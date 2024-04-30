@@ -6,9 +6,8 @@ from rest_framework.mixins import UpdateModelMixin
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from speleodb.users.api.serializers import UserSerializer
 from speleodb.users.models import User
-
-from .serializers import UserSerializer
 
 
 class UserViewSet(RetrieveModelMixin, ListModelMixin, UpdateModelMixin, GenericViewSet):
