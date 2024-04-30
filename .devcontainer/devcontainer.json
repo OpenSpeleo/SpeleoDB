@@ -55,7 +55,13 @@
                 "ms-python.vscode-pylance",
                 "charliermarsh.ruff",
                 // django
-                "batisteo.vscode-django"
+                "batisteo.vscode-django",
+                // Postman
+                "Postman.postman-for-vscode",
+                // TOML
+                "tamasfe.even-better-toml",
+                // YAML
+                "redhat.vscode-yaml"
             ]
         }
     },
