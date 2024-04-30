@@ -85,6 +85,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    "speleodb.surveys",
     "speleodb.users",
     # Your stuff: custom apps go here
 ]
