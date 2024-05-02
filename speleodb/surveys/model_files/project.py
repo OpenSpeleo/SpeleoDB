@@ -35,7 +35,7 @@ class Project(models.Model):
         on_delete=models.RESTRICT,
         null=True,
         blank=True,
-        default=None
+        default=None,
     )
 
     # Geo Coordinates
@@ -58,14 +58,10 @@ class Project(models.Model):
         on_delete=models.RESTRICT,
         null=True,
         blank=True,
-        default=None
+        default=None,
     )
 
-    mutex_dt = models.DateTimeField(
-        null=True,
-        blank=True,
-        default=None
-    )
+    mutex_dt = models.DateTimeField(null=True, blank=True, default=None)
 
     def __str__(self) -> str:
         return self.name
@@ -83,13 +79,21 @@ class Project(models.Model):
                 "Another user already is currently editing this file: "
                 f"{self.mutex_owner}"
             )
+
+        if not self.has_write_access(user):
+            raise PermissionError(f"User: `{user.email} can not execute this action.`")
+
         self.mutex_owner = user
         self.mutex_dt = timezone.localtime()
         self.save()
 
-    def release_mutex(self):
+    def release_mutex(self, user):
         if self.mutex_owner is None:
             raise ValidationError("No user is currently editing this file")
+
+        if self.mutex_owner != user and not self.has_sudo_access(user):
+            raise PermissionError(f"User: `{user.email} can not execute this action.`")
+
         self.mutex_owner = None
         self.mutex_dt = None
         self.save()
@@ -101,4 +105,14 @@ class Project(models.Model):
         return self.when.strftime("%Y/%m/%d")
 
     def get_permission(self, user: User) -> str:
-        return self.rel_permissions.filter(project=self, user=user)[0].level_name
+        return self.rel_permissions.get(project=self, user=user)
+
+    def has_write_access(self, user: User):
+        from speleodb.surveys.model_files.permission import Permission
+
+        return self.get_permission(user=user).level >= Permission.Level.READ_AND_WRITE
+
+    def has_sudo_access(self, user: User):
+        from speleodb.surveys.model_files.permission import Permission
+
+        return self.get_permission(user=user).level >= Permission.Level.SUDO

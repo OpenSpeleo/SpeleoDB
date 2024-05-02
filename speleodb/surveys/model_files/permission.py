@@ -1,23 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import uuid
-from typing import Self
-
-from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator
-from django.core.validators import MinValueValidator
 from django.db import models
-from django.utils import timezone
 
-from speleodb.users.models import User
 from speleodb.surveys.models import Project
+from speleodb.users.models import User
 
 
 class Permission(models.Model):
-    class Meta:
-        unique_together = ('user', 'project',)
-
     project = models.ForeignKey(
         Project,
         related_name="rel_permissions",
@@ -25,9 +15,7 @@ class Permission(models.Model):
     )
 
     user = models.ForeignKey(
-        User,
-        related_name="rel_permissions",
-        on_delete=models.CASCADE
+        User, related_name="rel_permissions", on_delete=models.CASCADE
     )
 
     class Level(models.IntegerChoices):
@@ -36,14 +24,11 @@ class Permission(models.Model):
         OWNER = (2, "SUDO")
 
     level = models.IntegerField(
-        choices=Level.choices,
-        default=Level.READ_ONLY,
-        verbose_name="level"
+        choices=Level.choices, default=Level.READ_ONLY, verbose_name="level"
     )
 
-    @property
-    def level_name(self) -> str:
-        return self.Level(self.level).label
+    class Meta:
+        unique_together = ("user", "project")
 
     def __str__(self):
         return f"{self.user} => {self.project} [{self.level_name}]"
@@ -51,6 +36,6 @@ class Permission(models.Model):
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
 
-    # @classmethod
-    # def fetch_project_by_user(cls, user: User) -> Self:
-    #     return cls
+    @property
+    def level_name(self) -> str:
+        return self.Level(self.level).label

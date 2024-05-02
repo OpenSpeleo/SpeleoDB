@@ -19,15 +19,6 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="User",
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
                 ("password", models.CharField(max_length=128, verbose_name="password")),
                 (
                     "last_login",
@@ -46,7 +37,10 @@ class Migration(migrations.Migration):
                 (
                     "email",
                     models.EmailField(
-                        unique=True, max_length=254, verbose_name="email address",
+                        primary_key=True,
+                        serialize=False,
+                        max_length=254,
+                        verbose_name="email address",
                     ),
                 ),
                 (
