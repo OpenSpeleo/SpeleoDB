@@ -24,20 +24,24 @@ def _sort_data(data):
 class SortedResponse(Response):
     def __init__(self, data, *args, **kwargs):
         data = _sort_data(data)
+        data["data"] = _sort_data(data["data"])
         super().__init__(data, *args, **kwargs)
 
 
 class CustomAPIView(APIView):
-    def get(self, request, *args, **kwargs):
-        if not hasattr(self, "_get"):
-            raise exceptions.MethodNotAllowed(request.method)
+    def base_request(self, view_fn, request, *args, **kwargs):
+        try:
+            view_fn = getattr(self, view_fn)
+        except AttributeError as e:
+            raise exceptions.MethodNotAllowed(request.method) from e
 
         payload = {}
         http_status = status.HTTP_200_OK
         try:
-            payload["data"] = self._get(request, *args, **kwargs)
+            payload["data"] = view_fn(request, *args, **kwargs)
 
         except Exception as e:  # noqa: BLE001
+            payload["data"] = {}
             payload["success"] = False
             payload["error"] = f"An error occured in the process: {e}"
             http_status = status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -45,3 +49,15 @@ class CustomAPIView(APIView):
         payload["url"] = request.build_absolute_uri()
         payload["timestamp"] = get_timestamp()
         return SortedResponse(payload, status=http_status)
+
+    def get(self, request, *args, **kwargs):
+        return self.base_request("_get", request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.base_request("_post", request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.base_request("_put", request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.base_request("_delete", request, *args, **kwargs)
