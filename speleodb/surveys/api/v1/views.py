@@ -5,26 +5,21 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from speleodb.surveys.api.serializers import ProjectSerializer
-from speleodb.surveys.api.utils import SortedResponse
+from speleodb.surveys.api.v1.serializers import ProjectSerializer
+from speleodb.surveys.api.v1.utils import CustomAPIView
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 
 
-class ProjectListApiView(APIView):
+class ProjectListApiView(CustomAPIView):
     # add permission to check if user is authenticated
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
     queryset = Project.objects.all()
     lookup_field = "pk"
 
-    # 1. List all
-    def get(self, request, *args, **kwargs):
-        """
-        List all the todo items for given requested user
-        """
+    def _get(self, request, *args, **kwargs):
         usr_projects = [
             (perm.project, perm.level_name)
             for perm in request.user.rel_permissions.all()
@@ -42,7 +37,7 @@ class ProjectListApiView(APIView):
             proj_dict["permission"] = level
             results.append(proj_dict)
 
-        return SortedResponse(results, status=status.HTTP_200_OK)
+        return results
 
     # 2. Create
     @csrf_exempt
