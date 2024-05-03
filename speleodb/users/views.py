@@ -11,8 +11,8 @@ from speleodb.users.models import User
 
 class UserDetailView(LoginRequiredMixin, DetailView):
     model = User
-    slug_field = "id"
-    slug_url_kwarg = "id"
+    slug_field = "email"
+    slug_url_kwarg = "email"
 
 
 user_detail_view = UserDetailView.as_view()
