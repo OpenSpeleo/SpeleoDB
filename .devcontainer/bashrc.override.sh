@@ -10,6 +10,8 @@ PROMPT_COMMAND="history -a; $PROMPT_COMMAND"
 # set some django env vars
 source /entrypoint
 
+alias ll="ls -al"
+
 # restore default shell options
 set +o errexit
 set +o pipefail
