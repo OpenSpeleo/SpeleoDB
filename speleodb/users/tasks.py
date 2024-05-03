@@ -1,6 +1,6 @@
 from celery import shared_task
 
-from .models import User
+from speleodb.users.models import User
 
 
 @shared_task()
