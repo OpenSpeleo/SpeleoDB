@@ -78,6 +78,7 @@ THIRD_PARTY_APPS = [
     "allauth.mfa",
     "allauth.socialaccount",
     "django_celery_beat",
+    "encrypted_model_fields",
     "rest_framework",
     "rest_framework.authtoken",
     "corsheaders",
@@ -85,6 +86,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    "speleodb.common",
     "speleodb.surveys",
     "speleodb.users",
     # Your stuff: custom apps go here
@@ -130,6 +132,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# ENCRYPTED FIELDS
+# ------------------------------------------------------------------------------
+# https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/#getting-started
+FIELD_ENCRYPTION_KEY = env("DJANGO_FIELD_ENCRYPTION_KEY")
 
 # MIDDLEWARE
 # ------------------------------------------------------------------------------

@@ -6,9 +6,8 @@ from rest_framework.routers import SimpleRouter
 
 from speleodb.users.api.views import UserViewSet
 
-router = DefaultRouter() if settings.DEBUG else SimpleRouter()
-
-router.register("users", UserViewSet)
+user_router = DefaultRouter() if settings.DEBUG else SimpleRouter()
+user_router.register("users", UserViewSet)
 
 urlpatterns = [
     re_path(r"^v1/", include("speleodb.surveys.api.v1.urls")),
@@ -16,4 +15,4 @@ urlpatterns = [
 
 
 app_name = "api"
-urlpatterns += router.urls
+urlpatterns += user_router.urls
