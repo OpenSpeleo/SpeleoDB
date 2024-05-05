@@ -279,3 +279,11 @@ speleodb/media/
 .env
 .envs/*
 !.envs/.local/
+
+# Non Versioned Directories
+git_projects/
+dev_tmp/*
+!dev_tmp/.gitkeep
+!dev_tmp/emails/
+dev_tmp/emails/*
+!dev_tmp/emails/.gitkeep
