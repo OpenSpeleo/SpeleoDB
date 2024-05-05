@@ -13,7 +13,7 @@ class User(AbstractUser):
     """
     Default custom user model for SpeleoDB.
     If adding fields that need to be filled at user signup,
-    check forms.SignupForm and forms.SocialSignupForms accordingly.
+    check forms.SignupForm.
     """
 
     # First and last name do not cover name patterns around the globe
