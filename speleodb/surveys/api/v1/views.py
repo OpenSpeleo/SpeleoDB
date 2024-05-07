@@ -13,6 +13,7 @@ from speleodb.surveys.api.v1.exceptions import NotAuthorizedError
 from speleodb.surveys.api.v1.exceptions import ResourceBusyError
 from speleodb.surveys.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.api.v1.serializers import UploadSerializer
+from speleodb.surveys.api.v1.utils import download_response
 from speleodb.surveys.api.v1.view_cls import CustomAPIView
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
@@ -164,11 +165,11 @@ class FileUploadView(CustomAPIView):
         file_uploaded = request.FILES.get("file_uploaded")
         content_type = file_uploaded.content_type
 
-        if content_type != "application/octet-stream":
+        if content_type not in ["application/octet-stream", "application/zip"]:
             data = {
                 "error": (
                     f"Unknown MIME Type received: `{content_type}`. "
-                    "Expected: `application/octet-stream`."
+                    "Expected: `application/octet-stream` or `application/zip`."
                 )
             }
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
@@ -196,3 +197,13 @@ class FileUploadView(CustomAPIView):
             "data": f"PUT API and you have uploaded a {content_type} file",
             "project_id": project_id,
         }
+
+
+class FileDownloadView(CustomAPIView):
+    # add permission to check if user is authenticated
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UploadSerializer
+    http_method_names = ["get"]
+
+    def get(self, request, id):
+        return download_response(filepath="fixtures/test_simple.tml", attachment=True)
