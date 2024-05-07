@@ -4,7 +4,6 @@
 from pathlib import Path
 
 from django.core.exceptions import ValidationError
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.response import Response
@@ -42,16 +41,12 @@ class ProjectAcquireApiView(CustomAPIView):
             raise NotAuthorizedError(e) from None
 
         try:
-            serializer = ProjectSerializer(project)
-            proj_dict = serializer.data
-            proj_dict["permission"] = project.get_permission(
-                user=request.user
-            ).level_name
+            serializer = ProjectSerializer(project, context={"user": request.user})
         except Exception:
             project.release_mutex(user=request.user)
             raise
 
-        return proj_dict
+        return serializer.data
 
 
 class ProjectReleaseApiView(CustomAPIView):
@@ -77,16 +72,12 @@ class ProjectReleaseApiView(CustomAPIView):
             raise NotAuthorizedError(e) from None
 
         try:
-            serializer = ProjectSerializer(project)
-            proj_dict = serializer.data
-            proj_dict["permission"] = project.get_permission(
-                user=request.user
-            ).level_name
+            serializer = ProjectSerializer(project, context={"user": request.user})
         except Exception:
             project.acquire_mutex(user=request.user)
             raise
 
-        return proj_dict
+        return serializer.data
 
 
 class ProjectApiView(CustomAPIView):
@@ -97,11 +88,9 @@ class ProjectApiView(CustomAPIView):
 
     def _get(self, request, project_id):
         project = Project.objects.get(id=project_id)
-        serializer = ProjectSerializer(project)
-        proj_dict = serializer.data
-        proj_dict["permission"] = project.get_permission(user=request.user).level_name
+        serializer = ProjectSerializer(project, context={"user": request.user})
 
-        return proj_dict
+        return serializer.data
 
 
 class CreateProjectApiView(CustomAPIView):
