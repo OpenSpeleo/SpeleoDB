@@ -146,11 +146,14 @@ ignore = [
   # https://github.com/astral-sh/ruff/issues/7871
   "EM101",  # Checks for the use of string literals in exception constructors.
   "EM102",  # Checks for the use of f-strings in exception constructors.
-  "TRY003", # Checks for long exception messages that are not defined in the 
+  "TRY003", # Checks for long exception messages that are not defined in the
   # exception class itself.
   "COM812", # Checks for the absence of trailing commas.
   "UP009",  # Checks for unnecessary UTF-8 encoding declarations.
   "EXE001", # Checks for a shebang directive in a file that is not executable.
+  "FBT002", # Checks for the use of boolean positional arguments in function
+  # definitions, as determined by the presence of a boolean default value.
+  "PLR0913", # Checks for function definitions that include too many arguments.
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
