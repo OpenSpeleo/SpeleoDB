@@ -15,10 +15,10 @@ urlpatterns = [
     # ========================== Public API Routes ========================== #
     # ================== Authentication Required API Routes ================= #
     path("project/", CreateProjectApiView.as_view()),
-    path("project/<uuid:project_id>/", ProjectApiView.as_view()),
-    path("project/<uuid:project_id>/acquire/", ProjectAcquireApiView.as_view()),
-    path("project/<uuid:project_id>/release/", ProjectReleaseApiView.as_view()),
-    path("project/<uuid:project_id>/update/", FileUploadView.as_view()),
+    path("project/<uuid:id>/", ProjectApiView.as_view()),
+    path("project/<uuid:id>/acquire/", ProjectAcquireApiView.as_view()),
+    path("project/<uuid:id>/release/", ProjectReleaseApiView.as_view()),
+    path("project/<uuid:id>/update/", FileUploadView.as_view()),
     path("project/<uuid:id>/download/", FileDownloadView.as_view()),
     path("projects/", ProjectListApiView.as_view()),
     # ================ Private API Routes - API KEY REQUIRED ================ #

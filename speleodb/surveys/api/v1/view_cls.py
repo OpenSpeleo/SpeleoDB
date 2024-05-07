@@ -1,13 +1,15 @@
+from contextlib import suppress
+
 from rest_framework import exceptions
 from rest_framework import status
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from speleodb.surveys.api.v1.utils import SortedResponse
 from speleodb.surveys.api.v1.utils import get_timestamp
 
 
-class CustomAPIView(APIView):
+class CustomAPIView(GenericAPIView):
     def base_request(self, view_fn, request, *args, **kwargs):
         try:
             view_fn = getattr(self, view_fn)
@@ -17,6 +19,9 @@ class CustomAPIView(APIView):
         payload = {}
         http_status = status.HTTP_200_OK
         try:
+            with suppress(AttributeError):
+                # remove the lookup field. Not needed
+                del kwargs[self.lookup_field]
             response = view_fn(request, *args, **kwargs)
 
             if isinstance(response, Response):
