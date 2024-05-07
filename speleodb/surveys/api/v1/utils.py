@@ -1,7 +1,10 @@
 from collections import OrderedDict
+from pathlib import Path
 
 from django.utils import timezone
 from rest_framework.response import Response
+
+from speleodb.surveys.api.v1.response import DownloadResponse
 
 
 def get_timestamp():
@@ -16,6 +19,20 @@ def maybe_sort_data(data):
         return [maybe_sort_data(_data) for _data in data]
 
     return data
+
+
+def download_response(
+    filepath,
+    attachment=True,
+):
+    filepath = Path(filepath)
+    return DownloadResponse(
+        file_instance=filepath.open(mode="rb"),
+        attachment=attachment,
+        basename=filepath.name,
+        file_mimetype="application/zip",
+        file_encoding=None,
+    )
 
 
 class SortedResponse(Response):

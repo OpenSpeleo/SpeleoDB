@@ -4,6 +4,7 @@
 from django.urls import path
 
 from speleodb.surveys.api.v1.views import CreateProjectApiView
+from speleodb.surveys.api.v1.views import FileDownloadView
 from speleodb.surveys.api.v1.views import FileUploadView
 from speleodb.surveys.api.v1.views import ProjectAcquireApiView
 from speleodb.surveys.api.v1.views import ProjectApiView
@@ -18,6 +19,7 @@ urlpatterns = [
     path("project/<uuid:project_id>/acquire/", ProjectAcquireApiView.as_view()),
     path("project/<uuid:project_id>/release/", ProjectReleaseApiView.as_view()),
     path("project/<uuid:project_id>/update/", FileUploadView.as_view()),
+    path("project/<uuid:id>/download/", FileDownloadView.as_view()),
     path("projects/", ProjectListApiView.as_view()),
     # ================ Private API Routes - API KEY REQUIRED ================ #
 ]
