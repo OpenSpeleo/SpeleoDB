@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.conf.urls import include
-from django.urls import re_path
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 from rest_framework.routers import SimpleRouter
 
@@ -10,7 +10,7 @@ user_router = DefaultRouter() if settings.DEBUG else SimpleRouter()
 user_router.register("users", UserViewSet)
 
 urlpatterns = [
-    re_path(r"^v1/", include("speleodb.surveys.api.v1.urls")),
+    path("v1/", include("speleodb.surveys.api.v1.urls")),
 ]
 
 

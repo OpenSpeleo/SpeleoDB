@@ -74,25 +74,33 @@ class Project(models.Model):
         )
 
     def acquire_mutex(self, user: User):
-        if self.mutex_owner is not None:
+        if not self.has_write_access(user):
+            raise PermissionError(f"User: `{user.email} can not execute this action.`")
+
+        # if the user is already the mutex_owner, just refresh the mutex_dt
+        # => re-acquire mutex
+        if self.mutex_owner is not None and self.mutex_owner != user:
             raise ValidationError(
                 "Another user already is currently editing this file: "
                 f"{self.mutex_owner}"
             )
-
-        if not self.has_write_access(user):
-            raise PermissionError(f"User: `{user.email} can not execute this action.`")
 
         self.mutex_owner = user
         self.mutex_dt = timezone.localtime()
         self.save()
 
     def release_mutex(self, user):
-        if self.mutex_owner is None:
-            raise ValidationError("No user is currently editing this file")
-
-        if self.mutex_owner != user and not self.has_sudo_access(user):
+        if not self.has_write_access(user):
             raise PermissionError(f"User: `{user.email} can not execute this action.`")
+
+        if self.mutex_owner is None:
+            # if nobody owns the project, returns without error.
+            return
+
+        if self.mutex_owner != user and not self.is_owner(user):
+            raise PermissionError(
+                f"User: `{user.email} is not the current editor of the project.`"
+            )
 
         self.mutex_owner = None
         self.mutex_dt = None
@@ -112,7 +120,7 @@ class Project(models.Model):
 
         return self.get_permission(user=user).level >= Permission.Level.READ_AND_WRITE
 
-    def has_sudo_access(self, user: User):
+    def is_owner(self, user: User):
         from speleodb.surveys.model_files.permission import Permission
 
-        return self.get_permission(user=user).level >= Permission.Level.SUDO
+        return self.get_permission(user=user).level >= Permission.Level.OWNER
