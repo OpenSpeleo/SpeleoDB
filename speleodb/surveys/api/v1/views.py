@@ -10,6 +10,8 @@ from rest_framework.response import Response
 
 from speleodb.surveys.api.v1.exceptions import NotAuthorizedError
 from speleodb.surveys.api.v1.exceptions import ResourceBusyError
+from speleodb.surveys.api.v1.permissions import UserHasReadAccess
+from speleodb.surveys.api.v1.permissions import UserHasWriteAccess
 from speleodb.surveys.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.api.v1.serializers import UploadSerializer
 from speleodb.surveys.api.v1.utils import download_response
@@ -19,18 +21,15 @@ from speleodb.surveys.models import Project
 
 
 class ProjectAcquireApiView(CustomAPIView):
-    # add permission to check if user is authenticated
-    permission_classes = [permissions.IsAuthenticated]
+    queryset = Project.objects.all()
+    permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
     serializer_class = ProjectSerializer
     http_method_names = ["post"]
+    lookup_field = "id"
 
-    def _post(self, request, project_id):
-        project = Project.objects.get(id=project_id)
+    def _post(self, request):
+        project = self.get_object()
 
-        if not project.has_write_access(user=request.user):
-            raise NotAuthorizedError(
-                f"User: `{request.user.email} can not execute this action.`"
-            )
         try:
             project.acquire_mutex(user=request.user)
 
@@ -50,18 +49,14 @@ class ProjectAcquireApiView(CustomAPIView):
 
 
 class ProjectReleaseApiView(CustomAPIView):
-    # add permission to check if user is authenticated
-    permission_classes = [permissions.IsAuthenticated]
+    queryset = Project.objects.all()
+    permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
     serializer_class = ProjectSerializer
     http_method_names = ["post"]
+    lookup_field = "id"
 
-    def _post(self, request, project_id):
-        project = Project.objects.get(id=project_id)
-
-        if not project.has_write_access(user=request.user):
-            raise NotAuthorizedError(
-                f"User: `{request.user.email} can not execute this action.`"
-            )
+    def _post(self, request):
+        project = self.get_object()
         try:
             project.release_mutex(user=request.user)
 
@@ -81,13 +76,14 @@ class ProjectReleaseApiView(CustomAPIView):
 
 
 class ProjectApiView(CustomAPIView):
-    # add permission to check if user is authenticated
-    permission_classes = [permissions.IsAuthenticated]
+    queryset = Project.objects.all()
+    permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
     serializer_class = ProjectSerializer
     http_method_names = ["get"]
+    lookup_field = "id"
 
-    def _get(self, request, project_id):
-        project = Project.objects.get(id=project_id)
+    def _get(self, request):
+        project = self.get_object()
         serializer = ProjectSerializer(project, context={"user": request.user})
 
         return serializer.data
@@ -150,7 +146,7 @@ class FileUploadView(CustomAPIView):
     serializer_class = UploadSerializer
     http_method_names = ["put"]
 
-    def _put(self, request, project_id):
+    def _put(self, request):
         file_uploaded = request.FILES.get("file_uploaded")
         content_type = file_uploaded.content_type
 
@@ -174,17 +170,17 @@ class FileUploadView(CustomAPIView):
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
         # file_uploaded =>
         # {
-        #     '_name': 'test_simple.tml',
-        #     'charset': None,
-        #     'content_type': 'application/octet-stream',
-        #     'content_type_extra': {},
-        #     'field_name': 'file_uploaded',
-        #     'file': <_io.BytesIO object at 0x71e8c6b982c0>,
-        #     'size': 92424
+        #     "_name": "test_simple.tml",
+        #     "charset": None,
+        #     "content_type": "application/octet-stream",
+        #     "content_type_extra": {},
+        #     "field_name": "file_uploaded",
+        #     "file": <_io.BytesIO object at 0x71e8c6b982c0>,
+        #     "size": 92424
         # }
         return {
             "data": f"PUT API and you have uploaded a {content_type} file",
-            "project_id": project_id,
+            "id": id,
         }
 
 
