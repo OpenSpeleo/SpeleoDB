@@ -14,10 +14,10 @@ from speleodb.surveys.api.v1.permissions import UserHasReadAccess
 from speleodb.surveys.api.v1.permissions import UserHasWriteAccess
 from speleodb.surveys.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.api.v1.serializers import UploadSerializer
-from speleodb.surveys.api.v1.utils import download_response
-from speleodb.surveys.api.v1.view_cls import CustomAPIView
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
+from speleodb.utils.response import DownloadResponseFromFile
+from speleodb.utils.view_cls import CustomAPIView
 
 
 class ProjectAcquireApiView(CustomAPIView):
@@ -27,7 +27,7 @@ class ProjectAcquireApiView(CustomAPIView):
     http_method_names = ["post"]
     lookup_field = "id"
 
-    def _post(self, request):
+    def _post(self, request, *args, **kwargs):
         project = self.get_object()
 
         try:
@@ -55,7 +55,7 @@ class ProjectReleaseApiView(CustomAPIView):
     http_method_names = ["post"]
     lookup_field = "id"
 
-    def _post(self, request):
+    def _post(self, request, *args, **kwargs):
         project = self.get_object()
         try:
             project.release_mutex(user=request.user)
@@ -82,7 +82,7 @@ class ProjectApiView(CustomAPIView):
     http_method_names = ["get"]
     lookup_field = "id"
 
-    def _get(self, request):
+    def _get(self, request, *args, **kwargs):
         project = self.get_object()
         serializer = ProjectSerializer(project, context={"user": request.user})
 
@@ -90,16 +90,17 @@ class ProjectApiView(CustomAPIView):
 
 
 class CreateProjectApiView(CustomAPIView):
-    # add permission to check if user is authenticated
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
     http_method_names = ["post"]
 
-    def _post(self, request):
+    def _post(self, request, *args, **kwargs):
         """
         Create the Todo with given todo data
         """
-        serializer = ProjectSerializer(data=request.data)
+        serializer = ProjectSerializer(
+            data=request.data, context={"user": request.user}
+        )
         if serializer.is_valid():
             proj = serializer.save()
             Permission.objects.create(
@@ -114,39 +115,33 @@ class CreateProjectApiView(CustomAPIView):
 
 
 class ProjectListApiView(CustomAPIView):
-    # add permission to check if user is authenticated
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
     http_method_names = ["get"]
 
-    def _get(self, request):
-        usr_projects = [
-            (perm.project, perm.level_name)
-            for perm in request.user.rel_permissions.all()
-        ]
+    def _get(self, request, *args, **kwargs):
+        usr_projects = [perm.project for perm in request.user.rel_permissions.all()]
 
         usr_projects = sorted(
-            usr_projects, key=lambda proj: proj[0].modified_date, reverse=True
+            usr_projects, key=lambda proj: proj.modified_date, reverse=True
         )
 
-        projects, levels = zip(*usr_projects, strict=False)
-        serializer = ProjectSerializer(projects, many=True)
+        serializer = ProjectSerializer(
+            usr_projects, many=True, context={"user": request.user}
+        )
 
-        results = []
-        for proj_dict, level in zip(serializer.data, levels, strict=False):
-            proj_dict["permission"] = level
-            results.append(proj_dict)
-
-        return results
+        return serializer.data
 
 
 class FileUploadView(CustomAPIView):
-    # add permission to check if user is authenticated
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UploadSerializer
+    queryset = Project.objects.all()
+    permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
+    serializer_class = ProjectSerializer
     http_method_names = ["put"]
+    lookup_field = "id"
 
-    def _put(self, request):
+    def _put(self, request, *args, **kwargs):
+        project = self.get_object()  # noqa: F841
         file_uploaded = request.FILES.get("file_uploaded")
         content_type = file_uploaded.content_type
 
@@ -179,16 +174,23 @@ class FileUploadView(CustomAPIView):
         #     "size": 92424
         # }
         return {
-            "data": f"PUT API and you have uploaded a {content_type} file",
-            "id": id,
+            "message": f"PUT API and you have uploaded a {content_type} file",
+            "project": ProjectSerializer(project, context={"user": request.user}).data,
         }
 
 
 class FileDownloadView(CustomAPIView):
-    # add permission to check if user is authenticated
-    permission_classes = [permissions.IsAuthenticated]
+    queryset = Project.objects.all()
+    permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
+    lookup_field = "id"
 
-    def get(self, request, id):
-        return download_response(filepath="fixtures/test_simple.tml", attachment=True)
+    def get(self, request, commit_sha1=None, *args, **kwargs):
+        if commit_sha1 is None:
+            # pull ToT
+            pass
+        project = self.get_object()  # noqa: F841
+        return DownloadResponseFromFile(
+            filepath="fixtures/test_simple.tml", attachment=False
+        )

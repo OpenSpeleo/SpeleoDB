@@ -8,9 +8,11 @@ from pathlib import Path
 from urllib.parse import quote
 
 from django.conf import settings
-from django.http import HttpResponse
 from django.http import StreamingHttpResponse
 from django.utils.encoding import force_str
+from rest_framework.response import Response
+
+from speleodb.utils.utils import maybe_sort_data
 
 
 def encode_basename_ascii(value):
@@ -38,8 +40,7 @@ def encode_basename_ascii(value):
     ascii_basename = unicodedata.normalize("NFKD", ascii_basename)
     ascii_basename = ascii_basename.encode("ascii", "ignore")
     ascii_basename = ascii_basename.decode("ascii")
-    ascii_basename = re.sub(r"[\s]", "_", ascii_basename)
-    return ascii_basename
+    return re.sub(r"[\s]", "_", ascii_basename)
 
 
 def encode_basename_utf8(value):
@@ -233,11 +234,21 @@ class DownloadResponse(StreamingHttpResponse):
         return settings.DEFAULT_CHARSET
 
 
-class ProxiedDownloadResponse(HttpResponse):
-    """Base class for internal redirect download responses.
+class DownloadResponseFromFile(DownloadResponse):
+    def __init__(self, filepath, attachment=True):
+        filepath = Path(filepath)
+        super().__init__(
+            file_instance=filepath.open(mode="rb"),
+            attachment=attachment,
+            basename=filepath.name,
+            file_mimetype="application/zip",
+            file_encoding=None,
+        )
 
-    This base class makes it possible to identify several types of specific
-    responses such as
-    :py:class:`~django_downloadview.nginx.response.XAccelRedirectResponse`.
 
-    """
+class SortedResponse(Response):
+    def __init__(self, data, *args, **kwargs):
+        data = maybe_sort_data(data)
+        for key, val in data.items():
+            data[key] = maybe_sort_data(val)
+        super().__init__(data, *args, **kwargs)

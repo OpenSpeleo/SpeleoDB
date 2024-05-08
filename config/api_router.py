@@ -4,7 +4,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 from rest_framework.routers import SimpleRouter
 
-from speleodb.users.api.views import UserViewSet
+from speleodb.users.api.v1.views import UserViewSet
 
 user_router = DefaultRouter() if settings.DEBUG else SimpleRouter()
 user_router.register("users", UserViewSet)
