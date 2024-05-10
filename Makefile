@@ -8,3 +8,7 @@ dump_data:
 
 load_data:
 	python manage.py loaddata fixtures/models.json
+
+test:
+# pytest -vvv --capture=no speleodb/users/tests/test_drf_views.py
+	pytest
