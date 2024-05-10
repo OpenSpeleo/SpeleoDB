@@ -11,6 +11,7 @@ from rest_framework.mixins import UpdateModelMixin
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from speleodb.users.api.v1.serializers import AuthTokenSerializer
 from speleodb.users.api.v1.serializers import UserSerializer
 from speleodb.users.models import User
 from speleodb.utils.utils import wrap_response_with_status
@@ -32,6 +33,8 @@ class UserViewSet(RetrieveModelMixin, ListModelMixin, UpdateModelMixin, GenericV
 
 
 class ObtainAuthToken(_ObtainAuthToken):
+    serializer_class = AuthTokenSerializer
+
     def post(self, request, *args, **kwargs):
         return wrap_response_with_status(super().post, request, *args, **kwargs)
 

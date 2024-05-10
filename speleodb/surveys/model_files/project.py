@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import decimal
 import uuid
 
 from django.core.exceptions import ValidationError
@@ -42,13 +43,19 @@ class Project(models.Model):
     longitude = models.DecimalField(
         max_digits=11,
         decimal_places=8,
-        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+        validators=[
+            MinValueValidator(decimal.Decimal(-180.0)),
+            MaxValueValidator(decimal.Decimal(180.0)),
+        ],
     )
 
     latitude = models.DecimalField(
         max_digits=11,
         decimal_places=8,
-        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+        validators=[
+            MinValueValidator(decimal.Decimal(-180.0)),
+            MaxValueValidator(decimal.Decimal(180.0)),
+        ],
     )
 
     # MUTEX Management
