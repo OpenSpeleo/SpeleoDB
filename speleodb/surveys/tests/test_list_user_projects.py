@@ -2,60 +2,64 @@ import random
 
 from django.test import TestCase
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from speleodb.surveys.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Permission
-from speleodb.surveys.models import Project
-from speleodb.users.models import User
+from speleodb.surveys.tests.factories import PermissionFactory
+from speleodb.surveys.tests.factories import TokenFactory
+from speleodb.surveys.tests.factories import UserFactory
 
 
-class TestTokenAuth(TestCase):
+class TestProjectInteraction(TestCase):
     """Token authentication"""
 
     header_prefix = "Token "
+    PROJECT_COUNT = 10
 
     def setUp(self):
         self.csrf_client = APIClient(enforce_csrf_checks=True)
-        self.username = "john"
-        self.email = "lennon@thebeatles.com"
-        self.password = "password"
-        self.user = User.objects.create_user(self.email, self.password)
 
-        self.key = "abcd1234"
-        self.token = Token.objects.create(key=self.key, user=self.user)
+        self.user = UserFactory()
+        self.token = TokenFactory(user=self.user)
 
     def test_get_user_projects(self):
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
-        proj_data = {
-            "name": "Mayan Blue",
-            "description": "A beautiful Cenote - Oh yeahhh cave",
-            "longitude": 37.37635035,
-            "latitude": -121.91914907,
-        }
 
-        for _ in range(10):
-            serializer = ProjectSerializer(data=proj_data, context={"user": self.user})
-            if serializer.is_valid():
-                proj = serializer.save()
-                Permission.objects.create(
-                    project=proj,
-                    user=self.user,
-                    level=random.choice(list(Permission.Level)),
-                )
+        for _ in range(self.PROJECT_COUNT):
+            # automatically creates projects associated
+            _ = PermissionFactory(
+                user=self.user,
+                level=random.choice(list(Permission.Level)),
+            )
 
-        auth = self.header_prefix + self.key
+        auth = self.header_prefix + self.token.key
         response = self.csrf_client.get(
             "/api/v1/projects/",
             HTTP_AUTHORIZATION=auth,
         )
-        assert response.status_code == status.HTTP_200_OK
 
-        assert len(response.data["data"]) == 10
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data["data"]) == self.PROJECT_COUNT
+
+        attributes = [
+            "creation_date",
+            "description",
+            "fork_from",
+            "id",
+            "latitude",
+            "longitude",
+            "modified_date",
+            "mutex_dt",
+            "mutex_owner",
+            "name",
+            "permission",
+        ]
+
+        for project in response.data["data"]:
+            assert all(attr in project for attr in attributes)
 
         target = {
             "success": True,

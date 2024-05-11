@@ -3,6 +3,8 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
+from speleodb.surveys.tests.factories import TokenFactory
+from speleodb.surveys.tests.factories import UserFactory
 from speleodb.users.models import User
 
 
@@ -13,24 +15,20 @@ class TestTokenAuth(TestCase):
 
     def setUp(self):
         self.csrf_client = APIClient(enforce_csrf_checks=True)
-        self.username = "john"
-        self.email = "lennon@thebeatles.com"
-        self.password = "password"
-        self.user = User.objects.create_user(self.email, self.password)
-
-        self.key = "abcd1234"
-        self.token = Token.objects.create(key=self.key, user=self.user)
+        self.user = UserFactory()
+        self.token = TokenFactory(user=self.user)
 
     def test_token_retrieval_works(self):
         response = self.csrf_client.post(
             "/api/auth-token/",
-            {"email": self.email, "password": self.password},
+            {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD},
         )
+        print(response.data)
         assert response.status_code == status.HTTP_200_OK
 
         target = {
             "success": True,
-            "token": self.key,
+            "token": self.token.key,
             "url": "http://testserver/api/auth-token/",
         }
 
@@ -40,12 +38,12 @@ class TestTokenAuth(TestCase):
     def test_token_refresh_works(self):
         response = self.csrf_client.patch(
             "/api/auth-token/",
-            {"email": self.email, "password": self.password},
+            {"email": self.user.email, "password": "password"},
         )
         assert response.status_code == status.HTTP_200_OK
 
         # Token shall be different.
-        assert self.key != response.data.pop("token")
+        assert self.token.key != response.data.pop("token")
 
         target = {
             "success": True,
@@ -58,7 +56,7 @@ class TestTokenAuth(TestCase):
     def test_missing_password(self):
         response = self.csrf_client.post(
             "/api/auth-token/",
-            {"email": self.email},
+            {"email": self.user.email},
         )
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -71,7 +69,7 @@ class TestTokenAuth(TestCase):
     def test_missing_email(self):
         response = self.csrf_client.post(
             "/api/auth-token/",
-            {"password": self.password},
+            {"password": "password"},
         )
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 

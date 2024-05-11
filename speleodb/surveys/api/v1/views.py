@@ -8,14 +8,14 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.response import Response
 
-from speleodb.surveys.api.v1.exceptions import NotAuthorizedError
-from speleodb.surveys.api.v1.exceptions import ResourceBusyError
 from speleodb.surveys.api.v1.permissions import UserHasReadAccess
 from speleodb.surveys.api.v1.permissions import UserHasWriteAccess
 from speleodb.surveys.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.api.v1.serializers import UploadSerializer
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
+from speleodb.utils.exceptions import NotAuthorizedError
+from speleodb.utils.exceptions import ResourceBusyError
 from speleodb.utils.response import DownloadResponseFromFile
 from speleodb.utils.view_cls import CustomAPIView
 

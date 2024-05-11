@@ -155,6 +155,7 @@ ignore = [
   "FBT002", # Checks for the use of boolean positional arguments in function
   # definitions, as determined by the presence of a boolean default value.
   "PLR0913", # Checks for function definitions that include too many arguments.
+  "S311",    # Checks for uses of cryptographically weak pseudo-random number generators.
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
