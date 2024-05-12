@@ -6,8 +6,12 @@ from pathlib import Path
 import environ
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
-# speleodb/
+
 APPS_DIR = BASE_DIR / "speleodb"
+
+# Space where projects are being saved
+GIT_PROJECTS_DIR = BASE_DIR / "git_projects"
+
 env = environ.Env()
 
 READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=True)
