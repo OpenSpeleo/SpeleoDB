@@ -2,8 +2,8 @@
 
 Here are the OPTIONS that you need to declare in the database for the server to function
 
-- `GITLAB_HOST_URL="https://gitlab.com/"`<br>
-The url to the GIT platform being used. Either self-hosted or cloud service.
+- `GITLAB_HOST_URL="gitlab.com"`<br>
+The url to the GIT platform being used. Either self-hosted or cloud service. No "https://" in front or trailing "/" at the end.
 
 - `GITLAB_TOKEN="https://<git_host>.com"`<br>
 A token can be obtained at:

@@ -282,7 +282,8 @@ speleodb/media/
 !.envs/.local/
 
 # Non Versioned Directories
-git_projects/
+git_projects/*
+!git_projects/.gitkeep
 dev_tmp/*
 !dev_tmp/.gitkeep
 !dev_tmp/emails/
