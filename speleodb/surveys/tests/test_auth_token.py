@@ -23,7 +23,6 @@ class TestTokenAuth(TestCase):
             "/api/auth-token/",
             {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD},
         )
-        print(response.data)
         assert response.status_code == status.HTTP_200_OK
 
         target = {
