@@ -141,8 +141,14 @@ class FileUploadView(CustomAPIView):
     lookup_field = "id"
 
     def _put(self, request, *args, **kwargs):
-        project = self.get_object()  # noqa: F841
-        file_uploaded = request.FILES.get("file_uploaded")
+        project = self.get_object()
+
+        commit_message = request.data.get("message", None)
+        if commit_message is None or commit_message == "":
+            data = {"error": (f"Empty or no `message` received: `{commit_message}`.")}
+            return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+        file_uploaded = request.data["artifact"]
         content_type = file_uploaded.content_type
 
         if content_type not in ["application/octet-stream", "application/zip"]:
@@ -163,18 +169,14 @@ class FileUploadView(CustomAPIView):
                 )
             }
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
-        # file_uploaded =>
-        # {
-        #     "_name": "test_simple.tml",
-        #     "charset": None,
-        #     "content_type": "application/octet-stream",
-        #     "content_type_extra": {},
-        #     "field_name": "file_uploaded",
-        #     "file": <_io.BytesIO object at 0x71e8c6b982c0>,
-        #     "size": 92424
-        # }
+
+        commit_id = project.process_uploaded_file(
+            file=file_uploaded, user=request.user, commit_msg=commit_message
+        )
+
         return {
-            "message": f"PUT API and you have uploaded a {content_type} file",
+            "content_type": content_type,
+            "commit_sha1": commit_id,
             "project": ProjectSerializer(project, context={"user": request.user}).data,
         }
 
