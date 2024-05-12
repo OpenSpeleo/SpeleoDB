@@ -16,6 +16,7 @@ from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import ResourceBusyError
+from speleodb.utils.gitlab_manager import GitlabManager
 from speleodb.utils.response import DownloadResponseFromFile
 from speleodb.utils.view_cls import CustomAPIView
 
@@ -131,6 +132,23 @@ class ProjectListApiView(CustomAPIView):
         )
 
         return serializer.data
+
+
+class GitHistoryView(CustomAPIView):
+    queryset = Project.objects.all()
+    permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
+    serializer_class = ProjectSerializer
+    http_method_names = ["get"]
+    lookup_field = "id"
+
+    def _get(self, request, *args, **kwargs):
+        project = self.get_object()
+        serializer = ProjectSerializer(project, context={"user": request.user})
+
+        return {
+            "project": serializer.data,
+            "history": GitlabManager.get_commit_history(project_id=project.id),
+        }
 
 
 class FileUploadView(CustomAPIView):
