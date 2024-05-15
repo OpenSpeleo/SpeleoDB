@@ -67,7 +67,9 @@
                 // Makefiles
                 "ms-vscode.makefile-tools",
                 // Docker
-                "ms-azuretools.vscode-docker"
+                "ms-azuretools.vscode-docker",
+                // Env
+                "IronGeek.vscode-env"
             ]
         }
     },
