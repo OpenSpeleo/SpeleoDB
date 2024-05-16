@@ -69,7 +69,12 @@
                 // Docker
                 "ms-azuretools.vscode-docker",
                 // Env
-                "IronGeek.vscode-env"
+                "IronGeek.vscode-env",
+                // Heroku
+                "benspaulding.procfile",
+                "ivangabriele.vscode-heroku",
+                "pkosta2005.heroku-command",
+                "JustBrenny.hero-heroku"
             ]
         }
     },

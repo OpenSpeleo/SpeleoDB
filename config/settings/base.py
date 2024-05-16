@@ -9,9 +9,6 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 
 APPS_DIR = BASE_DIR / "speleodb"
 
-# Space where projects are being saved
-GIT_PROJECTS_DIR = BASE_DIR / "git_projects"
-
 env = environ.Env()
 
 READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=True)
@@ -46,20 +43,29 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#locale-paths
 LOCALE_PATHS = [str(BASE_DIR / "locale")]
 
+# Git Project Saving
+# ------------------------------------------------------------------------------
+
+# Space where projects are being saved
+GIT_PROJECTS_DIR = env("DJANGO_GIT_PROJECT_DIR", default=BASE_DIR / "git_projects")
+
 # DATABASES
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
-DATABASES = {"default": env.db("DATABASE_URL")}
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "HOST": env("POSTGRES_HOST"),
-#         "PORT": env("POSTGRES_PORT"),
-#         "NAME": env("POSTGRES_DB"),
-#         "USER": env("POSTGRES_USER"),
-#         "PASSWORD": env("POSTGRES_PASSWORD"),
-#     }
-# }
+if env.bool("USE_DOCKER", default=False):
+    DATABASES = {"default": env.db("DATABASE_URL")}
+else:
+    DATABASES = {"default": env.db("DATABASE_URL")}
+    # DATABASES = {
+    #     "default": {
+    #         "ENGINE": "django.db.backends.postgresql",
+    #         "HOST": env("POSTGRES_HOST"),
+    #         "PORT": env("POSTGRES_PORT"),
+    #         "NAME": env("POSTGRES_DB"),
+    #         "USER": env("POSTGRES_USER"),
+    #         "PASSWORD": env("POSTGRES_PASSWORD"),
+    #     }
+    # }
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 # https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-DEFAULT_AUTO_FIELD
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
