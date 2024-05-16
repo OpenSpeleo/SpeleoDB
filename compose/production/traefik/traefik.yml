@@ -4,7 +4,7 @@ log:
 entryPoints:
   web:
     # http
-    address: ':80'
+    address: ":80"
     http:
       # https://doc.traefik.io/traefik/routing/entrypoints/#entrypoint
       redirections:
@@ -13,16 +13,16 @@ entryPoints:
 
   web-secure:
     # https
-    address: ':443'
+    address: ":443"
 
   flower:
-    address: ':5555'
+    address: ":5555"
 
 certificatesResolvers:
   letsencrypt:
     # https://doc.traefik.io/traefik/https/acme/#lets-encrypt
     acme:
-      email: 'contact@speleodb.com'
+      email: "contact@speleodb.com"
       storage: /etc/traefik/acme/acme.json
       # https://doc.traefik.io/traefik/https/acme/#httpchallenge
       httpChallenge:
@@ -31,7 +31,7 @@ certificatesResolvers:
 http:
   routers:
     web-secure-router:
-      rule: 'Host(`www.speleodb.com`)'
+      rule: "Host(`www.speleodb.com`)"
       entryPoints:
         - web-secure
       middlewares:
@@ -42,7 +42,7 @@ http:
         certResolver: letsencrypt
 
     flower-secure-router:
-      rule: 'Host(`www.speleodb.com`)'
+      rule: "Host(`www.speleodb.com`)"
       entryPoints:
         - flower
       service: flower
@@ -50,12 +50,22 @@ http:
         # https://doc.traefik.io/traefik/master/routing/routers/#certresolver
         certResolver: letsencrypt
 
+    web-media-router:
+      rule: "(Host(`speleodb.com`) || Host(`www.speleodb.com`)) && PathPrefix(`/media/`)"
+      entryPoints:
+        - web-secure
+      middlewares:
+        - csrf
+      service: django-media
+      tls:
+        certResolver: letsencrypt
+
   middlewares:
     csrf:
       # https://doc.traefik.io/traefik/master/middlewares/http/headers/#hostsproxyheaders
       # https://docs.djangoproject.com/en/dev/ref/csrf/#ajax
       headers:
-        hostsProxyHeaders: ['X-CSRFToken']
+        hostsProxyHeaders: ["X-CSRFToken"]
 
   services:
     django:
@@ -67,6 +77,11 @@ http:
       loadBalancer:
         servers:
           - url: http://flower:5555
+
+    django-media:
+      loadBalancer:
+        servers:
+          - url: http://nginx:80
 
 providers:
   # https://doc.traefik.io/traefik/master/providers/file/
