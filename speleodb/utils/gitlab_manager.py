@@ -62,13 +62,18 @@ class _GitlabManager(metaclass=LazySingletonMetaClass):
         except gitlab.exceptions.GitlabHttpError:
             return None
 
-    def get_commit_history(self, project_id):
+    def get_commit_history(self, project_id, hide_dl_url=True):
         try:
             project = self.get_project(project_id)
             commits = project.commits.list(get_all=True, all=True)
-            return [json.loads(commit.to_json()) for commit in commits]
+            data = [json.loads(commit.to_json()) for commit in commits]
+            if hide_dl_url:
+                for commit in data:
+                    del commit["web_url"]
         except gitlab.exceptions.GitlabHttpError:
             return None
+
+        return data
 
 
 GitlabManager = _GitlabManager()
