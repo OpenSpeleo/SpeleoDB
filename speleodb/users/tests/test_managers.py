@@ -45,6 +45,8 @@ def test_createsuperuser_command():
         "createsuperuser",
         "--email",
         "henry@example.com",
+        "--name",
+        "Chuck Norris",
         interactive=False,
         stdout=out,
     )

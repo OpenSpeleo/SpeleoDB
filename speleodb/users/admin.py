@@ -1,3 +1,5 @@
+from allauth.account.admin import EmailAddressAdmin as _EmailAddressAdmin
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
@@ -47,3 +49,14 @@ class UserAdmin(auth_admin.UserAdmin):
             },
         ),
     )
+
+
+class EmailAddressAdmin(_EmailAddressAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields["user"].widget.attrs["style"] = "width: 20em;"
+        return form
+
+
+admin.site.unregister(EmailAddress)
+admin.site.register(EmailAddress, EmailAddressAdmin)
