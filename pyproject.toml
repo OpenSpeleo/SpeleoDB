@@ -175,3 +175,5 @@ line-ending = "auto"
 
 [tool.ruff.lint.isort]
 force-single-line = true
+
+[tool.pytest_env]

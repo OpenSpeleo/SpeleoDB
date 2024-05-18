@@ -4,6 +4,7 @@
 from functools import lru_cache
 
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from encrypted_model_fields.fields import EncryptedCharField
 
@@ -38,3 +39,10 @@ class Option(models.Model):
     @lru_cache(100)
     def get(cls, name):
         return cls.objects.get(name=name)
+
+    @classmethod
+    def get_or_empty(cls, name):
+        try:
+            return cls.get(name=name)
+        except ObjectDoesNotExist:
+            return ""

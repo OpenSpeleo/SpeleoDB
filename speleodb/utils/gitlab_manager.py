@@ -1,20 +1,22 @@
 import json
+import pathlib
 
 import git
 import gitlab
 import gitlab.exceptions
 from django.conf import settings
+from gitlab.v4.objects.projects import ProjectManager
 
 from speleodb.common.models import Option
-from speleodb.utils.metaclasses import LazySingletonMetaClass
+from speleodb.utils.metaclasses import SingletonMetaClass
 
 
-class _GitlabManager(metaclass=LazySingletonMetaClass):
+class _GitlabManager(metaclass=SingletonMetaClass):
     def __init__(self):
-        self._gitlab_instance = Option.objects.get(name="GITLAB_HOST_URL").value
-        self._gitlab_token = Option.objects.get(name="GITLAB_TOKEN").value
-        self._gitlab_group_id = Option.objects.get(name="GITLAB_GROUP_ID").value
-        self._gitlab_group_name = Option.objects.get(name="GITLAB_GROUP_NAME").value
+        self._gitlab_instance = Option.get_or_empty(name="GITLAB_HOST_URL").value
+        self._gitlab_token = Option.get_or_empty(name="GITLAB_TOKEN").value
+        self._gitlab_group_id = Option.get_or_empty(name="GITLAB_GROUP_ID").value
+        self._gitlab_group_name = Option.get_or_empty(name="GITLAB_GROUP_NAME").value
 
         self._gl = gitlab.Gitlab(
             f"https://{self._gitlab_instance}/", private_token=self._gitlab_token
@@ -25,10 +27,13 @@ class _GitlabManager(metaclass=LazySingletonMetaClass):
         except gitlab.exceptions.GitlabAuthenticationError:
             self._gl = None
 
-        if settings.DEBUG:
+        if settings.DEBUG and self._gl:
             self._gl.enable_debug()
 
-    def create_project(self, project_id):
+    def create_project(self, project_id) -> pathlib.Path:
+        if self._gl is None:
+            return None
+
         try:
             try:
                 _ = self._gl.projects.create(
@@ -56,20 +61,35 @@ class _GitlabManager(metaclass=LazySingletonMetaClass):
 
         return project_dir
 
-    def get_project(self, project_id):
+    def _get_project(self, project_id) -> ProjectManager:
+        if self._gl is None:
+            return None
+
         try:
             return self._gl.projects.get(f"{self._gitlab_group_name}/{project_id}")
         except gitlab.exceptions.GitlabHttpError:
+            # Communication Problem
             return None
 
     def get_commit_history(self, project_id, hide_dl_url=True):
+        if self._gl is None:
+            return None
+
         try:
-            project = self.get_project(project_id)
+            try:
+                project = self._get_project(project_id)
+            except gitlab.exceptions.GitlabGetError:
+                return "ERROR: Project does not exist in Gitlab."
+
+            if project is None:
+                return None
+
             commits = project.commits.list(get_all=True, all=True)
             data = [json.loads(commit.to_json()) for commit in commits]
             if hide_dl_url:
                 for commit in data:
                     del commit["web_url"]
+
         except gitlab.exceptions.GitlabHttpError:
             return None
 

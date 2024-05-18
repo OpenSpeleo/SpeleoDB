@@ -7,7 +7,6 @@ from django.urls import re_path
 from speleodb.surveys.api.v1.views import CreateProjectApiView
 from speleodb.surveys.api.v1.views import FileDownloadView
 from speleodb.surveys.api.v1.views import FileUploadView
-from speleodb.surveys.api.v1.views import GitHistoryView
 from speleodb.surveys.api.v1.views import ProjectAcquireApiView
 from speleodb.surveys.api.v1.views import ProjectApiView
 from speleodb.surveys.api.v1.views import ProjectListApiView
@@ -24,7 +23,6 @@ urlpatterns = [
     path("project/<uuid:id>/release/", ProjectReleaseApiView.as_view()),
     path("project/<uuid:id>/update/", FileUploadView.as_view()),
     path("project/<uuid:id>/download/", FileDownloadView.as_view()),
-    path("project/<uuid:id>/history/", GitHistoryView.as_view()),
     re_path(
         rf"project/(?P<id>{uuid_regex})/download/(?P<commit_sha1>[0-9a-fA-F]{{6,20}})/$",
         FileDownloadView.as_view(),
