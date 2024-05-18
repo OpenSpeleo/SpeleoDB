@@ -3,6 +3,7 @@
 
 from collections import OrderedDict
 
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
@@ -45,11 +46,15 @@ def wrap_response_with_status(func, request, *args, **kwargs):
             http_status = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except (NotAuthorizedError, PermissionDenied) as e:
+        if settings.DEBUG:
+            raise
         payload["data"] = {}
         payload["error"] = f"An error occured in the process: {e}"
         http_status = status.HTTP_403_FORBIDDEN
 
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
+        if settings.DEBUG:
+            raise
         payload["data"] = {}
         payload["error"] = f"An error occured in the process: {e}"
         http_status = status.HTTP_500_INTERNAL_SERVER_ERROR

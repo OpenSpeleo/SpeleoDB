@@ -55,10 +55,35 @@ class TestProjectInteraction(TestCase):
 
         assert response.status_code == status.HTTP_200_OK
 
-        assert ProjectSerializer(data=response.data["data"]).is_valid()
+        assert ProjectSerializer(data=response.data["data"]["project"]).is_valid()
         proj_data = ProjectSerializer(self.project, context={"user": self.user}).data
 
-        assert proj_data == response.data["data"]
+        assert proj_data == response.data["data"]["project"]
+
+        if isinstance(response.data["data"]["history"], (tuple, list)):
+            commit_keys = [
+                "author_email",
+                "author_name",
+                "authored_date",
+                "committed_date",
+                "committer_email",
+                "committer_name",
+                "created_at",
+                "extended_trailers",
+                "id",
+                "message",
+                "parent_ids",
+                "short_id",
+                "title",
+                "trailers",
+            ]
+            for commit_data in response.data["data"]["history"]:
+                assert all(key in commit_data for key in commit_keys), commit_data
+                assert commit_data["committer_email"] == "contact@speleodb.com"
+                assert commit_data["committer_name"] == "SpeleoDB"
+        else:
+            # error fetching project from gitlab. TODO
+            pass
 
     @parameterized.expand(
         [
