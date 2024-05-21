@@ -13,4 +13,14 @@ urlpatterns = [
         TemplateView.as_view(template_name="pages/changelog.html"),
         name="changelog",
     ),
+    path(
+        "terms_and_conditions/",
+        TemplateView.as_view(template_name="pages/terms_and_conditions.html"),
+        name="terms_and_conditions",
+    ),
+    path(
+        "privacy_policy/",
+        TemplateView.as_view(template_name="pages/privacy_policy.html"),
+        name="privacy_policy",
+    ),
 ]
