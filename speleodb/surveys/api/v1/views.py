@@ -17,7 +17,7 @@ from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import ResourceBusyError
 from speleodb.utils.gitlab_manager import GitlabManager
-from speleodb.utils.response import DownloadResponseFromFile
+from speleodb.utils.response import DownloadTMLResponseFromFile
 from speleodb.utils.view_cls import CustomAPIView
 
 
@@ -197,6 +197,6 @@ class FileDownloadView(CustomAPIView):
             # pull ToT
             pass
         project = self.get_object()  # noqa: F841
-        return DownloadResponseFromFile(
+        return DownloadTMLResponseFromFile(
             filepath="fixtures/test_simple.tml", attachment=False
         )
