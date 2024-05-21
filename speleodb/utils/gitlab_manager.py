@@ -11,8 +11,25 @@ from speleodb.common.models import Option
 from speleodb.utils.metaclasses import SingletonMetaClass
 
 
+from functools import wraps
+
+
+def check_initialized(func):
+    @wraps(func)
+    def _impl(self, *args, **kwargs):
+        if not self._is_initialized:
+            self._initialize()
+
+        return func(self, *args, **kwargs)
+
+    return _impl
+
+
 class _GitlabManager(metaclass=SingletonMetaClass):
     def __init__(self):
+        self._is_initialized = False
+
+    def _initialize(self):
         self._gitlab_instance = Option.get_or_empty(name="GITLAB_HOST_URL").value
         self._gitlab_token = Option.get_or_empty(name="GITLAB_TOKEN").value
         self._gitlab_group_id = Option.get_or_empty(name="GITLAB_GROUP_ID").value
@@ -30,6 +47,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
         if settings.DEBUG and self._gl:
             self._gl.enable_debug()
 
+    @check_initialized
     def create_project(self, project_id) -> pathlib.Path:
         if self._gl is None:
             return None
@@ -61,6 +79,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
 
         return project_dir
 
+    @check_initialized
     def _get_project(self, project_id) -> ProjectManager:
         if self._gl is None:
             return None
@@ -71,6 +90,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             # Communication Problem
             return None
 
+    @check_initialized
     def get_commit_history(self, project_id, hide_dl_url=True):
         if self._gl is None:
             return None
