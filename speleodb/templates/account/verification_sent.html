@@ -1,0 +1,25 @@
+{% extends "account/base.html" %}
+
+{% load i18n %}
+
+{% block head_title %}
+  Verify Your E-mail Address
+{% endblock head_title %}
+
+{% block inner %}
+<div class="pt-16 pb-16">
+  <div class="grid md:grid-cols-12 gap-6 group">
+
+    <div class="md:col-span-4"></div>
+
+    <div class="md:col-span-4 text-lg font-inter">
+      <h1 class="text-center pb-8">Verify Your E-mail Address</h1>
+      <p>
+        We have sent an e-mail to you for verification. Follow the link provided to finalize the signup process.
+        <hr class="mb-4 mt-4">
+        Please contact us at <a class="ulink" href="mailto:contact@speleodb.com">contact@speleodb.com</a> if you do not receive it within a few minutes.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock inner %}
