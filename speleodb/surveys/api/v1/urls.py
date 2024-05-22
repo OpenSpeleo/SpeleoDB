@@ -24,7 +24,7 @@ urlpatterns = [
     path("project/<uuid:id>/update/", FileUploadView.as_view()),
     path("project/<uuid:id>/download/", FileDownloadView.as_view()),
     re_path(
-        rf"project/(?P<id>{uuid_regex})/download/(?P<commit_sha1>[0-9a-fA-F]{{6,20}})/$",
+        rf"project/(?P<id>{uuid_regex})/download/(?P<commit_sha1>[0-9a-fA-F]{{6,40}})/$",
         FileDownloadView.as_view(),
     ),
     path("projects/", ProjectListApiView.as_view()),
