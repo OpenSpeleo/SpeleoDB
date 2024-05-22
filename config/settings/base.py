@@ -39,7 +39,10 @@ USE_TZ = True
 # ------------------------------------------------------------------------------
 
 # Space where projects are being saved
-GIT_PROJECTS_DIR = env("DJANGO_GIT_PROJECT_DIR", default=BASE_DIR / "git_projects")
+DJANGO_GIT_PROJECTS_DIR = env(
+    "DJANGO_GIT_PROJECT_DIR", default=BASE_DIR / ".workdir/git_projects"
+)
+DJANGO_TMP_DL_DIR = env("DJANGO_TMP_DL_DIR", default=BASE_DIR / ".workdir/tmp_dl_dir")
 
 # DATABASES
 # ------------------------------------------------------------------------------
