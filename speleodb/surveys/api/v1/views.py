@@ -14,9 +14,7 @@ from speleodb.surveys.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.api.v1.serializers import UploadSerializer
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
-from speleodb.utils.exceptions import CommitIDNotFound
 from speleodb.utils.exceptions import NotAuthorizedError
-from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.exceptions import ResourceBusyError
 from speleodb.utils.gitlab_manager import GitlabManager
 from speleodb.utils.response import DownloadTMLResponseFromFile
@@ -176,13 +174,13 @@ class FileUploadView(CustomAPIView):
             }
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
-        commit_sha1 = project.process_uploaded_file(
+        commit_id = project.process_uploaded_file(
             file=file_uploaded, user=request.user, commit_msg=commit_message
         )
 
         return {
             "content_type": content_type,
-            "commit_sha1": commit_sha1,
+            "commit_sha1": commit_id,
             "project": ProjectSerializer(project, context={"user": request.user}).data,
         }
 
@@ -195,15 +193,10 @@ class FileDownloadView(CustomAPIView):
     lookup_field = "id"
 
     def get(self, request, commit_sha1=None, *args, **kwargs):
-        project = self.get_object()
-        try:
-            artifact = project.generate_tml_file(commit_sha1=commit_sha1)
-        except ProjectNotFound as e:
-            data = {"error": str(e)}
-            return Response(data, status=status.HTTP_404_NOT_FOUND)
-
-        # if artifact is None:
-        #     data = {"error": (f"Project")}
-        #     return Response(data, status=status.HTTP_404_NOT_FOUND)
-
-        return DownloadTMLResponseFromFile(filepath=artifact, attachment=False)
+        if commit_sha1 is None:
+            # pull ToT
+            pass
+        project = self.get_object()  # noqa: F841
+        return DownloadTMLResponseFromFile(
+            filepath="fixtures/test_simple.tml", attachment=False
+        )

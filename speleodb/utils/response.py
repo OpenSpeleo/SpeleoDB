@@ -12,7 +12,7 @@ class DownloadTMLResponseFromFile(FileResponse):
     def __init__(self, filepath, attachment=True):
         filepath = Path(filepath)
         super().__init__(
-            filepath.open(mode="rb"),
+            open_file=filepath.open(mode="rb"),
             as_attachment=attachment,
             filename=filepath.name,
             content_type="application/zip",
