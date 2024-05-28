@@ -10,7 +10,6 @@ from django.http import HttpRequest
 from django.http import HttpResponseRedirect
 from django.test import RequestFactory
 from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
 
 from speleodb.users.forms import UserAdminChangeForm
 from speleodb.users.models import User
@@ -69,7 +68,7 @@ class TestUserUpdateView:
         view.form_valid(form)
 
         messages_sent = [m.message for m in messages.get_messages(request)]
-        assert messages_sent == [_("Information successfully updated")]
+        assert messages_sent == ["Information successfully updated"]
 
 
 class TestUserRedirectView:

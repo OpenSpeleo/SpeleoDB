@@ -1,5 +1,6 @@
 import json
 import pathlib
+from functools import wraps
 
 import git
 import gitlab
@@ -8,10 +9,10 @@ from django.conf import settings
 from gitlab.v4.objects.projects import ProjectManager
 
 from speleodb.common.models import Option
+from speleodb.users.models import User
 from speleodb.utils.metaclasses import SingletonMetaClass
 
-
-from functools import wraps
+GIT_COMMITTER = git.Actor("SpeleoDB", "contact@speleodb.com")
 
 
 def check_initialized(func):
@@ -23,6 +24,78 @@ def check_initialized(func):
         return func(self, *args, **kwargs)
 
     return _impl
+
+
+class GitRepo:
+    def __init__(self, git_repo) -> None:
+        if isinstance(git_repo, pathlib.Path):
+            git_repo = git.Repo(git_repo)
+        self._repo = git_repo
+
+    def __fspath__(self):
+        return self._repo.working_tree_dir
+
+    @property
+    def repo(self):
+        return self._repo
+
+    @property
+    def path(self):
+        return pathlib.Path(self)
+
+    @property
+    def commit_sha1(self):
+        return self._repo.head.commit.hexsha
+
+    def pull(self):
+        origin = self._repo.remotes.origin
+        origin.pull()
+
+    def checkout_branch_or_commit(
+        self, commit_sha1: str | None = None, branch_name: str | None = None
+    ):
+        if commit_sha1 and branch_name:
+            raise ValueError(
+                f"`{commit_sha1=}` and `{branch_name=}` can not be set simultaneously."
+            )
+
+        if commit_sha1 is None and branch_name is None:
+            raise ValueError(
+                f"`{commit_sha1=}` and `{branch_name=}` can not be both set to `None`."
+            )
+
+        try:
+            self._repo.git.checkout(branch_name or commit_sha1)
+        except git.exc.GitCommandError:
+            if branch_name:
+                self._repo.git.checkout("-b", branch_name)
+            else:
+                raise
+
+        if branch_name:
+            # Ensure we are at the top of the branch
+            self.pull()
+
+    def checkout_branch(self, branch_name: str):
+        raise NotImplementedError
+
+    def commit_and_push_project(self, message: str, user: User) -> str:
+        # Add every file pending
+        self._repo.index.add("*")
+
+        # If there are modified files:
+        if self._repo.is_dirty():
+            author = git.Actor(user.name, user.email)
+
+            commit = self._repo.index.commit(
+                message, author=author, committer=GIT_COMMITTER
+            )
+
+            self._repo.git.push("--set-upstream", "origin", self._repo.active_branch)
+
+            return commit.hexsha
+
+        return None
 
 
 class _GitlabManager(metaclass=SingletonMetaClass):
@@ -48,36 +121,38 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             self._gl.enable_debug()
 
     @check_initialized
-    def create_project(self, project_id) -> pathlib.Path:
+    def create_or_clone_project(self, project_id) -> pathlib.Path:
         if self._gl is None:
             return None
 
-        try:
-            try:
-                _ = self._gl.projects.create(
-                    {"name": str(project_id), "namespace_id": self._gitlab_group_id}
-                )
-            # except gitlab.exceptions.InvalidGitRepositoryError:
-            except gitlab.exceptions.GitlabCreateError as e:
-                # The repository already exists in gitlab - skip in debug
-                if not settings.DEBUG or "has already been taken" not in str(e):
-                    raise
+        project_dir = settings.DJANGO_GIT_PROJECTS_DIR / str(project_id)
+        git_url = f"https://oauth2:{self._gitlab_token}@{self._gitlab_instance}/{self._gitlab_group_name}/{project_id}.git"
 
-            project_dir = settings.GIT_PROJECTS_DIR / str(project_id)
+        try:
+            # try to create the repository in Gitlab
+            _ = self._gl.projects.create(
+                {"name": str(project_id), "namespace_id": self._gitlab_group_id}
+            )
             project_dir.mkdir(exist_ok=True, parents=True)
 
             git_repo = git.Repo.init(project_dir)
-
-            origin = git_repo.create_remote(
-                "origin",
-                url=f"https://oauth2:{self._gitlab_token}@{self._gitlab_instance}/{self._gitlab_group_name}/{project_id}.git",
-            )
+            origin = git_repo.create_remote("origin", url=git_url)
             assert origin.exists()
 
-        except gitlab.exceptions.GitlabCreateError:
-            return None
+            # Create an initial empty commit
+            git_repo.index.commit(
+                "Initial Empty", author=GIT_COMMITTER, committer=GIT_COMMITTER
+            )
+            git_repo.git.push("--set-upstream", "origin", "master")
 
-        return project_dir
+        except gitlab.exceptions.GitlabCreateError:
+            # The repository already exists in Gitlab - git clone instead
+
+            # Ensure the parent directory exists
+            project_dir.parent.mkdir(exist_ok=True, parents=True)
+            git_repo = git.Repo.clone_from(git_url, project_dir)
+
+        return GitRepo(git_repo=git_repo)
 
     @check_initialized
     def _get_project(self, project_id) -> ProjectManager:

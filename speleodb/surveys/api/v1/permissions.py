@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from rest_framework import permissions
-from speleodb.surveys.model_files.permission import Permission
-from speleodb.surveys.models import Project
-
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import permissions
+
+from speleodb.surveys.model_files.permission import Permission
 
 
 class BaseProjectAccessLevel(permissions.BasePermission):

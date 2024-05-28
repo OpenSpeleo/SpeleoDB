@@ -1,7 +1,5 @@
 """Module for all Form Tests."""
 
-from django.utils.translation import gettext_lazy as _
-
 from speleodb.users.forms import UserAdminCreationForm
 from speleodb.users.models import User
 
@@ -32,4 +30,4 @@ class TestUserAdminCreationForm:
         assert not form.is_valid()
         assert len(form.errors) == 1
         assert "email" in form.errors
-        assert form.errors["email"][0] == _("This email has already been taken.")
+        assert form.errors["email"][0] == "This email has already been taken."

@@ -20,6 +20,7 @@ if READ_DOT_ENV_FILE:
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = env.bool("DJANGO_DEBUG", False)
+
 # Local time zone. Choices are
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # though not all of them may be available with every OS.
@@ -27,27 +28,21 @@ DEBUG = env.bool("DJANGO_DEBUG", False)
 TIME_ZONE = "US/Eastern"
 # https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 LANGUAGE_CODE = "en-us"
-# https://docs.djangoproject.com/en/dev/ref/settings/#languages
-# from django.utils.translation import gettext_lazy as _
-# LANGUAGES = [
-#     ('en', _('English')),
-#     ('fr-fr', _('French')),
-#     ('pt-br', _('Portuguese')),
-# ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 SITE_ID = 1
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-i18n
 USE_I18N = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-tz
 USE_TZ = True
-# https://docs.djangoproject.com/en/dev/ref/settings/#locale-paths
-LOCALE_PATHS = [str(BASE_DIR / "locale")]
 
 # Git Project Saving
 # ------------------------------------------------------------------------------
 
 # Space where projects are being saved
-GIT_PROJECTS_DIR = env("DJANGO_GIT_PROJECT_DIR", default=BASE_DIR / "git_projects")
+DJANGO_GIT_PROJECTS_DIR = env(
+    "DJANGO_GIT_PROJECT_DIR", default=BASE_DIR / ".workdir/git_projects"
+)
+DJANGO_TMP_DL_DIR = env("DJANGO_TMP_DL_DIR", default=BASE_DIR / ".workdir/tmp_dl_dir")
 
 # DATABASES
 # ------------------------------------------------------------------------------
@@ -95,6 +90,7 @@ THIRD_PARTY_APPS = [
     "crispy_bootstrap5",
     "allauth",
     "allauth.account",
+    "allauth.headless",
     "django_celery_beat",
     "encrypted_model_fields",
     "rest_framework",
@@ -104,10 +100,14 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    # Object Apps
     "speleodb.common",
     "speleodb.surveys",
     "speleodb.users",
-    # Your stuff: custom apps go here
+    # HTML Apps
+    "frontend_errors",
+    "frontend_private",
+    "frontend_public",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -126,8 +126,21 @@ AUTHENTICATION_BACKENDS = [
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
 AUTH_USER_MODEL = "users.User"
+
+# https://docs.allauth.org/en/latest/headless/installation.html
+HEADLESS_ONLY = True
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "/account/confirm-email/{key}",
+    "account_reset_password": "/account/password/reset",
+    "account_reset_password_from_key": "/account/password/reset/{key}",
+    "account_signup": "/signup",
+}
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-redirect-url
-LOGIN_REDIRECT_URL = "users:redirect"
+LOGIN_REDIRECT_URL = "private:home"
+# https://docs.djangoproject.com/en/dev/ref/settings/#logout-redirect-url
+LOGOUT_REDIRECT_URL = "home"
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-url
 LOGIN_URL = "account_login"
 
@@ -164,7 +177,6 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -330,6 +342,10 @@ ACCOUNT_AUTHENTICATION_METHOD = "email"
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_EMAIL_REQUIRED = True
 # https://docs.allauth.org/en/latest/account/configuration.html
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+# https://docs.allauth.org/en/latest/account/configuration.html
+ACCOUNT_LOGOUT_ON_GET = True
+# https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_USERNAME_REQUIRED = False
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
@@ -338,7 +354,8 @@ ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_ADAPTER = "speleodb.users.adapters.AccountAdapter"
 # https://docs.allauth.org/en/latest/account/forms.html
-ACCOUNT_FORMS = {"signup": "speleodb.users.forms.UserSignupForm"}
+# ACCOUNT_FORMS = {"signup": "speleodb.users.forms.SignupForm"}
+ACCOUNT_SIGNUP_FORM_CLASS = "speleodb.users.forms.SignupForm"
 # django-compressor
 # ------------------------------------------------------------------------------
 # https://django-compressor.readthedocs.io/en/latest/quickstart/#installation

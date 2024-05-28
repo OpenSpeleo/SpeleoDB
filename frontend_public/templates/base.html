@@ -1,0 +1,251 @@
+{% load static i18n compress%}
+<!DOCTYPE html>
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}" class="scroll-smooth">
+
+<head>
+    <meta charset="utf-8">
+    <title>SpeleoDB - {% block title %}Home{% endblock title %}</title>
+
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="SpeleoDB Collaboration and Survey Data Exchange Server" />
+    <meta name="author" content="Jonathan Dekhtiar" />
+
+    {% compress css %}
+    <link rel="stylesheet" href="{% static 'css/vendors/aos.css' %}">
+
+    {% if debug %}
+    <link rel="stylesheet" href="{% static 'css/vendors/swiper-bundle.min.css' %}" />
+    {% else %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8.4.7/swiper-bundle.min.css">
+    {% endif %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
+    <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
+    {% endcompress %}
+
+</head>
+
+<body class="font-inter antialiased bg-slate-900 text-slate-100 tracking-tight">
+
+    <!-- Page wrapper -->
+    <div class="flex flex-col min-h-screen overflow-hidden supports-[overflow:clip]:overflow-clip">
+
+        <!-- Site header -->
+        <header class="absolute w-full z-30">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6">
+                <div class="flex items-center justify-between h-16 md:h-20">
+
+                    <!-- Site branding -->
+                    <div class="flex-1">
+                        <!-- Logo -->
+                        <a class="inline-flex" href="{% url 'home' %}" aria-label="Cruip">
+                            <img class="max-w-none" src="{% static 'images/logo.svg' %}" style="height:42px" alt="SpeleoDB">
+                        </a>
+                    </div>
+
+                    <!-- Desktop navigation -->
+                    <nav class="hidden md:flex md:grow">
+
+                        <!-- Desktop menu links -->
+                        <ul class="flex grow justify-center flex-wrap items-center">
+                            <li>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'about' %}">About</a>
+                            </li>
+                            <li>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'changelog' %}">Changelog</a>
+                            </li>
+                            {% if request.user.is_authenticated %}
+                                <li>
+                                    <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'private:home' %}">Dashboard</a>
+                                </li>
+                                <li>
+                                    <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'private:account' %}">My Profile</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+
+                    </nav>
+
+                    <!-- Desktop sign in links -->
+                    <ul class="flex-1 flex justify-end items-center">
+                        {% if request.user.is_authenticated %}
+                            <li class="ml-6">
+                                <a class="btn-sm text-slate-300 hover:text-white transition duration-150 ease-in-out w-full group [background:linear-gradient(theme(colors.slate.900),_theme(colors.slate.900))_padding-box,_conic-gradient(theme(colors.slate.400),_theme(colors.slate.700)_25%,_theme(colors.slate.700)_75%,_theme(colors.slate.400)_100%)_border-box] relative before:absolute before:inset-0 before:bg-slate-800/30 before:rounded-full before:pointer-events-none">
+                                    <form method="post" action="{% url 'account_logout' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="relative inline-flex items-center">
+                                            Sign Out
+                                            <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;
+                                        </button>
+                                    </form>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white whitespace-nowrap transition duration-150 ease-in-out" href="{% url 'account_login' %}">Sign In</a>
+                            </li>
+                            {% if ACCOUNT_ALLOW_REGISTRATION %}
+                                <li class="ml-6">
+                                    <a class="btn-sm text-slate-300 hover:text-white transition duration-150 ease-in-out w-full group [background:linear-gradient(theme(colors.slate.900),_theme(colors.slate.900))_padding-box,_conic-gradient(theme(colors.slate.400),_theme(colors.slate.700)_25%,_theme(colors.slate.700)_75%,_theme(colors.slate.400)_100%)_border-box] relative before:absolute before:inset-0 before:bg-slate-800/30 before:rounded-full before:pointer-events-none" href="{% url 'account_signup' %}">
+                                        <span class="relative inline-flex items-center">
+                                            Sign Up
+                                            <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
+                                        </span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endif %}
+                    </ul>
+
+                    <!-- Mobile menu -->
+                    <div class="md:hidden flex items-center ml-4" x-data="{ expanded: false }">
+
+                        <!-- Hamburger button -->
+                        <button class="hamburger" :class="{ 'active': expanded }" @click.stop="expanded = !expanded" aria-controls="mobile-nav" :aria-expanded="expanded">
+                            <span class="sr-only">Menu</span>
+                            <svg class="w-5 h-5 fill-current text-slate-300 hover:text-white transition duration-150 ease-in-out" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <rect y="2" width="20" height="2" rx="1" />
+                                <rect y="9" width="20" height="2" rx="1" />
+                                <rect y="16" width="20" height="2" rx="1" />
+                            </svg>
+                        </button>
+
+                        <!-- Mobile navigation -->
+                        <nav id="mobile-nav" class="absolute top-full z-20 left-0 w-full px-4 sm:px-6 overflow-hidden transition-all duration-300 ease-in-out" x-ref="mobileNav" :style="expanded ? 'max-height: ' + $refs.mobileNav.scrollHeight + 'px; opacity: 1' : 'max-height: 0; opacity: .8'" @click.outside="expanded = false" @keydown.escape.window="expanded = false" x-cloak>
+                            <ul class="border border-transparent [background:linear-gradient(theme(colors.slate.900),_theme(colors.slate.900))_padding-box,_conic-gradient(theme(colors.slate.400),_theme(colors.slate.700)_25%,_theme(colors.slate.700)_75%,_theme(colors.slate.400)_100%)_border-box] rounded-lg px-4 py-1.5">
+                                <li>
+                                    <a class="flex font-medium text-sm text-slate-300 hover:text-white py-1.5" href="about.html">About</a>
+                                </li>
+                                <li>
+                                    <a class="flex font-medium text-sm text-slate-300 hover:text-white py-1.5" href="integrations.html">Integrations</a>
+                                </li>
+                                <li>
+                                    <a class="flex font-medium text-sm text-slate-300 hover:text-white py-1.5" href="pricing.html">Pricing</a>
+                                </li>
+                                <li>
+                                    <a class="flex font-medium text-sm text-slate-300 hover:text-white py-1.5" href="customers.html">Customers</a>
+                                </li>
+                                <li>
+                                    <a class="flex font-medium text-sm text-slate-300 hover:text-white py-1.5" href="changelog.html">Changelog</a>
+                                </li>
+                            </ul>
+                        </nav>
+
+                    </div>
+
+                </div>
+            </div>
+        </header>
+
+        <!-- Page content -->
+        <main class="grow">
+            {% block content %}{% endblock content %}
+        </main>
+
+        <!-- Site footer -->
+        <footer>
+            <div class="max-w-6xl mx-auto px-4 sm:px-6">
+
+                <!-- Blocks -->
+                <div class="grid sm:grid-cols-12 gap-8 py-8 md:py-12">
+
+                    <!-- 1st block -->
+                    <div class="sm:col-span-12 lg:col-span-4 order-1 lg:order-none">
+                        <div class="h-full flex flex-col sm:flex-row lg:flex-col justify-between">
+                            <div class="mb-4 sm:mb-0">
+                                <div class="mb-4">
+                                    <!-- Logo -->
+                                    <a class="inline-flex" href="index.html" aria-label="SpeleoDB">
+                                        <img src="{% static 'images/logo.svg' %}" style="height:65px" alt="SpeleoDB">
+                                    </a>
+                                </div>
+                                <div class="text-sm text-slate-300">&copy; www.speleodb.com <span class="text-slate-500">-</span> All rights reserved.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Blocks -->
+                    <div class="grid sm:grid-cols-12 md:col-span-8 text-center">
+
+                        <!-- #1 Sub block -->
+                        <div class="sm:col-span-6 md:col-span-4">
+                            <h6 class="text-sm text-slate-50 font-medium mb-2">SpeleoDB</h6>
+                            <ul class="text-sm space-y-2">
+                                <li>
+                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" href="{% url 'about' %}">About</a>
+                                </li>
+                                <li>
+                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" href="{% url 'changelog' %}">Changelog</a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- 3rd block -->
+                        <div class="sm:col-span-6 md:col-span-4">
+                            <h6 class="text-sm text-slate-50 font-medium mb-2">Resources</h6>
+                            <ul class="text-sm space-y-2">
+                                <li>
+                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" target="_blank" href="https://github.com/SpeleoDB/SpeleoDB">Contribute to SpeleoDB</a>
+                                </li>
+                                <li>
+                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" target="_blank" href="https://github.com/SpeleoDB/SpeleoDB/issues">Report a vulnerability</a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- 4th block -->
+                        <div class="sm:col-span-6 md:col-span-4">
+                            <h6 class="text-sm text-slate-50 font-medium mb-2">Legals</h6>
+                            <ul class="text-sm space-y-2">
+                                <li>
+                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" href="{% url 'terms_and_conditions' %}">Terms & Conditions</a>
+                                </li>
+                                <li>
+                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" href="{% url 'privacy_policy' %}">Privacy policy</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </footer>
+
+    </div>
+
+    {% compress js %}
+
+    {% if debug %}
+    <script src="{% static 'cdn/jquery-3.7.1.js' %}"></script>
+    {% else %}
+    <script
+        src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous">
+    </script>
+    {% endif %}
+
+    <script src="{% static 'js/vendors/alpinejs.min.js' %}" defer></script>
+    <script src="{% static 'js/vendors/aos.js' %}"></script>
+    {% if debug %}
+    <script src="{% static 'js/vendors/swiper-bundle.min.js' %}"></script>
+    {% else %}
+    <script src="https://cdn.jsdelivr.net/npm/swiper@8.4.7/swiper-bundle.min.js"></script>
+    {% endif %}
+    <script src="{% static 'js/main.js' %}"></script>
+
+    {% block extra_js %}{% endblock extra_js %}
+
+    {% endcompress %}
+
+</body>
+
+</html>

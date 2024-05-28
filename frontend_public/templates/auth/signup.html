@@ -1,0 +1,220 @@
+{% extends "auth_base.html" %}
+{% load static i18n compress%}
+
+{% block head_title %}
+  Signup
+{% endblock head_title %}
+
+{% block page_headline %}
+  Create a new account
+{% endblock page_headline %}
+
+{% block user_form %}
+
+<div class="error_msg text-sm text-slate-300 font-medium " id="error_div"></div>
+<div class="success_msg text-sm text-slate-300 font-medium " id="success_div"></div>
+
+<form method="post" id="signup_form">
+  {% csrf_token %}
+  <div class="space-y-4">
+
+      <div>
+          <label class="block text-sm text-slate-300 font-medium mb-1" for="name">Full Name <span class="text-rose-500">*</span></label>
+          <input id="name" name="name" class="form-input w-full" type="text" placeholder="Sheck Exley" required />
+      </div>
+
+      <div>
+          <label class="block text-sm text-slate-300 font-medium mb-1" for="email">Email <span class="text-rose-500">*</span></label>
+          <input id="email" name="email" class="form-input w-full" type="email" placeholder="sheck@exley.com" required />
+      </div>
+
+      <div>
+          <label class="block text-sm text-slate-300 font-medium mb-1" for="password">Password <span class="text-rose-500">*</span></label>
+          <input id="password" name="password" class="form-input w-full" placeholder="Password" type="password" autocomplete="on" required />
+          <div class="form-text md:col-span-12 text-sm text-slate-300 font-medium form_helptext pt-4">
+            <u>Password Rules:</u>
+            <ul>
+              <li>[*] It can't be similar to your other information.</li>
+              <li>[*] It must contain at least 8 characters.</li>
+              <li>[*] It can't be a commonly used password.</li>
+              <li>[*] It can't be entirely numeric.</li>
+            </ul>
+          </div>
+      </div>
+
+      <div>
+          <label class="block text-sm text-slate-300 font-medium mb-1" for="password2">Password (again)<span class="text-rose-500">*</span></label>
+          <input id="password2" name="password2" class="form-input w-full" placeholder="Password (again)" type="password" autocomplete="on" required />
+      </div>
+
+  </div>
+  <div class="mt-6">
+      <button class="btn text-sm text-white bg-purple-500 hover:bg-purple-600 w-full shadow-sm group" type="submit" id="btn_submit">
+          Sign Up <span class="tracking-normal text-purple-300 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
+      </button>
+  </div>
+</form>
+
+<div class="text-center mt-4">
+  <div class="text-sm text-slate-400">
+      Already have an account? <a class="font-medium text-purple-500 hover:text-purple-400 transition duration-150 ease-in-out" href="{% url 'account_login' %}">Sign in</a>
+  </div>
+</div>
+
+{% endblock user_form %}
+
+
+{% block extra_js %}
+<script>
+    $(document).ready(function () {
+
+        function validateEmail(email) {
+            var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return re.test(email);
+        }
+
+        $('#btn_submit').click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+            let signup_form = document.getElementById('signup_form');
+            var formData = new FormData(signup_form);
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            $.ajax({
+                url: "{% url 'headless:browser:account:signup' %}",
+                method: "POST",
+                data: JSON.stringify(Object.fromEntries(formData)),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+
+                    if ($("#name").val() == ""){
+                        $("#error_div").text("The `name` field is empty !");
+                        $("#error_div").show();
+                        return false;
+                    }
+
+                    if (!validateEmail($("#email").val()) || $("#email").val() == "") {
+                        $("#error_div").text("The Email Address is not valid !");
+                        $("#error_div").show();
+                        return false;
+                    }
+
+                    if ($("#password").val() == "" || $("#password2").val() == ""){
+                        $("#error_div").text("One of the `password` fields is empty !");
+                        $("#error_div").show();
+                        return false;
+                    }
+
+                    if ($("#password").val() != $("#password2").val()){
+                        $("#error_div").text("Password fields do not match !");
+                        $("#error_div").show();
+                        return false;
+                    }
+
+                    return true;
+
+                },
+                success: function (data) {
+                    console.log(data);
+                    $("#success_div").text("Success you can now Log In!");
+                    $("#success_div").show();
+                },
+                error: function (data) {
+                  if (data.status == 401) {
+                    $("#success_div").text("Success! Please check your email !");
+                    $("#success_div").show();
+                  }
+                  else {
+                    $("#error_div").text(data.responseJSON["errors"][0]["message"]);
+                    $("#error_div").show();
+                  }
+                }
+            });
+            return false; // prevent default
+        });
+
+    });
+</script>
+{% endblock extra_js %}
+
+
+
+{% comment %} {% extends "account/base.html" %}
+
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}
+  Signup
+{% endblock head_title %}
+
+{% block inner %}
+<div class="pt-16 pb-16">
+
+  <div class="grid md:grid-cols-12 gap-6 group">
+
+    <div class="md:col-span-4"></div>
+
+    <div class="md:col-span-4 text-lg font-inter">
+
+      <p class="font-medium text-slate-50 text-center pb-8">
+        <b>Already have an account? Then please <a href="{{ login_url }}" class="ulink">sign in</a>.</b>
+      </p>
+
+      <form class="signup" id="signup_form" method="post" action="{% url 'account_signup' %}">
+
+        {% csrf_token %}
+
+        <div class="grid md:grid-cols-12 gap-6 group">
+
+          <div class="pb-8" style="display: contents;" id="div_id_email">
+            <label for="id_email" class="md:col-span-4 form-label requiredField"> Email <span class="asteriskField">*</span></label>
+            <input type="email" name="email" placeholder="Email address" autocomplete="email" maxlength="320" class="md:col-span-8 textinput form-control" required="" id="id_email">
+          </div>
+
+          <div class="pb-8" style="display: contents;" id="div_id_name">
+            <label for="id_name" class="md:col-span-4 form-label requiredField"> Full Name <span class="asteriskField">*</span></label>
+            <input type="text" name="name" placeholder="Full Name" maxlength="255" minlength="5" class="md:col-span-8 textinput form-control" required="" id="id_name">
+          </div>
+
+          <div class="pb-8" style="display: contents;" id="div_id_password">
+            <label for="id_password" class="md:col-span-4 form-label requiredField"> Password <span class="asteriskField">*</span></label>
+            <input type="password" name="password" placeholder="Password" autocomplete="new-password" class="md:col-span-8 passwordinput form-control" required="" id="id_password">
+            <div id="id_password_helptext" class="form-text md:col-span-12">
+              <ul>
+                <li>Your password can't be too similar to your other personal information.</li>
+                <li>Your password must contain at least 8 characters.</li>
+                <li>Your password can't be a commonly used password.</li>
+                <li>Your password can't be entirely numeric.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="pb-8" style="display: contents;" id="div_id_password2">
+            <label for="id_password2" class="md:col-span-4 form-label requiredField"> Password (again) <span class="asteriskField">*</span></label>
+            <input type="password" name="password2" placeholder="Password (again)" autocomplete="new-password" class="md:col-span-8 passwordinput form-control" required="" id="id_password2">
+          </div>
+
+        </div>
+
+        <button class="mt-12 btn-sm text-slate-300 hover:text-white transition duration-150 ease-in-out w-full group [background:linear-gradient(theme(colors.slate.900),_theme(colors.slate.900))_padding-box,_conic-gradient(theme(colors.slate.400),_theme(colors.slate.700)_25%,_theme(colors.slate.700)_75%,_theme(colors.slate.400)_100%)_border-box] relative before:absolute before:inset-0 before:bg-slate-800/30 before:rounded-full before:pointer-events-none" type="submit">
+          <span class="relative inline-flex items-center">
+              Sign Up
+              <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
+          </span>
+        </button>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock inner %}
+
+ {% endcomment %}
+
+
+
+
