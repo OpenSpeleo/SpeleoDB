@@ -6,7 +6,7 @@ urlpatterns = [
     path(
         "",
         TemplateView.as_view(template_name="pages/dashboard.html"),
-        name="dashboard",
+        name="home",
     ),
     path(
         "projects/",

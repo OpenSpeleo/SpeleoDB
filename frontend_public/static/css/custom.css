@@ -1,15 +1,37 @@
 .ariane_link {
-    color:#1a1818;
-    /* text-shadow: 0px 0px 3px #ffffff; FF3.5+, Opera 9+, Saf1+, Chrome, IE10 */
-    text-shadow: -1px -1px 0 #ffffff, 1px -1px 0 #ffffff, -1px 1px 0 #ffffff, 1px 1px 0 #ffffff;
-    text-decoration: underline;
+  color: #1a1818;
+  /* text-shadow: 0px 0px 3px #ffffff; FF3.5+, Opera 9+, Saf1+, Chrome, IE10 */
+  text-shadow: -1px -1px 0 #ffffff, 1px -1px 0 #ffffff, -1px 1px 0 #ffffff, 1px 1px 0 #ffffff;
+  text-decoration: underline;
 }
 
 .ulink {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 .textinput,
 .passwordinput {
   color: #424242;
+}
+
+.error_msg {
+  border: 2px solid #c11b1b;
+}
+
+.success_msg {
+  border: 2px solid #1bc131;
+}
+
+.error_msg,
+.success_msg {
+  border-radius: 15px;
+  width: 100%;
+  margin: 20px auto;
+  padding: 10px;
+  text-align: center;
+  display: none;
+}
+
+.form_helptext {
+  color: rgb(203 213 225 / 79%);
 }

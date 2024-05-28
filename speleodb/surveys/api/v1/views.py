@@ -14,7 +14,6 @@ from speleodb.surveys.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.api.v1.serializers import UploadSerializer
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
-from speleodb.utils.exceptions import CommitIDNotFound
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.exceptions import ResourceBusyError

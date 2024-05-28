@@ -6,10 +6,14 @@ from drf_spectacular.views import SpectacularSwaggerView
 from speleodb.users.api.v1.views import ObtainAuthToken
 
 urlpatterns = [
-    # User management
-    path("users/", include("speleodb.users.urls", namespace="users")),
-    path("accounts/", include("allauth.urls")),
+    # Even when using headless, the third-party provider endpoints are stil
+    # needed for handling e.g. the OAuth handshake. The account views
+    # can be disabled using `HEADLESS_ONLY = True`.
+    path("allauth/", include("allauth.urls")),
+    # Include the API endpoints:
+    path("_allauth/", include("allauth.headless.urls")),
 ]
+
 
 # API URLS
 urlpatterns += [

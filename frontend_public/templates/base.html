@@ -16,7 +16,12 @@
 
     {% compress css %}
     <link rel="stylesheet" href="{% static 'css/vendors/aos.css' %}">
+
+    {% if debug %}
     <link rel="stylesheet" href="{% static 'css/vendors/swiper-bundle.min.css' %}" />
+    {% else %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8.4.7/swiper-bundle.min.css">
+    {% endif %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
 
@@ -59,7 +64,7 @@
                             </li>
                             {% if request.user.is_authenticated %}
                                 <li>
-                                    <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'private:dashboard' %}">Dashboard</a>
+                                    <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'private:home' %}">Dashboard</a>
                                 </li>
                                 <li>
                                     <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'private:account' %}">My Profile</a>
@@ -142,7 +147,7 @@
 
         <!-- Page content -->
         <main class="grow">
-            {% block content %}{% endblock %}
+            {% block content %}{% endblock content %}
         </main>
 
         <!-- Site footer -->
@@ -217,10 +222,28 @@
     </div>
 
     {% compress js %}
+
+    {% if debug %}
+    <script src="{% static 'cdn/jquery-3.7.1.js' %}"></script>
+    {% else %}
+    <script
+        src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous">
+    </script>
+    {% endif %}
+
     <script src="{% static 'js/vendors/alpinejs.min.js' %}" defer></script>
     <script src="{% static 'js/vendors/aos.js' %}"></script>
+    {% if debug %}
     <script src="{% static 'js/vendors/swiper-bundle.min.js' %}"></script>
+    {% else %}
+    <script src="https://cdn.jsdelivr.net/npm/swiper@8.4.7/swiper-bundle.min.js"></script>
+    {% endif %}
     <script src="{% static 'js/main.js' %}"></script>
+
+    {% block extra_js %}{% endblock extra_js %}
+
     {% endcompress %}
 
 </body>

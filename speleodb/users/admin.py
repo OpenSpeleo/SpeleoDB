@@ -4,7 +4,6 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
-from django.utils.translation import gettext_lazy as _
 
 from speleodb.users.forms import UserAdminChangeForm
 from speleodb.users.forms import UserAdminCreationForm
@@ -22,9 +21,9 @@ class UserAdmin(auth_admin.UserAdmin):
     add_form = UserAdminCreationForm
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        (_("Personal info"), {"fields": ("name",)}),
+        ("Personal info", {"fields": ("name",)}),
         (
-            _("Permissions"),
+            "Permissions",
             {
                 "fields": (
                     "is_active",
@@ -35,7 +34,7 @@ class UserAdmin(auth_admin.UserAdmin):
                 ),
             },
         ),
-        (_("Important dates"), {"fields": ("last_login", "date_joined")}),
+        ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
     list_display = ["email", "name", "is_superuser"]
     search_fields = ["name"]

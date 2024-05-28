@@ -90,6 +90,7 @@ THIRD_PARTY_APPS = [
     "crispy_bootstrap5",
     "allauth",
     "allauth.account",
+    "allauth.headless",
     "django_celery_beat",
     "encrypted_model_fields",
     "rest_framework",
@@ -125,8 +126,21 @@ AUTHENTICATION_BACKENDS = [
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
 AUTH_USER_MODEL = "users.User"
+
+# https://docs.allauth.org/en/latest/headless/installation.html
+HEADLESS_ONLY = True
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "/account/confirm-email/{key}",
+    "account_reset_password": "/account/password/reset",
+    "account_reset_password_from_key": "/account/password/reset/{key}",
+    "account_signup": "/signup",
+}
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-redirect-url
-LOGIN_REDIRECT_URL = "users:redirect"
+LOGIN_REDIRECT_URL = "private:home"
+# https://docs.djangoproject.com/en/dev/ref/settings/#logout-redirect-url
+LOGOUT_REDIRECT_URL = "home"
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-url
 LOGIN_URL = "account_login"
 
@@ -328,6 +342,10 @@ ACCOUNT_AUTHENTICATION_METHOD = "email"
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_EMAIL_REQUIRED = True
 # https://docs.allauth.org/en/latest/account/configuration.html
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+# https://docs.allauth.org/en/latest/account/configuration.html
+ACCOUNT_LOGOUT_ON_GET = True
+# https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_USERNAME_REQUIRED = False
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
@@ -336,7 +354,8 @@ ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_ADAPTER = "speleodb.users.adapters.AccountAdapter"
 # https://docs.allauth.org/en/latest/account/forms.html
-ACCOUNT_FORMS = {"signup": "speleodb.users.forms.UserSignupForm"}
+# ACCOUNT_FORMS = {"signup": "speleodb.users.forms.SignupForm"}
+ACCOUNT_SIGNUP_FORM_CLASS = "speleodb.users.forms.SignupForm"
 # django-compressor
 # ------------------------------------------------------------------------------
 # https://django-compressor.readthedocs.io/en/latest/quickstart/#installation

@@ -54,6 +54,11 @@ html {
   /* 6 */
 }
 
+html,
+body {
+  height: 100%;
+}
+
 /*
 1. Remove the margin in all browsers.
 2. Inherit line-height from `html` so users can set them as a class directly on the `html` element.
@@ -1525,7 +1530,7 @@ select {
   }
 
   .h2 {
-    font-size: 2.75rem;
+    font-size: 2.6rem;
     line-height: 1.1;
     letter-spacing: -0.017em;
   }
@@ -3331,12 +3336,12 @@ input[type="search"]::-webkit-search-results-decoration {
   padding-top: 0px;
 }
 
-.pt-4{
+.pt-4 {
   padding-top: 1rem;
 }
 
-.pt-8{
-    padding-top: 2rem;
+.pt-8 {
+  padding-top: 2rem;
 }
 
 .pt-12 {
@@ -4999,6 +5004,18 @@ input[type="search"]::-webkit-search-results-decoration {
     padding-bottom: 5rem;
   }
 
+  .md\:pb-4 {
+    padding-bottom: 1rem;
+  }
+
+  .md\:pb-8 {
+    padding-bottom: 2rem;
+  }
+
+  .md\:pb-12 {
+    padding-bottom: 3rem;
+  }
+
   .md\:pb-16 {
     padding-bottom: 4rem;
   }
@@ -5011,12 +5028,40 @@ input[type="search"]::-webkit-search-results-decoration {
     padding-bottom: 6rem;
   }
 
+  .md\:pb-28 {
+    padding-bottom: 7rem;
+  }
+
   .md\:pb-32 {
     padding-bottom: 8rem;
   }
 
-  .md\:pb-8 {
-    padding-bottom: 2rem;
+  .md\:pb-36 {
+    padding-bottom: 9rem;
+  }
+
+  .md\:pb-40 {
+    padding-bottom: 10rem;
+  }
+
+  .md\:pb-44 {
+    padding-bottom: 11rem;
+  }
+
+  .md\:pb-48 {
+    padding-bottom: 12rem;
+  }
+
+  .md\:pb-52 {
+    padding-bottom: 13rem;
+  }
+
+  .md\:pb-56 {
+    padding-bottom: 14rem;
+  }
+
+  .md\:pb-60 {
+    padding-bottom: 15rem;
   }
 
   .md\:pl-48 {
@@ -5031,20 +5076,64 @@ input[type="search"]::-webkit-search-results-decoration {
     padding-right: 0px;
   }
 
+  .md\:pt-4 {
+    padding-top: 1rem;
+  }
+
+  .md\:pt-8 {
+    padding-top: 2rem;
+  }
+
+  .md\:pt-12 {
+    padding-top: 3rem;
+  }
+
+  .md\:pt-16 {
+    padding-top: 4rem;
+  }
+
   .md\:pt-20 {
     padding-top: 5rem;
+  }
+
+  .md\:pt-24 {
+    padding-top: 6rem;
+  }
+
+  .md\:pt-28 {
+    padding-top: 7rem;
   }
 
   .md\:pt-32 {
     padding-top: 8rem;
   }
 
+  .md\:pt-36 {
+    padding-top: 9rem;
+  }
+
   .md\:pt-40 {
     padding-top: 10rem;
   }
 
+  .md\:pt-44 {
+    padding-top: 11rem;
+  }
+
+  .md\:pt-48 {
+    padding-top: 12rem;
+  }
+
   .md\:pt-52 {
     padding-top: 13rem;
+  }
+
+  .md\:pt-56 {
+    padding-top: 14rem;
+  }
+
+  .md\:pt-60 {
+    padding-top: 15rem;
   }
 
   .md\:pt-\[3\.75rem\] {

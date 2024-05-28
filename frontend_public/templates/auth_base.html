@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static i18n compress%}
+
+{% block title %}
+  {% block head_title %}
+  {% endblock head_title %}
+{% endblock title %}
+
+{% block content %}
+
+<section class="relative">
+
+    <!-- Illustration -->
+    <div class="md:block absolute left-1/2 -translate-x-1/2 -mt-36 blur-2xl opacity-70 pointer-events-none -z-10" aria-hidden="true">
+        <img src="{% static 'images/auth-illustration.svg' %}" class="max-w-none" width="1440" height="450" alt="Page Illustration">
+    </div>
+
+    <div class="relative max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="pt-28 pb-8">
+
+            <!-- Page header -->
+            <div class="max-w-3xl mx-auto text-center pb-12">
+                <!-- Logo -->
+                <div class="mb-5">
+                    <a class="inline-flex" href="{% url 'home' %}">
+                        <img class="relative" src="{% static 'images/logo.svg' %}" style="height: 80px" alt="Logo">
+                    </a>
+                </div>
+                <!-- Page title -->
+                <h1 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60">
+                    {% block page_headline %}{% endblock page_headline %}
+                </h1>
+            </div>
+
+            <!-- Form -->
+            <div class="max-w-sm mx-auto">
+                {% block user_form %}{% endblock user_form %}
+            </div>
+
+        </div>
+    </div>
+
+</section>
+
+{% endblock content %}
+
