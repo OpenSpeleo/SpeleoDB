@@ -7,7 +7,7 @@
     <meta charset="utf-8">
     <title>SpeleoDB - {% block title %}Home{% endblock title %}</title>
 
-    <meta charset="utf-8" />
+    <meta property="og:locale" content="en_US" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -47,7 +47,7 @@
                     <div class="flex-1">
                         <!-- Logo -->
                         <a class="inline-flex" href="{% url 'home' %}" aria-label="Cruip">
-                            <img class="max-w-none" src="{% static 'images/logo.svg' %}" style="height:42px" alt="SpeleoDB">
+                            <img class="max-w-none" src="{% static 'media/logo.svg' %}" style="height:42px" alt="SpeleoDB">
                         </a>
                     </div>
 
@@ -61,6 +61,9 @@
                             </li>
                             <li>
                                 <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'changelog' %}">Changelog</a>
+                            </li>
+                            <li>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'roadmap' %}">Roadmap</a>
                             </li>
                             {% if request.user.is_authenticated %}
                                 <li>
@@ -164,7 +167,7 @@
                                 <div class="mb-4">
                                     <!-- Logo -->
                                     <a class="inline-flex" href="index.html" aria-label="SpeleoDB">
-                                        <img src="{% static 'images/logo.svg' %}" style="height:65px" alt="SpeleoDB">
+                                        <img src="{% static 'media/logo.svg' %}" style="height:65px" alt="SpeleoDB">
                                     </a>
                                 </div>
                                 <div class="text-sm text-slate-300">&copy; www.speleodb.com <span class="text-slate-500">-</span> All rights reserved.</div>

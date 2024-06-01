@@ -35,3 +35,55 @@
 .form_helptext {
   color: rgb(203 213 225 / 79%);
 }
+
+/* -------------- CHANGELOG ---------------- */
+
+/* Complete */
+
+/* Completed Button Tag */
+.bg-emerald-400\/30 {
+  background-color: rgb(52 211 153 / 0.3);
+}
+
+.text-emerald-400 {
+  --tw-text-opacity: 1;
+  color: rgb(52 211 153 / var(--tw-text-opacity));
+}
+
+/* In Progress Button Tag */
+
+.bg-indigo-500\/30 {
+  background-color: rgb(99 102 241 / 0.3);
+}
+
+.text-indigo-400 {
+  --tw-text-opacity: 1;
+  color: rgb(129 140 248 / var(--tw-text-opacity));
+}
+
+/* Planned Button Tag */
+
+.bg-amber-400\/30 {
+  background-color: rgb(251 191 36 / 0.3);
+}
+
+.text-amber-400 {
+  --tw-text-opacity: 1;
+  color: rgb(251 191 36 / var(--tw-text-opacity));
+}
+
+/* Checkmarks */
+.bg-indigo-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(99 102 241 / var(--tw-bg-opacity));
+}
+
+.bg-slate-700 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(51 65 85 / var(--tw-bg-opacity));
+}
+
+.translate-y-3 {
+  --tw-translate-y: 0.75rem;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
