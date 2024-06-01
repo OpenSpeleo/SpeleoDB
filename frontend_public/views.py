@@ -1,4 +1,5 @@
 import allauth.account.views as allauth_views
+from django.conf import settings
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.views import View
@@ -52,11 +53,14 @@ class PasswordResetView(View):
 
 
 class SignUpView(View):
-    template_name = "auth/signup.html"
+    template_names = {
+        True: "auth/signup.html",
+        False: "auth/signup_closed.html",
+    }
 
     @redirect_authenticated_user
     def get(self, request):
         return render(
             request,
-            SignUpView.template_name,
+            SignUpView.template_names[settings.DJANGO_ACCOUNT_ALLOW_REGISTRATION],
         )

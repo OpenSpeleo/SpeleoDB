@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% load static i18n compress%}
+
+{% block content %}
+<!-- Content -->
+<section class="relative">
+    <!-- Radial gradient -->
+    <div class="absolute flex items-center justify-center top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none -z-10 w-[800px] aspect-square" aria-hidden="true">
+        <div class="absolute inset-0 translate-z-0 bg-purple-500 rounded-full blur-[120px] opacity-30"></div>
+        <div class="absolute w-64 h-64 translate-z-0 bg-purple-400 rounded-full blur-[80px] opacity-70"></div>
+    </div>
+    <!-- Particles animation -->
+    <div class="absolute inset-0 h-96 -z-10" aria-hidden="true">
+        <canvas data-particle-animation data-particle-quantity="15"></canvas>
+    </div>
+    <!-- Illustration -->
+    <div class="md:block absolute left-1/2 -translate-x-1/2 -mt-16 blur-2xl opacity-90 pointer-events-none -z-10" aria-hidden="true">
+        <img src="{% static 'media/placeholders/page-illustration.svg' %}" class="max-w-none" width="1440" height="427" alt="Page Illustration">
+    </div>
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="pt-32 pb-12 md:pt-40 md:pb-20">
+            <!-- Page header -->
+            <div class="text-center pb-12 md:pb-20">
+                <h1 class="h1 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Roadmap</h1>
+                <div class="max-w-3xl mx-auto">
+                    <p class="text-lg text-slate-400">Future updates and improvements to SpeleoDB.</p>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-200 border-slate-700">
+                <div class="max-w-3xl m-auto mt-8">
+                    <!-- Posts -->
+                    <div class="xl:-translate-x-16">
+
+                        <!-- Post -->
+                        <article class="pt-6">
+                            <div class="xl:flex">
+                                <div class="w-32 shrink-0">
+                                    <h2 class="text-xl leading-snug font-bold text-slate-800 text-slate-100 xl:leading-7 mb-4 xl:mb-0 inline">2024 Q2</h2>
+                                </div>
+                                <div class="grow pb-6 border-b border-slate-200 border-slate-700">
+                                    <header>
+                                        <div class="flex flex-nowrap items-center space-x-2 mb-6">
+                                            <div>
+                                                <div class="text-xs inline-flex font-medium bg-emerald-400/30 text-emerald-400 rounded-full text-center btn-sm">Completed</div>
+                                            </div>
+                                        </div>
+                                    </header>
+                                    <!-- List -->
+                                    <ul class="-my-2">
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 h-full w-0.5 bg-slate-700 self-start ml-2.5 -translate-x-1/2 translate-y-3" aria-hidden="true"></div>
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Product V1 - Early Access</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 h-full w-0.5 bg-slate-200 bg-slate-700 self-start ml-2.5 -translate-x-1/2 translate-y-3" aria-hidden="true"></div>
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Web3 Compatibility</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 h-full w-0.5 bg-slate-200 bg-slate-700 self-start ml-2.5 -translate-x-1/2 translate-y-3" aria-hidden="true"></div>
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Proof-of-Funds Compliance Key</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Activity Feed Integration</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Post -->
+                        <article class="pt-6">
+                            <div class="xl:flex">
+                                <div class="w-32 shrink-0">
+                                    <h2 class="text-xl leading-snug font-bold text-slate-800 text-slate-100 xl:leading-7 mb-4 xl:mb-0 inline">2024 Q3</h2>
+                                </div>
+                                <div class="grow pb-6 border-b border-slate-200 border-slate-700">
+                                    <header>
+                                        <div class="flex flex-nowrap items-center space-x-2 mb-6">
+                                            <div>
+                                                <div class="text-xs inline-flex font-medium bg-indigo-500/30 text-indigo-400 rounded-full text-center btn-sm
+
+
+                                                ">In Progress</div>
+                                            </div>
+                                        </div>
+                                    </header>
+                                    <!-- List -->
+                                    <ul class="-my-2">
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 h-full w-0.5 bg-slate-700 self-start ml-2.5 -translate-x-1/2 translate-y-3" aria-hidden="true"></div>
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Product V1 - Early Access</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 h-full w-0.5 bg-slate-200 bg-slate-700 self-start ml-2.5 -translate-x-1/2 translate-y-3" aria-hidden="true"></div>
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Web3 Compatibility</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 h-full w-0.5 bg-slate-200 bg-slate-700 self-start ml-2.5 -translate-x-1/2 translate-y-3" aria-hidden="true"></div>
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Proof-of-Funds Compliance Key</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Activity Feed Integration</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Post -->
+                        <article class="pt-6">
+                            <div class="xl:flex">
+                                <div class="w-32 shrink-0">
+                                    <h2 class="text-xl leading-snug font-bold text-slate-800 text-slate-100 xl:leading-7 mb-4 xl:mb-0 inline">2024 Q4</h2>
+                                </div>
+                                <div class="grow pb-6 border-b border-slate-200 border-slate-700">
+                                    <header>
+                                        <div class="flex flex-nowrap items-center space-x-2 mb-6">
+                                            <div>
+                                                <div class="text-xs inline-flex font-medium bg-amber-400/30 text-amber-400 rounded-full text-center btn-sm">Planned</div>
+                                            </div>
+                                        </div>
+                                    </header>
+                                    <!-- List -->
+                                    <ul class="-my-2">
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 h-full w-0.5 bg-slate-700 self-start ml-2.5 -translate-x-1/2 translate-y-3" aria-hidden="true"></div>
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Product V1 - Early Access</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 h-full w-0.5 bg-slate-200 bg-slate-700 self-start ml-2.5 -translate-x-1/2 translate-y-3" aria-hidden="true"></div>
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Web3 Compatibility</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 h-full w-0.5 bg-slate-200 bg-slate-700 self-start ml-2.5 -translate-x-1/2 translate-y-3" aria-hidden="true"></div>
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Proof-of-Funds Compliance Key</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                        <!-- List item -->
+                                        <li class="relative py-2">
+                                            <div class="flex items-center mb-1">
+                                                <div class="absolute left-0 rounded-full bg-indigo-500" aria-hidden="true">
+                                                    <svg class="w-5 h-5 fill-current text-white" viewBox="0 0 20 20">
+                                                        <path d="M14.4 8.4L13 7l-4 4-2-2-1.4 1.4L9 13.8z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800 text-slate-100 pl-9">Activity Feed Integration</h3>
+                                            </div>
+                                            <div class="pl-9">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </article>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+{% include "pages/call_to_action.html" %}
+{% endblock %}
