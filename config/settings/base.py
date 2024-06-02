@@ -7,7 +7,7 @@ import environ
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 
-APPS_DIR = BASE_DIR / "speleodb"
+# APPS_DIR = BASE_DIR / "speleodb"
 
 env = environ.Env()
 
@@ -192,7 +192,7 @@ STATIC_ROOT = str(BASE_DIR / "staticfiles")
 # https://docs.djangoproject.com/en/dev/ref/settings/#static-url
 STATIC_URL = "/static/"
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
-STATICFILES_DIRS = [str(APPS_DIR / "static")]
+# STATICFILES_DIRS = [str(APPS_DIR / "static")]
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#staticfiles-finders
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
@@ -202,7 +202,7 @@ STATICFILES_FINDERS = [
 # MEDIA
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-root
-MEDIA_ROOT = str(APPS_DIR / "media")
+MEDIA_ROOT = str(BASE_DIR / "mediafiles")
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = "/media/"
 
@@ -214,7 +214,7 @@ TEMPLATES = [
         # https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-TEMPLATES-BACKEND
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         # https://docs.djangoproject.com/en/dev/ref/settings/#dirs
-        "DIRS": [str(APPS_DIR / "templates")],
+        # "DIRS": [str(APPS_DIR / "templates")],
         # https://docs.djangoproject.com/en/dev/ref/settings/#app-dirs
         "APP_DIRS": True,
         "OPTIONS": {
@@ -244,7 +244,7 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 # FIXTURES
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#fixture-dirs
-FIXTURE_DIRS = (str(APPS_DIR / "fixtures"),)
+# FIXTURE_DIRS = (str(APPS_DIR / "fixtures"),)
 
 # SECURITY
 # ------------------------------------------------------------------------------
