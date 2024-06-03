@@ -68,9 +68,19 @@ class SignupForm(Form):
         widget=TextInput(attrs={"placeholder": "Full Name"}),
     )
 
+    country = CharField(
+        label="Country",
+        max_length=2,
+        min_length=2,
+        required=True,
+        widget=TextInput(attrs={"placeholder": "Country"}),
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def signup(self, request, user):
+        print(self.cleaned_data)
         user.name = self.cleaned_data["name"]
+        user.country = self.cleaned_data["country"]
         user.save()

@@ -92,6 +92,7 @@ THIRD_PARTY_APPS = [
     "allauth.account",
     "allauth.headless",
     "django_celery_beat",
+    "django_countries",
     "encrypted_model_fields",
     "rest_framework",
     "rest_framework.authtoken",
@@ -100,6 +101,8 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    # API Apps
+    "speleodb.api.v1",
     # Object Apps
     "speleodb.common",
     "speleodb.surveys",
@@ -163,6 +166,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# DJANGO COUNTRIES
+# ------------------------------------------------------------------------------
+# https://github.com/SmileyChris/django-countries#show-certain-countries-first
+COUNTRIES_FIRST = ["US", "MX", "FR"]
 
 # ENCRYPTED FIELDS
 # ------------------------------------------------------------------------------

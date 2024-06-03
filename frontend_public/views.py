@@ -1,4 +1,3 @@
-import allauth.account.views as allauth_views
 from django.conf import settings
 from django.shortcuts import redirect
 from django.shortcuts import render

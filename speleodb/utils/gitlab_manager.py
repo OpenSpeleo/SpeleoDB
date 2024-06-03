@@ -103,10 +103,10 @@ class _GitlabManager(metaclass=SingletonMetaClass):
         self._is_initialized = False
 
     def _initialize(self):
-        self._gitlab_instance = Option.get_or_empty(name="GITLAB_HOST_URL").value
-        self._gitlab_token = Option.get_or_empty(name="GITLAB_TOKEN").value
-        self._gitlab_group_id = Option.get_or_empty(name="GITLAB_GROUP_ID").value
-        self._gitlab_group_name = Option.get_or_empty(name="GITLAB_GROUP_NAME").value
+        self._gitlab_instance = Option.get_or_empty(name="GITLAB_HOST_URL")
+        self._gitlab_token = Option.get_or_empty(name="GITLAB_TOKEN")
+        self._gitlab_group_id = Option.get_or_empty(name="GITLAB_GROUP_ID")
+        self._gitlab_group_name = Option.get_or_empty(name="GITLAB_GROUP_NAME")
 
         self._gl = gitlab.Gitlab(
             f"https://{self._gitlab_instance}/", private_token=self._gitlab_token
