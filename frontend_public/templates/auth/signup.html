@@ -1,6 +1,8 @@
 {% extends "auth_base.html" %}
 {% load static i18n compress%}
 
+{% load countries %}
+
 {% block head_title %}
   Signup
 {% endblock head_title %}
@@ -26,6 +28,18 @@
       <div>
           <label class="block text-sm text-slate-300 font-medium mb-1" for="email">Email <span class="text-rose-500">*</span></label>
           <input id="email" name="email" class="form-input w-full" type="email" placeholder="sheck@exley.com" required />
+      </div>
+
+      <div>
+          <label class="block text-sm text-slate-300 font-medium mb-1" for="country">Country <span class="text-rose-500">*</span></label>
+
+            <select class="form-input w-full" name="country" id="country" required>
+                <option disabled selected value> -- select an option -- </option>
+                {% get_countries as countries %}
+                {% for country in countries %}
+                    <option value="{{ country.code }}">{{ country.name }}</option>
+                {% endfor %}
+          </select>
       </div>
 
       <div>
@@ -128,7 +142,11 @@
                     $("#success_div").show();
                   }
                   else {
-                    $("#error_div").text(data.responseJSON["errors"][0]["message"]);
+                    try {
+                        $("#error_div").text(data.responseJSON["errors"][0]["message"]);
+                    } catch (TypeError) {
+                        $("#error_div").text("There has been an error ...");
+                    }
                     $("#error_div").show();
                   }
                 }
@@ -139,82 +157,3 @@
     });
 </script>
 {% endblock extra_js %}
-
-
-
-{% comment %} {% extends "account/base.html" %}
-
-{% load i18n %}
-{% load crispy_forms_tags %}
-
-{% block head_title %}
-  Signup
-{% endblock head_title %}
-
-{% block inner %}
-<div class="pt-16 pb-16">
-
-  <div class="grid md:grid-cols-12 gap-6 group">
-
-    <div class="md:col-span-4"></div>
-
-    <div class="md:col-span-4 text-lg font-inter">
-
-      <p class="font-medium text-slate-50 text-center pb-8">
-        <b>Already have an account? Then please <a href="{{ login_url }}" class="ulink">sign in</a>.</b>
-      </p>
-
-      <form class="signup" id="signup_form" method="post" action="{% url 'account_signup' %}">
-
-        {% csrf_token %}
-
-        <div class="grid md:grid-cols-12 gap-6 group">
-
-          <div class="pb-8" style="display: contents;" id="div_id_email">
-            <label for="id_email" class="md:col-span-4 form-label requiredField"> Email <span class="asteriskField">*</span></label>
-            <input type="email" name="email" placeholder="Email address" autocomplete="email" maxlength="320" class="md:col-span-8 textinput form-control" required="" id="id_email">
-          </div>
-
-          <div class="pb-8" style="display: contents;" id="div_id_name">
-            <label for="id_name" class="md:col-span-4 form-label requiredField"> Full Name <span class="asteriskField">*</span></label>
-            <input type="text" name="name" placeholder="Full Name" maxlength="255" minlength="5" class="md:col-span-8 textinput form-control" required="" id="id_name">
-          </div>
-
-          <div class="pb-8" style="display: contents;" id="div_id_password">
-            <label for="id_password" class="md:col-span-4 form-label requiredField"> Password <span class="asteriskField">*</span></label>
-            <input type="password" name="password" placeholder="Password" autocomplete="new-password" class="md:col-span-8 passwordinput form-control" required="" id="id_password">
-            <div id="id_password_helptext" class="form-text md:col-span-12">
-              <ul>
-                <li>Your password can't be too similar to your other personal information.</li>
-                <li>Your password must contain at least 8 characters.</li>
-                <li>Your password can't be a commonly used password.</li>
-                <li>Your password can't be entirely numeric.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="pb-8" style="display: contents;" id="div_id_password2">
-            <label for="id_password2" class="md:col-span-4 form-label requiredField"> Password (again) <span class="asteriskField">*</span></label>
-            <input type="password" name="password2" placeholder="Password (again)" autocomplete="new-password" class="md:col-span-8 passwordinput form-control" required="" id="id_password2">
-          </div>
-
-        </div>
-
-        <button class="mt-12 btn-sm text-slate-300 hover:text-white transition duration-150 ease-in-out w-full group [background:linear-gradient(theme(colors.slate.900),_theme(colors.slate.900))_padding-box,_conic-gradient(theme(colors.slate.400),_theme(colors.slate.700)_25%,_theme(colors.slate.700)_75%,_theme(colors.slate.400)_100%)_border-box] relative before:absolute before:inset-0 before:bg-slate-800/30 before:rounded-full before:pointer-events-none" type="submit">
-          <span class="relative inline-flex items-center">
-              Sign Up
-              <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
-          </span>
-        </button>
-      </form>
-
-    </div>
-  </div>
-</div>
-{% endblock inner %}
-
- {% endcomment %}
-
-
-
-

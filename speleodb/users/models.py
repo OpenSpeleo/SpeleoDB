@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db.models import CharField
 from django.db.models import EmailField
 from django.urls import reverse
+from django_countries.fields import CountryField
 
 from .managers import UserManager
 
@@ -18,6 +19,7 @@ class User(AbstractUser):
     # First and last name do not cover name patterns around the globe
     name = CharField("Name of User", blank=False, null=False, max_length=255)
     email = EmailField("email address", primary_key=True)
+    country = CountryField()
     first_name = None  # type: ignore[assignment]
     last_name = None  # type: ignore[assignment]
     username = None  # type: ignore[assignment]

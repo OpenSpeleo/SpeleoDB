@@ -294,3 +294,5 @@ dev_tmp/*
 !dev_tmp/emails/
 dev_tmp/emails/*
 !dev_tmp/emails/.gitkeep
+
+.envs/test.env

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 from functools import lru_cache
 
 from django.conf import settings
@@ -43,6 +44,6 @@ class Option(models.Model):
     @classmethod
     def get_or_empty(cls, name):
         try:
-            return cls.get(name=name)
+            return cls.get(name=name).value
         except ObjectDoesNotExist:
-            return ""
+            return os.environ.get(name, default="")
