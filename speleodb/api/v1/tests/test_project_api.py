@@ -5,11 +5,11 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.surveys.models import Permission
 from speleodb.api.v1.tests.factories import PermissionFactory
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserFactory
+from speleodb.surveys.models import Permission
 
 
 @pytest.mark.parametrize(
