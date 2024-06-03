@@ -7,7 +7,7 @@ from django.views import View
 def redirect_authenticated_user(func):
     def wrapper(obj, request, *args, **kwargs):
         if request.user.is_authenticated:
-            return redirect("private:home")
+            return redirect("private:dashboard")
 
         return func(obj, request, *args, **kwargs)
 

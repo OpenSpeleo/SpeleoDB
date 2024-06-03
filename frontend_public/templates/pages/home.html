@@ -24,7 +24,7 @@
                 <div class="max-w-3xl mx-auto text-center">
                     <div class="mb-6 pb-8" data-aos="fade-down">
                         <div class="inline-flex relative before:absolute before:inset-0 before:bg-purple-500 before:blur-md">
-                            <a class="btn-sm py-0.5 text-slate-300 hover:text-white transition duration-150 ease-in-out group [background:linear-gradient(theme(colors.purple.500),_theme(colors.purple.500))_padding-box,_linear-gradient(theme(colors.purple.500),_theme(colors.purple.200)_75%,_theme(colors.transparent)_100%)_border-box] relative before:absolute before:inset-0 before:bg-slate-800/50 before:rounded-full before:pointer-events-none shadow" {% if request.user.is_authenticated %} href="{% url 'private:home' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
+                            <a class="btn-sm py-0.5 text-slate-300 hover:text-white transition duration-150 ease-in-out group [background:linear-gradient(theme(colors.purple.500),_theme(colors.purple.500))_padding-box,_linear-gradient(theme(colors.purple.500),_theme(colors.purple.200)_75%,_theme(colors.transparent)_100%)_border-box] relative before:absolute before:inset-0 before:bg-slate-800/50 before:rounded-full before:pointer-events-none shadow" {% if request.user.is_authenticated %} href="{% url 'private:dashboard' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
                                 <span class="relative inline-flex items-center">
                                     SpeleoDB is now in Beta <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
                                 </span>
@@ -55,7 +55,7 @@
                     </p>
                     <div class="max-w-xs mx-auto sm:max-w-none sm:inline-flex sm:justify-center space-y-4 sm:space-y-0 sm:space-x-4" data-aos="fade-down" data-aos-delay="400">
                         <div>
-                            <a class="btn text-slate-900 bg-gradient-to-r from-white/80 via-white to-white/80 hover:bg-white w-full transition duration-150 ease-in-out group" {% if request.user.is_authenticated %} href="{% url 'private:home' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
+                            <a class="btn text-slate-900 bg-gradient-to-r from-white/80 via-white to-white/80 hover:bg-white w-full transition duration-150 ease-in-out group" {% if request.user.is_authenticated %} href="{% url 'private:dashboard' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
                                 Get Started <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
                             </a>
                         </div>

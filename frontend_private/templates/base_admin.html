@@ -75,7 +75,7 @@
                         </svg>
                     </button>
                     <!-- Logo -->
-                    <a class="block" href="index.html">
+                    <a class="block" href="{% url 'home' %}">
                         <img src="{% static 'media/logo.svg' %}" style="height:65px" alt="SpeleoDB">
                         {% comment %} <svg width="32" height="32" viewBox="0 0 32 32">
                             <defs>
@@ -128,7 +128,7 @@
                                 <div class="lg:hidden lg:sidebar-expanded:block 2xl:block">
                                     <ul class="pl-9 mt-1" :class="open ? '!block' : 'hidden'">
                                         <li class="mb-1 last:mb-0">
-                                            <a class="block text-indigo-500 transition duration-150 truncate" href="index.html">
+                                            <a class="block text-indigo-500 transition duration-150 truncate" href="{% url 'home' %}">
                                                 <span class="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Main</span>
                                             </a>
                                         </li>
