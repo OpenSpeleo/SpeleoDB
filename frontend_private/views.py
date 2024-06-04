@@ -1,19 +1,37 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse
+from django.shortcuts import render
+from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import TemplateView
 
+from speleodb.surveys.models import Project
+
+
 class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
-    # login_url = reverse("account_login")
-    login_url = "/login/"
+    login_url = reverse_lazy("account_login")
 
 
+# ============ Setting Pages ============ #
 class DashboardView(_AuthenticatedTemplateView):
-    template_name = "pages/dashboard.html"
+    template_name = "pages/settings/dashboard.html"
 
 
+class FeedbackView(_AuthenticatedTemplateView):
+    template_name = "pages/settings/feedback.html"
+
+
+class NotificationsView(_AuthenticatedTemplateView):
+    template_name = "pages/settings/notifications.html"
+
+
+# ============ Project Pages ============ #
 class ProjectView(_AuthenticatedTemplateView):
     template_name = "pages/projects.html"
 
 
-class AccountView(_AuthenticatedTemplateView):
-    template_name = "pages/account.html"
+class ProjectDetailView(LoginRequiredMixin, View):
+    template_name = "pages/project_details.html"
+
+    def get(self, request, id: str):
+        project = Project.objects.get(id=id)
+        return render(request, ProjectDetailView.template_name, {"project": project})
