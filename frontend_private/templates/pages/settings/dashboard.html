@@ -1,0 +1,73 @@
+{% extends "pages/settings/base.html" %}
+{% load static i18n compress%}
+
+{% load countries %}
+
+{% block settings_panel %}
+<!-- Panel -->
+<div class="grow">
+
+    <!-- Panel body -->
+    <div class="p-6 space-y-6">
+        <h2 class="text-2xl text-slate-800 dark:text-slate-100 font-bold mb-5">My Account</h2>
+
+        <!-- Business Profile -->
+        <section>
+            <h3 class="text-xl leading-snug text-slate-800 dark:text-slate-100 font-bold mb-1">Personal Profile</h3>
+            <div class="text-sm">Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit.</div>
+            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="w-full">
+                    <label class="block text-sm font-medium mb-1" for="name">Full Name:</label>
+                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ user.name }}" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Email -->
+        <section>
+            <div class="flex flex-wrap mt-5">
+                <div class="mr-2">
+                    <label class="block text-sm font-medium mb-1" for="email">Personal Email:</label>
+                    <input id="email" class="form-input max-w-full w-128" type="email" value="{{ user.email }}" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Country -->
+        <section>
+            <div class="flex flex-wrap mt-5">
+                <div class="mr-2">
+                    <label class="block text-sm font-medium mb-1" for="country">Country:</label>
+                    <select id="country" class="form-select max-w-full w-128">
+                    {% get_countries as countries %}
+                    {% for country in countries %}
+                        <option value="{{ country.code }}" {% if country.code == user.country %} selected {% endif %}>{{ country.name }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Password -->
+        <section>
+            <h3 class="text-xl leading-snug text-slate-800 dark:text-slate-100 font-bold mb-1">Password</h3>
+            <div class="text-sm">Click below to change your password.</div>
+            <div class="mt-5">
+                <button class="btn border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 shadow-sm text-indigo-500">Set New Password</button>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Panel footer -->
+    <footer>
+        <div class="flex flex-col px-6 py-5 border-t border-slate-200 dark:border-slate-700">
+            <div class="flex self-end">
+                <button class="btn dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300">Cancel</button>
+                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+            </div>
+        </div>
+    </footer>
+
+</div>
+{% endblock settings_panel %}

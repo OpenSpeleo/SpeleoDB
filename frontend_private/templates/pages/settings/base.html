@@ -1,0 +1,151 @@
+{% extends "base_admin.html" %}
+{% load static i18n compress%}
+
+{% load countries %}
+
+{% block content %}
+<!-- Welcome banner -->
+<div class="relative bg-indigo-200 dark:bg-indigo-500 p-4 sm:p-6 rounded-sm overflow-hidden mb-8">
+
+    <!-- Background illustration -->
+    <div class="absolute right-0 top-0 -mt-4 mr-16 pointer-events-none hidden xl:block" aria-hidden="true">
+        <svg width="319" height="198" xmlns:xlink="http://www.w3.org/1999/xlink">
+            <defs>
+                <path id="welcome-a" d="M64 0l64 128-64-20-64 20z" />
+                <path id="welcome-e" d="M40 0l40 80-40-12.5L0 80z" />
+                <path id="welcome-g" d="M40 0l40 80-40-12.5L0 80z" />
+                <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="welcome-b">
+                    <stop stop-color="#A5B4FC" offset="0%" />
+                    <stop stop-color="#818CF8" offset="100%" />
+                </linearGradient>
+                <linearGradient x1="50%" y1="24.537%" x2="50%" y2="100%" id="welcome-c">
+                    <stop stop-color="#4338CA" offset="0%" />
+                    <stop stop-color="#6366F1" stop-opacity="0" offset="100%" />
+                </linearGradient>
+            </defs>
+            <g fill="none" fill-rule="evenodd">
+                <g transform="rotate(64 36.592 105.604)">
+                    <mask id="welcome-d" fill="#fff">
+                        <use xlink:href="#welcome-a" />
+                    </mask>
+                    <use fill="url(#welcome-b)" xlink:href="#welcome-a" />
+                    <path fill="url(#welcome-c)" mask="url(#welcome-d)" d="M64-24h80v152H64z" />
+                </g>
+                <g transform="rotate(-51 91.324 -105.372)">
+                    <mask id="welcome-f" fill="#fff">
+                        <use xlink:href="#welcome-e" />
+                    </mask>
+                    <use fill="url(#welcome-b)" xlink:href="#welcome-e" />
+                    <path fill="url(#welcome-c)" mask="url(#welcome-f)" d="M40.333-15.147h50v95h-50z" />
+                </g>
+                <g transform="rotate(44 61.546 392.623)">
+                    <mask id="welcome-h" fill="#fff">
+                        <use xlink:href="#welcome-g" />
+                    </mask>
+                    <use fill="url(#welcome-b)" xlink:href="#welcome-g" />
+                    <path fill="url(#welcome-c)" mask="url(#welcome-h)" d="M40.333-15.147h50v95h-50z" />
+                </g>
+            </g>
+        </svg>
+    </div>
+
+    <!-- Content -->
+    <div class="relative">
+        <h1 class="text-2xl md:text-3xl text-slate-800 dark:text-slate-100 font-bold mb-1">Hi {{ user.name }} 👋</h1>
+        <p class="dark:text-indigo-200">Let's quickly review how your survey projects are doing.</p>
+    </div>
+
+</div>
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto -mt-8">
+
+        <!-- Page header -->
+        <div class="mb-8">
+
+            <!-- Title -->
+            <h1 class="text-2xl md:text-3xl text-slate-800 dark:text-slate-100 font-bold">Account Settings ✨</h1>
+
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-sm mb-8">
+            <div class="flex flex-col md:flex-row md:-mr-px">
+
+                <!-- Sidebar -->
+                <div class="flex flex-nowrap overflow-x-scroll no-scrollbar md:block md:overflow-auto px-3 py-6 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 min-w-60 md:space-y-3">
+                    <!-- Group 1 -->
+                    <div>
+                        <div class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase mb-2">Account Settings</div>
+                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'dashboard' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:dashboard' %}">
+                                    {% if request.url_name == 'dashboard' %}
+                                        <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
+                                    {% else %}
+                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-400 dark:text-slate-500 mr-2" viewBox="0 0 16 16">
+                                    {% endif %}
+                                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+                                    </svg>
+                                    {% if request.url_name == 'dashboard' %}
+                                        <span class="text-sm font-medium text-indigo-500 dark:text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
+                                    {% endif %}
+                                        My Account
+                                    </span>
+                                </a>
+                            </li>
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'notifications' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:notifications' %}">
+                                    {% if request.url_name == 'notifications' %}
+                                        <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
+                                    {% else %}
+                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-400 dark:text-slate-500 mr-2" viewBox="0 0 16 16">
+                                    {% endif %}
+                                        <path d="M14.3.3c.4-.4 1-.4 1.4 0 .4.4.4 1 0 1.4l-8 8c-.2.2-.4.3-.7.3-.3 0-.5-.1-.7-.3-.4-.4-.4-1 0-1.4l8-8zM15 7c.6 0 1 .4 1 1 0 4.4-3.6 8-8 8s-8-3.6-8-8 3.6-8 8-8c.6 0 1 .4 1 1s-.4 1-1 1C4.7 2 2 4.7 2 8s2.7 6 6 6 6-2.7 6-6c0-.6.4-1 1-1z" />
+                                    </svg>
+                                    {% if request.url_name == 'notifications' %}
+                                        <span class="text-sm font-medium text-indigo-500 dark:text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
+                                    {% endif %}
+                                        My Notifications
+                                    </span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- Group 2 -->
+                    <div>
+                        <div class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase mt-4 mb-2">Any Question or Feedback ?</div>
+                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'feedback' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:feedback' %}">
+                                    {% if request.url_name == 'feedback' %}
+                                        <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
+                                    {% else %}
+                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-400 dark:text-slate-500 mr-2" viewBox="0 0 16 16">
+                                    {% endif %}
+                                        <path d="M7.001 3h2v4h-2V3zm1 7a1 1 0 110-2 1 1 0 010 2zM15 16a1 1 0 01-.6-.2L10.667 13H1a1 1 0 01-1-1V1a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1zM2 11h9a1 1 0 01.6.2L14 13V2H2v9z" />
+                                    </svg>
+                                    {% if request.url_name == 'feedback' %}
+                                        <span class="text-sm font-medium text-indigo-500 dark:text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
+                                    {% endif %}
+                                        Give Feedback
+                                    </span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                {% block settings_panel %}
+                {% endblock settings_panel %}
+
+            </div>
+        </div>
+
+    </div>
+</main>
+{% endblock content %}
