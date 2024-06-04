@@ -2,6 +2,9 @@ import json
 import pathlib
 from functools import wraps
 
+from cachetools import cached
+from cachetools import TTLCache
+
 import git
 import gitlab
 import gitlab.exceptions
@@ -154,6 +157,8 @@ class _GitlabManager(metaclass=SingletonMetaClass):
 
         return GitRepo(git_repo=git_repo)
 
+    # cache data for no longer than ten minutes
+    @cached(cache=TTLCache(maxsize=100, ttl=600))
     @check_initialized
     def _get_project(self, project_id) -> ProjectManager:
         if self._gl is None:
@@ -165,6 +170,8 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             # Communication Problem
             return None
 
+    # cache data for no longer than two minutes
+    @cached(cache=TTLCache(maxsize=50, ttl=120))
     @check_initialized
     def get_commit_history(self, project_id, hide_dl_url=True):
         if self._gl is None:

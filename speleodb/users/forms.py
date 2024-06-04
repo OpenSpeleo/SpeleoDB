@@ -80,7 +80,6 @@ class SignupForm(Form):
         super().__init__(*args, **kwargs)
 
     def signup(self, request, user):
-        print(self.cleaned_data)
         user.name = self.cleaned_data["name"]
         user.country = self.cleaned_data["country"]
         user.save()

@@ -14,15 +14,14 @@
             <div class="mb-4 sm:mb-0">
                 <h1 class="text-2xl md:text-3xl text-slate-800 dark:text-slate-100 font-bold">
                     My Survey Projects
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chart-dots-3 inline h-10 gold-svg" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                        <path d="M5 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-                        <path d="M16 15m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-                        <path d="M18 6m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
-                        <path d="M6 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
-                        <path d="M9 17l5 -1.5" />
-                        <path d="M6.5 8.5l7.81 5.37" />
-                        <path d="M7 7l8 -1" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chart-dots-3 inline h-10" viewBox="0 0 24 24">
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M5 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M16 15m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M18 6m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M6 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M9 17l5 -1.5" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M6.5 8.5l7.81 5.37" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M7 7l8 -1" />
                       </svg>
                 </h1>
             </div>
@@ -60,6 +59,9 @@
                                     <div class="font-semibold text-center">Country</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Revisions</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="font-semibold text-center">Permission</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
@@ -92,6 +94,12 @@
                                         <div class="text-center">
                                             {% get_country perm.project.country as country %}
                                             {{ country.name }}
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="text-center">
+                                            {% comment %} {{ perm.project.commit_history|length }} {% endcomment %}
+                                            <img id="spinner_{{ forloop.counter0 }}" data-project-id="{{perm.project.id}}" class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner2.svg' %}">
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
@@ -143,7 +151,7 @@
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="flex items-center text-slate-800">
                                             <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full mr-2 sm:mr-3">
-                                                <a href="{% url 'private:project_details' id=perm.project.id %}">
+                                                <a href="{% url 'private:project_details' project_id=perm.project.id %}">
                                                     <img class="ml-1" src="{% static 'private/media/icon-01.svg' %}" width="20" height="20" alt="Icon 01">
                                                 </a>
                                             </div>

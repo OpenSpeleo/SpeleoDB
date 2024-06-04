@@ -90,7 +90,7 @@ class ProjectApiView(CustomAPIView):
 
         return {
             "project": serializer.data,
-            "history": GitlabManager.get_commit_history(project_id=project.id),
+            "history": project.commit_history,
         }
 
 
