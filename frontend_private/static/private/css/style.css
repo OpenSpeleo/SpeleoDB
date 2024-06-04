@@ -3570,6 +3570,26 @@ span.flatpickr-weekday {
   stroke: currentColor;
 }
 
+.stroke-width-1 {
+  stroke-width: 1;
+}
+
+.stroke-width-1\.5 {
+  stroke-width: 1.5;
+}
+
+.stroke-width-2 {
+  stroke-width: 2;
+}
+
+.stroke-width-2\.5 {
+  stroke-width: 2.5;
+}
+
+.stroke-width-3 {
+  stroke-width: 3;
+}
+
 .object-cover {
   -o-object-fit: cover;
   object-fit: cover;
@@ -4311,6 +4331,14 @@ span.flatpickr-weekday {
 
 .filter {
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+
+.filter-invert {
+  filter: invert(1);
+}
+
+.filter-indigo {
+  filter: invert(0.5) sepia(1) saturate(5) hue-rotate(203deg);
 }
 
 .backdrop-blur-md {

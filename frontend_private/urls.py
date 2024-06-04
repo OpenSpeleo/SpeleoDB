@@ -12,5 +12,9 @@ urlpatterns = [
     path("feedback/", FeedbackView.as_view(), name="feedback"),
     path("notifications/", NotificationsView.as_view(), name="notifications"),
     path("projects/", ProjectView.as_view(), name="projects"),
-    path("project/<uuid:id>/", ProjectDetailView.as_view(), name="project_details"),
+    path(
+        "project/<uuid:project_id>/",
+        ProjectDetailView.as_view(),
+        name="project_details",
+    ),
 ]

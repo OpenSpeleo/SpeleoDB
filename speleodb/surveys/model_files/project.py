@@ -177,6 +177,13 @@ class Project(models.Model):
 
         return self.git_repo.commit_and_push_project(message=commit_msg, user=user)
 
+    @property
+    def commit_history(self):
+        commits = GitlabManager.get_commit_history(project_id=self.id)
+        if isinstance(commits, (list, tuple)):
+            return commits
+        return []
+
     def generate_tml_file(self, commit_sha1=None):
         if not self.git_repo:
             raise ProjectNotFound("This project does not exist on gitlab or on drive")
@@ -199,12 +206,9 @@ class Project(models.Model):
 
         with zipfile.ZipFile(tml_file, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
             for file in self.git_repo.path.glob("*"):
-                print(f"[*] processing: `{file}`: ", end="")
                 if not file.is_file() or file.name.startswith("."):
-                    print("SKIPPED")
                     continue
 
-                print(f"[*] ADDED => `{file.relative_to(self.git_repo.path)}`")
                 zipf.write(file, file.relative_to(self.git_repo.path))
 
         return tml_file
