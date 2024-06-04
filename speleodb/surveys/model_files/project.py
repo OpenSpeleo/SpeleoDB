@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import decimal
-import functools
 import pathlib
 import shutil
 import uuid
@@ -14,6 +13,7 @@ from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
+from django_countries.fields import CountryField
 
 from speleodb.users.models import User
 from speleodb.utils.exceptions import ProjectNotFound
@@ -40,6 +40,8 @@ class Project(models.Model):
     name = models.CharField(max_length=255)
     description = models.CharField(max_length=255)
 
+    country = CountryField()
+
     # Optional Field
     fork_from = models.ForeignKey(
         "self",
@@ -51,7 +53,7 @@ class Project(models.Model):
     )
 
     # Geo Coordinates
-    longitude = models.DecimalField(
+    latitude = models.DecimalField(
         max_digits=11,
         decimal_places=8,
         null=True,
@@ -62,7 +64,7 @@ class Project(models.Model):
         ],
     )
 
-    latitude = models.DecimalField(
+    longitude = models.DecimalField(
         max_digits=11,
         decimal_places=8,
         null=True,
