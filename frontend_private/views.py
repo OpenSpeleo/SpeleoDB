@@ -29,9 +29,19 @@ class ProjectView(_AuthenticatedTemplateView):
     template_name = "pages/projects.html"
 
 
-class ProjectDetailView(LoginRequiredMixin, View):
+class ProjectDetailsView(LoginRequiredMixin, View):
     template_name = "pages/project/details.html"
 
     def get(self, request, project_id: str):
         project = Project.objects.get(id=project_id)
-        return render(request, ProjectDetailView.template_name, {"project": project})
+        return render(request, ProjectDetailsView.template_name, {"project": project})
+
+
+class ProjectPermissionsView(LoginRequiredMixin, View):
+    template_name = "pages/project/permissions.html"
+
+    def get(self, request, project_id: str):
+        project = Project.objects.get(id=project_id)
+        return render(
+            request, ProjectPermissionsView.template_name, {"project": project}
+        )

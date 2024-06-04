@@ -1,0 +1,81 @@
+{% extends "pages/project/base.html" %}
+{% load static i18n compress%}
+
+{% load countries %}
+
+{% block right_panel %}
+<div class="grow">
+
+    <!-- Panel body -->
+    <div class="p-6 space-y-6">
+        <h2 class="text-2xl text-slate-800 dark:text-slate-100 font-bold mb-5">Project Settings</h2>
+
+        <!-- Project Name -->
+        <section>
+            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="w-full">
+                    <label class="block text-sm font-medium mb-1" for="name">Project Name:</label>
+                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.name }}" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Description -->
+        <section>
+            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="w-full">
+                    <label class="block text-sm font-medium mb-1" for="name">Description:</label>
+                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.description }}" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Country -->
+        <section>
+            <div class="flex flex-wrap mt-5">
+                <div class="mr-2">
+                    <label class="block text-sm font-medium mb-1" for="country">Country:</label>
+                    <select id="country" class="form-select max-w-full w-128">
+                    {% get_countries as countries %}
+                    {% for country in countries %}
+                        <option value="{{ country.code }}" {% if country.code == project.country %} selected {% endif %}>{{ country.name }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- latitude -->
+        <section>
+            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="w-full">
+                    <label class="block text-sm font-medium mb-1" for="name">Latitude:</label>
+                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.latitude }}" />
+                </div>
+            </div>
+        </section>
+
+        <!-- longitude -->
+        <section>
+            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="w-full">
+                    <label class="block text-sm font-medium mb-1" for="name">Longitude:</label>
+                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.longitude }}" />
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Panel footer -->
+    <footer>
+        <div class="flex flex-col px-6 py-5 border-t border-slate-200 dark:border-slate-700">
+            <div class="flex self-end">
+                <a class="btn dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300" href="{% url 'private:projects' %}">Cancel</a>
+                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+            </div>
+        </div>
+    </footer>
+
+</div>
+{% endblock right_panel %}
