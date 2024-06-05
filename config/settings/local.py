@@ -71,4 +71,4 @@ CELERY_TASK_EAGER_PROPAGATES = True
 
 # django-allauth
 # ------------------------------------------------------------------------------
-DJANGO_ACCOUNT_ALLOW_REGISTRATION = True
+ACCOUNT_ALLOW_REGISTRATION = True
