@@ -476,7 +476,6 @@
 
     </div>
 
-    {% compress js %}
 
     {% if debug %}
     <script src="{% static 'cdn/jquery-3.7.1.js' %}"></script>
@@ -488,9 +487,22 @@
     </script>
     {% endif %}
 
+    {% compress js %}
     <script src="{% static 'private/js/vendors/alpinejs.min.js' %}" defer></script>
     <script src="{% static 'private/js/main.js' %}"></script>
+    {% endcompress %}
+
+    {% if debug %}
     <script src="{% static 'private/js/vendors/chart.js' %}"></script>
+    {% else %}
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.0/chart.min.js"
+        integrity="sha512-mlz/Fs1VtBou2TrUkGzX4VoGvybkD9nkeXWJm3rle0DPHssYYx4j+8kIS15T78ttGfmOjH0lLaBXGcShaVkdkg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+    </script>
+    {% endif %}
+
+    {% compress js %}
     <script src="{% static 'private/js/vendors/moment.js' %}"></script>
     <script src="{% static 'private/js/vendors/chartjs-adapter-moment.js' %}"></script>
     <script src="{% static 'private/js/dashboard-charts.js' %}"></script>
