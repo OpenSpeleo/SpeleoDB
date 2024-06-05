@@ -69,9 +69,14 @@
                                 <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'roadmap' %}">Roadmap</a>
                             </li>
                             {% if request.user.is_authenticated %}
-                                <li>
-                                    <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'private:dashboard' %}">Dashboard</a>
-                                </li>
+                            <li>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'private:dashboard' %}">Dashboard</a>
+                            </li>
+                            {% endif %}
+                            {% if user.is_superuser or user.is_staff %}
+                            <li>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'admin:index' %}">Admin Panel</a>
+                            </li>
                             {% endif %}
                         </ul>
 
