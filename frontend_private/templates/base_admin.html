@@ -17,17 +17,26 @@
     <meta name="description" content="SpeleoDB Collaboration and Survey Data Exchange Server" />
     <meta name="author" content="Jonathan Dekhtiar" />
 
-    {% compress css %}
-
+    {% if debug %}
     <link href="{% static 'private/css/vendors/flatpickr.min.css' %}" rel="stylesheet">
+    {% else %}
+    <link
+        href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css"
+        integrity="sha256-GzSkJVLJbxDk36qko2cnawOGiqz/Y8GsQv/jMTUrx1Q=" rel="stylesheet" crossorigin="anonymous">
+    {% endif %}
+
+    {% compress css %}
     <link href="{% static 'private/css/style.css' %}" rel="stylesheet">
     <link href="{% static 'private/css/custom.css' %}" rel="stylesheet">
+
+    {% block extra_css %}{% endblock extra_css %}
+
+    {% endcompress %}
 
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
     <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
     <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
-    {% endcompress %}
 
 </head>
 
@@ -476,43 +485,46 @@
 
     </div>
 
-
     {% if debug %}
     <script src="{% static 'cdn/jquery-3.7.1.js' %}"></script>
+    <script src="{% static 'private/js/vendors/alpinejs.min.js' %}" defer></script>
+    <script src="{% static 'private/js/vendors/chart.js' %}"></script>
+    <script src="{% static 'private/js/vendors/moment.js' %}"></script>
+    <script src="{% static 'private/js/vendors/chartjs-adapter-moment.js' %}"></script>
+    <script src="{% static 'private/js/vendors/flatpickr.js' %}"></script>
     {% else %}
     <script
         src="https://code.jquery.com/jquery-3.7.1.min.js"
         integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
         crossorigin="anonymous">
     </script>
-    {% endif %}
-
-    {% compress js %}
-    <script src="{% static 'private/js/vendors/alpinejs.min.js' %}" defer></script>
-    <script src="{% static 'private/js/main.js' %}"></script>
-    {% endcompress %}
-
-    {% if debug %}
-    <script src="{% static 'private/js/vendors/chart.js' %}"></script>
-    {% else %}
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.11.1/dist/cdn.min.js"></script>
     <script
         src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.0/chart.min.js"
         integrity="sha512-mlz/Fs1VtBou2TrUkGzX4VoGvybkD9nkeXWJm3rle0DPHssYYx4j+8kIS15T78ttGfmOjH0lLaBXGcShaVkdkg=="
         crossorigin="anonymous" referrerpolicy="no-referrer">
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"
+        integrity="sha256-TKbdvBbEOMfezGDxb77pY503J3r2CTkPd5TrJymt21U=" crossorigin="anonymous">
+    </script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"
+        integrity="sha256-Huqxy3eUcaCwqqk92RwusapTfWlvAasF6p2rxV6FJaE=" crossorigin="anonymous">
+    </script>
     {% endif %}
 
     {% compress js %}
-    <script src="{% static 'private/js/vendors/moment.js' %}"></script>
-    <script src="{% static 'private/js/vendors/chartjs-adapter-moment.js' %}"></script>
     <script src="{% static 'private/js/dashboard-charts.js' %}"></script>
-    <script src="{% static 'private/js/vendors/flatpickr.js' %}"></script>
     <script src="{% static 'private/js/flatpickr-init.js' %}"></script>
 
     {% block extra_js %}{% endblock extra_js %}
+    {% endcompress %}
+
+    {% block inline_extra_js %}{% endblock inline_extra_js %}
 
     <!--end::Javascript-->
-    {% endcompress %}
 
 </body>
 
