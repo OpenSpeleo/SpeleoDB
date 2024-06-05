@@ -61,5 +61,5 @@ class SignUpView(View):
     def get(self, request):
         return render(
             request,
-            SignUpView.template_names[settings.DJANGO_ACCOUNT_ALLOW_REGISTRATION],
+            SignUpView.template_names[settings.ACCOUNT_ALLOW_REGISTRATION],
         )
