@@ -406,16 +406,32 @@
                             <!-- Divider -->
                             <hr class="w-px h-6 bg-slate-200 dark:bg-slate-700 border-none" />
 
-                            <!-- Landing button -->
+                            <!-- Home button -->
                             <div class="relative inline-flex">
                                 <button class="inline-flex justify-center items-center group">
                                     <div class="flex items-center truncate">
-                                        <a class="truncate ml-2 text-sm font-medium dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-200"                                         <a class="truncate mr-2 ml-2 text-sm font-medium dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-200" href="{% url 'home' %}">
+                                        <a class="truncate mr-2 ml-2 text-sm font-medium dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-200" href="{% url 'home' %}">
                                             Home
                                         </a>
                                     </div>
                                 </button>
                             </div>
+
+                            {% if user.is_superuser or user.is_staff %}
+                            <!-- Divider -->
+                            <hr class="w-px h-6 bg-slate-200 dark:bg-slate-700 border-none" />
+
+                            <!-- Home button -->
+                            <div class="relative inline-flex">
+                                <button class="inline-flex justify-center items-center group">
+                                    <div class="flex items-center truncate">
+                                        <a class="truncate mr-2 ml-2 text-sm font-medium dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-200" href="{% url 'admin:index' %}">
+                                            Admin Panel
+                                        </a>
+                                    </div>
+                                </button>
+                            </div>
+                            {% endif %}
 
                             <!-- Divider -->
                             <hr class="w-px h-6 bg-slate-200 dark:bg-slate-700 border-none" />
