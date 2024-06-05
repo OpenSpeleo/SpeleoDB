@@ -17,7 +17,6 @@ from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.exceptions import ResourceBusyError
-from speleodb.utils.gitlab_manager import GitlabManager
 from speleodb.utils.response import DownloadTMLResponseFromFile
 from speleodb.utils.view_cls import CustomAPIView
 

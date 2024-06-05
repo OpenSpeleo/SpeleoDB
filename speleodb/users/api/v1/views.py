@@ -35,6 +35,20 @@ class UserViewSet(RetrieveModelMixin, ListModelMixin, UpdateModelMixin, GenericV
 class ObtainAuthToken(_ObtainAuthToken):
     serializer_class = AuthTokenSerializer
 
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return wrap_response_with_status(
+                lambda *a, **kw: Response(
+                    status=status.HTTP_401_UNAUTHORIZED,
+                    data={"error": "Not authenticated"},
+                ),
+                request,
+            )
+        token, created = Token.objects.get_or_create(user=request.user)
+        return wrap_response_with_status(
+            lambda *a, **kw: Response({"token": token.key}), request
+        )
+
     def post(self, request, *args, **kwargs):
         return wrap_response_with_status(super().post, request, *args, **kwargs)
 
