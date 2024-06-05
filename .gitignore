@@ -282,10 +282,17 @@ speleodb/media/
 !.envs/.production/*.dist
 
 # Non Versioned Directories
-git_projects/*
-!git_projects/.gitkeep
+.workdir/*
+!.workdir/git_projects
+.workdir/git_projects/*
+!.workdir/git_projects/.gitkeep
+!.workdir/tmp_dl_dir
+.workdir/tmp_dl_dir/*
+!.workdir/tmp_dl_dir/.gitkeep
 dev_tmp/*
 !dev_tmp/.gitkeep
 !dev_tmp/emails/
 dev_tmp/emails/*
 !dev_tmp/emails/.gitkeep
+
+.envs/test.env

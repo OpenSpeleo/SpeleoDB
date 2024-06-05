@@ -16,6 +16,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "description",
         "creation_date",
         "modified_date",
+        "country",
         "latitude",
         "longitude",
         "fork_from",
