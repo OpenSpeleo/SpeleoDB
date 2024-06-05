@@ -132,8 +132,8 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
-                                            {% if perm.project.mutex_owner_id %}
-                                                {{ perm.project.mutex_owner_id }}
+                                            {% if perm.project.mutex_owner %}
+                                                {{ perm.project.mutex_owner }}
                                             {% else %}
                                             -
                                             {% endif %}

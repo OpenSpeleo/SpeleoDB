@@ -52,8 +52,7 @@ class TestProjectInteraction(TestCase):
             "latitude",
             "longitude",
             "modified_date",
-            "mutex_dt",
-            "mutex_owner",
+            "active_mutex",
             "name",
             "permission",
         ]
