@@ -120,7 +120,7 @@ class TestProjectInteraction(TestCase):
             ).data
 
             assert proj_data == response.data["data"]
-            assert response.data["data"]["mutex_owner"] == self.user.email
+            assert response.data["data"]["active_mutex"]["user"] == self.user.email
 
         # =================== RELEASE PROJECT =================== #
 
@@ -143,7 +143,7 @@ class TestProjectInteraction(TestCase):
             ).data
 
             assert proj_data == response.data["data"]
-            assert response.data["data"]["mutex_owner"] is None
+            assert response.data["data"]["active_mutex"] is None
 
     def test_fail_acquire_readonly_project(self):
         """

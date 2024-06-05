@@ -76,25 +76,43 @@ class Project(models.Model):
     )
 
     # MUTEX Management
-    mutex_owner = models.ForeignKey(
-        User,
-        related_name="active_mutexes",
+    active_mutex = models.OneToOneField(
+        "Mutex",
+        related_name="rel_active_mutexed_project",
         on_delete=models.RESTRICT,
         null=True,
         blank=True,
         default=None,
     )
 
-    mutex_dt = models.DateTimeField(null=True, blank=True, default=None)
-
     def __str__(self) -> str:
         return self.name
 
-    def __repsr__(self) -> str:
+    def save(self, *args, **kwargs):
+        if self.active_mutex and self.active_mutex.project != self:
+            raise ValueError(
+                f"Mutex Project mismatch: {self.active_mutex.project=} && {self=}"
+            )
+        super().save(*args, **kwargs)
+
+    @property
+    def mutex_owner(self):
+        try:
+            return self.active_mutex.user
+        except AttributeError:
+            return None
+
+    @property
+    def mutex_dt(self):
+        try:
+            return self.active_mutex.heartbeat_dt
+        except AttributeError:
+            return None
+
+    def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__}: {self.name} "
-            f"[{'LOCKED' if self.mutex_owner is not None else 'UNLOCKED'}]> "
-            f"Owner: {self.owner.email}"
+            f"[{'LOCKED' if self.active_mutex is not None else 'UNLOCKED'}]> "
         )
 
     def acquire_mutex(self, user: User):
@@ -103,32 +121,30 @@ class Project(models.Model):
 
         # if the user is already the mutex_owner, just refresh the mutex_dt
         # => re-acquire mutex
-        if self.mutex_owner is not None and self.mutex_owner != user:
-            raise ValidationError(
-                "Another user already is currently editing this file: "
-                f"{self.mutex_owner}"
-            )
+        if self.mutex_owner is not None:
+            if self.mutex_owner != user:
+                raise ValidationError(
+                    "Another user already is currently editing this file: "
+                    f"{self.mutex_owner}"
+                )
+            self.active_mutex.heartbeat_dt = timezone.localtime()
+            self.active_mutex.save()
+        else:
+            from speleodb.surveys.models import Mutex
 
-        self.mutex_owner = user
-        self.mutex_dt = timezone.localtime()
-        self.save()
+            self.active_mutex = Mutex.objects.create(project=self, user=user)
+            self.save()
 
-    def release_mutex(self, user):
-        if not self.has_write_access(user):
-            raise PermissionError(f"User: `{user.email} can not execute this action.`")
-
-        if self.mutex_owner is None:
+    def release_mutex(self, user: User, comment: str = ""):
+        if self.active_mutex is None:
             # if nobody owns the project, returns without error.
             return
 
         if self.mutex_owner != user and not self.is_owner(user):
-            raise PermissionError(
-                f"User: `{user.email} is not the current editor of the project.`"
-            )
+            raise PermissionError(f"User: `{user.email} can not execute this action.`")
 
-        self.mutex_owner = None
-        self.mutex_dt = None
-        self.save()
+        # AutoSave in the background
+        self.active_mutex.release_mutex(user=user, comment=comment)
 
     def get_date(self):
         return self.when.strftime("%Y/%m/%d %H:%M")

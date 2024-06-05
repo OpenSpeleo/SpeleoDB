@@ -10,6 +10,7 @@ from speleodb.surveys.models import Project
 class ProjectSerializer(serializers.ModelSerializer):
     permission = serializers.SerializerMethodField()
     country = serializers.SerializerMethodField()
+    active_mutex = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -24,6 +25,15 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def get_country(self, obj):
         return obj.country.code
+
+    def get_active_mutex(self, obj):
+        if obj.active_mutex is None:
+            return None
+        return {
+            "user": obj.active_mutex.user.email,
+            "creation_dt": obj.active_mutex.creation_dt,
+            "heartbeat_dt": obj.active_mutex.heartbeat_dt,
+        }
 
 
 # Serializers define the API representation.
