@@ -16,20 +16,23 @@
 
     {% compress css %}
     <link rel="stylesheet" href="{% static 'css/vendors/aos.css' %}">
+    {% endcompress %}
 
     {% if debug %}
     <link rel="stylesheet" href="{% static 'css/vendors/swiper-bundle.min.css' %}" />
     {% else %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8.4.7/swiper-bundle.min.css">
     {% endif %}
+
+    {% compress css %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    {% endcompress %}
 
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
     <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
     <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
-    {% endcompress %}
 
 </head>
 
@@ -221,8 +224,6 @@
 
     </div>
 
-    {% compress js %}
-
     {% if debug %}
     <script src="{% static 'cdn/jquery-3.7.1.js' %}"></script>
     {% else %}
@@ -233,13 +234,18 @@
     </script>
     {% endif %}
 
+    {% compress js %}
     <script src="{% static 'js/vendors/alpinejs.min.js' %}" defer></script>
     <script src="{% static 'js/vendors/aos.js' %}"></script>
+    {% endcompress %}
+
     {% if debug %}
     <script src="{% static 'js/vendors/swiper-bundle.min.js' %}"></script>
     {% else %}
     <script src="https://cdn.jsdelivr.net/npm/swiper@8.4.7/swiper-bundle.min.js"></script>
     {% endif %}
+
+    {% compress js %}
     <script src="{% static 'js/main.js' %}"></script>
 
     {% block extra_js %}{% endblock extra_js %}

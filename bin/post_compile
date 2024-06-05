@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
 
+FORCE_COMPRESS_ENABLED="0"
+
+# Loop through arguments and process them
+for arg in "$@"
+do
+    case $arg in
+        --force_compress)
+        FORCE_COMPRESS_ENABLED="1"
+        shift # Remove --force_compress from processing
+        ;;
+    esac
+done
+
 compress_enabled() {
 python << END
 import sys
@@ -15,9 +28,10 @@ else:
 END
 }
 
-if compress_enabled
-then
-  python manage.py compress
+# echo "FORCE_COMPRESS_ENABLED = ${FORCE_COMPRESS_ENABLED}"
+
+if [[ compress_enabled || ${FORCE_COMPRESS_ENABLED} == "1" ]]; then
+  python manage.py compress --force
 fi
 
 python manage.py collectstatic --noinput

@@ -2,17 +2,17 @@ import json
 import pathlib
 from functools import wraps
 
-from cachetools import cached
-from cachetools import TTLCache
-
 import git
 import gitlab
 import gitlab.exceptions
+from cachetools import TTLCache
+from cachetools import cached
 from django.conf import settings
 from gitlab.v4.objects.projects import ProjectManager
 
 from speleodb.common.models import Option
 from speleodb.users.models import User
+from speleodb.utils.lazy_string import LazyString
 from speleodb.utils.metaclasses import SingletonMetaClass
 
 GIT_COMMITTER = git.Actor("SpeleoDB", "contact@speleodb.com")
@@ -106,10 +106,19 @@ class _GitlabManager(metaclass=SingletonMetaClass):
         self._is_initialized = False
 
     def _initialize(self):
-        self._gitlab_instance = Option.get_or_empty(name="GITLAB_HOST_URL")
-        self._gitlab_token = Option.get_or_empty(name="GITLAB_TOKEN")
-        self._gitlab_group_id = Option.get_or_empty(name="GITLAB_GROUP_ID")
-        self._gitlab_group_name = Option.get_or_empty(name="GITLAB_GROUP_NAME")
+        # Allow Starting SpeleoDB without GITLAB Options to be defined.
+        self._gitlab_instance = LazyString(
+            lambda: Option.get_or_empty(name="GITLAB_HOST_URL")
+        )
+        self._gitlab_token = LazyString(
+            lambda: Option.get_or_empty(name="GITLAB_TOKEN")
+        )
+        self._gitlab_group_id = LazyString(
+            lambda: Option.get_or_empty(name="GITLAB_GROUP_ID")
+        )
+        self._gitlab_group_name = LazyString(
+            lambda: Option.get_or_empty(name="GITLAB_GROUP_NAME")
+        )
 
         self._gl = gitlab.Gitlab(
             f"https://{self._gitlab_instance}/", private_token=self._gitlab_token
