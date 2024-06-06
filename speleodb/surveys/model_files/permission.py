@@ -23,7 +23,7 @@ class Permission(models.Model):
         READ_AND_WRITE = (1, "READ_AND_WRITE")
         OWNER = (2, "OWNER")
 
-    level = models.IntegerField(
+    _level = models.IntegerField(
         choices=Level.choices, default=Level.READ_ONLY, verbose_name="level"
     )
 
@@ -31,11 +31,15 @@ class Permission(models.Model):
         unique_together = ("user", "project")
 
     def __str__(self):
-        return f"{self.user} => {self.project} [{self.level_name}]"
+        return f"{self.user} => {self.project} [{self.level}]"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
 
     @property
-    def level_name(self) -> str:
-        return self.Level(self.level).label
+    def level(self) -> str:
+        return self.Level(self._level).label
+
+    @level.setter
+    def level(self, value):
+        self._level = value

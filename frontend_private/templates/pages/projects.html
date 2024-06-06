@@ -97,17 +97,17 @@
                                         <div class="text-center">
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
                                             {% if perm.project.software == "MANUAL" %}
-                                                bg-slate-700 text-slate-400">Manual</div>
+                                                bg-slate-700">Manual</div>
                                             {% elif perm.project.software == "ARIANE" %}
-                                                bg-indigo-500/30">Ariane</div>
+                                                bg-pastel-blue">Ariane</div>
                                             {% elif perm.project.software == "COMPASS" %}
-                                                bg-amber-400/30 text-amber-400">Compass</div>
+                                                bg-pastel-orange">Compass</div>
                                             {% elif perm.project.software == "WALLS" %}
-                                                bg-amber-400/30 text-amber-400">Walls</div>
+                                                bg-pastel-red">Walls</div>
                                             {% elif perm.project.software == "STICKMAPS" %}
-                                                bg-amber-400/30 text-amber-400">StickMaps</div>
+                                                bg-pastel-purple">StickMaps</div>
                                             {% else %}
-                                               bg-rose-500/30 text-rose-400">Other</div>
+                                                bg-slate-700">Other</div>
                                             {% endif %}
                                         </div>
                                     </td>
@@ -124,14 +124,13 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
+                                            <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
                                             {% if perm.level == "READ_ONLY" %}
-                                                <div class="inline-flex font-medium bg-slate-700 text-slate-100 text-slate-400 rounded-full text-center px-2.5 py-0.5">Read Only</div>
+                                                bg-pastel-blue">Read Only</div>
                                             {% elif perm.level == "READ_AND_WRITE" %}
-                                                <div class="inline-flex font-medium bg-indigo-100 bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5" style="color: rgb(171 178 255);">Read And Write</div>
+                                                bg-pastel-purple">Read And Write</div>
                                             {% elif perm.level == "OWNER" %}
-                                                <div class="inline-flex font-medium bg-amber-100 bg-amber-400/30 text-amber-600 text-amber-400 rounded-full text-center px-2.5 py-0.5">Admin</div>
-                                            {% else %}
-                                                <div class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-500 text-rose-400 rounded-full text-center px-2.5 py-0.5">Unknown</div>
+                                                bg-pastel-orange">Admin</div>
                                             {% endif %}
                                         </div>
 

@@ -20,6 +20,7 @@ admin.site.register(Permission, PermissionAdmin)
 class ProjectAdmin(admin.ModelAdmin):
     list_display = (
         "name",
+        "software",
         "description",
         "creation_date",
         "modified_date",

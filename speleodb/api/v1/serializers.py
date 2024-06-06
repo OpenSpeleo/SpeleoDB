@@ -12,20 +12,25 @@ class ProjectSerializer(serializers.ModelSerializer):
     country = serializers.SerializerMethodField()
     active_mutex = serializers.SerializerMethodField()
     software = serializers.SerializerMethodField()
+    visibility = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
-        fields = "__all__"
+        # fields = "__all__"
+        exclude = ("_software", "_visibility")
 
     def get_permission(self, obj):
         user = self.context.get("user")
         try:
-            return obj.get_permission(user=user).level_name
+            return obj.get_permission(user=user).level
         except ObjectDoesNotExist:
             return None
 
     def get_software(self, obj):
-        return obj.software_name
+        return obj.software
+
+    def get_visibility(self, obj):
+        return obj.visibility
 
     def get_country(self, obj):
         return obj.country.code

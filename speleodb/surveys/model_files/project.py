@@ -75,6 +75,16 @@ class Project(models.Model):
         ],
     )
 
+    class Visibility(models.IntegerChoices):
+        PRIVATE = (0, "PRIVATE")
+        PUBLIC = (1, "PUBLIC")
+
+    _visibility = models.IntegerField(
+        choices=Visibility.choices,
+        verbose_name="visibility",
+        default=Visibility.PRIVATE,
+    )
+
     class Software(models.IntegerChoices):
         MANUAL = (0, "MANUAL")
         ARIANE = (1, "ARIANE")
@@ -83,7 +93,7 @@ class Project(models.Model):
         STICKMAPS = (4, "STICKMAPS")
         OTHER = (99, "OTHER")
 
-    software = models.IntegerField(choices=Software.choices, verbose_name="software")
+    _software = models.IntegerField(choices=Software.choices, verbose_name="software")
 
     # MUTEX Management
     active_mutex = models.OneToOneField(
@@ -106,8 +116,20 @@ class Project(models.Model):
         super().save(*args, **kwargs)
 
     @property
-    def software_name(self) -> str:
-        return self.Software(self.software).label
+    def software(self) -> str:
+        return self.Software(self._software).label
+
+    @software.setter
+    def software(self, value):
+        self._software = value
+
+    @property
+    def visibility(self) -> str:
+        return self.Visibility(self._visibility).label
+
+    @visibility.setter
+    def visibility(self, value):
+        self._visibility = value
 
     @property
     def mutex_owner(self):
@@ -172,12 +194,12 @@ class Project(models.Model):
     def has_write_access(self, user: User):
         from speleodb.surveys.model_files.permission import Permission
 
-        return self.get_permission(user=user).level >= Permission.Level.READ_AND_WRITE
+        return self.get_permission(user=user)._level >= Permission.Level.READ_AND_WRITE
 
     def is_owner(self, user: User):
         from speleodb.surveys.model_files.permission import Permission
 
-        return self.get_permission(user=user).level >= Permission.Level.OWNER
+        return self.get_permission(user=user)._level >= Permission.Level.OWNER
 
     # @functools.cached_property
     @property
