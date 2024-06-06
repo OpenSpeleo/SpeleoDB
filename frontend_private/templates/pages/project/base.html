@@ -12,7 +12,7 @@
 
             <!-- Left: Title -->
             <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-800 dark:text-slate-100 font-bold">
+                <h1 class="text-2xl md:text-3xl text-slate-800 text-slate-100 font-bold">
                     Project: {{ project.name }}
                 </h1>
             </div>
@@ -20,21 +20,21 @@
         </div>
 
         <!-- Project Details -->
-        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-sm mb-8">
+        <div class="bg-white bg-slate-800 shadow-lg rounded-sm mb-8">
             <div class="flex flex-col md:flex-row md:-mr-px">
 
                 <!-- Sidebar -->
-                <div class="flex flex-nowrap overflow-x-scroll no-scrollbar md:block md:overflow-auto px-3 py-6 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 min-w-60 md:space-y-3">
+                <div class="flex flex-nowrap overflow-x-scroll no-scrollbar md:block md:overflow-auto px-3 py-6 border-b md:border-b-0 md:border-r border-slate-200 border-slate-700 min-w-60 md:space-y-3">
                     <!-- Group 1 -->
                     <div>
-                        <div class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase mb-2">Project Settings</div>
+                        <div class="text-xs font-semibold text-slate-400 text-slate-500 uppercase mb-2">Project Settings</div>
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_details' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:project_details' project_id=project.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_details' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_details' project_id=project.id %}">
                                     {% if request.url_name == 'project_details' %}
                                         <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22"  stroke-width="2" fill="none">
                                     {% else %}
-                                        <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-slate-400 dark:text-slate-500 mr-2" viewBox="0 0 22 22" stroke-width="2" fill="none">
+                                        <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-slate-400 text-slate-500 mr-2" viewBox="0 0 22 22" stroke-width="2" fill="none">
                                     {% endif %}
                                             <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                             <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
@@ -48,38 +48,38 @@
                                             <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
                                         </svg>
                                     {% if request.url_name == 'project_details' %}
-                                        <span class="text-sm font-medium text-indigo-500 dark:text-indigo-400">
+                                        <span class="text-sm font-medium text-indigo-400">
                                     {% else %}
-                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
                                     {% endif %}
                                         Project Details
                                     </span>
                                 </a>
                             </li>
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_permissions' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:project_permissions' project_id=project.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_permissions' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_permissions' project_id=project.id %}">
                                     {% if request.url_name == 'project_permissions' %}
                                         <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
                                     {% else %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-400 dark:text-slate-500 mr-2" viewBox="0 0 16 16">
+                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-400 text-slate-500 mr-2" viewBox="0 0 16 16">
                                     {% endif %}
                                         <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
                                     </svg>
                                     {% if request.url_name == 'project_permissions' %}
-                                        <span class="text-sm font-medium text-indigo-500 dark:text-indigo-400">
+                                        <span class="text-sm font-medium text-indigo-400">
                                     {% else %}
-                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
                                     {% endif %}
                                         Permissions
                                     </span>
                                 </a>
                             </li>
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_mutexes' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:project_mutexes' project_id=project.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_mutexes' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_mutexes' project_id=project.id %}">
                                     {% if request.url_name == 'project_mutexes' %}
                                         <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
                                     {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 dark:text-slate-500 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 text-slate-500 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
                                     {% endif %}
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                         <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
@@ -87,29 +87,29 @@
                                         <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
                                       </svg>
                                     {% if request.url_name == 'project_mutexes' %}
-                                        <span class="text-sm font-medium text-indigo-500 dark:text-indigo-400">
+                                        <span class="text-sm font-medium text-indigo-400">
                                     {% else %}
-                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
                                     {% endif %}
                                         Lock History
                                     </span>
                                 </a>
                             </li>
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_revisions' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:project_revisions' project_id=project.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_revisions' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_revisions' project_id=project.id %}">
                                     {% if request.url_name == 'project_revisions' %}
                                         <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
                                     {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 dark:text-slate-500 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 text-slate-500 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
                                     {% endif %}
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                         <path d="M12 8l0 4l2 2" />
                                         <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
                                       </svg>
                                     {% if request.url_name == 'project_revisions' %}
-                                        <span class="text-sm font-medium text-indigo-500 dark:text-indigo-400">
+                                        <span class="text-sm font-medium text-indigo-400">
                                     {% else %}
-                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
                                     {% endif %}
                                         Revision History
                                     </span>
@@ -123,11 +123,11 @@
                         <hr class="mt-4 mb-4" style="border-color: rgb(255 255 255 / 40%);">
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_danger_zone' %}bg-rose-50 dark:bg-rose-500/30{% endif %}" href="{% url 'private:project_danger_zone' project_id=project.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_danger_zone' %}bg-rose-50 bg-rose-500/30{% endif %}" href="{% url 'private:project_danger_zone' project_id=project.id %}">
                                     {% if request.url_name == 'project_danger_zone' %}
                                         <svg class="w-4 h-4 shrink-0 stroke-current text-rose-500 mr-2" viewBox="0 0 22 22" fill="none" stroke-width=2>
                                     {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 dark:text-slate-500 mr-2" viewBox="0 0 22 22" fill="none"  stroke-width=2>
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 text-slate-500 mr-2" viewBox="0 0 22 22" fill="none"  stroke-width=2>
                                     {% endif %}
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                         <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
@@ -135,9 +135,9 @@
                                         <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
                                       </svg>
                                     {% if request.url_name == 'project_danger_zone' %}
-                                        <span class="text-sm font-medium text-rose-500 dark:text-rose-400">
+                                        <span class="text-sm font-medium text-rose-500 text-rose-400">
                                     {% else %}
-                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
                                     {% endif %}
                                         Danger Zone
                                     </span>

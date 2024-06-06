@@ -40,8 +40,6 @@ const fintechCard01 = () => {
   const ctx = document.getElementById('fintech-card-01');
   if (!ctx) return;
 
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
-
   const textColor = {
     light: '#94a3b8',
     dark: '#64748B'
@@ -65,7 +63,7 @@ const fintechCard01 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  };   
+  };
 
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
@@ -109,7 +107,7 @@ const fintechCard01 = () => {
           pointHoverBackgroundColor: '#6366f1',
           pointBorderWidth: 0,
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,          
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
         // Yellow line
@@ -132,7 +130,7 @@ const fintechCard01 = () => {
           pointBackgroundColor: '#fbbf24',
           pointHoverBackgroundColor: '#fbbf24',
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,          
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
         // gray line
@@ -154,7 +152,7 @@ const fintechCard01 = () => {
           pointBackgroundColor: `rgba(${hexToRGB('#64748B')}, 0.25)`,
           pointHoverBackgroundColor: `rgba(${hexToRGB('#64748B')}, 0.25)`,
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,          
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
       ],
@@ -168,15 +166,15 @@ const fintechCard01 = () => {
           beginAtZero: true,
           border: {
             display: false,
-          },  
+          },
           ticks: {
             maxTicksLimit: 7,
             callback: (value) => `${value}%`,
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
           grid: {
-            color: darkMode ? gridColor.dark : gridColor.light,
-          },     
+            color: gridColor.dark,
+          },
         },
         x: {
           type: 'time',
@@ -189,14 +187,14 @@ const fintechCard01 = () => {
           },
           border: {
             display: false,
-          },            
+          },
           grid: {
             display: false,
           },
           ticks: {
             autoSkipPadding: 48,
             maxRotation: 0,
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
         },
       },
@@ -213,9 +211,9 @@ const fintechCard01 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => `${context.parsed.y}%`,
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,            
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
       },
       interaction: {
@@ -260,7 +258,7 @@ const fintechCard01 = () => {
           box.style.pointerEvents = 'none';
           // Label
           const label = document.createElement('span');
-          label.classList.add('text-slate-500', 'dark:text-slate-400');
+          label.classList.add('text-slate-500', 'text-slate-400');
           label.style.fontSize = '0.875rem';
           label.style.lineHeight = '1.5715';
           const labelText = document.createTextNode(item.text);
@@ -273,26 +271,6 @@ const fintechCard01 = () => {
       },
     }],
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.x.ticks.color = textColor.dark;
-      chart.options.scales.y.ticks.color = textColor.dark;
-      chart.options.scales.y.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.x.ticks.color = textColor.light;
-      chart.options.scales.y.ticks.color = textColor.light;
-      chart.options.scales.y.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-    }
-    chart.update('none');
-  });  
 };
 fintechCard01();
 
@@ -300,8 +278,6 @@ fintechCard01();
 const fintechCard03 = () => {
   const ctx = document.getElementById('fintech-card-03');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const textColor = {
     light: '#94a3b8',
@@ -374,15 +350,15 @@ const fintechCard03 = () => {
         y: {
           border: {
             display: false,
-          },  
+          },
           ticks: {
             maxTicksLimit: 5,
             callback: (value) => formatValue(value),
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
           grid: {
-            color: darkMode ? gridColor.dark : gridColor.light,
-          },         
+            color: gridColor.dark,
+          },
         },
         x: {
           type: 'time',
@@ -395,13 +371,13 @@ const fintechCard03 = () => {
           },
           border: {
             display: false,
-          },            
+          },
           grid: {
             display: false,
           },
           ticks: {
-            color: darkMode ? textColor.dark : textColor.light,
-          },          
+            color: textColor.dark,
+          },
         },
       },
       plugins: {
@@ -417,9 +393,9 @@ const fintechCard03 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatValue(context.parsed.y),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,           
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
       },
       interaction: {
@@ -467,7 +443,7 @@ const fintechCard03 = () => {
           box.style.pointerEvents = 'none';
           // Label
           const label = document.createElement('span');
-          label.classList.add('text-slate-500', 'dark:text-slate-400');
+          label.classList.add('text-slate-500', 'text-slate-400');
           label.style.fontSize = '0.875rem';
           label.style.lineHeight = '1.5715';
           const labelText = document.createTextNode(item.text);
@@ -480,26 +456,6 @@ const fintechCard03 = () => {
       },
     }],
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.x.ticks.color = textColor.dark;
-      chart.options.scales.y.ticks.color = textColor.dark;
-      chart.options.scales.y.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.x.ticks.color = textColor.light;
-      chart.options.scales.y.ticks.color = textColor.light;
-      chart.options.scales.y.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-    }
-    chart.update('none');
-  });  
 };
 fintechCard03();
 
@@ -515,8 +471,6 @@ const imageEls = [];
 const fintechCard04 = () => {
   const ctx = document.getElementById('fintech-card-04');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const textColor = {
     light: '#94a3b8',
@@ -541,7 +495,7 @@ const fintechCard04 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  }; 
+  };
 
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
@@ -587,7 +541,7 @@ const fintechCard04 = () => {
         y: {
           border: {
             display: false,
-          },            
+          },
           grid: {
             display: false,
             drawTicks: false,
@@ -599,15 +553,15 @@ const fintechCard04 = () => {
         x: {
           border: {
             display: false,
-          },  
+          },
           ticks: {
             maxTicksLimit: 3,
             align: 'end',
             callback: (value) => formatValue(value),
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
           grid: {
-            color: darkMode ? gridColor.dark : gridColor.light,
+            color: gridColor.dark,
           },
         },
       },
@@ -624,9 +578,9 @@ const fintechCard04 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatValue(context.parsed.x),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,            
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
       },
       interaction: {
@@ -674,7 +628,7 @@ const fintechCard04 = () => {
           box.style.pointerEvents = 'none';
           // Label
           const label = document.createElement('span');
-          label.classList.add('text-slate-500', 'dark:text-slate-400');
+          label.classList.add('text-slate-500', 'text-slate-400');
           label.style.fontSize = '0.875rem';
           label.style.lineHeight = '1.5715';
           const labelText = document.createTextNode(item.text);
@@ -702,24 +656,6 @@ const fintechCard04 = () => {
       },
     }],
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.x.ticks.color = textColor.dark;
-      chart.options.scales.x.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.x.ticks.color = textColor.light;
-      chart.options.scales.x.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-    }
-    chart.update('none');
-  });
 };
 fintechCard04();
 
@@ -727,8 +663,6 @@ fintechCard04();
 const fintechCard07 = () => {
   const ctx = document.getElementById('fintech-card-07');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const textColor = {
     light: '#94a3b8',
@@ -753,7 +687,7 @@ const fintechCard07 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  };  
+  };
 
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
@@ -787,7 +721,7 @@ const fintechCard07 = () => {
           pointHoverBackgroundColor: '#6366f1',
           pointBorderWidth: 0,
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,           
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
         // Gray line
@@ -825,15 +759,15 @@ const fintechCard07 = () => {
           beginAtZero: true,
           border: {
             display: false,
-          },  
+          },
           ticks: {
             maxTicksLimit: 7,
             callback: (value) => formatValue(value),
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
           grid: {
-            color: darkMode ? gridColor.dark : gridColor.light,
-          },  
+            color: gridColor.dark,
+          },
         },
         x: {
           type: 'time',
@@ -846,14 +780,14 @@ const fintechCard07 = () => {
           },
           border: {
             display: false,
-          },            
+          },
           grid: {
             display: false,
           },
           ticks: {
             autoSkipPadding: 48,
             maxRotation: 0,
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
         },
       },
@@ -863,9 +797,9 @@ const fintechCard07 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatValue(context.parsed.y),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,            
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
         legend: {
           display: false,
@@ -878,26 +812,6 @@ const fintechCard07 = () => {
       maintainAspectRatio: false,
     },
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.x.ticks.color = textColor.dark;
-      chart.options.scales.y.ticks.color = textColor.dark;
-      chart.options.scales.y.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.x.ticks.color = textColor.light;
-      chart.options.scales.y.ticks.color = textColor.light;
-      chart.options.scales.y.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-    }
-    chart.update('none');
-  });  
 };
 fintechCard07();
 
@@ -905,8 +819,6 @@ fintechCard07();
 const fintechCard08 = () => {
   const ctx = document.getElementById('fintech-card-08');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const textColor = {
     light: '#94a3b8',
@@ -957,7 +869,7 @@ const fintechCard08 = () => {
           pointBackgroundColor: '#10b981',
           pointHoverBackgroundColor: '#10b981',
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,              
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
         // Light green line
@@ -975,7 +887,7 @@ const fintechCard08 = () => {
           pointBackgroundColor: '#a7f3d0',
           pointHoverBackgroundColor: '#a7f3d0',
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,              
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
       ],
@@ -994,20 +906,20 @@ const fintechCard08 = () => {
           beginAtZero: true,
           border: {
             display: false,
-          },  
+          },
           ticks: {
             maxTicksLimit: 7,
             callback: (value) => formatValue(value),
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
           grid: {
-            color: darkMode ? gridColor.dark : gridColor.light,
+            color: gridColor.dark,
           },
         },
         x: {
           border: {
             display: false,
-          },            
+          },
           grid: {
             display: false,
           },
@@ -1015,7 +927,7 @@ const fintechCard08 = () => {
             autoSkipPadding: 48,
             maxRotation: 0,
             align: 'end',
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
         },
       },
@@ -1025,9 +937,9 @@ const fintechCard08 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatValue(context.parsed.y),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,             
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
         legend: {
           display: false,
@@ -1040,26 +952,6 @@ const fintechCard08 = () => {
       maintainAspectRatio: false,
     },
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.x.ticks.color = textColor.dark;
-      chart.options.scales.y.ticks.color = textColor.dark;
-      chart.options.scales.y.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.x.ticks.color = textColor.light;
-      chart.options.scales.y.ticks.color = textColor.light;
-      chart.options.scales.y.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-    }
-    chart.update('none');
-  });  
 };
 fintechCard08();
 
@@ -1068,12 +960,10 @@ const fintechCard09 = () => {
   const ctx = document.getElementById('fintech-card-09');
   if (!ctx) return;
 
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
-
   const tooltipTitleColor = {
     light: '#1e293b',
     dark: '#f1f5f9'
-  }; 
+  };
 
   const tooltipBodyColor = {
     light: '#1e293b',
@@ -1135,11 +1025,11 @@ const fintechCard09 = () => {
           containerID: 'fintech-card-09-legend',
         },
         tooltip: {
-          titleColor: darkMode ? tooltipTitleColor.dark : tooltipTitleColor.light,
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,
-        },        
+          titleColor: tooltipTitleColor.dark,
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
+        },
       },
       interaction: {
         intersect: false,
@@ -1186,7 +1076,7 @@ const fintechCard09 = () => {
           box.style.pointerEvents = 'none';
           // Label
           const label = document.createElement('span');
-          label.classList.add('text-slate-500', 'dark:text-slate-400');
+          label.classList.add('text-slate-500', 'text-slate-400');
           label.style.fontSize = '0.875rem';
           label.style.lineHeight = '1.5715';
           const labelText = document.createTextNode(item.text);
@@ -1199,22 +1089,6 @@ const fintechCard09 = () => {
       },
     }],
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.plugins.tooltip.titleColor = tooltipTitleColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.plugins.tooltip.titleColor = tooltipTitleColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-    }
-    chart.update('none');
-  });  
 };
 fintechCard09();
 
@@ -1222,8 +1096,6 @@ fintechCard09();
 const fintechCard10 = () => {
   const ctx = document.getElementById('fintech-card-10');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const gridColor = {
     light: '#f1f5f9',
@@ -1243,8 +1115,8 @@ const fintechCard10 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  };  
-  
+  };
+
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
     type: 'line',
@@ -1298,15 +1170,15 @@ const fintechCard10 = () => {
           beginAtZero: true,
           border: {
             display: false,
-          },            
+          },
           grid: {
             drawTicks: false,
-            color: darkMode ? gridColor.dark : gridColor.light,
+            color: gridColor.dark,
           },
           ticks: {
             maxTicksLimit: 2,
             display: false,
-          },          
+          },
         },
         x: {
           type: 'time',
@@ -1323,9 +1195,9 @@ const fintechCard10 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatValue(context.parsed.y),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,          
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
         legend: {
           display: false,
@@ -1338,22 +1210,6 @@ const fintechCard10 = () => {
       maintainAspectRatio: false,
     },
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.y.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.y.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;      
-    }
-    chart.update('none');
-  });  
 };
 fintechCard10();
 
@@ -1361,8 +1217,6 @@ fintechCard10();
 const fintechCard11 = () => {
   const ctx = document.getElementById('fintech-card-11');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const gridColor = {
     light: '#f1f5f9',
@@ -1382,8 +1236,8 @@ const fintechCard11 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  };  
-  
+  };
+
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
     type: 'line',
@@ -1418,7 +1272,7 @@ const fintechCard11 = () => {
           pointBackgroundColor: '#10b981',
           pointHoverBackgroundColor: '#10b981',
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,      
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
       ],
@@ -1437,15 +1291,15 @@ const fintechCard11 = () => {
           beginAtZero: true,
           border: {
             display: false,
-          },            
+          },
           grid: {
             drawTicks: false,
-            color: darkMode ? gridColor.dark : gridColor.light,
+            color: gridColor.dark,
           },
           ticks: {
             maxTicksLimit: 2,
             display: false,
-          },          
+          },
         },
         x: {
           type: 'time',
@@ -1462,9 +1316,9 @@ const fintechCard11 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatValue(context.parsed.y),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,          
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
         legend: {
           display: false,
@@ -1477,22 +1331,6 @@ const fintechCard11 = () => {
       maintainAspectRatio: false,
     },
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.y.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.y.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;      
-    }
-    chart.update('none');
-  });  
 };
 fintechCard11();
 
@@ -1500,8 +1338,6 @@ fintechCard11();
 const fintechCard12 = () => {
   const ctx = document.getElementById('fintech-card-12');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const gridColor = {
     light: '#f1f5f9',
@@ -1521,8 +1357,8 @@ const fintechCard12 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  };  
-  
+  };
+
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
     type: 'line',
@@ -1557,7 +1393,7 @@ const fintechCard12 = () => {
           pointBackgroundColor: '#10b981',
           pointHoverBackgroundColor: '#10b981',
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,      
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
       ],
@@ -1576,15 +1412,15 @@ const fintechCard12 = () => {
           beginAtZero: true,
           border: {
             display: false,
-          },            
+          },
           grid: {
             drawTicks: false,
-            color: darkMode ? gridColor.dark : gridColor.light,
+            color: gridColor.dark,
           },
           ticks: {
             maxTicksLimit: 2,
             display: false,
-          },          
+          },
         },
         x: {
           type: 'time',
@@ -1601,9 +1437,9 @@ const fintechCard12 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatValue(context.parsed.y),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,          
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
         legend: {
           display: false,
@@ -1616,22 +1452,6 @@ const fintechCard12 = () => {
       maintainAspectRatio: false,
     },
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.y.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.y.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;      
-    }
-    chart.update('none');
-  });  
 };
 fintechCard12();
 
@@ -1639,8 +1459,6 @@ fintechCard12();
 const fintechCard13 = () => {
   const ctx = document.getElementById('fintech-card-13');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const gridColor = {
     light: '#f1f5f9',
@@ -1660,8 +1478,8 @@ const fintechCard13 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  };  
-  
+  };
+
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
     type: 'line',
@@ -1696,7 +1514,7 @@ const fintechCard13 = () => {
           pointBackgroundColor: '#10b981',
           pointHoverBackgroundColor: '#10b981',
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,      
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
       ],
@@ -1715,15 +1533,15 @@ const fintechCard13 = () => {
           beginAtZero: true,
           border: {
             display: false,
-          },            
+          },
           grid: {
             drawTicks: false,
-            color: darkMode ? gridColor.dark : gridColor.light,
+            color: gridColor.dark,
           },
           ticks: {
             maxTicksLimit: 2,
             display: false,
-          },          
+          },
         },
         x: {
           type: 'time',
@@ -1740,9 +1558,9 @@ const fintechCard13 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatValue(context.parsed.y),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,          
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
         legend: {
           display: false,
@@ -1755,22 +1573,6 @@ const fintechCard13 = () => {
       maintainAspectRatio: false,
     },
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.y.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.y.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;      
-    }
-    chart.update('none');
-  });  
 };
 fintechCard13();
 
@@ -1837,8 +1639,6 @@ const fintechCard14 = () => {
   miniCharts.forEach((miniChart) => {
     const ctx = document.getElementById(miniChart.selector);
 
-    const darkMode = localStorage.getItem('dark-mode') === 'true';
-
     const tooltipBodyColor = {
       light: '#1e293b',
       dark: '#f1f5f9'
@@ -1852,7 +1652,7 @@ const fintechCard14 = () => {
     const tooltipBorderColor = {
       light: '#e2e8f0',
       dark: '#475569'
-    }; 
+    };
 
     if (!ctx) return;
     // eslint-disable-next-line no-unused-vars
@@ -1884,7 +1684,7 @@ const fintechCard14 = () => {
             pointBackgroundColor: miniChart.growth ? '#10b981' : '#f43f5e',
             pointHoverBackgroundColor: miniChart.growth ? '#10b981' : '#f43f5e',
             pointBorderWidth: 0,
-            pointHoverBorderWidth: 0,      
+            pointHoverBorderWidth: 0,
             clip: 20,
           },
         ],
@@ -1910,9 +1710,9 @@ const fintechCard14 = () => {
               title: () => false, // Disable tooltip title
               label: (context) => formatValue(context.parsed.y),
             },
-            bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-            backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-            borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,              
+            bodyColor: tooltipBodyColor.dark,
+            backgroundColor: tooltipBgColor.dark,
+            borderColor: tooltipBorderColor.dark,
           },
           legend: {
             display: false,
@@ -1925,20 +1725,6 @@ const fintechCard14 = () => {
         maintainAspectRatio: false,
       },
     });
-
-    document.addEventListener('darkMode', (e) => {
-      const { mode } = e.detail;
-      if (mode === 'on') {
-        chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-        chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-        chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-      } else {
-        chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-        chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-        chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-      }
-      chart.update('none');
-    });     
   });
 };
-fintechCard14(); 
+fintechCard14();
