@@ -30,7 +30,7 @@
                         <div class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase mb-2">Project Settings</div>
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'dashboard' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:project_details' project_id=project.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_details' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:project_details' project_id=project.id %}">
                                     {% if request.url_name == 'project_details' %}
                                         <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22"  stroke-width="2" fill="none">
                                     {% else %}
@@ -57,7 +57,7 @@
                                 </a>
                             </li>
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'dashboard' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:project_permissions' project_id=project.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_permissions' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:project_permissions' project_id=project.id %}">
                                     {% if request.url_name == 'project_permissions' %}
                                         <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
                                     {% else %}
@@ -70,36 +70,82 @@
                                     {% else %}
                                         <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
                                     {% endif %}
-                                        Project Permissions
+                                        Permissions
+                                    </span>
+                                </a>
+                            </li>
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_mutexes' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:project_mutexes' project_id=project.id %}">
+                                    {% if request.url_name == 'project_mutexes' %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
+                                    {% else %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 dark:text-slate-500 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
+                                    {% endif %}
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+                                        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+                                        <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+                                      </svg>
+                                    {% if request.url_name == 'project_mutexes' %}
+                                        <span class="text-sm font-medium text-indigo-500 dark:text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
+                                    {% endif %}
+                                        Lock History
+                                    </span>
+                                </a>
+                            </li>
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_revisions' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:project_revisions' project_id=project.id %}">
+                                    {% if request.url_name == 'project_revisions' %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
+                                    {% else %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 dark:text-slate-500 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
+                                    {% endif %}
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <path d="M12 8l0 4l2 2" />
+                                        <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
+                                      </svg>
+                                    {% if request.url_name == 'project_revisions' %}
+                                        <span class="text-sm font-medium text-indigo-500 dark:text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
+                                    {% endif %}
+                                        Revision History
                                     </span>
                                 </a>
                             </li>
                         </ul>
                     </div>
-                    {% comment %} <!-- Group 2 -->
+                    {% if is_project_owner %}
+                    <!-- Group 2 -->
                     <div>
-                        <div class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase mt-4 mb-2">Any Question or Feedback ?</div>
+                        <hr class="mt-4 mb-4" style="border-color: rgb(255 255 255 / 40%);">
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'feedback' %}bg-indigo-50 dark:bg-indigo-500/30{% endif %}" href="{% url 'private:feedback' %}">
-                                    {% if request.url_name == 'feedback' %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_danger_zone' %}bg-rose-50 dark:bg-rose-500/30{% endif %}" href="{% url 'private:project_danger_zone' project_id=project.id %}">
+                                    {% if request.url_name == 'project_danger_zone' %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-rose-500 mr-2" viewBox="0 0 22 22" fill="none" stroke-width=2>
                                     {% else %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-400 dark:text-slate-500 mr-2" viewBox="0 0 16 16">
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 dark:text-slate-500 mr-2" viewBox="0 0 22 22" fill="none"  stroke-width=2>
                                     {% endif %}
-                                        <path d="M7.001 3h2v4h-2V3zm1 7a1 1 0 110-2 1 1 0 010 2zM15 16a1 1 0 01-.6-.2L10.667 13H1a1 1 0 01-1-1V1a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1zM2 11h9a1 1 0 01.6.2L14 13V2H2v9z" />
-                                    </svg>
-                                    {% if request.url_name == 'feedback' %}
-                                        <span class="text-sm font-medium text-indigo-500 dark:text-indigo-400">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
+                                        <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
+                                        <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
+                                      </svg>
+                                    {% if request.url_name == 'project_danger_zone' %}
+                                        <span class="text-sm font-medium text-rose-500 dark:text-rose-400">
                                     {% else %}
                                         <span class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200">
                                     {% endif %}
-                                        Give Feedback
+                                        Danger Zone
                                     </span>
                                 </a>
                             </li>
                         </ul>
-                    </div> {% endcomment %}
+                    </div>
+                    {% endif %}
                 </div>
 
                 <!-- Right Panel -->
