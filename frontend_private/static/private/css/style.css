@@ -3143,6 +3143,11 @@ span.flatpickr-weekday {
   background-color: rgb(245 158 11 / var(--tw-bg-opacity));
 }
 
+.bg-amber-500\/30 {
+  --tw-bg-opacity: 0.3;
+  background-color: rgb(245 158 11 / var(--tw-bg-opacity));
+}
+
 .bg-black {
   --tw-bg-opacity: 1;
   background-color: rgb(0 0 0 / var(--tw-bg-opacity));
@@ -3288,6 +3293,30 @@ span.flatpickr-weekday {
 .bg-white {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
+}
+
+.bg-pastel-blue {
+  --tw-bg-opacity: 1;
+  color: white;
+  background-color: rgb(71 94 175 / var(--tw-bg-opacity));
+}
+
+.bg-pastel-orange {
+  --tw-bg-opacity: 1;
+  color: white;
+  background-color: rgb(219 155 16 / var(--tw-bg-opacity));
+}
+
+.bg-pastel-red {
+  --tw-bg-opacity: 1;
+  color: white;
+  background-color: rgb(221 87 70 / var(--tw-bg-opacity));
+}
+
+.bg-pastel-purple {
+  --tw-bg-opacity: 1;
+  color: white;
+  background-color: rgb(120 71 175 / var(--tw-bg-opacity));
 }
 
 .bg-opacity-25 {

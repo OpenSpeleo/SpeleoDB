@@ -18,7 +18,7 @@ class BaseProjectAccessLevel(permissions.BasePermission):
             return True
 
         try:
-            return obj.get_permission(user=request.user).level >= self.MIN_ACCESS_LELEL
+            return obj.get_permission(user=request.user)._level >= self.MIN_ACCESS_LELEL
         except ObjectDoesNotExist:
             return False
 
