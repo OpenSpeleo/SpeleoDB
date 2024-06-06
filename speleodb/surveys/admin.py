@@ -8,7 +8,13 @@ from speleodb.surveys.models import Mutex
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 
-admin.site.register(Permission)
+
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = ("project", "user", "level")
+    ordering = ("project",)
+
+
+admin.site.register(Permission, PermissionAdmin)
 
 
 class ProjectAdmin(admin.ModelAdmin):
