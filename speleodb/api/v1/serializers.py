@@ -11,6 +11,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     permission = serializers.SerializerMethodField()
     country = serializers.SerializerMethodField()
     active_mutex = serializers.SerializerMethodField()
+    software = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -22,6 +23,9 @@ class ProjectSerializer(serializers.ModelSerializer):
             return obj.get_permission(user=user).level_name
         except ObjectDoesNotExist:
             return None
+
+    def get_software(self, obj):
+        return obj.software_name
 
     def get_country(self, obj):
         return obj.country.code

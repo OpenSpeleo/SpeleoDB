@@ -1,5 +1,7 @@
 import random
+
 import factory
+from django_countries import countries
 from factory import Faker
 from factory import post_generation
 from factory.django import DjangoModelFactory
@@ -8,8 +10,6 @@ from rest_framework.authtoken.models import Token
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
-
-from django_countries import countries
 
 
 class UserFactory(DjangoModelFactory):
@@ -54,12 +54,14 @@ class ProjectFactory(DjangoModelFactory):
     longitude = Faker("longitude")
     latitude = Faker("latitude")
 
+    software = random.choice(Project.Software.choices)[0]
+
     class Meta:
         model = Project
 
 
 class PermissionFactory(DjangoModelFactory):
-    level = Permission.Level.READ_ONLY
+    level = random.choice(Permission.Level.choices)[0]
     user = factory.SubFactory(UserFactory)
     project = factory.SubFactory(ProjectFactory)
 

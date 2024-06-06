@@ -145,6 +145,66 @@ class TestProjectInteraction(TestCase):
             assert proj_data == response.data["data"]
             assert response.data["data"]["active_mutex"] is None
 
+    @parameterized.expand(
+        [
+            Permission.Level.OWNER,
+            Permission.Level.READ_AND_WRITE,
+        ]
+    )
+    def test_acquire_and_release_user_project_with_comment(self, level):
+        """
+        Ensure POSTing json over token auth with correct
+        credentials passes and does not require CSRF
+        """
+
+        _ = PermissionFactory(user=self.user, project=self.project, level=level)
+
+        # =================== ACQUIRE PROJECT =================== #
+
+        auth = self.header_prefix + self.token.key
+        response = self.csrf_client.post(
+            f"/api/v1/project/{self.project.id}/acquire/",
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+
+        # refresh mutex data
+        self.project.refresh_from_db()
+
+        assert ProjectSerializer(data=response.data["data"]).is_valid()
+        proj_data = ProjectSerializer(self.project, context={"user": self.user}).data
+
+        assert proj_data == response.data["data"]
+        assert response.data["data"]["active_mutex"]["user"] == self.user.email
+
+        # =================== RELEASE PROJECT =================== #
+
+        mutex = self.project.active_mutex
+
+        test_comment = "hello world"
+
+        auth = self.header_prefix + self.token.key
+        response = self.csrf_client.post(
+            f"/api/v1/project/{self.project.id}/release/",
+            HTTP_AUTHORIZATION=auth,
+            data={"comment": test_comment},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+
+        # refresh mutex data
+        mutex.refresh_from_db()
+        self.project.refresh_from_db()
+
+        assert ProjectSerializer(data=response.data["data"]).is_valid()
+        proj_data = ProjectSerializer(self.project, context={"user": self.user}).data
+
+        assert proj_data == response.data["data"]
+        assert response.data["data"]["active_mutex"] is None
+        assert mutex.closing_comment == test_comment
+        assert mutex.closing_user == self.user
+
     def test_fail_acquire_readonly_project(self):
         """
         Ensure POSTing json over token auth with correct
