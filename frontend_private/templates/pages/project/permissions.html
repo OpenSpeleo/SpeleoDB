@@ -4,78 +4,119 @@
 {% load countries %}
 
 {% block right_panel %}
+
 <div class="grow">
-
-    <!-- Panel body -->
     <div class="p-6 space-y-6">
-        <h2 class="text-2xl text-slate-800 dark:text-slate-100 font-bold mb-5">Project Settings</h2>
 
-        <!-- Project Name -->
-        <section>
-            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                <div class="w-full">
-                    <label class="block text-sm font-medium mb-1" for="name">Project Name:</label>
-                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.name }}" />
-                </div>
+        <!-- Page header -->
+        <div class="mb-16 block">
+
+            <!-- Left: Title -->
+            <div class="mb-4 sm:mb-0 w-fit block float-left">
+                <h1 class="text-2xl md:text-3xl text-slate-800 dark:text-slate-100 font-bold">
+                    Project's Permissions
+                </h1>
             </div>
-        </section>
 
-        <!-- Description -->
-        <section>
-            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                <div class="w-full">
-                    <label class="block text-sm font-medium mb-1" for="name">Description:</label>
-                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.description }}" />
-                </div>
+            <!-- Right: Actions -->
+            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2 w-fit block float-right">
+
+                <!-- New button -->
+                {% if not is_project_owner %}
+                    <button class="btn bg-slate-600 text-white" disabled>
+                {% else %}
+                    <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                {% endif %}
+                    <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24" viewBox="0 0 16 16">
+                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+                      </svg>
+                    <span class="hidden xs:block ml-2">Grant Access</span>
+                </button>
+
             </div>
-        </section>
 
-        <!-- Country -->
-        <section>
-            <div class="flex flex-wrap mt-5">
-                <div class="mr-2">
-                    <label class="block text-sm font-medium mb-1" for="country">Country:</label>
-                    <select id="country" class="form-select max-w-full w-128">
-                    {% get_countries as countries %}
-                    {% for country in countries %}
-                        <option value="{{ country.code }}" {% if country.code == project.country %} selected {% endif %}>{{ country.name }}</option>
-                    {% endfor %}
-                    </select>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-sm border border-slate-200 dark:border-slate-700">
+
+            <div x-data="handleSelect">
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full dark:text-slate-300">
+                        <!-- Table header -->
+                        <thead class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/20 border-t border-b border-slate-200 dark:border-slate-700">
+                            <tr>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">User Name</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">User Email</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Access Level</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Actions</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <!-- Table body -->
+                        <tbody class="text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                            {% for permission in permissions %}
+                                <!-- Row -->
+                                <tr>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="text-center">
+                                            <div class="font-medium text-slate-800 dark:text-slate-100">{{ permission.user.name }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="text-center">{{ permission.user.email }}</div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="text-center">
+                                            {% if permission.level_name == "READ_ONLY" %}
+                                                <div class="inline-flex font-medium bg-slate-700 text-slate-100 dark:text-slate-400 rounded-full text-center px-2.5 py-0.5">Read Only</div>
+                                            {% elif permission.level_name == "READ_AND_WRITE" %}
+                                                <div class="inline-flex font-medium bg-indigo-100 dark:bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5" style="color: rgb(171 178 255);">Read And Write</div>
+                                            {% elif permission.level_name == "OWNER" %}
+                                                <div class="inline-flex font-medium bg-amber-100 dark:bg-amber-400/30 text-amber-600 dark:text-amber-400 rounded-full text-center px-2.5 py-0.5">Admin</div>
+                                            {% else %}
+                                                <div class="inline-flex font-medium bg-rose-100 dark:bg-rose-500/30 text-rose-500 dark:text-rose-400 rounded-full text-center px-2.5 py-0.5">Unknown</div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
+                                        {% if is_project_owner %}
+                                        <a href="#">
+                                        {% endif %}
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if is_project_owner %}text-amber-500{% else %}text-slate-500{% endif %} inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                                    <path d="M13.5 6.5l4 4" />
+                                                </svg>
+                                        </a>
+                                        {% if is_project_owner %}
+                                        <a href="#">
+                                        {% endif %}
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if is_project_owner %}text-rose-500{% else %}text-slate-500{% endif %} inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                <path d="M18 6l-12 12" />
+                                                <path d="M6 6l12 12" />
+                                            </svg>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
                 </div>
-            </div>
-        </section>
-
-        <!-- latitude -->
-        <section>
-            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                <div class="w-full">
-                    <label class="block text-sm font-medium mb-1" for="name">Latitude:</label>
-                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.latitude }}" />
-                </div>
-            </div>
-        </section>
-
-        <!-- longitude -->
-        <section>
-            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                <div class="w-full">
-                    <label class="block text-sm font-medium mb-1" for="name">Longitude:</label>
-                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.longitude }}" />
-                </div>
-            </div>
-        </section>
-
-    </div>
-
-    <!-- Panel footer -->
-    <footer>
-        <div class="flex flex-col px-6 py-5 border-t border-slate-200 dark:border-slate-700">
-            <div class="flex self-end">
-                <a class="btn dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300" href="{% url 'private:projects' %}">Cancel</a>
-                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
             </div>
         </div>
-    </footer>
 
+    </div>
 </div>
 {% endblock right_panel %}

@@ -1,0 +1,93 @@
+{% extends "pages/project/base.html" %}
+{% load static i18n compress%}
+
+{% load countries %}
+
+{% block right_panel %}
+<div class="grow">
+    <div class="p-6 space-y-6">
+
+        <!-- Page header -->
+        <div class="mb-16 block">
+
+            <!-- Left: Title -->
+            <div class="mb-4 sm:mb-0 w-fit block float-left">
+                <h1 class="text-2xl md:text-3xl text-slate-800 dark:text-slate-100 font-bold">
+                    Project's Revision History
+                </h1>
+            </div>
+
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-sm border border-slate-200 dark:border-slate-700">
+
+            <div x-data="handleSelect">
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full dark:text-slate-300">
+                        <!-- Table header -->
+                        <thead class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/20 border-t border-b border-slate-200 dark:border-slate-700">
+                            <tr>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">ID</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Author</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Date</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Message</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Download</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <!-- Table body -->
+                        <tbody class="text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                            {% for commit in commits %}
+                                <!-- Row -->
+                                <tr>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="text-center">
+                                            <div class="font-medium text-slate-800 dark:text-slate-100">{{ commit.short_id }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="text-center">
+                                            <div class="font-medium text-slate-800 dark:text-slate-100">{{ commit.author_email }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="text-center">{{ commit.committed_date|date:"Y/m/d H:i" }}</div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="text-center">
+                                            <div class="font-medium text-slate-800 dark:text-slate-100">{{ commit.message }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
+                                        <a href="#">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 text-indigo-500 inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" />
+                                                <path d="M12 13l0 9" />
+                                                <path d="M9 19l3 3l3 -3" />
+                                            </svg>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock right_panel %}
