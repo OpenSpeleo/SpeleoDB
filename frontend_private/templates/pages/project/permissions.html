@@ -13,7 +13,7 @@
 
             <!-- Left: Title -->
             <div class="mb-4 sm:mb-0 w-fit block float-left">
-                <h1 class="text-2xl md:text-3xl text-slate-800 dark:text-slate-100 font-bold">
+                <h1 class="text-2xl md:text-3xl text-slate-800 text-slate-100 font-bold">
                     Project's Permissions
                 </h1>
             </div>
@@ -38,15 +38,15 @@
         </div>
 
         <!-- Table -->
-        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-sm border border-slate-200 dark:border-slate-700">
+        <div class="bg-white bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
 
             <div x-data="handleSelect">
 
                 <!-- Table -->
                 <div class="overflow-x-auto">
-                    <table class="table-auto w-full dark:text-slate-300">
+                    <table class="table-auto w-full text-slate-300">
                         <!-- Table header -->
-                        <thead class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/20 border-t border-b border-slate-200 dark:border-slate-700">
+                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
                             <tr>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="font-semibold text-center">User Name</div>
@@ -63,13 +63,13 @@
                             </tr>
                         </thead>
                         <!-- Table body -->
-                        <tbody class="text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                        <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
                             {% for permission in permissions %}
                                 <!-- Row -->
                                 <tr>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
-                                            <div class="font-medium text-slate-800 dark:text-slate-100">{{ permission.user.name }}</div>
+                                            <div class="font-medium text-slate-800 text-slate-100">{{ permission.user.name }}</div>
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
@@ -77,14 +77,14 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
-                                            {% if permission.level_name == "READ_ONLY" %}
-                                                <div class="inline-flex font-medium bg-slate-700 text-slate-100 dark:text-slate-400 rounded-full text-center px-2.5 py-0.5">Read Only</div>
-                                            {% elif permission.level_name == "READ_AND_WRITE" %}
-                                                <div class="inline-flex font-medium bg-indigo-100 dark:bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5" style="color: rgb(171 178 255);">Read And Write</div>
-                                            {% elif permission.level_name == "OWNER" %}
-                                                <div class="inline-flex font-medium bg-amber-100 dark:bg-amber-400/30 text-amber-600 dark:text-amber-400 rounded-full text-center px-2.5 py-0.5">Admin</div>
+                                            {% if permission.level == "READ_ONLY" %}
+                                                <div class="inline-flex font-medium bg-slate-700 text-slate-100 text-slate-400 rounded-full text-center px-2.5 py-0.5">Read Only</div>
+                                            {% elif permission.level == "READ_AND_WRITE" %}
+                                                <div class="inline-flex font-medium bg-indigo-100 bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5" style="color: rgb(171 178 255);">Read And Write</div>
+                                            {% elif permission.level == "OWNER" %}
+                                                <div class="inline-flex font-medium bg-amber-100 bg-amber-400/30 text-amber-600 text-amber-400 rounded-full text-center px-2.5 py-0.5">Admin</div>
                                             {% else %}
-                                                <div class="inline-flex font-medium bg-rose-100 dark:bg-rose-500/30 text-rose-500 dark:text-rose-400 rounded-full text-center px-2.5 py-0.5">Unknown</div>
+                                                <div class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-500 text-rose-400 rounded-full text-center px-2.5 py-0.5">Unknown</div>
                                             {% endif %}
                                         </div>
                                     </td>

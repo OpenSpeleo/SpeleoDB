@@ -63,7 +63,7 @@ input[type="search"]::-webkit-search-results-decoration {
 .form-select,
 .form-checkbox,
 .form-radio {
-    @apply bg-white dark:bg-slate-900/30 border focus:ring-0 focus:ring-offset-0 dark:disabled:bg-slate-700/30 dark:disabled:border-slate-700 dark:disabled:hover:border-slate-700;
+    @apply bg-white bg-slate-900/30 border focus:ring-0 focus:ring-offset-0 disabled:bg-slate-700/30 disabled:border-slate-700 disabled:hover:border-slate-700;
 }
 
 .form-input,
@@ -78,12 +78,12 @@ input[type="search"]::-webkit-search-results-decoration {
 .form-textarea,
 .form-multiselect,
 .form-select {
-    @apply text-sm text-slate-800 dark:text-slate-100 leading-5 py-2 px-3 border-slate-200 hover:border-slate-300 focus:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 dark:focus:border-slate-600 shadow-sm;
+    @apply text-sm text-slate-800 text-slate-100 leading-5 py-2 px-3 border-slate-200 hover:border-slate-300 focus:border-slate-300 border-slate-700 hover:border-slate-600 focus:border-slate-600 shadow-sm;
 }
 
 .form-input,
 .form-textarea {
-    @apply placeholder-slate-400 dark:placeholder-slate-500;
+    @apply placeholder-slate-400 placeholder-slate-500;
 }
 
 .form-select {
@@ -92,7 +92,7 @@ input[type="search"]::-webkit-search-results-decoration {
 
 .form-checkbox,
 .form-radio {
-    @apply text-indigo-500 checked:bg-indigo-500 dark:checked:border-transparent border border-slate-300 focus:border-indigo-300 dark:border-slate-700 dark:focus:border-indigo-500/50;
+    @apply text-indigo-500 checked:bg-indigo-500 checked:border-transparent border border-slate-300 focus:border-indigo-300 border-slate-700 focus:border-indigo-500/50;
 }
 
 /* Switch element */
@@ -124,11 +124,11 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .form-switch input[type="checkbox"]:disabled + label {
-    @apply cursor-not-allowed bg-slate-100 dark:bg-slate-700/20 border border-slate-200 dark:border-slate-700;
+    @apply cursor-not-allowed bg-slate-100 bg-slate-700/20 border border-slate-200 border-slate-700;
 }
 
 .form-switch input[type="checkbox"]:disabled + label > span:first-child {
-    @apply bg-slate-400 dark:bg-slate-600;
+    @apply bg-slate-400 bg-slate-600;
 }
 
 /* Chrome, Safari and Opera */

@@ -55,8 +55,6 @@ const analyticsCard01 = () => {
   const ctx = document.getElementById('analytics-card-01');
   if (!ctx) return;
 
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
-
   const textColor = {
     light: '#94a3b8',
     dark: '#64748B'
@@ -80,7 +78,7 @@ const analyticsCard01 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  };   
+  };
 
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
@@ -118,7 +116,7 @@ const analyticsCard01 = () => {
           pointHoverBackgroundColor: '#6366f1',
           pointBorderWidth: 0,
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,       
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
         // Gray line
@@ -139,7 +137,7 @@ const analyticsCard01 = () => {
           pointBackgroundColor: `rgba(${hexToRGB('#64748B')}, 0.25)`,
           pointHoverBackgroundColor: `rgba(${hexToRGB('#64748B')}, 0.25)`,
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,          
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
       ],
@@ -148,19 +146,19 @@ const analyticsCard01 = () => {
       layout: {
         padding: 20,
       },
-      scales: {      
+      scales: {
         y: {
           beginAtZero: true,
           border: {
             display: false,
-          },  
+          },
           ticks: {
             callback: (value) => formatThousands(value),
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
           grid: {
-            color: darkMode ? gridColor.dark : gridColor.light,
-          },   
+            color: gridColor.dark,
+          },
         },
         x: {
           type: 'time',
@@ -173,14 +171,14 @@ const analyticsCard01 = () => {
           },
           border: {
             display: false,
-          },            
+          },
           grid: {
             display: false,
           },
           ticks: {
             autoSkipPadding: 48,
             maxRotation: 0,
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
         },
       },
@@ -193,9 +191,9 @@ const analyticsCard01 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatThousands(context.parsed.y),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,          
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
       },
       interaction: {
@@ -205,26 +203,6 @@ const analyticsCard01 = () => {
       maintainAspectRatio: false,
     },
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.x.ticks.color = textColor.dark;
-      chart.options.scales.y.ticks.color = textColor.dark;
-      chart.options.scales.y.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.x.ticks.color = textColor.light;
-      chart.options.scales.y.ticks.color = textColor.light;
-      chart.options.scales.y.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-    }
-    chart.update('none');
-  });
 };
 analyticsCard01();
 
@@ -232,8 +210,6 @@ analyticsCard01();
 const analyticsCard02 = () => {
   const ctx = document.getElementById('analytics-card-02');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const chartAreaBg = {
     light: '#f8fafc',
@@ -289,14 +265,14 @@ const analyticsCard02 = () => {
           pointBackgroundColor: '#6366f1',
           pointHoverBackgroundColor: '#6366f1',
           pointBorderWidth: 0,
-          pointHoverBorderWidth: 0,              
+          pointHoverBorderWidth: 0,
           clip: 20,
         },
       ],
     },
     options: {
       chartArea: {
-        backgroundColor: darkMode ? chartAreaBg.dark : chartAreaBg.light,
+        backgroundColor: chartAreaBg.dark,
       },
       layout: {
         padding: {
@@ -324,9 +300,9 @@ const analyticsCard02 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatThousands(context.parsed.y),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,          
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
         legend: {
           display: false,
@@ -339,21 +315,6 @@ const analyticsCard02 = () => {
       maintainAspectRatio: false,
     },
   });
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.chartArea.backgroundColor = chartAreaBg.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.chartArea.backgroundColor = chartAreaBg.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-    }
-    chart.update('none');
-  });  
 };
 analyticsCard02();
 
@@ -361,8 +322,6 @@ analyticsCard02();
 const analyticsCard03 = () => {
   const ctx = document.getElementById('analytics-card-03');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const textColor = {
     light: '#94a3b8',
@@ -387,7 +346,7 @@ const analyticsCard03 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  }; 
+  };
 
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
@@ -458,15 +417,15 @@ const analyticsCard03 = () => {
           stacked: true,
           border: {
             display: false,
-          },  
+          },
           beginAtZero: true,
           ticks: {
             maxTicksLimit: 5,
             callback: (value) => formatThousands(value),
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
           grid: {
-            color: darkMode ? gridColor.dark : gridColor.light,
+            color: gridColor.dark,
           },
         },
         x: {
@@ -481,14 +440,14 @@ const analyticsCard03 = () => {
           },
           border: {
             display: false,
-          },            
+          },
           grid: {
             display: false,
           },
           ticks: {
             autoSkipPadding: 48,
             maxRotation: 0,
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
         },
       },
@@ -505,9 +464,9 @@ const analyticsCard03 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatThousands(context.parsed.y),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,             
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
       },
       interaction: {
@@ -555,7 +514,7 @@ const analyticsCard03 = () => {
           box.style.pointerEvents = 'none';
           // Label
           const label = document.createElement('span');
-          label.classList.add('text-slate-500', 'dark:text-slate-400');
+          label.classList.add('text-slate-500', 'text-slate-400');
           label.style.fontSize = '0.875rem';
           label.style.lineHeight = '1.5715';
           const labelText = document.createTextNode(item.text);
@@ -568,26 +527,6 @@ const analyticsCard03 = () => {
       },
     }],
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.x.ticks.color = textColor.dark;
-      chart.options.scales.y.ticks.color = textColor.dark;
-      chart.options.scales.y.grid.color = gridColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.x.ticks.color = textColor.light;
-      chart.options.scales.y.ticks.color = textColor.light;
-      chart.options.scales.y.grid.color = gridColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-    }
-    chart.update('none');
-  });  
 };
 analyticsCard03();
 
@@ -595,8 +534,6 @@ analyticsCard03();
 const analyticsCard04 = () => {
   const ctx = document.getElementById('analytics-card-04');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const textColor = {
     light: '#94a3b8',
@@ -621,7 +558,7 @@ const analyticsCard04 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  };   
+  };
 
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
@@ -675,26 +612,26 @@ const analyticsCard04 = () => {
           },
           border: {
             display: false,
-          },            
+          },
           grid: {
             display: false,
           },
           ticks: {
-            color: darkMode ? textColor.dark : textColor.light,
-          },           
+            color: textColor.dark,
+          },
         },
         x: {
           border: {
             display: false,
-          },  
+          },
           ticks: {
             maxTicksLimit: 3,
             align: 'end',
             callback: (value) => formatThousands(value),
-            color: darkMode ? textColor.dark : textColor.light,
+            color: textColor.dark,
           },
           grid: {
-            color: darkMode ? gridColor.dark : gridColor.light,
+            color: gridColor.dark,
           },
         },
       },
@@ -711,9 +648,9 @@ const analyticsCard04 = () => {
             title: () => false, // Disable tooltip title
             label: (context) => formatThousands(context.parsed.x),
           },
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,          
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
         },
       },
       interaction: {
@@ -761,7 +698,7 @@ const analyticsCard04 = () => {
           box.style.pointerEvents = 'none';
           // Label
           const label = document.createElement('span');
-          label.classList.add('text-slate-500', 'dark:text-slate-400');
+          label.classList.add('text-slate-500', 'text-slate-400');
           label.style.fontSize = '0.875rem';
           label.style.lineHeight = '1.5715';
           const labelText = document.createTextNode(item.text);
@@ -774,26 +711,6 @@ const analyticsCard04 = () => {
       },
     }],
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.x.ticks.color = textColor.dark;
-      chart.options.scales.x.grid.color = gridColor.dark;
-      chart.options.scales.y.ticks.color = textColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;
-    } else {
-      chart.options.scales.x.ticks.color = textColor.light;
-      chart.options.scales.x.grid.color = gridColor.light;
-      chart.options.scales.y.ticks.color = textColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;
-    }
-    chart.update('none');
-  }); 
 };
 analyticsCard04();
 
@@ -801,8 +718,6 @@ analyticsCard04();
 const analyticsCard08 = () => {
   const ctx = document.getElementById('analytics-card-08');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const tooltipTitleColor = {
     light: '#1e293b',
@@ -822,7 +737,7 @@ const analyticsCard08 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  }; 
+  };
 
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
@@ -863,11 +778,11 @@ const analyticsCard08 = () => {
           containerID: 'analytics-card-08-legend',
         },
         tooltip: {
-          titleColor: darkMode ? tooltipTitleColor.dark : tooltipTitleColor.light,
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,
-        },         
+          titleColor: tooltipTitleColor.dark,
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
+        },
       },
       interaction: {
         intersect: false,
@@ -895,7 +810,7 @@ const analyticsCard08 = () => {
           li.style.margin = '4px';
           // Button element
           const button = document.createElement('button');
-          button.classList.add('btn-xs', 'bg-white', 'dark:bg-slate-800', 'text-slate-500', 'dark:text-slate-400', 'border', 'border-slate-200', 'dark:border-slate-700', 'shadow-md');
+          button.classList.add('btn-xs', 'bg-white', 'bg-slate-800', 'text-slate-500', 'text-slate-400', 'border', 'border-slate-200', 'border-slate-700', 'shadow-md');
           button.style.opacity = item.hidden ? '.3' : '';
           button.onclick = () => {
             c.toggleDataVisibility(item.index, !item.index);
@@ -924,22 +839,6 @@ const analyticsCard08 = () => {
       },
     }],
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.plugins.tooltip.titleColor = tooltipTitleColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;      
-    } else {
-      chart.options.plugins.tooltip.titleColor = tooltipTitleColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;      
-    }
-    chart.update('none');
-  }); 
 };
 analyticsCard08();
 
@@ -947,8 +846,6 @@ analyticsCard08();
 const analyticsCard09 = () => {
   const ctx = document.getElementById('analytics-card-09');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const tooltipTitleColor = {
     light: '#1e293b',
@@ -968,7 +865,7 @@ const analyticsCard09 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  }; 
+  };
 
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
@@ -1011,11 +908,11 @@ const analyticsCard09 = () => {
           containerID: 'analytics-card-09-legend',
         },
         tooltip: {
-          titleColor: darkMode ? tooltipTitleColor.dark : tooltipTitleColor.light,
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,
-        },         
+          titleColor: tooltipTitleColor.dark,
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
+        },
       },
       interaction: {
         intersect: false,
@@ -1043,7 +940,7 @@ const analyticsCard09 = () => {
           li.style.margin = '4px';
           // Button element
           const button = document.createElement('button');
-          button.classList.add('btn-xs', 'bg-white', 'dark:bg-slate-800', 'text-slate-500', 'dark:text-slate-400', 'border', 'border-slate-200', 'dark:border-slate-700', 'shadow-md');
+          button.classList.add('btn-xs', 'bg-white', 'bg-slate-800', 'text-slate-500', 'text-slate-400', 'border', 'border-slate-200', 'border-slate-700', 'shadow-md');
           button.style.opacity = item.hidden ? '.3' : '';
           button.onclick = () => {
             c.toggleDataVisibility(item.index, !item.index);
@@ -1072,22 +969,6 @@ const analyticsCard09 = () => {
       },
     }],
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.plugins.tooltip.titleColor = tooltipTitleColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;      
-    } else {
-      chart.options.plugins.tooltip.titleColor = tooltipTitleColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;      
-    }
-    chart.update('none');
-  }); 
 };
 analyticsCard09();
 
@@ -1095,8 +976,6 @@ analyticsCard09();
 const analyticsCard10 = () => {
   const ctx = document.getElementById('analytics-card-10');
   if (!ctx) return;
-
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
 
   const gridColor = {
     light: '#f1f5f9',
@@ -1106,12 +985,12 @@ const analyticsCard10 = () => {
   const textColor = {
     light: '#94a3b8',
     dark: '#64748B'
-  };  
+  };
 
   const backdropColor = {
     light: '#ffffff',
     dark: '#1e293b'
-  };  
+  };
 
   const tooltipTitleColor = {
     light: '#1e293b',
@@ -1131,7 +1010,7 @@ const analyticsCard10 = () => {
   const tooltipBorderColor = {
     light: '#e2e8f0',
     dark: '#475569'
-  }; 
+  };
 
   // eslint-disable-next-line no-unused-vars
   const chart = new Chart(ctx, {
@@ -1165,14 +1044,14 @@ const analyticsCard10 = () => {
       scales: {
         r: {
           grid: {
-            color: darkMode ? gridColor.dark : gridColor.light,
+            color: gridColor.dark,
           },
           ticks: {
-            color: darkMode ? textColor.dark : textColor.light,
-            backdropColor: darkMode ? backdropColor.dark : backdropColor.light,
+            color: textColor.dark,
+            backdropColor: backdropColor.dark,
           },
         },
-      },      
+      },
       plugins: {
         legend: {
           display: false,
@@ -1182,11 +1061,11 @@ const analyticsCard10 = () => {
           containerID: 'analytics-card-10-legend',
         },
         tooltip: {
-          titleColor: darkMode ? tooltipTitleColor.dark : tooltipTitleColor.light,
-          bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
-          backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
-          borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,
-        },         
+          titleColor: tooltipTitleColor.dark,
+          bodyColor: tooltipBodyColor.dark,
+          backgroundColor: tooltipBgColor.dark,
+          borderColor: tooltipBorderColor.dark,
+        },
       },
       interaction: {
         intersect: false,
@@ -1214,7 +1093,7 @@ const analyticsCard10 = () => {
           li.style.margin = '4px';
           // Button element
           const button = document.createElement('button');
-          button.classList.add('btn-xs', 'bg-white', 'dark:bg-slate-800', 'text-slate-500', 'dark:text-slate-400', 'border', 'border-slate-200', 'dark:border-slate-700', 'shadow-md');
+          button.classList.add('btn-xs', 'bg-white', 'bg-slate-800', 'text-slate-500', 'text-slate-400', 'border', 'border-slate-200', 'border-slate-700', 'shadow-md');
           button.style.opacity = item.hidden ? '.3' : '';
           button.onclick = () => {
             c.toggleDataVisibility(item.index, !item.index);
@@ -1243,27 +1122,5 @@ const analyticsCard10 = () => {
       },
     }],
   });
-
-  document.addEventListener('darkMode', (e) => {
-    const { mode } = e.detail;
-    if (mode === 'on') {
-      chart.options.scales.r.grid.color = gridColor.dark;
-      chart.options.scales.r.ticks.color = textColor.dark;
-      chart.options.scales.r.ticks.backdropColor = backdropColor.dark;
-      chart.options.plugins.tooltip.titleColor = tooltipTitleColor.dark;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.dark;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.dark;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.dark;      
-    } else {
-      chart.options.scales.r.grid.color = gridColor.light;
-      chart.options.scales.r.ticks.color = textColor.light;
-      chart.options.scales.r.ticks.backdropColor = backdropColor.light;
-      chart.options.plugins.tooltip.titleColor = tooltipTitleColor.light;
-      chart.options.plugins.tooltip.bodyColor = tooltipBodyColor.light;
-      chart.options.plugins.tooltip.backgroundColor = tooltipBgColor.light;
-      chart.options.plugins.tooltip.borderColor = tooltipBorderColor.light;      
-    }
-    chart.update('none');
-  }); 
 };
-analyticsCard10();    
+analyticsCard10();
