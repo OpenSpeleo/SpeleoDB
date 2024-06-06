@@ -42,8 +42,8 @@ class ProjectAcquireApiView(CustomAPIView):
 
         try:
             serializer = ProjectSerializer(project, context={"user": request.user})
-        except Exception:
-            project.release_mutex(user=request.user)
+        except Exception as e:
+            project.release_mutex(user=request.user, comment=f"Error: `{e}`")
             raise
 
         return serializer.data
@@ -58,8 +58,9 @@ class ProjectReleaseApiView(CustomAPIView):
 
     def _post(self, request, *args, **kwargs):
         project = self.get_object()
+        comment = request.data.get("comment", "")
         try:
-            project.release_mutex(user=request.user)
+            project.release_mutex(user=request.user, comment=comment)
 
         except ValidationError as e:
             raise ResourceBusyError(e.message) from None

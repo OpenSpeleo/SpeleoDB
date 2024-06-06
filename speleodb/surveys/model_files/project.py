@@ -75,6 +75,16 @@ class Project(models.Model):
         ],
     )
 
+    class Software(models.IntegerChoices):
+        MANUAL = (0, "MANUAL")
+        ARIANE = (1, "ARIANE")
+        COMPASS = (2, "COMPASS")
+        WALLS = (3, "WALLS")
+        STICKMAPS = (4, "STICKMAPS")
+        OTHER = (99, "OTHER")
+
+    software = models.IntegerField(choices=Software.choices, verbose_name="software")
+
     # MUTEX Management
     active_mutex = models.OneToOneField(
         "Mutex",
@@ -94,6 +104,10 @@ class Project(models.Model):
                 f"Mutex Project mismatch: {self.active_mutex.project=} && {self=}"
             )
         super().save(*args, **kwargs)
+
+    @property
+    def software_name(self) -> str:
+        return self.Software(self.software).label
 
     @property
     def mutex_owner(self):
