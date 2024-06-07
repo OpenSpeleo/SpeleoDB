@@ -158,74 +158,7 @@
             {% block content %}{% endblock content %}
         </main>
 
-        <!-- Site footer -->
-        <footer>
-            <div class="max-w-6xl mx-auto px-4 sm:px-6">
-
-                <!-- Blocks -->
-                <div class="grid sm:grid-cols-12 gap-8 py-8 md:py-12">
-
-                    <!-- 1st block -->
-                    <div class="sm:col-span-12 lg:col-span-4 order-1 lg:order-none">
-                        <div class="h-full flex flex-col sm:flex-row lg:flex-col justify-between">
-                            <div class="mb-4 sm:mb-0">
-                                <div class="mb-4">
-                                    <!-- Logo -->
-                                    <a class="inline-flex" href="index.html" aria-label="SpeleoDB">
-                                        <img src="{% static 'media/logo.svg' %}" style="height:65px" alt="SpeleoDB">
-                                    </a>
-                                </div>
-                                <div class="text-sm text-slate-300">&copy; www.speleodb.com <span class="text-slate-500">-</span> All rights reserved.</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Blocks -->
-                    <div class="grid sm:grid-cols-12 md:col-span-8 text-center">
-
-                        <!-- #1 Sub block -->
-                        <div class="sm:col-span-6 md:col-span-4">
-                            <h6 class="text-sm text-slate-50 font-medium mb-2">SpeleoDB</h6>
-                            <ul class="text-sm space-y-2">
-                                <li>
-                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" href="{% url 'about' %}">About</a>
-                                </li>
-                                <li>
-                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" href="{% url 'changelog' %}">Changelog</a>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <!-- 3rd block -->
-                        <div class="sm:col-span-6 md:col-span-4">
-                            <h6 class="text-sm text-slate-50 font-medium mb-2">Resources</h6>
-                            <ul class="text-sm space-y-2">
-                                <li>
-                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" target="_blank" href="https://github.com/SpeleoDB/SpeleoDB">Contribute to SpeleoDB</a>
-                                </li>
-                                <li>
-                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" target="_blank" href="https://github.com/SpeleoDB/SpeleoDB/issues">Report a vulnerability</a>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <!-- 4th block -->
-                        <div class="sm:col-span-6 md:col-span-4">
-                            <h6 class="text-sm text-slate-50 font-medium mb-2">Legals</h6>
-                            <ul class="text-sm space-y-2">
-                                <li>
-                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" href="{% url 'terms_and_conditions' %}">Terms & Conditions</a>
-                                </li>
-                                <li>
-                                    <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" href="{% url 'privacy_policy' %}">Privacy policy</a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </footer>
+        {% include "footer.html" %}
 
     </div>
 
