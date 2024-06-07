@@ -11,7 +11,6 @@ from speleodb.api.v1.views.mutex import ProjectReleaseApiView
 from speleodb.api.v1.views.project import CreateProjectApiView
 from speleodb.api.v1.views.project import ProjectApiView
 from speleodb.api.v1.views.project import ProjectListApiView
-from speleodb.api.v1.views.user import UserPreference
 
 app_name = "v1"
 
@@ -44,6 +43,4 @@ urlpatterns = [
         name="download_project_at_hash",
     ),
     path("projects/", ProjectListApiView.as_view(), name="list_all_projects"),
-    # ======================= USER APIs ======================= #
-    path("user/preferences/", UserPreference.as_view(), name="set_user_preferences"),
 ]
