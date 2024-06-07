@@ -1,35 +1,44 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import contextlib
 
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import permissions
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken as _ObtainAuthToken
-from rest_framework.decorators import action
-from rest_framework.mixins import ListModelMixin
-from rest_framework.mixins import RetrieveModelMixin
-from rest_framework.mixins import UpdateModelMixin
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
 
 from speleodb.users.api.v1.serializers import AuthTokenSerializer
 from speleodb.users.api.v1.serializers import UserSerializer
-from speleodb.users.models import User
+from speleodb.utils.helpers import str2bool
 from speleodb.utils.helpers import wrap_response_with_status
+from speleodb.utils.view_cls import CustomAPIView
 
 
-class UserViewSet(RetrieveModelMixin, ListModelMixin, UpdateModelMixin, GenericViewSet):
-    serializer_class = UserSerializer
-    queryset = User.objects.all()
-    lookup_field = "pk"
+class UserPreference(CustomAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["patch"]
 
-    def get_queryset(self, *args, **kwargs):
-        assert isinstance(self.request.user.email, str)
-        return self.queryset.filter(email=self.request.user.email)
+    def _patch(self, request, *args, **kwargs):
+        try:
+            request.user.email_on_projects_updates = str2bool(
+                request.data["email_on_projects_updates"]
+            )
+            request.user.email_on_speleodb_updates = str2bool(
+                request.data["email_on_speleodb_updates"]
+            )
+        except KeyError as e:
+            return Response(
+                {"errror": f"Attribute: {e} is missing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-    @action(detail=False)
-    def me(self, request):
-        serializer = UserSerializer(request.user, context={"request": request})
-        return Response(status=status.HTTP_200_OK, data=serializer.data)
+        request.user.save()
+        serializer = UserSerializer(request.user)
+
+        return serializer.data
 
 
 class ObtainAuthToken(_ObtainAuthToken):

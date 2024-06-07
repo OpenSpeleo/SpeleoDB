@@ -5,7 +5,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from speleodb.surveys.models import Project
-from speleodb.users.models import User
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -51,15 +50,3 @@ class UploadSerializer(serializers.Serializer):
 
     class Meta:
         fields = ["file_uploaded"]
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = [
-            "country",
-            "email",
-            "email_on_projects_updates",
-            "email_on_speleodb_updates",
-            "name",
-        ]

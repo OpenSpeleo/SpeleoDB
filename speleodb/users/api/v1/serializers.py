@@ -4,14 +4,16 @@ from rest_framework import serializers
 from speleodb.users.models import User
 
 
-class UserSerializer(serializers.ModelSerializer[User]):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["name", "url"]
-
-        # extra_kwargs = {
-        #     "url": {"view_name": "api:user-detail", "lookup_field": "pk"},
-        # }
+        fields = [
+            "country",
+            "email",
+            "email_on_projects_updates",
+            "email_on_speleodb_updates",
+            "name",
+        ]
 
 
 class AuthTokenSerializer(serializers.Serializer):
