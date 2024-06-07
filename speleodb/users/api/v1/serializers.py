@@ -9,9 +9,9 @@ class UserSerializer(serializers.ModelSerializer[User]):
         model = User
         fields = ["name", "url"]
 
-        extra_kwargs = {
-            "url": {"view_name": "api:user-detail", "lookup_field": "pk"},
-        }
+        # extra_kwargs = {
+        #     "url": {"view_name": "api:user-detail", "lookup_field": "pk"},
+        # }
 
 
 class AuthTokenSerializer(serializers.Serializer):
@@ -42,7 +42,7 @@ class AuthTokenSerializer(serializers.Serializer):
                 msg = "Unable to log in with provided credentials."
                 raise serializers.ValidationError(msg, code="authorization")
         else:
-            msg = "Must include \"email\" and \"password\"."
+            msg = 'Must include "email" and "password".'
             raise serializers.ValidationError(msg, code="authorization")
 
         attrs["user"] = user

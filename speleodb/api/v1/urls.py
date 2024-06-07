@@ -4,13 +4,14 @@
 from django.urls import path
 from django.urls import re_path
 
-from speleodb.api.v1.views import CreateProjectApiView
-from speleodb.api.v1.views import FileDownloadView
-from speleodb.api.v1.views import FileUploadView
-from speleodb.api.v1.views import ProjectAcquireApiView
-from speleodb.api.v1.views import ProjectApiView
-from speleodb.api.v1.views import ProjectListApiView
-from speleodb.api.v1.views import ProjectReleaseApiView
+from speleodb.api.v1.views.file import FileDownloadView
+from speleodb.api.v1.views.file import FileUploadView
+from speleodb.api.v1.views.mutex import ProjectAcquireApiView
+from speleodb.api.v1.views.mutex import ProjectReleaseApiView
+from speleodb.api.v1.views.project import CreateProjectApiView
+from speleodb.api.v1.views.project import ProjectApiView
+from speleodb.api.v1.views.project import ProjectListApiView
+from speleodb.api.v1.views.user import UserPreference
 
 app_name = "v1"
 
@@ -43,5 +44,6 @@ urlpatterns = [
         name="download_project_at_hash",
     ),
     path("projects/", ProjectListApiView.as_view(), name="list_all_projects"),
-    # ================ Private API Routes - API KEY REQUIRED ================ #
+    # ======================= USER APIs ======================= #
+    path("user/preferences/", UserPreference.as_view(), name="set_user_preferences"),
 ]

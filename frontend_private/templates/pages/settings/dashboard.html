@@ -8,13 +8,11 @@
 <div class="grow">
 
     <!-- Panel body -->
-    <div class="p-6 space-y-6">
-        <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-5">My Account</h2>
+    <div class="p-6">
+        <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-5">Personal Profile</h2>
 
         <!-- Business Profile -->
         <section>
-            <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-1">Personal Profile</h3>
-            <div class="text-sm">Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit.</div>
             <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
                 <div class="w-full">
                     <label class="block text-sm font-medium mb-1" for="name">Full Name:</label>
@@ -27,7 +25,7 @@
         <section>
             <div class="flex flex-wrap mt-5">
                 <div class="mr-2">
-                    <label class="block text-sm font-medium mb-1" for="email">Personal Email:</label>
+                    <label class="block text-sm font-medium mb-1" for="email">Email:</label>
                     <input id="email" class="form-input max-w-full w-128" type="email" value="{{ user.email }}" />
                 </div>
             </div>
@@ -48,8 +46,16 @@
             </div>
         </section>
 
+        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-8">
+            <div class="flex self-end">
+                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+            </div>
+        </div>
+
+        <hr class="mt-4 mb-8" style="border-color: rgb(255 255 255 / 40%);">
+
         <!-- Password -->
-        <section>
+        <section class="pb-4">
             <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-1">Password</h3>
             <div class="text-sm">Click below to change your password.</div>
             <div class="mt-5">
@@ -61,12 +67,6 @@
 
     <!-- Panel footer -->
     <footer>
-        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-            <div class="flex self-end">
-                <button class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300">Cancel</button>
-                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
-            </div>
-        </div>
     </footer>
 
 </div>

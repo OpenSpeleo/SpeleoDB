@@ -11,116 +11,109 @@
 
         <!-- General -->
         <section>
-            <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-1">General</h3>
+            <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-1">Email Preferences</h3>
             <ul>
-                <li class="flex justify-between items-center py-3 border-b border-slate-200 border-slate-700">
-                    <!-- Left -->
-                    <div>
-                        <div class="text-slate-800 text-slate-100 font-semibold">Comments and replies</div>
-                        <div class="text-sm">Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit.</div>
-                    </div>
-                    <!-- Right -->
-                    <div class="flex items-center ml-4" x-data="{ checked: true }">
-                        <div class="text-sm text-slate-400 text-slate-500 italic mr-2" x-text="checked ? 'On' : 'Off'"></div>
-                        <div class="form-switch">
-                            <input type="checkbox" id="comments" class="sr-only" x-model="checked" />
-                            <label class="bg-slate-400 bg-slate-700" for="comments">
-                                <span class="bg-white shadow-sm" aria-hidden="true"></span>
-                                <span class="sr-only">Enable smart sync</span>
-                            </label>
+                <form id="preference_form">
+                    {% csrf_token %}
+                    <li class="flex justify-between items-center py-3 border-b border-slate-200 border-slate-700">
+                        <!-- Left -->
+                        <div>
+                            <div class="text-slate-800 text-slate-100 font-semibold">Receive updates from SpeleoDB</div>
+                            <div class="text-sm">We promise to keep the volume low. Only important updates about SpeleoDB.</div>
                         </div>
-                    </div>
-                </li>
-                <li class="flex justify-between items-center py-3 border-b border-slate-200 border-slate-700">
-                    <!-- Left -->
-                    <div>
-                        <div class="text-slate-800 text-slate-100 font-semibold">Messages</div>
-                        <div class="text-sm">Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit.</div>
-                    </div>
-                    <!-- Right -->
-                    <div class="flex items-center ml-4" x-data="{ checked: true }">
-                        <div class="text-sm text-slate-400 text-slate-500 italic mr-2" x-text="checked ? 'On' : 'Off'"></div>
-                        <div class="form-switch">
-                            <input type="checkbox" id="messages" class="sr-only" x-model="checked" />
-                            <label class="bg-slate-400 bg-slate-700" for="messages">
-                                <span class="bg-white shadow-sm" aria-hidden="true"></span>
-                                <span class="sr-only">Enable smart sync</span>
-                            </label>
+                        <!-- Right -->
+                        <div class="flex items-center ml-4" x-data="{ checked: {% if user.email_on_speleodb_updates %}true{% else %}false{% endif %} }">
+                            <div class="text-sm text-slate-400 text-slate-500 italic mr-2" x-text="checked ? 'On' : 'Off'"></div>
+                            <div class="form-switch">
+                                <input type="checkbox" name="email_on_speleodb_updates" id="email_on_speleodb_updates" class="sr-only" x-model="checked" />
+                                <label class="bg-slate-400 bg-slate-700" for="email_on_speleodb_updates">
+                                    <span class="bg-white shadow-sm" aria-hidden="true"></span>
+                                    <span class="sr-only">Enable smart sync</span>
+                                </label>
+                            </div>
                         </div>
-                    </div>
-                </li>
-                <li class="flex justify-between items-center py-3 border-b border-slate-200 border-slate-700">
-                    <!-- Left -->
-                    <div>
-                        <div class="text-slate-800 text-slate-100 font-semibold">Mentions</div>
-                        <div class="text-sm">Excepteur sint occaecat cupidatat non in culpa qui officia deserunt mollit.</div>
-                    </div>
-                    <!-- Right -->
-                    <div class="flex items-center ml-4" x-data="{ checked: false }">
-                        <div class="text-sm text-slate-400 text-slate-500 italic mr-2" x-text="checked ? 'On' : 'Off'"></div>
-                        <div class="form-switch">
-                            <input type="checkbox" id="mentions" class="sr-only" x-model="checked" />
-                            <label class="bg-slate-400 bg-slate-700" for="mentions">
-                                <span class="bg-white shadow-sm" aria-hidden="true"></span>
-                                <span class="sr-only">Enable smart sync</span>
-                            </label>
+                    </li>
+                    <li class="flex justify-between items-center py-3 border-b border-slate-200 border-slate-700">
+                        <!-- Left -->
+                        <div>
+                            <div class="text-slate-800 text-slate-100 font-semibold">Receive update summary when one of your projects gets updated.</div>
+                            <div class="text-sm">Receive a quick summary email everytime a project gets updated. Beware of the potential high volume of emails.</div>
                         </div>
-                    </div>
-                </li>
+                        <!-- Right -->
+                        <div class="flex items-center ml-4" x-data="{ checked: {% if user.email_on_projects_updates %}true{% else %}false{% endif %} }">
+                            <div class="text-sm text-slate-400 text-slate-500 italic mr-2" x-text="checked ? 'On' : 'Off'"></div>
+                            <div class="form-switch">
+                                <input type="checkbox" id="email_on_projects_updates" name="email_on_projects_updates" class="sr-only" x-model="checked" />
+                                <label class="bg-slate-400 bg-slate-700" for="email_on_projects_updates">
+                                    <span class="bg-white shadow-sm" aria-hidden="true"></span>
+                                    <span class="sr-only">Enable smart sync</span>
+                                </label>
+                            </div>
+                        </div>
+                    </li>
+                </form>
             </ul>
-        </section>
 
-        <!-- Shares -->
-        <section>
-            <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-1">Shares</h3>
-            <ul>
-                <li class="flex justify-between items-center py-3 border-b border-slate-200 border-slate-700">
-                    <!-- Left -->
-                    <div>
-                        <div class="text-slate-800 text-slate-100 font-semibold">Shares of my content</div>
-                        <div class="text-sm">Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit.</div>
-                    </div>
-                    <!-- Right -->
-                    <div class="flex items-center ml-4">
-                        <button class="btn-sm border-slate-200 border-slate-700 hover:border-slate-300 hover:border-slate-600 shadow-sm">Manage</button>
-                    </div>
-                </li>
-                <li class="flex justify-between items-center py-3 border-b border-slate-200 border-slate-700">
-                    <!-- Left -->
-                    <div>
-                        <div class="text-slate-800 text-slate-100 font-semibold">Team invites</div>
-                        <div class="text-sm">Excepteur sint occaecat cupidatat non in culpa qui officia deserunt mollit.</div>
-                    </div>
-                    <!-- Right -->
-                    <div class="flex items-center ml-4">
-                        <button class="btn-sm border-slate-200 border-slate-700 hover:border-slate-300 hover:border-slate-600 shadow-sm">Manage</button>
-                    </div>
-                </li>
-                <li class="flex justify-between items-center py-3 border-b border-slate-200 border-slate-700">
-                    <!-- Left -->
-                    <div>
-                        <div class="text-slate-800 text-slate-100 font-semibold">Smart connection</div>
-                        <div class="text-sm">Excepteur sint occaecat cupidatat non in culpa qui officia deserunt mollit.</div>
-                    </div>
-                    <!-- Right -->
-                    <div class="flex items-center ml-4">
-                        <div class="text-sm text-slate-400 text-slate-500 italic mr-2 hidden md:block">Active</div>
-                        <button class="btn-sm border-slate-200 border-slate-700 hover:border-slate-300 hover:border-slate-600 shadow-sm text-rose-500">Disable</button>
-                    </div>
-                </li>
-            </ul>
+            <div class="flex flex-col py-5 border-t border-slate-200 border-slate-700">
+                <div class="flex self-end">
+                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+                </div>
+            </div>
+
         </section>
     </div>
 
-    <!-- Panel footer -->
-    <footer>
-        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-            <div class="flex self-end">
-                <button class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300">Cancel</button>
-                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
-            </div>
-        </div>
-    </footer>
-
 </div>
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+
 {% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+    $(document).ready(function () {
+        $("body").click(function() {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+         });
+
+        $('#btn_submit').click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+            let preference_form = document.getElementById('preference_form');
+            var formData = new FormData(preference_form);
+
+            var checkbox = $("#preference_form").find("input[type=checkbox]");
+            $.each(checkbox, function(key, val) {
+                formData.append($(val).attr('name'), $(this).is(':checked'))
+
+            });
+
+            $.ajax({
+                url: "{% url 'api:v1:set_user_preferences' %}",
+                method: "PATCH",
+                data: JSON.stringify(Object.fromEntries(formData)),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+
+                },
+                success: function (data) {
+                    $("#modal_success").css('display', 'flex');  // show modal
+                },
+                error: function (data) {
+                    $("#modal_error").css('display', 'flex');  // show modal
+                }
+            });
+            return false; // prevent default
+        });
+
+    });
+</script>
+{% endblock inline_extra_js %}

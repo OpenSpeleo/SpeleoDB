@@ -28,6 +28,22 @@ def maybe_sort_data(data):
     return data
 
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    return v.lower() in [
+        "true",
+        "1",
+        "t",
+        "y",
+        "yes",
+        "yeah",
+        "yup",
+        "certainly",
+        "uh-huh",
+    ]
+
+
 def wrap_response_with_status(func, request, *args, **kwargs):
     payload = {}
     http_status = status.HTTP_200_OK

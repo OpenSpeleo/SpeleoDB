@@ -1871,6 +1871,10 @@ span.flatpickr-weekday {
   margin-left: -0.25rem;
 }
 
+.-ml-5 {
+  margin-left: -1.25rem;
+}
+
 .-ml-px {
   margin-left: -1px;
 }
@@ -1969,6 +1973,10 @@ span.flatpickr-weekday {
 
 .mb-10 {
   margin-bottom: 2.5rem;
+}
+
+.mb-12 {
+  margin-bottom: 3rem;
 }
 
 .mb-16 {
@@ -2977,6 +2985,10 @@ span.flatpickr-weekday {
   border-width: 1px;
 }
 
+.border-thin {
+  border-width: thin;
+}
+
 .border-0 {
   border-width: 0px;
 }
@@ -3114,6 +3126,11 @@ span.flatpickr-weekday {
 
 .border-transparent {
   border-color: transparent;
+}
+
+.border-white\/45 {
+  --tw-border-opacity: .45;
+  border-color: rgb(255 255 255 / var(--tw-border-opacity));
 }
 
 .border-white {

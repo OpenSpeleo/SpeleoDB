@@ -5,7 +5,7 @@ from pathlib import Path
 from django.http import FileResponse
 from rest_framework.response import Response
 
-from speleodb.utils.utils import maybe_sort_data
+from speleodb.utils.helpers import maybe_sort_data
 
 
 class DownloadTMLResponseFromFile(FileResponse):
