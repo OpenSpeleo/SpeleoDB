@@ -6,16 +6,6 @@ from django.views.defaults import ERROR_403_TEMPLATE_NAME
 from django.views.defaults import ERROR_404_TEMPLATE_NAME
 from django.views.defaults import ERROR_500_TEMPLATE_NAME
 
-from frontend_private.views import DashboardView
-from frontend_private.views import FeedbackView
-from frontend_private.views import NotificationsView
-from frontend_private.views import ProjectCommitsView
-from frontend_private.views import ProjectDangerZoneView
-from frontend_private.views import ProjectDetailsView
-from frontend_private.views import ProjectListingView
-from frontend_private.views import ProjectMutexesView
-from frontend_private.views import ProjectPermissionsView
-
 ERROR_400_TEMPLATE_NAME = "400.html"  # noqa: F811
 ERROR_403_TEMPLATE_NAME = "403.html"  # noqa: F811
 ERROR_404_TEMPLATE_NAME = "404.html"  # noqa: F811
@@ -26,7 +16,6 @@ app_name = "errors"
 if settings.DEBUG:
     # This allows the error pages to be debugged during development, just visit
     # these url in browser to see how these error pages look like.
-
     urlpatterns = [
         path(
             "400/",

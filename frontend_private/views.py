@@ -24,8 +24,8 @@ class FeedbackView(_AuthenticatedTemplateView):
     template_name = "pages/settings/feedback.html"
 
 
-class NotificationsView(_AuthenticatedTemplateView):
-    template_name = "pages/settings/notifications.html"
+class PreferencesView(_AuthenticatedTemplateView):
+    template_name = "pages/settings/preferences.html"
 
 
 # ============ Project Pages ============ #
