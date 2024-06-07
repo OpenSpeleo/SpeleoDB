@@ -30,7 +30,7 @@
   display: block;
   margin: 0 auto;
   position: relative;
-  margin-top: 8vh;
+  margin-top: 4vh;
 }
 
 .permission_denied h1 {
@@ -70,14 +70,14 @@
 }
 
 .denied__link {
-  background: none;
+  background: #b94242;
   color: #fff;
   padding: 12px 0px 10px 0px;
   border: 1px solid #fff;
   outline: none;
   border-radius: 7px;
-  width: 150px;
-  font-size: 15px;
+  width: 300px;
+  font-size: 20px;
   text-align: center;
   margin: 0 auto;
   vertical-align: middle;
@@ -85,7 +85,7 @@
   margin-bottom: 40px;
   margin-top: 25px;
   font-family: "Dosis", sans-serif;
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .denied__link:hover {
