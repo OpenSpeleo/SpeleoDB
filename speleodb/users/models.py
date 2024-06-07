@@ -1,6 +1,7 @@
 from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser
+from django.db.models import BooleanField
 from django.db.models import CharField
 from django.db.models import EmailField
 from django_countries.fields import CountryField
@@ -22,6 +23,11 @@ class User(AbstractUser):
     first_name = None  # type: ignore[assignment]
     last_name = None  # type: ignore[assignment]
     username = None  # type: ignore[assignment]
+
+    # ===================== User Preferences ===================== #
+    email_on_speleodb_updates = BooleanField(default=True)
+    email_on_projects_updates = BooleanField(default=False)
+    # ------------------------------------------------------------ #
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["name"]

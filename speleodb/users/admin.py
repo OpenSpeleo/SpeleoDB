@@ -26,6 +26,10 @@ class UserAdmin(auth_admin.UserAdmin):
             {"fields": ("name", "country")},
         ),
         (
+            "Preferences",
+            {"fields": ("email_on_speleodb_updates", "email_on_projects_updates")},
+        ),
+        (
             "Permissions",
             {
                 "fields": (

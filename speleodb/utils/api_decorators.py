@@ -4,7 +4,7 @@
 import wrapt
 from rest_framework import exceptions
 
-from speleodb.utils.utils import wrap_response_with_status
+from speleodb.utils.helpers import wrap_response_with_status
 
 
 @wrapt.decorator

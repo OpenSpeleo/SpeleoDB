@@ -1,0 +1,32 @@
+
+<!-- Modal dialog -->
+<div id="modal_error" class="fixed inset-0 z-50 overflow-hidden flex items-center my-4 justify-center px-4 sm:px-6" style="display: none;">
+    <div class="bg-slate-800 rounded shadow-lg overflow-auto max-w-lg w-full max-h-full border-thin border-white/45">
+        <div class="p-5 flex">
+            <!-- Icon -->
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-rose-500/30">
+                <svg class="w-4 h-4 shrink-0 fill-current text-rose-500" viewBox="0 0 16 16">
+                    <path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm0 12c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm1-3H7V4h2v5z"></path>
+                </svg>
+            </div>
+            <!-- Content -->
+            <div class="w-full text-center -ml-5">
+                <!-- Modal header -->
+                <div class="mb-2">
+                    <div class="text-lg font-semibold text-slate-100 text-center">Error</div>
+                </div>
+                <!-- Modal content -->
+                <div class="text-sm mb-10">
+                    <div class="space-y-2">
+                        <p>There has been an error during processing.</br>
+                        If the problem persists, please contact the administrators.</p>
+                    </div>
+                </div>
+                <!-- Modal footer -->
+                <div class="flex flex-wrap justify-center space-x-2">
+                    <button class="btn-sm bg-rose-500 hover:bg-rose-600 text-white w-32">x Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

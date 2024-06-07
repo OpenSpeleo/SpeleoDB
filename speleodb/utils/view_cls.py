@@ -22,3 +22,7 @@ class CustomAPIView(GenericAPIView):
     @request_wrapper
     def delete(self, request, *args, **kwargs):
         pass
+
+    @request_wrapper
+    def patch(self, request, *args, **kwargs):
+        pass
