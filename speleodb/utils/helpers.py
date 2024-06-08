@@ -54,7 +54,7 @@ def wrap_response_with_status(func, request, *args, **kwargs):
             payload.update(response.data)
             http_status = response.status_code
 
-        elif isinstance(response, (list, tuple, dict)):
+        elif isinstance(response, (list, tuple, dict, str)):
             payload["data"] = response
 
         else:

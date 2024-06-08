@@ -3,6 +3,10 @@
 
 import contextlib
 
+from allauth.account import signals
+from allauth.account.adapter import get_adapter
+from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from rest_framework import status
@@ -75,3 +79,38 @@ class ObtainAuthToken(_ObtainAuthToken):
 
     def patch(self, request, *args, **kwargs):
         return wrap_response_with_status(self._patch, request, *args, **kwargs)
+
+
+class UserPasswordChangeView(CustomAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["post"]
+
+    def _post(self, request, *args, **kwargs):
+        try:
+            password = request.data["password"]
+        except KeyError:
+            return Response(
+                {"errror": "Attribute: `password` is missing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from django.core.exceptions import ValidationError
+
+        if not settings.DEBUG:
+            try:
+                validate_password(password, user=request.user)
+            except ValidationError as e:
+                return Response(
+                    {"errror": e.messages},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        get_adapter().set_password(request.user, password)
+        request.user.save()
+        signals.password_changed.send(
+            sender=request.user.__class__,
+            request=request,
+            user=request.user,
+        )
+
+        return "Password changed successfully"
