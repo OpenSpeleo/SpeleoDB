@@ -129,7 +129,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
         except gitlab.exceptions.GitlabAuthenticationError:
             self._gl = None
 
-        if settings.DEBUG and self._gl:
+        if settings.DEBUG_GITLAB and self._gl:
             self._gl.enable_debug()
 
     @check_initialized

@@ -18,7 +18,7 @@ class User(AbstractUser):
 
     # First and last name do not cover name patterns around the globe
     name = CharField("Name of User", blank=False, null=False, max_length=255)
-    email = EmailField("email address", primary_key=True)
+    email = EmailField("email address", unique=True)
     country = CountryField()
     first_name = None  # type: ignore[assignment]
     last_name = None  # type: ignore[assignment]
