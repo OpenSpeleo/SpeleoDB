@@ -95,7 +95,7 @@
 
             $.ajax({
                 url: "{% url 'api:v1_users:set_user_preferences' %}",
-                method: "PATCH",
+                method: "PUT",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
                 cache: false,

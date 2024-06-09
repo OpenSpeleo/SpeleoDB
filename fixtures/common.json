@@ -1,0 +1,30 @@
+[
+    {
+        "model": "common.option",
+        "pk": "GITLAB_GROUP_ID",
+        "fields": {
+            "value": "<placeholder>"
+        }
+    },
+    {
+        "model": "common.option",
+        "pk": "GITLAB_GROUP_NAME",
+        "fields": {
+            "value": "<placeholder>"
+        }
+    },
+    {
+        "model": "common.option",
+        "pk": "GITLAB_HOST_URL",
+        "fields": {
+            "value": "<placeholder>"
+        }
+    },
+    {
+        "model": "common.option",
+        "pk": "GITLAB_TOKEN",
+        "fields": {
+            "value": "<placeholder>"
+        }
+    }
+]

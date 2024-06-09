@@ -50,7 +50,7 @@ class CreateProjectApiView(CustomAPIView):
             return Response({"data": serializer.data}, status=status.HTTP_201_CREATED)
 
         return Response(
-            {"errror": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+            {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
 

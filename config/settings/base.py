@@ -20,6 +20,7 @@ if READ_DOT_ENV_FILE:
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = env.bool("DJANGO_DEBUG", False)
+DEBUG_GITLAB = env.bool("DJANGO_DEBUG_GITLAB", False)
 
 # Local time zone. Choices are
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -132,7 +133,7 @@ AUTHENTICATION_BACKENDS = [
 AUTH_USER_MODEL = "users.User"
 
 # https://docs.allauth.org/en/latest/account/configuration.html
-ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = False
+ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
 
 # https://docs.allauth.org/en/latest/headless/installation.html
 HEADLESS_ONLY = True

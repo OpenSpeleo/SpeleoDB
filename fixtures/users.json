@@ -1,0 +1,78 @@
+[
+    {
+        "model": "users.user",
+        "pk": 1,
+        "fields": {
+            "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$bGhCMmVsUVpsU3BKVXpJb1NrT3lCbw$TmEHswxnYF1fa0qHzgrNmDiWZAthfxVWubxUt0GhQUQ",
+            "last_login": "2024-06-09T04:19:07.680Z",
+            "is_superuser": true,
+            "is_staff": true,
+            "is_active": true,
+            "date_joined": "2024-05-01T22:26:17Z",
+            "name": "Contact Speleo",
+            "country": "MX",
+            "email_on_speleodb_updates": false,
+            "email_on_projects_updates": true,
+            "groups": [],
+            "user_permissions": [],
+            "email": "contact@speleodb.com"
+        }
+    },
+    {
+        "model": "users.user",
+        "pk": 2,
+        "fields": {
+            "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$MWdrYWU0S3lwVW1jYUM3VDRQWDgwWQ$vLoA4AcNms4VgaI+IVhtmZNlMT9Jeu5NGMjT2qkeUMo",
+            "last_login": null,
+            "is_superuser": false,
+            "is_staff": false,
+            "is_active": true,
+            "date_joined": "2024-05-28T07:04:22.915Z",
+            "name": "Jill Heinerth",
+            "country": "NZ",
+            "email_on_speleodb_updates": true,
+            "email_on_projects_updates": false,
+            "groups": [],
+            "user_permissions": [],
+            "email": "jill@heinerth.com"
+        }
+    },
+    {
+        "model": "users.user",
+        "pk": 3,
+        "fields": {
+            "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$Nm91SUhnTk1TTkcwc2NrVG5UcWVqVg$G9YVLN5hQLNXRAWp6n2fwFbWRqEIXmXNl06Xxvc+bl4",
+            "last_login": "2024-06-05T19:18:55.593Z",
+            "is_superuser": false,
+            "is_staff": false,
+            "is_active": true,
+            "date_joined": "2024-05-27T17:37:15.914Z",
+            "name": "Sheck Exley",
+            "country": "US",
+            "email_on_speleodb_updates": true,
+            "email_on_projects_updates": false,
+            "groups": [],
+            "user_permissions": [],
+            "email": "sheck@exley.com"
+        }
+    },
+    {
+        "model": "users.user",
+        "pk": 4,
+        "fields": {
+            "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$d0NLZU83a243dmlXT2NSaW5KZkRMSw$uHjK7G8p9uLCY1vuFYBlHecfFInaa2H1UFWbdOEaxzQ",
+            "last_login": "2024-06-05T19:19:22.549Z",
+            "is_superuser": false,
+            "is_staff": true,
+            "is_active": true,
+            "date_joined": "2024-05-01T22:26:28Z",
+            "name": "Test Speleo",
+            "country": "NZ",
+            "email_on_speleodb_updates": true,
+            "email_on_projects_updates": false,
+            "groups": [],
+            "user_permissions": [],
+            "email": "test@speleodb.com"
+        }
+    }
+]

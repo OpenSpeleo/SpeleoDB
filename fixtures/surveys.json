@@ -1,0 +1,583 @@
+[
+    {
+        "model": "surveys.project",
+        "pk": "19036ed7-df8b-4a15-aa3d-3688b0b06b37",
+        "fields": {
+            "creation_date": "2024-05-01T22:34:15.918Z",
+            "modified_date": "2024-06-06T21:02:21.248Z",
+            "name": "Mayan Blue 6",
+            "description": "A beautiful Cenote",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": "20.19671000",
+            "longitude": "-87.50123400",
+            "_visibility": 0,
+            "_software": 0,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "1aa5bf4a-8766-4b7d-8fdf-d578bfd986e2",
+        "fields": {
+            "creation_date": "2024-05-01T22:39:12.267Z",
+            "modified_date": "2024-05-02T02:11:55.590Z",
+            "name": "Mayan Blue 5",
+            "description": "A beautiful Cenote",
+            "country": "MX",
+            "fork_from": "e7ab44af-4a8e-493e-b609-c2ee26bbc552",
+            "latitude": "-121.91914907",
+            "longitude": "37.37635035",
+            "_visibility": 0,
+            "_software": 1,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "33a38b8e-189c-4fe1-a659-c6a2d10d7239",
+        "fields": {
+            "creation_date": "2024-05-22T16:33:52.467Z",
+            "modified_date": "2024-05-22T16:33:52.467Z",
+            "name": "Carry's Loft",
+            "description": "A nice beautiful canyon looking cenote under the electric lines",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": null,
+            "longitude": null,
+            "_visibility": 0,
+            "_software": 1,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "3a8cd379-570d-42fc-90d0-9059365134c1",
+        "fields": {
+            "creation_date": "2024-05-01T22:34:18.651Z",
+            "modified_date": "2024-05-02T02:11:21.540Z",
+            "name": "Mayan Blue 3",
+            "description": "A beautiful Cenote",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": "-121.91914907",
+            "longitude": "37.37635035",
+            "_visibility": 0,
+            "_software": 1,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "4d5c19fa-7f1a-4e41-ae11-04bf9c540dbb",
+        "fields": {
+            "creation_date": "2024-05-22T01:14:00.220Z",
+            "modified_date": "2024-06-06T21:03:22.424Z",
+            "name": "Carry's Loft",
+            "description": "A nice beautiful canyon looking cenote under the electric lines",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": null,
+            "longitude": null,
+            "_visibility": 0,
+            "_software": 99,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "4fdf10b8-b2c5-4118-a215-28963b8e3072",
+        "fields": {
+            "creation_date": "2024-05-22T01:14:05.474Z",
+            "modified_date": "2024-06-04T04:51:31.886Z",
+            "name": "Carry's Loft",
+            "description": "A nice beautiful canyon looking cenote under the electric lines",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": null,
+            "longitude": null,
+            "_visibility": 0,
+            "_software": 1,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "61f54c24-ebf3-46e8-aa58-5bad16e5bf0f",
+        "fields": {
+            "creation_date": "2024-05-01T22:34:19.499Z",
+            "modified_date": "2024-06-06T21:02:29.575Z",
+            "name": "Mayan Blue 4",
+            "description": "A beautiful Cenote",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": "-121.91914907",
+            "longitude": "37.37635035",
+            "_visibility": 0,
+            "_software": 2,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "82522381-9f72-4cdb-a9c4-2a18e5079f1e",
+        "fields": {
+            "creation_date": "2024-05-22T01:13:31.989Z",
+            "modified_date": "2024-06-06T21:03:01.563Z",
+            "name": "Carry's Loft",
+            "description": "A nice beautiful canyon looking cenote under the electric lines",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": null,
+            "longitude": null,
+            "_visibility": 0,
+            "_software": 4,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "8930c296-65a5-45cb-b4e6-1f4bebbed5be",
+        "fields": {
+            "creation_date": "2024-05-22T01:11:27.980Z",
+            "modified_date": "2024-06-06T21:02:44.662Z",
+            "name": "Mayan Blue",
+            "description": "A beautiful Cenote - Oh yeahhh cave",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": "-121.91914907",
+            "longitude": "37.37635035",
+            "_visibility": 0,
+            "_software": 3,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "91206689-d3b5-4026-8a8c-1329721c0146",
+        "fields": {
+            "creation_date": "2024-05-22T01:14:08.030Z",
+            "modified_date": "2024-06-04T04:51:23.555Z",
+            "name": "Carry's Loft",
+            "description": "A nice beautiful canyon looking cenote under the electric lines",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": null,
+            "longitude": null,
+            "_visibility": 0,
+            "_software": 1,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "918d8e11-1a18-40ce-88f7-d42985bb28ed",
+        "fields": {
+            "creation_date": "2024-05-01T22:34:16.852Z",
+            "modified_date": "2024-05-02T02:11:29.936Z",
+            "name": "Mayan Blue 7",
+            "description": "A beautiful Cenote",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": "-121.91914907",
+            "longitude": "37.37635035",
+            "_visibility": 0,
+            "_software": 1,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+        "fields": {
+            "creation_date": "2024-05-01T22:34:05.327Z",
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "name": "Mayan Blue 2",
+            "description": "A beautiful Cenote",
+            "country": "MX",
+            "fork_from": "e7ab44af-4a8e-493e-b609-c2ee26bbc552",
+            "latitude": "-121.91914907",
+            "longitude": "37.37635035",
+            "_visibility": 0,
+            "_software": 1,
+            "active_mutex": 18
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "e7ab44af-4a8e-493e-b609-c2ee26bbc552",
+        "fields": {
+            "creation_date": "2024-05-01T22:34:17.753Z",
+            "modified_date": "2024-05-22T01:10:37.225Z",
+            "name": "Mayan Blue 1",
+            "description": "A beautiful Cenote",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": "-121.91914907",
+            "longitude": "37.37635035",
+            "_visibility": 0,
+            "_software": 1,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.project",
+        "pk": "f8d274bf-ee89-4c9e-9858-0ed153afa8f2",
+        "fields": {
+            "creation_date": "2024-05-22T16:33:34.914Z",
+            "modified_date": "2024-05-22T16:33:34.914Z",
+            "name": "Carry's Loft",
+            "description": "A nice beautiful canyon looking cenote under the electric lines",
+            "country": "MX",
+            "fork_from": null,
+            "latitude": null,
+            "longitude": null,
+            "_visibility": 0,
+            "_software": 1,
+            "active_mutex": null
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 2,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 3,
+        "fields": {
+            "project": "19036ed7-df8b-4a15-aa3d-3688b0b06b37",
+            "user": 1,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 4,
+        "fields": {
+            "project": "918d8e11-1a18-40ce-88f7-d42985bb28ed",
+            "user": 1,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 5,
+        "fields": {
+            "project": "e7ab44af-4a8e-493e-b609-c2ee26bbc552",
+            "user": 1,
+            "_level": 1
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 6,
+        "fields": {
+            "project": "3a8cd379-570d-42fc-90d0-9059365134c1",
+            "user": 4,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 7,
+        "fields": {
+            "project": "61f54c24-ebf3-46e8-aa58-5bad16e5bf0f",
+            "user": 1,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 8,
+        "fields": {
+            "project": "1aa5bf4a-8766-4b7d-8fdf-d578bfd986e2",
+            "user": 4,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 9,
+        "fields": {
+            "project": "8930c296-65a5-45cb-b4e6-1f4bebbed5be",
+            "user": 1,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 10,
+        "fields": {
+            "project": "82522381-9f72-4cdb-a9c4-2a18e5079f1e",
+            "user": 1,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 11,
+        "fields": {
+            "project": "4d5c19fa-7f1a-4e41-ae11-04bf9c540dbb",
+            "user": 1,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 12,
+        "fields": {
+            "project": "4fdf10b8-b2c5-4118-a215-28963b8e3072",
+            "user": 1,
+            "_level": 0
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 13,
+        "fields": {
+            "project": "91206689-d3b5-4026-8a8c-1329721c0146",
+            "user": 1,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 14,
+        "fields": {
+            "project": "f8d274bf-ee89-4c9e-9858-0ed153afa8f2",
+            "user": 1,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 15,
+        "fields": {
+            "project": "33a38b8e-189c-4fe1-a659-c6a2d10d7239",
+            "user": 1,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.permission",
+        "pk": 16,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 3,
+            "_level": 2
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 3,
+        "fields": {
+            "project": "4fdf10b8-b2c5-4118-a215-28963b8e3072",
+            "user": 1,
+            "creation_dt": "2024-06-05T17:12:23.499Z",
+            "heartbeat_dt": "2024-06-05T17:12:23.499Z",
+            "closing_user": null,
+            "closing_dt": null,
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 4,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-05T17:14:56.598Z",
+            "heartbeat_dt": "2024-06-05T17:15:10.949Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-05T17:15:04Z",
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 5,
+        "fields": {
+            "project": "19036ed7-df8b-4a15-aa3d-3688b0b06b37",
+            "user": 1,
+            "creation_dt": "2024-06-05T18:21:58.165Z",
+            "heartbeat_dt": "2024-06-05T18:45:38.913Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-05T18:45:38.913Z",
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 6,
+        "fields": {
+            "project": "19036ed7-df8b-4a15-aa3d-3688b0b06b37",
+            "user": 1,
+            "creation_dt": "2024-06-05T18:45:51.107Z",
+            "heartbeat_dt": "2024-06-05T18:45:57.852Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-05T18:45:57.852Z",
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 7,
+        "fields": {
+            "project": "19036ed7-df8b-4a15-aa3d-3688b0b06b37",
+            "user": 1,
+            "creation_dt": "2024-06-05T18:46:32.748Z",
+            "heartbeat_dt": "2024-06-06T04:32:00.579Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T04:32:00.578Z",
+            "closing_comment": "closed from postman"
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 8,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-06T04:24:36.809Z",
+            "heartbeat_dt": "2024-06-06T04:27:05.472Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T04:27:05.472Z",
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 9,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-06T04:27:15.286Z",
+            "heartbeat_dt": "2024-06-06T04:31:08.147Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T04:31:08.147Z",
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 10,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-06T04:32:23.351Z",
+            "heartbeat_dt": "2024-06-06T04:32:59.036Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T04:32:59.035Z",
+            "closing_comment": "closed from postman"
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 11,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-06T04:33:07.060Z",
+            "heartbeat_dt": "2024-06-06T04:33:12.976Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T04:33:12.975Z",
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 12,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-06T04:33:19.187Z",
+            "heartbeat_dt": "2024-06-06T04:33:26.450Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T04:33:26.449Z",
+            "closing_comment": "closed from postman"
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 13,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-06T04:33:32.795Z",
+            "heartbeat_dt": "2024-06-06T04:51:19.590Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T04:51:19.589Z",
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 14,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-06T05:26:42.598Z",
+            "heartbeat_dt": "2024-06-06T06:20:42.850Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T06:20:42.850Z",
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 15,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 3,
+            "creation_dt": "2024-06-06T06:38:56.893Z",
+            "heartbeat_dt": "2024-06-06T06:39:44.252Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T06:39:44.252Z",
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 16,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-06T06:39:57.552Z",
+            "heartbeat_dt": "2024-06-06T14:56:30.318Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T14:56:30.318Z",
+            "closing_comment": "wawawaa"
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 17,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-06T14:56:42.719Z",
+            "heartbeat_dt": "2024-06-06T14:56:49.851Z",
+            "closing_user": 1,
+            "closing_dt": "2024-06-06T14:56:49.851Z",
+            "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.mutex",
+        "pk": 18,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "user": 1,
+            "creation_dt": "2024-06-06T14:56:55.496Z",
+            "heartbeat_dt": "2024-06-06T14:56:55.496Z",
+            "closing_user": null,
+            "closing_dt": null,
+            "closing_comment": ""
+        }
+    }
+]

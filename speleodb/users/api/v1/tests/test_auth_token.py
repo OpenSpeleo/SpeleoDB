@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -18,7 +19,7 @@ class TestTokenAuth(TestCase):
 
     def test_token_retrieval_works(self):
         response = self.csrf_client.post(
-            "/api/auth-token/",
+            reverse("api:v1_users:get_auth_token"),
             {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD},
         )
         assert response.status_code == status.HTTP_200_OK
@@ -26,7 +27,7 @@ class TestTokenAuth(TestCase):
         target = {
             "success": True,
             "token": self.token.key,
-            "url": "http://testserver/api/auth-token/",
+            "url": "http://testserver/api/v1/user/auth-token/",
         }
 
         for key, val in target.items():
@@ -34,7 +35,7 @@ class TestTokenAuth(TestCase):
 
     def test_token_refresh_works(self):
         response = self.csrf_client.patch(
-            "/api/auth-token/",
+            reverse("api:v1_users:get_auth_token"),
             {"email": self.user.email, "password": "password"},
         )
         assert response.status_code == status.HTTP_200_OK
@@ -44,7 +45,7 @@ class TestTokenAuth(TestCase):
 
         target = {
             "success": True,
-            "url": "http://testserver/api/auth-token/",
+            "url": "http://testserver/api/v1/user/auth-token/",
         }
 
         for key, val in target.items():
@@ -52,7 +53,7 @@ class TestTokenAuth(TestCase):
 
     def test_missing_password(self):
         response = self.csrf_client.post(
-            "/api/auth-token/",
+            reverse("api:v1_users:get_auth_token"),
             {"email": self.user.email},
         )
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -65,7 +66,7 @@ class TestTokenAuth(TestCase):
 
     def test_missing_email(self):
         response = self.csrf_client.post(
-            "/api/auth-token/",
+            reverse("api:v1_users:get_auth_token"),
             {"password": "password"},
         )
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
