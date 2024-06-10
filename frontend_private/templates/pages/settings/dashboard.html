@@ -18,7 +18,7 @@
                 <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
                     <div class="w-full">
                         <label class="block text-sm font-medium mb-1" for="name">Full Name:</label>
-                        <input id="name" class="form-input max-w-full w-128" type="text" value="{{ user.name }}" />
+                        <input id="name" name="name" class="form-input max-w-full w-128" type="text" value="{{ user.name }}" />
                     </div>
                 </div>
             </section>
@@ -28,7 +28,7 @@
                 <div class="flex flex-wrap mt-5">
                     <div class="mr-2">
                         <label class="block text-sm font-medium mb-1" for="email">Email:</label>
-                        <input id="email" class="form-input max-w-full w-128" type="email" value="{{ user.email }}" />
+                        <input id="email" name="email" class="form-input max-w-full w-128" type="email" value="{{ user.email }}" />
                     </div>
                 </div>
             </section>
@@ -38,7 +38,7 @@
                 <div class="flex flex-wrap mt-5">
                     <div class="mr-2">
                         <label class="block text-sm font-medium mb-1" for="country">Country:</label>
-                        <select id="country" class="form-select max-w-full w-128">
+                        <select id="country" name="country" class="form-select max-w-full w-128">
                         {% get_countries as countries %}
                         {% for country in countries %}
                             <option value="{{ country.code }}" {% if country.code == user.country %} selected {% endif %}>{{ country.name }}</option>
@@ -50,7 +50,8 @@
 
             <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-8">
                 <div class="flex self-end">
-                    <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+                    {% csrf_token %}
+                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
                 </div>
             </div>
 
@@ -66,7 +67,7 @@
 
 
 {% block inline_extra_js %}
-{% comment %} <script>
+<script>
 
     $(document).ready(function () {
 
@@ -84,16 +85,16 @@
             return re.test(email);
         }
 
-        $('#btn_submit_password_form').click(function () {
+        $('#btn_submit').click(function () {
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let change_password_form = document.getElementById('change_password_form');
-            var formData = new FormData(change_password_form);
+            let update_user_info_form = document.getElementById('update_user_info_form');
+            var formData = new FormData(update_user_info_form);
 
             $("#error_div").hide();
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1_users:change_user_password' %}",
+                url: "{% url 'api:v1_users:update_user_info' %}",
                 method: "PUT",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
@@ -101,20 +102,8 @@
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("X-CSRFToken", csrftoken);
 
-                    if ($("#oldpassword").val() == ""){
-                        $("#modal_error_txt").text("The `oldpassword` field is empty !");
-                        $("#modal_error").css('display', 'flex');
-                        return false;
-                    }
-
-                    if ($("#password1").val() == "" || $("#password2").val() == ""){
-                        $("#modal_error_txt").text("One of the `password` fields is empty !");
-                        $("#modal_error").css('display', 'flex');
-                        return false;
-                    }
-
-                    if ($("#password1").val() != $("#password2").val()){
-                        $("#modal_error_txt").text("Password fields do not match !");
+                    if (!validateEmail($("#email").val()) || $("#email").val() == "") {
+                        $("#modal_error_txt").text("The Email Address is not valid !");
                         $("#modal_error").css('display', 'flex');
                         return false;
                     }
@@ -124,14 +113,10 @@
                 },
                 success: function (data) {
                     $("#modal_success_txt").html(
-                        "Success your password was updated.<br>" +
-                        "You will now need to re-authenticate."
+                        "Success your information has been updated.<br>" +
+                        "If you modified your email address, please check your emails."
                     );
                     $("#modal_success").css('display', 'flex');
-                    window.setTimeout(function(){
-                        // Redirect the user to login page
-                        window.location.href = "{% url 'account_login' %}";
-                    }, 2000);
                 },
                 error: function (data) {
                   if (data.status == 429) {
@@ -148,5 +133,5 @@
         });
 
     });
-</script> {% endcomment %}
+</script>
 {% endblock inline_extra_js %}

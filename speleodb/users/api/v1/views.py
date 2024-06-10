@@ -6,14 +6,18 @@ import contextlib
 from allauth.account import signals
 from allauth.account.adapter import get_adapter
 from allauth.account.internal.flows.password_change import logout_on_password_change
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+from django_countries import countries
+from django_countries.fields import Country
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.authtoken.views import ObtainAuthToken as _ObtainAuthToken
+from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
@@ -29,18 +33,51 @@ class UserInfo(CustomAPIView):
     http_method_names = ["put"]
 
     def _put(self, request, *args, **kwargs):
-        try:
-            request.user.country = request.data["country"]
-            request.user.email = request.data["email"]
-            request.user.name = request.data["name"]
-        except KeyError as e:
-            return Response(
-                {"error": f"Attribute: {e} is missing"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        modified_attrs = {}
+        for key in ["country", "email", "name"]:
+            try:
+                new_value = request.data[key]
 
-        request.user.save(update_fields=["country", "email", "name"])
-        serializer = UserSerializer(request.user)
+                if key == "country":
+                    if new_value not in countries:
+                        return Response(
+                            {"error": f"The country: `{new_value}` does not exist."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    new_value = Country(code=new_value)
+
+                elif key == "email":
+                    try:
+                        validate_email(new_value)
+                    except ValidationError:
+                        return Response(
+                            {"error": f"The email: `{new_value}` is invalid."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
+            except KeyError:
+                return Response(
+                    {"error": f"Attribute: `{key}` is missing"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if new_value == getattr(request.user, key):
+                continue
+
+            modified_attrs[key] = new_value
+
+        if modified_attrs:
+            with contextlib.suppress(KeyError):
+                email = modified_attrs.pop("email")
+                EmailAddress.objects.add_email(
+                    request, request.user, email, confirm=True
+                )
+
+            for key, value in modified_attrs.items():
+                setattr(request.user, key, value)
+            request.user.save(update_fields=modified_attrs)
+
+            serializer = UserSerializer(request.user)
 
         return serializer.data
 
@@ -69,7 +106,7 @@ class UserPreference(CustomAPIView):
         return serializer.data
 
 
-class ObtainAuthToken(_ObtainAuthToken):
+class UserAuthTokenView(ObtainAuthToken):
     serializer_class = AuthTokenSerializer
 
     def get(self, request, *args, **kwargs):
@@ -144,7 +181,7 @@ class UserPasswordChangeView(CustomAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        get_adapter().set_password(request.user, password1)
+        get_adapter(request).set_password(request.user, password1)
         request.user.save()
         signals.password_changed.send(
             sender=request.user.__class__,
