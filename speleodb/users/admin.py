@@ -43,7 +43,7 @@ class UserAdmin(auth_admin.UserAdmin):
         ),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
-    list_display = ["email", "name", "country", "is_superuser", "is_staff"]
+    list_display = ["email", "name", "country", "is_superuser"]
     search_fields = ["name", "email"]
     ordering = ["email"]
     add_fieldsets = (

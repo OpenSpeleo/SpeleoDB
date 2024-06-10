@@ -11,193 +11,63 @@
     <div class="p-6">
         <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-5">Personal Profile</h2>
 
-        <form>
-
-            <!-- Full Name -->
-            <section>
-                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                    <div class="w-full">
-                        <label class="block text-sm font-medium mb-1" for="name">Full Name:</label>
-                        <input id="name" class="form-input max-w-full w-128" type="text" value="{{ user.name }}" />
-                    </div>
-                </div>
-            </section>
-
-            <!-- Email -->
-            <section>
-                <div class="flex flex-wrap mt-5">
-                    <div class="mr-2">
-                        <label class="block text-sm font-medium mb-1" for="email">Email:</label>
-                        <input id="email" class="form-input max-w-full w-128" type="email" value="{{ user.email }}" />
-                    </div>
-                </div>
-            </section>
-
-            <!-- Country -->
-            <section>
-                <div class="flex flex-wrap mt-5">
-                    <div class="mr-2">
-                        <label class="block text-sm font-medium mb-1" for="country">Country:</label>
-                        <select id="country" class="form-select max-w-full w-128">
-                        {% get_countries as countries %}
-                        {% for country in countries %}
-                            <option value="{{ country.code }}" {% if country.code == user.country %} selected {% endif %}>{{ country.name }}</option>
-                        {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </section>
-
-            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-8">
-                <div class="flex self-end">
-                    <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+        <!-- Business Profile -->
+        <section>
+            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="w-full">
+                    <label class="block text-sm font-medium mb-1" for="name">Full Name:</label>
+                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ user.name }}" />
                 </div>
             </div>
+        </section>
 
-        </form>
-
-        <hr class="mt-8 mb-12" style="border-color: rgb(255 255 255 / 40%);">
-
-        <form id="change_password_form">
-
-            <fieldset>
-
-                {% csrf_token %}
-
-                <!-- Old Password -->
-                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                    <div class="w-full">
-                        <label class="block text-sm font-medium mb-1" for="oldpassword">Old Password:</label>
-                        <input id="oldpassword" name="oldpassword" class="form-input max-w-full w-128" type="password" value="" />
-                    </div>
+        <!-- Email -->
+        <section>
+            <div class="flex flex-wrap mt-5">
+                <div class="mr-2">
+                    <label class="block text-sm font-medium mb-1" for="email">Email:</label>
+                    <input id="email" class="form-input max-w-full w-128" type="email" value="{{ user.email }}" />
                 </div>
+            </div>
+        </section>
 
-                <!-- Password -->
-                <section>
-                    <div class="flex flex-wrap mt-5">
-                        <div class="mr-2">
-                            <label class="block text-sm font-medium mb-1" for="password1">New Password:</label>
-                            <input id="password1" name="password1" class="form-input max-w-full w-128" type="password" value="" />
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Password Again -->
-                <section>
-                    <div class="flex flex-wrap mt-5">
-                        <div class="mr-2">
-                            <label class="block text-sm font-medium mb-1" for="password2">New Password (again):</label>
-                            <input id="password2" name="password2" class="form-input max-w-full w-128" type="password" value="" />
-                            <div class="form-text md:col-span-12 text-sm text-slate-300 font-medium form_helptext pt-4">
-                                <u>Password Rules:</u>
-                                <ul>
-                                <li>[*] It can't be similar to your other information.</li>
-                                <li>[*] It must contain at least 8 characters.</li>
-                                <li>[*] It can't be a commonly used password.</li>
-                                <li>[*] It can't be entirely numeric.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-8">
-                    <div class="flex self-end">
-                        <button id="btn_submit_password_form" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
-                    </div>
+        <!-- Country -->
+        <section>
+            <div class="flex flex-wrap mt-5">
+                <div class="mr-2">
+                    <label class="block text-sm font-medium mb-1" for="country">Country:</label>
+                    <select id="country" class="form-select max-w-full w-128">
+                    {% get_countries as countries %}
+                    {% for country in countries %}
+                        <option value="{{ country.code }}" {% if country.code == user.country %} selected {% endif %}>{{ country.name }}</option>
+                    {% endfor %}
+                    </select>
                 </div>
-            </fieldset>
-        </form>
+            </div>
+        </section>
+
+        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-8">
+            <div class="flex self-end">
+                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+            </div>
+        </div>
+
+        <hr class="mt-4 mb-8" style="border-color: rgb(255 255 255 / 40%);">
+
+        <!-- Password -->
+        <section class="pb-4">
+            <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-1">Password</h3>
+            <div class="text-sm">Click below to change your password.</div>
+            <div class="mt-5">
+                <button class="btn border-slate-200 border-slate-700 hover:border-slate-300 hover:border-slate-600 shadow-sm text-indigo-500">Set New Password</button>
+            </div>
+        </section>
+
     </div>
 
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
+    <!-- Panel footer -->
+    <footer>
+    </footer>
 
 </div>
 {% endblock right_panel %}
-
-
-{% block inline_extra_js %}
-<script>
-    $("body").click(function() {
-        if ($("#modal_success").is(":visible")) {
-            $("#modal_success").hide();
-        }
-        if ($("#modal_error").is(":visible")) {
-            $("#modal_error").hide();
-        }
-     });
-
-    $(document).ready(function () {
-
-        function validateEmail(email) {
-            var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-            return re.test(email);
-        }
-
-        $('#btn_submit_password_form').click(function () {
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let change_password_form = document.getElementById('change_password_form');
-            var formData = new FormData(change_password_form);
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            $.ajax({
-                url: "{% url 'api:v1_users:change_user_password' %}",
-                method: "PUT",
-                data: JSON.stringify(Object.fromEntries(formData)),
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-
-                    if ($("#oldpassword").val() == ""){
-                        $("#modal_error_txt").text("The `oldpassword` field is empty !");
-                        $("#modal_error").css('display', 'flex');
-                        return false;
-                    }
-
-                    if ($("#password1").val() == "" || $("#password2").val() == ""){
-                        $("#modal_error_txt").text("One of the `password` fields is empty !");
-                        $("#modal_error").css('display', 'flex');
-                        return false;
-                    }
-
-                    if ($("#password1").val() != $("#password2").val()){
-                        $("#modal_error_txt").text("Password fields do not match !");
-                        $("#modal_error").css('display', 'flex');
-                        return false;
-                    }
-
-                    return true;
-
-                },
-                success: function (data) {
-                    $("#modal_success_txt").html(
-                        "Success your password was updated.<br>" +
-                        "You will now need to re-authenticate."
-                    );
-                    $("#modal_success").css('display', 'flex');
-                    window.setTimeout(function(){
-                        // Redirect the user to login page
-                        window.location.href = "{% url 'account_login' %}";
-                    }, 2000);
-                },
-                error: function (data) {
-                  if (data.status == 429) {
-                    $("#modal_error_txt").text(data.responseJSON["detail"]);
-                    $("#modal_error").css('display', 'flex');
-                  }
-                  else {
-                    $("#modal_error_txt").text(data.responseJSON["errors"][0]);
-                    $("#modal_error").css('display', 'flex');
-                  }
-                }
-            });
-            return false; // prevent default
-        });
-
-    });
-</script>
-{% endblock inline_extra_js %}
