@@ -1,12 +1,15 @@
+import contextlib
 import datetime
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView
+from rest_framework.authtoken.models import Token
 
 from speleodb.surveys.models import Project
 
@@ -18,6 +21,25 @@ class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
 # ============ Setting Pages ============ #
 class DashboardView(_AuthenticatedTemplateView):
     template_name = "pages/settings/dashboard.html"
+
+
+class PassWordView(_AuthenticatedTemplateView):
+    template_name = "pages/settings/password.html"
+
+
+class AuthTokenView(_AuthenticatedTemplateView):
+    template_name = "pages/settings/auth-token.html"
+
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        context["auth_token"], _ = Token.objects.get_or_create(user=request.user)
+        return self.render_to_response(context)
+
+    def post(self, request, *args, **kwargs):
+        with contextlib.suppress(ObjectDoesNotExist):
+            Token.objects.get(user=request.user).delete()
+
+        return self.get(request, *args, **kwargs)
 
 
 class FeedbackView(_AuthenticatedTemplateView):
