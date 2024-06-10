@@ -116,9 +116,9 @@ class PasswordChangeThrottle(UserRateThrottle):
 class UserPasswordChangeView(CustomAPIView):
     throttle_classes = [PasswordChangeThrottle]
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["post"]
+    http_method_names = ["put"]
 
-    def _post(self, request, *args, **kwargs):
+    def _put(self, request, *args, **kwargs):
         try:
             oldpassword = request.data["oldpassword"]
             password1 = request.data["password1"]
