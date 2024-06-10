@@ -5,9 +5,7 @@ import contextlib
 
 from allauth.account import signals
 from allauth.account.adapter import get_adapter
-from allauth.account.forms import ResetPasswordForm
 from allauth.account.internal.flows.password_change import logout_on_password_change
-from allauth.account.utils import filter_users_by_email
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
@@ -16,9 +14,7 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken as _ObtainAuthToken
-from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
 from rest_framework.throttling import UserRateThrottle
 
 from speleodb.users.api.v1.serializers import AuthTokenSerializer
@@ -116,9 +112,9 @@ class PasswordChangeThrottle(UserRateThrottle):
 class UserPasswordChangeView(CustomAPIView):
     throttle_classes = [PasswordChangeThrottle]
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["post"]
+    http_method_names = ["put"]
 
-    def _post(self, request, *args, **kwargs):
+    def _put(self, request, *args, **kwargs):
         try:
             oldpassword = request.data["oldpassword"]
             password1 = request.data["password1"]

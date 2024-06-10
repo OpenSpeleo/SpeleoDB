@@ -9,52 +9,29 @@
 
     <!-- Panel body -->
     <div class="p-6">
-        <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-5">Personal Profile</h2>
+        <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-5">Application Token</h2>
 
-        <form id="update_user_info_form">
-
-            <!-- Full Name -->
-            <section>
-                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                    <div class="w-full">
-                        <label class="block text-sm font-medium mb-1" for="name">Full Name:</label>
-                        <input id="name" class="form-input max-w-full w-128" type="text" value="{{ user.name }}" />
-                    </div>
-                </div>
-            </section>
-
-            <!-- Email -->
-            <section>
-                <div class="flex flex-wrap mt-5">
-                    <div class="mr-2">
-                        <label class="block text-sm font-medium mb-1" for="email">Email:</label>
-                        <input id="email" class="form-input max-w-full w-128" type="email" value="{{ user.email }}" />
-                    </div>
-                </div>
-            </section>
-
-            <!-- Country -->
-            <section>
-                <div class="flex flex-wrap mt-5">
-                    <div class="mr-2">
-                        <label class="block text-sm font-medium mb-1" for="country">Country:</label>
-                        <select id="country" class="form-select max-w-full w-128">
-                        {% get_countries as countries %}
-                        {% for country in countries %}
-                            <option value="{{ country.code }}" {% if country.code == user.country %} selected {% endif %}>{{ country.name }}</option>
-                        {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </section>
-
-            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-8">
-                <div class="flex self-end">
-                    <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+        <!-- Full Name -->
+        <section>
+            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="w-full">
+                    <label class="block text-sm font-medium mb-1" for="name">Current Application Token:</label>
+                    <input class="form-input max-w-full w-128" type="text" value="{{ auth_token.key }}" disabled/>
                 </div>
             </div>
+        </section>
 
-        </form>
+        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-16">
+            <div class="text-right">
+                <h2 class="mb-6">
+                    If you believe your token has been compromised, you can generate a new one.<br>
+                    Treat this value just like you would treat your password.</h2>
+                <form action="{% url 'private:auth-token' %}" method="POST">
+                    {% csrf_token %}
+                    <button class="btn bg-rose-500 hover:bg-rose-600 text-white ml-3">Refresh Token</button>
+                </form>
+            </div>
+        </div>
 
     </div>
 
