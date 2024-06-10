@@ -5,6 +5,7 @@ from speleodb.users.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
+    country = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = [
@@ -14,6 +15,9 @@ class UserSerializer(serializers.ModelSerializer):
             "email_on_speleodb_updates",
             "name",
         ]
+
+    def get_country(self, obj):
+        return obj.country.code
 
 
 class AuthTokenSerializer(serializers.Serializer):

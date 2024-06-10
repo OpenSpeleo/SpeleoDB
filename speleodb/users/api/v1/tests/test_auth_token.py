@@ -19,7 +19,7 @@ class TestTokenAuth(TestCase):
 
     def test_token_retrieval_works(self):
         response = self.csrf_client.post(
-            reverse("api:v1_users:get_auth_token"),
+            reverse("api:v1_users:auth_token"),
             {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD},
         )
         assert response.status_code == status.HTTP_200_OK
@@ -35,7 +35,7 @@ class TestTokenAuth(TestCase):
 
     def test_token_refresh_works(self):
         response = self.csrf_client.patch(
-            reverse("api:v1_users:get_auth_token"),
+            reverse("api:v1_users:auth_token"),
             {"email": self.user.email, "password": "password"},
         )
         assert response.status_code == status.HTTP_200_OK
@@ -53,7 +53,7 @@ class TestTokenAuth(TestCase):
 
     def test_missing_password(self):
         response = self.csrf_client.post(
-            reverse("api:v1_users:get_auth_token"),
+            reverse("api:v1_users:auth_token"),
             {"email": self.user.email},
         )
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -66,7 +66,7 @@ class TestTokenAuth(TestCase):
 
     def test_missing_email(self):
         response = self.csrf_client.post(
-            reverse("api:v1_users:get_auth_token"),
+            reverse("api:v1_users:auth_token"),
             {"password": "password"},
         )
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
