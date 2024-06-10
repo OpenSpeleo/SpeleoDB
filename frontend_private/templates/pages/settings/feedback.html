@@ -4,72 +4,140 @@
 {% block right_panel %}
 <!-- Panel -->
 <div class="grow">
+    <form id="feedback_form" action="https://formspree.io/f/myyrrknj" method="POST">
 
-    <!-- Panel body -->
-    <div class="p-6 space-y-6">
-        <div>
-            <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-4">Give Feedback</h2>
-            <div class="text-sm">Our product depends on customer feedback to improve the overall experience!</div>
+        <!-- Panel body -->
+        <div class="p-6 space-y-6">
+            <div>
+                <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-4">Give Feedback</h2>
+                <div class="text-sm">Our product depends on customer feedback to improve the overall experience!</div>
+            </div>
+
+            <input type="hidden" name="email" value="{{ user.email }}"/>
+
+            <!-- Score -->
+            <section>
+                <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-6">How likely would you recommend us to a friend or colleague?</h3>
+                <div class="w-full max-w-xl">
+                    <div class="relative">
+                        <div class="absolute left-0 top-1/2 -mt-px w-full h-0.5 bg-slate-200 bg-slate-700" aria-hidden="true"></div>
+
+                        <input type="hidden" name="score" value="3"/>
+
+                        <ul class="relative flex justify-between w-full">
+                            <li class="flex">
+                                <span data-score="1" class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
+                            </li>
+                            <li class="flex">
+                                <span data-score="2" class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
+                            </li>
+                            <li class="flex">
+                                <span data-score="3" class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-indigo-500 border-indigo-500"></span>
+                            </li>
+                            <li class="flex">
+                                <span data-score="4" class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
+                            </li>
+                            <li class="flex">
+                                <span data-score="5" class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="w-full flex justify-between text-sm text-slate-500 text-slate-400 italic mt-3">
+                        <div>Not at all</div>
+                        <div style="margin-left: 2.65rem;">Not sure</div>
+                        <div>Extremely likely</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tell us in words -->
+            <section>
+                <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-5">What's on your mind ?</h3>
+                <!-- Form -->
+                <label class="sr-only" for="feedback">Leave a feedback</label>
+                <textarea id="feedback" name="feedback" class="form-textarea w-full focus:border-slate-300" rows="4" placeholder="I really enjoy/dislike …"></textarea>
+            </section>
+
         </div>
 
-        <!-- Rate -->
-        <section>
-            <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-6">How likely would you recommend us to a friend or colleague?</h3>
-            <div class="w-full max-w-xl">
-                <div class="relative">
-                    <div class="absolute left-0 top-1/2 -mt-px w-full h-0.5 bg-slate-200 bg-slate-700" aria-hidden="true"></div>
-                    <ul class="relative flex justify-between w-full">
-                        <li class="flex">
-                            <button class="w-3 h-3 rounded-full bg-white bg-slate-800 border-2 border-slate-400 border-slate-500">
-                                <span class="sr-only">1</span>
-                            </button>
-                        </li>
-                        <li class="flex">
-                            <button class="w-3 h-3 rounded-full bg-white bg-slate-800 border-2 border-slate-400 border-slate-500">
-                                <span class="sr-only">2</span>
-                            </button>
-                        </li>
-                        <li class="flex">
-                            <button class="w-3 h-3 rounded-full bg-indigo-500 border-2 border-indigo-500">
-                                <span class="sr-only">3</span>
-                            </button>
-                        </li>
-                        <li class="flex">
-                            <button class="w-3 h-3 rounded-full bg-white bg-slate-800 border-2 border-slate-400 border-slate-500">
-                                <span class="sr-only">4</span>
-                            </button>
-                        </li>
-                        <li class="flex">
-                            <button class="w-3 h-3 rounded-full bg-white bg-slate-800 border-2 border-slate-400 border-slate-500">
-                                <span class="sr-only">5</span>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-                <div class="w-full flex justify-between text-sm text-slate-500 text-slate-400 italic mt-3">
-                    <div>Not at all</div>
-                    <div>Extremely likely</div>
+        <!-- Panel footer -->
+        <footer>
+            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+                <div class="flex self-end">
+                    <button id="btn_submit_feedback" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Submit</button>
                 </div>
             </div>
-        </section>
+        </footer>
 
-        <!-- Tell us in words -->
-        <section>
-            <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-5">What's on your mind ?</h3>
-            <!-- Form -->
-            <label class="sr-only" for="feedback">Leave a feedback</label>
-            <textarea id="feedback" class="form-textarea w-full focus:border-slate-300" rows="4" placeholder="I really enjoy…"></textarea>
-        </section>
-    </div>
+    </form>
 
-    <!-- Panel footer -->
-    <footer>
-        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-            <div class="flex self-end">
-                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Submit</button>
-            </div>
-        </div>
-    </footer>
+    {% include 'snippets/modal_success.html' %}
+    {% include 'snippets/modal_error.html' %}
 
 </div>
 {% endblock right_panel %}
+
+
+{% block inline_extra_js %}
+<script>
+
+    $(document).ready(function () {
+
+        $('.feedback_score').click(function() {
+            $('.feedback_score').removeClass("bg-indigo-500 border-indigo-500").addClass("bg-slate-800 border-slate-500");
+            $(this).removeClass("bg-slate-800 border-slate-500").addClass("bg-indigo-500 border-indigo-500");
+            $('input[name=score]').val($(this).data("score"));
+        });
+
+        $("body").click(function() {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+            return false;
+         });
+
+        var form = document.getElementById('feedback_form');
+        async function handleSubmit(event) {
+            event.preventDefault();
+            var data = new FormData(form);
+            fetch(
+                "https://formspree.io/f/myyrrknj",
+                {
+                    method: form.method,
+                    body: data,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                }
+            ).then(response => {
+                if (response.ok) {
+                    status.innerHTML = "Thanks for your submission!";
+                    form.reset();
+
+                    $("#modal_success_txt").html("Thanks for your feedback. We appreciate a lot!");
+                    $("#modal_success").css('display', 'flex');
+
+                } else {
+                    response.json().then(data => {
+                        if (Object.hasOwn(data, 'errors')) {
+                            status.innerHTML = $("#modal_error_txt").text(data["errors"].map(error => error["message"]).join(", "));
+                        } else {
+                            status.innerHTML = $("#modal_error_txt").text("Oops! There was a problem submitting your feedback");
+                        }
+                        $("#modal_error").css('display', 'flex');
+                    })
+                }
+            }).catch(error => {
+                $("#modal_error_txt").text("Oops! There was a problem submitting your feedback");
+                $("#modal_error").css('display', 'flex');
+            });
+        }
+        //form.addEventListener("submit", handleSubmit);
+        const btn_submit_feedback = document.getElementById("btn_submit_feedback");
+        btn_submit_feedback.addEventListener("click", handleSubmit);
+    });
+</script>
+{% endblock inline_extra_js %}
