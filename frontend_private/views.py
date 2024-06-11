@@ -69,6 +69,14 @@ class _BaseProjectView(LoginRequiredMixin, View):
         }
 
 
+class ProjectUploadView(_BaseProjectView):
+    template_name = "pages/project/upload.html"
+
+    def get(self, request, project_id: str):
+        data = super().get(request, project_id=project_id)
+        return render(request, ProjectUploadView.template_name, data)
+
+
 class ProjectDangerZoneView(_BaseProjectView):
     template_name = "pages/project/danger_zone.html"
 

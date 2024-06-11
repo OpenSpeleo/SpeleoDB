@@ -237,7 +237,7 @@ class Project(models.Model):
             data_xml_f = zip_archive.read(TML_XML_FILENAME)
 
         # Make sure the project is update to ToT (Top of Tree)
-        self.git_repo.pull()
+        self.git_repo.checkout_and_pull()
 
         with (self.git_repo.path / TML_XML_FILENAME).open(mode="wb") as f:
             f.write(data_xml_f)

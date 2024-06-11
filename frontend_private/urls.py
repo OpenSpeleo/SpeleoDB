@@ -12,6 +12,7 @@ from frontend_private.views import ProjectDetailsView
 from frontend_private.views import ProjectListingView
 from frontend_private.views import ProjectMutexesView
 from frontend_private.views import ProjectPermissionsView
+from frontend_private.views import ProjectUploadView
 
 app_name = "private"
 urlpatterns = [
@@ -33,7 +34,7 @@ urlpatterns = [
     ),
     path(
         "project/<uuid:project_id>/upload/",
-        ProjectDetailsView.as_view(),
+        ProjectUploadView.as_view(),
         name="project_upload",
     ),
     path(
