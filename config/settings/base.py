@@ -182,6 +182,30 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://github.com/SmileyChris/django-countries#show-certain-countries-first
 COUNTRIES_FIRST = ["US", "MX", "FR"]
 
+# https://github.com/SmileyChris/django-countries/blob/main/django_countries/data.py
+COUNTRIES_OVERRIDE = {
+    "AB": "Scotland",
+    "BO": "Bolivia",
+    "BQ": "Bonaire",
+    "CD": "Congo",
+    "FM": "Micronesia",
+    "GB": "Great Britain",
+    "GS": "South Georgia",
+    "IR": "Iran",
+    "KP": "North Korea",
+    "KR": "South Korea",
+    "LA": "Laos",
+    "MD": "Moldova",
+    "MF": "Saint Martin",
+    "SH": "Saint Helena",
+    "TW": "Taiwan",
+    "UM": "US Minor Outlying Islands",
+    "US": "USA",
+    "VE": "Venezuela",
+    "VG": "Virgin Islands (GB)",
+    "VI": "Virgin Islands (USA)",
+}
+
 # ENCRYPTED FIELDS
 # ------------------------------------------------------------------------------
 # https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/#getting-started

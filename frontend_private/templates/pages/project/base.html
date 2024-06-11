@@ -29,6 +29,8 @@
                     <div>
                         <div class="text-xs font-semibold text-slate-400 text-slate-500 uppercase mb-2">Project Settings</div>
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+
+                            <!-- Project Details -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
                                 <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_details' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_details' project_id=project.id %}">
                                     {% if request.url_name == 'project_details' %}
@@ -56,6 +58,33 @@
                                     </span>
                                 </a>
                             </li>
+
+                            {% if project.active_mutex and project.active_mutex.user == user %}
+                            <!-- Project Upload -->
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_upload' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_upload' project_id=project.id %}">
+                                    {% if request.url_name == 'project_upload' %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400 mr-2" viewBox="1.55 4.2 21.7 17.55">
+                                    {% else %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current fill-none stroke-width-2 text-slate-400 text-slate-500 mr-2" viewBox="1.55 4.2 21.7 17.55">
+                                    {% endif %}
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1"></path>
+                                        <path d="M9 15l3 -3l3 3"></path>
+                                        <path d="M12 12l0 9"></path>
+                                    </svg>
+                                    {% if request.url_name == 'project_upload' %}
+                                        <span class="text-sm font-medium text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                                    {% endif %}
+                                        Upload new revision
+                                    </span>
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            <!-- Project Permissions -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
                                 <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_permissions' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_permissions' project_id=project.id %}">
                                     {% if request.url_name == 'project_permissions' %}
@@ -74,6 +103,8 @@
                                     </span>
                                 </a>
                             </li>
+
+                            <!-- Project Lock History -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
                                 <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_mutexes' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_mutexes' project_id=project.id %}">
                                     {% if request.url_name == 'project_mutexes' %}
@@ -95,6 +126,8 @@
                                     </span>
                                 </a>
                             </li>
+
+                            <!-- Project Revision History -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
                                 <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_revisions' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_revisions' project_id=project.id %}">
                                     {% if request.url_name == 'project_revisions' %}
@@ -122,6 +155,8 @@
                     <div>
                         <hr class="mt-4 mb-4" style="border-color: rgb(255 255 255 / 40%);">
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+
+                            <!-- Project Danger Zone -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
                                 <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_danger_zone' %}bg-rose-50 bg-rose-500/30{% endif %}" href="{% url 'private:project_danger_zone' project_id=project.id %}">
                                     {% if request.url_name == 'project_danger_zone' %}
