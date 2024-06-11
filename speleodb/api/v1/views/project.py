@@ -4,6 +4,7 @@
 from decimal import Decimal
 from decimal import InvalidOperation as DecimalInvalidOperation
 
+from django.core.exceptions import ValidationError
 from django_countries import countries
 from django_countries.fields import Country
 from rest_framework import permissions
@@ -103,23 +104,29 @@ class CreateProjectApiView(CustomAPIView):
     http_method_names = ["post"]
 
     def _post(self, request, *args, **kwargs):
-        """
-        Create the Todo with given todo data
-        """
-        serializer = ProjectSerializer(
-            data=request.data, context={"user": request.user}
-        )
-        if serializer.is_valid():
-            proj = serializer.save()
-            Permission.objects.create(
-                project=proj, user=request.user, level=Permission.Level.OWNER
+        try:
+            serializer = ProjectSerializer(
+                data=request.data, context={"user": request.user}
+            )
+            if serializer.is_valid():
+                proj = serializer.save()
+                Permission.objects.create(
+                    project=proj, user=request.user, level=Permission.Level.OWNER
+                )
+
+                return Response(
+                    {"data": serializer.data}, status=status.HTTP_201_CREATED
+                )
+
+            return Response(
+                {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
             )
 
-            return Response({"data": serializer.data}, status=status.HTTP_201_CREATED)
-
-        return Response(
-            {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-        )
+        except ValidationError as e:
+            return Response(
+                {"errors": e.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class ProjectListApiView(CustomAPIView):
