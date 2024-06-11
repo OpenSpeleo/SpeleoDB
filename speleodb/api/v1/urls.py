@@ -9,6 +9,7 @@ from speleodb.api.v1.views.file import FileUploadView
 from speleodb.api.v1.views.mutex import ProjectAcquireApiView
 from speleodb.api.v1.views.mutex import ProjectReleaseApiView
 from speleodb.api.v1.views.permission import ProjectPermissionListView
+from speleodb.api.v1.views.permission import ProjectPermissionView
 from speleodb.api.v1.views.project import CreateProjectApiView
 from speleodb.api.v1.views.project import ProjectApiView
 from speleodb.api.v1.views.project import ProjectListApiView
@@ -26,6 +27,11 @@ urlpatterns = [
         "project/<uuid:id>/permissions/",
         ProjectPermissionListView.as_view(),
         name="list_project_permissions",
+    ),
+    path(
+        "project/<uuid:id>/permission/",
+        ProjectPermissionView.as_view(),
+        name="project_permission",
     ),
     path(
         "project/<uuid:id>/acquire/",
