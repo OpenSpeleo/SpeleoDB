@@ -379,9 +379,8 @@
             "project": "4fdf10b8-b2c5-4118-a215-28963b8e3072",
             "user": 1,
             "creation_dt": "2024-06-05T17:12:23.499Z",
-            "heartbeat_dt": "2024-06-05T17:12:23.499Z",
+            "last_modified_dt": "2024-06-05T17:12:23.499Z",
             "closing_user": null,
-            "closing_dt": null,
             "closing_comment": ""
         }
     },
@@ -392,9 +391,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-05T17:14:56.598Z",
-            "heartbeat_dt": "2024-06-05T17:15:10.949Z",
+            "last_modified_dt": "2024-06-05T17:15:10.949Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-05T17:15:04Z",
             "closing_comment": ""
         }
     },
@@ -405,9 +403,8 @@
             "project": "19036ed7-df8b-4a15-aa3d-3688b0b06b37",
             "user": 1,
             "creation_dt": "2024-06-05T18:21:58.165Z",
-            "heartbeat_dt": "2024-06-05T18:45:38.913Z",
+            "last_modified_dt": "2024-06-05T18:45:38.913Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-05T18:45:38.913Z",
             "closing_comment": ""
         }
     },
@@ -418,9 +415,8 @@
             "project": "19036ed7-df8b-4a15-aa3d-3688b0b06b37",
             "user": 1,
             "creation_dt": "2024-06-05T18:45:51.107Z",
-            "heartbeat_dt": "2024-06-05T18:45:57.852Z",
+            "last_modified_dt": "2024-06-05T18:45:57.852Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-05T18:45:57.852Z",
             "closing_comment": ""
         }
     },
@@ -431,9 +427,8 @@
             "project": "19036ed7-df8b-4a15-aa3d-3688b0b06b37",
             "user": 1,
             "creation_dt": "2024-06-05T18:46:32.748Z",
-            "heartbeat_dt": "2024-06-06T04:32:00.579Z",
+            "last_modified_dt": "2024-06-06T04:32:00.579Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T04:32:00.578Z",
             "closing_comment": "closed from postman"
         }
     },
@@ -444,9 +439,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-06T04:24:36.809Z",
-            "heartbeat_dt": "2024-06-06T04:27:05.472Z",
+            "last_modified_dt": "2024-06-06T04:27:05.472Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T04:27:05.472Z",
             "closing_comment": ""
         }
     },
@@ -457,9 +451,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-06T04:27:15.286Z",
-            "heartbeat_dt": "2024-06-06T04:31:08.147Z",
+            "last_modified_dt": "2024-06-06T04:31:08.147Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T04:31:08.147Z",
             "closing_comment": ""
         }
     },
@@ -470,9 +463,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-06T04:32:23.351Z",
-            "heartbeat_dt": "2024-06-06T04:32:59.036Z",
+            "last_modified_dt": "2024-06-06T04:32:59.036Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T04:32:59.035Z",
             "closing_comment": "closed from postman"
         }
     },
@@ -483,9 +475,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-06T04:33:07.060Z",
-            "heartbeat_dt": "2024-06-06T04:33:12.976Z",
+            "last_modified_dt": "2024-06-06T04:33:12.976Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T04:33:12.975Z",
             "closing_comment": ""
         }
     },
@@ -496,9 +487,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-06T04:33:19.187Z",
-            "heartbeat_dt": "2024-06-06T04:33:26.450Z",
+            "last_modified_dt": "2024-06-06T04:33:26.450Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T04:33:26.449Z",
             "closing_comment": "closed from postman"
         }
     },
@@ -509,9 +499,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-06T04:33:32.795Z",
-            "heartbeat_dt": "2024-06-06T04:51:19.590Z",
+            "last_modified_dt": "2024-06-06T04:51:19.590Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T04:51:19.589Z",
             "closing_comment": ""
         }
     },
@@ -522,9 +511,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-06T05:26:42.598Z",
-            "heartbeat_dt": "2024-06-06T06:20:42.850Z",
+            "last_modified_dt": "2024-06-06T06:20:42.850Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T06:20:42.850Z",
             "closing_comment": ""
         }
     },
@@ -535,9 +523,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 3,
             "creation_dt": "2024-06-06T06:38:56.893Z",
-            "heartbeat_dt": "2024-06-06T06:39:44.252Z",
+            "last_modified_dt": "2024-06-06T06:39:44.252Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T06:39:44.252Z",
             "closing_comment": ""
         }
     },
@@ -548,9 +535,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-06T06:39:57.552Z",
-            "heartbeat_dt": "2024-06-06T14:56:30.318Z",
+            "last_modified_dt": "2024-06-06T14:56:30.318Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T14:56:30.318Z",
             "closing_comment": "wawawaa"
         }
     },
@@ -561,9 +547,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-06T14:56:42.719Z",
-            "heartbeat_dt": "2024-06-06T14:56:49.851Z",
+            "last_modified_dt": "2024-06-06T14:56:49.851Z",
             "closing_user": 1,
-            "closing_dt": "2024-06-06T14:56:49.851Z",
             "closing_comment": ""
         }
     },
@@ -574,9 +559,8 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_dt": "2024-06-06T14:56:55.496Z",
-            "heartbeat_dt": "2024-06-06T14:56:55.496Z",
+            "last_modified_dt": "2024-06-06T14:56:55.496Z",
             "closing_user": null,
-            "closing_dt": null,
             "closing_comment": ""
         }
     }

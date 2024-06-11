@@ -60,10 +60,7 @@
                                     <div class="font-semibold text-center">Lock Date</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                    <div class="font-semibold text-center">Last Seen Date</div>
-                                </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                    <div class="font-semibold text-center">Unlock Date</div>
+                                    <div class="font-semibold text-center">Last Modified Date</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="font-semibold text-center">Unlock by</div>
@@ -90,10 +87,7 @@
                                         <div class="text-center">{{ mutex.creation_dt|date:"Y/m/d H:i" }}</div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                        <div class="text-center">{{ mutex.heartbeat_dt|date:"Y/m/d H:i" }}</div>
-                                    </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                        <div class="text-center">{{ mutex.closing_dt|date:"Y/m/d H:i" }}</div>
+                                        <div class="text-center">{{ mutex.last_modified_dt|date:"Y/m/d H:i" }}</div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">{% if mutex.closing_user %}{{ mutex.closing_user }}{% endif %}</div>
@@ -102,7 +96,7 @@
                                         <div class="text-center">{{ mutex.closing_comment }}</div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
-                                        {% if not mutex.closing_dt %}
+                                        {% if mutex.is_active %}
                                             {% if mutex.user == user or is_project_owner %}
                                             <a href="#" class="btn_unlock">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 text-rose-500 inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -231,4 +225,3 @@
 </script>
 
 {% endblock inline_extra_js %}
-

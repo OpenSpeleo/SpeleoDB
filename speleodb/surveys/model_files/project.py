@@ -142,7 +142,7 @@ class Project(models.Model):
     @property
     def mutex_dt(self):
         try:
-            return self.active_mutex.heartbeat_dt
+            return self.active_mutex.last_modified_dt
         except AttributeError:
             return None
 
@@ -164,7 +164,7 @@ class Project(models.Model):
                     "Another user already is currently editing this file: "
                     f"{self.mutex_owner}"
                 )
-            self.active_mutex.heartbeat_dt = timezone.localtime()
+            self.active_mutex.last_modified_dt = timezone.localtime()
             self.active_mutex.save()
         else:
             from speleodb.surveys.models import Mutex

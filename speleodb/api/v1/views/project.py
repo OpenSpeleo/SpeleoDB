@@ -93,7 +93,7 @@ class ProjectApiView(CustomAPIView):
 
         project = self.get_object()
         for perm in project.get_all_permissions():
-            perm.deactivate()
+            perm.deactivate(request.user)
 
         return {"id": str(project.id)}
 
