@@ -16,7 +16,7 @@ def test_one_project_apiview(project: Project):
     )
     assert (
         resolve(f"/api/v1/project/{project.id}/").view_name
-        == "api:v1:one_project_apiview"  # noqa: E501
+        == "api:v1:one_project_apiview"
     )
 
 
@@ -28,6 +28,17 @@ def test_list_project_permissions(project: Project):
     assert (
         resolve(f"/api/v1/project/{project.id}/permissions/").view_name
         == "api:v1:list_project_permissions"
+    )
+
+
+def test_project_permission(project: Project):
+    assert (
+        reverse("api:v1:project_permission", kwargs={"id": project.id})
+        == f"/api/v1/project/{project.id}/permission/"
+    )
+    assert (
+        resolve(f"/api/v1/project/{project.id}/permission/").view_name
+        == "api:v1:project_permission"
     )
 
 
