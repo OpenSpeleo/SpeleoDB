@@ -8,7 +8,7 @@ from speleodb.surveys.model_files.permission import Permission
 
 
 class BaseProjectAccessLevel(permissions.BasePermission):
-    MIN_ACCESS_LELEL = None
+    MIN_ACCESS_LEVEL = None
 
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated
@@ -18,16 +18,21 @@ class BaseProjectAccessLevel(permissions.BasePermission):
             return True
 
         try:
-            return obj.get_permission(user=request.user)._level >= self.MIN_ACCESS_LELEL  # noqa: SLF001
+            return obj.get_permission(user=request.user)._level >= self.MIN_ACCESS_LEVEL  # noqa: SLF001
         except ObjectDoesNotExist:
             return False
 
 
+class UserHasAdminAccess(BaseProjectAccessLevel):
+    MIN_ACCESS_LEVEL = Permission.Level.OWNER
+    message = "You must have admin access for this project."
+
+
 class UserHasWriteAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_LELEL = Permission.Level.READ_AND_WRITE
+    MIN_ACCESS_LEVEL = Permission.Level.READ_AND_WRITE
     message = "You must have write access for this project."
 
 
 class UserHasReadAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_LELEL = Permission.Level.READ_ONLY
+    MIN_ACCESS_LEVEL = Permission.Level.READ_ONLY
     message = "You must have read access for this project."

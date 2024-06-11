@@ -10,6 +10,8 @@
     <div class="p-6 space-y-6">
         <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-16">Project Danger Zone</h2>
 
+        {% csrf_token %}
+
         <!-- Project Name -->
         <section>
             <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
@@ -18,7 +20,7 @@
                     <span class="block text-sm font-medium mb-1" for="name">
                         Once you delete a repository, there is no going back. Please be <b><u>absolutely</u></b> certain.
                     </span>
-                    <button class="btn bg-rose-500 hover:bg-rose-600 text-white mt-4">Delete Repository</button>
+                    <button id="btn_delete" class="btn bg-rose-500 hover:bg-rose-600 text-white mt-4">Delete Repository</button>
                 </div>
             </div>
         </section>
@@ -26,4 +28,77 @@
     </div>
 
 </div>
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+{% include 'snippets/modal_confirmation.html' %}
+
 {% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+
+    $(document).ready(function () {
+
+        $("body").click(function() {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+            if ($("#modal_confirmation").is(":visible")) {
+                $("#modal_confirmation").hide();
+            }
+        });
+
+        $("#btn_delete").click(function () {
+            $("#modal_confirmation").css('display', 'flex');
+            return false; // prevent default
+        });
+
+        $('#btn_confirmed_submit').click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+            $("#modal_confirmation").hide();
+
+            $.ajax({
+                url: "{% url 'api:v1:one_project_apiview' id=project.id %}",
+                method: "DELETE",
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The project has been deleted succesfully.");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function(){
+                        // Redirect to project listing
+                        window.location.href = "{% url 'private:projects' %}";
+                    }, 2000);
+                },
+                error: function (data) {
+                  if (data.status == 429) {
+                    $("#modal_error_txt").text(data.responseJSON["detail"]);
+                    $("#modal_error").css('display', 'flex');
+                  }
+                  else {
+                    $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                    $("#modal_error").css('display', 'flex');
+                  }
+                }
+            });
+            return false; // prevent default
+        });
+    });
+</script>
+
+{% endblock inline_extra_js %}
+
+
