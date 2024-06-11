@@ -95,6 +95,16 @@ class ProjectPermissionView(CustomAPIView):
         if isinstance(perm_data, Response):
             return perm_data
 
+        # Can't edit your own permission
+        if request.user == perm_data["user"]:
+            # This by default make no sense because you need to be owner to create
+            # permission. So you obviously can't create permission for yourself.
+            # Added just as safety and logical consistency.
+            return Response(
+                {"error": ("A user can not edit their own permission")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         permission, created = Permission.objects.get_or_create(
             project=project, user=perm_data["user"]
         )
@@ -131,6 +141,13 @@ class ProjectPermissionView(CustomAPIView):
         # An Error occured
         if isinstance(perm_data, Response):
             return perm_data
+
+        # Can't edit your own permission
+        if request.user == perm_data["user"]:
+            return Response(
+                {"error": ("A user can not edit their own permission")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             permission = Permission.objects.get(project=project, user=perm_data["user"])
@@ -178,6 +195,13 @@ class ProjectPermissionView(CustomAPIView):
         # An Error occured
         if isinstance(perm_data, Response):
             return perm_data
+
+        # Can't edit your own permission
+        if request.user == perm_data["user"]:
+            return Response(
+                {"error": ("A user can not edit their own permission")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             permission = Permission.objects.get(project=project, user=perm_data["user"])
