@@ -20,7 +20,7 @@ urlpatterns = [
     # ========================== Public API Routes ========================== #
     # ================== Authentication Required API Routes ================= #
     path("project/", CreateProjectApiView.as_view(), name="create_project"),
-    path("project/<uuid:id>/", ProjectApiView.as_view(), name="get_one_project"),
+    path("project/<uuid:id>/", ProjectApiView.as_view(), name="one_project_apiview"),
     path(
         "project/<uuid:id>/acquire/",
         ProjectAcquireApiView.as_view(),

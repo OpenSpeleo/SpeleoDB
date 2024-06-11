@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from decimal import Decimal
+from decimal import InvalidOperation as DecimalInvalidOperation
+
+from django_countries import countries
+from django_countries.fields import Country
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.response import Response
@@ -16,7 +21,7 @@ class ProjectApiView(CustomAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
     serializer_class = ProjectSerializer
-    http_method_names = ["get"]
+    http_method_names = ["get", "put"]
     lookup_field = "id"
 
     def _get(self, request, *args, **kwargs):
@@ -26,6 +31,52 @@ class ProjectApiView(CustomAPIView):
         return {
             "project": serializer.data,
             "history": project.commit_history,
+        }
+
+    def _put(self, request, *args, **kwargs):
+        project = self.get_object()
+
+        modified_attrs = {}
+        for key in ["name", "description", "country", "latitude", "longitude"]:
+            try:
+                new_value = request.data[key]
+
+                if key == "country":
+                    if new_value not in countries:
+                        return Response(
+                            {"error": f"The country: `{new_value}` does not exist."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    new_value = Country(code=new_value)
+
+                elif key in ["latitude", "longitude"]:
+                    try:
+                        new_value = Decimal.from_float(float(new_value))
+                    except (DecimalInvalidOperation, TypeError, ValueError):
+                        return Response(
+                            {"error": f"The value: `{key}={new_value}` is invalid."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
+            except KeyError:
+                return Response(
+                    {"error": f"Attribute: `{key}` is missing"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if new_value == getattr(project, key):
+                continue
+
+            modified_attrs[key] = new_value
+
+        if modified_attrs:
+            for key, value in modified_attrs.items():
+                setattr(project, key, value)
+            project.save(update_fields=modified_attrs)
+
+        serializer = ProjectSerializer(project, context={"user": request.user})
+        return {
+            "project": serializer.data,
         }
 
 

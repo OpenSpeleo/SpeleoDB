@@ -18,6 +18,8 @@
                 </h1>
             </div>
 
+            {% csrf_token %}
+
             <!-- Right: Actions -->
             <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2 w-fit block float-right">
 
@@ -25,7 +27,7 @@
                 {% if project.mutex_owner or not has_write_access %}
                     <button class="btn bg-slate-600 text-white" disabled>
                 {% else %}
-                    <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                    <button id="btn_lock_project" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
                 {% endif %}
                     <svg class="w-4 h-4 stroke-current opacity-100 shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -102,7 +104,7 @@
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
                                         {% if not mutex.closing_dt %}
                                             {% if mutex.user == user or is_project_owner %}
-                                            <a href="#">
+                                            <a href="#" class="btn_unlock">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 text-rose-500 inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                                     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                                     <path d="M5 11m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" />
@@ -124,4 +126,109 @@
 
     </div>
 </div>
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+
 {% endblock right_panel %}
+
+
+{% block inline_extra_js %}
+<script>
+
+    $(document).ready(function () {
+
+        $("body").click(function() {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+
+        $('.btn_unlock').click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            $.ajax({
+                url: "{% url 'api:v1:release_project' id=project.id %}",
+                method: "POST",
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The project has been unlocked for edition.");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function(){
+                        // Refresh the page
+                        window.location.reload();
+                    }, 2000);
+                },
+                error: function (data) {
+                  if (data.status == 429) {
+                    $("#modal_error_txt").text(data.responseJSON["detail"]);
+                    $("#modal_error").css('display', 'flex');
+                  }
+                  else {
+                    $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                    $("#modal_error").css('display', 'flex');
+                  }
+                }
+            });
+            return false; // prevent default
+        });
+
+    {% if not project.mutex_owner and has_write_access %}
+        $('#btn_lock_project').click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            $.ajax({
+                url: "{% url 'api:v1:acquire_project' id=project.id %}",
+                method: "POST",
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The project has been locked for edition.");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function(){
+                        // Refresh the page
+                        window.location.reload();
+                    }, 2000);
+                },
+                error: function (data) {
+                if (data.status == 429) {
+                    $("#modal_error_txt").text(data.responseJSON["detail"]);
+                    $("#modal_error").css('display', 'flex');
+                }
+                else {
+                    $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                    $("#modal_error").css('display', 'flex');
+                }
+                }
+            });
+            return false; // prevent default
+        });
+    {% endif %}
+
+    });
+</script>
+
+{% endblock inline_extra_js %}
+

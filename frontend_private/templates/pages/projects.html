@@ -142,7 +142,7 @@
                                         <div class="text-center">
                                             {% if perm.project.latitude and perm.project.longitude %}
                                                 <a href="https://www.google.com/maps/place/{{perm.project.latitude}},{{perm.project.longitude}}" target="_blank" class="text-sky-500">
-                                                    ({{ perm.project.latitude }},{{ perm.project.longitude }})
+                                                    ({{ perm.project.latitude }}, {{ perm.project.longitude }})
                                                 </a>
                                             {% else %}
                                             -
@@ -200,7 +200,7 @@ $( document ).ready(function() {
     });
 
     function get_commit_history(project_id, target_div){
-        var base_api_url = "{% url 'api:v1:get_one_project' id='00000000-0000-0000-0000-000000000000' %}";
+        var base_api_url = "{% url 'api:v1:one_project_apiview' id='00000000-0000-0000-0000-000000000000' %}";
         var api_url = base_api_url.substr(0, base_api_url.lastIndexOf('/', base_api_url.lastIndexOf('/') -1 ) + 1) + project_id + "/";
 
         $.ajax({

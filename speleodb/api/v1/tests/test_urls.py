@@ -9,13 +9,13 @@ def test_create_project():
     assert resolve("/api/v1/project/").view_name == "api:v1:create_project"
 
 
-def test_get_one_project(project: Project):
+def test_one_project_apiview(project: Project):
     assert (
-        reverse("api:v1:get_one_project", kwargs={"id": project.id})
+        reverse("api:v1:one_project_apiview", kwargs={"id": project.id})
         == f"/api/v1/project/{project.id}/"
     )
     assert (
-        resolve(f"/api/v1/project/{project.id}/").view_name == "api:v1:get_one_project"
+        resolve(f"/api/v1/project/{project.id}/").view_name == "api:v1:one_project_apiview"
     )
 
 

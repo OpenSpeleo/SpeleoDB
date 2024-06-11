@@ -6,76 +6,140 @@
 {% block right_panel %}
 <div class="grow">
 
-    <!-- Panel body -->
-    <div class="p-6 space-y-6">
-        <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-5">Project Settings</h2>
+    <form id="project_details_form">
 
-        <!-- Project Name -->
-        <section>
-            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                <div class="w-full">
-                    <label class="block text-sm font-medium mb-1" for="name">Project Name:</label>
-                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.name }}" />
+        {% csrf_token %}
+
+        <!-- Panel body -->
+        <div class="p-6 space-y-6">
+            <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-5">Project Settings</h2>
+
+            <!-- Project Name -->
+            <section>
+                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                    <div class="w-full">
+                        <label class="block text-sm font-medium mb-1" for="name">Project Name:</label>
+                        <input id="name" name="name" class="form-input max-w-full w-128" type="text" value="{{ project.name }}" />
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Description -->
-        <section>
-            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                <div class="w-full">
-                    <label class="block text-sm font-medium mb-1" for="name">Description:</label>
-                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.description }}" />
+            <!-- Description -->
+            <section>
+                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                    <div class="w-full">
+                        <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                        <input id="description" name="description" class="form-input max-w-full w-128" type="text" value="{{ project.description }}" />
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Country -->
-        <section>
-            <div class="flex flex-wrap mt-5">
-                <div class="mr-2">
-                    <label class="block text-sm font-medium mb-1" for="country">Country:</label>
-                    <select id="country" class="form-select max-w-full w-128">
-                    {% get_countries as countries %}
-                    {% for country in countries %}
-                        <option value="{{ country.code }}" {% if country.code == project.country %} selected {% endif %}>{{ country.name }}</option>
-                    {% endfor %}
-                    </select>
+            <!-- Country -->
+            <section>
+                <div class="flex flex-wrap mt-5">
+                    <div class="mr-2">
+                        <label class="block text-sm font-medium mb-1" for="country">Country:</label>
+                        <select id="country" name="country" class="form-select max-w-full w-128">
+                        {% get_countries as countries %}
+                        {% for country in countries %}
+                            <option value="{{ country.code }}" {% if country.code == project.country %} selected {% endif %}>{{ country.name }}</option>
+                        {% endfor %}
+                        </select>
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- latitude -->
-        <section>
-            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                <div class="w-full">
-                    <label class="block text-sm font-medium mb-1" for="name">Latitude:</label>
-                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.latitude }}" />
+            <!-- latitude -->
+            <section>
+                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                    <div class="w-full">
+                        <label class="block text-sm font-medium mb-1" for="latitude">Latitude:</label>
+                        <input id="latitude" name="latitude" class="form-input max-w-full w-128" type="text" value="{{ project.latitude }}" />
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- longitude -->
-        <section>
-            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                <div class="w-full">
-                    <label class="block text-sm font-medium mb-1" for="name">Longitude:</label>
-                    <input id="name" class="form-input max-w-full w-128" type="text" value="{{ project.longitude }}" />
+            <!-- longitude -->
+            <section>
+                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                    <div class="w-full">
+                        <label class="block text-sm font-medium mb-1" for="longitude">Longitude:</label>
+                        <input id="longitude" name="longitude" class="form-input max-w-full w-128" type="text" value="{{ project.longitude }}" />
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-    </div>
-
-    <!-- Panel footer -->
-    <footer>
-        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-            <div class="flex self-end">
-                <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:projects' %}">Cancel</a>
-                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
-            </div>
         </div>
-    </footer>
+
+        <!-- Panel footer -->
+        <footer>
+            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+                <div class="flex self-end">
+                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:projects' %}">Cancel</a>
+                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+                </div>
+            </div>
+        </footer>
+
+    </form>
+
+    {% include 'snippets/modal_success.html' %}
+    {% include 'snippets/modal_error.html' %}
 
 </div>
 {% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+
+    $(document).ready(function () {
+
+        $("body").click(function() {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+
+        $('#btn_submit').click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+            let update_userproject_details_form_info_form = document.getElementById('project_details_form');
+            var formData = new FormData(project_details_form);
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            $.ajax({
+                url: "{% url 'api:v1:one_project_apiview' id=project.id %}",
+                method: "PUT",
+                data: JSON.stringify(Object.fromEntries(formData)),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The project your has been updated.");
+                    $("#modal_success").css('display', 'flex');
+                },
+                error: function (data) {
+                  if (data.status == 429) {
+                    $("#modal_error_txt").text(data.responseJSON["detail"]);
+                    $("#modal_error").css('display', 'flex');
+                  }
+                  else {
+                    $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                    $("#modal_error").css('display', 'flex');
+                  }
+                }
+            });
+            return false; // prevent default
+        });
+
+    });
+</script>
+{% endblock inline_extra_js %}
