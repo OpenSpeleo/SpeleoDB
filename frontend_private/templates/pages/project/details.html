@@ -105,7 +105,7 @@
 
         $('#btn_submit').click(function () {
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let update_userproject_details_form_info_form = document.getElementById('project_details_form');
+            let project_details_form = document.getElementById('project_details_form');
             var formData = new FormData(project_details_form);
 
             $("#error_div").hide();

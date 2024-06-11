@@ -1,4 +1,4 @@
-{% extends "pages/settings/base.html" %}
+{% extends "pages/user/base.html" %}
 {% load static i18n compress%}
 
 {% block right_panel %}
@@ -99,10 +99,10 @@
             }
          });
 
-        var form = document.getElementById('feedback_form');
+        var feedback_form = document.getElementById('feedback_form');
         async function handleSubmit(event) {
             event.preventDefault();
-            var data = new FormData(form);
+            var data = new FormData(feedback_form);
             fetch(
                 "https://formspree.io/f/myyrrknj",
                 {
