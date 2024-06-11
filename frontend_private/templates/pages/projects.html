@@ -116,7 +116,7 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center" id="async_revision_{{ forloop.counter0 }}">
-                                            <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{perm.project.id}}" class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner2.svg' %}">
+                                            <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{perm.project.id}}" class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner.svg' %}">
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
@@ -165,7 +165,7 @@
                                         <div class="flex items-center text-slate-800">
                                             <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-100 bg-slate-700 rounded-full mr-2 sm:mr-3">
                                                 <a href="{% url 'private:project_details' project_id=perm.project.id %}">
-                                                    <img class="ml-1" src="{% static 'private/media/icon-01.svg' %}" width="20" height="20" alt="Icon 01">
+                                                    <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="Icon 01">
                                                 </a>
                                             </div>
                                         </div>
