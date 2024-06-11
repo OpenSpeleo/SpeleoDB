@@ -48,13 +48,12 @@ class MutexAdmin(admin.ModelAdmin):
         "project",
         "user",
         "creation_dt",
-        "heartbeat_dt",
-        "closing_dt",
+        "last_modified_dt",
         "closing_user",
         "closing_comment",
     )
-    ordering = ("-heartbeat_dt",)
-    list_filter = ["closing_dt"]
+    ordering = ("-last_modified_dt",)
+    list_filter = ["closing_user"]
 
 
 admin.site.register(Mutex, MutexAdmin)

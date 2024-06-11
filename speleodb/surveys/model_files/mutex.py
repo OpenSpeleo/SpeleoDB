@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import django.utils.timezone
 from django.db import models
-from model_utils import FieldTracker
 
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
@@ -21,7 +19,7 @@ class Mutex(models.Model):
     )
 
     creation_dt = models.DateTimeField(auto_now_add=True, editable=False)
-    heartbeat_dt = models.DateTimeField(auto_now=True, editable=False)
+    last_modified_dt = models.DateTimeField(auto_now=True, editable=False)
 
     closing_user = models.ForeignKey(
         User,
@@ -31,24 +29,13 @@ class Mutex(models.Model):
         null=True,
         default=None,
     )
-    closing_dt = models.DateTimeField(
-        null=True, blank=True, default=None, editable=False
-    )
     closing_comment = models.TextField(blank=True, default="")
-
-    closing_tracker = FieldTracker(fields=["closing_user"])
 
     class Meta:
         verbose_name_plural = "mutexes"
 
     def __str__(self):
         return f"{self.user} => {self.project} @ {self.creation_dt}"
-
-    def save(self, *args, **kwargs):
-        if self.closing_tracker.changed():
-            self.closing_dt = django.utils.timezone.now()
-
-        super().save(*args, **kwargs)
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
@@ -61,3 +48,7 @@ class Mutex(models.Model):
         mutexed_project = self.rel_active_mutexed_project
         mutexed_project.active_mutex = None
         mutexed_project.save()
+
+    @property
+    def is_active(self):
+        return self.closing_user is None

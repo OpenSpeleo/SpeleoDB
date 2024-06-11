@@ -110,9 +110,7 @@ class ProjectPermissionView(CustomAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        permission.is_active = True
-        permission.level = perm_data["level"]
-        permission.save()
+        permission.reactivate(level=perm_data["level"])
 
         permission_serializer = PermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": request.user})
@@ -194,7 +192,7 @@ class ProjectPermissionView(CustomAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        permission.deactivate()
+        permission.deactivate(user=request.user)
         project_serializer = ProjectSerializer(project, context={"user": request.user})
 
         return Response(

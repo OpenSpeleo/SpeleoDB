@@ -23,6 +23,15 @@ class Permission(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
+    deactivated_by = models.ForeignKey(
+        User,
+        related_name="rel_deactivated_permissions",
+        on_delete=models.RESTRICT,
+        blank=True,
+        null=True,
+        default=None,
+    )
+
     class Level(models.IntegerChoices):
         READ_ONLY = (0, "READ_ONLY")
         READ_AND_WRITE = (1, "READ_AND_WRITE")
@@ -49,6 +58,13 @@ class Permission(models.Model):
     def level(self, value):
         self._level = value
 
-    def deactivate(self):
+    def deactivate(self, user: User):
         self.is_active = False
+        self.deactivated_by = user
+        self.save()
+
+    def reactivate(self, level=Level):
+        self.is_active = True
+        self.deactivated_by = None
+        self.level = level
         self.save()
