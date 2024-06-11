@@ -92,8 +92,8 @@ class ProjectApiView(CustomAPIView):
         # This is done to protect users from malicious/erronous project deletion.
 
         project = self.get_object()
-        for perm in project.rel_permissions.all():
-            perm.delete()
+        for perm in project.get_all_permissions():
+            perm.deactivate()
 
         return {"id": str(project.id)}
 
@@ -135,7 +135,10 @@ class ProjectListApiView(CustomAPIView):
     http_method_names = ["get"]
 
     def _get(self, request, *args, **kwargs):
-        usr_projects = [perm.project for perm in request.user.rel_permissions.all()]
+        usr_projects = [
+            perm.project
+            for perm in request.user.get_all_permissions()
+        ]
 
         usr_projects = sorted(
             usr_projects, key=lambda proj: proj.modified_date, reverse=True

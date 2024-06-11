@@ -7,4 +7,4 @@ register = template.Library()
 
 @register.simple_tag
 def get_visibility_scopes():
-    return list(Project.Visibility._member_names_)
+    return [name for _, name in Project.Visibility.choices]

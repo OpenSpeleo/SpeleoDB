@@ -36,4 +36,7 @@ class User(AbstractUser):
 
     @property
     def projects(self):
-        return [perm.project for perm in self.rel_permissions.all()]
+        return [perm.project for perm in self.get_all_permissions()]
+
+    def get_all_permissions(self):
+        return self.rel_permissions.filter(is_active=True)

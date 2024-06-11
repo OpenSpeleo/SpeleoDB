@@ -7,6 +7,7 @@ from django_countries import countries
 from django_countries.fields import Country
 from rest_framework import serializers
 
+from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 
 
@@ -19,7 +20,6 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        # fields = "__all__"
         exclude = ("_software", "_visibility")
 
     def create(self, validated_data):
@@ -28,7 +28,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         if (
             not isinstance(visibility, str)
-            or visibility.upper() not in Project.Visibility._member_names_
+            or visibility.upper() not in [name for _, name in Project.Visibility.choices]
         ):
             raise ValidationError(
                 f"Invalid value received for `visibility`: `{visibility}`"
@@ -58,7 +58,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         if (
             not isinstance(software, str)
-            or software.upper() not in Project.Software._member_names_
+            or software.upper() not in [name for _, name in Project.Software.choices]
         ):
             raise ValidationError(
                 f"Invalid value received for `software`: `{software}`"
@@ -107,3 +107,19 @@ class UploadSerializer(serializers.Serializer):
 
     class Meta:
         fields = ["file_uploaded"]
+
+
+class PermissionSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()
+    level = serializers.SerializerMethodField()
+
+    class Meta:
+        fields = ("user", "level", "creation_date", "modified_date")
+        model = Permission
+
+    def get_level(self, obj):
+        return obj.level
+
+
+class PermissionListSerializer(serializers.ListSerializer):
+    child = PermissionSerializer()
