@@ -33,6 +33,7 @@ class FileUploadView(CustomAPIView):
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
         file_uploaded = request.data["artifact"]
+
         content_type = file_uploaded.content_type
 
         if content_type not in ["application/octet-stream", "application/zip"]:
@@ -60,6 +61,7 @@ class FileUploadView(CustomAPIView):
 
         return {
             "content_type": content_type,
+            "message": commit_message,
             "commit_sha1": commit_sha1,
             "project": ProjectSerializer(project, context={"user": request.user}).data,
         }

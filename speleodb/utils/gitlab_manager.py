@@ -50,6 +50,10 @@ class GitRepo:
     def commit_sha1(self):
         return self._repo.head.commit.hexsha
 
+    def checkout_and_pull(self, branch: str = "master"):
+        self.checkout_branch_or_commit(branch_name=branch)
+        self.pull()
+
     def pull(self):
         origin = self._repo.remotes.origin
         origin.pull()
@@ -143,7 +147,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
         try:
             # try to create the repository in Gitlab
             _ = self._gl.projects.create(
-                {"name": str(project_id), "namespace_id": self._gitlab_group_id}
+                {"name": str(project_id), "namespace_id": str(self._gitlab_group_id)}
             )
             project_dir.mkdir(exist_ok=True, parents=True)
 
@@ -179,8 +183,6 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             # Communication Problem
             return None
 
-    # cache data for no longer than two minutes
-    @cached(cache=TTLCache(maxsize=50, ttl=120))
     @check_initialized
     def get_commit_history(self, project_id, hide_dl_url=True):
         if self._gl is None:

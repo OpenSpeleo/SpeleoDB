@@ -3188,8 +3188,28 @@ span.flatpickr-weekday {
   background-color: rgb(209 250 229 / var(--tw-bg-opacity));
 }
 
+.bg-emerald-100\/10 {
+  --tw-bg-opacity: 0.1;
+  background-color: rgb(209 250 229 / var(--tw-bg-opacity));
+}
+
+.bg-emerald-100\/30 {
+  --tw-bg-opacity: 0.3;
+  background-color: rgb(209 250 229 / var(--tw-bg-opacity));
+}
+
 .bg-emerald-500 {
   --tw-bg-opacity: 1;
+  background-color: rgb(16 185 129 / var(--tw-bg-opacity));
+}
+
+.bg-emerald-500\/10 {
+  --tw-bg-opacity: 0.1;
+  background-color: rgb(16 185 129 / var(--tw-bg-opacity));
+}
+
+.bg-emerald-500\/30 {
+  --tw-bg-opacity: 0.3;
   background-color: rgb(16 185 129 / var(--tw-bg-opacity));
 }
 
