@@ -4,7 +4,8 @@
 {% block right_panel %}
 <!-- Panel -->
 <div class="grow">
-    <form id="feedback_form" action="https://formspree.io/f/myyrrknj" method="POST">
+
+    <form id="feedback_form">
 
         <!-- Panel body -->
         <div class="p-6 space-y-6">
@@ -64,7 +65,7 @@
         <footer>
             <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
                 <div class="flex self-end">
-                    <button id="btn_submit_feedback" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Submit</button>
+                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Submit</button>
                 </div>
             </div>
         </footer>
@@ -135,8 +136,8 @@
             });
         }
         //form.addEventListener("submit", handleSubmit);
-        const btn_submit_feedback = document.getElementById("btn_submit_feedback");
-        btn_submit_feedback.addEventListener("click", handleSubmit);
+        const btn_submit = document.getElementById("btn_submit");
+        btn_submit.addEventListener("click", handleSubmit);
     });
 </script>
 {% endblock inline_extra_js %}
