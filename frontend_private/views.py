@@ -96,7 +96,7 @@ class ProjectPermissionsView(_BaseProjectView):
 
     def get(self, request, project_id: str):
         data = super().get(request, project_id=project_id)
-        data["permissions"] = data["project"].rel_permissions.all()
+        data["permissions"] = data["project"].get_all_permissions()
         return render(request, ProjectPermissionsView.template_name, data)
 
 

@@ -8,6 +8,7 @@ from speleodb.api.v1.views.file import FileDownloadView
 from speleodb.api.v1.views.file import FileUploadView
 from speleodb.api.v1.views.mutex import ProjectAcquireApiView
 from speleodb.api.v1.views.mutex import ProjectReleaseApiView
+from speleodb.api.v1.views.permission import ProjectPermissionListView
 from speleodb.api.v1.views.project import CreateProjectApiView
 from speleodb.api.v1.views.project import ProjectApiView
 from speleodb.api.v1.views.project import ProjectListApiView
@@ -21,6 +22,11 @@ urlpatterns = [
     # ================== Authentication Required API Routes ================= #
     path("project/", CreateProjectApiView.as_view(), name="create_project"),
     path("project/<uuid:id>/", ProjectApiView.as_view(), name="one_project_apiview"),
+    path(
+        "project/<uuid:id>/permissions/",
+        ProjectPermissionListView.as_view(),
+        name="list_project_permissions",
+    ),
     path(
         "project/<uuid:id>/acquire/",
         ProjectAcquireApiView.as_view(),

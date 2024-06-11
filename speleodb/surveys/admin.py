@@ -10,8 +10,16 @@ from speleodb.surveys.models import Project
 
 
 class PermissionAdmin(admin.ModelAdmin):
-    list_display = ("project", "user", "level")
+    list_display = (
+        "project",
+        "user",
+        "level",
+        "creation_date",
+        "modified_date",
+        "is_active",
+    )
     ordering = ("project",)
+    list_filter = ["is_active"]
 
 
 admin.site.register(Permission, PermissionAdmin)

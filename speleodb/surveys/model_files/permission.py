@@ -18,6 +18,11 @@ class Permission(models.Model):
         User, related_name="rel_permissions", on_delete=models.CASCADE
     )
 
+    is_active = models.BooleanField(default=True)
+
+    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
+    modified_date = models.DateTimeField(auto_now=True, editable=False)
+
     class Level(models.IntegerChoices):
         READ_ONLY = (0, "READ_ONLY")
         READ_AND_WRITE = (1, "READ_AND_WRITE")
@@ -43,3 +48,7 @@ class Permission(models.Model):
     @level.setter
     def level(self, value):
         self._level = value
+
+    def deactivate(self):
+        self.is_active = False
+        self.save()

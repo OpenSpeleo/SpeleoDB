@@ -85,7 +85,7 @@
                         </thead>
                         <!-- Table body -->
                         <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
-                            {% for perm in user.rel_permissions.all %}
+                            {% for perm in user.get_all_permissions %}
                                 <!-- Row -->
                                 <tr>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">

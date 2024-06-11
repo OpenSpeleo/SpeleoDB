@@ -8,6 +8,7 @@ import uuid
 import zipfile
 
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
@@ -189,17 +190,31 @@ class Project(models.Model):
         return self.when.strftime("%Y/%m/%d")
 
     def get_permission(self, user: User) -> str:
-        return self.rel_permissions.get(project=self, user=user)
+        return self.rel_permissions.get(user=user, is_active=True)
+
+    def get_all_permissions(self):
+        return self.rel_permissions.filter(is_active=True)
+
+    def _has_permission(self, user: User, permission):
+        from speleodb.surveys.model_files.permission import Permission
+
+        if not isinstance(permission, Permission.Level):
+            raise TypeError(f"Unexpected value received for: `{permission=}`")
+
+        try:
+            return self.get_permission(user=user)._level >= permission  # noqa: SLF001
+        except ObjectDoesNotExist:
+            return False
 
     def has_write_access(self, user: User):
         from speleodb.surveys.model_files.permission import Permission
 
-        return self.get_permission(user=user)._level >= Permission.Level.READ_AND_WRITE
+        return self._has_permission(user, permission=Permission.Level.READ_AND_WRITE)
 
     def is_owner(self, user: User):
         from speleodb.surveys.model_files.permission import Permission
 
-        return self.get_permission(user=user)._level >= Permission.Level.OWNER
+        return self._has_permission(user, permission=Permission.Level.OWNER)
 
     # @functools.cached_property
     @property

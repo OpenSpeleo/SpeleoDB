@@ -7,4 +7,4 @@ register = template.Library()
 
 @register.simple_tag
 def get_survey_softwares():
-    return list(Project.Software._member_names_)
+    return [name for _, name in Project.Software.choices]

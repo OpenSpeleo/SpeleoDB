@@ -7,4 +7,4 @@ register = template.Library()
 
 @register.simple_tag
 def get_permission_levels():
-    return list(Permission.Level._member_names_)
+    return [name for _, name in Permission.Level.choices]
