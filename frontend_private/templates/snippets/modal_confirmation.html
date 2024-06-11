@@ -1,5 +1,5 @@
 <!-- Modal dialog -->
-<div id="modal_error" class="fixed inset-0 z-50 overflow-hidden flex items-center my-4 justify-center px-4 sm:px-6" style="display: none;">
+<div id="modal_confirmation" class="fixed inset-0 z-50 overflow-hidden flex items-center my-4 justify-center px-4 sm:px-6" style="display: none;">
     <div class="bg-slate-800 rounded shadow-lg overflow-auto max-w-lg w-full max-h-full border-thin border-white/45">
         <div class="p-5 flex">
             <!-- Icon -->
@@ -12,18 +12,21 @@
             <div class="w-full text-center -ml-5">
                 <!-- Modal header -->
                 <div class="mb-2">
-                    <div class="text-lg font-semibold text-slate-100 text-center">Error</div>
+                    <div class="text-lg font-semibold text-slate-100 text-center">Are you absolutely certain ?</div>
                 </div>
                 <!-- Modal content -->
                 <div class="text-sm mb-10">
                     <div class="space-y-2">
-                        <p id="modal_error_txt">There has been an error during processing.</br>
-                        If the problem persists, please contact the administrators.</p>
+                        <p id="modal_error_txt">
+                            This action is definitive and can't be reversed.<br>
+                            Are you absolutely certain you wish to proceed ?
+                        </p>
                     </div>
                 </div>
                 <!-- Modal footer -->
                 <div class="flex flex-wrap justify-center space-x-2">
-                    <button class="btn-sm bg-rose-500 hover:bg-rose-600 text-white w-32">x Close</button>
+                    <button class="btn-sm bg-emerald-500 hover:bg-emerald-600 text-white w-32 mr-4">Cancel</button>
+                    <button id="btn_confirmed_submit" class="btn-sm bg-rose-500 hover:bg-rose-600 text-white w-32 ml-4">Yes, Delete it</button>
                 </div>
             </div>
         </div>
