@@ -2,8 +2,11 @@
 {% load static i18n compress%}
 
 {% load countries %}
+{% load set_var %}
 
 {% block right_panel %}
+
+{% csrf_token %}
 
 <div class="grow">
     <div class="p-6 space-y-6">
@@ -89,19 +92,26 @@
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
-                                        {% if is_project_owner %}
-                                        <a href="#">
+
+                                        {% comment %} An owner can edit/delete their own permission {% endcomment %}
+                                        {% if permission.user != user and is_project_owner %}
+                                            {% set can_edit = True %}
+                                        {% else %}
+                                            {% set can_edit = False %}
                                         {% endif %}
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if is_project_owner %}text-amber-500{% else %}text-slate-500{% endif %} inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
-                                                    <path d="M13.5 6.5l4 4" />
-                                                </svg>
-                                        </a>
-                                        {% if is_project_owner %}
-                                        <a href="#">
-                                        {% endif %}
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if is_project_owner %}text-rose-500{% else %}text-slate-500{% endif %} inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
+
+                                        <!-- Edit Link -->
+                                        <span class="cursor-pointer {% if can_edit %}btn_edit_perm{% endif %}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                                <path d="M13.5 6.5l4 4" />
+                                            </svg>
+                                        </span>
+
+                                        <!-- Delete Link -->
+                                        <span class="cursor-pointer {% if can_edit %}btn_delete_perm" data-user="{{permission.user}}{% endif %}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                                 <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                                 <path d="M18 6l-12 12" />
                                                 <path d="M6 6l12 12" />
@@ -119,4 +129,74 @@
 
     </div>
 </div>
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+
 {% endblock right_panel %}
+
+
+{% if is_project_owner %}
+{% block inline_extra_js %}
+<script>
+
+    $(document).ready(function () {
+
+        $("body").click(function() {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+
+        $(".btn_delete_perm").click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+            var formData = new FormData();
+            formData.append("user", $(this).data("user"));
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            $.ajax({
+                url: "{% url 'api:v1:project_permission' id=project.id %}",
+                method: "DELETE",
+                data: JSON.stringify(Object.fromEntries(formData)),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The permission has been deleted succesfully.");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function(){
+                        // Refresh the page
+                        window.location.reload();
+                    }, 2000);
+                },
+                error: function (data) {
+                  if (data.status == 429) {
+                    $("#modal_error_txt").text(data.responseJSON["detail"]);
+                    $("#modal_error").css('display', 'flex');
+                  }
+                  else {
+                    $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                    $("#modal_error").css('display', 'flex');
+                  }
+                }
+            });
+            return false; // prevent default
+        });
+    });
+</script>
+{% endblock inline_extra_js %}
+{% endif %}
+
+
+
