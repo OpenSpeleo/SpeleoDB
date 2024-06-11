@@ -133,3 +133,7 @@
         transform: rotate(360deg);
     }
 }
+
+#dropzone [type="file"] {
+    cursor: pointer;
+}

@@ -2091,6 +2091,14 @@ span.flatpickr-weekday {
   margin-top: 0.5rem;
 }
 
+.mt-20 {
+  margin-top: 5rem;
+}
+
+.-mt-20 {
+  margin-top: -5rem;
+}
+
 .mt-3 {
   margin-top: 0.75rem;
 }
@@ -2187,6 +2195,10 @@ span.flatpickr-weekday {
   height: 2.5rem;
 }
 
+.h-100 {
+  height: 25rem;
+}
+
 .h-12 {
   height: 3rem;
 }
@@ -2209,6 +2221,10 @@ span.flatpickr-weekday {
 
 .h-24 {
   height: 6rem;
+}
+
+.h-28 {
+  height: 7rem;
 }
 
 .h-3 {
@@ -4809,7 +4825,13 @@ span.flatpickr-weekday {
 }
 
 .border-amber-400\/50 {
-  border-color: rgb(251 191 36 / 0.5);
+  --tw-border-opacity: 0.5;
+  border-color: rgb(251 191 36 / var(--tw-border-opacity));
+}
+
+.border-amber-500\/50 {
+  --tw-border-opacity: 0.5;
+  border-color: rgb(245 158 11 / var(--tw-border-opacity));
 }
 
 .border-indigo-500 {
@@ -4857,7 +4879,8 @@ span.flatpickr-weekday {
 }
 
 .bg-amber-400\/10 {
-  background-color: rgb(251 191 36 / 0.1);
+  --tw-bg-opacity: 0.1;
+  background-color: rgb(251 191 36 / var(--tw-bg-opacity));
 }
 
 .bg-amber-400\/30 {

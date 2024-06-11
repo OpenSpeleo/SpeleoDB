@@ -32,26 +32,27 @@
                     <div class="mt-6">
                         <div class="text-sm font-semibold text-slate-100 mb-2">Survey File</div>
 
-                        <div id="dropzone" class="roundedborder-dashed text-center px-5 py-8 border bg-slate-700/30 border-slate-700">
+                        <div id="dropzone" class="rounded border-dashed text-center h-28 border border-slate-700 bg-slate-700/30">
+                            <input class="w-full h-full opacity-0" id="artifact" name="artifact" type="file" accept=".tml,.tmlu">
+                            <div class="-mt-20 text-center">
+                                <span id="icon_waiting_for_file">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="inline-flex w-4 h-4 text-slate-400 mb-3 stroke-current fill-none" viewBox="3.25 3.25 17.5 18.5">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"></path>
+                                        <path d="M7 9l5 -5l5 5"></path>
+                                        <path d="M12 4l0 12"></path>
+                                    </svg>
+                                </span>
 
-                            <span id="icon_waiting_for_file">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="inline-flex w-4 h-4 text-slate-400 mb-3 stroke-current fill-none" viewBox="3.25 3.25 17.5 18.5">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"></path>
-                                    <path d="M7 9l5 -5l5 5"></path>
-                                    <path d="M12 4l0 12"></path>
-                                </svg>
-                            </span>
+                                <span id="icon_file_added" style="display: none;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="inline-flex w-4 h-4 text-slate-400 mb-3 stroke-current fill-none" viewBox="4.25 6.25 16.5 11.5">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M5 12l5 5l10 -10"></path>
+                                    </svg>
+                                </span>
 
-                            <span id="icon_file_added" style="display: none;">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="inline-flex w-4 h-4 text-slate-400 mb-3 stroke-current fill-none" viewBox="4.25 6.25 16.5 11.5">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <path d="M5 12l5 5l10 -10"></path>
-                                </svg>
-                            </span>
-
-                            <label for="artifact" class="block text-sm text-slate-400 italic">We accept files generated from Ariane (only currently).</label>
-                            <input class="sr-only" id="artifact" name="artifact" type="file" accept=".tml,.tmlu">
+                                <label for="artifact" class="block text-sm text-slate-400 italic">We accept files generated from Ariane (only currently).</label>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -96,14 +97,18 @@
         });
 
         $('#dropzone').on('dragover', function() {
-            $(this).addClass('hover');
-          });
+            console.log("HELLO ON");
+            $(this).removeClass('border-slate-700 bg-slate-700/30');
+            $(this).addClass('border-amber-500/50 bg-amber-400/10');
+        });
 
-          $('#dropzone').on('dragleave', function() {
-            $(this).removeClass('hover');
-          });
+        $('#dropzone').on('dragleave', function() {
+            console.log("HELLO OFF");
+            $(this).removeClass('border-amber-500/50 bg-amber-400/10');
+            $(this).addClass('border-slate-700 bg-slate-700/30');
+        });
 
-          $('#dropzone input').on('change', function(e) {
+        $('#dropzone input').on('change', function(e) {
             var file = this.files[0];
             var filetype = "." + file.name.split('.').pop();
 
@@ -113,6 +118,9 @@
                 return false;
             }
 
+            // If it was done with drag & drop
+            $('#dropzone').removeClass('border-amber-500/50 bg-amber-400/10');
+            // If it was done with filepicker
             $('#dropzone').removeClass('hover bg-slate-700/30 border-slate-700');
             $('#dropzone').addClass('bg-emerald-500/10 border-emerald-300');
 
