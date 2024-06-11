@@ -141,6 +141,31 @@
                                 </a>
                             </li>
 
+                            <!-- New Project -->
+                            {% if request.url_name == 'project_new' %}
+                            {% set stroke_color = 'indigo' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:project_new' %}">
+                            {% else %}
+                            {% set stroke_color = 'slate' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:project_new' %}">
+                            {% endif %}
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="fill-current text-{{stroke_color}}-400 shrink-0 h-6 w-6" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round" viewBox="4.25 2.25 15.5 19.5">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
+                                                <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path>
+                                                <path d="M12 11l0 6"></path>
+                                                <path d="M9 14l6 0"></path>
+                                              </svg>
+                                            <span class="text-sm font-medium ml-3 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">New Project</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+
                             <hr class="mt-5 mb-5" style="border-color: rgb(255 255 255 / 40%);">
 
                             <!-- Feedback -->

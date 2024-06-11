@@ -3,6 +3,7 @@ from django.urls import path
 from frontend_private.views import AuthTokenView
 from frontend_private.views import DashboardView
 from frontend_private.views import FeedbackView
+from frontend_private.views import NewProjectView
 from frontend_private.views import PassWordView
 from frontend_private.views import PreferencesView
 from frontend_private.views import ProjectCommitsView
@@ -20,6 +21,11 @@ urlpatterns = [
     path("feedback/", FeedbackView.as_view(), name="feedback"),
     path("preferences/", PreferencesView.as_view(), name="preferences"),
     path("projects/", ProjectListingView.as_view(), name="projects"),
+    path(
+        "project/new/",
+        NewProjectView.as_view(),
+        name="project_new",
+    ),
     path(
         "project/<uuid:project_id>/",
         ProjectDetailsView.as_view(),

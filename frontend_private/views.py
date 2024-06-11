@@ -20,15 +20,15 @@ class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
 
 # ============ Setting Pages ============ #
 class DashboardView(_AuthenticatedTemplateView):
-    template_name = "pages/settings/dashboard.html"
+    template_name = "pages/user/dashboard.html"
 
 
 class PassWordView(_AuthenticatedTemplateView):
-    template_name = "pages/settings/password.html"
+    template_name = "pages/user/password.html"
 
 
 class AuthTokenView(_AuthenticatedTemplateView):
-    template_name = "pages/settings/auth-token.html"
+    template_name = "pages/user/auth-token.html"
 
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
@@ -43,16 +43,20 @@ class AuthTokenView(_AuthenticatedTemplateView):
 
 
 class FeedbackView(_AuthenticatedTemplateView):
-    template_name = "pages/settings/feedback.html"
+    template_name = "pages/user/feedback.html"
 
 
 class PreferencesView(_AuthenticatedTemplateView):
-    template_name = "pages/settings/preferences.html"
+    template_name = "pages/user/preferences.html"
 
 
 # ============ Project Pages ============ #
 class ProjectListingView(_AuthenticatedTemplateView):
     template_name = "pages/projects.html"
+
+
+class NewProjectView(_AuthenticatedTemplateView):
+    template_name = "pages/new_project.html"
 
 
 class _BaseProjectView(LoginRequiredMixin, View):
