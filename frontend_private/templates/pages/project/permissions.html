@@ -43,7 +43,7 @@
         <!-- Table -->
         <div class="bg-white bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
 
-            <div x-data="handleSelect">
+            <div>
 
                 <!-- Table -->
                 <div class="overflow-x-auto">
@@ -101,7 +101,7 @@
                                         {% endif %}
 
                                         <!-- Edit Link -->
-                                        <span class="cursor-pointer {% if can_edit %}btn_edit_perm{% endif %}">
+                                        <span class="cursor-pointer {% if can_edit %}btn_open_edit_perm" data-user="{{permission.user}}" data-level="{{permission.level}}{% endif %}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                                 <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                                 <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
@@ -132,7 +132,7 @@
 
 {% include 'snippets/modal_success.html' %}
 {% include 'snippets/modal_error.html' %}
-{% include 'snippets/modal_edit_permission.html' %}
+{% include 'snippets/modal_permission_form.html' %}
 
 {% endblock right_panel %}
 
@@ -144,13 +144,9 @@
     $(document).ready(function () {
 
         $(".btn_close").click(function() {
-            if ($("#add_permission_modal").is(":visible")) {
-                $("#add_permission_modal").hide();
+            if ($("#permission_modal").is(":visible")) {
+                $("#permission_modal").hide();
             }
-        });
-
-        $("#btn_open_add_user").click(function() {
-            $("#add_permission_modal").css('display', 'flex');
         });
 
         $("body").click(function() {
@@ -166,6 +162,33 @@
         /* --------------------------- ADDING PERMISSION --------------------------- */
         /* ------------------------------------------------------------------------- */
 
+        $("#btn_open_add_user").click(function() {
+            var form = document.getElementById("permission_form");
+            form.reset();
+            form.method = "POST"
+            $("#permission_modal_title").text("Add a collaborator to the project");
+            $("#permission_modal_header").text("Who would you like to add 🙌 ?");
+            $("#permission_modal").css('display', 'flex');
+        });
+
+        /* ------------------------------------------------------------------------- */
+        /* --------------------------- EDITING PERMISSION -------------------------- */
+        /* ------------------------------------------------------------------------- */
+
+        $(".btn_open_edit_perm").click(function() {
+            var form = document.getElementById("permission_form");
+            form.method = "PUT"
+            $("#permission_modal_title").text("How shall we modify this user's access ?");
+            $("#permission_modal_header").text("");
+            $("#permission_modal").css('display', 'flex');
+            $("#user").val($(this).data("user"));
+            $("#level").val($(this).data("level"));
+        });
+
+        /* ------------------------------------------------------------------------- */
+        /* ---------------------- ADD/EDITING PERMISSION AJAX ---------------------- */
+        /* ------------------------------------------------------------------------- */
+
         function validateEmail(email) {
             var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
             return re.test(email);
@@ -173,39 +196,37 @@
 
         $('#btn_submit_add').click(function () {
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let permission_add_form = document.getElementById('permission_add_form');
-            var formData = new FormData(permission_add_form);
+            let permission_form = document.getElementById('permission_form');
+            var formData = new FormData(permission_form);
 
             $("#error_div").hide();
             $("#success_div").hide();
 
             $.ajax({
                 url: "{% url 'api:v1:project_permission' id=project.id %}",
-                method: "POST",
+                method: $("#permission_form").attr('method'),
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
                 cache: false,
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("X-CSRFToken", csrftoken);
 
-                    if (!validateEmail($("#user_add").val()) || $("#user_add").val() == "") {
+                    if (!validateEmail($("#user").val()) || $("#user").val() == "") {
                         $("#modal_error_txt").text("The Email Address is not valid !");
                         $("#modal_error").css('display', 'flex');
                         return false;
                     }
 
-                    if ($("#level_add").val() == "") {
+                    if ($("#level").val() == "") {
                         $("#modal_error_txt").text("The Access Level field is empty !");
                         $("#modal_error").css('display', 'flex');
                         return false;
                     }
-
-
                     return true;
 
                 },
                 success: function (data) {
-                    $("#modal_success_txt").text("The person `" + $("#user_add").val() + "` has been added.");
+                    $("#modal_success_txt").text("Action executed with success!");
                     $("#modal_success").css('display', 'flex');
 
                     window.setTimeout(function(){
@@ -273,7 +294,6 @@
             });
             return false; // prevent default
         });
-
 
     });
 </script>
