@@ -1,5 +1,6 @@
 import json
 import pathlib
+import time
 from functools import wraps
 
 import git
@@ -49,6 +50,14 @@ class GitRepo:
     @property
     def commit_sha1(self):
         return self._repo.head.commit.hexsha
+
+    @property
+    def commit_sha1_short(self):
+        return self.commit_sha1[:8]
+
+    @property
+    def commit_date(self):
+        return time.gmtime(self._repo.head.commit.committed_date)
 
     def checkout_and_pull(self, branch: str = "master"):
         self.checkout_branch_or_commit(branch_name=branch)
@@ -161,7 +170,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             git_repo.index.commit(
                 _GitlabManager.FIRST_COMMIT_NAME,
                 author=GIT_COMMITTER,
-                committer=GIT_COMMITTER
+                committer=GIT_COMMITTER,
             )
             git_repo.git.push("--set-upstream", "origin", "master")
 
