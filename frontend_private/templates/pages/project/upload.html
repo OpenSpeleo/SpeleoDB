@@ -97,13 +97,11 @@
         });
 
         $('#dropzone').on('dragover', function() {
-            console.log("HELLO ON");
             $(this).removeClass('border-slate-700 bg-slate-700/30');
             $(this).addClass('border-amber-500/50 bg-amber-400/10');
         });
 
         $('#dropzone').on('dragleave', function() {
-            console.log("HELLO OFF");
             $(this).removeClass('border-amber-500/50 bg-amber-400/10');
             $(this).addClass('border-slate-700 bg-slate-700/30');
         });
