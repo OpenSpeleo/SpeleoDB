@@ -37,6 +37,9 @@ class ProjectAcquireApiView(CustomAPIView):
             project.release_mutex(user=request.user, comment=f"Error: `{e}`")
             raise
 
+        # Refresh the `modified_date` field
+        project.save()
+
         return serializer.data
 
 
@@ -64,5 +67,8 @@ class ProjectReleaseApiView(CustomAPIView):
         except Exception:
             project.acquire_mutex(user=request.user)
             raise
+
+        # Refresh the `modified_date` field
+        project.save()
 
         return serializer.data

@@ -219,13 +219,15 @@ class Project(models.Model):
     # @functools.cached_property
     @property
     def git_repo(self):
-        project_dir = settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)
+        project_dir = (settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)).resolve()
 
         if not project_dir.exists():
             git_repo = GitlabManager.create_or_clone_project(self.id)
-            if project_dir != pathlib.Path(git_repo):
+            git_repo_path = pathlib.Path(git_repo).resolve()
+
+            if project_dir != git_repo_path:
                 raise ValueError(
-                    f"Difference detected between `{pathlib.Path(git_repo)=}` "
+                    f"Difference detected between `{git_repo_path=}` "
                     f"and `{project_dir=}`"
                 )
             return git_repo

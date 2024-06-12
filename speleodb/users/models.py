@@ -40,3 +40,12 @@ class User(AbstractUser):
 
     def get_all_permissions(self):
         return self.rel_permissions.filter(is_active=True)
+
+    def get_all_projects(self):
+        projects = [
+            {"project": perm.project, "level": perm.level}
+            for perm in self.get_all_permissions()
+        ]
+        return sorted(
+            projects, key=lambda data: data["project"].modified_date, reverse=True
+        )

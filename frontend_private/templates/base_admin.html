@@ -442,11 +442,38 @@
                                 </button>
                             </div>
 
+                            {% if user.is_staff or user.is_superuser %}
+                            <!-- Divider -->
+                            <hr class="w-px h-6 bg-slate-200 bg-slate-700 border-none" />
+
+                            <!-- API Docs button -->
+                            <div class="relative inline-flex">
+                                <button class="inline-flex justify-center items-center group">
+                                    <div class="flex items-center truncate">
+                                        <a class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-800 group-hover:text-slate-200" href="{% url 'api-schema' %}">
+                                            API Schema
+                                        </a>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <!-- API Docs button -->
+                            <div class="relative inline-flex">
+                                <button class="inline-flex justify-center items-center group">
+                                    <div class="flex items-center truncate">
+                                        <a class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-800 group-hover:text-slate-200" target="_blank" href="{% url 'api-docs' %}">
+                                            API Docs
+                                        </a>
+                                    </div>
+                                </button>
+                            </div>
+                            {% endif %}
+
                             {% if user.is_superuser %}
                             <!-- Divider -->
                             <hr class="w-px h-6 bg-slate-200 bg-slate-700 border-none" />
 
-                            <!-- Home button -->
+                            <!-- Admin Panel button -->
                             <div class="relative inline-flex">
                                 <button class="inline-flex justify-center items-center group">
                                     <div class="flex items-center truncate">
