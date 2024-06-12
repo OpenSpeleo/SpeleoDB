@@ -62,6 +62,9 @@
                                     <div class="font-semibold text-center">Country</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Collaborators</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="font-semibold text-center">Revisions</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
@@ -115,6 +118,11 @@
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="text-center">
+                                            {{ data.project.get_permission_count }}
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center" id="async_revision_{{ forloop.counter0 }}">
                                             <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{data.project.id}}" class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner.svg' %}">
                                         </div>
@@ -155,7 +163,7 @@
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
                                             {% if data.project.mutex_dt %}
-                                                {{ data.project.mutex_dt }}
+                                                {{ data.project.mutex_dt|date:"Y/m/d H:i" }}
                                             {% else %}
                                             -
                                             {% endif %}
