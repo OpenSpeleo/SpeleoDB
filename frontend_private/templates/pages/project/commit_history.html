@@ -2,6 +2,7 @@
 {% load static i18n compress%}
 
 {% load countries %}
+{% load is_in_list %}
 
 {% block right_panel %}
 <div class="grow">
@@ -71,6 +72,7 @@
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
+                                        {% if not commit.message|is_in_list:skip_download_names %}
                                         <a target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id commit_sha1=commit.short_id %}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 text-indigo-500 inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" />
@@ -78,6 +80,7 @@
                                                 <path d="M9 19l3 3l3 -3" />
                                             </svg>
                                         </a>
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}

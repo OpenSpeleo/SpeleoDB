@@ -94,7 +94,7 @@
                             <section>
                                 <div class="flex flex-wrap mt-5">
                                     <div class="mr-2">
-                                        <label class="block text-sm font-medium mb-1" for="country">Software:<span class="text-rose-600"> *</span></label>
+                                        <label class="block text-sm font-medium mb-1" for="software">Software:<span class="text-rose-600"> *</span></label>
                                         <select id="software" name="software" class="form-select max-w-full w-128">
                                             <option disabled selected value>Select an option...</option>
                                         {% get_survey_softwares as softwares %}
@@ -110,8 +110,8 @@
                             <section>
                                 <div class="flex flex-wrap mt-5">
                                     <div class="mr-2">
-                                        <label class="block text-sm font-medium mb-1" for="country">Visibility:<span class="text-rose-600"> *</span></label>
-                                        <select id="Visibility" name="Visibility" class="form-select max-w-full w-128">
+                                        <label class="block text-sm font-medium mb-1" for="visibility">Visibility:<span class="text-rose-600"> *</span></label>
+                                        <select id="visibility" name="visibility" class="form-select max-w-full w-128">
                                             <option disabled selected value>Select an option...</option>
                                         {% get_visibility_scopes as visibility_scopes %}
                                         {% for visibility_scope in visibility_scopes %}

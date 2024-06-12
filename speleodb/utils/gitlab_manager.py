@@ -106,6 +106,8 @@ class GitRepo:
 
 
 class _GitlabManager(metaclass=SingletonMetaClass):
+    FIRST_COMMIT_NAME = "[Automated] Project Creation"
+
     def __init__(self):
         self._is_initialized = False
 
@@ -157,7 +159,9 @@ class _GitlabManager(metaclass=SingletonMetaClass):
 
             # Create an initial empty commit
             git_repo.index.commit(
-                "Initial Empty", author=GIT_COMMITTER, committer=GIT_COMMITTER
+                _GitlabManager.FIRST_COMMIT_NAME,
+                author=GIT_COMMITTER,
+                committer=GIT_COMMITTER
             )
             git_repo.git.push("--set-upstream", "origin", "master")
 
