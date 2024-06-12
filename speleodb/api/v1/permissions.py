@@ -24,7 +24,7 @@ class BaseProjectAccessLevel(permissions.BasePermission):
 
 
 class UserHasAdminAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_LEVEL = Permission.Level.OWNER
+    MIN_ACCESS_LEVEL = Permission.Level.ADMIN
     message = "You must have admin access for this project."
 
 

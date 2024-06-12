@@ -35,7 +35,7 @@ class Permission(models.Model):
     class Level(models.IntegerChoices):
         READ_ONLY = (0, "READ_ONLY")
         READ_AND_WRITE = (1, "READ_AND_WRITE")
-        OWNER = (2, "OWNER")
+        ADMIN = (2, "ADMIN")
 
     _level = models.IntegerField(
         choices=Level.choices, default=Level.READ_ONLY, verbose_name="level"

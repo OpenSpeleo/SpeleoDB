@@ -97,9 +97,9 @@ class ProjectPermissionView(CustomAPIView):
 
         # Can't edit your own permission
         if request.user == perm_data["user"]:
-            # This by default make no sense because you need to be owner to create
-            # permission. So you obviously can't create permission for yourself.
-            # Added just as safety and logical consistency.
+            # This by default make no sense because you need to be project admin
+            # to create permission. So you obviously can't create permission for
+            # yourself. Added just as safety and logical consistency.
             return Response(
                 {"error": ("A user can not edit their own permission")},
                 status=status.HTTP_400_BAD_REQUEST,

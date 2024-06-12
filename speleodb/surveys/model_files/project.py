@@ -177,7 +177,7 @@ class Project(models.Model):
             # if nobody owns the project, returns without error.
             return
 
-        if self.mutex_owner != user and not self.is_owner(user):
+        if self.mutex_owner != user and not self.is_admin(user):
             raise PermissionError(f"User: `{user.email} can not execute this action.`")
 
         # AutoSave in the background
@@ -214,10 +214,10 @@ class Project(models.Model):
 
         return self._has_permission(user, permission=Permission.Level.READ_AND_WRITE)
 
-    def is_owner(self, user: User):
+    def is_admin(self, user: User):
         from speleodb.surveys.model_files.permission import Permission
 
-        return self._has_permission(user, permission=Permission.Level.OWNER)
+        return self._has_permission(user, permission=Permission.Level.ADMIN)
 
     # @functools.cached_property
     @property
