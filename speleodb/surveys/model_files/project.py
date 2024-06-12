@@ -195,6 +195,9 @@ class Project(models.Model):
     def get_all_permissions(self):
         return self.rel_permissions.filter(is_active=True)
 
+    def get_permission_count(self):
+        return self.rel_permissions.filter(is_active=True).count()
+
     def _has_permission(self, user: User, permission):
         from speleodb.surveys.model_files.permission import Permission
 
