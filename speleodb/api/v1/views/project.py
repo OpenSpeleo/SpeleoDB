@@ -111,7 +111,7 @@ class CreateProjectApiView(CustomAPIView):
             if serializer.is_valid():
                 proj = serializer.save()
                 Permission.objects.create(
-                    project=proj, user=request.user, level=Permission.Level.OWNER
+                    project=proj, user=request.user, level=Permission.Level.ADMIN
                 )
 
                 return Response(

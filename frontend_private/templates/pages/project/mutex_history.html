@@ -97,7 +97,7 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
                                         {% if mutex.is_active %}
-                                            {% if mutex.user == user or is_project_owner %}
+                                            {% if mutex.user == user or is_project_admin %}
                                             <a href="#" class="btn_unlock">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 text-rose-500 inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                                     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>

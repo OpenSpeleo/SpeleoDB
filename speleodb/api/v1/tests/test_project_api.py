@@ -15,7 +15,7 @@ from speleodb.surveys.models import Permission
 @pytest.mark.parametrize(
     "level",
     [
-        Permission.Level.OWNER,
+        Permission.Level.ADMIN,
         Permission.Level.READ_AND_WRITE,
         Permission.Level.READ_ONLY,
     ],
@@ -34,7 +34,7 @@ class TestProjectInteraction(TestCase):
 
     @parameterized.expand(
         [
-            Permission.Level.OWNER,
+            Permission.Level.ADMIN,
             Permission.Level.READ_AND_WRITE,
             Permission.Level.READ_ONLY,
         ]
@@ -87,7 +87,7 @@ class TestProjectInteraction(TestCase):
 
     @parameterized.expand(
         [
-            Permission.Level.OWNER,
+            Permission.Level.ADMIN,
             Permission.Level.READ_AND_WRITE,
         ]
     )
@@ -147,7 +147,7 @@ class TestProjectInteraction(TestCase):
 
     @parameterized.expand(
         [
-            Permission.Level.OWNER,
+            Permission.Level.ADMIN,
             Permission.Level.READ_AND_WRITE,
         ]
     )

@@ -65,7 +65,7 @@ class _BaseProjectView(LoginRequiredMixin, View):
         project = Project.objects.get(id=project_id)
         return {
             "project": project,
-            "is_project_owner": project.is_owner(request.user),
+            "is_project_admin": project.is_admin(request.user),
             "has_write_access": project.has_write_access(request.user),
         }
 
@@ -84,7 +84,7 @@ class ProjectDangerZoneView(_BaseProjectView):
     def get(self, request, project_id: str):
         data = super().get(request, project_id=project_id)
 
-        if not data["is_project_owner"]:
+        if not data["is_project_admin"]:
             return redirect(
                 reverse("private:project_details", kwargs={"project_id": project_id})
             )
