@@ -207,14 +207,14 @@
                     }, 2000);
                 },
                 error: function (data) {
-                if (data.status == 429) {
-                    $("#modal_error_txt").text(data.responseJSON["detail"]);
-                    $("#modal_error").css('display', 'flex');
-                }
-                else {
-                    $("#modal_error_txt").text(data.responseJSON["errors"][0]);
-                    $("#modal_error").css('display', 'flex');
-                }
+                    if (data.status == 429) {
+                        $("#modal_error_txt").text(data.responseJSON["detail"]);
+                        $("#modal_error").css('display', 'flex');
+                    }
+                    else {
+                        $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                        $("#modal_error").css('display', 'flex');
+                    }
                 }
             });
             return false; // prevent default

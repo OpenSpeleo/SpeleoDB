@@ -125,6 +125,9 @@ class ProjectPermissionView(CustomAPIView):
         permission_serializer = PermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": request.user})
 
+        # Refresh the `modified_date` field
+        project.save()
+
         return Response(
             {
                 "project": project_serializer.data,
@@ -179,6 +182,9 @@ class ProjectPermissionView(CustomAPIView):
         permission_serializer = PermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": request.user})
 
+        # Refresh the `modified_date` field
+        project.save()
+
         return Response(
             {
                 "project": project_serializer.data,
@@ -218,6 +224,9 @@ class ProjectPermissionView(CustomAPIView):
 
         permission.deactivate(user=request.user)
         project_serializer = ProjectSerializer(project, context={"user": request.user})
+
+        # Refresh the `modified_date` field
+        project.save()
 
         return Response(
             {

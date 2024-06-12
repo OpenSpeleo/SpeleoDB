@@ -59,6 +59,9 @@ class FileUploadView(CustomAPIView):
             file=file_uploaded, user=request.user, commit_msg=commit_message
         )
 
+        # Refresh the `modified_date` field
+        project.save()
+
         return {
             "content_type": content_type,
             "message": commit_message,

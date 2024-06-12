@@ -82,26 +82,26 @@
                         </thead>
                         <!-- Table body -->
                         <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
-                            {% for perm in user.get_all_permissions %}
+                            {% for data in user.get_all_projects %}
                                 <!-- Row -->
                                 <tr>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
-                                            <div class="font-medium text-slate-800 text-slate-100">{{ perm.project.name }}</div>
+                                            <div class="font-medium text-slate-800 text-slate-100">{{ data.project.name }}</div>
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
-                                            {% if perm.project.software == "MANUAL" %}
+                                            {% if data.project.software == "MANUAL" %}
                                                 bg-slate-700">Manual</div>
-                                            {% elif perm.project.software == "ARIANE" %}
+                                            {% elif data.project.software == "ARIANE" %}
                                                 bg-pastel-blue">Ariane</div>
-                                            {% elif perm.project.software == "COMPASS" %}
+                                            {% elif data.project.software == "COMPASS" %}
                                                 bg-pastel-orange">Compass</div>
-                                            {% elif perm.project.software == "WALLS" %}
+                                            {% elif data.project.software == "WALLS" %}
                                                 bg-pastel-red">Walls</div>
-                                            {% elif perm.project.software == "STICKMAPS" %}
+                                            {% elif data.project.software == "STICKMAPS" %}
                                                 bg-pastel-purple">StickMaps</div>
                                             {% else %}
                                                 bg-slate-700">Other</div>
@@ -110,23 +110,23 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
-                                            {% get_country perm.project.country as country %}
+                                            {% get_country data.project.country as country %}
                                             {{ country.name }}
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center" id="async_revision_{{ forloop.counter0 }}">
-                                            <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{perm.project.id}}" class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner.svg' %}">
+                                            <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{data.project.id}}" class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner.svg' %}">
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
-                                            {% if perm.level == "READ_ONLY" %}
+                                            {% if data.level == "READ_ONLY" %}
                                                 bg-pastel-blue">Read Only</div>
-                                            {% elif perm.level == "READ_AND_WRITE" %}
+                                            {% elif data.level == "READ_AND_WRITE" %}
                                                 bg-pastel-purple">Read And Write</div>
-                                            {% elif perm.level == "OWNER" %}
+                                            {% elif data.level == "OWNER" %}
                                                 bg-pastel-orange">Admin</div>
                                             {% endif %}
                                         </div>
@@ -134,9 +134,9 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
-                                            {% if perm.project.latitude and perm.project.longitude %}
-                                                <a href="https://www.google.com/maps/place/{{perm.project.latitude}},{{perm.project.longitude}}" target="_blank" class="text-sky-500">
-                                                    ({{ perm.project.latitude }}, {{ perm.project.longitude }})
+                                            {% if data.project.latitude and data.project.longitude %}
+                                                <a href="https://www.google.com/maps/place/{{data.project.latitude}},{{data.project.longitude}}" target="_blank" class="text-sky-500">
+                                                    ({{ data.project.latitude }}, {{ data.project.longitude }})
                                                 </a>
                                             {% else %}
                                             -
@@ -145,8 +145,8 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
-                                            {% if perm.project.mutex_owner %}
-                                                {{ perm.project.mutex_owner }}
+                                            {% if data.project.mutex_owner %}
+                                                {{ data.project.mutex_owner }}
                                             {% else %}
                                             -
                                             {% endif %}
@@ -154,8 +154,8 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
-                                            {% if perm.project.mutex_dt %}
-                                                {{ perm.project.mutex_dt }}
+                                            {% if data.project.mutex_dt %}
+                                                {{ data.project.mutex_dt }}
                                             {% else %}
                                             -
                                             {% endif %}
@@ -164,7 +164,7 @@
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="flex items-center text-slate-800">
                                             <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-100 bg-slate-700 rounded-full mr-2 sm:mr-3">
-                                                <a href="{% url 'private:project_details' project_id=perm.project.id %}">
+                                                <a href="{% url 'private:project_details' project_id=data.project.id %}">
                                                     <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="Icon 01">
                                                 </a>
                                             </div>
