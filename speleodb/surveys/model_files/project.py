@@ -3,9 +3,7 @@
 
 import decimal
 import pathlib
-import shutil
 import uuid
-import zipfile
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -17,12 +15,8 @@ from django.utils import timezone
 from django_countries.fields import CountryField
 
 from speleodb.users.models import User
-from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.gitlab_manager import GitlabManager
 from speleodb.utils.gitlab_manager import GitRepo
-
-TML_XML_FILENAME = "Data.xml"
-TML_DEFAULT_FILENAME = "project.tml"
 
 
 class Project(models.Model):
@@ -219,7 +213,6 @@ class Project(models.Model):
 
         return self._has_permission(user, permission=Permission.Level.ADMIN)
 
-    # @functools.cached_property
     @property
     def git_repo(self):
         project_dir = (settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)).resolve()
@@ -237,50 +230,9 @@ class Project(models.Model):
 
         return GitRepo(project_dir)
 
-    def process_uploaded_file(self, file, user, commit_msg):
-        with zipfile.ZipFile(file) as zip_archive:
-            data_xml_f = zip_archive.read(TML_XML_FILENAME)
-
-        # Make sure the project is update to ToT (Top of Tree)
-        self.git_repo.checkout_and_pull()
-
-        with (self.git_repo.path / TML_XML_FILENAME).open(mode="wb") as f:
-            f.write(data_xml_f)
-
-        return self.git_repo.commit_and_push_project(message=commit_msg, user=user)
-
     @property
     def commit_history(self):
         commits = GitlabManager.get_commit_history(project_id=self.id)
         if isinstance(commits, (list, tuple)):
             return commits
         return []
-
-    def generate_tml_file(self, commit_sha1=None):
-        if not self.git_repo:
-            raise ProjectNotFound("This project does not exist on gitlab or on drive")
-
-        if commit_sha1 is None:
-            # Make sure the project is update to ToT (Top of Tree)
-            self.git_repo.checkout_branch_or_commit(branch_name="master")
-            self.git_repo.pull()
-
-        else:
-            self.git_repo.checkout_branch_or_commit(commit_sha1=commit_sha1)
-
-        dest_dir = settings.DJANGO_TMP_DL_DIR / self.git_repo.commit_sha1
-
-        if dest_dir.exists():
-            shutil.rmtree(dest_dir)
-        dest_dir.mkdir(exist_ok=True, parents=True)
-
-        tml_file = dest_dir / TML_DEFAULT_FILENAME
-
-        with zipfile.ZipFile(tml_file, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
-            for file in self.git_repo.path.glob("*"):
-                if not file.is_file() or file.name.startswith("."):
-                    continue
-
-                zipf.write(file, file.relative_to(self.git_repo.path))
-
-        return tml_file

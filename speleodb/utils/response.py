@@ -8,14 +8,14 @@ from rest_framework.response import Response
 from speleodb.utils.helpers import maybe_sort_data
 
 
-class DownloadTMLResponseFromFile(FileResponse):
+class DownloadResponseFromFile(FileResponse):
     def __init__(self, filepath, attachment=True):
         filepath = Path(filepath)
         super().__init__(
             filepath.open(mode="rb"),
             as_attachment=attachment,
             filename=filepath.name,
-            content_type="application/zip",
+            content_type="application/octet-stream",
         )
 
 
