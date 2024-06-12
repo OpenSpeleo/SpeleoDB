@@ -12,6 +12,7 @@ from django.views.generic import TemplateView
 from rest_framework.authtoken.models import Token
 
 from speleodb.surveys.models import Project
+from speleodb.utils.gitlab_manager import GitlabManager
 
 
 class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
@@ -136,4 +137,9 @@ class ProjectCommitsView(_BaseProjectView):
                     )
 
         data["commits"] = commits
+
+        data["skip_download_names"] = [
+            GitlabManager.FIRST_COMMIT_NAME,
+            "Initial Empty",
+        ]
         return render(request, ProjectCommitsView.template_name, data)
