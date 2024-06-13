@@ -12,8 +12,10 @@ urlpatterns = [
     path("", include("frontend_errors.urls")),
     path("", include("speleodb.urls")),
     path("private/", include("frontend_private.urls", namespace="private")),
-    # # Django Admin, use {% url 'admin:index' %}
+    # Admin Panel
     path(settings.ADMIN_URL, admin.site.urls),
+    # Debuging Tools
+    path(settings.HIJACK_URL, include("hijack.urls", namespace="hijack")),
     # Media files
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
 ]

@@ -90,6 +90,11 @@ EMAIL_SUBJECT_PREFIX = env(
     default="[SpeleoDB] ",
 )
 
+# HIJACK
+# ------------------------------------------------------------------------------
+# Django Admin URL regex.
+HIJACK_URL = env("DJANGO_HIJACK_URL")
+
 # ADMIN
 # ------------------------------------------------------------------------------
 # Django Admin URL regex.

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
+from hijack.contrib.admin import HijackUserAdminMixin
 
 from speleodb.users.forms import UserAdminChangeForm
 from speleodb.users.forms import UserAdminCreationForm
@@ -16,7 +17,7 @@ if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
 
 
 @admin.register(User)
-class UserAdmin(auth_admin.UserAdmin):
+class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm
     fieldsets = (
@@ -55,6 +56,9 @@ class UserAdmin(auth_admin.UserAdmin):
             },
         ),
     )
+
+    def get_hijack_user(self, obj):
+        return obj
 
 
 class EmailAddressAdmin(_EmailAddressAdmin):

@@ -99,6 +99,8 @@ THIRD_PARTY_APPS = [
     "rest_framework.authtoken",
     "corsheaders",
     "drf_spectacular",
+    "hijack",
+    "hijack.contrib.admin",
 ]
 
 LOCAL_APPS = [
@@ -226,6 +228,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "speleodb.middleware.ViewNameMiddleware",
+    "hijack.middleware.HijackUserMiddleware",
 ]
 
 # STATIC
@@ -307,6 +310,13 @@ EMAIL_BACKEND = env(
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 5
+
+# DJANGO-HIJACK
+# ------------------------------------------------------------------------------
+# Django Hijack URL.
+HIJACK_URL = "hijack/"
+# Hide notification if `None`.
+HIJACK_INSERT_BEFORE = None
 
 # ADMIN
 # ------------------------------------------------------------------------------
