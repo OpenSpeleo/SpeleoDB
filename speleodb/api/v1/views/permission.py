@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.exceptions import ValidationError
 from rest_framework import permissions
 from rest_framework import status
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasAdminAccess
@@ -15,30 +15,31 @@ from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
-from speleodb.utils.view_cls import CustomAPIView
 
 
-class ProjectPermissionListView(CustomAPIView):
+class ProjectPermissionListView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
     serializer_class = ProjectSerializer
     http_method_names = ["get"]
     lookup_field = "id"
 
-    def _get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         project = self.get_object()
         permissions = project.get_all_permissions()
 
         project_serializer = ProjectSerializer(project, context={"user": request.user})
         permission_serializer = PermissionListSerializer(permissions)
 
-        return {
-            "project": project_serializer.data,
-            "permissions": permission_serializer.data,
-        }
+        return Response(
+            {
+                "project": project_serializer.data,
+                "permissions": permission_serializer.data,
+            }
+        )
 
 
-class ProjectPermissionView(CustomAPIView):
+class ProjectPermissionView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated, UserHasAdminAccess]
     serializer_class = ProjectSerializer
@@ -86,7 +87,7 @@ class ProjectPermissionView(CustomAPIView):
 
         return perm_data
 
-    def _post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         project = self.get_object()
 
         perm_data = self._process_request_data(data=request.data)
@@ -136,7 +137,7 @@ class ProjectPermissionView(CustomAPIView):
             status=status.HTTP_201_CREATED,
         )
 
-    def _put(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         project = self.get_object()
 
         perm_data = self._process_request_data(data=request.data)
@@ -193,7 +194,7 @@ class ProjectPermissionView(CustomAPIView):
             status=status.HTTP_201_CREATED,
         )
 
-    def _delete(self, request, *args, **kwargs):
+    def delete(self, request, *args, **kwargs):
         project = self.get_object()
 
         perm_data = self._process_request_data(data=request.data, skip_level=True)

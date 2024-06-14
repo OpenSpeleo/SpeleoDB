@@ -227,8 +227,9 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
-    "speleodb.middleware.ViewNameMiddleware",
     "hijack.middleware.HijackUserMiddleware",
+    "speleodb.middleware.ViewNameMiddleware",
+    "speleodb.middleware.DRFWrapResponseMiddleware",
 ]
 
 # STATIC
