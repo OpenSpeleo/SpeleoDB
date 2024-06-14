@@ -29,12 +29,23 @@ from speleodb.utils.view_cls import CustomAPIView
 
 
 class UserInfo(CustomAPIView):
+    serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["put"]
+    http_method_names = ["get", "put"]
+
+    def _get(self, request, *args, **kwargs):
+        return UserSerializer(request.user).data
 
     def _put(self, request, *args, **kwargs):
         modified_attrs = {}
-        for key in ["country", "email", "name"]:
+
+        for key in [
+            "country",
+            "email",
+            "name",
+            "email_on_projects_updates",
+            "email_on_speleodb_updates",
+        ]:
             try:
                 new_value = request.data[key]
 
@@ -55,11 +66,11 @@ class UserInfo(CustomAPIView):
                             status=status.HTTP_400_BAD_REQUEST,
                         )
 
+                elif key.startswith("email_on"):
+                    new_value = str2bool(new_value)
+
             except KeyError:
-                return Response(
-                    {"error": f"Attribute: `{key}` is missing"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                continue
 
             if new_value == getattr(request.user, key):
                 continue
@@ -69,38 +80,12 @@ class UserInfo(CustomAPIView):
         if modified_attrs:
             with contextlib.suppress(KeyError):
                 email = modified_attrs.pop("email")
-                EmailAddress.objects.add_email(
-                    request, request.user, email, confirm=True
-                )
+                EmailAddress.objects.add_new_email(request, request.user, email)
 
             for key, value in modified_attrs.items():
                 setattr(request.user, key, value)
-            request.user.save(update_fields=modified_attrs)
+            request.user.save(update_fields=modified_attrs.keys())
 
-            serializer = UserSerializer(request.user)
-
-        return serializer.data
-
-
-class UserPreference(CustomAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["put"]
-
-    def _put(self, request, *args, **kwargs):
-        try:
-            request.user.email_on_projects_updates = str2bool(
-                request.data["email_on_projects_updates"]
-            )
-            request.user.email_on_speleodb_updates = str2bool(
-                request.data["email_on_speleodb_updates"]
-            )
-        except KeyError as e:
-            return Response(
-                {"error": f"Attribute: {e} is missing"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        request.user.save()
         serializer = UserSerializer(request.user)
 
         return serializer.data
@@ -147,6 +132,7 @@ class PasswordChangeThrottle(UserRateThrottle):
 
 
 class UserPasswordChangeView(CustomAPIView):
+    serializer_class = UserSerializer
     throttle_classes = [PasswordChangeThrottle]
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ["put"]

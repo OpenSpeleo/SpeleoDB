@@ -14,14 +14,6 @@ def test_update_user_info_url():
     assert resolve("/api/v1/user/info/").view_name == "api:v1_users:update_user_info"
 
 
-def test_update_user_preferences_url():
-    assert reverse("api:v1_users:update_user_preferences") == "/api/v1/user/preferences/"
-    assert (
-        resolve("/api/v1/user/preferences/").view_name
-        == "api:v1_users:update_user_preferences"
-    )
-
-
 def test_update_user_password_url():
     assert reverse("api:v1_users:update_user_password") == "/api/v1/user/password/"
     assert (
