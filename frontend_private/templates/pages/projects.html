@@ -52,34 +52,34 @@
                         <!-- Table header -->
                         <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
                             <tr>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
                                     <div class="font-semibold text-center">Project Name</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">Software</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">Country</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">Collaborators</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">Revisions</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">Permission</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">GPS Coordinates</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">Current Editor</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">Editing Since</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
                                 </th>
                             </tr>
                         </thead>
@@ -88,12 +88,12 @@
                             {% for data in user.get_all_projects %}
                                 <!-- Row -->
                                 <tr>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
                                         <div class="text-center">
                                             <div class="font-medium text-slate-800 text-slate-100">{{ data.project.name }}</div>
                                         </div>
                                     </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
                                             {% if data.project.software == "MANUAL" %}
@@ -111,23 +111,23 @@
                                             {% endif %}
                                         </div>
                                     </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             {% get_country data.project.country as country %}
                                             {{ country.name }}
                                         </div>
                                     </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             {{ data.project.get_permission_count }}
                                         </div>
                                     </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center" id="async_revision_{{ forloop.counter0 }}">
                                             <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{data.project.id}}" class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner.svg' %}">
                                         </div>
                                     </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
                                             {% if data.level == "READ_ONLY" %}
@@ -140,7 +140,7 @@
                                         </div>
 
                                     </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             {% if data.project.latitude and data.project.longitude %}
                                                 <a href="https://www.google.com/maps/place/{{data.project.latitude}},{{data.project.longitude}}" target="_blank" class="text-sky-500">
@@ -151,7 +151,7 @@
                                             {% endif %}
                                         </div>
                                     </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             {% if data.project.mutex_owner %}
                                                 {{ data.project.mutex_owner }}
@@ -160,7 +160,7 @@
                                             {% endif %}
                                         </div>
                                     </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             {% if data.project.mutex_dt %}
                                                 {{ data.project.mutex_dt|date:"Y/m/d H:i" }}
@@ -169,7 +169,7 @@
                                             {% endif %}
                                         </div>
                                     </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="flex items-center text-slate-800">
                                             <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-100 bg-slate-700 rounded-full mr-2 sm:mr-3">
                                                 <a href="{% url 'private:project_details' project_id=data.project.id %}">
