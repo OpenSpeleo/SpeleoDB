@@ -3,11 +3,10 @@
 
 
 from django.conf import settings
+from django.http.response import HttpResponse
 from django.urls import resolve
-from django.utils.deprecation import MiddlewareMixin
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
@@ -59,8 +58,15 @@ class DRFWrapResponseMiddleware:
             wrapped_response = self.get_response(request)
 
             if isinstance(wrapped_response, Response):
-                payload.update({"data": wrapped_response.data})
+                if "error" in wrapped_response.data:
+                    payload.update(wrapped_response.data)
+                else:
+                    payload.update({"data": wrapped_response.data})
                 http_status = wrapped_response.status_code
+
+            elif isinstance(wrapped_response, HttpResponse):
+                # DJANGO error
+                return wrapped_response
 
             else:
                 payload["error"] = (
@@ -89,11 +95,15 @@ class DRFWrapResponseMiddleware:
 
         response = SortedResponse(payload, status=http_status)
 
+        import pprint
+
+        # pprint.pprint(wrapped_response.__dict__)
+
         try:
             response.accepted_renderer = wrapped_response.accepted_renderer
             response.accepted_media_type = wrapped_response.accepted_media_type
             response.renderer_context = wrapped_response.renderer_context
-        except NameError:
+        except (NameError, AttributeError):
             response.accepted_renderer = JSONRenderer()
             response.accepted_media_type = "application/json"
             response.renderer_context = {}

@@ -57,7 +57,22 @@ class ProjectApiView(GenericAPIView):
                         )
                     new_value = Country(code=new_value)
 
+                elif key == "description":
+                    if len(new_value) > 255:  # noqa: PLR2004
+                        return Response(
+                            {
+                                "error": (
+                                    "The value: `description` is too long. "
+                                    f"Received: {len(new_value)}. Maximum: 255."
+                                )
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
                 elif key in ["latitude", "longitude"]:
+                    if new_value == "":
+                        continue
+
                     try:
                         new_value = Decimal.from_float(float(new_value))
                     except (DecimalInvalidOperation, TypeError, ValueError):

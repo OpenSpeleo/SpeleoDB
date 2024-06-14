@@ -29,7 +29,7 @@
                 <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
                     <div class="w-full">
                         <label class="block text-sm font-medium mb-1" for="description">Description:</label>
-                        <input id="description" name="description" class="form-input max-w-full w-128" type="text" value="{{ project.description }}" />
+                        <textarea id="description" name="description" class="form-textarea max-w-full w-128 focus:border-slate-300" rows="4">{{ project.description }}</textarea>
                     </div>
                 </div>
             </section>
@@ -54,7 +54,7 @@
                 <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
                     <div class="w-full">
                         <label class="block text-sm font-medium mb-1" for="latitude">Latitude:</label>
-                        <input id="latitude" name="latitude" class="form-input max-w-full w-128" type="text" value="{{ project.latitude }}" />
+                        <input id="latitude" name="latitude" class="form-input max-w-full w-128" type="text" value="{% if project.latitude %}{{ project.latitude }}{% endif %}" />
                     </div>
                 </div>
             </section>
@@ -64,7 +64,7 @@
                 <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
                     <div class="w-full">
                         <label class="block text-sm font-medium mb-1" for="longitude">Longitude:</label>
-                        <input id="longitude" name="longitude" class="form-input max-w-full w-128" type="text" value="{{ project.longitude }}" />
+                        <input id="longitude" name="longitude" class="form-input max-w-full w-128" type="text" value="{% if project.longitude %}{{ project.longitude }}{% endif %}" />
                     </div>
                 </div>
             </section>
