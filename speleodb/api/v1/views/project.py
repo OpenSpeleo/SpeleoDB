@@ -9,6 +9,7 @@ from django_countries import countries
 from django_countries.fields import Country
 from rest_framework import permissions
 from rest_framework import status
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasAdminAccess
@@ -18,10 +19,9 @@ from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 from speleodb.utils.api_decorators import method_permission_classes
-from speleodb.utils.view_cls import CustomAPIView
 
 
-class ProjectApiView(CustomAPIView):
+class ProjectApiView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
@@ -29,17 +29,19 @@ class ProjectApiView(CustomAPIView):
     lookup_field = "id"
 
     @method_permission_classes((UserHasReadAccess,))
-    def _get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         project = self.get_object()
         serializer = ProjectSerializer(project, context={"user": request.user})
 
-        return {
-            "project": serializer.data,
-            "history": project.commit_history,
-        }
+        return Response(
+            {
+                "project": serializer.data,
+                "history": project.commit_history,
+            }
+        )
 
     @method_permission_classes((UserHasWriteAccess,))
-    def _put(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         project = self.get_object()
 
         modified_attrs = {}
@@ -81,12 +83,14 @@ class ProjectApiView(CustomAPIView):
             project.save(update_fields=modified_attrs)
 
         serializer = ProjectSerializer(project, context={"user": request.user})
-        return {
-            "project": serializer.data,
-        }
+        return Response(
+            {
+                "project": serializer.data,
+            }
+        )
 
     @method_permission_classes((UserHasAdminAccess,))
-    def _delete(self, request, *args, **kwargs):
+    def delete(self, request, *args, **kwargs):
         # Note: We only delete the permissions, rendering the project invisible to the
         # users. After 30 days, the project gets automatically deleted by a cronjob.
         # This is done to protect users from malicious/erronous project deletion.
@@ -95,15 +99,15 @@ class ProjectApiView(CustomAPIView):
         for perm in project.get_all_permissions():
             perm.deactivate(request.user)
 
-        return {"id": str(project.id)}
+        return Response({"id": str(project.id)})
 
 
-class CreateProjectApiView(CustomAPIView):
+class CreateProjectApiView(GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
     http_method_names = ["post"]
 
-    def _post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         try:
             serializer = ProjectSerializer(
                 data=request.data, context={"user": request.user}
@@ -129,16 +133,13 @@ class CreateProjectApiView(CustomAPIView):
             )
 
 
-class ProjectListApiView(CustomAPIView):
+class ProjectListApiView(GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
     http_method_names = ["get"]
 
-    def _get(self, request, *args, **kwargs):
-        usr_projects = [
-            perm.project
-            for perm in request.user.get_all_permissions()
-        ]
+    def get(self, request, *args, **kwargs):
+        usr_projects = [perm.project for perm in request.user.get_all_permissions()]
 
         usr_projects = sorted(
             usr_projects, key=lambda proj: proj.modified_date, reverse=True
@@ -148,4 +149,4 @@ class ProjectListApiView(CustomAPIView):
             usr_projects, many=True, context={"user": request.user}
         )
 
-        return serializer.data
+        return Response(serializer.data)

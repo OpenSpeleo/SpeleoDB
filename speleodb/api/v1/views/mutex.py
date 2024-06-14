@@ -3,23 +3,24 @@
 
 from django.core.exceptions import ValidationError
 from rest_framework import permissions
+from rest_framework.generics import GenericAPIView
+from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import ResourceBusyError
-from speleodb.utils.view_cls import CustomAPIView
 
 
-class ProjectAcquireApiView(CustomAPIView):
+class ProjectAcquireApiView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
     serializer_class = ProjectSerializer
     http_method_names = ["post"]
     lookup_field = "id"
 
-    def _post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         project = self.get_object()
 
         try:
@@ -40,17 +41,17 @@ class ProjectAcquireApiView(CustomAPIView):
         # Refresh the `modified_date` field
         project.save()
 
-        return serializer.data
+        return Response(serializer.data)
 
 
-class ProjectReleaseApiView(CustomAPIView):
+class ProjectReleaseApiView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
     serializer_class = ProjectSerializer
     http_method_names = ["post"]
     lookup_field = "id"
 
-    def _post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         project = self.get_object()
         comment = request.data.get("comment", "")
         try:
@@ -71,4 +72,4 @@ class ProjectReleaseApiView(CustomAPIView):
         # Refresh the `modified_date` field
         project.save()
 
-        return serializer.data
+        return Response(serializer.data)

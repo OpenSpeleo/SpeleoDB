@@ -9,7 +9,6 @@ from allauth.account.internal.flows.password_change import logout_on_password_ch
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django_countries import countries
@@ -18,25 +17,25 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 from rest_framework.throttling import UserRateThrottle
 
 from speleodb.users.api.v1.serializers import AuthTokenSerializer
 from speleodb.users.api.v1.serializers import UserSerializer
 from speleodb.utils.helpers import str2bool
-from speleodb.utils.helpers import wrap_response_with_status
-from speleodb.utils.view_cls import CustomAPIView
 
 
-class UserInfo(CustomAPIView):
+class UserInfo(GenericAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ["get", "put"]
 
-    def _get(self, request, *args, **kwargs):
-        return UserSerializer(request.user).data
+    def get(self, request, *args, **kwargs):
+        return Response(UserSerializer(request.user).data)
 
-    def _put(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):  # noqa: C901
         modified_attrs = {}
 
         for key in [
@@ -88,56 +87,46 @@ class UserInfo(CustomAPIView):
 
         serializer = UserSerializer(request.user)
 
-        return serializer.data
+        return Response(serializer.data)
 
 
 class UserAuthTokenView(ObtainAuthToken):
     serializer_class = AuthTokenSerializer
+    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
 
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return wrap_response_with_status(
-                lambda *a, **kw: Response(
-                    status=status.HTTP_401_UNAUTHORIZED,
-                    data={"error": "Not authenticated"},
-                ),
-                request,
+            return Response(
+                status=status.HTTP_401_UNAUTHORIZED,
+                data={"error": "Not authenticated"},
             )
-        token, created = Token.objects.get_or_create(user=request.user)
-        return wrap_response_with_status(
-            lambda *a, **kw: Response({"token": token.key}), request
-        )
 
-    def post(self, request, *args, **kwargs):
-        return wrap_response_with_status(super().post, request, *args, **kwargs)
+        token, _ = Token.objects.get_or_create(user=request.user)
+        return Response({"token": token.key})
 
-    def _patch(self, request, *args, **kwargs):
+    def patch(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
 
         # delete to recreate a fresh token
-        with contextlib.suppress(ObjectDoesNotExist):
-            Token.objects.get(user=user).delete()
+        Token.objects.filter(user=user).delete()
 
         token, created = Token.objects.get_or_create(user=user)
         return Response({"token": token.key})
-
-    def patch(self, request, *args, **kwargs):
-        return wrap_response_with_status(self._patch, request, *args, **kwargs)
 
 
 class PasswordChangeThrottle(UserRateThrottle):
     rate = "3/h"
 
 
-class UserPasswordChangeView(CustomAPIView):
+class UserPasswordChangeView(GenericAPIView):
     serializer_class = UserSerializer
     throttle_classes = [PasswordChangeThrottle]
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ["put"]
 
-    def _put(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         try:
             oldpassword = request.data["oldpassword"]
             password1 = request.data["password1"]
@@ -177,4 +166,4 @@ class UserPasswordChangeView(CustomAPIView):
 
         logout_on_password_change(request, request.user)
 
-        return "Password changed successfully"
+        return Response({"message:", "Password changed successfully"})
