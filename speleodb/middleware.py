@@ -64,15 +64,8 @@ class DRFWrapResponseMiddleware:
                     payload.update({"data": wrapped_response.data})
                 http_status = wrapped_response.status_code
 
-            elif isinstance(wrapped_response, HttpResponse):
-                # DJANGO error
-                return wrapped_response
-
             else:
-                payload["error"] = (
-                    f"Unsupported response type: {type(wrapped_response)}"
-                )
-                http_status = status.HTTP_500_INTERNAL_SERVER_ERROR
+                return wrapped_response
 
         except (NotAuthorizedError, PermissionDenied) as e:
             if settings.DEBUG:
