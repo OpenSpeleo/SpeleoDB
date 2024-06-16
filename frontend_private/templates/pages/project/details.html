@@ -69,6 +69,8 @@
                 </div>
             </section>
 
+            <input type="hidden" name="software" value="{{project.software}}">
+
         </div>
 
         <!-- Panel footer -->
@@ -103,13 +105,30 @@
             }
         });
 
-        $('#btn_submit').click(function () {
+        function fieldMissingError (field) {
+            $("#modal_error_txt").text("The field `" + field + "` can not be empty.");
+            $("#modal_error").css('display', 'flex');
+        }
+
+        $('#btn_submit').click(function (e) {
+            e.preventDefault();
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
             let project_details_form = document.getElementById('project_details_form');
             var formData = new FormData(project_details_form);
 
-            $("#error_div").hide();
-            $("#success_div").hide();
+            const fields = ["name", "description", "country"];
+
+            for (let i = 0; i < fields.length; i++) {
+                let field = fields[i];
+                if (!formData.has(field) || formData.get(field) == "") {
+                    fieldMissingError(field);
+                    return false;
+                }
+            }
 
             $.ajax({
                 url: "{% url 'api:v1:one_project_apiview' id=project.id %}",
