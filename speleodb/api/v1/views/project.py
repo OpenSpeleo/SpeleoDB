@@ -42,67 +42,24 @@ class ProjectApiView(GenericAPIView):
 
     @method_permission_classes((UserHasWriteAccess,))
     def put(self, request, *args, **kwargs):
-        project = self.get_object()
+        try:
+            serializer = ProjectSerializer(
+                data=request.data, context={"user": request.user}
+            )
+            if serializer.is_valid():
+                serializer.save()
 
-        modified_attrs = {}
-        for key in ["name", "description", "country", "latitude", "longitude"]:
-            try:
-                new_value = request.data[key]
+                return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
-                if key == "country":
-                    if new_value not in countries:
-                        return Response(
-                            {"error": f"The country: `{new_value}` does not exist."},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                    new_value = Country(code=new_value)
+            return Response(
+                {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-                elif key == "description":
-                    if len(new_value) > 255:  # noqa: PLR2004
-                        return Response(
-                            {
-                                "error": (
-                                    "The value: `description` is too long. "
-                                    f"Received: {len(new_value)}. Maximum: 255."
-                                )
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-
-                elif key in ["latitude", "longitude"]:
-                    if new_value == "":
-                        continue
-
-                    try:
-                        new_value = Decimal.from_float(float(new_value))
-                    except (DecimalInvalidOperation, TypeError, ValueError):
-                        return Response(
-                            {"error": f"The value: `{key}={new_value}` is invalid."},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-
-            except KeyError:
-                return Response(
-                    {"error": f"Attribute: `{key}` is missing"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            if new_value == getattr(project, key):
-                continue
-
-            modified_attrs[key] = new_value
-
-        if modified_attrs:
-            for key, value in modified_attrs.items():
-                setattr(project, key, value)
-            project.save(update_fields=modified_attrs)
-
-        serializer = ProjectSerializer(project, context={"user": request.user})
-        return Response(
-            {
-                "project": serializer.data,
-            }
-        )
+        except ValidationError as e:
+            return Response(
+                {"errors": e.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     @method_permission_classes((UserHasAdminAccess,))
     def delete(self, request, *args, **kwargs):

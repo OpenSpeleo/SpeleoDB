@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import enum
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.exceptions import ValidationError
 from django_countries import countries
 from django_countries.fields import Country
 from rest_framework import serializers
@@ -11,70 +11,49 @@ from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 
 
+class CustomChoiceField(serializers.ChoiceField):
+    def to_representation(self, obj):
+        if obj == "" and self.allow_blank:
+            return obj
+
+        if isinstance(obj, Country):
+            return obj.code
+
+        val = self._choices[obj]
+
+        if isinstance(val, enum.Enum):
+            return self._choices[obj].name
+
+        return val
+
+    def to_internal_value(self, data):
+        if self.field_name == "country":
+            return super().to_internal_value(data)
+
+        return getattr(self._kwargs["choices"], data)
+
+
 class ProjectSerializer(serializers.ModelSerializer):
+    country = CustomChoiceField(choices=countries)
+    latitude = serializers.DecimalField(
+        max_digits=11, decimal_places=8, allow_null=True
+    )
+    longitude = serializers.DecimalField(
+        max_digits=11, decimal_places=8, allow_null=True
+    )
+    software = CustomChoiceField(choices=Project.Software, source="_software")
+    visibility = CustomChoiceField(
+        choices=Project.Visibility,
+        source="_visibility",
+        default=Project.Visibility.PRIVATE,
+    )
+
     permission = serializers.SerializerMethodField()
-    country = serializers.SerializerMethodField()
     active_mutex = serializers.SerializerMethodField()
-    software = serializers.SerializerMethodField()
-    visibility = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         exclude = ("_software", "_visibility")
-
-    def create(self, validated_data):
-        # =========== VISIBILITY Validation =========== #
-        visibility = self.initial_data.get("visibility", "private")
-
-        if (
-            not isinstance(visibility, str)
-            or visibility.upper() not in [name for _, name in Project.Visibility.choices]
-        ):
-            raise ValidationError(
-                f"Invalid value received for `visibility`: `{visibility}`"
-            )
-        visibility = getattr(Project.Visibility, visibility.upper())
-
-        # =========== Country Validation =========== #
-        try:
-            country = self.initial_data.get("country")
-        except KeyError as e:
-            raise ValidationError("Value `country` is missing") from e
-
-        if not isinstance(country, str):
-            raise ValidationError(f"Invalid value received for `country`: `{country}`")
-        country = country.upper()
-
-        if country not in countries:
-            raise ValidationError(f"Value `country` does not exist: {country}")
-
-        country = Country(code=country)
-
-        # =========== Software Validation =========== #
-        try:
-            software = self.initial_data.get("software")
-        except KeyError as e:
-            raise ValidationError("Value `software` is missing") from e
-
-        if (
-            not isinstance(software, str)
-            or software.upper() not in [name for _, name in Project.Software.choices]
-        ):
-            raise ValidationError(
-                f"Invalid value received for `software`: `{software}`"
-            )
-        software = getattr(Project.Software, software.upper())
-
-        # ========================= UPDATE OF THE VALUE DICT ========================= #
-
-        validated_data.update(
-            {
-                "country": country,
-                "_software": software,
-                "_visibility": visibility,
-            }
-        )
-        return super().create(validated_data)
 
     def get_permission(self, obj):
         user = self.context.get("user")
@@ -82,15 +61,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             return obj.get_permission(user=user).level
         except ObjectDoesNotExist:
             return None
-
-    def get_software(self, obj):
-        return obj.software
-
-    def get_visibility(self, obj):
-        return obj.visibility
-
-    def get_country(self, obj):
-        return obj.country.code
 
     def get_active_mutex(self, obj):
         if obj.active_mutex is None:
@@ -102,24 +72,21 @@ class ProjectSerializer(serializers.ModelSerializer):
         }
 
 
-class UploadSerializer(serializers.Serializer):
-    file_uploaded = serializers.FileField()
-
-    class Meta:
-        fields = ["file_uploaded"]
-
-
 class PermissionSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField()
-    level = serializers.SerializerMethodField()
+    level = CustomChoiceField(choices=Permission.Level, source="_level")
 
     class Meta:
         fields = ("user", "level", "creation_date", "modified_date")
         model = Permission
 
-    def get_level(self, obj):
-        return obj.level
-
 
 class PermissionListSerializer(serializers.ListSerializer):
     child = PermissionSerializer()
+
+
+class UploadSerializer(serializers.Serializer):
+    file_uploaded = serializers.FileField()
+
+    class Meta:
+        fields = ["file_uploaded"]

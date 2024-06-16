@@ -106,7 +106,7 @@
                                 </div>
                             </section>
 
-                            <!-- Visibility -->
+                            {% comment %} <!-- Visibility -->
                             <section>
                                 <div class="flex flex-wrap mt-5">
                                     <div class="mr-2">
@@ -120,7 +120,7 @@
                                         </select>
                                     </div>
                                 </div>
-                            </section>
+                            </section> {% endcomment %}
 
                         </div>
 
@@ -160,13 +160,30 @@
             }
         });
 
-        $('#btn_submit').click(function () {
+        function fieldMissingError (field) {
+            $("#modal_error_txt").text("The field `" + field + "` can not be empty.");
+            $("#modal_error").css('display', 'flex');
+        }
+
+        $('#btn_submit').click(function (e) {
+            e.preventDefault();
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
             let new_project_form = document.getElementById('new_project_form');
             var formData = new FormData(new_project_form);
 
-            $("#error_div").hide();
-            $("#success_div").hide();
+            const fields = ["name", "description", "country", "software"];
+
+            for (let i = 0; i < fields.length; i++) {
+                let field = fields[i];
+                if (!formData.has(field) || formData.get(field) == "") {
+                    fieldMissingError(field);
+                    return false;
+                }
+            }
 
             $.ajax({
                 url: "{% url 'api:v1:create_project' %}",
@@ -176,6 +193,10 @@
                 cache: false,
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("X-CSRFToken", csrftoken);
+
+                    {% comment %} console.log($(this).data); {% endcomment %}
+                    console.log($(this).data["name"]);
+
                     return true;
 
                 },

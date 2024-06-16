@@ -32,10 +32,10 @@ class Project(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
-    name = models.CharField(max_length=255)
-    description = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, blank=False, null=False)
+    description = models.CharField(max_length=255, blank=False, null=False)
 
-    country = CountryField()
+    country = CountryField(null=False, blank=False)
 
     # Optional Field
     fork_from = models.ForeignKey(
@@ -76,8 +76,10 @@ class Project(models.Model):
 
     _visibility = models.IntegerField(
         choices=Visibility.choices,
-        verbose_name="visibility",
+        blank=False,
+        null=False,
         default=Visibility.PRIVATE,
+        verbose_name="visibility",
     )
 
     class Software(models.IntegerChoices):
@@ -88,7 +90,12 @@ class Project(models.Model):
         STICKMAPS = (4, "STICKMAPS")
         OTHER = (99, "OTHER")
 
-    _software = models.IntegerField(choices=Software.choices, verbose_name="software")
+    _software = models.IntegerField(
+        choices=Software.choices,
+        blank=False,
+        null=False,
+        verbose_name="software",
+    )
 
     # MUTEX Management
     active_mutex = models.OneToOneField(
