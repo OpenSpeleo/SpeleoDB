@@ -12,15 +12,14 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.generics import GenericAPIView
-from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.throttling import UserRateThrottle
 
 from speleodb.users.api.v1.serializers import AuthTokenSerializer
 from speleodb.users.api.v1.serializers import UserSerializer
-from speleodb.utils.response import SuccessResponse
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import NoWrapResponse
+from speleodb.utils.response import SuccessResponse
 
 
 class UserInfo(GenericAPIView):
@@ -89,7 +88,7 @@ class UserAuthTokenView(ObtainAuthToken):
         token, created = Token.objects.get_or_create(user=user)
         return NoWrapResponse(
             {"token": token.key},
-            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
     def post(self, request, *args, **kwargs):
