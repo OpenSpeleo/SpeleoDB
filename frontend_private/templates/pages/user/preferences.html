@@ -95,7 +95,7 @@
 
             $.ajax({
                 url: "{% url 'api:v1_users:update_user_info' %}",
-                method: "PUT",
+                method: "PATCH",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
                 cache: false,

@@ -3,7 +3,6 @@
 
 
 from django.conf import settings
-from django.http.response import HttpResponse
 from django.urls import resolve
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
@@ -58,7 +57,7 @@ class DRFWrapResponseMiddleware:
             wrapped_response = self.get_response(request)
 
             if isinstance(wrapped_response, Response):
-                if "error" in wrapped_response.data:
+                if any(key in wrapped_response.data for key in ["error", "errors"]):
                     payload.update(wrapped_response.data)
                 else:
                     payload.update({"data": wrapped_response.data})

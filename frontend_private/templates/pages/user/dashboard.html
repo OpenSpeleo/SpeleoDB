@@ -95,7 +95,7 @@
 
             $.ajax({
                 url: "{% url 'api:v1_users:update_user_info' %}",
-                method: "PUT",
+                method: "PATCH",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
                 cache: false,
@@ -126,8 +126,12 @@
                   else {
                     if ("error" in data.responseJSON) {
                         $("#modal_error_txt").text(data.responseJSON["error"]);
-                    } else {
-                        $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                    } else if ("errors" in data.responseJSON) {
+                        var error_msg = "";
+                        for (var key in data.responseJSON["errors"]){
+                            error_msg += "- <b>Error:</b> `" + key + "`: " + data.responseJSON["errors"][key] + "<br>";
+                          }
+                        $("#modal_error_txt").html(error_msg);
                     }
                     $("#modal_error").css('display', 'flex');
                   }

@@ -52,7 +52,7 @@ class ProjectApiView(GenericAPIView):
                 return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
             return Response(
-                {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+                {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
             )
 
         except ValidationError as e:
@@ -95,7 +95,7 @@ class CreateProjectApiView(GenericAPIView):
                 )
 
             return Response(
-                {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+                {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
             )
 
         except ValidationError as e:
