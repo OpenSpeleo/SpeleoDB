@@ -114,7 +114,7 @@ class ProjectMutexesView(_BaseProjectView):
 
     def get(self, request, project_id: str):
         data = super().get(request, project_id=project_id)
-        data["mutexes"] = data["project"].rel_mutexes.all().order_by("-creation_dt")
+        data["mutexes"] = data["project"].rel_mutexes.all().order_by("-creation_date")
         return render(request, ProjectMutexesView.template_name, data)
 
 

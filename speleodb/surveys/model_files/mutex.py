@@ -18,8 +18,8 @@ class Mutex(models.Model):
         User, related_name="rel_mutexes", on_delete=models.RESTRICT
     )
 
-    creation_dt = models.DateTimeField(auto_now_add=True, editable=False)
-    last_modified_dt = models.DateTimeField(auto_now=True, editable=False)
+    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
+    modified_date = models.DateTimeField(auto_now=True, editable=False)
 
     closing_user = models.ForeignKey(
         User,
@@ -35,7 +35,7 @@ class Mutex(models.Model):
         verbose_name_plural = "mutexes"
 
     def __str__(self):
-        return f"{self.user} => {self.project} @ {self.creation_dt}"
+        return f"{self.user} => {self.project} @ {self.creation_date}"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"

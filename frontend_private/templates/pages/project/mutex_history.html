@@ -84,10 +84,10 @@
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                        <div class="text-center">{{ mutex.creation_dt|date:"Y/m/d H:i" }}</div>
+                                        <div class="text-center">{{ mutex.creation_date|date:"Y/m/d H:i" }}</div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                        <div class="text-center">{{ mutex.last_modified_dt|date:"Y/m/d H:i" }}</div>
+                                        <div class="text-center">{{ mutex.modified_date|date:"Y/m/d H:i" }}</div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">{% if mutex.closing_user %}{{ mutex.closing_user }}{% endif %}</div>
