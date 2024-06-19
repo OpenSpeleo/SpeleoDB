@@ -1,4 +1,6 @@
 # ruff: noqa
+from pathlib import Path
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -12,6 +14,10 @@ urlpatterns = [
     path("", include("speleodb.urls")),
     path("private/", include("frontend_private.urls", namespace="private")),
     # Admin Panel
+    path(
+        f"{Path(settings.ADMIN_URL) / 'dynamic_raw_id'}/",
+        include("dynamic_raw_id.urls"),
+    ),
     path(settings.ADMIN_URL, admin.site.urls),
     # Debuging Tools
     path(settings.HIJACK_URL, include("hijack.urls", namespace="hijack")),

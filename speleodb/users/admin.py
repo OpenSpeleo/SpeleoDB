@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
+from dynamic_raw_id.admin import DynamicRawIDMixin
 from hijack.contrib.admin import HijackUserAdminMixin
 
 from speleodb.users.forms import UserAdminChangeForm
@@ -61,7 +62,10 @@ class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):
         return obj
 
 
-class EmailAddressAdmin(_EmailAddressAdmin):
+class EmailAddressAdmin(DynamicRawIDMixin, _EmailAddressAdmin):
+    dynamic_raw_id_fields = ("user",)
+    raw_id_fields = ()
+
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         form.base_fields["user"].widget.attrs["style"] = "width: 20em;"
