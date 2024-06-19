@@ -24,70 +24,73 @@ from rest_framework.throttling import UserRateThrottle
 
 from speleodb.users.api.v1.serializers import AuthTokenSerializer
 from speleodb.users.api.v1.serializers import UserSerializer
-from speleodb.utils.helpers import str2bool
 
 
 class UserInfo(GenericAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["get", "put"]
 
     def get(self, request, *args, **kwargs):
         return Response(UserSerializer(request.user).data)
 
-    def put(self, request, *args, **kwargs):  # noqa: C901
-        modified_attrs = {}
+    def _maybe_update_email(self, request, user, new_email):
+        if new_email is not None and new_email != user.email:
+            validate_email(new_email)
+            EmailAddress.objects.add_new_email(request, request.user, new_email)
 
-        for key in [
-            "country",
-            "email",
-            "name",
-            "email_on_projects_updates",
-            "email_on_speleodb_updates",
-        ]:
-            try:
-                new_value = request.data[key]
+    def put(self, request, *args, **kwargs):
+        email = request.data.pop("email", None)
+        try:
+            self._maybe_update_email(request, user=request.user, new_email=email)
+        except ValidationError:
+            return Response(
+                {"error": f"The email: `{email}` is invalid."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-                if key == "country":
-                    if new_value not in countries:
-                        return Response(
-                            {"error": f"The country: `{new_value}` does not exist."},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                    new_value = Country(code=new_value)
+        try:
+            serializer = UserSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
-                elif key == "email":
-                    try:
-                        validate_email(new_value)
-                    except ValidationError:
-                        return Response(
-                            {"error": f"The email: `{new_value}` is invalid."},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
+            return Response(
+                {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-                elif key.startswith("email_on"):
-                    new_value = str2bool(new_value)
+        except ValidationError as e:
+            return Response(
+                {"errors": e.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-            except KeyError:
-                continue
+    def patch(self, request, *args, **kwargs):
+        email = request.data.pop("email", None)
+        try:
+            self._maybe_update_email(request, user=request.user, new_email=email)
+        except ValidationError:
+            return Response(
+                {"error": f"The email: `{email}` is invalid."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-            if new_value == getattr(request.user, key):
-                continue
+        try:
+            serializer = UserSerializer(
+                request.user, data=request.data, partial=True
+            )
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
-            modified_attrs[key] = new_value
+            return Response(
+                {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-        if modified_attrs:
-            with contextlib.suppress(KeyError):
-                email = modified_attrs.pop("email")
-                EmailAddress.objects.add_new_email(request, request.user, email)
-
-            for key, value in modified_attrs.items():
-                setattr(request.user, key, value)
-            request.user.save(update_fields=modified_attrs.keys())
-
-        serializer = UserSerializer(request.user)
-
-        return Response(serializer.data)
+        except ValidationError as e:
+            return Response(
+                {"errors": e.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class UserAuthTokenView(ObtainAuthToken):

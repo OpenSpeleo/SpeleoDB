@@ -33,7 +33,7 @@ class Project(models.Model):
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
     name = models.CharField(max_length=255, blank=False, null=False)
-    description = models.CharField(max_length=255, blank=False, null=False)
+    description = models.TextField (blank=False, null=False)
 
     country = CountryField(null=False, blank=False)
 

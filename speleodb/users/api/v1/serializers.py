@@ -1,13 +1,24 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from django.contrib.auth import authenticate
+from django_countries import countries
 from rest_framework import serializers
 
 from speleodb.users.models import User
+from speleodb.utils.serializer_fields import CustomChoiceField
 
 
 class UserSerializer(serializers.ModelSerializer):
-    country = serializers.SerializerMethodField()
+    country = CustomChoiceField(choices=countries)
+    name = serializers.CharField(allow_blank=False)
+    email = serializers.EmailField(allow_blank=False, read_only=True)
+    email_on_projects_updates = serializers.BooleanField()
+    email_on_speleodb_updates = serializers.BooleanField()
+
     class Meta:
         model = User
+        # fields = "__all__"
         fields = [
             "country",
             "email",
@@ -16,8 +27,8 @@ class UserSerializer(serializers.ModelSerializer):
             "name",
         ]
 
-    def get_country(self, obj):
-        return obj.country.code
+    # def get_country(self, obj):
+    #     return obj.country.code
 
 
 class AuthTokenSerializer(serializers.Serializer):
