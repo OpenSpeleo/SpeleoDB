@@ -7,11 +7,13 @@ dump_data:
 	python manage.py dumpdata surveys --indent 4 > fixtures/surveys.json
 	python manage.py dumpdata common --indent 4 > fixtures/common.json
 	python manage.py dumpdata users --indent 4 > fixtures/users.json
+	python manage.py dumpdata account.emailaddress --indent 4 > fixtures/emailaddresses.json
 
 load_data:
 	python manage.py loaddata fixtures/users.json
 	python manage.py loaddata fixtures/common.json
 	python manage.py loaddata fixtures/surveys.json
+	python manage.py loaddata fixtures/emailaddresses.json
 
 test:
 # pytest -vvv --capture=no speleodb/surveys/tests/test_auth_token.py
