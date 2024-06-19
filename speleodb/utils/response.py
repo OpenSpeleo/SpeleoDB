@@ -25,3 +25,10 @@ class SortedResponse(Response):
         for key, val in data.items():
             data[key] = maybe_sort_data(val)
         super().__init__(data, *args, **kwargs)
+
+
+class SuccessResponse(Response): pass
+
+class ErrorResponse(Response): pass
+
+class NoWrapResponse(Response): pass

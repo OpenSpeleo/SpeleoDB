@@ -53,12 +53,18 @@ class TestProjectInteraction(TestCase):
             HTTP_AUTHORIZATION=auth,
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.status_code
 
-        assert ProjectSerializer(data=response.data["data"]["project"]).is_valid()
-        proj_data = ProjectSerializer(self.project, context={"user": self.user}).data
+        # Verify data can be de-serialized
+        serializer = ProjectSerializer(data=response.data["data"]["project"])
+        assert serializer.is_valid(), (serializer.errors, response.data)
 
-        assert proj_data == response.data["data"]["project"]
+        serializer = ProjectSerializer(self.project, context={"user": self.user})
+
+        assert serializer.data == response.data["data"]["project"], {
+            "reserialized": serializer.data, 
+            "response_data": response.data["data"]["project"]
+        }
 
         if isinstance(response.data["data"]["history"], (tuple, list)):
             commit_keys = [
@@ -79,8 +85,8 @@ class TestProjectInteraction(TestCase):
             ]
             for commit_data in response.data["data"]["history"]:
                 assert all(key in commit_data for key in commit_keys), commit_data
-                assert commit_data["committer_email"] == "contact@speleodb.com"
-                assert commit_data["committer_name"] == "SpeleoDB"
+                assert commit_data["committer_email"] == "contact@speleodb.com", commit_data["committer_email"]
+                assert commit_data["committer_name"] == "SpeleoDB", commit_data["committer_name"]
         else:
             # error fetching project from gitlab. TODO
             pass
@@ -109,18 +115,24 @@ class TestProjectInteraction(TestCase):
                 HTTP_AUTHORIZATION=auth,
             )
 
-            assert response.status_code == status.HTTP_200_OK
+            assert response.status_code == status.HTTP_200_OK, response.status_code
 
             # refresh mutex data
             self.project.refresh_from_db()
 
-            assert ProjectSerializer(data=response.data["data"]).is_valid()
-            proj_data = ProjectSerializer(
+            # Verify data can be de-serialized
+            serializer = ProjectSerializer(data=response.data["data"])
+            assert serializer.is_valid(), (serializer.errors, response.data)
+
+            project_data = ProjectSerializer(
                 self.project, context={"user": self.user}
             ).data
 
-            assert proj_data == response.data["data"]
-            assert response.data["data"]["active_mutex"]["user"] == self.user.email
+            assert project_data == response.data["data"], {
+            "reserialized": project_data, 
+            "response_data": response.data["data"]
+        }
+            assert response.data["data"]["active_mutex"]["user"] == self.user.email, (response.data, self.user.email)
 
         # =================== RELEASE PROJECT =================== #
 
@@ -132,18 +144,24 @@ class TestProjectInteraction(TestCase):
                 HTTP_AUTHORIZATION=auth,
             )
 
-            assert response.status_code == status.HTTP_200_OK
+            assert response.status_code == status.HTTP_200_OK, response.status_code
 
             # refresh mutex data
             self.project.refresh_from_db()
 
-            assert ProjectSerializer(data=response.data["data"]).is_valid()
-            proj_data = ProjectSerializer(
+            # Verify data can be de-serialized
+            serializer = ProjectSerializer(data=response.data["data"])
+            assert serializer.is_valid(), (serializer.errors, response.data)
+
+            project_data = ProjectSerializer(
                 self.project, context={"user": self.user}
             ).data
 
-            assert proj_data == response.data["data"]
-            assert response.data["data"]["active_mutex"] is None
+            assert project_data == response.data["data"], {
+                "reserialized": project_data, 
+                "response_data": response.data["data"]
+            }
+            assert response.data["data"]["active_mutex"] is None, response.data
 
     @parameterized.expand(
         [
@@ -167,16 +185,22 @@ class TestProjectInteraction(TestCase):
             HTTP_AUTHORIZATION=auth,
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.status_code
 
         # refresh mutex data
         self.project.refresh_from_db()
 
-        assert ProjectSerializer(data=response.data["data"]).is_valid()
-        proj_data = ProjectSerializer(self.project, context={"user": self.user}).data
+        # Verify data can be de-serialized
+        serializer = ProjectSerializer(data=response.data["data"])
+        assert serializer.is_valid(), (serializer.errors, response.data)
 
-        assert proj_data == response.data["data"]
-        assert response.data["data"]["active_mutex"]["user"] == self.user.email
+        project_data = ProjectSerializer(self.project, context={"user": self.user}).data
+
+        assert project_data == response.data["data"], {
+            "reserialized": project_data, 
+            "response_data": response.data["data"]
+        }
+        assert response.data["data"]["active_mutex"]["user"] == self.user.email, (response.data, self.user.email)
 
         # =================== RELEASE PROJECT =================== #
 
@@ -191,19 +215,25 @@ class TestProjectInteraction(TestCase):
             data={"comment": test_comment},
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.status_code
 
         # refresh mutex data
         mutex.refresh_from_db()
         self.project.refresh_from_db()
 
-        assert ProjectSerializer(data=response.data["data"]).is_valid()
-        proj_data = ProjectSerializer(self.project, context={"user": self.user}).data
+        # Verify data can be de-serialized
+        serializer = ProjectSerializer(data=response.data["data"])
+        assert serializer.is_valid(), (serializer.errors, response.data)
+        
+        project_data = ProjectSerializer(self.project, context={"user": self.user}).data
 
-        assert proj_data == response.data["data"]
-        assert response.data["data"]["active_mutex"] is None
-        assert mutex.closing_comment == test_comment
-        assert mutex.closing_user == self.user
+        assert project_data == response.data["data"], {
+            "reserialized": project_data, 
+            "response_data": response.data["data"]
+        }
+        assert response.data["data"]["active_mutex"] is None, response.data
+        assert mutex.closing_comment == test_comment, (mutex, test_comment)
+        assert mutex.closing_user == self.user, (mutex, self.user)
 
     def test_fail_acquire_readonly_project(self):
         """
@@ -221,8 +251,8 @@ class TestProjectInteraction(TestCase):
             HTTP_AUTHORIZATION=auth,
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert not response.data["success"]
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.status_code
+        assert not response.data["success"], response.data
 
     def test_fail_release_readonly_project(self):
         _ = PermissionFactory(
@@ -235,5 +265,5 @@ class TestProjectInteraction(TestCase):
             HTTP_AUTHORIZATION=auth,
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert not response.data["success"]
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.status_code
+        assert not response.data["success"], response.data

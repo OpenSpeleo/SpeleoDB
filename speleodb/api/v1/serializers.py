@@ -12,12 +12,6 @@ from speleodb.utils.serializer_fields import CustomChoiceField
 
 class ProjectSerializer(serializers.ModelSerializer):
     country = CustomChoiceField(choices=countries)
-    latitude = serializers.DecimalField(
-        max_digits=11, decimal_places=8, allow_null=True
-    )
-    longitude = serializers.DecimalField(
-        max_digits=11, decimal_places=8, allow_null=True
-    )
     software = CustomChoiceField(choices=Project.Software, source="_software")
     visibility = CustomChoiceField(
         choices=Project.Visibility,
@@ -32,16 +26,36 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         exclude = ("_software", "_visibility")
 
+    def create(self, validated_data):
+        project = super().create(validated_data)
+
+        # assign current user as project admin
+        Permission.objects.create(
+            project=project, user=self.context.get("user"), level=Permission.Level.ADMIN
+        )
+
+        return project
+
     def get_permission(self, obj):
+        if isinstance(obj, dict):
+            # Unsaved object
+            return None
+
         user = self.context.get("user")
+
         try:
             return obj.get_permission(user=user).level
         except ObjectDoesNotExist:
             return None
 
     def get_active_mutex(self, obj):
+        if isinstance(obj, dict):
+            # Unsaved object
+            return None
+
         if obj.active_mutex is None:
             return None
+
         return {
             "user": obj.active_mutex.user.email,
             "creation_dt": obj.active_mutex.creation_dt,

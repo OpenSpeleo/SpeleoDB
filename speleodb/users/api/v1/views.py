@@ -1,18 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import contextlib
-
 from allauth.account import signals
 from allauth.account.adapter import get_adapter
 from allauth.account.internal.flows.password_change import logout_on_password_change
-from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
-from django_countries import countries
-from django_countries.fields import Country
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -24,6 +18,9 @@ from rest_framework.throttling import UserRateThrottle
 
 from speleodb.users.api.v1.serializers import AuthTokenSerializer
 from speleodb.users.api.v1.serializers import UserSerializer
+from speleodb.utils.response import SuccessResponse
+from speleodb.utils.response import ErrorResponse
+from speleodb.utils.response import NoWrapResponse
 
 
 class UserInfo(GenericAPIView):
@@ -31,66 +28,31 @@ class UserInfo(GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        return Response(UserSerializer(request.user).data)
-
-    def _maybe_update_email(self, request, user, new_email):
-        if new_email is not None and new_email != user.email:
-            validate_email(new_email)
-            EmailAddress.objects.add_new_email(request, request.user, new_email)
+        return SuccessResponse(self.get_serializer(request.user).data)
 
     def put(self, request, *args, **kwargs):
-        email = request.data.pop("email", None)
-        try:
-            self._maybe_update_email(request, user=request.user, new_email=email)
-        except ValidationError:
-            return Response(
-                {"error": f"The email: `{email}` is invalid."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = self.get_serializer(
+            data=request.data, context={"request": request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return SuccessResponse({"data": serializer.data}, status=status.HTTP_200_OK)
 
-        try:
-            serializer = UserSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response({"data": serializer.data}, status=status.HTTP_200_OK)
-
-            return Response(
-                {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        except ValidationError as e:
-            return Response(
-                {"errors": e.messages},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        return ErrorResponse(
+            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     def patch(self, request, *args, **kwargs):
-        email = request.data.pop("email", None)
-        try:
-            self._maybe_update_email(request, user=request.user, new_email=email)
-        except ValidationError:
-            return Response(
-                {"error": f"The email: `{email}` is invalid."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = self.get_serializer(
+            request.user, data=request.data, partial=True, context={"request": request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return SuccessResponse({"data": serializer.data}, status=status.HTTP_200_OK)
 
-        try:
-            serializer = UserSerializer(
-                request.user, data=request.data, partial=True
-            )
-            if serializer.is_valid():
-                serializer.save()
-                return Response({"data": serializer.data}, status=status.HTTP_200_OK)
-
-            return Response(
-                {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        except ValidationError as e:
-            return Response(
-                {"errors": e.messages},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        return ErrorResponse(
+            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class UserAuthTokenView(ObtainAuthToken):
@@ -99,24 +61,45 @@ class UserAuthTokenView(ObtainAuthToken):
 
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return Response(
+            return ErrorResponse(
                 status=status.HTTP_401_UNAUTHORIZED,
                 data={"error": "Not authenticated"},
             )
 
         token, _ = Token.objects.get_or_create(user=request.user)
-        return Response({"token": token.key})
+        return NoWrapResponse({"token": token.key})
 
-    def patch(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data["user"]
+    def _fetch_token(self, request, refresh_token=False, *args, **kwargs):
+        if not request.user.is_authenticated:
+            serializer = self.get_serializer(data=request.data)
 
-        # delete to recreate a fresh token
-        Token.objects.filter(user=user).delete()
+            if not serializer.is_valid():
+                return ErrorResponse(
+                    {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+                )
+            user = serializer.validated_data["user"]
+
+        else:
+            user = request.user
+
+        if refresh_token:
+            # delete to recreate a fresh token
+            Token.objects.filter(user=user).delete()
 
         token, created = Token.objects.get_or_create(user=user)
-        return Response({"token": token.key})
+        return NoWrapResponse(
+            {"token": token.key},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        )
+
+    def post(self, request, *args, **kwargs):
+        return self._fetch_token(request, refresh_token=False, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self._fetch_token(request, refresh_token=True, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self._fetch_token(request, refresh_token=True, *args, **kwargs)
 
 
 class PasswordChangeThrottle(UserRateThrottle):
@@ -135,7 +118,7 @@ class UserPasswordChangeView(GenericAPIView):
             password1 = request.data["password1"]
             password2 = request.data["password2"]
         except KeyError as e:
-            return Response(
+            return ErrorResponse(
                 {"error": f"Attribute: {e} is missing"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -154,7 +137,7 @@ class UserPasswordChangeView(GenericAPIView):
                 validate_password(password1, user=request.user)
 
         except ValidationError as e:
-            return Response(
+            return ErrorResponse(
                 {"errors": e.messages},
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -169,4 +152,4 @@ class UserPasswordChangeView(GenericAPIView):
 
         logout_on_password_change(request, request.user)
 
-        return Response({"message:", "Password changed successfully"})
+        return NoWrapResponse({"message:", "Password changed successfully"})
