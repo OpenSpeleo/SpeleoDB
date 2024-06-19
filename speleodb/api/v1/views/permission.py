@@ -15,6 +15,8 @@ from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
+from speleodb.utils.response import SuccessResponse
+from speleodb.utils.response import ErrorResponse
 
 
 class ProjectPermissionListView(GenericAPIView):
@@ -31,7 +33,7 @@ class ProjectPermissionListView(GenericAPIView):
         project_serializer = ProjectSerializer(project, context={"user": request.user})
         permission_serializer = PermissionListSerializer(permissions)
 
-        return Response(
+        return SuccessResponse(
             {
                 "project": project_serializer.data,
                 "permissions": permission_serializer.data,
@@ -59,7 +61,7 @@ class ProjectPermissionView(GenericAPIView):
                     if not isinstance(value, str) or value.upper() not in [
                         name for _, name in Permission.Level.choices
                     ]:
-                        return Response(
+                        return ErrorResponse(
                             {"error": f"Invalid value received for `{key}`: `{value}`"},
                             status=status.HTTP_400_BAD_REQUEST,
                         )
@@ -69,18 +71,18 @@ class ProjectPermissionView(GenericAPIView):
                     try:
                         perm_data[key] = User.objects.get(email=value)
                     except ObjectDoesNotExist:
-                        return Response(
+                        return ErrorResponse(
                             {"error": f"The user: `{value}` does not exist."},
                             status=status.HTTP_400_BAD_REQUEST,
                         )
                     if not perm_data[key].is_active:
-                        return Response(
+                        return ErrorResponse(
                             {"error": f"The user: `{value}` is inactive."},
                             status=status.HTTP_400_BAD_REQUEST,
                         )
 
             except KeyError:
-                return Response(
+                return ErrorResponse(
                     {"error": f"Attribute: `{key}` is missing"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
@@ -101,7 +103,7 @@ class ProjectPermissionView(GenericAPIView):
             # This by default make no sense because you need to be project admin
             # to create permission. So you obviously can't create permission for
             # yourself. Added just as safety and logical consistency.
-            return Response(
+            return ErrorResponse(
                 {"error": ("A user can not edit their own permission")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -111,7 +113,7 @@ class ProjectPermissionView(GenericAPIView):
         )
 
         if not created and permission.is_active:
-            return Response(
+            return ErrorResponse(
                 {
                     "error": (
                         f"A permission for this user: `{perm_data['user']}` "
@@ -129,7 +131,7 @@ class ProjectPermissionView(GenericAPIView):
         # Refresh the `modified_date` field
         project.save()
 
-        return Response(
+        return SuccessResponse(
             {
                 "project": project_serializer.data,
                 "permission": permission_serializer.data,
@@ -148,7 +150,7 @@ class ProjectPermissionView(GenericAPIView):
 
         # Can't edit your own permission
         if request.user == perm_data["user"]:
-            return Response(
+            return ErrorResponse(
                 {"error": ("A user can not edit their own permission")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -156,7 +158,7 @@ class ProjectPermissionView(GenericAPIView):
         try:
             permission = Permission.objects.get(project=project, user=perm_data["user"])
         except ObjectDoesNotExist:
-            return Response(
+            return ErrorResponse(
                 {
                     "error": (
                         f"A permission for this user: `{perm_data['user']}` "
@@ -167,7 +169,7 @@ class ProjectPermissionView(GenericAPIView):
             )
 
         if not permission.is_active:
-            return Response(
+            return ErrorResponse(
                 {
                     "error": (
                         f"The permission for this user: `{perm_data['user']}` "
@@ -186,7 +188,7 @@ class ProjectPermissionView(GenericAPIView):
         # Refresh the `modified_date` field
         project.save()
 
-        return Response(
+        return SuccessResponse(
             {
                 "project": project_serializer.data,
                 "permission": permission_serializer.data,
@@ -205,7 +207,7 @@ class ProjectPermissionView(GenericAPIView):
 
         # Can't edit your own permission
         if request.user == perm_data["user"]:
-            return Response(
+            return ErrorResponse(
                 {"error": ("A user can not edit their own permission")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -213,7 +215,7 @@ class ProjectPermissionView(GenericAPIView):
         try:
             permission = Permission.objects.get(project=project, user=perm_data["user"])
         except ObjectDoesNotExist:
-            return Response(
+            return ErrorResponse(
                 {
                     "error": (
                         f"A permission for this user: `{perm_data['user']}` "
@@ -229,7 +231,7 @@ class ProjectPermissionView(GenericAPIView):
         # Refresh the `modified_date` field
         project.save()
 
-        return Response(
+        return SuccessResponse(
             {
                 "project": project_serializer.data,
             },

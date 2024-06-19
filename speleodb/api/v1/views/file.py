@@ -16,6 +16,9 @@ from speleodb.processors.auto_selector import AutoSelectorUploadFileProcessor
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.response import DownloadResponseFromFile
+from speleodb.utils.response import SuccessResponse
+from speleodb.utils.response import ErrorResponse
+
 
 
 class FileUploadView(GenericAPIView):
@@ -31,12 +34,12 @@ class FileUploadView(GenericAPIView):
         commit_message = request.data.get("message", None)
         if commit_message is None or commit_message == "":
             data = {"error": (f"Empty or no `message` received: `{commit_message}`.")}
-            return Response(data, status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse(data, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             file_uploaded = request.data["artifact"]
         except KeyError:
-            return Response(
+            return ErrorResponse(
                 {"error": "Uploaded file `artifact is missing.`"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -44,7 +47,7 @@ class FileUploadView(GenericAPIView):
         try:
             processor = AutoSelectorUploadFileProcessor(file=file_uploaded)
         except ValidationError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         commit_sha1 = processor.commit_uploaded_file(
             user=request.user, project=project, commit_msg=commit_message
@@ -53,7 +56,7 @@ class FileUploadView(GenericAPIView):
         # Refresh the `modified_date` field
         project.save()
 
-        return Response(
+        return SuccessResponse(
             {
                 "content_type": processor.content_type,
                 "message": commit_message,
@@ -79,6 +82,6 @@ class FileDownloadView(GenericAPIView):
                 project=project, commit_sha1=commit_sha1
             )
         except ProjectNotFound as e:
-            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+            return ErrorResponse({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
 
         return DownloadResponseFromFile(filepath=artifact, attachment=False)

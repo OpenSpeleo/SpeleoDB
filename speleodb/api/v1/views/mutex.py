@@ -11,6 +11,8 @@ from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import ResourceBusyError
+from speleodb.utils.response import SuccessResponse
+from speleodb.utils.response import ErrorResponse
 
 
 class ProjectAcquireApiView(GenericAPIView):
@@ -41,7 +43,7 @@ class ProjectAcquireApiView(GenericAPIView):
         # Refresh the `modified_date` field
         project.save()
 
-        return Response(serializer.data)
+        return SuccessResponse(serializer.data)
 
 
 class ProjectReleaseApiView(GenericAPIView):
@@ -72,4 +74,4 @@ class ProjectReleaseApiView(GenericAPIView):
         # Refresh the `modified_date` field
         project.save()
 
-        return Response(serializer.data)
+        return SuccessResponse(serializer.data)

@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from allauth.account.models import EmailAddress
 from django.contrib.auth import authenticate
+from django.core.validators import validate_email
 from django_countries import countries
 from rest_framework import serializers
 
@@ -11,14 +13,9 @@ from speleodb.utils.serializer_fields import CustomChoiceField
 
 class UserSerializer(serializers.ModelSerializer):
     country = CustomChoiceField(choices=countries)
-    name = serializers.CharField(allow_blank=False)
-    email = serializers.EmailField(allow_blank=False, read_only=True)
-    email_on_projects_updates = serializers.BooleanField()
-    email_on_speleodb_updates = serializers.BooleanField()
 
     class Meta:
         model = User
-        # fields = "__all__"
         fields = [
             "country",
             "email",
@@ -27,8 +24,15 @@ class UserSerializer(serializers.ModelSerializer):
             "name",
         ]
 
-    # def get_country(self, obj):
-    #     return obj.country.code
+    def update(self, instance, validated_data) -> User:
+        request = self.context.get("request")
+
+        email = validated_data.pop("email", None)
+        if email is not None and email != request.user.email:
+            validate_email(email)
+            EmailAddress.objects.add_new_email(request, request.user, email)
+
+        return super().update(instance, validated_data)
 
 
 class AuthTokenSerializer(serializers.Serializer):
