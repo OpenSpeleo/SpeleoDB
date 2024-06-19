@@ -11,7 +11,7 @@
     <div class="p-6">
         <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-5">Personal Profile</h2>
 
-        <form id="update_user_info_form">
+        <form id="update_user_info_form" autocomplete="off">
 
             <!-- Full Name -->
             <section>
@@ -80,11 +80,6 @@
             }
         });
 
-        function validateEmail(email) {
-            var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-            return re.test(email);
-        }
-
         $('#btn_submit').click(function () {
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
             let update_user_info_form = document.getElementById('update_user_info_form');
@@ -101,13 +96,6 @@
                 cache: false,
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("X-CSRFToken", csrftoken);
-
-                    if (!validateEmail($("#email").val()) || $("#email").val() == "") {
-                        $("#modal_error_txt").text("The Email Address is not valid !");
-                        $("#modal_error").css('display', 'flex');
-                        return false;
-                    }
-
                     return true;
 
                 },
@@ -126,11 +114,12 @@
                   else {
                     if ("error" in data.responseJSON) {
                         $("#modal_error_txt").text(data.responseJSON["error"]);
-                    } else if ("errors" in data.responseJSON) {
+                    } 
+                    else if ("errors" in data.responseJSON) {
                         var error_msg = "";
                         for (var key in data.responseJSON["errors"]){
                             error_msg += "- <b>Error:</b> `" + key + "`: " + data.responseJSON["errors"][key] + "<br>";
-                          }
+                        }
                         $("#modal_error_txt").html(error_msg);
                     }
                     $("#modal_error").css('display', 'flex');

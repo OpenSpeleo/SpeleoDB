@@ -6,7 +6,7 @@
 {% block right_panel %}
 <div class="grow">
 
-    <form id="project_details_form">
+    <form id="project_details_form" autocomplete="off">
 
         {% csrf_token %}
 
@@ -105,11 +105,6 @@
             }
         });
 
-        function fieldMissingError (field) {
-            $("#modal_error_txt").text("The field `" + field + "` can not be empty.");
-            $("#modal_error").css('display', 'flex');
-        }
-
         $('#btn_submit').click(function (e) {
             e.preventDefault();
 
@@ -120,16 +115,6 @@
             let project_details_form = document.getElementById('project_details_form');
             var formData = new FormData(project_details_form);
 
-            const fields = ["name", "description", "country"];
-
-            for (let i = 0; i < fields.length; i++) {
-                let field = fields[i];
-                if (!formData.has(field) || formData.get(field) == "") {
-                    fieldMissingError(field);
-                    return false;
-                }
-            }
-
             $.ajax({
                 url: "{% url 'api:v1:one_project_apiview' id=project.id %}",
                 method: "PUT",
@@ -139,25 +124,29 @@
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("X-CSRFToken", csrftoken);
                     return true;
-
                 },
                 success: function (data) {
                     $("#modal_success_txt").html("The project your has been updated.");
                     $("#modal_success").css('display', 'flex');
                 },
                 error: function (data) {
-                  if (data.status == 429) {
-                    $("#modal_error_txt").text(data.responseJSON["detail"]);
-                    $("#modal_error").css('display', 'flex');
-                  }
-                  else {
-                    if ("error" in data.responseJSON) {
-                        $("#modal_error_txt").text(data.responseJSON["error"]);
-                    } else {
-                        $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                    if (data.status == 429) {
+                        $("#modal_error_txt").text(data.responseJSON["detail"]);
+                        $("#modal_error").css('display', 'flex');
                     }
-                    $("#modal_error").css('display', 'flex');
-                  }
+                    else {
+                        if ("error" in data.responseJSON) {
+                            $("#modal_error_txt").text(data.responseJSON["error"]);
+                        } 
+                        else if ("errors" in data.responseJSON) {
+                            var error_msg = "";
+                            for (var key in data.responseJSON["errors"]){
+                                error_msg += "- <b>Error:</b> `" + key + "`: " + data.responseJSON["errors"][key] + "<br>";
+                            }
+                            $("#modal_error_txt").html(error_msg);
+                        }
+                        $("#modal_error").css('display', 'flex');
+                    }
                 }
             });
             return false; // prevent default
