@@ -58,8 +58,8 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         return {
             "user": obj.active_mutex.user.email,
-            "creation_dt": obj.active_mutex.creation_dt,
-            "last_modified_dt": obj.active_mutex.last_modified_dt,
+            "creation_date": obj.active_mutex.creation_date,
+            "modified_date": obj.active_mutex.modified_date,
         }
 
 

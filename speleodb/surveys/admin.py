@@ -47,12 +47,12 @@ class MutexAdmin(admin.ModelAdmin):
     list_display = (
         "project",
         "user",
-        "creation_dt",
-        "last_modified_dt",
+        "creation_date",
+        "modified_date",
         "closing_user",
         "closing_comment",
     )
-    ordering = ("-last_modified_dt",)
+    ordering = ("-modified_date",)
     list_filter = ["closing_user"]
 
 
