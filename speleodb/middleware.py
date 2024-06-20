@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 from django.conf import settings
 from django.urls import resolve
 from rest_framework import status
@@ -47,7 +46,7 @@ class DRFWrapResponseMiddleware:
     def select_renderer(self, request):
         return self.negotiator.select_renderer(request, self.renderers)
 
-    def __call__(self, request):  # noqa: C901
+    def __call__(self, request):
         # Skip for non-API calls
         if "/api/" not in request.path:
             return self.get_response(request)
@@ -69,12 +68,12 @@ class DRFWrapResponseMiddleware:
             elif isinstance(wrapped_response, SuccessResponse):
                 payload.update({"data": wrapped_response.data})
 
-            elif wrapped_response.exception:
-                exception = True
-                payload.update(wrapped_response.data)
-
             else:
-                return wrapped_response
+                try:
+                    payload.update(wrapped_response.data)
+                    exception = True
+                except Exception:  # noqa: BLE001
+                    return wrapped_response
 
             http_status = wrapped_response.status_code
 

@@ -1,4 +1,5 @@
 import json
+import logging
 import pathlib
 import time
 from functools import wraps
@@ -18,12 +19,21 @@ from speleodb.utils.metaclasses import SingletonMetaClass
 
 GIT_COMMITTER = git.Actor("SpeleoDB", "contact@speleodb.com")
 
+logger = logging.getLogger(__name__)
+
+
+class GitlabError(Exception):
+    pass
+
 
 def check_initialized(func):
     @wraps(func)
     def _impl(self, *args, **kwargs):
         if not self._is_initialized:
-            self._initialize()
+            try:
+                self._initialize()
+            except Exception as e:
+                raise GitlabError from e
 
         return func(self, *args, **kwargs)
 
@@ -119,6 +129,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
 
     def __init__(self):
         self._is_initialized = False
+        self._is_error = False
 
     def _initialize(self):
         # Allow Starting SpeleoDB without GITLAB Options to be defined.
