@@ -151,4 +151,6 @@ class UserPasswordChangeView(GenericAPIView):
 
         logout_on_password_change(request, request.user)
 
-        return NoWrapResponse({"message:", "Password changed successfully"})
+        return NoWrapResponse(
+            {"message": "Password changed successfully"}, status=status.HTTP_200_OK
+        )

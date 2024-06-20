@@ -7,15 +7,14 @@ from django.urls import resolve
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.renderers import JSONRenderer
-from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.helpers import get_timestamp
-from speleodb.utils.response import SortedResponse
-from speleodb.utils.response import SuccessResponse
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import NoWrapResponse
+from speleodb.utils.response import SortedResponse
+from speleodb.utils.response import SuccessResponse
 
 
 class ViewNameMiddleware:
@@ -60,19 +59,23 @@ class DRFWrapResponseMiddleware:
         try:
             wrapped_response = self.get_response(request)
 
-            if isinstance(wrapped_response, (ErrorResponse, NoWrapResponse)):
+            if isinstance(wrapped_response, ErrorResponse):
                 payload.update(wrapped_response.data)
                 exception = True
+
+            elif isinstance(wrapped_response, NoWrapResponse):
+                payload.update(wrapped_response.data)
+
             elif isinstance(wrapped_response, SuccessResponse):
                 payload.update({"data": wrapped_response.data})
-            else:
-                if wrapped_response.exception:
-                    exception = True
-                    payload.update(wrapped_response.data)
 
-                else:
-                    return wrapped_response
-            
+            elif wrapped_response.exception:
+                exception = True
+                payload.update(wrapped_response.data)
+
+            else:
+                return wrapped_response
+
             http_status = wrapped_response.status_code
 
         except (NotAuthorizedError, PermissionDenied) as e:
@@ -82,6 +85,7 @@ class DRFWrapResponseMiddleware:
             payload["data"] = {}
             payload["error"] = f"An error occured in the process: {e}"
             http_status = status.HTTP_403_FORBIDDEN
+            exception = True
 
         except Exception as e:
             if settings.DEBUG:
@@ -90,6 +94,7 @@ class DRFWrapResponseMiddleware:
             payload["data"] = {}
             payload["error"] = f"An error occured in the process: {e}"
             http_status = status.HTTP_500_INTERNAL_SERVER_ERROR
+            exception = True
 
         payload["url"] = request.build_absolute_uri()
         payload["timestamp"] = get_timestamp()
@@ -97,7 +102,7 @@ class DRFWrapResponseMiddleware:
 
         response = SortedResponse(payload, status=http_status)
         response.exception = exception
-        
+
         try:
             response.accepted_renderer = wrapped_response.accepted_renderer
             response.accepted_media_type = wrapped_response.accepted_media_type
