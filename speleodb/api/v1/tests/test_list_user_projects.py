@@ -1,6 +1,7 @@
 import random
 
 from django.test import TestCase
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -17,7 +18,7 @@ class TestProjectInteraction(TestCase):
     PROJECT_COUNT = 10
 
     def setUp(self):
-        self.csrf_client = APIClient(enforce_csrf_checks=True)
+        self.client = APIClient(enforce_csrf_checks=False)
 
         self.user = UserFactory()
         self.token = TokenFactory(user=self.user)
@@ -35,9 +36,11 @@ class TestProjectInteraction(TestCase):
                 level=random.choice(list(Permission.Level)),
             )
 
+        endpoint = reverse("api:v1:list_all_projects")
+
         auth = self.header_prefix + self.token.key
-        response = self.csrf_client.get(
-            "/api/v1/projects/",
+        response = self.client.get(
+            endpoint,
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -62,7 +65,7 @@ class TestProjectInteraction(TestCase):
 
         target = {
             "success": True,
-            "url": "http://testserver/api/v1/projects/",
+            "url": f"http://testserver{endpoint}",
         }
 
         for key, val in target.items():

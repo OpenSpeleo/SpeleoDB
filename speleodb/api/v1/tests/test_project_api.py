@@ -1,5 +1,6 @@
 import pytest
 from django.test import TestCase
+from django.urls import reverse
 from parameterized import parameterized
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -26,7 +27,7 @@ class TestProjectInteraction(TestCase):
     header_prefix = "Token "
 
     def setUp(self):
-        self.csrf_client = APIClient(enforce_csrf_checks=True)
+        self.client = APIClient(enforce_csrf_checks=False)
 
         self.user = UserFactory()
         self.token = TokenFactory(user=self.user)
@@ -48,8 +49,8 @@ class TestProjectInteraction(TestCase):
         _ = PermissionFactory(user=self.user, project=self.project, level=level)
 
         auth = self.header_prefix + self.token.key
-        response = self.csrf_client.get(
-            f"/api/v1/project/{self.project.id}/",
+        response = self.client.get(
+            reverse("api:v1:one_project_apiview", kwargs={"id": self.project.id}),
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -62,8 +63,8 @@ class TestProjectInteraction(TestCase):
         serializer = ProjectSerializer(self.project, context={"user": self.user})
 
         assert serializer.data == response.data["data"]["project"], {
-            "reserialized": serializer.data, 
-            "response_data": response.data["data"]["project"]
+            "reserialized": serializer.data,
+            "response_data": response.data["data"]["project"],
         }
 
         if isinstance(response.data["data"]["history"], (tuple, list)):
@@ -85,8 +86,12 @@ class TestProjectInteraction(TestCase):
             ]
             for commit_data in response.data["data"]["history"]:
                 assert all(key in commit_data for key in commit_keys), commit_data
-                assert commit_data["committer_email"] == "contact@speleodb.com", commit_data["committer_email"]
-                assert commit_data["committer_name"] == "SpeleoDB", commit_data["committer_name"]
+                assert (
+                    commit_data["committer_email"] == "contact@speleodb.com"
+                ), commit_data["committer_email"]
+                assert commit_data["committer_name"] == "SpeleoDB", commit_data[
+                    "committer_name"
+                ]
         else:
             # error fetching project from gitlab. TODO
             pass
@@ -110,8 +115,8 @@ class TestProjectInteraction(TestCase):
         # It is possible to acquire a project multiple time.
         for _ in range(5):
             auth = self.header_prefix + self.token.key
-            response = self.csrf_client.post(
-                f"/api/v1/project/{self.project.id}/acquire/",
+            response = self.client.post(
+                reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
                 HTTP_AUTHORIZATION=auth,
             )
 
@@ -129,18 +134,21 @@ class TestProjectInteraction(TestCase):
             ).data
 
             assert project_data == response.data["data"], {
-            "reserialized": project_data, 
-            "response_data": response.data["data"]
-        }
-            assert response.data["data"]["active_mutex"]["user"] == self.user.email, (response.data, self.user.email)
+                "reserialized": project_data,
+                "response_data": response.data["data"],
+            }
+            assert response.data["data"]["active_mutex"]["user"] == self.user.email, (
+                response.data,
+                self.user.email,
+            )
 
         # =================== RELEASE PROJECT =================== #
 
         # It is possible to release a project multiple time.
         for _ in range(5):
             auth = self.header_prefix + self.token.key
-            response = self.csrf_client.post(
-                f"/api/v1/project/{self.project.id}/release/",
+            response = self.client.post(
+                reverse("api:v1:release_project", kwargs={"id": self.project.id}),
                 HTTP_AUTHORIZATION=auth,
             )
 
@@ -158,8 +166,8 @@ class TestProjectInteraction(TestCase):
             ).data
 
             assert project_data == response.data["data"], {
-                "reserialized": project_data, 
-                "response_data": response.data["data"]
+                "reserialized": project_data,
+                "response_data": response.data["data"],
             }
             assert response.data["data"]["active_mutex"] is None, response.data
 
@@ -180,8 +188,8 @@ class TestProjectInteraction(TestCase):
         # =================== ACQUIRE PROJECT =================== #
 
         auth = self.header_prefix + self.token.key
-        response = self.csrf_client.post(
-            f"/api/v1/project/{self.project.id}/acquire/",
+        response = self.client.post(
+            reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -197,10 +205,13 @@ class TestProjectInteraction(TestCase):
         project_data = ProjectSerializer(self.project, context={"user": self.user}).data
 
         assert project_data == response.data["data"], {
-            "reserialized": project_data, 
-            "response_data": response.data["data"]
+            "reserialized": project_data,
+            "response_data": response.data["data"],
         }
-        assert response.data["data"]["active_mutex"]["user"] == self.user.email, (response.data, self.user.email)
+        assert response.data["data"]["active_mutex"]["user"] == self.user.email, (
+            response.data,
+            self.user.email,
+        )
 
         # =================== RELEASE PROJECT =================== #
 
@@ -209,8 +220,8 @@ class TestProjectInteraction(TestCase):
         test_comment = "hello world"
 
         auth = self.header_prefix + self.token.key
-        response = self.csrf_client.post(
-            f"/api/v1/project/{self.project.id}/release/",
+        response = self.client.post(
+            reverse("api:v1:release_project", kwargs={"id": self.project.id}),
             HTTP_AUTHORIZATION=auth,
             data={"comment": test_comment},
         )
@@ -224,12 +235,12 @@ class TestProjectInteraction(TestCase):
         # Verify data can be de-serialized
         serializer = ProjectSerializer(data=response.data["data"])
         assert serializer.is_valid(), (serializer.errors, response.data)
-        
+
         project_data = ProjectSerializer(self.project, context={"user": self.user}).data
 
         assert project_data == response.data["data"], {
-            "reserialized": project_data, 
-            "response_data": response.data["data"]
+            "reserialized": project_data,
+            "response_data": response.data["data"],
         }
         assert response.data["data"]["active_mutex"] is None, response.data
         assert mutex.closing_comment == test_comment, (mutex, test_comment)
@@ -246,8 +257,8 @@ class TestProjectInteraction(TestCase):
         )
 
         auth = self.header_prefix + self.token.key
-        response = self.csrf_client.post(
-            f"/api/v1/project/{self.project.id}/acquire/",
+        response = self.client.post(
+            reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -260,8 +271,8 @@ class TestProjectInteraction(TestCase):
         )
 
         auth = self.header_prefix + self.token.key
-        response = self.csrf_client.post(
-            f"/api/v1/project/{self.project.id}/release/",
+        response = self.client.post(
+            reverse("api:v1:release_project", kwargs={"id": self.project.id}),
             HTTP_AUTHORIZATION=auth,
         )
 
