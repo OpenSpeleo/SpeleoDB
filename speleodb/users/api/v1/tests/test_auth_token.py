@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user
 from django.test import TestCase
 from django.urls import reverse
 from parameterized import parameterized
@@ -15,13 +16,14 @@ class TestTokenAuth(TestCase):
     header_prefix = "Token "
 
     def setUp(self):
-        self.csrf_client = APIClient(enforce_csrf_checks=False)
+        self.client = APIClient(enforce_csrf_checks=False)
         self.user = UserFactory()
         self.token = TokenFactory(user=self.user)
 
     def test_token_retrieval_works(self):
-        response = self.csrf_client.post(
-            reverse("api:v1_users:auth_token"),
+        endpoint = reverse("api:v1_users:auth_token")
+        response = self.client.post(
+            endpoint,
             {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD},
         )
         assert response.status_code == status.HTTP_200_OK, response.status_code
@@ -29,7 +31,7 @@ class TestTokenAuth(TestCase):
         target = {
             "success": True,
             "token": self.token.key,
-            "url": "http://testserver/api/v1/user/auth-token/",
+            "url": f"http://testserver{endpoint}",
         }
 
         for key, val in target.items():
@@ -43,16 +45,16 @@ class TestTokenAuth(TestCase):
             raise ValueError(f"Method `{method}` is not allowed.")
 
         if is_authenticated:
-            self.csrf_client.login(
+            self.client.login(
                 username=self.user.email, password=UserFactory.DEFAULT_PASSWORD
             )
-            from django.contrib.auth import get_user
+            assert get_user(self.client).is_authenticated
 
-            assert get_user(self.csrf_client).is_authenticated
+        method_fn = getattr(self.client, method.lower())
 
-        method_fn = getattr(self.csrf_client, method.lower())
+        endpoint = reverse("api:v1_users:auth_token")
         response = method_fn(
-            reverse("api:v1_users:auth_token"),
+            endpoint,
             {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD}
             if not is_authenticated
             else None,
@@ -75,14 +77,14 @@ class TestTokenAuth(TestCase):
 
         target = {
             "success": True,
-            "url": "http://testserver/api/v1/user/auth-token/",
+            "url": f"http://testserver{endpoint}",
         }
 
         for key, val in target.items():
             assert val == response.data[key], response.data
 
     def test_wrong_password(self):
-        response = self.csrf_client.post(
+        response = self.client.post(
             reverse("api:v1_users:auth_token"),
             {"email": self.user.email, "password": "YeeOfLittleFaith"},
         )
@@ -92,7 +94,7 @@ class TestTokenAuth(TestCase):
         assert not response.data["success"], response.data
 
     def test_not_existing_email(self):
-        response = self.csrf_client.post(
+        response = self.client.post(
             reverse("api:v1_users:auth_token"),
             {"email": "chuck@norris.com", "password": UserFactory.DEFAULT_PASSWORD},
         )
@@ -102,7 +104,7 @@ class TestTokenAuth(TestCase):
         assert not response.data["success"], response.data
 
     def test_missing_password(self):
-        response = self.csrf_client.post(
+        response = self.client.post(
             reverse("api:v1_users:auth_token"),
             {"email": self.user.email},
         )
@@ -117,7 +119,7 @@ class TestTokenAuth(TestCase):
         ), response.data
 
     def test_missing_email(self):
-        response = self.csrf_client.post(
+        response = self.client.post(
             reverse("api:v1_users:auth_token"),
             {"password": UserFactory.DEFAULT_PASSWORD},
         )
