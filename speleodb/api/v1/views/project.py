@@ -41,7 +41,7 @@ class ProjectApiView(GenericAPIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return SuccessResponse({"data": serializer.data}, status=status.HTTP_200_OK)
+            return SuccessResponse(serializer.data, status=status.HTTP_200_OK)
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
@@ -55,7 +55,7 @@ class ProjectApiView(GenericAPIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return SuccessResponse({"data": serializer.data}, status=status.HTTP_200_OK)
+            return SuccessResponse(serializer.data, status=status.HTTP_200_OK)
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
@@ -85,7 +85,7 @@ class CreateProjectApiView(GenericAPIView):
         if serializer.is_valid():
             serializer.save()
             return SuccessResponse(
-                {"data": serializer.data}, status=status.HTTP_201_CREATED
+                serializer.data, status=status.HTTP_201_CREATED
             )
 
         return ErrorResponse(
