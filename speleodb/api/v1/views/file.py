@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import logging
 
 from django.core.exceptions import ValidationError
 from rest_framework import permissions
@@ -14,9 +15,12 @@ from speleodb.processors.auto_selector import AutoSelectorDownloadFileProcessor
 from speleodb.processors.auto_selector import AutoSelectorUploadFileProcessor
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import ProjectNotFound
+from speleodb.utils.gitlab_manager import GitlabError
 from speleodb.utils.response import DownloadResponseFromFile
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
+
+logger = logging.getLogger(__name__)
 
 
 class FileUploadView(GenericAPIView):
@@ -43,8 +47,16 @@ class FileUploadView(GenericAPIView):
 
         try:
             processor = AutoSelectorUploadFileProcessor(file=file_uploaded)
+
         except ValidationError as e:
             return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except GitlabError:
+            logger.exception("There has been a problem accessing gitlab")
+            return ErrorResponse(
+                {"error": "There has been a problem accessing gitlab"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         commit_sha1 = processor.commit_uploaded_file(
             user=request.user, project=project, commit_msg=commit_message
@@ -74,11 +86,20 @@ class FileDownloadView(GenericAPIView):
 
     def get(self, request, commit_sha1=None, *args, **kwargs):
         project = self.get_object()
+
         try:
             artifact = AutoSelectorDownloadFileProcessor(
                 project=project, commit_sha1=commit_sha1
             )
+
         except ProjectNotFound as e:
             return ErrorResponse({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+
+        except GitlabError:
+            logger.exception("There has been a problem accessing gitlab")
+            return ErrorResponse(
+                {"error": "There has been a problem accessing gitlab"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         return DownloadResponseFromFile(filepath=artifact, attachment=False)

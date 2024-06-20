@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import logging
 
 from rest_framework import permissions
 from rest_framework import status
@@ -11,8 +12,11 @@ from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Project
 from speleodb.utils.api_decorators import method_permission_classes
+from speleodb.utils.gitlab_manager import GitlabError
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectApiView(GenericAPIView):
@@ -26,12 +30,16 @@ class ProjectApiView(GenericAPIView):
         project = self.get_object()
         serializer = self.get_serializer(project, context={"user": request.user})
 
-        return SuccessResponse(
-            {
-                "project": serializer.data,
-                "history": project.commit_history,
-            }
-        )
+        try:
+            return SuccessResponse(
+                {"project": serializer.data, "history": project.commit_history}
+            )
+        except GitlabError:
+            logger.exception("There has been a problem accessing gitlab")
+            return ErrorResponse(
+                {"error": "There has been a problem accessing gitlab"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     @method_permission_classes((UserHasWriteAccess,))
     def put(self, request, *args, **kwargs):
@@ -84,9 +92,7 @@ class CreateProjectApiView(GenericAPIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return SuccessResponse(
-                serializer.data, status=status.HTTP_201_CREATED
-            )
+            return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
