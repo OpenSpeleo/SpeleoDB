@@ -6,7 +6,6 @@ from rest_framework.test import APIClient
 
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserFactory
-
 from speleodb.utils.test_utils import named_product
 
 
@@ -92,7 +91,7 @@ class TestTokenAuth(TestCase):
         assert "token" not in response.data, response.data
         assert not response.data["success"], response.data
 
-    def test_wrong_email(self):
+    def test_not_existing_email(self):
         response = self.csrf_client.post(
             reverse("api:v1_users:auth_token"),
             {"email": "chuck@norris.com", "password": UserFactory.DEFAULT_PASSWORD},

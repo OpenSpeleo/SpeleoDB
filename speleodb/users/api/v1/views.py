@@ -87,13 +87,13 @@ class UserAuthTokenView(ObtainAuthToken):
         )
 
     def post(self, request, *args, **kwargs):
-        return self._fetch_token(request, refresh_token=False, *args, **kwargs)
+        return self._fetch_token(request, *args, refresh_token=False, **kwargs)
 
     def patch(self, request, *args, **kwargs):
-        return self._fetch_token(request, refresh_token=True, *args, **kwargs)
+        return self._fetch_token(request, *args, refresh_token=True, **kwargs)
 
     def put(self, request, *args, **kwargs):
-        return self._fetch_token(request, refresh_token=True, *args, **kwargs)
+        return self._fetch_token(request, *args, refresh_token=True, **kwargs)
 
 
 class PasswordChangeThrottle(UserRateThrottle):
@@ -104,7 +104,6 @@ class UserPasswordChangeView(GenericAPIView):
     serializer_class = PasswordChangeSerializer
     throttle_classes = [PasswordChangeThrottle]
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["put"]
 
     def put(self, request, *args, **kwargs):
         serializer = self.get_serializer(
