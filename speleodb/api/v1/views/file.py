@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
@@ -16,16 +15,14 @@ from speleodb.processors.auto_selector import AutoSelectorUploadFileProcessor
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.response import DownloadResponseFromFile
-from speleodb.utils.response import SuccessResponse
 from speleodb.utils.response import ErrorResponse
-
+from speleodb.utils.response import SuccessResponse
 
 
 class FileUploadView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
     serializer_class = ProjectSerializer
-    http_method_names = ["put"]
     lookup_field = "id"
 
     def put(self, request, *args, **kwargs):

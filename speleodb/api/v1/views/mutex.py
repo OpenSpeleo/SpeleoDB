@@ -4,7 +4,6 @@
 from django.core.exceptions import ValidationError
 from rest_framework import permissions
 from rest_framework.generics import GenericAPIView
-from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
@@ -12,14 +11,12 @@ from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import ResourceBusyError
 from speleodb.utils.response import SuccessResponse
-from speleodb.utils.response import ErrorResponse
 
 
 class ProjectAcquireApiView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
     serializer_class = ProjectSerializer
-    http_method_names = ["post"]
     lookup_field = "id"
 
     def post(self, request, *args, **kwargs):
@@ -50,7 +47,6 @@ class ProjectReleaseApiView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
     serializer_class = ProjectSerializer
-    http_method_names = ["post"]
     lookup_field = "id"
 
     def post(self, request, *args, **kwargs):

@@ -15,15 +15,14 @@ from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
-from speleodb.utils.response import SuccessResponse
 from speleodb.utils.response import ErrorResponse
+from speleodb.utils.response import SuccessResponse
 
 
 class ProjectPermissionListView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
     serializer_class = ProjectSerializer
-    http_method_names = ["get"]
     lookup_field = "id"
 
     def get(self, request, *args, **kwargs):
@@ -45,7 +44,6 @@ class ProjectPermissionView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated, UserHasAdminAccess]
     serializer_class = ProjectSerializer
-    http_method_names = ["post", "put", "delete"]
     lookup_field = "id"
 
     def _process_request_data(self, data, skip_level=False):

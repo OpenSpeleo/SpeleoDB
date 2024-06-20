@@ -1,26 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from decimal import Decimal
-from decimal import InvalidOperation as DecimalInvalidOperation
-
-from django.core.exceptions import ValidationError
-from django_countries import countries
-from django_countries.fields import Country
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasAdminAccess
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 from speleodb.utils.api_decorators import method_permission_classes
-from speleodb.utils.response import SuccessResponse
 from speleodb.utils.response import ErrorResponse
+from speleodb.utils.response import SuccessResponse
 
 
 class ProjectApiView(GenericAPIView):
@@ -92,7 +84,9 @@ class CreateProjectApiView(GenericAPIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return SuccessResponse({"data": serializer.data}, status=status.HTTP_201_CREATED)
+            return SuccessResponse(
+                {"data": serializer.data}, status=status.HTTP_201_CREATED
+            )
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
