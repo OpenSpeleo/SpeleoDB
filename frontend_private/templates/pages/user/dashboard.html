@@ -89,7 +89,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1_users:update_user_info' %}",
+                url: "{% url 'api:v1_users:user_info' %}",
                 method: "PATCH",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
@@ -114,7 +114,7 @@
                     else {
                         if ("error" in data.responseJSON) {
                             $("#modal_error_txt").text(data.responseJSON["error"]);
-                        } 
+                        }
                         else if ("errors" in data.responseJSON) {
                             var error_msg = "";
                             for (var key in data.responseJSON["errors"]){

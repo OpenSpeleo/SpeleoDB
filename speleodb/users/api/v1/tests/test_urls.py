@@ -9,9 +9,9 @@ def test_auth_token_url():
     )
 
 
-def test_update_user_info_url():
-    assert reverse("api:v1_users:update_user_info") == "/api/v1/user/info/"
-    assert resolve("/api/v1/user/info/").view_name == "api:v1_users:update_user_info"
+def test_user_info_url():
+    assert reverse("api:v1_users:user_info") == "/api/v1/user/info/"
+    assert resolve("/api/v1/user/info/").view_name == "api:v1_users:user_info"
 
 
 def test_update_user_password_url():
