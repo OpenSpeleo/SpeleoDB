@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import contextlib
 import logging
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -13,6 +15,7 @@ from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import UploadSerializer
 from speleodb.processors.auto_selector import AutoSelectorDownloadFileProcessor
 from speleodb.processors.auto_selector import AutoSelectorUploadFileProcessor
+from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.gitlab_manager import GitlabError
@@ -29,7 +32,16 @@ class FileUploadView(GenericAPIView):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request, fileformat, *args, **kwargs):
+        fileformat = "ariane"  # TODO: Remove
+        try:
+            fileformat = getattr(Format.FileFormat, fileformat.upper())
+        except AttributeError:
+            return ErrorResponse(
+                {"error": f"The file format requested is not recognized: {fileformat}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         project = self.get_object()
 
         commit_message = request.data.get("message", None)
@@ -62,6 +74,10 @@ class FileUploadView(GenericAPIView):
             user=request.user, project=project, commit_msg=commit_message
         )
 
+        # Associating the project with the format - ignore if already done.
+        with contextlib.suppress(IntegrityError):
+            Format.objects.create(project=project, format=fileformat)
+
         # Refresh the `modified_date` field
         project.save()
 
@@ -84,7 +100,15 @@ class FileDownloadView(GenericAPIView):
     http_method_names = ["get"]
     lookup_field = "id"
 
-    def get(self, request, commit_sha1=None, *args, **kwargs):
+    def get(self, request, fileformat, commit_sha1=None, *args, **kwargs):
+        try:
+            fileformat = getattr(Format.FileFormat, fileformat.upper())
+        except AttributeError:
+            return ErrorResponse(
+                {"error": f"The file format requested is not recognized: {fileformat}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         project = self.get_object()
 
         try:

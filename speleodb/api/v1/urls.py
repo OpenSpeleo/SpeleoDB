@@ -13,10 +13,16 @@ from speleodb.api.v1.views.permission import ProjectPermissionView
 from speleodb.api.v1.views.project import CreateProjectApiView
 from speleodb.api.v1.views.project import ProjectApiView
 from speleodb.api.v1.views.project import ProjectListApiView
+from speleodb.surveys.models import Format
 
 app_name = "v1"
 
 uuid_regex = "[0-9a-fA-F]{8}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{12}"  # noqa: E501
+
+down_formats_regex = (
+    "(?P<fileformat>" + "|".join(Format.FileFormat.download_choices) + ")"
+)
+up_formats_regex = "(?P<fileformat>" + "|".join(Format.FileFormat.upload_choices) + ")"
 
 urlpatterns = [
     # ========================== Public API Routes ========================== #
@@ -43,14 +49,18 @@ urlpatterns = [
         ProjectReleaseApiView.as_view(),
         name="release_project",
     ),
-    path("project/<uuid:id>/upload/", FileUploadView.as_view(), name="upload_project"),
-    path(
-        "project/<uuid:id>/download/",
+    re_path(
+        rf"project/(?P<id>{uuid_regex})/upload/{up_formats_regex}/$",
+        FileUploadView.as_view(),
+        name="upload_project",
+    ),
+    re_path(
+        rf"project/(?P<id>{uuid_regex})/download/{down_formats_regex}/$",
         FileDownloadView.as_view(),
         name="download_project",
     ),
     re_path(
-        rf"project/(?P<id>{uuid_regex})/download/(?P<commit_sha1>[0-9a-fA-F]{{6,40}})/$",
+        rf"project/(?P<id>{uuid_regex})/download/{down_formats_regex}/(?P<commit_sha1>[0-9a-fA-F]{{6,40}})/$",
         FileDownloadView.as_view(),
         name="download_project_at_hash",
     ),

@@ -3,19 +3,19 @@
         "model": "users.user",
         "pk": 1,
         "fields": {
-            "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$bGhCMmVsUVpsU3BKVXpJb1NrT3lCbw$TmEHswxnYF1fa0qHzgrNmDiWZAthfxVWubxUt0GhQUQ",
-            "last_login": "2024-06-09T04:19:07.680Z",
+            "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$TG1zNzA2WU1seTdXV01QbGFiQUp0ZA$Xp8Qx2POCC/lgVUHqPpPeY93wO6autE2EhdhEFoZ0T8",
+            "last_login": "2024-06-20T00:47:08.463Z",
             "is_superuser": true,
             "is_staff": true,
             "is_active": true,
             "date_joined": "2024-05-01T22:26:17Z",
             "name": "Contact Speleo",
+            "email": "contact@speleodb.com",
             "country": "MX",
             "email_on_speleodb_updates": false,
             "email_on_projects_updates": true,
             "groups": [],
-            "user_permissions": [],
-            "email": "contact@speleodb.com"
+            "user_permissions": []
         }
     },
     {
@@ -29,12 +29,12 @@
             "is_active": true,
             "date_joined": "2024-05-28T07:04:22.915Z",
             "name": "Jill Heinerth",
+            "email": "jill@heinerth.com",
             "country": "NZ",
             "email_on_speleodb_updates": true,
             "email_on_projects_updates": false,
             "groups": [],
-            "user_permissions": [],
-            "email": "jill@heinerth.com"
+            "user_permissions": []
         }
     },
     {
@@ -48,12 +48,12 @@
             "is_active": true,
             "date_joined": "2024-05-27T17:37:15.914Z",
             "name": "Sheck Exley",
+            "email": "sheck@exley.com",
             "country": "US",
             "email_on_speleodb_updates": true,
             "email_on_projects_updates": false,
             "groups": [],
-            "user_permissions": [],
-            "email": "sheck@exley.com"
+            "user_permissions": []
         }
     },
     {
@@ -67,12 +67,12 @@
             "is_active": true,
             "date_joined": "2024-05-01T22:26:28Z",
             "name": "Test Speleo",
+            "email": "test@speleodb.com",
             "country": "NZ",
             "email_on_speleodb_updates": true,
             "email_on_projects_updates": false,
             "groups": [],
-            "user_permissions": [],
-            "email": "test@speleodb.com"
+            "user_permissions": []
         }
     }
 ]

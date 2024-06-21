@@ -55,7 +55,6 @@ class ProjectFactory(DjangoModelFactory):
     latitude = Faker("latitude")
 
     country = random.choice(countries)[0]
-    software = random.choice(Project.Software.choices)[0]
 
     class Meta:
         model = Project

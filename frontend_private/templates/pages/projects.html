@@ -56,9 +56,6 @@
                                     <div class="font-semibold text-center">Project Name</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3">
-                                    <div class="font-semibold text-center">Software</div>
-                                </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">Country</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3">
@@ -91,24 +88,6 @@
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
                                         <div class="text-center">
                                             <div class="font-medium text-slate-800 text-slate-100">{{ data.project.name }}</div>
-                                        </div>
-                                    </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
-                                        <div class="text-center">
-                                            <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
-                                            {% if data.project.software == "MANUAL" %}
-                                                bg-slate-700">Manual</div>
-                                            {% elif data.project.software == "ARIANE" %}
-                                                bg-pastel-blue">Ariane</div>
-                                            {% elif data.project.software == "COMPASS" %}
-                                                bg-pastel-orange">Compass</div>
-                                            {% elif data.project.software == "WALLS" %}
-                                                bg-pastel-red">Walls</div>
-                                            {% elif data.project.software == "STICKMAPS" %}
-                                                bg-pastel-purple">StickMaps</div>
-                                            {% else %}
-                                                bg-slate-700">Other</div>
-                                            {% endif %}
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">

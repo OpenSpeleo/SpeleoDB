@@ -1,6 +1,8 @@
+import pytest
 from django.urls import resolve
 from django.urls import reverse
 
+from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 
 
@@ -64,57 +66,48 @@ def test_release_project(project: Project):
     )
 
 
-def test_upload_project(project: Project):
-    assert (
-        reverse("api:v1:upload_project", kwargs={"id": project.id})
-        == f"/api/v1/project/{project.id}/upload/"
+@pytest.mark.parametrize("fileformat", Format.FileFormat.upload_choices)
+def test_upload_project(fileformat: str, project: Project):
+    endpoint = reverse(
+        "api:v1:upload_project",
+        kwargs={"id": project.id, "fileformat": fileformat},
     )
-    assert (
-        resolve(f"/api/v1/project/{project.id}/upload/").view_name
-        == "api:v1:upload_project"
+    expected_endpoint = f"/api/v1/project/{project.id}/upload/{fileformat}/"
+
+    assert endpoint == expected_endpoint, endpoint
+
+    assert resolve(expected_endpoint).view_name == "api:v1:upload_project", resolve(
+        expected_endpoint
+    ).view_name
+
+
+@pytest.mark.parametrize("fileformat", Format.FileFormat.download_choices)
+def test_download_project(fileformat: str, project: Project):
+    endpoint = reverse(
+        "api:v1:download_project",
+        kwargs={"id": project.id, "fileformat": fileformat},
+    )
+    expected_endpoint = f"/api/v1/project/{project.id}/download/{fileformat}/"
+
+    assert endpoint == expected_endpoint, endpoint
+
+    assert resolve(expected_endpoint).view_name == "api:v1:download_project", resolve(
+        expected_endpoint
+    ).view_name
+
+
+@pytest.mark.parametrize("fileformat", Format.FileFormat.download_choices)
+def test_download_project_at_hash(fileformat: str, project: Project, sha1_hash: str):
+    endpoint = reverse(
+        "api:v1:download_project_at_hash",
+        kwargs={"id": project.id, "commit_sha1": sha1_hash, "fileformat": fileformat},
+    )
+    expected_endpoint = (
+        f"/api/v1/project/{project.id}/download/{fileformat}/{sha1_hash}/"
     )
 
+    assert endpoint == expected_endpoint, endpoint
 
-def test_download_project(project: Project):
     assert (
-        reverse("api:v1:download_project", kwargs={"id": project.id})
-        == f"/api/v1/project/{project.id}/download/"
-    )
-    assert (
-        resolve(f"/api/v1/project/{project.id}/download/").view_name
-        == "api:v1:download_project"
-    )
-
-
-def test_download_project_at_hash(project: Project, sha1_hash: str):
-    assert (
-        reverse(
-            "api:v1:download_project_at_hash",
-            kwargs={"id": project.id, "commit_sha1": sha1_hash},
-        )
-        == f"/api/v1/project/{project.id}/download/{sha1_hash}/"
-    )
-    assert (
-        resolve(f"/api/v1/project/{project.id}/download/{sha1_hash}/").view_name
-        == "api:v1:download_project_at_hash"
-    )
-
-
-# def test_create_project():
-#     assert reverse("api:v1:create_project") == "/api/v1/project/"
-#     assert resolve("/api/v1/project/").view_name == "api:v1:create_project"
-
-
-# def test_create_project():
-#     assert reverse("api:v1:create_project") == "/api/v1/project/"
-#     assert resolve("/api/v1/project/").view_name == "api:v1:create_project"
-
-
-# def test_create_project():
-#     assert reverse("api:v1:create_project") == "/api/v1/project/"
-#     assert resolve("/api/v1/project/").view_name == "api:v1:create_project"
-
-
-# def test_create_project():
-#     assert reverse("api:v1:create_project") == "/api/v1/project/"
-#     assert resolve("/api/v1/project/").view_name == "api:v1:create_project"
+        resolve(expected_endpoint).view_name == "api:v1:download_project_at_hash"
+    ), resolve(expected_endpoint).view_name

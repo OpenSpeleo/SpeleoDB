@@ -10,8 +10,6 @@ from rest_framework.generics import GenericAPIView
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Project
-from speleodb.utils.exceptions import NotAuthorizedError
-from speleodb.utils.exceptions import ResourceBusyError
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 

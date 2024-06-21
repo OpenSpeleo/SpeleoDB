@@ -69,8 +69,6 @@
                 </div>
             </section>
 
-            <input type="hidden" name="software" value="{{project.software}}">
-
         </div>
 
         <!-- Panel footer -->
@@ -137,7 +135,7 @@
                     else {
                         if ("error" in data.responseJSON) {
                             $("#modal_error_txt").text(data.responseJSON["error"]);
-                        } 
+                        }
                         else if ("errors" in data.responseJSON) {
                             var error_msg = "";
                             for (var key in data.responseJSON["errors"]){

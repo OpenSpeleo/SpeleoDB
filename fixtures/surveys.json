@@ -12,7 +12,6 @@
             "latitude": "20.19671000",
             "longitude": "-87.50123400",
             "_visibility": 0,
-            "_software": 0,
             "active_mutex": null
         }
     },
@@ -29,7 +28,6 @@
             "latitude": "-121.91914907",
             "longitude": "37.37635035",
             "_visibility": 0,
-            "_software": 1,
             "active_mutex": null
         }
     },
@@ -46,7 +44,6 @@
             "latitude": null,
             "longitude": null,
             "_visibility": 0,
-            "_software": 1,
             "active_mutex": null
         }
     },
@@ -63,7 +60,6 @@
             "latitude": "-121.91914907",
             "longitude": "37.37635035",
             "_visibility": 0,
-            "_software": 1,
             "active_mutex": null
         }
     },
@@ -80,7 +76,6 @@
             "latitude": null,
             "longitude": null,
             "_visibility": 0,
-            "_software": 99,
             "active_mutex": null
         }
     },
@@ -89,7 +84,7 @@
         "pk": "4fdf10b8-b2c5-4118-a215-28963b8e3072",
         "fields": {
             "creation_date": "2024-05-22T01:14:05.474Z",
-            "modified_date": "2024-06-04T04:51:31.886Z",
+            "modified_date": "2024-06-21T01:53:04.280Z",
             "name": "Carry's Loft",
             "description": "A nice beautiful canyon looking cenote under the electric lines",
             "country": "MX",
@@ -97,7 +92,6 @@
             "latitude": null,
             "longitude": null,
             "_visibility": 0,
-            "_software": 1,
             "active_mutex": null
         }
     },
@@ -114,7 +108,6 @@
             "latitude": "-121.91914907",
             "longitude": "37.37635035",
             "_visibility": 0,
-            "_software": 2,
             "active_mutex": null
         }
     },
@@ -131,7 +124,6 @@
             "latitude": null,
             "longitude": null,
             "_visibility": 0,
-            "_software": 4,
             "active_mutex": null
         }
     },
@@ -148,7 +140,6 @@
             "latitude": "-121.91914907",
             "longitude": "37.37635035",
             "_visibility": 0,
-            "_software": 3,
             "active_mutex": null
         }
     },
@@ -157,15 +148,14 @@
         "pk": "91206689-d3b5-4026-8a8c-1329721c0146",
         "fields": {
             "creation_date": "2024-05-22T01:14:08.030Z",
-            "modified_date": "2024-06-04T04:51:23.555Z",
-            "name": "Carry's Loft",
+            "modified_date": "2024-06-21T02:58:12.373Z",
+            "name": "Carry's Loft 1",
             "description": "A nice beautiful canyon looking cenote under the electric lines",
             "country": "MX",
             "fork_from": null,
             "latitude": null,
             "longitude": null,
             "_visibility": 0,
-            "_software": 1,
             "active_mutex": null
         }
     },
@@ -182,7 +172,6 @@
             "latitude": "-121.91914907",
             "longitude": "37.37635035",
             "_visibility": 0,
-            "_software": 1,
             "active_mutex": null
         }
     },
@@ -191,7 +180,7 @@
         "pk": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
         "fields": {
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z",
+            "modified_date": "2024-06-20T23:12:06.147Z",
             "name": "Mayan Blue 2",
             "description": "A beautiful Cenote",
             "country": "MX",
@@ -199,8 +188,7 @@
             "latitude": "-121.91914907",
             "longitude": "37.37635035",
             "_visibility": 0,
-            "_software": 1,
-            "active_mutex": 18
+            "active_mutex": null
         }
     },
     {
@@ -216,7 +204,6 @@
             "latitude": "-121.91914907",
             "longitude": "37.37635035",
             "_visibility": 0,
-            "_software": 1,
             "active_mutex": null
         }
     },
@@ -233,7 +220,6 @@
             "latitude": null,
             "longitude": null,
             "_visibility": 0,
-            "_software": 1,
             "active_mutex": null
         }
     },
@@ -243,9 +229,11 @@
         "fields": {
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -254,9 +242,11 @@
         "fields": {
             "project": "19036ed7-df8b-4a15-aa3d-3688b0b06b37",
             "user": 1,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -265,9 +255,11 @@
         "fields": {
             "project": "918d8e11-1a18-40ce-88f7-d42985bb28ed",
             "user": 1,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -276,9 +268,11 @@
         "fields": {
             "project": "e7ab44af-4a8e-493e-b609-c2ee26bbc552",
             "user": 1,
-            "_level": 1,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 1
         }
     },
     {
@@ -287,9 +281,11 @@
         "fields": {
             "project": "3a8cd379-570d-42fc-90d0-9059365134c1",
             "user": 4,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -298,9 +294,11 @@
         "fields": {
             "project": "61f54c24-ebf3-46e8-aa58-5bad16e5bf0f",
             "user": 1,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -309,9 +307,11 @@
         "fields": {
             "project": "1aa5bf4a-8766-4b7d-8fdf-d578bfd986e2",
             "user": 4,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -320,9 +320,11 @@
         "fields": {
             "project": "8930c296-65a5-45cb-b4e6-1f4bebbed5be",
             "user": 1,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -331,9 +333,11 @@
         "fields": {
             "project": "82522381-9f72-4cdb-a9c4-2a18e5079f1e",
             "user": 1,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -342,9 +346,11 @@
         "fields": {
             "project": "4d5c19fa-7f1a-4e41-ae11-04bf9c540dbb",
             "user": 1,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -353,9 +359,11 @@
         "fields": {
             "project": "4fdf10b8-b2c5-4118-a215-28963b8e3072",
             "user": 1,
-            "_level": 0,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 0
         }
     },
     {
@@ -364,9 +372,11 @@
         "fields": {
             "project": "91206689-d3b5-4026-8a8c-1329721c0146",
             "user": 1,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -375,9 +385,11 @@
         "fields": {
             "project": "f8d274bf-ee89-4c9e-9858-0ed153afa8f2",
             "user": 1,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -386,9 +398,11 @@
         "fields": {
             "project": "33a38b8e-189c-4fe1-a659-c6a2d10d7239",
             "user": 1,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -397,9 +411,11 @@
         "fields": {
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 3,
-            "_level": 2,
+            "is_active": true,
             "creation_date": "2024-05-01T22:34:05.327Z",
-            "modified_date": "2024-06-06T14:56:55.499Z"
+            "modified_date": "2024-06-06T14:56:55.499Z",
+            "deactivated_by": null,
+            "_level": 2
         }
     },
     {
@@ -589,9 +605,45 @@
             "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
             "user": 1,
             "creation_date": "2024-06-06T14:56:55.496Z",
-            "modified_date": "2024-06-06T14:56:55.496Z",
-            "closing_user": null,
+            "modified_date": "2024-06-20T23:12:06.143Z",
+            "closing_user": 1,
             "closing_comment": ""
+        }
+    },
+    {
+        "model": "surveys.format",
+        "pk": 1,
+        "fields": {
+            "project": "d4acddc1-aa1d-4a3c-a8ef-fe626eb68a10",
+            "_format": 0,
+            "creation_date": "2024-06-21T02:57:39.543Z"
+        }
+    },
+    {
+        "model": "surveys.format",
+        "pk": 2,
+        "fields": {
+            "project": "91206689-d3b5-4026-8a8c-1329721c0146",
+            "_format": 0,
+            "creation_date": "2024-06-21T02:58:31.286Z"
+        }
+    },
+    {
+        "model": "surveys.format",
+        "pk": 3,
+        "fields": {
+            "project": "e7ab44af-4a8e-493e-b609-c2ee26bbc552",
+            "_format": 0,
+            "creation_date": "2024-06-21T02:58:52.756Z"
+        }
+    },
+    {
+        "model": "surveys.format",
+        "pk": 5,
+        "fields": {
+            "project": "918d8e11-1a18-40ce-88f7-d42985bb28ed",
+            "_format": 0,
+            "creation_date": "2024-06-21T03:02:41.757Z"
         }
     }
 ]
