@@ -33,7 +33,10 @@ class FileUploadView(GenericAPIView):
     lookup_field = "id"
 
     def put(self, request, fileformat, *args, **kwargs):
+        # ======================== REMOVE ONCE IMPLEMENTED ======================== #
         fileformat = "ariane"  # TODO: Remove
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+
         try:
             fileformat = getattr(Format.FileFormat, fileformat.upper())
         except AttributeError:
@@ -57,13 +60,24 @@ class FileUploadView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Associating the project with the format - ignore if already done.
+        # We have to start with this in order to have `commit_date` > creation_date.
+        with contextlib.suppress(IntegrityError):
+            f_obj, created = Format.objects.get_or_create(
+                project=project, _format=fileformat
+            )
+
         try:
             processor = AutoSelectorUploadFileProcessor(file=file_uploaded)
 
         except ValidationError as e:
+            if created:
+                f_obj.delete()
             return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         except GitlabError:
+            if created:
+                f_obj.delete()
             logger.exception("There has been a problem accessing gitlab")
             return ErrorResponse(
                 {"error": "There has been a problem accessing gitlab"},
@@ -73,10 +87,6 @@ class FileUploadView(GenericAPIView):
         commit_sha1 = processor.commit_uploaded_file(
             user=request.user, project=project, commit_msg=commit_message
         )
-
-        # Associating the project with the format - ignore if already done.
-        with contextlib.suppress(IntegrityError):
-            Format.objects.create(project=project, format=fileformat)
 
         # Refresh the `modified_date` field
         project.save()
