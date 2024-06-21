@@ -75,8 +75,12 @@ class Format(models.Model):
         return f"<{self.__class__.__name__}: {self}>"
 
     @property
+    def raw_format(self) -> str:
+        return self.FileFormat(self._format)
+
+    @property
     def format(self) -> str:
-        return self.FileFormat(self._format).label
+        return self.raw_format.label
 
     @format.setter
     def format(self, value):
