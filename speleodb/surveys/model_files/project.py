@@ -33,7 +33,7 @@ class Project(models.Model):
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
     name = models.CharField(max_length=255, blank=False, null=False)
-    description = models.TextField (blank=False, null=False)
+    description = models.TextField(blank=False, null=False)
 
     country = CountryField(null=False, blank=False)
 
@@ -82,21 +82,6 @@ class Project(models.Model):
         verbose_name="visibility",
     )
 
-    class Software(models.IntegerChoices):
-        MANUAL = (0, "MANUAL")
-        ARIANE = (1, "ARIANE")
-        COMPASS = (2, "COMPASS")
-        WALLS = (3, "WALLS")
-        STICKMAPS = (4, "STICKMAPS")
-        OTHER = (99, "OTHER")
-
-    _software = models.IntegerField(
-        choices=Software.choices,
-        blank=False,
-        null=False,
-        verbose_name="software",
-    )
-
     # MUTEX Management
     active_mutex = models.OneToOneField(
         "Mutex",
@@ -116,14 +101,6 @@ class Project(models.Model):
                 f"Mutex Project mismatch: {self.active_mutex.project=} && {self=}"
             )
         super().save(*args, **kwargs)
-
-    @property
-    def software(self) -> str:
-        return self.Software(self._software).label
-
-    @software.setter
-    def software(self, value):
-        self._software = value
 
     @property
     def visibility(self) -> str:

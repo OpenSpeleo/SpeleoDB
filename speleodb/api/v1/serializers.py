@@ -12,7 +12,6 @@ from speleodb.utils.serializer_fields import CustomChoiceField
 
 class ProjectSerializer(serializers.ModelSerializer):
     country = CustomChoiceField(choices=countries)
-    software = CustomChoiceField(choices=Project.Software, source="_software")
     visibility = CustomChoiceField(
         choices=Project.Visibility,
         source="_visibility",
@@ -24,7 +23,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        exclude = ("_software", "_visibility")
+        exclude = ("_visibility",)
 
     def create(self, validated_data):
         project = super().create(validated_data)

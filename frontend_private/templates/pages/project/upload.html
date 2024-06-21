@@ -136,7 +136,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:upload_project' id=project.id %}",
+                url: "{% url 'api:v1:upload_project' id=project.id fileformat='web' %}",
                 method: "PUT",
                 data: formData,
                 contentType: false,

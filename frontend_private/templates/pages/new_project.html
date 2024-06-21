@@ -2,7 +2,7 @@
 {% load static i18n compress%}
 
 {% load countries %}
-{% load survey_softwares %}
+{% load survey_formats %}
 {% load visibility_scopes %}
 
 
@@ -86,22 +86,6 @@
                                     <div class="w-full">
                                         <label class="block text-sm font-medium mb-1" for="longitude">Longitude:</label>
                                         <input id="longitude" name="longitude" class="form-input max-w-full w-128" type="text" placeholder="[Optional]" />
-                                    </div>
-                                </div>
-                            </section>
-
-                            <!-- Software -->
-                            <section>
-                                <div class="flex flex-wrap mt-5">
-                                    <div class="mr-2">
-                                        <label class="block text-sm font-medium mb-1" for="software">Software:<span class="text-rose-600"> *</span></label>
-                                        <select id="software" name="software" class="form-select max-w-full w-128">
-                                            <option disabled selected value>Select an option...</option>
-                                        {% get_survey_softwares as softwares %}
-                                        {% for software in softwares %}
-                                            <option value="{{ software }}">{{ software|title }}</option>
-                                        {% endfor %}
-                                        </select>
                                     </div>
                                 </div>
                             </section>
@@ -198,7 +182,7 @@
                     else {
                         if ("error" in data.responseJSON) {
                             $("#modal_error_txt").text(data.responseJSON["error"]);
-                        } 
+                        }
                         else if ("errors" in data.responseJSON) {
                             var error_msg = "";
                             for (var key in data.responseJSON["errors"]){
