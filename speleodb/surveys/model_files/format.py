@@ -21,31 +21,68 @@ class Format(models.Model):
     )
 
     class FileFormat(models.IntegerChoices):
-        ARIANE = (0, "ARIANE")
-        COMPASS = (1, "COMPASS")
-        WALLS = (2, "WALLS")
-        STICKMAPS = (3, "STICKMAPS")
-        ZIP = (97, "ZIP")
-        WEB = (98, "WEB")
-        OTHER = (99, "OTHER")
+        # NOTE: Special values that don't really represent a "file format":
+        # ------------------------------------------------------------------------------
+
+        # - `OTHER`: is a wildchar format. Anything that doesn't fit the other format
+        #   will just be saved as a file without any special treatment.
+        OTHER = (1000, "OTHER")
+
+        # - `AUTO`: not a format. Upload endpoint that automatically detects the format.
+        AUTO = (9998, "AUTO")
+
+        # - `DUMP`: not a format. Download endpoint that packages and returns everything
+        #   as a zipfile.
+        DUMP = (9999, "DUMP")
+
+        __excluded_download_formats__ = [OTHER, AUTO]
+        __excluded_upload_formats__ = [OTHER, DUMP]
+        __excluded_db_formats__ = [AUTO, DUMP]
+
+        # NOTE: Recognized Software Formats that will undergo a special process.
+        # ------------------------------------------------------------------------------
+        # Each software gets a new 10s.
+        # It allows to insert new formats without having to shift everyone.
+        # Hopefully no software uses more than 10 different file formats.
+
+        # Ariane Line
+        ARIANE_TML = (10, "ARIANE_TML")
+        ARIANE_TMLU = (11, "ARIANE_TMLU")
+        ARIANE_AGR = (12, "ARIANE_AGR")
+
+        # Compass
+        COMPASS_MAK = (20, "COMPASS_MAK")
+        COMPASS_DAT = (21, "COMPASS_DAT")
+
+        # Walls
+        WALLS_SRV = (30, "WALLS_SRV")
+        WALLS_WPJ = (31, "WALLS_WPJ")
+
+        # StickMaps
+        STICKMAPS = (40, "STICKMAPS")
 
         @classmethod
-        def filtered_choices(cls, exclude_vals=None):
+        def filtered_choices(cls, exclude_vals=None, as_str=True):
             exclude_vals = exclude_vals if not None else []
-            return [f.lower() for _, f in cls.choices if f not in exclude_vals]
+
+            filtered_list = [f for f in cls.choices if f not in exclude_vals]
+            if as_str:
+                return [f.lower() for _, f in filtered_list]
+            return filtered_list
 
         @classproperty
         def download_choices(cls):  # noqa: N805
-            return cls.filtered_choices(exclude_vals=["OTHER", "WEB"])
+            return cls.filtered_choices(exclude_vals=cls.__excluded_download_formats__)
 
         @classproperty
         def upload_choices(cls):  # noqa: N805
-            return cls.filtered_choices(exclude_vals=["OTHER", "ZIP"])
+            return cls.filtered_choices(exclude_vals=cls.__excluded_upload_formats__)
 
         @classproperty
         def db_choices(cls):  # noqa: N805
-            exclude_vals = ["WEB", "ZIP"]
-            return [(i, f) for i, f in cls.choices if f not in exclude_vals]
+            return cls.filtered_choices(
+                exclude_vals=cls.__excluded_db_formats__, as_str=False
+            )
 
     _format = models.IntegerField(
         choices=FileFormat.db_choices,
@@ -56,6 +93,7 @@ class Format(models.Model):
 
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
 
+    # Object Manager disabling update
     objects = NoUpdateQuerySet.as_manager()
 
     class Meta:
@@ -68,6 +106,7 @@ class Format(models.Model):
         return f"{self.project} -> {self.format}"
 
     def save(self, *args, **kwargs):
+        # Only allows object creation. Otherwise bypass.
         if self.pk is None:
             super().save(*args, **kwargs)
 

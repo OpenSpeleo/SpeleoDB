@@ -14,7 +14,3 @@ def get_survey_formats():
 @register.simple_tag
 def get_project_formats(project: Project):
     return project.rel_formats.all().order_by("_format")
-    formats = [f.raw_format for f in project.rel_formats.all()] + [
-        Format.FileFormat.ZIP
-    ]
-    return [f.label.lower() for f in formats]
