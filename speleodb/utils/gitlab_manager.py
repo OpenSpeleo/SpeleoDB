@@ -1,7 +1,9 @@
+import contextlib
 import json
 import logging
 import pathlib
 import time
+import uuid
 from functools import wraps
 
 import git
@@ -125,6 +127,7 @@ class GitRepo:
 
 
 class _GitlabManager(metaclass=SingletonMetaClass):
+    __GITLAB_CACHE__ = TTLCache(maxsize=100, ttl=600)
     FIRST_COMMIT_NAME = "[Automated] Project Creation"
 
     def __init__(self):
@@ -159,7 +162,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             self._gl.enable_debug()
 
     @check_initialized
-    def create_or_clone_project(self, project_id) -> pathlib.Path:
+    def create_or_clone_project(self, project_id: uuid.UUID) -> pathlib.Path:
         if self._gl is None:
             return None
 
@@ -197,7 +200,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
     # cache data for no longer than ten minutes
     @cached(cache=TTLCache(maxsize=100, ttl=600))
     @check_initialized
-    def _get_project(self, project_id) -> ProjectManager:
+    def _get_project(self, project_id: uuid.UUID) -> ProjectManager:
         if self._gl is None:
             return None
 
@@ -207,8 +210,14 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             # Communication Problem
             return None
 
+    @classmethod
+    def void_project_gitlab_cache(cls, project_id: uuid.UUID):
+        with contextlib.suppress(KeyError):
+            del cls.__GITLAB_CACHE__[project_id]
+
+    @cached(cache=__GITLAB_CACHE__, key=lambda self, project_id: project_id)
     @check_initialized
-    def get_commit_history(self, project_id, hide_dl_url=True):
+    def get_commit_history(self, project_id: uuid.UUID):
         if self._gl is None:
             return None
 
@@ -223,9 +232,10 @@ class _GitlabManager(metaclass=SingletonMetaClass):
 
             commits = project.commits.list(get_all=True, all=True)
             data = [json.loads(commit.to_json()) for commit in commits]
-            if hide_dl_url:
-                for commit in data:
-                    del commit["web_url"]
+
+            # Removes traces of a download URL from gitlab
+            for commit in data:
+                del commit["web_url"]
 
         except gitlab.exceptions.GitlabHttpError:
             return None
