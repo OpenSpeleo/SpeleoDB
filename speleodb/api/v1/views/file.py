@@ -34,7 +34,7 @@ class FileUploadView(GenericAPIView):
 
     def put(self, request, fileformat, *args, **kwargs):
         # ======================== REMOVE ONCE IMPLEMENTED ======================== #
-        fileformat = "ariane"  # TODO: Remove
+        fileformat = "ariane_tml"  # TODO: Remove when properly implemented
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 
         try:
@@ -81,12 +81,21 @@ class FileUploadView(GenericAPIView):
             logger.exception("There has been a problem accessing gitlab")
             return ErrorResponse(
                 {"error": "There has been a problem accessing gitlab"},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        commit_sha1 = processor.commit_uploaded_file(
-            user=request.user, project=project, commit_msg=commit_message
-        )
+        try:
+            commit_sha1 = processor.commit_uploaded_file(
+                user=request.user, project=project, commit_msg=commit_message
+            )
+        except Exception as e:
+            if created:
+                f_obj.delete()
+            logger.exception("There has been a problem committing the file")
+            return ErrorResponse(
+                {"error": f"There has been a problem committing the file: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         # Refresh the `modified_date` field
         project.save()
