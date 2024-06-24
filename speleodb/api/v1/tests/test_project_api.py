@@ -51,7 +51,7 @@ class TestProjectInteraction(TestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse("api:v1:one_project_apiview", kwargs={"id": self.project.id}),
-            HTTP_AUTHORIZATION=auth,
+            headers={"authorization": auth},
         )
 
         assert response.status_code == status.HTTP_200_OK, response.status_code
@@ -117,7 +117,7 @@ class TestProjectInteraction(TestCase):
             auth = self.header_prefix + self.token.key
             response = self.client.post(
                 reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
-                HTTP_AUTHORIZATION=auth,
+                headers={"authorization": auth},
             )
 
             assert response.status_code == status.HTTP_200_OK, response.status_code
@@ -149,7 +149,7 @@ class TestProjectInteraction(TestCase):
             auth = self.header_prefix + self.token.key
             response = self.client.post(
                 reverse("api:v1:release_project", kwargs={"id": self.project.id}),
-                HTTP_AUTHORIZATION=auth,
+                headers={"authorization": auth},
             )
 
             assert response.status_code == status.HTTP_200_OK, response.status_code
@@ -190,7 +190,7 @@ class TestProjectInteraction(TestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
-            HTTP_AUTHORIZATION=auth,
+            headers={"authorization": auth},
         )
 
         assert response.status_code == status.HTTP_200_OK, response.status_code
@@ -222,7 +222,7 @@ class TestProjectInteraction(TestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse("api:v1:release_project", kwargs={"id": self.project.id}),
-            HTTP_AUTHORIZATION=auth,
+            headers={"authorization": auth},
             data={"comment": test_comment},
         )
 
@@ -259,7 +259,7 @@ class TestProjectInteraction(TestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
-            HTTP_AUTHORIZATION=auth,
+            headers={"authorization": auth},
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN, response.status_code
@@ -273,7 +273,7 @@ class TestProjectInteraction(TestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse("api:v1:release_project", kwargs={"id": self.project.id}),
-            HTTP_AUTHORIZATION=auth,
+            headers={"authorization": auth},
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN, response.status_code

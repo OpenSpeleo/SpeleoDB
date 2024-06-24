@@ -1,10 +1,8 @@
 import shutil
-import zipfile
 from pathlib import Path
 
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Project
-from speleodb.users.models import User
 
 
 class TMLUFileProcessor(BaseFileProcessor):

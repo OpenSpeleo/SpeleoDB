@@ -33,7 +33,7 @@ class FileUploadView(GenericAPIView):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def put(self, request, fileformat, *args, **kwargs):
+    def put(self, request, fileformat, *args, **kwargs):  # noqa: PLR0911, PLR0912
         # ======================== REMOVE ONCE IMPLEMENTED ======================== #
         fileformat = "ariane_tml"  # TODO: Remove when properly implemented
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #

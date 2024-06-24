@@ -39,10 +39,7 @@ class TestProjectInteraction(TestCase):
         endpoint = reverse("api:v1:list_all_projects")
 
         auth = self.header_prefix + self.token.key
-        response = self.client.get(
-            endpoint,
-            HTTP_AUTHORIZATION=auth,
-        )
+        response = self.client.get(endpoint, headers={"authorization": auth})
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["data"]) == self.PROJECT_COUNT

@@ -10,6 +10,7 @@ from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
 
 
+@admin.register(Format)
 class FormatAdmin(admin.ModelAdmin):
     list_display = ("project", "format", "creation_date")
     ordering = ("-creation_date",)
@@ -19,9 +20,7 @@ class FormatAdmin(admin.ModelAdmin):
         return False
 
 
-admin.site.register(Format, FormatAdmin)
-
-
+@admin.register(Mutex)
 class MutexAdmin(admin.ModelAdmin):
     list_display = (
         "project",
@@ -35,9 +34,7 @@ class MutexAdmin(admin.ModelAdmin):
     list_filter = ["closing_user"]
 
 
-admin.site.register(Mutex, MutexAdmin)
-
-
+@admin.register(Permission)
 class PermissionAdmin(admin.ModelAdmin):
     list_display = (
         "project",
@@ -51,9 +48,7 @@ class PermissionAdmin(admin.ModelAdmin):
     list_filter = ["is_active"]
 
 
-admin.site.register(Permission, PermissionAdmin)
-
-
+@admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     list_display = (
         "name",
@@ -66,6 +61,3 @@ class ProjectAdmin(admin.ModelAdmin):
         "fork_from",
     )
     ordering = ("name",)
-
-
-admin.site.register(Project, ProjectAdmin)

@@ -4,9 +4,7 @@ from django.urls import reverse
 
 def test_auth_token_url():
     assert reverse("api:v1_users:auth_token") == "/api/v1/user/auth-token/"
-    assert (
-        resolve("/api/v1/user/auth-token/").view_name == "api:v1_users:auth_token"
-    )
+    assert resolve("/api/v1/user/auth-token/").view_name == "api:v1_users:auth_token"
 
 
 def test_user_info_url():
