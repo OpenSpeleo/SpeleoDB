@@ -37,7 +37,11 @@ def check_initialized(func):
             except Exception as e:
                 raise GitlabError from e
 
-        return func(self, *args, **kwargs)
+        try:
+            return func(self, *args, **kwargs)
+        except GitlabError:
+            # Force re-auth just in case
+            self._is_initialized = False
 
     return _impl
 
