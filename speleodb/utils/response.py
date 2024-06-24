@@ -27,8 +27,13 @@ class SortedResponse(Response):
         super().__init__(data, *args, **kwargs)
 
 
-class SuccessResponse(Response): pass
+class SuccessResponse(Response):
+    pass
 
-class ErrorResponse(Response): pass
 
-class NoWrapResponse(Response): pass
+class ErrorResponse(Response):
+    pass
+
+
+class NoWrapResponse(Response):
+    pass

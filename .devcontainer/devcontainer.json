@@ -70,6 +70,8 @@
                 "ms-azuretools.vscode-docker",
                 // Env
                 "IronGeek.vscode-env",
+                // GH Action
+                "github.vscode-github-actions"
             ]
         }
     },

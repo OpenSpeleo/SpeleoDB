@@ -3,13 +3,7 @@
 
 from collections import OrderedDict
 
-from django.conf import settings
 from django.utils import timezone
-from rest_framework import status
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.response import Response
-
-from speleodb.utils.exceptions import NotAuthorizedError
 
 
 def get_timestamp():

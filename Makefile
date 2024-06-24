@@ -1,5 +1,6 @@
 reset_db:
 	python manage.py reset_db
+	python manage.py drop_test_database
 	python manage.py makemigrations
 	python manage.py migrate
 

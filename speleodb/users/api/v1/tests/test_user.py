@@ -26,10 +26,7 @@ class TestUserAPI(TestCase):
         endpoint = reverse("api:v1_users:user_info")
 
         auth = self.header_prefix + self.token.key
-        response = self.client.get(
-            endpoint,
-            HTTP_AUTHORIZATION=auth,
-        )
+        response = self.client.get(endpoint, headers={"authorization": auth})
 
         assert response.status_code == status.HTTP_200_OK, response.status_code
 
@@ -88,7 +85,7 @@ class TestUserAPI(TestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.patch(
             endpoint,
-            HTTP_AUTHORIZATION=auth,
+            headers={"authorization": auth},
             data=json.dumps(kwargs),
             content_type="application/json",
         )

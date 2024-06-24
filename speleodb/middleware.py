@@ -46,7 +46,7 @@ class DRFWrapResponseMiddleware:
     def select_renderer(self, request):
         return self.negotiator.select_renderer(request, self.renderers)
 
-    def __call__(self, request):
+    def __call__(self, request):  # noqa: C901, PLR0912, RUF100
         # Skip for non-API calls
         if "/api/" not in request.path:
             return self.get_response(request)
@@ -86,7 +86,7 @@ class DRFWrapResponseMiddleware:
             http_status = status.HTTP_403_FORBIDDEN
             exception = True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001, RUF100
             if settings.DEBUG:
                 raise
 
