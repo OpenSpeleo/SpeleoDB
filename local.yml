@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 volumes:
   speleodb_local_postgres_data: {}
@@ -20,8 +20,9 @@ services:
       - ./.envs/.local/.django
       - ./.envs/.local/.postgres
     ports:
-      - '8000:8000'
+      - "8000:8000"
     command: /start
+    # command: sleep 600 && /start
 
   postgres:
     build:
@@ -64,5 +65,5 @@ services:
     image: speleodb_local_flower
     container_name: speleodb_local_flower
     ports:
-      - '5555:5555'
+      - "5555:5555"
     command: /start-flower
