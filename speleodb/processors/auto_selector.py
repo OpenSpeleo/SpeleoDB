@@ -1,13 +1,15 @@
 from django.core.exceptions import ValidationError
 
-from speleodb.processors._impl.ariane_processor import TMLFileProcessor
-from speleodb.processors._impl.ariane_processor import TMLUFileProcessor
-from speleodb.processors._impl.zip_processor import DumpProcessor
+from speleodb.processors._impl.ariane import AGRFileProcessor
+from speleodb.processors._impl.ariane import TMLFileProcessor
+from speleodb.processors._impl.ariane import TMLUFileProcessor
+from speleodb.processors._impl.compass import DATFileProcessor
+from speleodb.processors._impl.compass import MAKFileProcessor
+from speleodb.processors._impl.misc import DumpProcessor
 from speleodb.processors.base import Artifact
+from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
-
-CANDIDATE_PROCESSORS = [TMLFileProcessor, TMLUFileProcessor]
 
 
 class AutoSelector:
@@ -20,11 +22,20 @@ class AutoSelector:
             case Format.FileFormat.ARIANE_TMLU:
                 return TMLUFileProcessor
 
+            case Format.FileFormat.ARIANE_AGR:
+                return AGRFileProcessor
+
+            case Format.FileFormat.COMPASS_DAT:
+                return DATFileProcessor
+
+            case Format.FileFormat.COMPASS_MAK:
+                return MAKFileProcessor
+
             case Format.FileFormat.AUTO:
                 if f_extension is None:
                     raise ValueError("Automatic Processor discovery not enabled.")
 
-                for candidate_cls in CANDIDATE_PROCESSORS:
+                for candidate_cls in BaseFileProcessor.__subclasses__():
                     if f_extension in candidate_cls.ALLOWED_EXTENSIONS:
                         return candidate_cls
 
