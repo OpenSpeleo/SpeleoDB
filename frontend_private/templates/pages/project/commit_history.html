@@ -93,7 +93,7 @@
                                             {% for dl_format in dl_formats %}
                                                 {% if dl_format.creation_date|date:"Y/m/d H:i" <= commit.committed_date|date:"Y/m/d H:i" %}
                                                 <li>
-                                                    <a class="font-medium text-sm text-slate-300 hover:text-slate-200 flex py-1 px-3 mb-2" @click="open = false" @click="open = false" @focus="open = true" @focusout="open = false" target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id commit_sha1=commit.short_id fileformat=dl_format.format|lower %}">{{ dl_format.format|title }}</a>
+                                                    <a class="font-medium text-sm text-slate-300 hover:text-slate-200 flex py-1 px-3 mb-2" @click="open = false" @click="open = false" @focus="open = true" @focusout="open = false" target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id commit_sha1=commit.short_id fileformat=dl_format.format|lower %}">{{ dl_format.raw_format.webname }}</a>
                                                 </li>
                                                 {% endif %}
                                             {% endfor %}

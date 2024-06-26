@@ -84,6 +84,10 @@ class Format(models.Model):
                 exclude_vals=cls.__excluded_db_formats__, as_str=False
             )
 
+        @property
+        def webname(self):
+            return self.label.replace("_", " ")
+
     _format = models.IntegerField(
         choices=FileFormat.db_choices,
         verbose_name="format",
