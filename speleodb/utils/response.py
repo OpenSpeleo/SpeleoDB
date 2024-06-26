@@ -9,12 +9,12 @@ from speleodb.utils.helpers import maybe_sort_data
 
 
 class DownloadResponseFromFile(FileResponse):
-    def __init__(self, filepath, attachment=True):
+    def __init__(self, filepath: str, filename: str, attachment=True):
         filepath = Path(filepath)
         super().__init__(
             filepath.open(mode="rb"),
             as_attachment=attachment,
-            filename=filepath.name,
+            filename=filename,
             content_type="application/octet-stream",
         )
 

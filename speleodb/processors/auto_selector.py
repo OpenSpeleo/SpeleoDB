@@ -1,36 +1,59 @@
-from pathlib import Path
-
 from django.core.exceptions import ValidationError
 
-from speleodb.processors.ariane.tml_processor import TMLFileProcessor
-from speleodb.processors.ariane.tmlu_processor import TMLUFileProcessor
-from speleodb.processors.base import BaseFileProcessor
+from speleodb.processors._impl.ariane_processor import TMLFileProcessor
+from speleodb.processors._impl.ariane_processor import TMLUFileProcessor
+from speleodb.processors._impl.zip_processor import DumpProcessor
+from speleodb.processors.base import Artifact
+from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 
 CANDIDATE_PROCESSORS = [TMLFileProcessor, TMLUFileProcessor]
 
 
-def AutoSelectorUploadFileProcessor(file):  # noqa: N802
-    file_ext = Path(file.name).suffix.lower()
+class AutoSelector:
+    @staticmethod
+    def get_processor(fileformat: Format.FileFormat, f_extension=None):
+        match fileformat:
+            case Format.FileFormat.ARIANE_TML:
+                return TMLFileProcessor
 
-    for processor_cls in CANDIDATE_PROCESSORS:
-        if file_ext in processor_cls.ALLOWED_EXTENSIONS:
-            return processor_cls(file=file)
+            case Format.FileFormat.ARIANE_TMLU:
+                return TMLUFileProcessor
 
-    raise ValidationError(f"No valid file processor found for extension: {file_ext}")
+            case Format.FileFormat.AUTO:
+                if f_extension is None:
+                    raise ValueError("Automatic Processor discovery not enabled.")
 
+                for candidate_cls in CANDIDATE_PROCESSORS:
+                    if f_extension in candidate_cls.ALLOWED_EXTENSIONS:
+                        return candidate_cls
 
-def AutoSelectorDownloadFileProcessor(project: Project, commit_sha1: str):  # noqa: N802
-    BaseFileProcessor.checkout_commit_or_master(
-        project=project, commit_sha1=commit_sha1
-    )
+            case Format.FileFormat.DUMP:
+                return DumpProcessor
 
-    git_repo_path = project.git_repo.path
+        raise ValidationError(
+            f"This file format `{fileformat}` [with extension: `{f_extension}`] is not "
+            "implemented yet ..."
+        )
 
-    for processor_cls in CANDIDATE_PROCESSORS:
-        if (git_repo_path / processor_cls.TARGET_SAVE_FILENAME).is_file():
-            return processor_cls.prepare_file_for_download(
-                project=project, commit_sha1=commit_sha1
+    @staticmethod
+    def get_upload_processor(fileformat: Format.FileFormat, file, project: Project):
+        if not isinstance(fileformat, Format.FileFormat):
+            raise TypeError(
+                "Unknown `fileformat` received, expected one of "
+                f"{Format.FileFormat.choices}"
             )
 
-    raise ValidationError(f"No valid file processor found for project: {project.name}")
+        file = Artifact(file)
+        processor_cls = AutoSelector.get_processor(
+            fileformat=fileformat, f_extension=file.extension
+        )
+        return processor_cls(project=project)
+
+    @staticmethod
+    def get_download_processor(
+        fileformat: Format.FileFormat, project: Project, commit_sha1: str
+    ):
+        processor_cls = AutoSelector.get_processor(fileformat=fileformat)
+
+        return processor_cls(project=project, commit_sha1=commit_sha1)
