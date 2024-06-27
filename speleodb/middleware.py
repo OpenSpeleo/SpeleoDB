@@ -58,6 +58,9 @@ class DRFWrapResponseMiddleware:
         try:
             wrapped_response = self.get_response(request)
 
+            if not request.path.startswith("/api/v1"):
+                return wrapped_response
+
             if isinstance(wrapped_response, ErrorResponse):
                 payload.update(wrapped_response.data)
                 exception = True
