@@ -1,5 +1,6 @@
 import contextlib
 import datetime
+import pathlib
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
@@ -9,8 +10,11 @@ from django.urls import reverse
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView
+from gitdb.exc import BadName as GitRevBadName
 from rest_framework.authtoken.models import Token
 
+from speleodb.git_engine.exceptions import GitCommitNotFoundError
+from speleodb.git_engine.core import GitRepo
 from speleodb.surveys.models import Project
 from speleodb.utils.gitlab_manager import GitlabManager
 
@@ -119,7 +123,7 @@ class ProjectMutexesView(_BaseProjectView):
 
 
 class ProjectCommitsView(_BaseProjectView):
-    template_name = "pages/project/commit_history.html"
+    template_name = "pages/project/revision_history.html"
 
     def get(self, request, project_id: str):
         data = super().get(request, project_id=project_id)
@@ -143,3 +147,22 @@ class ProjectCommitsView(_BaseProjectView):
             "Initial Empty",
         ]
         return render(request, ProjectCommitsView.template_name, data)
+
+
+class ProjectGitExplorerView(_BaseProjectView):
+    template_name = "pages/project/git_view.html"
+
+    def get(self, request, project_id: str, hexsha: str | None = None):
+        data = super().get(request, project_id=project_id)
+
+        project = Project.objects.get(id=project_id)
+
+        # Guard against non-existing commit ID
+        try:
+            data["n_commits"] = len(list(project.git_repo.commits))
+            data["commit"] = project.git_repo.commit(hexsha)
+        except (ValueError, GitCommitNotFoundError, GitRevBadName):
+            # commit does not exists
+            return redirect("private:project_revisions", project_id=project.id)
+
+        return render(request, ProjectGitExplorerView.template_name, data)

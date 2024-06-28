@@ -2,7 +2,6 @@ import contextlib
 import json
 import logging
 import pathlib
-import time
 import uuid
 from functools import wraps
 
@@ -15,7 +14,7 @@ from django.conf import settings
 from gitlab.v4.objects.projects import ProjectManager
 
 from speleodb.common.models import Option
-from speleodb.users.models import User
+from speleodb.git_engine.core import GitRepo
 from speleodb.utils.lazy_string import LazyString
 from speleodb.utils.metaclasses import SingletonMetaClass
 
@@ -44,90 +43,6 @@ def check_initialized(func):
             self._is_initialized = False
 
     return _impl
-
-
-class GitRepo:
-    def __init__(self, git_repo) -> None:
-        if isinstance(git_repo, pathlib.Path):
-            git_repo = git.Repo(git_repo)
-        self._repo = git_repo
-
-    def __fspath__(self):
-        return self._repo.working_tree_dir
-
-    @property
-    def repo(self):
-        return self._repo
-
-    @property
-    def path(self):
-        return pathlib.Path(self)
-
-    @property
-    def commit_sha1(self):
-        return self._repo.head.commit.hexsha
-
-    @property
-    def commit_sha1_short(self):
-        return self.commit_sha1[:8]
-
-    @property
-    def commit_date(self):
-        return time.gmtime(self._repo.head.commit.committed_date)
-
-    def checkout_and_pull(self, branch: str = "master"):
-        self.checkout_branch_or_commit(branch_name=branch)
-        self.pull()
-
-    def pull(self):
-        origin = self._repo.remotes.origin
-        origin.pull()
-
-    def checkout_branch_or_commit(
-        self, commit_sha1: str | None = None, branch_name: str | None = None
-    ):
-        if commit_sha1 and branch_name:
-            raise ValueError(
-                f"`{commit_sha1=}` and `{branch_name=}` can not be set simultaneously."
-            )
-
-        if commit_sha1 is None and branch_name is None:
-            raise ValueError(
-                f"`{commit_sha1=}` and `{branch_name=}` can not be both set to `None`."
-            )
-
-        try:
-            self._repo.git.checkout(branch_name or commit_sha1)
-        except git.exc.GitCommandError:
-            if branch_name:
-                self._repo.git.checkout("-b", branch_name)
-            else:
-                raise
-
-        if branch_name:
-            # Ensure we are at the top of the branch
-            self.pull()
-
-    def checkout_branch(self, branch_name: str):
-        raise NotImplementedError
-
-    def commit_and_push_project(self, message: str, user: User) -> str:
-        # Add every file pending
-        self._repo.index.add("*")
-
-        # If there are modified files:
-        if self._repo.is_dirty():
-            author = git.Actor(user.name, user.email)
-
-            commit = self._repo.index.commit(
-                message, author=author, committer=GIT_COMMITTER
-            )
-
-            self._repo.git.push("--set-upstream", "origin", self._repo.active_branch)
-
-            return commit.hexsha
-
-        return None
 
 
 class _GitlabManager(metaclass=SingletonMetaClass):
@@ -199,7 +114,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             project_dir.parent.mkdir(exist_ok=True, parents=True)
             git_repo = git.Repo.clone_from(git_url, project_dir)
 
-        return GitRepo(git_repo=git_repo)
+        return GitRepo.from_repo(repo=git_repo)
 
     # cache data for no longer than ten minutes
     @cached(cache=TTLCache(maxsize=100, ttl=600))

@@ -63,8 +63,8 @@ class AutoSelector:
 
     @staticmethod
     def get_download_processor(
-        fileformat: Format.FileFormat, project: Project, commit_sha1: str
+        fileformat: Format.FileFormat, project: Project, hexsha: str
     ):
         processor_cls = AutoSelector.get_processor(fileformat=fileformat)
 
-        return processor_cls(project=project, commit_sha1=commit_sha1)
+        return processor_cls(project=project, hexsha=hexsha)

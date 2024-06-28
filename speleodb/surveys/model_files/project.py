@@ -14,9 +14,9 @@ from django.db import models
 from django.utils import timezone
 from django_countries.fields import CountryField
 
+from speleodb.git_engine.core import GitRepo
 from speleodb.users.models import User
 from speleodb.utils.gitlab_manager import GitlabManager
-from speleodb.utils.gitlab_manager import GitRepo
 
 
 class Project(models.Model):
@@ -203,7 +203,7 @@ class Project(models.Model):
 
         if not project_dir.exists():
             git_repo = GitlabManager.create_or_clone_project(self.id)
-            git_repo_path = pathlib.Path(git_repo).resolve()
+            git_repo_path = pathlib.Path(git_repo.path).resolve()
 
             if project_dir != git_repo_path:
                 raise ValueError(

@@ -2,6 +2,7 @@
 {% load static i18n compress%}
 
 {% load countries %}
+{% load set_var %}
 
 {% block content %}
 <main class="grow">
@@ -129,8 +130,11 @@
 
                             <!-- Project Revision History -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_revisions' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_revisions' project_id=project.id %}">
-                                    {% if request.url_name == 'project_revisions' %}
+                                {% if request.url_name == 'project_revisions' or request.url_name == 'project_revision_explorer' %}
+                                {% set is_active = True %}
+                                {% endif %}
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if is_active %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_revisions' project_id=project.id %}">
+                                    {% if is_active %}
                                         <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
                                     {% else %}
                                         <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 text-slate-500 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
@@ -139,7 +143,7 @@
                                         <path d="M12 8l0 4l2 2" />
                                         <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
                                       </svg>
-                                    {% if request.url_name == 'project_revisions' %}
+                                    {% if is_active %}
                                         <span class="text-sm font-medium text-indigo-400">
                                     {% else %}
                                         <span class="text-sm font-medium text-slate-300 hover:text-slate-200">

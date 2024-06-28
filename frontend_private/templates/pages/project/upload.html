@@ -159,7 +159,7 @@
                 success: function (data) {
                     $("#loading_spinner").hide();
 
-                    if (data["commit_sha1"] === null) {
+                    if (data["hexsha"] === null) {
                         $("#modal_error_txt").text("The file uploaded is identical to the one currently stored.");
                         $("#modal_error").css('display', 'flex');
                     } else {
