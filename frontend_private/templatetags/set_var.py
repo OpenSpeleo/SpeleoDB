@@ -17,6 +17,7 @@ class SetVarNode(template.Node):
         return ""
 
 
+@register.tag("set")
 def set_var(parser, token):
     """
     {% set <var_name>  = <var_value> %}
@@ -27,6 +28,3 @@ def set_var(parser, token):
             "'set' tag must be of the form:  {% set <var_name>  = <var_value> %}"
         )
     return SetVarNode(parts[1], parts[3])
-
-
-register.tag("set", set_var)

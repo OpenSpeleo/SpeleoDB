@@ -16,12 +16,14 @@ from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import UploadSerializer
+from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.processors.auto_selector import AutoSelector
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.gitlab_manager import GitlabError
 from speleodb.utils.gitlab_manager import GitlabManager
+from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import DownloadResponseFromFile
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
@@ -86,7 +88,7 @@ class FileUploadView(GenericAPIView):
             )
 
         try:
-            file, commit_sha1 = processor.commit_file(
+            file, hexsha = processor.commit_file(
                 file=file_uploaded,
                 user=request.user,
                 commit_msg=commit_message,
@@ -125,7 +127,7 @@ class FileUploadView(GenericAPIView):
             {
                 "content_type": file.content_type,
                 "message": commit_message,
-                "commit_sha1": commit_sha1,
+                "hexsha": hexsha,
                 "project": ProjectSerializer(
                     project, context={"user": request.user}
                 ).data,
@@ -140,7 +142,7 @@ class FileDownloadView(GenericAPIView):
     http_method_names = ["get"]
     lookup_field = "id"
 
-    def get(self, request, fileformat, commit_sha1=None, *args, **kwargs):
+    def get(self, request, fileformat, hexsha=None, *args, **kwargs):
         try:
             fileformat = getattr(Format.FileFormat, fileformat.upper())
         except AttributeError:
@@ -161,7 +163,7 @@ class FileDownloadView(GenericAPIView):
 
         try:
             processor = AutoSelector.get_download_processor(
-                fileformat=fileformat, project=project, commit_sha1=commit_sha1
+                fileformat=fileformat, project=project, hexsha=hexsha
             )
 
         except (ValidationError, FileNotFoundError) as e:
@@ -175,7 +177,7 @@ class FileDownloadView(GenericAPIView):
             return DownloadResponseFromFile(
                 filename=filename,
                 filepath=temp_filepath,
-                attachment=False,
+                attachment=True,
             )
 
         except ProjectNotFound as e:
@@ -190,3 +192,27 @@ class FileDownloadView(GenericAPIView):
 
         finally:
             pathlib.Path(temp_file.name).unlink()
+
+
+class BlobDownloadView(GenericAPIView):
+    queryset = Project.objects.all()
+    permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
+    serializer_class = UploadSerializer
+    http_method_names = ["get"]
+    lookup_field = "id"
+
+    def get(self, request, hexsha: str, *args, **kwargs):
+        project = self.get_object()
+
+        try:
+            obj = project.git_repo.find_blob(hexsha)
+
+        except GitBlobNotFoundError:
+            return ErrorResponse(
+                {"error": f"Object id=`{hexsha}` not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return DownloadResponseFromBlob(
+            obj=obj.content, filename=obj.name, attachment=True
+        )

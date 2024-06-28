@@ -1,11 +1,19 @@
-""":py:class:`django.http.HttpResponse` subclasses."""
-
 from pathlib import Path
 
 from django.http import FileResponse
 from rest_framework.response import Response
 
 from speleodb.utils.helpers import maybe_sort_data
+
+
+class DownloadResponseFromBlob(FileResponse):
+    def __init__(self, obj, filename: str, attachment=True):
+        super().__init__(
+            obj,
+            as_attachment=attachment,
+            filename=filename,
+            content_type="application/octet-stream",
+        )
 
 
 class DownloadResponseFromFile(FileResponse):

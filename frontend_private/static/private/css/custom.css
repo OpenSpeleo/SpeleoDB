@@ -137,3 +137,13 @@
 #dropzone [type="file"] {
     cursor: pointer;
 }
+
+/* Git Webview */
+
+.git_btn {
+    background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
+    --tw-gradient-from: #fff var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+    --tw-gradient-to: #f3f4f6 var(--tw-gradient-to-position);
+}

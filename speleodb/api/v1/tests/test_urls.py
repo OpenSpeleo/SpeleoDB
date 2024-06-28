@@ -100,7 +100,7 @@ def test_download_project(fileformat: str, project: Project):
 def test_download_project_at_hash(fileformat: str, project: Project, sha1_hash: str):
     endpoint = reverse(
         "api:v1:download_project_at_hash",
-        kwargs={"id": project.id, "commit_sha1": sha1_hash, "fileformat": fileformat},
+        kwargs={"id": project.id, "hexsha": sha1_hash, "fileformat": fileformat},
     )
     expected_endpoint = (
         f"/api/v1/project/{project.id}/download/{fileformat}/{sha1_hash}/"

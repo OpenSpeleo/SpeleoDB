@@ -1,4 +1,5 @@
 from django.urls import path
+from django.urls import re_path
 
 from frontend_private.views import AuthTokenView
 from frontend_private.views import DashboardView
@@ -9,10 +10,13 @@ from frontend_private.views import PreferencesView
 from frontend_private.views import ProjectCommitsView
 from frontend_private.views import ProjectDangerZoneView
 from frontend_private.views import ProjectDetailsView
+from frontend_private.views import ProjectGitExplorerView
 from frontend_private.views import ProjectListingView
 from frontend_private.views import ProjectMutexesView
 from frontend_private.views import ProjectPermissionsView
 from frontend_private.views import ProjectUploadView
+
+uuid_regex = "[0-9a-fA-F]{8}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{12}"  # noqa: E501
 
 app_name = "private"
 urlpatterns = [
@@ -51,6 +55,16 @@ urlpatterns = [
         "project/<uuid:project_id>/revisions/",
         ProjectCommitsView.as_view(),
         name="project_revisions",
+    ),
+    path(
+        "project/<uuid:project_id>/browser/",
+        ProjectGitExplorerView.as_view(),
+        name="project_revision_explorer",
+    ),
+    re_path(
+        rf"project/(?P<project_id>{uuid_regex})/browser/(?P<hexsha>[0-9a-fA-F]{{6,40}})/$",
+        ProjectGitExplorerView.as_view(),
+        name="project_revision_explorer",
     ),
     path(
         "project/<uuid:project_id>/danger_zone/",

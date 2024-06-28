@@ -1,0 +1,104 @@
+{% extends "pages/project/base.html" %}
+{% load static i18n compress %}
+
+{% load filter_utils %}
+{% load set_var %}
+
+{% block right_panel %}
+<div class="grow">
+    <div class="p-6 space-y-6">
+
+        {% comment %} <!-- Page header -->
+        <div class="mb-16 block">
+
+            <!-- Left: Title -->
+            <div class="mb-4 sm:mb-0 w-fit block float-left">
+                <h1 class="text-2xl md:text-3xl text-slate-800 text-slate-100 font-bold">
+                    Project File Explorer
+                </h1>
+            </div>
+
+        </div> {% endcomment %}
+
+        <div class="flex min-h-screen flex-col">
+            <main class="flex flex-1 flex-col">
+
+               <div class="container relative flex flex-col md:grid md:space-y-0 w-full md:grid-cols-12  space-y-4 md:gap-6 mb-16">
+                  <section class="pt-8 border-gray-100 col-span-full">
+                     <header class="flex flex-wrap items-center justify-start pb-2 md:justify-end lg:flex-nowrap">
+
+                       <div class="mb-2 mr-2 flex w-full items-center md:w-auto">
+                           <a class="btn git_btn group mr-0 flex-grow-0 cursor-pointer rounded-full text-sm md:px-4 md:text-base" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha=commit.hexsha fileformat='dump' %}">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-type-zip mr-2" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round"  width="1.5em" height="1.5em" viewBox="4.25 2.25 15.5 19.5">
+                                 <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                 <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
+                                 <path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4"></path>
+                                 <path d="M16 18h1.5a1.5 1.5 0 0 0 0 -3h-1.5v6"></path>
+                                 <path d="M12 15v6"></path>
+                                 <path d="M5 15h3l-3 6h3"></path>
+                               </svg>
+                              <span class="mr-1 text-gray-600">Download as ZIP</span>
+                           </a>
+                       </div>
+
+                       <div class="mb-2 mr-2 flex w-full items-center md:w-auto">
+                           <a class="btn git_btn group mr-0 flex-grow-0 cursor-pointer rounded-full text-sm md:px-4 md:text-base" href="{% url 'private:project_revisions' project_id=project.id %}">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-history mr-2" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round"  width="1.5em" height="1.5em" viewBox="2.3 2.16 19.45 19.5">
+                                 <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                 <path d="M12 8l0 4l2 2"></path>
+                                 <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"></path>
+                               </svg>
+                              <span class="mr-1 text-gray-600">History: {{n_commits}} commits</span>
+                           </a>
+                       </div>
+
+                     </header>
+
+                     <div class=" contents mt-4">
+                        <div class="grid grid-cols-12 from-gray-100-to-white flex items-baseline rounded-t-lg border border-b-0 bg-gradient-to-t px-3 py-2 border-gray-600">
+                           <div class="sm:col-span-12 md:col-span-9 flex flex-none items-center truncate text-gray-300">
+                              {{ commit.author }}:<span class="ml-4 text-sm text-gray-400 truncate">{{ commit.message }}</span>
+                           </div>
+                           <div class="md:col-span-3 hidden md:flex items-center truncate ml-auto text-sm text-gray-300">
+                              <span class="mr-1">{{ commit.hexsha_short }}</span> - {{ commit.date|time_struct_since }}
+                           </div>
+                       </div>
+                        <ul class="mb-8 rounded-b-lg border border-t-0 border-gray-600 bg-gray-900/50">
+
+                           {% for file in commit.root_files %}
+                           <li class="grid h-10 grid-cols-12 place-content-center gap-x-3 border-t px-3 border-gray-600">
+                              <div class="sm:col-span-8 md:col-span-3 flex items-center">
+                                 <a class="group flex items-center truncate hover:underline" download href="{% url 'api:v1:download_blob' id=project.id hexsha=file.hexsha %}">
+                                    <svg class="flex-none mr-2 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 32 32">
+                                       <path d="M25.7 9.3l-7-7A.908.908 0 0 0 18 2H8a2.006 2.006 0 0 0-2 2v24a2.006 2.006 0 0 0 2 2h16a2.006 2.006 0 0 0 2-2V10a.908.908 0 0 0-.3-.7zM18 4.4l5.6 5.6H18zM24 28H8V4h8v6a2.006 2.006 0 0 0 2 2h6z" fill="currentColor"></path>
+                                    </svg>
+                                    <span class="truncate">{{ file.name }}</span>
+                                 </a>
+                              </div>
+                              <a class="group sm:col-span-4 md:col-span-2 flex items-center justify-self-end truncate text-right font-mono text-[0.8rem] leading-6 text-gray-400 xl:pr-10 hover:underline" title="Download file" download href="{% url 'api:v1:download_blob' id=project.id hexsha=file.hexsha %}">
+                                 {{ file.size|format_byte_size }}
+                                 <div class="ml-2 flex h-5 w-5 items-center justify-center rounded border text-gray-500 border-gray-600 xl:ml-4">
+                                    <svg class="" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" role="img" width="1em" height="1em" viewBox="0 0 32 32">
+                                       <path fill="currentColor" d="M26 24v4H6v-4H4v4a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-4zm0-10l-1.41-1.41L17 20.17V2h-2v18.17l-7.59-7.58L6 14l10 10l10-10z"></path>
+                                    </svg>
+                                 </div>
+                              </a>
+                              <a class="md:col-span-5 hidden md:flex items-center font-mono text-sm text-gray-400 hover:underline" href="{% url 'private:project_revision_explorer' project_id=project.id hexsha=file.commit.hexsha %}">
+                                 <span class="truncate">{{ file.commit.message }}</span>
+                              </a>
+                              <a class="md:col-span-2 hidden md:flex truncate ml-auto text-sm text-gray-400 items-center hover:underline" href="{% url 'private:project_revision_explorer' project_id=project.id hexsha=file.commit.hexsha %}">
+                                 <time datetime="2024-06-15T01:00:03" title="Sat, 15 Jun 2024 01:00:03 GMT">{{ file.commit.date|time_struct_since }}</time>
+                              </a>
+                           </li>
+                           {% endfor %}
+
+                        </ul>
+                     </div>
+                  </section>
+               </div>
+            </main>
+         </div>
+
+    </div>
+</div>
+{% endblock right_panel %}

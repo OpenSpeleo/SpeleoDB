@@ -81,9 +81,9 @@ class BaseFileProcessor:
     TARGET_DOWNLOAD_FILENAME = None
     ASSOC_FILEFORMAT = None
 
-    def __init__(self, project: Project, commit_sha1=None):
+    def __init__(self, project: Project, hexsha=None):
         self._project = project
-        self._commit_sha1 = commit_sha1
+        self._hexsha = hexsha
         self.checkout_commit_or_master()
 
     @property
@@ -91,8 +91,8 @@ class BaseFileProcessor:
         return self._project
 
     @property
-    def commit_sha1(self):
-        return self._commit_sha1
+    def hexsha(self):
+        return self._hexsha
 
     def commit_file(self, file, user: User, commit_msg: str):
         # Make sure the project is update to ToT (Top of Tree)
@@ -115,14 +115,14 @@ class BaseFileProcessor:
         if not self.project.git_repo:
             raise ProjectNotFound("This project does not exist on gitlab or on drive")
 
-        if self.commit_sha1 is None:
+        if self.hexsha is None:
             # Make sure the project is update to ToT (Top of Tree)
             self.project.git_repo.checkout_branch_or_commit(branch_name="master")
             self.project.git_repo.pull()
 
         else:
             self.project.git_repo.checkout_branch_or_commit(
-                commit_sha1=self.commit_sha1
+                hexsha=self.hexsha
             )
 
     def postprocess_file_before_download(self, filepath: Path):
@@ -140,8 +140,9 @@ class BaseFileProcessor:
         if not isinstance(target_f, Path):
             raise TypeError(f"Unexpected `target_f` type received: {type(target_f)}")
 
+        commit_date = time.gmtime(self.project.git_repo.head.commit.committed_date)
         filename = self.TARGET_DOWNLOAD_FILENAME.format(
-            timestamp=time.strftime("%Y-%m-%d_%Hh%M", self.project.git_repo.commit_date)
+            timestamp=time.strftime("%Y-%m-%d_%Hh%M", commit_date)
         )
 
         try:
