@@ -35,10 +35,6 @@ class Format(models.Model):
         #   as a zipfile.
         DUMP = (9999, "DUMP")
 
-        __excluded_download_formats__ = [OTHER, AUTO]
-        __excluded_upload_formats__ = [OTHER, DUMP]
-        __excluded_db_formats__ = [AUTO, DUMP]
-
         # NOTE: Recognized Software Formats that will undergo a special process.
         # ------------------------------------------------------------------------------
         # Each software gets a new 10s.
@@ -87,6 +83,18 @@ class Format(models.Model):
         @property
         def webname(self):
             return self.label.replace("_", " ")
+
+        @classproperty
+        def __excluded_download_formats__(cls):  # noqa: N805
+            return [cls.OTHER, cls.AUTO]
+
+        @classproperty
+        def __excluded_upload_formats__(cls):  # noqa: N805
+            return [cls.DUMP]
+
+        @classproperty
+        def __excluded_db_formats__(cls):  # noqa: N805
+            return [cls.DUMP, cls.AUTO]
 
     _format = models.IntegerField(
         choices=FileFormat.db_choices,

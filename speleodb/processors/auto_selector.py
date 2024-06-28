@@ -36,16 +36,16 @@ class AutoSelector:
                     raise ValueError("Automatic Processor discovery not enabled.")
 
                 for candidate_cls in BaseFileProcessor.__subclasses__():
-                    if f_extension in candidate_cls.ALLOWED_EXTENSIONS:
-                        return candidate_cls
+                    try:
+                        if f_extension in candidate_cls.ALLOWED_EXTENSIONS:
+                            return candidate_cls
+                    except TypeError:  # Only allows downloads
+                        continue
 
             case Format.FileFormat.DUMP:
                 return DumpProcessor
 
-        raise ValidationError(
-            f"This file format `{fileformat}` [with extension: `{f_extension}`] is not "
-            "implemented yet ..."
-        )
+        return BaseFileProcessor
 
     @staticmethod
     def get_upload_processor(fileformat: Format.FileFormat, file, project: Project):
