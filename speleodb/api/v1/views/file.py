@@ -7,6 +7,7 @@ import pathlib
 import tempfile
 
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import IntegrityError
 from rest_framework import permissions
 from rest_framework import status
@@ -62,10 +63,16 @@ class FileUploadView(GenericAPIView):
             return ErrorResponse(data, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            file_uploaded = request.data["artifact"]
+            file_uploaded = request.FILES["artifact"]
         except KeyError:
             return ErrorResponse(
-                {"error": "Uploaded file `artifact is missing.`"},
+                {"error": "Uploaded file `artifact` is missing."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not isinstance(file_uploaded, InMemoryUploadedFile):
+            return ErrorResponse(
+                {"error": f"Unknown artifact received: `{file_uploaded}`"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -78,14 +85,13 @@ class FileUploadView(GenericAPIView):
                 fileformat = processor.ASSOC_FILEFORMAT
 
         except (ValidationError, FileNotFoundError) as e:
-            return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse({"error": e}, status=status.HTTP_400_BAD_REQUEST)
 
         # Associating the project with the format - ignore if already done.
         # We have to start with this in order to have `commit_date` > creation_date.
-        with contextlib.suppress(IntegrityError):
-            f_obj, created = Format.objects.get_or_create(
-                project=project, _format=fileformat
-            )
+        f_obj, created = Format.objects.get_or_create(
+            project=project, _format=fileformat
+        )
 
         try:
             file, hexsha = processor.commit_file(

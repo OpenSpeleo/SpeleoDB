@@ -70,7 +70,7 @@ logger = logging.getLogger(__name__)
 class GitFile:
     def __init__(self, repo, blob):
         self._blob = blob
-        self._repo = repo
+        self.repo = repo
 
     @classmethod
     def from_hexsha(cls, repo, hexsha):
@@ -79,7 +79,15 @@ class GitFile:
 
     @property
     def repo(self):
+        if not isinstance(self._repo, GitRepo):
+            return GitRepo.from_repo(self._repo)
         return self._repo
+
+    @repo.setter
+    def repo(self, value):
+        if not isinstance(value, GitRepo):
+            value = GitRepo.from_repo(value)
+        self._repo = value
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.abspath}>"
@@ -174,9 +182,9 @@ class GitTree(Tree):
 
     @property
     def repo(self):
-        if isinstance(self._repo, GitRepo):
-            return self._repo
-        return GitRepo.from_repo(self._repo)
+        if not isinstance(self._repo, GitRepo):
+            return GitRepo.from_repo(self._repo)
+        return self._repo
 
     @repo.setter
     def repo(self, value):
@@ -246,9 +254,9 @@ class GitCommit(Commit):
 
     @property
     def repo(self):
-        if isinstance(self._repo, GitRepo):
-            return self._repo
-        return GitRepo.from_repo(self._repo)
+        if not isinstance(self._repo, GitRepo):
+            self._repo = GitRepo.from_repo(self._repo)
+        return self._repo
 
     @repo.setter
     def repo(self, value):
@@ -467,7 +475,7 @@ class GitRepo(Repo):
 
             commit = self.index.commit(message, author=author, committer=GIT_COMMITTER)
 
-            self.git.push("--set-upstream", "origin", self._repo.active_branch)
+            self.git.push("--set-upstream", "origin", self.active_branch)
 
             return commit.hexsha
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
+from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
 from speleodb.utils.exceptions import ProjectNotFound
@@ -61,13 +62,13 @@ class Artifact:
         if not isinstance(allowed_extensions, (list, tuple)):
             raise TypeError(f"Unexpected type: {type(allowed_mimetypes)=}")
 
-        if self.content_type not in allowed_mimetypes:
+        if self.content_type not in allowed_mimetypes and "*" not in allowed_mimetypes:
             raise ValidationError(
                 f"Invalid file type received: `{self.content_type}`, "
                 f"expected one of: {allowed_mimetypes}"
             )
 
-        if self.extension not in allowed_extensions:
+        if self.extension not in allowed_extensions and "*" not in allowed_extensions:
             raise ValidationError(
                 f"Invalid file extension received: `{self.extension}`, "
                 f"expected one of: {allowed_extensions}"
@@ -75,11 +76,11 @@ class Artifact:
 
 
 class BaseFileProcessor:
-    ALLOWED_EXTENSIONS = None
-    ALLOWED_MIMETYPES = None
+    ALLOWED_EXTENSIONS = ["*"]
+    ALLOWED_MIMETYPES = ["*"]
     TARGET_SAVE_FILENAME = None
     TARGET_DOWNLOAD_FILENAME = None
-    ASSOC_FILEFORMAT = None
+    ASSOC_FILEFORMAT = Format.FileFormat.OTHER
 
     def __init__(self, project: Project, hexsha=None):
         self._project = project
@@ -96,7 +97,7 @@ class BaseFileProcessor:
 
     def commit_file(self, file, user: User, commit_msg: str):
         # Make sure the project is update to ToT (Top of Tree)
-        self.project.git_repo.checkout_and_pull()
+        self.project.git_repo.checkout_branch(branch_name="master")
 
         file = Artifact(file)
         file.assert_valid(
@@ -104,11 +105,17 @@ class BaseFileProcessor:
             allowed_mimetypes=self.ALLOWED_MIMETYPES,
         )
 
-        target_path = self.project.git_repo.path / self.TARGET_SAVE_FILENAME
+        filename = (
+            self.TARGET_SAVE_FILENAME
+            if self.TARGET_SAVE_FILENAME is not None
+            else file.name
+        )
+
+        target_path = self.project.git_repo.path / filename
         file.write(path=target_path)
 
         return file, self.project.git_repo.commit_and_push_project(
-            message=commit_msg, user=user
+            message=commit_msg, author_name=user.name, author_email=user.email
         )
 
     def checkout_commit_or_master(self):
@@ -121,9 +128,7 @@ class BaseFileProcessor:
             self.project.git_repo.pull()
 
         else:
-            self.project.git_repo.checkout_branch_or_commit(
-                hexsha=self.hexsha
-            )
+            self.project.git_repo.checkout_branch_or_commit(hexsha=self.hexsha)
 
     def postprocess_file_before_download(self, filepath: Path):
         with contextlib.suppress(shutil.SameFileError):
@@ -141,8 +146,12 @@ class BaseFileProcessor:
             raise TypeError(f"Unexpected `target_f` type received: {type(target_f)}")
 
         commit_date = time.gmtime(self.project.git_repo.head.commit.committed_date)
-        filename = self.TARGET_DOWNLOAD_FILENAME.format(
-            timestamp=time.strftime("%Y-%m-%d_%Hh%M", commit_date)
+        filename = (
+            self.TARGET_DOWNLOAD_FILENAME.format(
+                timestamp=time.strftime("%Y-%m-%d_%Hh%M", commit_date)
+            )
+            if self.TARGET_DOWNLOAD_FILENAME is not None
+            else target_f.name
         )
 
         try:
