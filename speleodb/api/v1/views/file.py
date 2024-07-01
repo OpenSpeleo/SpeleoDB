@@ -23,7 +23,6 @@ from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.gitlab_manager import GitlabError
-from speleodb.utils.gitlab_manager import GitlabManager
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import DownloadResponseFromFile
 from speleodb.utils.response import ErrorResponse
@@ -122,9 +121,6 @@ class FileUploadView(GenericAPIView):
                 {"error": f"There has been a problem committing the file: {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        # Void Gitlab API Cache for this project.
-        GitlabManager.void_project_gitlab_cache(project_id=project.id)
 
         # Refresh the `modified_date` field
         project.save()

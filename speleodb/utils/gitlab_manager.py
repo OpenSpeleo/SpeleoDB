@@ -1,4 +1,3 @@
-import contextlib
 import json
 import logging
 import pathlib
@@ -46,7 +45,6 @@ def check_initialized(func):
 
 
 class _GitlabManager(metaclass=SingletonMetaClass):
-    __GITLAB_CACHE__ = TTLCache(maxsize=100, ttl=600)
     FIRST_COMMIT_NAME = "[Automated] Project Creation"
 
     def __init__(self):
@@ -129,12 +127,6 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             # Communication Problem
             return None
 
-    @classmethod
-    def void_project_gitlab_cache(cls, project_id: uuid.UUID):
-        with contextlib.suppress(KeyError):
-            del cls.__GITLAB_CACHE__[project_id]
-
-    @cached(cache=__GITLAB_CACHE__, key=lambda self, project_id: project_id)
     @check_initialized
     def get_commit_history(self, project_id: uuid.UUID):
         if self._gl is None:
