@@ -4,6 +4,7 @@
 {% load countries %}
 {% load is_in_list %}
 {% load survey_formats %}
+{% load filter_utils %}
 
 {% block right_panel %}
 <div class="grow">
@@ -56,18 +57,18 @@
                             <!-- Commit ID -->
                             <td class="px-2 first:pl-5 last:pr-5 py-3">
                                 <div class="text-center">
-                                    <div class="font-medium text-slate-800 text-slate-100">{{ commit.short_id }}</div>
+                                    <div class="font-medium text-slate-800 text-slate-100">{{ commit.hexsha_short }}</div>
                                 </div>
                             </td>
                             <!-- Commit Author -->
                             <td class="px-2 first:pl-5 last:pr-5 py-3">
                                 <div class="text-center">
-                                    <div class="font-medium text-slate-800 text-slate-100">{{ commit.author_email }}</div>
+                                    <div class="font-medium text-slate-800 text-slate-100">{{ commit.author }}</div>
                                 </div>
                             </td>
                             <!-- Commit Date -->
                             <td class="px-2 first:pl-5 last:pr-5 py-3">
-                                <div class="text-center">{{ commit.committed_date|date:"Y/m/d H:i" }}</div>
+                                <div class="text-center">{{ commit.date|time_struct_format }}</div>
                             </td>
                             <!-- Commit Message -->
                             <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-lg">
@@ -92,14 +93,14 @@
                                         <ul>
                                             {% get_project_formats project as dl_formats %}
                                             {% for dl_format in dl_formats %}
-                                                {% if dl_format.creation_date|date:"Y/m/d H:i" <= commit.committed_date|date:"Y/m/d H:i" %}
+                                                {% if dl_format.creation_date|date:"Y/m/d H:i" <= commit.date|time_struct_format %}
                                                 <li>
-                                                    <a class="font-medium text-sm text-slate-300 hover:text-slate-200 flex py-1 px-3 mb-2" @click="open = false" @click="open = false" @focus="open = true" @focusout="open = false" target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha=commit.short_id fileformat=dl_format.format|lower %}">{{ dl_format.raw_format.webname }}</a>
+                                                    <a class="font-medium text-sm text-slate-300 hover:text-slate-200 flex py-1 px-3 mb-2" @click="open = false" @click="open = false" @focus="open = true" @focusout="open = false" target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha=commit.hexsha fileformat=dl_format.format|lower %}">{{ dl_format.raw_format.webname }}</a>
                                                 </li>
                                                 {% endif %}
                                             {% endfor %}
                                             <li>
-                                                <a class="font-medium text-sm text-slate-300 hover:text-slate-200 flex py-1 px-3 mb-2" @click="open = false" @click="open = false" @focus="open = true" @focusout="open = false" target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha=commit.short_id fileformat='dump' %}"> Everything (ZIP)</a>
+                                                <a class="font-medium text-sm text-slate-300 hover:text-slate-200 flex py-1 px-3 mb-2" @click="open = false" @click="open = false" @focus="open = true" @focusout="open = false" target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha=commit.hexsha fileformat='dump' %}"> Everything (ZIP)</a>
                                             </li>
                                         </ul>
                                     </div>
@@ -110,7 +111,7 @@
                             <td class="px-2 first:pl-5 last:pr-5 py-3 text-center w-28">
                                 {% if not commit.message|is_in_list:skip_download_names %}
                                 <div class="relative inline-flex" x-data="{ open: false }">
-                                    <a href="{% url 'private:project_revision_explorer' project_id=project.id hexsha=commit.id %}" class="rounded-full">
+                                    <a href="{% url 'private:project_revision_explorer' project_id=project.id hexsha=commit.hexsha %}" class="rounded-full">
                                         <span class="sr-only">Menu</span>
                                         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-folders stroke-current" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round" height="1.5em" viewBox="2.25 3.25 19.5 18.5">
                                             <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>

@@ -20,6 +20,19 @@ def time_struct_since(time_struct: time.struct_time):
     return timeago.format(dt, dt_now)
 
 
+@register.filter(name="time_struct_format")
+def time_struct_format(time_struct: time.struct_time):
+    dt = datetime.datetime.fromtimestamp(time.mktime(time_struct))  # noqa: DTZ006
+
+    source_tz = pytz.timezone("Etc/GMT-1")
+    dt = source_tz.localize(dt)
+
+    timezone = pytz.timezone("US/Eastern")
+    dt = dt.astimezone(timezone)
+
+    return dt.strftime("%Y/%m/%d %H:%M")
+
+
 @register.filter(name="format_byte_size")
 def format_byte_size(size_bytes):
     if size_bytes == 0:

@@ -1,6 +1,4 @@
 import contextlib
-import datetime
-import pathlib
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
@@ -14,7 +12,6 @@ from gitdb.exc import BadName as GitRevBadName
 from rest_framework.authtoken.models import Token
 
 from speleodb.git_engine.exceptions import GitCommitNotFoundError
-from speleodb.git_engine.core import GitRepo
 from speleodb.surveys.models import Project
 from speleodb.utils.gitlab_manager import GitlabManager
 
@@ -128,19 +125,15 @@ class ProjectCommitsView(_BaseProjectView):
     def get(self, request, project_id: str):
         data = super().get(request, project_id=project_id)
 
-        commits = sorted(
-            data["project"].commit_history,
-            key=lambda record: record["authored_date"],
-            reverse=True,
-        )
-        for commit in commits:
-            for key in ["authored_date", "committed_date", "created_at"]:
-                if isinstance(commit[key], str):
-                    commit[key] = datetime.datetime.strptime(  # noqa: DTZ007
-                        commit[key].split(".")[0], "%Y-%m-%dT%H:%M:%S"
-                    )
+        project = Project.objects.get(id=project_id)
 
-        data["commits"] = commits
+        data["commits"] = []
+        with contextlib.suppress(ValueError):
+            data["commits"] = sorted(
+                project.git_repo.commits,
+                key=lambda commit: commit.date,
+                reverse=True,
+            )
 
         data["skip_download_names"] = [
             GitlabManager.FIRST_COMMIT_NAME,
