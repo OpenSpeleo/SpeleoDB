@@ -1,2 +1,119 @@
 {% extends "base.html" %}
 {% load static i18n compress%}
+
+{% block content %}
+<!-- Content -->
+<section class="relative">
+    <!-- Radial gradient -->
+    <div class="absolute flex items-center justify-center top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none -z-10 w-[800px] aspect-square" aria-hidden="true">
+        <div class="absolute inset-0 translate-z-0 bg-purple-500 rounded-full blur-[120px] opacity-30"></div>
+        <div class="absolute w-64 h-64 translate-z-0 bg-purple-400 rounded-full blur-[80px] opacity-70"></div>
+    </div>
+    <!-- Particles animation -->
+    <div class="absolute inset-0 h-96 -z-10" aria-hidden="true">
+        <canvas data-particle-animation data-particle-quantity="15"></canvas>
+    </div>
+    <!-- Illustration -->
+    <div class="md:block absolute left-1/2 -translate-x-1/2 -mt-16 blur-2xl opacity-90 pointer-events-none -z-10" aria-hidden="true">
+        <img src="{% static 'media/page-illustration.svg' %}" class="max-w-none" width="1440" height="427" alt="Page Illustration">
+    </div>
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="pt-32 pb-12 md:pt-40 md:pb-20">
+            <!-- Page header -->
+            <div class="text-center pb-12 md:pb-20">
+                <h1 class="h1 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Terms and Conditions</h1>
+                <div class="max-w-3xl mx-auto">
+                    <p class="text-lg text-slate-400">We encourage you to read them. It's simple and we have nothing to hide.</p>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-200 border-slate-700">
+                <div class="m-auto mt-8">
+                    <!-- Posts -->
+                    <div class="xl:-translate-x-16">
+
+                        <!-- Post -->
+                        <article class="pt-6">
+                            <div class="xl:flex">
+                                <div class="grow pb-6">
+                                    <div class="flex flex-nowrap items-center space-x-2 mb-6">
+                                        <div>
+                                            <div class="text-slate-200 space-y-6">
+                                                <p>
+                                                    Welcome to SpeleoDB, developed by the Underwater Speleological and Archaeological Heritage Institute (USAH Institute). By using our platform, you agree to the following terms and conditions:
+                                                </p>
+
+                                                <p class="h5">Data Privacy</p>
+                                                <p>
+                                                    Your data privacy is paramount to us. You retain full ownership and control over your data. SpeleoDB implements robust security measures to prevent unauthorized access, ensuring your data is protected at all times.
+                                                </p>
+
+                                                <p class="h5">Transparency</p>
+                                                <p>
+                                                    SpeleoDB is an open-source platform. Our code is publicly available for review, fostering trust and accountability. By using SpeleoDB, you benefit from the transparency of our practices and operations.
+                                                </p>
+
+                                                <p class="h5">Powered by GIT</p>
+                                                <p>
+                                                    SpeleoDB utilizes GIT for version control. Every modification to your survey data is tracked and recoverable, ensuring data integrity and facilitating collaboration.
+                                                </p>
+
+                                                <p class="h5">Forever Recoverable</p>
+                                                <p>
+                                                    Each change made to your data is versioned, allowing you to revert to any previous state. This ensures that your data remains accurate and recoverable at all times.
+                                                </p>
+
+                                                <p class="h5">Secure Backups</p>
+                                                <p>
+                                                    Your data is backed up in multiple datacenters, providing robust protection against data loss. This ensures that your information is always accessible and secure.
+                                                </p>
+
+                                                <p class="h5">Open Source Governance</p>
+                                                <p>
+                                                    SpeleoDB operates under an open-source model under the direction of a non-profit organization. We welcome contributions from the community and encourage active participation. Join us in shaping the future of cave surveying.
+                                                </p>
+
+                                                <p class="h5">Decentralized Future</p>
+                                                <p>
+                                                    SpeleoDB embraces a decentralized approach through the SpeleoPUB protocol. You have the option to run your own server, ensuring data ownership and fostering a collaborative environment across platforms.
+                                                </p>
+
+                                                <p class="h5">Enhanced Survey Workflows</p>
+                                                <p>
+                                                    Our tools are designed to improve and accelerate survey workflows. SpeleoDB optimizes processes, enhancing efficiency and productivity for the cave surveying community.
+                                                </p>
+
+                                                <p class="h5">Disclaimer</p>
+                                                <p>
+                                                    While we strive to provide a reliable and secure platform, SpeleoDB and the USAH Institute are not responsible for any data loss, security breaches, or other issues that may arise.
+                                                </p>
+
+                                                <p class="h5">Changes to Terms and Conditions</p>
+                                                <p>
+                                                    We may update these terms and conditions from time to time. Any changes will be posted on this page, and your continued use of SpeleoDB constitutes acceptance of the updated terms.
+                                                </p>
+
+                                                <p class="h5">Contact Us</p>
+                                                <p>
+                                                    If you have any questions or concerns about these terms and conditions, please contact us at contact @ speleodb.com.
+                                                </p>
+                                                <hr class="pb-6">
+                                                If you have any questions or concerns about our privacy policy, please contact us at contact @ speleodb.com.
+                                                <br>
+                                                <b>Thank you for using and trusting SpeleoDB.</b>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+{% include "pages/call_to_action.html" %}
+{% endblock %}

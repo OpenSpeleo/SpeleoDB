@@ -19,7 +19,7 @@
 
         <!-- Illustration -->
         <div class="md:block absolute left-1/2 -translate-x-1/2 -mt-16 blur-2xl opacity-90 pointer-events-none -z-10" aria-hidden="true">
-            <img src="{% static 'media/placeholders/page-illustration.svg' %}" class="max-w-none" width="1440" height="427" alt="Page Illustration">
+            <img src="{% static 'media/page-illustration.svg' %}" class="max-w-none" width="1440" height="427" alt="Page Illustration">
         </div>
 
         <div class="max-w-6xl mx-auto px-4 sm:px-6">
@@ -27,8 +27,12 @@
 
                 <!-- Hero content -->
                 <div class="text-center">
-                    <div class="inline-flex font-medium bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-purple-200 pb-3">The folks behind the product</div>
-                    <h1 class="h1 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-6">Turning security into innovation</h1>
+                    <div class="inline-flex font-medium text-2xl bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-purple-50 pb-3">
+                        The folks behind the SpeleoDB
+                    </div>
+                    <h1 class="h1 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-6">
+                        Towards a more collaborative future.
+                    </h1>
                     <!-- Rings illustration -->
                     <div class="inline-flex items-center justify-center relative">
                         <!-- Particles animation -->
@@ -36,7 +40,7 @@
                             <canvas data-particle-animation data-particle-quantity="10"></canvas>
                         </div>
                         <div class="inline-flex [mask-image:_radial-gradient(circle_at_bottom,transparent_15%,black_70%)]">
-                            <img src="{% static 'media/placeholders/about-illustration.svg' %}" width="446" height="446" alt="About illustration" />
+                            <img src="{% static 'media/about-illustration.svg' %}" width="446" height="446" alt="About illustration" />
                         </div>
                         <img class="absolute mt-[30%] drop-shadow-lg animate-float" src="{% static 'media/placeholders/about-icon.svg' %}" width="72" height="72" alt="About icon" />
                     </div>
@@ -74,25 +78,27 @@
 
                     <div class="md:flex justify-between space-x-6 md:space-x-8 lg:space-x-14">
                         <figure class="min-w-[240px]">
-                            <img class="sticky top-8 mx-auto mb-12 md:mb-0 rounded-lg -rotate-[4deg]" src="{% static 'media/placeholders/team.jpg' %}" width="420" height="280" alt="Team" />
+                            <img class="sticky top-8 mx-auto mb-12 md:mb-0 rounded-lg -rotate-[4deg]" src="{% static 'media/hoyo_negro_survey.jpg' %}" width="420" height="280" alt="Team" />
                         </figure>
                         <div class="max-w-[548px] mx-auto">
-                            <div class="text-slate-400 space-y-6">
+                            <div class="text-slate-200 space-y-6 text-justify">
                                 <p>
-                                    We came together over a shared excitement about building a product that could solve our own problem of where our next favourite hack is coming from. But also a product that helps everyone thrive in this market: from founders and engineers to companies and investors.
+                                    We came together over a shared excitement about building a product that could solve a problem dear to our hearts. But also a product that helps teams of cave explorers and surveyors to map the underground world.
                                 </p>
                                 <p>
-                                    Stellar is a product that connects people around the topics and ideas that fascinate them. <strong class="text-slate-50 font-medium">The idea that we can use technology to take our experience</strong>, as security lovers, to a new dimension and leave the computer industry in better shape while we're at it.
+                                    The Underwater Speleological and Archaeological Heritage Institute (USAH Institute) was founded with a mission to enhance collaboration and innovation in the field of cave survey and data collection. Recognizing the challenges faced with the tools (often outdated) used by our community, proprietary file formats, and a lack of collaborative platforms—we set out to create a solution that addresses these issues while respecting the deep-seated concerns about data privacy and ownership.
                                 </p>
                                 <p>
-                                    You can dive into the atoms that make up a product, share the moments that move you and discuss the ideas you find compelling. We want to create a ground for <strong class="text-slate-50 font-medium">discussion and bring knowledge together</strong>, while making it more accessible and easier to grasp.
+                                    Our journey began with the realization that the cave survey community needed a modern, open-source platform that prioritizes data integrity and collaboration. Inspired by proven solutions in other fields, such as GIT for version control and open-source governance, we envisioned a platform that would empower users to take full control of their data. Thus, SpeleoDB was born.
                                 </p>
                                 <p>
-                                    Contrary to popular belief, this product is not random security. It has roots in a piece of classical literature, making it over 5 years old. Richard McClintock, a professor at <a class="text-purple-500 font-medium hover:underline" href="#0">Hampden-Sydney College</a> in Virginia, looked up one of the more obscure words, consectetur from a passage, and going through the cites of the word in classical literature, discovered the undoubtable source.
+                                    From the outset, our goal was to build a platform that is not only technologically advanced but also transparent and inclusive. SpeleoDB leverages open file format standards to ensure compatibility across different software, and our open-source code invites scrutiny and contributions from the community. We believe that a collaborative approach is essential for the platform's continuous improvement and alignment with the community's needs.
                                 </p>
                                 <p>
-                                    We all thrive on learning something new every day and everyone is constantly trying on different hats. We are working with new technologies while rethinking an old industry and are excited about all the possibilities and opportunities to innovate.
-                                    It's a problem deeply ingrained in traditional sectors like startups and the wider service industry but which has been compounded in the past five to ten years by the emergence of the mostly tech-powered gig economy which has created a new generation of shift workers and indeed
+                                    As we move forward, we remain committed to a decentralized future. With the development of the SpeleoPUB protocol, we aim to enable users to run their own servers, fostering a truly distributed network that enhances both collaboration and data security. Our technical steering committee, comprising members from various backgrounds within the cave survey community, ensures that the evolution of SpeleoDB is guided by collective wisdom and shared goals.
+                                </p>
+                                <p>
+                                    At SpeleoDB, we are driven by our dedication to innovation, transparency, and community. Our story is one of collaboration and progress, as we work together to transform the landscape of cave survey and data collection for the good of the cave diving communities.
                                 </p>
                             </div>
                         </div>
@@ -103,7 +109,7 @@
         </div>
     </section>
 
-    <!-- Team -->
+    {% comment %} <!-- Team -->
     <section class="relative">
         <!-- Radial gradient -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none -z-10" aria-hidden="true">
@@ -499,7 +505,7 @@
                 </div>
             </div>
         </div>
-    </section>
+    </section> {% endcomment %}
 
     {% include "pages/call_to_action.html" %}
 

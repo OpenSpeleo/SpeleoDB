@@ -42,47 +42,54 @@
 
 <body
     class="font-inter antialiased bg-slate-900 text-slate-400"
-    {% comment %} :class="{ 'sidebar-expanded': sidebarExpanded }"
+    :class="{ 'sidebar-expanded': sidebarExpanded }"
     x-data="{ sidebarOpen: false, sidebarExpanded: localStorage.getItem('sidebar-expanded') == 'true' }"
-    x-init="$watch('sidebarExpanded', value => localStorage.setItem('sidebar-expanded', value))" {% endcomment %}
+    x-init="$watch('sidebarExpanded', value => localStorage.setItem('sidebar-expanded', value))"
 >
 
-    {% comment %} <script>
+    <script>
         if (localStorage.getItem('sidebar-expanded') == 'true') {
             document.querySelector('body').classList.add('sidebar-expanded');
         } else {
             document.querySelector('body').classList.remove('sidebar-expanded');
         }
-    </script> {% endcomment %}
+    </script>
 
     <!-- Page wrapper -->
     <div class="flex h-[100dvh] overflow-hidden">
 
         <!-- Sidebar -->
         <div class="min-w-fit">
-            {% comment %} <!-- Sidebar backdrop (mobile only) -->
+            <!-- Sidebar backdrop (mobile only) -->
             <div
                 class="fixed inset-0 bg-slate-900 bg-opacity-30 z-40 lg:hidden lg:z-auto transition-opacity duration-200"
                 :class="sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'"
                 aria-hidden="true"
                 x-cloak
-            ></div> {% endcomment %}
+            ></div>
 
             <!-- Sidebar -->
             <div
                 id="sidebar"
                 class="flex flex-col absolute z-40 left-0 top-0 lg:static lg:left-auto lg:top-auto lg:translate-x-0 h-[100dvh] overflow-y-scroll lg:overflow-y-auto no-scrollbar w-64 lg:w-20 lg:sidebar-expanded:!w-64 2xl:!w-64 shrink-0 bg-slate-800 p-4 transition-all duration-200 ease-in-out"
-                {% comment %} :class="sidebarOpen ? 'translate-x-0' : '-translate-x-64'"
+                :class="sidebarOpen ? 'translate-x-0' : '-translate-x-64'"
                 @click.outside="sidebarOpen = false"
                 @keydown.escape.window="sidebarOpen = false"
-                x-cloak="lg" {% endcomment %}
+                x-cloak="lg"
             >
 
                 <!-- Sidebar header -->
-                <div class="flex justify-between mb-10 pr-3 sm:px-2">
+                <div class="flex justify-between mb-10 mt-3">
+                    <!-- Close button -->
+                    <button class="lg:hidden text-slate-500 hover:text-slate-400" @click.stop="sidebarOpen = !sidebarOpen" aria-controls="sidebar" :aria-expanded="sidebarOpen">
+                        <span class="sr-only">Close sidebar</span>
+                        <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10.7 18.7l1.4-1.4L7.8 13H20v-2H7.8l4.3-4.3-1.4-1.4L4 12z" />
+                        </svg>
+                    </button>
                     <!-- Logo -->
                     <a class="block" href="{% url 'home' %}">
-                        <img src="{% static 'media/logo.svg' %}" style="height:65px" alt="SpeleoDB">
+                        <img src="{% static 'media/logo.svg' %}" class"xs:logo-img" alt="SpeleoDB">
                     </a>
                 </div>
 
@@ -210,9 +217,9 @@
                             <!-- Hamburger button -->
                             <button
                                 class="text-slate-500 hover:text-slate-600 lg:hidden"
-                                {% comment %} @click.stop="sidebarOpen = !sidebarOpen"
+                                @click.stop="sidebarOpen = !sidebarOpen"
                                 aria-controls="sidebar"
-                                :aria-expanded="sidebarOpen" {% endcomment %}
+                                :aria-expanded="sidebarOpen"
                             >
                                 <span class="sr-only">Open sidebar</span>
                                 <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
