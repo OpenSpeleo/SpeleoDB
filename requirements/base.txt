@@ -11,6 +11,7 @@ flower==2.0.1  # https://github.com/mher/flower
 uvicorn[standard]==0.30.1  # https://github.com/encode/uvicorn
 wrapt==1.16.0  # https://github.com/GrahamDumpleton/wrapt
 cachetools==5.3.3  # https://github.com/tkem/cachetools
+shelved-cache==0.3.1  # https://github.com/mariushelf/shelved_cache
 timeago==1.0.16  # https://github.com/hustcc/timeago
 
 # Git Management

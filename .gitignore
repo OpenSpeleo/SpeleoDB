@@ -297,3 +297,5 @@ dev_tmp/emails/*
 !dev_tmp/emails/.gitkeep
 
 .envs/test.env
+
+gitlab.cache

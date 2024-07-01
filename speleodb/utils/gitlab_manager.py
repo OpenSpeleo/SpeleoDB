@@ -12,6 +12,7 @@ from cachetools import TTLCache
 from cachetools import cached
 from django.conf import settings
 from gitlab.v4.objects.projects import ProjectManager
+from shelved_cache import PersistentCache
 
 from speleodb.common.models import Option
 from speleodb.git_engine.core import GitRepo
@@ -46,7 +47,9 @@ def check_initialized(func):
 
 
 class _GitlabManager(metaclass=SingletonMetaClass):
-    __GITLAB_CACHE__ = TTLCache(maxsize=100, ttl=600)
+    __GITLAB_CACHE__ = PersistentCache(
+        TTLCache, filename="gitlab.cache", maxsize=100, ttl=600
+    )
     FIRST_COMMIT_NAME = "[Automated] Project Creation"
 
     def __init__(self):
