@@ -5,6 +5,7 @@ from pathlib import Path
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import TemporaryUploadedFile
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
@@ -13,9 +14,12 @@ from speleodb.utils.exceptions import ProjectNotFound
 
 
 class Artifact:
-    def __init__(self, file: InMemoryUploadedFile) -> None:
-        if not isinstance(file, InMemoryUploadedFile):
-            raise TypeError(f"Expected `InMemoryUploadedFile`, received: {type(file)}")
+    def __init__(self, file: InMemoryUploadedFile | TemporaryUploadedFile) -> None:
+        if not isinstance(file, (InMemoryUploadedFile, TemporaryUploadedFile)):
+            raise TypeError(
+                "Expected `InMemoryUploadedFile` or `TemporaryUploadedFile`, received: "
+                f"{type(file)}"
+            )
         self._file = file
         self._path = None
 

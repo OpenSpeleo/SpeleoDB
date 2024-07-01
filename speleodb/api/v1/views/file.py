@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import contextlib
 import logging
 import pathlib
 import tempfile
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.db import IntegrityError
+from django.core.files.uploadedfile import TemporaryUploadedFile
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -69,7 +68,7 @@ class FileUploadView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if not isinstance(file_uploaded, InMemoryUploadedFile):
+        if not isinstance(file_uploaded, (InMemoryUploadedFile, TemporaryUploadedFile)):
             return ErrorResponse(
                 {"error": f"Unknown artifact received: `{file_uploaded}`"},
                 status=status.HTTP_400_BAD_REQUEST,
