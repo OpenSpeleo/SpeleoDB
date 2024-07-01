@@ -5443,6 +5443,12 @@ focus\:border-slate-900:focus {
   .xs\:block {
     display: block;
   }
+
+  .xs\:logo-img {
+    --left-margin-val: 2;
+    width: calc(100% - var(--tw-space-x-reverse) * 1rem);
+    margin-left: 1rem * var(--tw-space-x-reverse);
+  }
 }
 
 @media (min-width: 640px) {

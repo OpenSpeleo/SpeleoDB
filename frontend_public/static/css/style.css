@@ -1520,6 +1520,13 @@ select {
   font-weight: 800;
 }
 
+.h5 {
+  font-size: 1.1rem;
+  line-height: 1.333;
+  letter-spacing: -0.017em;
+  font-weight: 800;
+}
+
 @media (min-width: 768px) {
   .h1 {
     font-size: 3.5rem;
@@ -1959,6 +1966,10 @@ input[type="search"]::-webkit-search-results-decoration {
 
 .order-2 {
   order: 2;
+}
+
+.m-auto {
+  margin: auto;
 }
 
 .-m-1 {
@@ -3056,6 +3067,24 @@ input[type="search"]::-webkit-search-results-decoration {
   background-image: linear-gradient(to top right, var(--tw-gradient-stops));
 }
 
+.from-purple-100 {
+  --tw-gradient-from: #f3e8ff var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(243 232 255 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.from-purple-200 {
+  --tw-gradient-from: #e9d5ff var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(233 213 255 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.from-purple-300 {
+  --tw-gradient-from: #d8b4fe var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(216 180 254 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
 .from-purple-500 {
   --tw-gradient-from: #a855f7 var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(168 85 247 / 0) var(--tw-gradient-to-position);
@@ -3100,6 +3129,14 @@ input[type="search"]::-webkit-search-results-decoration {
 .via-white {
   --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), #fff var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.to-purple-50 {
+  --tw-gradient-to: #faf5ff var(--tw-gradient-to-position);
+}
+
+.to-purple-100 {
+  --tw-gradient-to: #f3e8ff var(--tw-gradient-to-position);
 }
 
 .to-purple-200 {
@@ -3401,6 +3438,10 @@ input[type="search"]::-webkit-search-results-decoration {
 
 .text-right {
   text-align: right;
+}
+
+.text-justify {
+  text-align: justify;
 }
 
 .font-inter {
