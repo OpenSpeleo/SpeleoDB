@@ -129,6 +129,7 @@ class ProjectCommitsView(_BaseProjectView):
 
         data["commits"] = []
         with contextlib.suppress(ValueError):
+            project.git_repo.checkout_branch("master")
             data["commits"] = sorted(
                 project.git_repo.commits,
                 key=lambda commit: commit.date,
@@ -152,6 +153,7 @@ class ProjectGitExplorerView(_BaseProjectView):
 
         # Guard against non-existing commit ID
         try:
+            project.git_repo.checkout_branch("master")
             data["n_commits"] = len(list(project.git_repo.commits))
             data["commit"] = project.git_repo.commit(hexsha)
         except (ValueError, GitCommitNotFoundError, GitRevBadName):
