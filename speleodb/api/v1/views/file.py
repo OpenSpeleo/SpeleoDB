@@ -8,6 +8,7 @@ import tempfile
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
+from django.http import Http404
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -173,7 +174,13 @@ class FileDownloadView(GenericAPIView):
         try:
             temp_file = tempfile.NamedTemporaryFile(delete=False)
             temp_filepath = pathlib.Path(temp_file.name)
-            filename = processor.get_file_for_download(target_f=temp_filepath)
+
+            try:
+                filename = processor.get_file_for_download(target_f=temp_filepath)
+            except ValidationError as e:
+                raise Http404(
+                    f"The file: `{processor.TARGET_SAVE_FILENAME}` does not exists."
+                ) from e
 
             return DownloadResponseFromFile(
                 filename=filename,
