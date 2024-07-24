@@ -30,7 +30,7 @@ EMAIL_BACKEND = env(
     "DJANGO_EMAIL_BACKEND",
     default="django.core.mail.backends.filebased.EmailBackend",
 )
-EMAIL_FILE_PATH = "./dev_tmp/emails"
+EMAIL_FILE_PATH = "./.workdir/emails"
 
 # WhiteNoise
 # ------------------------------------------------------------------------------
