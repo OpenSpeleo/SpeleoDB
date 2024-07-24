@@ -290,10 +290,8 @@ git_projects/
 !.workdir/tmp_dl_dir
 .workdir/tmp_dl_dir/*
 !.workdir/tmp_dl_dir/.gitkeep
-dev_tmp/*
-!dev_tmp/.gitkeep
-!dev_tmp/emails/
-dev_tmp/emails/*
-!dev_tmp/emails/.gitkeep
+!.workdir/emails
+.workdir/emails/*
+!.workdir/emails/.gitkeep
 
 .envs/test.env
