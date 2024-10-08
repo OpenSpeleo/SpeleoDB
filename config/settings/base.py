@@ -45,6 +45,8 @@ DJANGO_GIT_PROJECTS_DIR = env(
 )
 DJANGO_TMP_DL_DIR = env("DJANGO_TMP_DL_DIR", default=BASE_DIR / ".workdir/tmp_dl_dir")
 
+DJANGO_GIT_RETRY_ATTEMPTS = 5
+
 # DATABASES
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
