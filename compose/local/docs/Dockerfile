@@ -1,9 +1,8 @@
 # define an alias for the specific python version used in this file.
-FROM docker.io/python:3.12.4-slim-bookworm as python
-
+FROM docker.io/python:3.12-slim-bookworm AS python
 
 # Python build stage
-FROM python as python-build-stage
+FROM python AS python-build-stage
 
 ENV PYTHONDONTWRITEBYTECODE 1
 
@@ -26,11 +25,11 @@ RUN pip wheel --no-cache-dir --wheel-dir /usr/src/app/wheels  \
 
 
 # Python 'run' stage
-FROM python as python-run-stage
+FROM python AS python-run-stage
 
 ARG BUILD_ENVIRONMENT
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
   # To run the Makefile
