@@ -31,7 +31,7 @@ django-compressor==4.5  # https://github.com/django-compressor/django-compressor
 django-dynamic-raw-id==4.3  # https://github.com/lincolnloop/django-dynamic-raw-id
 django-redis==5.4.0  # https://github.com/jazzband/django-redis
 django-encrypted-model-fields==0.6.5  # https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/
-django-hijack==3.5.4  # https://github.com/django-hijack/django-hijack/
+django-hijack==3.7.0  # https://github.com/django-hijack/django-hijack/
 # Django REST Framework
 djangorestframework==3.15.2  # https://github.com/encode/django-rest-framework
 django-cors-headers==4.3.1  # https://github.com/adamchainz/django-cors-headers
