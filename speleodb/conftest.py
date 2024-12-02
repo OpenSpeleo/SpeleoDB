@@ -13,9 +13,10 @@ from speleodb.users.tests.factories import UserFactory
 
 
 @pytest.fixture(scope="session", autouse=True)
-def load_test_env():  # noqa: PT004
-    current_dir = pathlib.Path(__file__).resolve().parent
-    assert load_dotenv(current_dir / "../.envs/test.env")
+def _load_test_env():
+    project_base_dir = pathlib.Path(__file__).resolve().parent.parent
+    if (env_file := project_base_dir / ".envs/test.env").exists():
+        assert load_dotenv(env_file)
 
 
 @pytest.fixture(autouse=True)
@@ -23,17 +24,17 @@ def _media_storage(settings, tmpdir) -> None:
     settings.MEDIA_ROOT = tmpdir.strpath
 
 
-@pytest.fixture()
+@pytest.fixture
 def user(db) -> User:
     return UserFactory()
 
 
-@pytest.fixture()
+@pytest.fixture
 def project(db) -> Project:
     return ProjectFactory()
 
 
-@pytest.fixture()
+@pytest.fixture
 def sha1_hash(db) -> str:
     import random
     import string

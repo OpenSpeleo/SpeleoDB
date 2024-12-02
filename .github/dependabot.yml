@@ -5,6 +5,7 @@ version: 2
 updates:
   # Update GitHub actions in workflows
   - package-ecosystem: "github-actions"
+    open-pull-requests-limit: 25
     directory: "/"
     # Every weekday
     schedule:
@@ -15,6 +16,7 @@ updates:
   # support wildcards or recursively checking subdirectories. Check this issue for updates:
   # https://github.com/dependabot/dependabot-core/issues/2178
   - package-ecosystem: "docker"
+    open-pull-requests-limit: 25
     # Look for a `Dockerfile` in the `compose/local/django` directory
     directory: "compose/local/django/"
     # Every weekday
@@ -28,6 +30,7 @@ updates:
           - "version-update:semver-minor"
 
   - package-ecosystem: "docker"
+    open-pull-requests-limit: 25
     # Look for a `Dockerfile` in the `compose/local/docs` directory
     directory: "compose/local/docs/"
     # Every weekday
@@ -41,6 +44,7 @@ updates:
           - "version-update:semver-minor"
 
   - package-ecosystem: "docker"
+    open-pull-requests-limit: 25
     # Look for a `Dockerfile` in the `compose/local/node` directory
     directory: "compose/local/node/"
     # Every weekday
@@ -48,6 +52,7 @@ updates:
       interval: "weekly"
 
   - package-ecosystem: "docker"
+    open-pull-requests-limit: 25
     # Look for a `Dockerfile` in the `compose/production/aws` directory
     directory: "compose/production/aws/"
     # Every weekday
@@ -55,6 +60,7 @@ updates:
       interval: "weekly"
 
   - package-ecosystem: "docker"
+    open-pull-requests-limit: 25
     # Look for a `Dockerfile` in the `compose/production/django` directory
     directory: "compose/production/django/"
     # Every weekday
@@ -68,6 +74,7 @@ updates:
           - "version-update:semver-minor"
 
   - package-ecosystem: "docker"
+    open-pull-requests-limit: 25
     # Look for a `Dockerfile` in the `compose/production/postgres` directory
     directory: "compose/production/postgres/"
     # Every weekday
@@ -83,6 +90,7 @@ updates:
 
   # Enable version updates for Python/Pip - Production
   - package-ecosystem: "pip"
+    open-pull-requests-limit: 50
     # Look for a `requirements.txt` in the `root` directory
     # also 'setup.cfg', 'runtime.txt' and 'requirements/*.txt'
     directory: "/"

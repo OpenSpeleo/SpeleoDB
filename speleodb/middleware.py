@@ -46,7 +46,7 @@ class DRFWrapResponseMiddleware:
     def select_renderer(self, request):
         return self.negotiator.select_renderer(request, self.renderers)
 
-    def __call__(self, request):  # noqa: C901, PLR0912, RUF100
+    def __call__(self, request):
         # Skip for non-API calls
         if "/api/" not in request.path:
             return self.get_response(request)
