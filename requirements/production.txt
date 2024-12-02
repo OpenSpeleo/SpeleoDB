@@ -2,10 +2,10 @@
 
 -r base.txt
 
-gunicorn==22.0.0  # https://github.com/benoitc/gunicorn
-psycopg[c]==3.2.1  # https://github.com/psycopg/psycopg
+gunicorn==23.0.0  # https://github.com/benoitc/gunicorn
+psycopg[c]==3.2.3  # https://github.com/psycopg/psycopg
 
 # Django
 # ------------------------------------------------------------------------------
-django-storages==1.14.3  # https://github.com/jschneier/django-storages
-django-anymail[mailersend]==11.0  # https://github.com/anymail/django-anymail
+django-storages==1.14.4  # https://github.com/jschneier/django-storages
+django-anymail[mailersend]==12.0  # https://github.com/anymail/django-anymail

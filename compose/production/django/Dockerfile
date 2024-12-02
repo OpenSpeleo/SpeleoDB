@@ -19,12 +19,16 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   vim \
   make \
   cmake \
+  gcc \
   # cleaning up unused files
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
 
 # Requirements are installed here to ensure they will be cached.
 COPY ./requirements .
+
+# Update PIP to latest version
+RUN pip install --upgrade pip
 
 # Create Python Dependency and Sub-Dependency Wheels.
 RUN pip wheel --wheel-dir /usr/src/app/wheels  \
