@@ -34,5 +34,5 @@ pre-commit==4.0.1  # https://github.com/pre-commit/pre-commit
 
 # Django
 # ------------------------------------------------------------------------------
-django-debug-toolbar==4.4.2  # https://github.com/jazzband/django-debug-toolbar
+django-debug-toolbar==4.4.6  # https://github.com/jazzband/django-debug-toolbar
 django-extensions==3.2.3  # https://github.com/django-extensions/django-extensions
