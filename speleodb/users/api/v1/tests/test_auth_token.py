@@ -24,7 +24,7 @@ class TestTokenAuth(TestCase):
         endpoint = reverse("api:v1_users:auth_token")
         response = self.client.post(
             endpoint,
-            {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD},
+            {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD()},
         )
         assert response.status_code == status.HTTP_200_OK, response.status_code
 
@@ -46,7 +46,7 @@ class TestTokenAuth(TestCase):
 
         if is_authenticated:
             self.client.login(
-                username=self.user.email, password=UserFactory.DEFAULT_PASSWORD
+                username=self.user.email, password=UserFactory.DEFAULT_PASSWORD()
             )
             assert get_user(self.client).is_authenticated
 
@@ -55,7 +55,7 @@ class TestTokenAuth(TestCase):
         endpoint = reverse("api:v1_users:auth_token")
         response = method_fn(
             endpoint,
-            {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD}
+            {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD()}
             if not is_authenticated
             else None,
         )
@@ -96,7 +96,7 @@ class TestTokenAuth(TestCase):
     def test_not_existing_email(self):
         response = self.client.post(
             reverse("api:v1_users:auth_token"),
-            {"email": "chuck@norris.com", "password": UserFactory.DEFAULT_PASSWORD},
+            {"email": "chuck@norris.com", "password": UserFactory.DEFAULT_PASSWORD()},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.status_code
 
@@ -121,7 +121,7 @@ class TestTokenAuth(TestCase):
     def test_missing_email(self):
         response = self.client.post(
             reverse("api:v1_users:auth_token"),
-            {"password": UserFactory.DEFAULT_PASSWORD},
+            {"password": UserFactory.DEFAULT_PASSWORD()},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.status_code
 

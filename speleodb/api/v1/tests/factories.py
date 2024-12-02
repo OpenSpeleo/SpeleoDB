@@ -22,7 +22,7 @@ class UserFactory(DjangoModelFactory):
 
     @post_generation
     def password(self, *args, **kwargs):
-        self.set_password(UserFactory.DEFAULT_PASSWORD)
+        self.set_password(UserFactory.DEFAULT_PASSWORD())
 
     @classmethod
     def _after_postgeneration(cls, instance, create, results=None):
@@ -32,8 +32,6 @@ class UserFactory(DjangoModelFactory):
             instance.save()
 
     @classmethod
-    @property
-    # Deprecation fix: https://github.com/linkml/linkml/pull/1959/files
     def DEFAULT_PASSWORD(cls):  # noqa: N802
         return "password"
 
