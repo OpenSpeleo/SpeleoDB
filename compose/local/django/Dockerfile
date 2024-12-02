@@ -20,10 +20,12 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # Requirements are installed here to ensure they will be cached.
 COPY ./requirements .
 
+# Update PIP to latest version
+RUN pip install --upgrade pip
+
 # Create Python Dependency and Sub-Dependency Wheels.
 RUN pip wheel --wheel-dir /usr/src/app/wheels  \
   -r ${BUILD_ENVIRONMENT}.txt
-
 
 # Python 'run' stage
 FROM python AS python-run-stage
@@ -47,7 +49,6 @@ RUN groupadd --gid 1000 dev-user \
   && useradd --uid 1000 --gid dev-user --shell /bin/bash --create-home dev-user \
   && echo dev-user ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/dev-user \
   && chmod 0440 /etc/sudoers.d/dev-user
-
 
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
