@@ -12,7 +12,7 @@ from speleodb.surveys.models import Project
 
 class AutoSelector:
     @staticmethod
-    def get_processor(fileformat: Format.FileFormat, f_extension=None):  # noqa: PLR0911
+    def get_processor(fileformat: Format.FileFormat, f_extension=None):
         match fileformat:
             case Format.FileFormat.ARIANE_TML:
                 return TMLFileProcessor

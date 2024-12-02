@@ -37,7 +37,7 @@ class FileUploadView(GenericAPIView):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def put(self, request, fileformat, *args, **kwargs):  # noqa: PLR0911, C901, PLR0912
+    def put(self, request, fileformat, *args, **kwargs):
         try:
             fileformat = getattr(Format.FileFormat, fileformat.upper())
         except AttributeError:
@@ -171,35 +171,34 @@ class FileDownloadView(GenericAPIView):
         except (ValidationError, FileNotFoundError) as e:
             return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            temp_file = tempfile.NamedTemporaryFile(delete=False)
-            temp_filepath = pathlib.Path(temp_file.name)
-
+        with tempfile.NamedTemporaryFile() as temp_file:
             try:
-                filename = processor.get_file_for_download(target_f=temp_filepath)
-            except ValidationError as e:
-                raise Http404(
-                    f"The file: `{processor.TARGET_SAVE_FILENAME}` does not exists."
-                ) from e
+                temp_filepath = pathlib.Path(temp_file.name)
 
-            return DownloadResponseFromFile(
-                filename=filename,
-                filepath=temp_filepath,
-                attachment=True,
-            )
+                try:
+                    filename = processor.get_file_for_download(target_f=temp_filepath)
+                except ValidationError as e:
+                    raise Http404(
+                        f"The file: `{processor.TARGET_SAVE_FILENAME}` does not exists."
+                    ) from e
 
-        except ProjectNotFound as e:
-            return ErrorResponse({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+                return DownloadResponseFromFile(
+                    filename=filename,
+                    filepath=temp_filepath,
+                    attachment=True,
+                )
 
-        except GitlabError:
-            logger.exception("There has been a problem accessing gitlab")
-            return ErrorResponse(
-                {"error": "There has been a problem accessing gitlab"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            except ProjectNotFound as e:
+                return ErrorResponse(
+                    {"error": str(e)}, status=status.HTTP_404_NOT_FOUND
+                )
 
-        finally:
-            pathlib.Path(temp_file.name).unlink()
+            except GitlabError:
+                logger.exception("There has been a problem accessing gitlab")
+                return ErrorResponse(
+                    {"error": "There has been a problem accessing gitlab"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
 
 class BlobDownloadView(GenericAPIView):
