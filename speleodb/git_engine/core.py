@@ -42,9 +42,9 @@ logger = logging.getLogger(__name__)
 #         b_blob_id: str | bytes | None,
 #         a_mode: bytes | str | None,
 #         b_mode: bytes | str | None,
-#         new_file: bool,  # noqa: FBT001
-#         deleted_file: bool,  # noqa: FBT001
-#         copied_file: bool,  # noqa: FBT001
+#         new_file: bool,
+#         deleted_file: bool,
+#         copied_file: bool,
 #         raw_rename_from: bytes | None,
 #         raw_rename_to: bytes | None,
 #         diff: str | bytes | None,
@@ -455,7 +455,7 @@ class GitRepo(Repo):
         else:
             raise GitBaseError(
                 "Impossible to pull repository: "
-                f"{self.remotes.origin.url.split("@")[-1]}"  # Removes OAUTH2 token
+                f"{self.remotes.origin.url.split('@')[-1]}"  # Removes OAUTH2 token
             )
 
     def checkout_branch_or_commit(

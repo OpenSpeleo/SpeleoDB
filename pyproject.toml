@@ -106,7 +106,6 @@ select = [
   "EM",
   "EXE",
   "FA",
-  'ISC',
   "ICN",
   "G",
   'INP',
@@ -158,6 +157,7 @@ ignore = [
   "PLR0913", # Checks for function definitions that include too many arguments.
   "S311",    # Checks for uses of cryptographically weak pseudo-random number generators.
   "ERA001",  # Checks for commented-out Python code.
+  "C901",    # Checks for functions with a high McCabe complexity.
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
