@@ -8,7 +8,7 @@ watchfiles==1.0.0  # https://github.com/samuelcolvin/watchfiles
 # Testing
 # ------------------------------------------------------------------------------
 mypy==1.11.2  # https://github.com/python/mypy
-django-stubs[compatible-mypy]==5.0.4  # https://github.com/typeddjango/django-stubs
+django-stubs[compatible-mypy]==5.1.0  # https://github.com/typeddjango/django-stubs
 pytest==8.3.4  # https://github.com/pytest-dev/pytest
 pytest-env==1.1.5  # https://github.com/pytest-dev/pytest-env
 pytest-dotenv==0.5.2  # https://github.com/quiqua/pytest-dotenv
