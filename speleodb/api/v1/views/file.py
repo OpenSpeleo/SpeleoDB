@@ -37,7 +37,7 @@ class FileUploadView(GenericAPIView):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def put(self, request, fileformat, *args, **kwargs):  # noqa: PLR0911
+    def put(self, request, fileformat, *args, **kwargs):  # noqa: PLR0911, C901, PLR0912
         try:
             fileformat = getattr(Format.FileFormat, fileformat.upper())
         except AttributeError:

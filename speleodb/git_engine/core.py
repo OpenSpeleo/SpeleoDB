@@ -6,11 +6,14 @@ from io import BytesIO
 from typing import Self
 
 import git
+from django.conf import settings
 from git import HEAD
 from git import Commit
 from git import Repo
 from git import Tree
+from git.exc import GitCommandError
 
+from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.exceptions import GitPathNotFoundError
 
@@ -39,9 +42,9 @@ logger = logging.getLogger(__name__)
 #         b_blob_id: str | bytes | None,
 #         a_mode: bytes | str | None,
 #         b_mode: bytes | str | None,
-#         new_file: bool,  # noqa: FBT001
-#         deleted_file: bool,  # noqa: FBT001
-#         copied_file: bool,  # noqa: FBT001
+#         new_file: bool,
+#         deleted_file: bool,
+#         copied_file: bool,
 #         raw_rename_from: bytes | None,
 #         raw_rename_to: bytes | None,
 #         diff: str | bytes | None,
@@ -343,7 +346,17 @@ class GitRepo(Repo):
 
     @classmethod
     def clone_from(cls, *args, **kwargs):
-        repo = super().clone_from(*args, **kwargs)
+        for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
+            repo = super().clone_from(*args, **kwargs)
+            break
+        else:
+            try:
+                url = kwargs["url"]
+            except KeyError:
+                url = args[0]
+
+            raise GitBaseError(f"Impossible to clone repository: {url=}")
+
         return cls.from_repo(repo)
 
     def __eq__(self, other):
@@ -435,7 +448,15 @@ class GitRepo(Repo):
 
     def pull(self):
         origin = self.remotes.origin
-        origin.pull()
+        for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
+            with contextlib.suppress(GitCommandError):
+                origin.pull()
+                break
+        else:
+            raise GitBaseError(
+                "Impossible to pull repository: "
+                f"{self.remotes.origin.url.split('@')[-1]}"  # Removes OAUTH2 token
+            )
 
     def checkout_branch_or_commit(
         self, hexsha: str | None = None, branch_name: str | None = None

@@ -1,5 +1,3 @@
-from django.core.exceptions import ValidationError
-
 from speleodb.processors._impl.ariane import AGRFileProcessor
 from speleodb.processors._impl.ariane import TMLFileProcessor
 from speleodb.processors._impl.ariane import TMLUFileProcessor
@@ -14,7 +12,7 @@ from speleodb.surveys.models import Project
 
 class AutoSelector:
     @staticmethod
-    def get_processor(fileformat: Format.FileFormat, f_extension=None):
+    def get_processor(fileformat: Format.FileFormat, f_extension=None):  # noqa: PLR0911
         match fileformat:
             case Format.FileFormat.ARIANE_TML:
                 return TMLFileProcessor

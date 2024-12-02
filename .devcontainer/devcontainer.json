@@ -40,7 +40,7 @@
                     "languageServer": "Pylance",
                     "linting.enabled": true,
                     "linting.mypyEnabled": true,
-                    "linting.mypyPath": "/usr/local/bin/mypy",
+                    "linting.mypyPath": "/usr/local/bin/mypy"
                 }
             },
             // https://code.visualstudio.com/docs/remote/devcontainerjson-reference#_vs-code-specific-properties
