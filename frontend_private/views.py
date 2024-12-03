@@ -13,6 +13,8 @@ from rest_framework.authtoken.models import Token
 
 from speleodb.git_engine.exceptions import GitCommitNotFoundError
 from speleodb.surveys.models import Project
+from speleodb.users.models import SurveyTeam
+from speleodb.users.models import SurveyTeamMembership
 from speleodb.utils.gitlab_manager import GitlabManager
 
 
@@ -52,13 +54,74 @@ class PreferencesView(_AuthenticatedTemplateView):
     template_name = "pages/user/preferences.html"
 
 
+# ============ Team Pages ============ #
+class TeamListingView(_AuthenticatedTemplateView):
+    template_name = "pages/teams.html"
+
+
+class NewTeamView(_AuthenticatedTemplateView):
+    template_name = "pages/team/new.html"
+
+
+class _BaseTeamView(LoginRequiredMixin, View):
+    def get(self, request, team_id: int):
+        team = SurveyTeam.objects.get(id=team_id)
+
+        return {
+            "team": team,
+            "is_team_leader": team.is_leader(request.user),
+        }
+
+
+class TeamDetailsView(_BaseTeamView):
+    template_name = "pages/team/details.html"
+
+    def get(self, request, team_id: int):
+        try:
+            data = super().get(request, team_id=team_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:teams"))
+        return render(request, TeamDetailsView.template_name, data)
+
+
+class TeamMembershipsView(_BaseTeamView):
+    template_name = "pages/team/memberships.html"
+
+    def get(self, request, team_id: int):
+        try:
+            data = super().get(request, team_id=team_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:teams"))
+
+        data["memberships"] = data["team"].get_all_members()
+
+        return render(request, TeamMembershipsView.template_name, data)
+
+
+class TeamDangerZoneView(_BaseTeamView):
+    template_name = "pages/team/danger_zone.html"
+
+    def get(self, request, team_id: int):
+        try:
+            data = super().get(request, team_id=team_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:teams"))
+
+        if not data["is_team_leader"]:
+            return redirect(
+                reverse("private:team_details", kwargs={"team_id": team_id})
+            )
+
+        return render(request, TeamDangerZoneView.template_name, data)
+
+
 # ============ Project Pages ============ #
 class ProjectListingView(_AuthenticatedTemplateView):
     template_name = "pages/projects.html"
 
 
 class NewProjectView(_AuthenticatedTemplateView):
-    template_name = "pages/new_project.html"
+    template_name = "pages/project/new.html"
 
 
 class _BaseProjectView(LoginRequiredMixin, View):
@@ -75,7 +138,11 @@ class ProjectUploadView(_BaseProjectView):
     template_name = "pages/project/upload.html"
 
     def get(self, request, project_id: str):
-        data = super().get(request, project_id=project_id)
+        try:
+            data = super().get(request, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
+
         return render(request, ProjectUploadView.template_name, data)
 
 
@@ -83,7 +150,10 @@ class ProjectDangerZoneView(_BaseProjectView):
     template_name = "pages/project/danger_zone.html"
 
     def get(self, request, project_id: str):
-        data = super().get(request, project_id=project_id)
+        try:
+            data = super().get(request, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
 
         if not data["is_project_admin"]:
             return redirect(
@@ -97,7 +167,11 @@ class ProjectDetailsView(_BaseProjectView):
     template_name = "pages/project/details.html"
 
     def get(self, request, project_id: str):
-        data = super().get(request, project_id=project_id)
+        try:
+            data = super().get(request, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
+
         return render(request, ProjectDetailsView.template_name, data)
 
 
@@ -105,7 +179,11 @@ class ProjectPermissionsView(_BaseProjectView):
     template_name = "pages/project/permissions.html"
 
     def get(self, request, project_id: str):
-        data = super().get(request, project_id=project_id)
+        try:
+            data = super().get(request, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
+
         data["permissions"] = data["project"].get_all_permissions()
         return render(request, ProjectPermissionsView.template_name, data)
 
@@ -114,7 +192,11 @@ class ProjectMutexesView(_BaseProjectView):
     template_name = "pages/project/mutex_history.html"
 
     def get(self, request, project_id: str):
-        data = super().get(request, project_id=project_id)
+        try:
+            data = super().get(request, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
+
         data["mutexes"] = data["project"].rel_mutexes.all().order_by("-creation_date")
         return render(request, ProjectMutexesView.template_name, data)
 
@@ -123,7 +205,10 @@ class ProjectCommitsView(_BaseProjectView):
     template_name = "pages/project/revision_history.html"
 
     def get(self, request, project_id: str):
-        data = super().get(request, project_id=project_id)
+        try:
+            data = super().get(request, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
 
         project = Project.objects.get(id=project_id)
 
@@ -147,7 +232,10 @@ class ProjectGitExplorerView(_BaseProjectView):
     template_name = "pages/project/git_view.html"
 
     def get(self, request, project_id: str, hexsha: str | None = None):
-        data = super().get(request, project_id=project_id)
+        try:
+            data = super().get(request, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
 
         project = Project.objects.get(id=project_id)
 

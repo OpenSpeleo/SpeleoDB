@@ -5,6 +5,7 @@ from frontend_private.views import AuthTokenView
 from frontend_private.views import DashboardView
 from frontend_private.views import FeedbackView
 from frontend_private.views import NewProjectView
+from frontend_private.views import NewTeamView
 from frontend_private.views import PassWordView
 from frontend_private.views import PreferencesView
 from frontend_private.views import ProjectCommitsView
@@ -15,6 +16,10 @@ from frontend_private.views import ProjectListingView
 from frontend_private.views import ProjectMutexesView
 from frontend_private.views import ProjectPermissionsView
 from frontend_private.views import ProjectUploadView
+from frontend_private.views import TeamDangerZoneView
+from frontend_private.views import TeamDetailsView
+from frontend_private.views import TeamListingView
+from frontend_private.views import TeamMembershipsView
 
 uuid_regex = "[0-9a-fA-F]{8}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{12}"  # noqa: E501
 
@@ -25,12 +30,23 @@ urlpatterns = [
     path("auth-token/", AuthTokenView.as_view(), name="auth-token"),
     path("feedback/", FeedbackView.as_view(), name="feedback"),
     path("preferences/", PreferencesView.as_view(), name="preferences"),
-    path("projects/", ProjectListingView.as_view(), name="projects"),
+    # Teams URLs
+    path("teams/", TeamListingView.as_view(), name="teams"),
+    path("team/new/", NewTeamView.as_view(), name="team_new"),
+    path("team/<int:team_id>/", TeamDetailsView.as_view(), name="team_details"),
     path(
-        "project/new/",
-        NewProjectView.as_view(),
-        name="project_new",
+        "team/<int:team_id>/memberships/",
+        TeamMembershipsView.as_view(),
+        name="team_memberships",
     ),
+    path(
+        "project/<int:team_id>/danger_zone/",
+        TeamDangerZoneView.as_view(),
+        name="team_danger_zone",
+    ),
+    # Project URLs
+    path("projects/", ProjectListingView.as_view(), name="projects"),
+    path("project/new/", NewProjectView.as_view(), name="project_new"),
     path(
         "project/<uuid:project_id>/",
         ProjectDetailsView.as_view(),

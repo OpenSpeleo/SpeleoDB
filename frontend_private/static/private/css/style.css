@@ -4050,6 +4050,14 @@ span.flatpickr-weekday {
   line-height: 1.5;
 }
 
+.font-heavy {
+  font-weight: 800;
+}
+
+.font-extra-bold {
+  font-weight: 800;
+}
+
 .font-bold {
   font-weight: 700;
 }
