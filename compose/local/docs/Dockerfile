@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
   # dependencies for building Python packages
-  build-essential \
+  build-essential gcc \
   # psycopg dependencies
   libpq-dev \
   # cleaning up unused files

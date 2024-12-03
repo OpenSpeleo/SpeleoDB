@@ -63,7 +63,7 @@ class Permission(models.Model):
         self.deactivated_by = user
         self.save()
 
-    def reactivate(self, level=Level):
+    def reactivate(self, level: Level):
         self.is_active = True
         self.deactivated_by = None
         self.level = level

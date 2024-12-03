@@ -9,9 +9,9 @@ ARG BUILD_ENVIRONMENT=local
 # Install apt packages
 RUN apt-get update && apt-get install --no-install-recommends -y \
   # dependencies for building Python packages
-  build-essential \
+  build-essential gcc \
   # psycopg dependencies
-  libpq-dev gcc
+  libpq-dev
 
 # Install Rust & Cargo for `watchfiles` dependency
 RUN apt-get update && apt-get install --no-install-recommends -y \
