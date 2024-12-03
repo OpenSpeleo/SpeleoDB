@@ -52,6 +52,9 @@
                         <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
                             <tr>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">#</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="font-semibold text-center">User Name</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
@@ -70,6 +73,11 @@
                             {% for permission in permissions %}
                                 <!-- Row -->
                                 <tr>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="text-center">
+                                            <div class="font-medium text-slate-800 text-slate-100">{{ forloop.counter }}</div>
+                                        </div>
+                                    </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
                                             <div class="font-medium text-slate-800 text-slate-100">{{ permission.user.name }}</div>
