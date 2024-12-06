@@ -17,7 +17,7 @@
             <!-- Left: Title -->
             <div class="mb-4 sm:mb-0 w-fit block float-left">
                 <h1 class="text-2xl md:text-3xl text-slate-800 text-slate-100 font-bold">
-                    Project's Permissions
+                    Project's User Permissions
                 </h1>
             </div>
 
@@ -26,15 +26,17 @@
 
                 <!-- New button -->
                 {% if not is_project_admin %}
-                    <button class="btn bg-slate-600 text-white" disabled>
-                {% else %}
+                <button class="btn bg-slate-600 text-white" disabled>
+                    {% else %}
                     <button id="btn_open_add_user" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
-                {% endif %}
-                    <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24" viewBox="0 0 16 16">
-                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
-                      </svg>
-                    <span class="hidden xs:block ml-2">Grant Access</span>
-                </button>
+                        {% endif %}
+                        <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24"
+                            viewBox="0 0 16 16">
+                            <path
+                                d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+                        </svg>
+                        <span class="hidden xs:block ml-2">Grant Access</span>
+                    </button>
 
             </div>
 
@@ -49,7 +51,8 @@
                 <div class="overflow-x-auto">
                     <table class="table-auto w-full text-slate-300">
                         <!-- Table header -->
-                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                        <thead
+                            class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
                             <tr>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="font-semibold text-center">#</div>
@@ -71,62 +74,79 @@
                         <!-- Table body -->
                         <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
                             {% for permission in permissions %}
-                                <!-- Row -->
-                                <tr>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                        <div class="text-center">
-                                            <div class="font-medium text-slate-800 text-slate-100">{{ forloop.counter }}</div>
+                            <!-- Row -->
+                            <tr>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="text-center">
+                                        <div class="font-medium text-slate-800 text-slate-100">{{ forloop.counter }}
                                         </div>
-                                    </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                        <div class="text-center">
-                                            <div class="font-medium text-slate-800 text-slate-100">{{ permission.user.name }}</div>
-                                        </div>
-                                    </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                        <div class="text-center">{{ permission.user.email }}</div>
-                                    </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                        <div class="text-center">
-                                            {% if permission.level == "READ_ONLY" %}
-                                                <div class="inline-flex font-medium bg-slate-700 text-slate-100 text-slate-400 rounded-full text-center px-2.5 py-0.5">Read Only</div>
-                                            {% elif permission.level == "READ_AND_WRITE" %}
-                                                <div class="inline-flex font-medium bg-indigo-100 bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5" style="color: rgb(171 178 255);">Read And Write</div>
-                                            {% elif permission.level == "ADMIN" %}
-                                                <div class="inline-flex font-medium bg-amber-100 bg-amber-400/30 text-amber-600 text-amber-400 rounded-full text-center px-2.5 py-0.5">Admin</div>
-                                            {% else %}
-                                                <div class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-500 text-rose-400 rounded-full text-center px-2.5 py-0.5">Unknown</div>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
-
-                                        {% comment %} A user can not edit/delete their own permission. Must be another ADMIN {% endcomment %}
-                                        {% if permission.user != user and is_project_admin %}
-                                            {% set can_edit = True %}
+                                    </div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="text-center">
+                                        <div class="font-medium text-slate-800 text-slate-100">{{ permission.user.name }}</div>
+                                    </div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="text-center">{{ permission.user.email }}</div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="text-center">
+                                        {% if permission.level == "READ_ONLY" %}
+                                        <div
+                                            class="inline-flex font-medium bg-slate-700 text-slate-100 text-slate-400 rounded-full text-center px-2.5 py-0.5">
+                                            Read Only</div>
+                                        {% elif permission.level == "READ_AND_WRITE" %}
+                                        <div class="inline-flex font-medium bg-indigo-100 bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5"
+                                            style="color: rgb(171 178 255);">Read And Write</div>
+                                        {% elif permission.level == "ADMIN" %}
+                                        <div
+                                            class="inline-flex font-medium bg-amber-100 bg-amber-400/30 text-amber-600 text-amber-400 rounded-full text-center px-2.5 py-0.5">
+                                            Admin</div>
                                         {% else %}
-                                            {% set can_edit = False %}
+                                        <div
+                                            class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-500 text-rose-400 rounded-full text-center px-2.5 py-0.5">
+                                            Unknown</div>
                                         {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
 
-                                        <!-- Edit Link -->
-                                        <span class="cursor-pointer {% if can_edit %}btn_open_edit_perm" data-user="{{permission.user}}" data-level="{{permission.level}}{% endif %}">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
-                                                <path d="M13.5 6.5l4 4" />
-                                            </svg>
-                                        </span>
+                                    {% comment %} A user can not edit/delete their own permission. Must be another ADMIN
+                                    {% endcomment %}
+                                    {% if permission.user != user and is_project_admin %}
+                                    {% set can_edit = True %}
+                                    {% else %}
+                                    {% set can_edit = False %}
+                                    {% endif %}
 
-                                        <!-- Delete Link -->
-                                        <span class="cursor-pointer {% if can_edit %}btn_delete_perm" data-user="{{permission.user}}{% endif %}">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                <path d="M18 6l-12 12" />
-                                                <path d="M6 6l12 12" />
-                                            </svg>
+                                    <!-- Edit Link -->
+                                    <span class="cursor-pointer {% if can_edit %}btn_open_edit_perm"
+                                        data-user="{{permission.user}}" data-level="{{permission.level}}{% endif %}">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline"
+                                            viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                            <path d="M13.5 6.5l4 4" />
+                                        </svg>
+                                    </span>
+
+                                    <!-- Delete Link -->
+                                    <span class="cursor-pointer {% if can_edit %}btn_delete_perm"
+                                        data-user="{{permission.user}}{% endif %}">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline"
+                                            viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <path d="M18 6l-12 12" />
+                                            <path d="M6 6l12 12" />
+                                        </svg>
                                         </a>
-                                    </td>
-                                </tr>
+                                </td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -151,13 +171,13 @@
 
     $(document).ready(function () {
 
-        $(".btn_close").click(function() {
+        $(".btn_close").click(function () {
             if ($("#permission_modal").is(":visible")) {
                 $("#permission_modal").hide();
             }
         });
 
-        $("body").click(function() {
+        $("body").click(function () {
             if ($("#modal_success").is(":visible")) {
                 $("#modal_success").hide();
             }
@@ -170,7 +190,7 @@
         /* --------------------------- ADDING PERMISSION --------------------------- */
         /* ------------------------------------------------------------------------- */
 
-        $("#btn_open_add_user").click(function() {
+        $("#btn_open_add_user").click(function () {
             var form = document.getElementById("permission_form");
             form.reset();
             form.method = "POST"
@@ -184,7 +204,7 @@
         /* --------------------------- EDITING PERMISSION -------------------------- */
         /* ------------------------------------------------------------------------- */
 
-        $(".btn_open_edit_perm").click(function() {
+        $(".btn_open_edit_perm").click(function () {
             var form = document.getElementById("permission_form");
             form.method = "PUT"
             $("#permission_modal_title").text("How shall we modify this user's access ?");
@@ -212,7 +232,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:project_permission' id=project.id %}",
+                url: "{% url 'api:v1:project_user_permission' id=project.id %}",
                 method: $("#permission_form").attr('method'),
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
@@ -238,7 +258,7 @@
                     $("#modal_success_txt").text("Action executed with success!");
                     $("#modal_success").css('display', 'flex');
 
-                    window.setTimeout(function(){
+                    window.setTimeout(function () {
                         // Refresh the page
                         window.location.reload();
                     }, 2000);
@@ -275,7 +295,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:project_permission' id=project.id %}",
+                url: "{% url 'api:v1:project_user_permission' id=project.id %}",
                 method: "DELETE",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
@@ -289,24 +309,24 @@
                     $("#modal_success_txt").html("The permission has been deleted succesfully.");
                     $("#modal_success").css('display', 'flex');
 
-                    window.setTimeout(function(){
+                    window.setTimeout(function () {
                         // Refresh the page
                         window.location.reload();
                     }, 2000);
                 },
                 error: function (data) {
-                  if (data.status == 429) {
-                      $("#modal_error_txt").text(data.responseJSON["detail"]);
-                      $("#modal_error").css('display', 'flex');
-                  }
-                  else {
-                      if ("error" in data.responseJSON) {
-                          $("#modal_error_txt").text(data.responseJSON["error"]);
-                      } else {
-                          $("#modal_error_txt").text(data.responseJSON["errors"][0]);
-                      }
-                      $("#modal_error").css('display', 'flex');
-                  }
+                    if (data.status == 429) {
+                        $("#modal_error_txt").text(data.responseJSON["detail"]);
+                        $("#modal_error").css('display', 'flex');
+                    }
+                    else {
+                        if ("error" in data.responseJSON) {
+                            $("#modal_error_txt").text(data.responseJSON["error"]);
+                        } else {
+                            $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                        }
+                        $("#modal_error").css('display', 'flex');
+                    }
                 }
             });
             return false; // prevent default
