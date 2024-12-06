@@ -49,3 +49,13 @@ class User(AbstractUser):
         return sorted(
             projects, key=lambda data: data["project"].modified_date, reverse=True
         )
+
+    def get_all_team_memberships(self):  # -> list[SurveyTeamMembership]
+        return self.rel_team_memberships.filter(is_active=True)
+
+    def get_all_teams(self):  # -> list[SurveyTeam]
+        teams = [
+            {"team": membership.team, "role": membership.role}
+            for membership in self.get_all_team_memberships()
+        ]
+        return sorted(teams, key=lambda data: data["team"].modified_date, reverse=True)

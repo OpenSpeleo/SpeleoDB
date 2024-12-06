@@ -1,0 +1,141 @@
+{% extends "pages/team/base.html" %}
+{% load static i18n compress%}
+
+{% load countries %}
+
+{% block right_panel %}
+<div class="grow">
+
+    <form id="team_details_form" autocomplete="off">
+
+        {% csrf_token %}
+
+        <!-- Panel body -->
+        <div class="p-6 space-y-6">
+            <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-5">Team Settings</h2>
+
+            <!-- Team Name -->
+            <section>
+                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                    <div class="w-full">
+                        <label class="block text-sm font-medium mb-1" for="name">Team Name:</label>
+                        <input id="name" name="name" class="form-input max-w-full w-128" type="text" value="{{ team.name }}" {% if not is_team_leader %}disabled{% endif %}/>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Description -->
+            <section>
+                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                    <div class="w-full">
+                        <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                        <textarea id="description" name="description" class="form-textarea max-w-full w-128 focus:border-slate-300" rows="4" {% if not is_team_leader %}disabled{% endif %}>{{ team.description }}</textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Country -->
+            <section>
+                <div class="flex flex-wrap mt-5">
+                    <div class="mr-2">
+                        <label class="block text-sm font-medium mb-1" for="country">Country:</label>
+                        <select id="country" name="country" class="form-select max-w-full w-128" {% if not is_team_leader %}disabled{% endif %}>
+                        {% get_countries as countries %}
+                        {% for country in countries %}
+                            <option value="{{ country.code }}" {% if country.code == team.country %} selected {% endif %}>{{ country.name }}</option>
+                        {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+        
+        {% if is_team_leader %}
+        <!-- Panel footer -->
+        <footer>
+            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+                <div class="flex self-end">
+                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:teams' %}">Cancel</a>
+                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+                </div>
+            </div>
+        </footer>
+        {% endif %}
+
+    </form>
+
+    {% if is_team_leader %}
+        {% include 'snippets/modal_success.html' %}
+        {% include 'snippets/modal_error.html' %}
+    {% endif %}
+
+</div>
+{% endblock right_panel %}
+
+{% if is_team_leader %}
+{% block inline_extra_js %}
+<script>
+
+    $(document).ready(function () {
+
+        $("body").click(function() {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+
+        $('#btn_submit').click(function (e) {
+            e.preventDefault();
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+            let team_details_form = document.getElementById('team_details_form');
+            var formData = new FormData(team_details_form);
+
+            $.ajax({
+                url: "{% url 'api:v1_users:one_team_apiview' id=team.id %}",
+                method: "PUT",
+                data: JSON.stringify(Object.fromEntries(formData)),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The team your has been updated.");
+                    $("#modal_success").css('display', 'flex');
+                },
+                error: function (data) {
+                    if (data.status == 429) {
+                        $("#modal_error_txt").text(data.responseJSON["detail"]);
+                        $("#modal_error").css('display', 'flex');
+                    }
+                    else {
+                        if ("error" in data.responseJSON) {
+                            $("#modal_error_txt").text(data.responseJSON["error"]);
+                        }
+                        else if ("errors" in data.responseJSON) {
+                            var error_msg = "";
+                            for (var key in data.responseJSON["errors"]){
+                                error_msg += "- <b>Error:</b> `" + key + "`: " + data.responseJSON["errors"][key] + "<br>";
+                            }
+                            $("#modal_error_txt").html(error_msg);
+                        }
+                        $("#modal_error").css('display', 'flex');
+                    }
+                }
+            });
+            return false; // prevent default
+        });
+
+    });
+</script>
+{% endblock inline_extra_js %}
+{% endif %}

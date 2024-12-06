@@ -9,6 +9,8 @@ from hijack.contrib.admin import HijackUserAdminMixin
 
 from speleodb.users.forms import UserAdminChangeForm
 from speleodb.users.forms import UserAdminCreationForm
+from speleodb.users.models import SurveyTeam
+from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
 
 if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
@@ -82,3 +84,23 @@ class EmailAddressAdmin(DynamicRawIDMixin, _EmailAddressAdmin):
 
 admin.site.unregister(EmailAddress)
 admin.site.register(EmailAddress, EmailAddressAdmin)
+
+
+@admin.register(SurveyTeam)
+class SurveyTeamAdmin(admin.ModelAdmin):
+    list_display = ("name", "creation_date", "modified_date")
+    ordering = ("name",)
+
+
+@admin.register(SurveyTeamMembership)
+class SurveyTeamMembershipAdmin(admin.ModelAdmin):
+    list_display = (
+        "team",
+        "user",
+        "role",
+        "creation_date",
+        "modified_date",
+        "is_active",
+    )
+    ordering = ("team",)
+    list_filter = ["is_active"]

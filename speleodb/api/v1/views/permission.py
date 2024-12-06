@@ -223,7 +223,7 @@ class ProjectPermissionView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        permission.deactivate(user=request.user)
+        permission.deactivate(deactivated_by=request.user)
         project_serializer = ProjectSerializer(project, context={"user": request.user})
 
         # Refresh the `modified_date` field

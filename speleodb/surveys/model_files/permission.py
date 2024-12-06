@@ -58,9 +58,9 @@ class Permission(models.Model):
     def level(self, value):
         self._level = value
 
-    def deactivate(self, user: User):
+    def deactivate(self, deactivated_by: User):
         self.is_active = False
-        self.deactivated_by = user
+        self.deactivated_by = deactivated_by
         self.save()
 
     def reactivate(self, level: Level):

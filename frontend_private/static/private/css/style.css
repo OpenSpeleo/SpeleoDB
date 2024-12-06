@@ -1095,7 +1095,13 @@ input[type="search"]::-webkit-search-results-decoration {
 .form-multiselect:disabled,
 .form-select:disabled,
 .form-checkbox:disabled,
-.form-radio:disabled {
+.form-radio:disabled,
+.form-input:read-only,
+.form-textarea:read-only,
+.form-multiselect:read-only,
+.form-select:read-only,
+.form-checkbox:read-only,
+.form-radio:read-only {
   --tw-border-opacity: 1;
   border-color: rgb(51 65 85 / var(--tw-border-opacity));
   background-color: rgb(51 65 85 / 0.3);
@@ -1106,7 +1112,13 @@ input[type="search"]::-webkit-search-results-decoration {
 .form-multiselect:hover:disabled,
 .form-select:hover:disabled,
 .form-checkbox:hover:disabled,
-.form-radio:hover:disabled {
+.form-radio:hover:disabled,
+.form-input:hover:read-only,
+.form-textarea:hover:read-only,
+.form-multiselect:hover:read-only,
+.form-select:hover:read-only,
+.form-checkbox:hover:read-only,
+.form-radio:hover:read-only {
   --tw-border-opacity: 1;
   border-color: rgb(51 65 85 / var(--tw-border-opacity));
 }
@@ -4048,6 +4060,14 @@ span.flatpickr-weekday {
 .text-xs {
   font-size: 0.75rem;
   line-height: 1.5;
+}
+
+.font-heavy {
+  font-weight: 800;
+}
+
+.font-extra-bold {
+  font-weight: 800;
 }
 
 .font-bold {
