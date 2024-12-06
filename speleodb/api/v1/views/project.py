@@ -77,7 +77,7 @@ class ProjectApiView(GenericAPIView):
 
         project = self.get_object()
         for perm in project.get_all_permissions():
-            perm.deactivate(request.user)
+            perm.deactivate(deactivated_by=request.user)
 
         return SuccessResponse({"id": str(project.id)})
 

@@ -1,4 +1,4 @@
-{% extends "pages/project/base.html" %}
+{% extends "pages/team/base.html" %}
 {% load static i18n compress%}
 
 {% load countries %}
@@ -8,19 +8,19 @@
 
     <!-- Panel body -->
     <div class="p-6 space-y-6">
-        <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-16">Project Danger Zone</h2>
+        <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-16">Team Danger Zone</h2>
 
         {% csrf_token %}
 
-        <!-- Project Name -->
+        <!-- Team Name -->
         <section>
             <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
                 <div class="w-full border p-6">
-                    <h1 class="mb-2 underline font-heavy">Delete this repository ?</h1>
+                    <h1 class="mb-2 underline font-heavy">Delete this team ?</h1>
                     <span class="block text-sm font-medium mb-1" for="name">
-                        Once you delete a repository, there is no going back. Please be <b><u>absolutely</u></b> certain.
+                        Once you delete a team, there is no going back. Please be <b><u>absolutely</u></b> certain.
                     </span>
-                    <button id="btn_delete" class="btn bg-rose-500 hover:bg-rose-600 text-white mt-4">Delete Repository</button>
+                    <button id="btn_delete" class="btn bg-rose-500 hover:bg-rose-600 text-white mt-4">Delete Team </button>
                 </div>
             </div>
         </section>
@@ -65,7 +65,7 @@
             $("#modal_confirmation").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:one_project_apiview' id=project.id %}",
+                url: "{% url 'api:v1_users:one_team_apiview' id=team.id %}",
                 method: "DELETE",
                 contentType: "application/json; charset=utf-8",
                 cache: false,
@@ -75,12 +75,12 @@
 
                 },
                 success: function (data) {
-                    $("#modal_success_txt").html("The project has been deleted succesfully.");
+                    $("#modal_success_txt").html("The team has been deleted succesfully.");
                     $("#modal_success").css('display', 'flex');
 
                     window.setTimeout(function(){
-                        // Redirect to project listing
-                        window.location.href = "{% url 'private:projects' %}";
+                        // Redirect to team listing
+                        window.location.href = "{% url 'private:teams' %}";
                     }, 2000);
                 },
                 error: function (data) {

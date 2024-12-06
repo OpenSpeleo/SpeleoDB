@@ -28,6 +28,7 @@ up_formats_regex = "(?P<fileformat>" + "|".join(Format.FileFormat.upload_choices
 urlpatterns = [
     # ========================== Public API Routes ========================== #
     # ================== Authentication Required API Routes ================= #
+    # ----------------------------- PROJECT APIs ---------------------------- #
     path("project/", CreateProjectApiView.as_view(), name="create_project"),
     path("project/<uuid:id>/", ProjectApiView.as_view(), name="one_project_apiview"),
     path(

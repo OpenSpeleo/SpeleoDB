@@ -4,10 +4,13 @@
 import pathlib
 
 import pytest
+from django.apps import apps
 from dotenv import load_dotenv
 
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.surveys.models import Project
+from speleodb.users.api.v1.tests.factories import SurveyTeamFactory
+from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory
 
@@ -35,6 +38,11 @@ def project(db) -> Project:
 
 
 @pytest.fixture
+def team(db) -> SurveyTeam:
+    return SurveyTeamFactory()
+
+
+@pytest.fixture
 def sha1_hash(db) -> str:
     import random
     import string
@@ -42,3 +50,15 @@ def sha1_hash(db) -> str:
 
     rand_str = "".join(random.sample(string.ascii_lowercase, 8))
     return sha1(rand_str.encode("utf-8")).hexdigest()  # noqa: S324
+
+
+@pytest.fixture(autouse=True)
+def cleanup_database(db):
+    """
+    Cleanup fixture that deletes all objects from the database after each test.
+    Automatically applied to all tests that use the database.
+    """
+    yield  # Let the test run
+    # Delete all objects from all models
+    for model in apps.get_models():
+        model.objects.all().delete()

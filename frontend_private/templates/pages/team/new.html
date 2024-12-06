@@ -16,29 +16,29 @@
             <!-- Left: Title -->
             <div class="mb-4 sm:mb-0">
                 <h1 class="text-2xl md:text-3xl text-slate-800 text-slate-100 font-bold">
-                    Create a new Project
+                    Create a new Team
                 </h1>
             </div>
 
         </div>
 
-        <!-- Project Details -->
+        <!-- Team Details -->
         <div class="bg-white bg-slate-800 shadow-lg rounded-sm mb-8">
             <div class="flex flex-col md:flex-row md:-mr-px">
                 <div class="grow">
 
-                    <form id="new_project_form" autocomplete="off">
+                    <form id="new_team_form" autocomplete="off">
 
                         {% csrf_token %}
 
                         <!-- Panel body -->
                         <div class="p-6 space-y-6">
 
-                            <!-- Project Name -->
+                            <!-- Team Name -->
                             <section>
                                 <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
                                     <div class="w-full">
-                                        <label class="block text-sm font-medium mb-1" for="name">Project Name:<span class="text-rose-600"> *</span></label>
+                                        <label class="block text-sm font-medium mb-1" for="name">Team Name:<span class="text-rose-600"> *</span></label>
                                         <input id="name" name="name" class="form-input max-w-full w-128" type="text" />
                                     </div>
                                 </div>
@@ -63,48 +63,12 @@
                                             <option disabled selected value>Select an option...</option>
                                         {% get_countries as countries %}
                                         {% for country in countries %}
-                                            <option value="{{ country.code }}" {% if country.code == project.country %} selected {% endif %}>{{ country.name }}</option>
+                                        <option value="{{ country.code }}">{{ country.name }}</option>
                                         {% endfor %}
                                         </select>
                                     </div>
                                 </div>
                             </section>
-
-                            <!-- latitude -->
-                            <section>
-                                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                                    <div class="w-full">
-                                        <label class="block text-sm font-medium mb-1" for="latitude">Latitude:</label>
-                                        <input id="latitude" name="latitude" class="form-input max-w-full w-128" type="text" placeholder="[Optional]" />
-                                    </div>
-                                </div>
-                            </section>
-
-                            <!-- longitude -->
-                            <section>
-                                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                                    <div class="w-full">
-                                        <label class="block text-sm font-medium mb-1" for="longitude">Longitude:</label>
-                                        <input id="longitude" name="longitude" class="form-input max-w-full w-128" type="text" placeholder="[Optional]" />
-                                    </div>
-                                </div>
-                            </section>
-
-                            {% comment %} <!-- Visibility -->
-                            <section>
-                                <div class="flex flex-wrap mt-5">
-                                    <div class="mr-2">
-                                        <label class="block text-sm font-medium mb-1" for="visibility">Visibility:<span class="text-rose-600"> *</span></label>
-                                        <select id="visibility" name="visibility" class="form-select max-w-full w-128">
-                                            <option disabled selected value>Select an option...</option>
-                                        {% get_visibility_scopes as visibility_scopes %}
-                                        {% for visibility_scope in visibility_scopes %}
-                                            <option value="{{ visibility_scope }}">{{ visibility_scope|title }}</option>
-                                        {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                            </section> {% endcomment %}
 
                         </div>
 
@@ -112,7 +76,7 @@
                         <footer>
                             <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
                                 <div class="flex self-end">
-                                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:projects' %}">Cancel</a>
+                                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:teams' %}">Cancel</a>
                                     <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
                                 </div>
                             </div>
@@ -151,11 +115,11 @@
             $("#success_div").hide();
 
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let new_project_form = document.getElementById('new_project_form');
-            var formData = new FormData(new_project_form);
+            let new_team_form = document.getElementById('new_team_form');
+            var formData = new FormData(new_team_form);
 
             $.ajax({
-                url: "{% url 'api:v1:create_project' %}",
+                url: "{% url 'api:v1_users:create_team' %}",
                 method: "POST",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
@@ -166,12 +130,12 @@
 
                 },
                 success: function (data) {
-                    $("#modal_success_txt").html("The project has been created.");
+                    $("#modal_success_txt").html("The team has been created.");
                     $("#modal_success").css('display', 'flex');
 
                     window.setTimeout(function(){
-                        // Redirect to project listing
-                        window.location.href = "{% url 'private:projects' %}";
+                        // Redirect to team listing
+                        window.location.href = "{% url 'private:teams' %}";
                     }, 2000);
                 },
                 error: function (data) {
