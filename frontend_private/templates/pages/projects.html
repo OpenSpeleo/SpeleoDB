@@ -82,7 +82,7 @@
                         </thead>
                         <!-- Table body -->
                         <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
-                            {% for data in user.get_all_projects %}
+                            {% for data in user.projects_with_level %}
                                 <!-- Row -->
                                 <tr>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
@@ -98,7 +98,7 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {{ data.project.get_permission_count }}
+                                            {{ data.project.get_user_permission_count }}
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">

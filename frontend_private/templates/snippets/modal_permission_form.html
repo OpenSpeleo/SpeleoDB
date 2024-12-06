@@ -1,4 +1,4 @@
-{% load permission_levels %}
+{% load user_permission_levels %}
 
 <!-- Modal dialog -->
 <div id="permission_modal" class="fixed inset-0 z-40 overflow-hidden flex items-center my-4 justify-center px-4 sm:px-6" style="display: none">
@@ -31,7 +31,7 @@
                         <label class="block text-sm font-medium mb-1" for="level">Access Level:<span class="text-rose-600"> *</span></label>
                         <select id="level" name="level" class="form-select max-w-full w-128 h-10 mb-4">
                             <option disabled selected value>Select an option...</option>
-                        {% get_permission_levels as levels %}
+                        {% get_user_permission_levels as levels %}
                         {% for level in levels %}
                             <option value="{{ level }}">{{ level }}</option>
                         {% endfor %}

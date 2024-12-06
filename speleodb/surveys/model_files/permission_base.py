@@ -3,20 +3,13 @@
 
 from django.db import models
 
-from speleodb.surveys.models import Project
 from speleodb.users.models import User
 
 
-class Permission(models.Model):
-    project = models.ForeignKey(
-        Project,
-        related_name="rel_permissions",
-        on_delete=models.CASCADE,
-    )
-
-    user = models.ForeignKey(
-        User, related_name="rel_permissions", on_delete=models.CASCADE
-    )
+class BasePermissionModel(models.Model):
+    # abstract parameter
+    target = NotImplementedError()
+    project = NotImplementedError()
 
     is_active = models.BooleanField(default=True)
 
@@ -25,7 +18,6 @@ class Permission(models.Model):
 
     deactivated_by = models.ForeignKey(
         User,
-        related_name="rel_deactivated_permissions",
         on_delete=models.RESTRICT,
         blank=True,
         null=True,
@@ -35,17 +27,18 @@ class Permission(models.Model):
     class Level(models.IntegerChoices):
         READ_ONLY = (0, "READ_ONLY")
         READ_AND_WRITE = (1, "READ_AND_WRITE")
-        ADMIN = (2, "ADMIN")
+        # ADMIN = (2, "ADMIN")
 
     _level = models.IntegerField(
         choices=Level.choices, default=Level.READ_ONLY, verbose_name="level"
     )
 
     class Meta:
-        unique_together = ("user", "project")
+        abstract = True
+        unique_together = ("target", "project")
 
     def __str__(self):
-        return f"{self.user} => {self.project} [{self.level}]"
+        return f"{self.target} => {self.project} [{self.level}]"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"

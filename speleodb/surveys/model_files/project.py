@@ -15,6 +15,7 @@ from django.utils import timezone
 from django_countries.fields import CountryField
 
 from speleodb.git_engine.core import GitRepo
+from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 from speleodb.utils.gitlab_manager import GitlabManager
 
@@ -167,37 +168,71 @@ class Project(models.Model):
     def get_shortdate(self):
         return self.when.strftime("%Y/%m/%d")
 
-    def get_permission(self, user: User) -> str:
-        return self.rel_permissions.get(user=user, is_active=True)
+    def get_user_permission(self, user: User) -> str:
+        return self.rel_user_permissions.get(target=user, is_active=True)
 
-    def get_all_permissions(self):
-        return self.rel_permissions.filter(is_active=True).order_by(
-            "-_level", "user__email"
+    def get_team_permission(self, team: SurveyTeam) -> str:
+        return self.rel_team_permissions.get(target=team, is_active=True)
+
+    def get_all_user_permissions(self):  # -> list["UserPermission"]
+        return self.rel_user_permissions.filter(is_active=True).order_by(
+            "-_level", "target__email"
         )
 
-    def get_permission_count(self):
-        return self.rel_permissions.filter(is_active=True).count()
+    def get_all_team_permissions(self):  # -> list["TeamPermission"]
+        return self.rel_team_permissions.filter(is_active=True).order_by(
+            "-_level", "target__name"
+        )
 
-    def _has_permission(self, user: User, permission):
-        from speleodb.surveys.model_files.permission import Permission
+    def get_all_permissions(self):  # -> list["UserPermission" | "TeamPermission"]
+        return self.get_all_user_permissions() + self.get_all_team_permissions()
 
-        if not isinstance(permission, Permission.Level):
+    def get_user_permission_count(self):
+        return self.rel_user_permissions.filter(is_active=True).count()
+
+    def get_team_permission_count(self):
+        return self.rel_team_permissions.filter(is_active=True).count()
+
+    def _has_user_permission(self, user: User, permission):
+        from speleodb.surveys.model_files.permission_user import UserPermission
+
+        if not isinstance(permission, UserPermission.Level):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
 
         try:
-            return self.get_permission(user=user)._level >= permission  # noqa: SLF001
+            return self.get_user_permission(user=user)._level >= permission  # noqa: SLF001
         except ObjectDoesNotExist:
             return False
 
-    def has_write_access(self, user: User):
-        from speleodb.surveys.model_files.permission import Permission
+    def _has_team_permission(self, team: SurveyTeam, permission) -> bool:
+        from speleodb.surveys.model_files.permission_team import TeamPermission
 
-        return self._has_permission(user, permission=Permission.Level.READ_AND_WRITE)
+        if not isinstance(permission, TeamPermission.Level):
+            raise TypeError(f"Unexpected value received for: `{permission=}`")
+
+        try:
+            return self.get_team_permission(target=team)._level >= permission  # noqa: SLF001
+        except ObjectDoesNotExist:
+            return False
+
+    def _has_permission(self, target: User | SurveyTeam, permission) -> bool:
+        if isinstance(target, User):
+            return self._has_user_permission(user=target, permission=permission)
+        if isinstance(target, SurveyTeam):
+            return self._has_user_permission(team=target, permission=permission)
+        raise TypeError(f"Unexpected value received for: `{target=}`")
+
+    def has_write_access(self, user: User):
+        from speleodb.surveys.model_files.permission_user import UserPermission
+
+        return self._has_user_permission(
+            user, permission=UserPermission.Level.READ_AND_WRITE
+        )
 
     def is_admin(self, user: User):
-        from speleodb.surveys.model_files.permission import Permission
+        from speleodb.surveys.model_files.permission_user import UserPermission
 
-        return self._has_permission(user, permission=Permission.Level.ADMIN)
+        return self._has_user_permission(user, permission=UserPermission.Level.ADMIN)
 
     @property
     def git_repo(self):
