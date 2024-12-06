@@ -171,7 +171,9 @@ class Project(models.Model):
         return self.rel_permissions.get(user=user, is_active=True)
 
     def get_all_permissions(self):
-        return self.rel_permissions.filter(is_active=True)
+        return self.rel_permissions.filter(is_active=True).order_by(
+            "-_level", "user__email"
+        )
 
     def get_permission_count(self):
         return self.rel_permissions.filter(is_active=True).count()
