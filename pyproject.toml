@@ -2,7 +2,8 @@
 [tool.pytest.ini_options]
 norecursedirs = "git_projects/*"
 minversion = "6.0"
-addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
+addopts = "--ds=config.settings.test --import-mode=importlib"
+# addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
 # addopts = "--ds=config.settings.test -vvv --capture=no --reuse-db --import-mode=importlib"
 python_files = ["tests.py", "test_*.py"]
 

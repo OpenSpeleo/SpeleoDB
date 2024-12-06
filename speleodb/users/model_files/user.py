@@ -35,27 +35,60 @@ class User(AbstractUser):
     objects: ClassVar[UserManager] = UserManager()
 
     @property
+    def teams(self):
+        return [
+            team_membership.team
+            for team_membership in self.rel_team_memberships.filter(
+                is_active=True
+            ).order_by("-modified_date")
+        ]
+
+    @property
+    def team_memberships(self):
+        return self.rel_team_memberships.filter(is_active=True).order_by(
+            "-modified_date"
+        )
+
+    @property
+    def user_projects(self):
+        return sorted(
+            [perm.project for perm in self.get_all_permissions()],
+            key=lambda data: data["project"].modified_date,
+            reverse=True,
+        )
+
+    @property
+    def team_projects(self):
+        return sorted(
+            [
+                team_membership.project
+                for team_membership in self.rel_team_memberships.filter(is_active=True)
+            ],
+            key=lambda data: data["project"].modified_date,
+            reverse=True,
+        )
+
+    @property
     def projects(self):
-        return [perm.project for perm in self.get_all_permissions()]
+        return sorted(
+            set(self.user_projects + self.team_projects),
+            key=lambda data: data["project"].modified_date,
+            reverse=True,
+        )
 
-    def get_all_permissions(self):
-        return self.rel_permissions.filter(is_active=True)
-
-    def get_all_projects(self):
+    @property
+    def projects_with_level(self):
         projects = [
             {"project": perm.project, "level": perm.level}
             for perm in self.get_all_permissions()
         ]
+
         return sorted(
             projects, key=lambda data: data["project"].modified_date, reverse=True
         )
 
-    def get_all_team_memberships(self):  # -> list[SurveyTeamMembership]
-        return self.rel_team_memberships.filter(is_active=True)
+    def get_all_permissions(self):
+        return self.rel_permissions.filter(is_active=True)
 
-    def get_all_teams(self):  # -> list[SurveyTeam]
-        teams = [
-            {"team": membership.team, "role": membership.role}
-            for membership in self.get_all_team_memberships()
-        ]
-        return sorted(teams, key=lambda data: data["team"].modified_date, reverse=True)
+    # def get_team_all_permissions(self):
+    #     return self.rel_permissions.filter(is_active=True)
