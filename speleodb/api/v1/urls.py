@@ -29,18 +29,35 @@ urlpatterns = [
     # ========================== Public API Routes ========================== #
     # ================== Authentication Required API Routes ================= #
     # ----------------------------- PROJECT APIs ---------------------------- #
+    # --------- PROJECT DETAILS --------- #
     path("project/", CreateProjectApiView.as_view(), name="create_project"),
+    path("projects/", ProjectListApiView.as_view(), name="list_all_projects"),
     path("project/<uuid:id>/", ProjectApiView.as_view(), name="one_project_apiview"),
+    # --------- USER PERMISSIONS --------- #
     path(
-        "project/<uuid:id>/permissions/",
+        "project/<uuid:id>/permissions/user/",
         ProjectPermissionListView.as_view(),
-        name="list_project_permissions",
+        name="list_project_user_permissions",
     ),
     path(
-        "project/<uuid:id>/permission/",
+        "project/<uuid:id>/permission/user/",
         ProjectPermissionView.as_view(),
-        name="project_permission",
+        name="project_user_permission",
     ),
+    # --------- TEAM PERMISSIONS --------- #
+    # TODO: FIX HERE
+    path(
+        "project/<uuid:id>/permissions/team/",
+        ProjectPermissionListView.as_view(),
+        name="list_project_team_permissions",
+    ),
+    # TODO: FIX HERE
+    path(
+        "project/<uuid:id>/permission/team/",
+        ProjectPermissionView.as_view(),
+        name="project_team_permission",
+    ),
+    # --------- MUTEX --------- #
     path(
         "project/<uuid:id>/acquire/",
         ProjectAcquireApiView.as_view(),
@@ -51,6 +68,7 @@ urlpatterns = [
         ProjectReleaseApiView.as_view(),
         name="release_project",
     ),
+    # --------- UPLOAD/DOWNLOAD --------- #
     re_path(
         rf"project/(?P<id>{uuid_regex})/upload/{up_formats_regex}/$",
         FileUploadView.as_view(),
@@ -71,5 +89,4 @@ urlpatterns = [
         FileDownloadView.as_view(),
         name="download_project_at_hash",
     ),
-    path("projects/", ProjectListApiView.as_view(), name="list_all_projects"),
 ]

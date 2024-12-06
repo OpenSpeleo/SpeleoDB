@@ -14,8 +14,9 @@ from frontend_private.views import ProjectDetailsView
 from frontend_private.views import ProjectGitExplorerView
 from frontend_private.views import ProjectListingView
 from frontend_private.views import ProjectMutexesView
-from frontend_private.views import ProjectPermissionsView
+from frontend_private.views import ProjectTeamPermissionsView
 from frontend_private.views import ProjectUploadView
+from frontend_private.views import ProjectUserPermissionsView
 from frontend_private.views import TeamDangerZoneView
 from frontend_private.views import TeamDetailsView
 from frontend_private.views import TeamListingView
@@ -58,9 +59,14 @@ urlpatterns = [
         name="project_upload",
     ),
     path(
-        "project/<uuid:project_id>/permissions/",
-        ProjectPermissionsView.as_view(),
-        name="project_permissions",
+        "project/<uuid:project_id>/permissions/user/",
+        ProjectUserPermissionsView.as_view(),
+        name="project_user_permissions",
+    ),
+    path(
+        "project/<uuid:project_id>/permissions/team/",
+        ProjectTeamPermissionsView.as_view(),
+        name="project_team_permissions",
     ),
     path(
         "project/<uuid:project_id>/mutexes/",

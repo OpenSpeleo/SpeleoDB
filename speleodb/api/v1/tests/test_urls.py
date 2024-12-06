@@ -22,25 +22,47 @@ def test_one_project_apiview(project: Project):
     )
 
 
-def test_list_project_permissions(project: Project):
+def test_list_project_user_permissions(project: Project):
     assert (
-        reverse("api:v1:list_project_permissions", kwargs={"id": project.id})
-        == f"/api/v1/project/{project.id}/permissions/"
+        reverse("api:v1:list_project_user_permissions", kwargs={"id": project.id})
+        == f"/api/v1/project/{project.id}/permissions/user/"
     )
     assert (
-        resolve(f"/api/v1/project/{project.id}/permissions/").view_name
-        == "api:v1:list_project_permissions"
+        resolve(f"/api/v1/project/{project.id}/permissions/user/").view_name
+        == "api:v1:list_project_user_permissions"
     )
 
 
-def test_project_permission(project: Project):
+def test_list_project_team_permissions(project: Project):
     assert (
-        reverse("api:v1:project_permission", kwargs={"id": project.id})
-        == f"/api/v1/project/{project.id}/permission/"
+        reverse("api:v1:list_project_team_permissions", kwargs={"id": project.id})
+        == f"/api/v1/project/{project.id}/permissions/team/"
     )
     assert (
-        resolve(f"/api/v1/project/{project.id}/permission/").view_name
-        == "api:v1:project_permission"
+        resolve(f"/api/v1/project/{project.id}/permissions/team/").view_name
+        == "api:v1:list_project_team_permissions"
+    )
+
+
+def test_user_project_permission(project: Project):
+    assert (
+        reverse("api:v1:project_user_permission", kwargs={"id": project.id})
+        == f"/api/v1/project/{project.id}/permission/user/"
+    )
+    assert (
+        resolve(f"/api/v1/project/{project.id}/permission/user/").view_name
+        == "api:v1:project_user_permission"
+    )
+
+
+def test_team_project_permission(project: Project):
+    assert (
+        reverse("api:v1:project_team_permission", kwargs={"id": project.id})
+        == f"/api/v1/project/{project.id}/permission/team/"
+    )
+    assert (
+        resolve(f"/api/v1/project/{project.id}/permission/team/").view_name
+        == "api:v1:project_team_permission"
     )
 
 
