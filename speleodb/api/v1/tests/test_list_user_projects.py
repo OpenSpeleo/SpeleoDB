@@ -5,10 +5,10 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from speleodb.api.v1.tests.factories import PermissionFactory
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserFactory
-from speleodb.surveys.models import Permission
+from speleodb.api.v1.tests.factories import UserPermissionFactory
+from speleodb.surveys.models import UserPermission
 
 
 class TestProjectInteraction(TestCase):
@@ -31,9 +31,9 @@ class TestProjectInteraction(TestCase):
 
         for _ in range(self.PROJECT_COUNT):
             # automatically creates projects associated
-            _ = PermissionFactory(
-                user=self.user,
-                level=random.choice(list(Permission.Level)),
+            _ = UserPermissionFactory(
+                target=self.user,
+                level=random.choice(list(UserPermission.Level)),
             )
 
         endpoint = reverse("api:v1:list_all_projects")
@@ -54,7 +54,7 @@ class TestProjectInteraction(TestCase):
             "modified_date",
             "active_mutex",
             "name",
-            "permission",
+            "user_permission",
         ]
 
         for project in response.data["data"]:

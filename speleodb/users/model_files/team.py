@@ -27,19 +27,19 @@ class SurveyTeam(models.Model):
     def __str__(self):
         return self.name
 
-    def get_all_memberships(self):
-        return self.rel_team_memberships.filter(is_active=True).order_by(
-            "-_role", "user__email"
-        )
-
-    def get_member_count(self):
-        return self.get_all_memberships().count()
-
     def get_membership(self, user: User):
         try:
             return self.rel_team_memberships.get(user=user, is_active=True)
         except ObjectDoesNotExist:
             return None
+
+    def get_member_count(self):
+        return self.get_all_memberships().count()
+
+    def get_all_memberships(self):
+        return self.rel_team_memberships.filter(is_active=True).order_by(
+            "-_role", "user__email"
+        )
 
     def is_leader(self, user: User):
         try:

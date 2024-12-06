@@ -6,19 +6,19 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.api.v1.tests.factories import PermissionFactory
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserFactory
-from speleodb.surveys.models import Permission
+from speleodb.api.v1.tests.factories import UserPermissionFactory
+from speleodb.surveys.models import UserPermission
 
 
 @pytest.mark.parametrize(
     "level",
     [
-        Permission.Level.ADMIN,
-        Permission.Level.READ_AND_WRITE,
-        Permission.Level.READ_ONLY,
+        UserPermission.Level.ADMIN,
+        UserPermission.Level.READ_AND_WRITE,
+        UserPermission.Level.READ_ONLY,
     ],
 )
 class TestProjectInteraction(TestCase):
@@ -35,9 +35,9 @@ class TestProjectInteraction(TestCase):
 
     @parameterized.expand(
         [
-            Permission.Level.ADMIN,
-            Permission.Level.READ_AND_WRITE,
-            Permission.Level.READ_ONLY,
+            UserPermission.Level.ADMIN,
+            UserPermission.Level.READ_AND_WRITE,
+            UserPermission.Level.READ_ONLY,
         ]
     )
     def test_get_user_project(self, level):
@@ -46,7 +46,7 @@ class TestProjectInteraction(TestCase):
         credentials passes and does not require CSRF
         """
 
-        _ = PermissionFactory(user=self.user, project=self.project, level=level)
+        _ = UserPermissionFactory(target=self.user, project=self.project, level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
@@ -98,8 +98,8 @@ class TestProjectInteraction(TestCase):
 
     @parameterized.expand(
         [
-            Permission.Level.ADMIN,
-            Permission.Level.READ_AND_WRITE,
+            UserPermission.Level.ADMIN,
+            UserPermission.Level.READ_AND_WRITE,
         ]
     )
     def test_acquire_and_release_user_project(self, level):
@@ -108,7 +108,7 @@ class TestProjectInteraction(TestCase):
         credentials passes and does not require CSRF
         """
 
-        _ = PermissionFactory(user=self.user, project=self.project, level=level)
+        _ = UserPermissionFactory(target=self.user, project=self.project, level=level)
 
         # =================== ACQUIRE PROJECT =================== #
 
@@ -173,8 +173,8 @@ class TestProjectInteraction(TestCase):
 
     @parameterized.expand(
         [
-            Permission.Level.ADMIN,
-            Permission.Level.READ_AND_WRITE,
+            UserPermission.Level.ADMIN,
+            UserPermission.Level.READ_AND_WRITE,
         ]
     )
     def test_acquire_and_release_user_project_with_comment(self, level):
@@ -183,7 +183,7 @@ class TestProjectInteraction(TestCase):
         credentials passes and does not require CSRF
         """
 
-        _ = PermissionFactory(user=self.user, project=self.project, level=level)
+        _ = UserPermissionFactory(target=self.user, project=self.project, level=level)
 
         # =================== ACQUIRE PROJECT =================== #
 
@@ -252,8 +252,8 @@ class TestProjectInteraction(TestCase):
         credentials passes and does not require CSRF
         """
 
-        _ = PermissionFactory(
-            user=self.user, project=self.project, level=Permission.Level.READ_ONLY
+        _ = UserPermissionFactory(
+            target=self.user, project=self.project, level=UserPermission.Level.READ_ONLY
         )
 
         auth = self.header_prefix + self.token.key
@@ -266,8 +266,8 @@ class TestProjectInteraction(TestCase):
         assert not response.data["success"], response.data
 
     def test_fail_release_readonly_project(self):
-        _ = PermissionFactory(
-            user=self.user, project=self.project, level=Permission.Level.READ_ONLY
+        _ = UserPermissionFactory(
+            target=self.user, project=self.project, level=UserPermission.Level.READ_ONLY
         )
 
         auth = self.header_prefix + self.token.key

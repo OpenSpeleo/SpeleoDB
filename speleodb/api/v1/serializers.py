@@ -5,8 +5,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django_countries import countries
 from rest_framework import serializers
 
-from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import UserPermission
 from speleodb.utils.serializer_fields import CustomChoiceField
 
 
@@ -18,7 +18,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         default=Project.Visibility.PRIVATE,
     )
 
-    permission = serializers.SerializerMethodField()
+    user_permission = serializers.SerializerMethodField()
     active_mutex = serializers.SerializerMethodField()
 
     class Meta:
@@ -29,13 +29,27 @@ class ProjectSerializer(serializers.ModelSerializer):
         project = super().create(validated_data)
 
         # assign current user as project admin
-        Permission.objects.create(
-            project=project, user=self.context.get("user"), level=Permission.Level.ADMIN
+        UserPermission.objects.create(
+            project=project,
+            user=self.context.get("user"),
+            level=UserPermission.Level.ADMIN,
         )
 
         return project
 
-    def get_permission(self, obj):
+    # def get_team_permission(self, obj):
+    #     if isinstance(obj, dict):
+    #         # Unsaved object
+    #         return None
+    #
+    #     user = self.context.get("user")
+    #
+    #     try:
+    #         return obj.get_team_permission(team=user).level
+    #     except ObjectDoesNotExist:
+    #         return None
+
+    def get_user_permission(self, obj):
         if isinstance(obj, dict):
             # Unsaved object
             return None
@@ -43,7 +57,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         user = self.context.get("user")
 
         try:
-            return obj.get_permission(user=user).level
+            return obj.get_user_permission(user=user).level
         except ObjectDoesNotExist:
             return None
 
@@ -62,17 +76,17 @@ class ProjectSerializer(serializers.ModelSerializer):
         }
 
 
-class PermissionSerializer(serializers.ModelSerializer):
+class UserPermissionSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField()
-    level = CustomChoiceField(choices=Permission.Level, source="_level")
+    level = CustomChoiceField(choices=UserPermission.Level, source="_level")
 
     class Meta:
-        fields = ("user", "level", "creation_date", "modified_date")
-        model = Permission
+        fields = ("target", "level", "creation_date", "modified_date")
+        model = UserPermission
 
 
-class PermissionListSerializer(serializers.ListSerializer):
-    child = PermissionSerializer()
+class UserPermissionListSerializer(serializers.ListSerializer):
+    child = UserPermissionSerializer()
 
 
 class UploadSerializer(serializers.Serializer):

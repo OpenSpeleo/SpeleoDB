@@ -187,7 +187,7 @@ class ProjectUserPermissionsView(_BaseProjectView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        data["permissions"] = data["project"].get_all_permissions()
+        data["permissions"] = data["project"].get_all_user_permissions()
         return render(request, ProjectUserPermissionsView.template_name, data)
 
 
@@ -200,7 +200,7 @@ class ProjectTeamPermissionsView(_BaseProjectView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        data["permissions"] = data["project"].get_all_permissions()
+        data["permissions"] = data["project"].get_all_team_permissions()
         return render(request, ProjectTeamPermissionsView.template_name, data)
 
 

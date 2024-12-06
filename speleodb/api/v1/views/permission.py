@@ -9,11 +9,11 @@ from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasAdminAccess
 from speleodb.api.v1.permissions import UserHasReadAccess
-from speleodb.api.v1.serializers import PermissionListSerializer
-from speleodb.api.v1.serializers import PermissionSerializer
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.surveys.models import Permission
+from speleodb.api.v1.serializers import UserPermissionListSerializer
+from speleodb.api.v1.serializers import UserPermissionSerializer
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import UserPermission
 from speleodb.users.models import User
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
@@ -27,10 +27,10 @@ class ProjectPermissionListView(GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         project = self.get_object()
-        permissions = project.get_all_permissions()
+        permissions = project.get_all_user_permissions()
 
         project_serializer = ProjectSerializer(project, context={"user": request.user})
-        permission_serializer = PermissionListSerializer(permissions)
+        permission_serializer = UserPermissionListSerializer(permissions)
 
         return SuccessResponse(
             {
@@ -57,13 +57,13 @@ class ProjectPermissionView(GenericAPIView):
 
                 if key == "level":
                     if not isinstance(value, str) or value.upper() not in [
-                        name for _, name in Permission.Level.choices
+                        name for _, name in UserPermission.Level.choices
                     ]:
                         return ErrorResponse(
                             {"error": f"Invalid value received for `{key}`: `{value}`"},
                             status=status.HTTP_400_BAD_REQUEST,
                         )
-                    perm_data[key] = getattr(Permission.Level, value.upper())
+                    perm_data[key] = getattr(UserPermission.Level, value.upper())
 
                 elif key in "user":
                     try:
@@ -97,7 +97,7 @@ class ProjectPermissionView(GenericAPIView):
             return perm_data
 
         # Can't edit your own permission
-        if request.user == perm_data["user"]:
+        if request.user == perm_data["target"]:
             # This by default make no sense because you need to be project admin
             # to create permission. So you obviously can't create permission for
             # yourself. Added just as safety and logical consistency.
@@ -106,7 +106,7 @@ class ProjectPermissionView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        permission, created = Permission.objects.get_or_create(
+        permission, created = UserPermission.objects.get_or_create(
             project=project, user=perm_data["user"]
         )
 
@@ -123,7 +123,7 @@ class ProjectPermissionView(GenericAPIView):
 
         permission.reactivate(level=perm_data["level"])
 
-        permission_serializer = PermissionSerializer(permission)
+        permission_serializer = UserPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": request.user})
 
         # Refresh the `modified_date` field
@@ -132,7 +132,7 @@ class ProjectPermissionView(GenericAPIView):
         return SuccessResponse(
             {
                 "project": project_serializer.data,
-                "permission": permission_serializer.data,
+                "user_permission": permission_serializer.data,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -147,14 +147,16 @@ class ProjectPermissionView(GenericAPIView):
             return perm_data
 
         # Can't edit your own permission
-        if request.user == perm_data["user"]:
+        if request.user == perm_data["target"]:
             return ErrorResponse(
                 {"error": ("A user can not edit their own permission")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            permission = Permission.objects.get(project=project, user=perm_data["user"])
+            permission = UserPermission.objects.get(
+                project=project, user=perm_data["user"]
+            )
         except ObjectDoesNotExist:
             return ErrorResponse(
                 {
@@ -180,7 +182,7 @@ class ProjectPermissionView(GenericAPIView):
         permission.level = perm_data["level"]
         permission.save()
 
-        permission_serializer = PermissionSerializer(permission)
+        permission_serializer = UserPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": request.user})
 
         # Refresh the `modified_date` field
@@ -189,7 +191,7 @@ class ProjectPermissionView(GenericAPIView):
         return SuccessResponse(
             {
                 "project": project_serializer.data,
-                "permission": permission_serializer.data,
+                "user_permission": permission_serializer.data,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -204,14 +206,16 @@ class ProjectPermissionView(GenericAPIView):
             return perm_data
 
         # Can't edit your own permission
-        if request.user == perm_data["user"]:
+        if request.user == perm_data["target"]:
             return ErrorResponse(
                 {"error": ("A user can not edit their own permission")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            permission = Permission.objects.get(project=project, user=perm_data["user"])
+            permission = UserPermission.objects.get(
+                project=project, user=perm_data["user"]
+            )
         except ObjectDoesNotExist:
             return ErrorResponse(
                 {

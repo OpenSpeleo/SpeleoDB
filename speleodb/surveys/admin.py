@@ -6,8 +6,9 @@ from django.contrib import admin
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Mutex
-from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import TeamPermission
+from speleodb.surveys.models import UserPermission
 
 
 @admin.register(Format)
@@ -34,11 +35,12 @@ class MutexAdmin(admin.ModelAdmin):
     list_filter = ["closing_user"]
 
 
-@admin.register(Permission)
+@admin.register(TeamPermission)
+@admin.register(UserPermission)
 class PermissionAdmin(admin.ModelAdmin):
     list_display = (
         "project",
-        "user",
+        "target",
         "level",
         "creation_date",
         "modified_date",
