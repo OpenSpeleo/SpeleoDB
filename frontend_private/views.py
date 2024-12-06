@@ -178,8 +178,8 @@ class ProjectDetailsView(_BaseProjectView):
         return render(request, ProjectDetailsView.template_name, data)
 
 
-class ProjectPermissionsView(_BaseProjectView):
-    template_name = "pages/project/permissions.html"
+class ProjectUserPermissionsView(_BaseProjectView):
+    template_name = "pages/project/user_permissions.html"
 
     def get(self, request, project_id: str):
         try:
@@ -188,7 +188,20 @@ class ProjectPermissionsView(_BaseProjectView):
             return redirect(reverse("private:projects"))
 
         data["permissions"] = data["project"].get_all_permissions()
-        return render(request, ProjectPermissionsView.template_name, data)
+        return render(request, ProjectUserPermissionsView.template_name, data)
+
+
+class ProjectTeamPermissionsView(_BaseProjectView):
+    template_name = "pages/project/team_permissions.html"
+
+    def get(self, request, project_id: str):
+        try:
+            data = super().get(request, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
+
+        data["permissions"] = data["project"].get_all_permissions()
+        return render(request, ProjectTeamPermissionsView.template_name, data)
 
 
 class ProjectMutexesView(_BaseProjectView):
