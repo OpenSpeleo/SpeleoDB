@@ -94,8 +94,8 @@ class SurveyTeamMembership(models.Model):
 
     class Meta:
         unique_together = ("user", "team")
-        verbose_name = "Survey Team Membership"
-        verbose_name_plural = "Survey Memberships"
+        verbose_name = "Team Membership"
+        verbose_name_plural = "Team Memberships"
 
     def __str__(self):
         return f"{self.user} => {self.team} [{self.role}]"
