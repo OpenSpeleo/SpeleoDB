@@ -32,7 +32,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         # assign current user as project admin
         UserPermission.objects.create(
             project=project,
-            user=self.context.get("user"),
+            target=self.context.get("user"),
             level=UserPermission.Level.ADMIN,
         )
 

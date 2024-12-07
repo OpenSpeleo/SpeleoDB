@@ -9,11 +9,13 @@ from speleodb.api.v1.views.file import FileDownloadView
 from speleodb.api.v1.views.file import FileUploadView
 from speleodb.api.v1.views.mutex import ProjectAcquireApiView
 from speleodb.api.v1.views.mutex import ProjectReleaseApiView
-from speleodb.api.v1.views.permission import ProjectPermissionListView
-from speleodb.api.v1.views.permission import ProjectPermissionView
 from speleodb.api.v1.views.project import CreateProjectApiView
 from speleodb.api.v1.views.project import ProjectApiView
 from speleodb.api.v1.views.project import ProjectListApiView
+from speleodb.api.v1.views.team_permission import ProjectTeamPermissionListView
+from speleodb.api.v1.views.team_permission import ProjectTeamPermissionView
+from speleodb.api.v1.views.user_permission import ProjectUserPermissionListView
+from speleodb.api.v1.views.user_permission import ProjectUserPermissionView
 from speleodb.surveys.models import Format
 
 app_name = "v1"
@@ -36,25 +38,23 @@ urlpatterns = [
     # --------- USER PERMISSIONS --------- #
     path(
         "project/<uuid:id>/permissions/user/",
-        ProjectPermissionListView.as_view(),
+        ProjectUserPermissionListView.as_view(),
         name="list_project_user_permissions",
     ),
     path(
         "project/<uuid:id>/permission/user/",
-        ProjectPermissionView.as_view(),
+        ProjectUserPermissionView.as_view(),
         name="project_user_permission",
     ),
     # --------- TEAM PERMISSIONS --------- #
-    # TODO: FIX HERE
     path(
         "project/<uuid:id>/permissions/team/",
-        ProjectPermissionListView.as_view(),
+        ProjectTeamPermissionListView.as_view(),
         name="list_project_team_permissions",
     ),
-    # TODO: FIX HERE
     path(
         "project/<uuid:id>/permission/team/",
-        ProjectPermissionView.as_view(),
+        ProjectTeamPermissionView.as_view(),
         name="project_team_permission",
     ),
     # --------- MUTEX --------- #
