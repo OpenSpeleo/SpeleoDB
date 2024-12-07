@@ -6,6 +6,7 @@ from django_countries import countries
 from rest_framework import serializers
 
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 from speleodb.utils.serializer_fields import CustomChoiceField
 
@@ -77,7 +78,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 class UserPermissionSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField()
+    target = serializers.StringRelatedField()
     level = CustomChoiceField(choices=UserPermission.Level, source="_level")
 
     class Meta:
@@ -85,8 +86,21 @@ class UserPermissionSerializer(serializers.ModelSerializer):
         model = UserPermission
 
 
+class TeamPermissionSerializer(serializers.ModelSerializer):
+    target = serializers.StringRelatedField()
+    level = CustomChoiceField(choices=UserPermission.Level, source="_level")
+
+    class Meta:
+        fields = ("target", "level", "creation_date", "modified_date")
+        model = TeamPermission
+
+
 class UserPermissionListSerializer(serializers.ListSerializer):
     child = UserPermissionSerializer()
+
+
+class TeamPermissionListSerializer(serializers.ListSerializer):
+    child = TeamPermissionSerializer()
 
 
 class UploadSerializer(serializers.Serializer):

@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
                 ('is_active', models.BooleanField(default=True)),
                 ('creation_date', models.DateTimeField(auto_now_add=True)),
                 ('modified_date', models.DateTimeField(auto_now=True)),
-                ('_level', models.IntegerField(choices=[(0, 'Read Only'), (1, 'Read And Write'), (2, 'ADMIN')], default=0, verbose_name='level')),
+                ('_level', models.IntegerField(choices=[(0, 'READ_ONLY'), (1, 'READ_AND_WRITE'), (2, 'ADMIN')], default=0, verbose_name='level')),
                 ('deactivated_by', models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.RESTRICT, to=settings.AUTH_USER_MODEL)),
                 ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rel_user_permissions', to='surveys.project')),
                 ('target', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rel_permissions', to=settings.AUTH_USER_MODEL)),

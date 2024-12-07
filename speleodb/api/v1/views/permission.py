@@ -97,7 +97,7 @@ class ProjectPermissionView(GenericAPIView):
             return perm_data
 
         # Can't edit your own permission
-        if request.user == perm_data["target"]:
+        if request.user == perm_data["user"]:
             # This by default make no sense because you need to be project admin
             # to create permission. So you obviously can't create permission for
             # yourself. Added just as safety and logical consistency.
@@ -107,7 +107,7 @@ class ProjectPermissionView(GenericAPIView):
             )
 
         permission, created = UserPermission.objects.get_or_create(
-            project=project, user=perm_data["user"]
+            project=project, target=perm_data["user"]
         )
 
         if not created and permission.is_active:
@@ -147,7 +147,7 @@ class ProjectPermissionView(GenericAPIView):
             return perm_data
 
         # Can't edit your own permission
-        if request.user == perm_data["target"]:
+        if request.user == perm_data["user"]:
             return ErrorResponse(
                 {"error": ("A user can not edit their own permission")},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -155,7 +155,7 @@ class ProjectPermissionView(GenericAPIView):
 
         try:
             permission = UserPermission.objects.get(
-                project=project, user=perm_data["user"]
+                project=project, target=perm_data["user"]
             )
         except ObjectDoesNotExist:
             return ErrorResponse(
@@ -206,7 +206,7 @@ class ProjectPermissionView(GenericAPIView):
             return perm_data
 
         # Can't edit your own permission
-        if request.user == perm_data["target"]:
+        if request.user == perm_data["user"]:
             return ErrorResponse(
                 {"error": ("A user can not edit their own permission")},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -214,7 +214,7 @@ class ProjectPermissionView(GenericAPIView):
 
         try:
             permission = UserPermission.objects.get(
-                project=project, user=perm_data["user"]
+                project=project, target=perm_data["user"]
             )
         except ObjectDoesNotExist:
             return ErrorResponse(
