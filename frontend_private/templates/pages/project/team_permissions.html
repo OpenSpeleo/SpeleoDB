@@ -107,7 +107,7 @@
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
 
                                     <!-- Edit Link -->
-                                    <span class="cursor-pointer btn_open_edit_perm" data-team="{{permission.team}}" data-level="{{permission.level}}">
+                                    <span class="cursor-pointer btn_open_edit_perm" data-team="{{permission.target.id}}" data-level="{{permission.level}}">
                                         <svg xmlns="http://www.w3.org/2000/svg"
                                             class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 text-amber-500 inline"
                                             viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
@@ -119,7 +119,7 @@
                                     </span>
 
                                     <!-- Delete Link -->
-                                    <span class="cursor-pointer btn_delete_perm" data-team="{{permission.target}}">
+                                    <span class="cursor-pointer btn_delete_perm" data-team="{{permission.target.id}}">
                                         <svg xmlns="http://www.w3.org/2000/svg"
                                             class="icon icon-tabler icon-tabler-x stroke-current h-6  text-rose-500 inline"
                                             viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
@@ -170,6 +170,22 @@
             }
         });
 
+        function lockSelect(selector) {
+            $(selector)
+                .addClass("readonly") // Add a class to indicate the readonly state
+                .on("mousedown keydown", preventInteraction); // Block interactions
+        }
+        
+        function preventInteraction(e) {
+            e.preventDefault(); // Prevent user interaction
+        }
+
+        function unlockSelect(selector) {
+            $(selector)
+                .removeClass("readonly") // Remove the readonly indication
+                .off("mousedown keydown", preventInteraction); // Restore interactions
+        }
+
         /* ------------------------------------------------------------------------- */
         /* --------------------------- ADDING PERMISSION --------------------------- */
         /* ------------------------------------------------------------------------- */
@@ -181,7 +197,7 @@
             $("#permission_modal_title").text("Add a Team to the project");
             $("#permission_modal_header").text("What team would you like to add 🙌 ?");
             $("#permission_modal").css('display', 'flex');
-            $("#team").prop("readonly", false);
+            unlockSelect("#team");
         });
 
         /* ------------------------------------------------------------------------- */
@@ -194,8 +210,9 @@
             $("#permission_modal_title").text("How shall we modify this team's access ?");
             $("#permission_modal_header").text("");
             $("#permission_modal").css('display', 'flex');
-            $("#team").val($(this).data("team")).prop("readonly", true);
+            $("#team").val($(this).data("team"));
             $("#level").val($(this).data("level"));
+            lockSelect("#team");
         });
 
         /* ------------------------------------------------------------------------- */
