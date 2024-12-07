@@ -20,8 +20,14 @@ class UserPermission(BasePermissionModel):
     )
 
     class Level(models.IntegerChoices):
-        READ_ONLY = BasePermissionModel.Level.READ_ONLY
-        READ_AND_WRITE = BasePermissionModel.Level.READ_AND_WRITE
+        READ_ONLY = (
+            BasePermissionModel.Level.READ_ONLY,
+            BasePermissionModel.Level.READ_ONLY.label,
+        )
+        READ_AND_WRITE = (
+            BasePermissionModel.Level.READ_AND_WRITE,
+            BasePermissionModel.Level.READ_AND_WRITE.label,
+        )
         ADMIN = (2, "ADMIN")
 
     _level = models.IntegerField(

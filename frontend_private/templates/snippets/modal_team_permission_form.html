@@ -1,4 +1,4 @@
-{% load user_permission_levels %}
+{% load permission_levels %}
 
 <!-- Modal dialog -->
 <div id="permission_modal" class="fixed inset-0 z-40 overflow-hidden flex items-center my-4 justify-center px-4 sm:px-6" style="display: none">
@@ -6,7 +6,7 @@
         <!-- Modal header -->
         <div class="px-5 py-3 border-b border-slate-700">
             <div class="flex justify-between items-center">
-                <div id="permission_modal_title" class="font-semibold text-slate-100">Add User to the Project</div>
+                <div id="permission_modal_title" class="font-semibold text-slate-100">Add Team to the Project</div>
                 <button class="btn_close text-slate-500 hover:text-slate-400">
                     <div class="sr-only">Close</div>
                     <svg class="w-4 h-4 fill-current">
@@ -24,14 +24,19 @@
                 <div class="space-y-3">
                     {% csrf_token %}
                     <div>
-                        <label class="block text-sm font-medium mb-1" for="user">Email <span class="text-rose-500">*</span></label>
-                        <input id="user" name="user" class="form-input w-full px-2 py-1 h-10 mb-2" type="email" required />
+                        <label class="block text-sm font-medium mb-1" for="team">Team <span class="text-rose-500">*</span></label>
+                        <select id="team" name="team" class="form-select max-w-full w-128 h-10 mb-4">
+                            <option disabled selected value>Select a team ...</option>
+                        {% for team in user.teams %}
+                            <option value="{{ team.id }}">{{ team.name }}</option>
+                        {% endfor %}
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1" for="level">Access Level:<span class="text-rose-600"> *</span></label>
                         <select id="level" name="level" class="form-select max-w-full w-128 h-10 mb-4">
-                            <option disabled selected value>Select an option...</option>
-                        {% get_user_permission_levels as levels %}
+                            <option disabled selected value>Select an option ...</option>
+                        {% get_team_permission_levels as levels %}
                         {% for level in levels %}
                             <option value="{{ level }}">{{ level }}</option>
                         {% endfor %}

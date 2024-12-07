@@ -9,6 +9,26 @@ from django_countries.fields import CountryField
 from speleodb.users.managers import UserManager
 
 
+def filter_permissions_by_best(permissions: list) -> list:
+    """
+    A user can have access to a project by name or from N teams.
+    This function keep the "best access level" for each project
+    and discard the permissions less interesting.
+    Only one permission per project is being kept.
+    """
+    permission_map = {}
+    for perm in permissions:
+        if (
+            perm.project not in permission_map
+            or permission_map[perm.project]._level < perm._level  # noqa: SLF001
+        ):
+            permission_map[perm.project] = perm
+
+    return sorted(
+        permission_map.values(), key=lambda data: data.modified_date, reverse=True
+    )
+
+
 class User(AbstractUser):
     """
     Default custom user model for SpeleoDB.
@@ -52,19 +72,16 @@ class User(AbstractUser):
     @property
     def user_projects(self):
         return sorted(
-            [perm.project for perm in self.get_all_permissions()],
-            key=lambda data: data["project"].modified_date,
+            [perm.project for perm in self.permissions_user],
+            key=lambda data: data.modified_date,
             reverse=True,
         )
 
     @property
     def team_projects(self):
         return sorted(
-            [
-                team_membership.project
-                for team_membership in self.rel_team_memberships.filter(is_active=True)
-            ],
-            key=lambda data: data["project"].modified_date,
+            [perm.project for perm in self.team_permissions],
+            key=lambda data: data.modified_date,
             reverse=True,
         )
 
@@ -72,7 +89,7 @@ class User(AbstractUser):
     def projects(self):
         return sorted(
             set(self.user_projects + self.team_projects),
-            key=lambda data: data["project"].modified_date,
+            key=lambda data: data.modified_date,
             reverse=True,
         )
 
@@ -80,15 +97,29 @@ class User(AbstractUser):
     def projects_with_level(self):
         projects = [
             {"project": perm.project, "level": perm.level}
-            for perm in self.get_all_permissions()
+            for perm in self.permissions_user
         ]
 
         return sorted(
             projects, key=lambda data: data["project"].modified_date, reverse=True
         )
 
-    def get_all_permissions(self):
-        return self.rel_permissions.filter(is_active=True)
+    @property
+    def permissions_user(self):
+        return list(
+            self.rel_permissions.filter(is_active=True).order_by(
+                "-project__modified_date"
+            )
+        )
 
-    # def get_team_all_permissions(self):
-    #     return self.rel_permissions.filter(is_active=True)
+    @property
+    def permissions_team(self):
+        permissions = []
+        for team in self.teams:
+            permissions.extend(team.rel_permissions.filter(is_active=True))
+
+        return filter_permissions_by_best(permissions)
+
+    @property
+    def permissions(self):
+        return filter_permissions_by_best(self.permissions_user + self.permissions_team)
