@@ -66,14 +66,13 @@ class NewTeamView(_AuthenticatedTemplateView):
 class _BaseTeamView(LoginRequiredMixin, View):
     def get(self, request, team_id: int):
         team = SurveyTeam.objects.get(id=team_id)
-        membership = team.get_membership(request.user)
-        if request.user and request.user.is_authenticated and membership is not None:
+        if request.user and request.user.is_authenticated:
+            if not team.is_member(request.user):
+                return redirect(reverse("private:teams"))
             return {
                 "team": team,
-                "is_team_leader": membership._role == SurveyTeamMembership.Role.LEADER,  # noqa: SLF001
+                "is_team_leader": team.is_leader(request.user)
             }
-
-        raise ObjectDoesNotExist
 
 
 class TeamDetailsView(_BaseTeamView):

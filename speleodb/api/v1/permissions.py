@@ -48,7 +48,7 @@ class BaseTeamAccessLevel(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request, view, obj: SurveyTeamMembership):
         if request.user.is_superuser:
             return True
 
@@ -60,7 +60,7 @@ class BaseTeamAccessLevel(permissions.BasePermission):
 
 class UserHasLeaderAccess(BaseTeamAccessLevel):
     MIN_ACCESS_LEVEL = SurveyTeamMembership.Role.LEADER
-    message = "You must have leader access for this project."
+    message = f"You must have {SurveyTeamMembership.Role.LEADER.label} access."
 
 
 class UserHasMemberAccess(BaseTeamAccessLevel):

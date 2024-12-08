@@ -37,13 +37,11 @@ class SurveyTeamSerializer(serializers.ModelSerializer):
         user = self.context.get("user")
 
         try:
-            membership = obj.get_membership(user=user)
+            return obj.get_membership(user=user).role
             if membership is None:
                 return None
         except ObjectDoesNotExist:
             return None
-
-        return membership.role
 
 
 class SurveyTeamMembershipSerializer(serializers.ModelSerializer):
