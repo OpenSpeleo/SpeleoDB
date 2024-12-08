@@ -10,7 +10,7 @@ from rest_framework.authtoken.models import Token
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
-from speleodb.users.api.v1.tests.factories import SurveyTeamFactory
+from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 
 
@@ -36,6 +36,17 @@ class UserFactory(DjangoModelFactory):
     @classmethod
     def DEFAULT_PASSWORD(cls):  # noqa: N802
         return "password"
+
+
+class SurveyTeamFactory(DjangoModelFactory):
+    name = Faker("name")
+    description = factory.LazyAttribute(
+        lambda obj: f"Team description for `{obj.name}`"
+    )
+    country = random.choice(countries)[0]
+
+    class Meta:
+        model = SurveyTeam
 
 
 class TokenFactory(DjangoModelFactory):

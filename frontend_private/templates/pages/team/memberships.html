@@ -210,7 +210,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1_users:team_membership' id=team.id %}",
+                url: "{% url 'api:v1:team_membership' id=team.id %}",
                 method: $("#membership_form").attr('method'),
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
@@ -273,7 +273,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1_users:team_membership' id=team.id %}",
+                url: "{% url 'api:v1:team_membership' id=team.id %}",
                 method: "DELETE",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",

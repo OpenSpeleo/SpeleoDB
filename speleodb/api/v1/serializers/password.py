@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 from allauth.account import signals
 from allauth.account.adapter import get_adapter
 from allauth.account.internal.flows.password_change import logout_on_password_change

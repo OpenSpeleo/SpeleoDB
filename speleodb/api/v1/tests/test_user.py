@@ -23,7 +23,7 @@ class TestUserAPI(TestCase):
         self.token = TokenFactory(user=self.user)
 
     def test_get_user_info(self):
-        endpoint = reverse("api:v1_users:user_info")
+        endpoint = reverse("api:v1:user_info")
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(endpoint, headers={"authorization": auth})
@@ -80,7 +80,7 @@ class TestUserAPI(TestCase):
         self._patch_user_info(expect_success=False, **{name: None})
 
     def _patch_user_info(self, expect_success=True, **kwargs):
-        endpoint = reverse("api:v1_users:user_info")
+        endpoint = reverse("api:v1:user_info")
 
         auth = self.header_prefix + self.token.key
         response = self.client.patch(

@@ -1,7 +1,7 @@
 # import pytest
 # from rest_framework.test import APIRequestFactory
 
-# from speleodb.users.api.v1.views import UserViewSet
+# from speleodb.api.v1.views import UserViewSet
 # from speleodb.users.models import User
 
 
