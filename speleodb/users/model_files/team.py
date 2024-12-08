@@ -27,27 +27,33 @@ class SurveyTeam(models.Model):
     def __str__(self):
         return self.name
 
-    def get_membership(self, user: User):
+    def get_membership(self, user: User) -> "SurveyTeamMembership":
         try:
             return self.rel_team_memberships.get(user=user, is_active=True)
-        except ObjectDoesNotExist:
-            return None
+        except (SurveyTeamMembership.DoesNotExist, ObjectDoesNotExist) as e:
+            raise ObjectDoesNotExist from e
 
-    def get_member_count(self):
+    def get_member_count(self) -> int:
         return self.get_all_memberships().count()
 
-    def get_all_memberships(self):
+    def get_all_memberships(self) -> list["SurveyTeamMembership"]:
         return self.rel_team_memberships.filter(is_active=True).order_by(
             "-_role", "user__email"
         )
 
-    def is_leader(self, user: User):
+    def is_member(self, user: User) -> bool:
+        try:
+            return self.rel_team_memberships.get(user=user, is_active=True)
+        except (SurveyTeamMembership.DoesNotExist, ObjectDoesNotExist):
+            return False
+
+    def is_leader(self, user: User) -> bool:
         try:
             return (
                 self.rel_team_memberships.get(user=user, is_active=True)._role  # noqa: SLF001
                 == SurveyTeamMembership.Role.LEADER
             )
-        except ObjectDoesNotExist:
+        except (SurveyTeamMembership.DoesNotExist, ObjectDoesNotExist):
             return False
 
 
