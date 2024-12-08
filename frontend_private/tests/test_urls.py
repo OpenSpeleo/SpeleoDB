@@ -77,7 +77,7 @@ from django.urls import reverse
         ),
     ],
 )
-def test_routes(name: str, path: str, kwargs: dict):
+def test_routes(name: str, path: str, kwargs: dict | None):
     path = f"/private/{path}" if kwargs is None else f"/private/{path.format(**kwargs)}"
 
     # Test reverse URL generation

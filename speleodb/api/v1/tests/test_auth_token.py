@@ -21,7 +21,7 @@ class TestTokenAuth(TestCase):
         self.token = TokenFactory(user=self.user)
 
     def test_token_retrieval_works(self):
-        endpoint = reverse("api:v1_users:auth_token")
+        endpoint = reverse("api:v1:auth_token")
         response = self.client.post(
             endpoint,
             {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD()},
@@ -52,7 +52,7 @@ class TestTokenAuth(TestCase):
 
         method_fn = getattr(self.client, method.lower())
 
-        endpoint = reverse("api:v1_users:auth_token")
+        endpoint = reverse("api:v1:auth_token")
         response = method_fn(
             endpoint,
             {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD()}
@@ -85,7 +85,7 @@ class TestTokenAuth(TestCase):
 
     def test_wrong_password(self):
         response = self.client.post(
-            reverse("api:v1_users:auth_token"),
+            reverse("api:v1:auth_token"),
             {"email": self.user.email, "password": "YeeOfLittleFaith"},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.status_code
@@ -95,7 +95,7 @@ class TestTokenAuth(TestCase):
 
     def test_not_existing_email(self):
         response = self.client.post(
-            reverse("api:v1_users:auth_token"),
+            reverse("api:v1:auth_token"),
             {"email": "chuck@norris.com", "password": UserFactory.DEFAULT_PASSWORD()},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.status_code
@@ -105,7 +105,7 @@ class TestTokenAuth(TestCase):
 
     def test_missing_password(self):
         response = self.client.post(
-            reverse("api:v1_users:auth_token"),
+            reverse("api:v1:auth_token"),
             {"email": self.user.email},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.status_code
@@ -120,7 +120,7 @@ class TestTokenAuth(TestCase):
 
     def test_missing_email(self):
         response = self.client.post(
-            reverse("api:v1_users:auth_token"),
+            reverse("api:v1:auth_token"),
             {"password": UserFactory.DEFAULT_PASSWORD()},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.status_code

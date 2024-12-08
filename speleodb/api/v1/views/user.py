@@ -9,9 +9,9 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.settings import api_settings
 from rest_framework.throttling import UserRateThrottle
 
-from speleodb.users.api.v1.serializers import AuthTokenSerializer
-from speleodb.users.api.v1.serializers import PasswordChangeSerializer
-from speleodb.users.api.v1.serializers import UserSerializer
+from speleodb.api.v1.serializers import AuthTokenSerializer
+from speleodb.api.v1.serializers import PasswordChangeSerializer
+from speleodb.api.v1.serializers import UserSerializer
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
