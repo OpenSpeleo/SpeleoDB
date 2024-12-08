@@ -75,36 +75,3 @@ class ProjectSerializer(serializers.ModelSerializer):
             "creation_date": obj.active_mutex.creation_date,
             "modified_date": obj.active_mutex.modified_date,
         }
-
-
-class UserPermissionSerializer(serializers.ModelSerializer):
-    target = serializers.StringRelatedField()
-    level = CustomChoiceField(choices=UserPermission.Level, source="_level")
-
-    class Meta:
-        fields = ("target", "level", "creation_date", "modified_date")
-        model = UserPermission
-
-
-class TeamPermissionSerializer(serializers.ModelSerializer):
-    target = serializers.StringRelatedField()
-    level = CustomChoiceField(choices=UserPermission.Level, source="_level")
-
-    class Meta:
-        fields = ("target", "level", "creation_date", "modified_date")
-        model = TeamPermission
-
-
-class UserPermissionListSerializer(serializers.ListSerializer):
-    child = UserPermissionSerializer()
-
-
-class TeamPermissionListSerializer(serializers.ListSerializer):
-    child = TeamPermissionSerializer()
-
-
-class UploadSerializer(serializers.Serializer):
-    file_uploaded = serializers.FileField()
-
-    class Meta:
-        fields = ["file_uploaded"]

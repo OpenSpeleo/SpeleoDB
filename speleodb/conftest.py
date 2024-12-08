@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.surveys.models import Project
-from speleodb.users.api.v1.tests.factories import SurveyTeamFactory
+from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory

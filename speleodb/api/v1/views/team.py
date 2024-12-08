@@ -11,8 +11,8 @@ from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasLeaderAccess
 from speleodb.api.v1.permissions import UserHasMemberAccess
-from speleodb.users.api.v1.serializers import SurveyTeamMembershipSerializer
-from speleodb.users.api.v1.serializers import SurveyTeamSerializer
+from speleodb.api.v1.serializers import SurveyTeamMembershipSerializer
+from speleodb.api.v1.serializers import SurveyTeamSerializer
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
