@@ -3,64 +3,26 @@
 
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
-from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import UserHasLeaderAccess
-from speleodb.api.v1.permissions import UserHasLeaderAccessOrReadOnlyForMembers
+from speleodb.api.v1.permissions import UserHasMemberAccess
 from speleodb.api.v1.serializers import SurveyTeamMembershipListSerializer
 from speleodb.api.v1.serializers import SurveyTeamMembershipSerializer
 from speleodb.api.v1.serializers import SurveyTeamSerializer
+from speleodb.api.v1.serializers import UserRequestSerializer
+from speleodb.api.v1.serializers import UserRequestWithTeamRoleSerializer
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
-from speleodb.users.models import User
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 
-class TeamMembershipDataSerializer(serializers.Serializer):
-    user = serializers.EmailField()
-
-    def validate_user(self, value):
-        try:
-            user = User.objects.get(email=value)
-
-        except User.DoesNotExist as e:
-            raise serializers.ValidationError(
-                f"The user `{value}` does not exist."
-            ) from e
-
-        if not user.is_active:
-            raise serializers.ValidationError(f"The user `{value}` is inactive.")
-
-        # A user can't edit their own membership
-        # This by default make no sense because you need to be team leader
-        # to create membership. So you obviously can't create membership for
-        # yourself. Added just as safety and logical consistency.
-        if self.context.get("requesting_user") == user:
-            raise serializers.ValidationError(
-                "A user can not edit their own membership"
-            )
-
-        return user
-
-
-class TeamMembershipDataWithRoleSerializer(TeamMembershipDataSerializer):
-    role = serializers.ChoiceField(
-        choices=[name for _, name in SurveyTeamMembership.Role.choices]
-    )
-
-    def validate_role(self, value):
-        return getattr(SurveyTeamMembership.Role, value.upper())
-
-
 class TeamMembershipApiView(GenericAPIView):
     queryset = SurveyTeam.objects.all()
-    permission_classes = [
-        permissions.IsAuthenticated,
-        UserHasLeaderAccessOrReadOnlyForMembers,
-    ]
+    permission_classes = [UserHasLeaderAccess | (IsReadOnly & UserHasMemberAccess)]
     serializer_class = SurveyTeamSerializer
     lookup_field = "id"
 
@@ -93,7 +55,7 @@ class TeamMembershipApiView(GenericAPIView):
         )
 
     def post(self, request, *args, **kwargs):
-        serializer = TeamMembershipDataWithRoleSerializer(
+        serializer = UserRequestWithTeamRoleSerializer(
             data=request.data, context={"requesting_user": request.user}
         )
 
@@ -129,6 +91,9 @@ class TeamMembershipApiView(GenericAPIView):
             membership.role = serializer.validated_data["role"]
             membership.save()
 
+        # Refresh the `modified_date` field
+        team.save()
+
         membership_serializer = SurveyTeamMembershipSerializer(membership)
         team_serializer = SurveyTeamSerializer(team, context={"user": request.user})
 
@@ -141,7 +106,7 @@ class TeamMembershipApiView(GenericAPIView):
         )
 
     def put(self, request, *args, **kwargs):
-        serializer = TeamMembershipDataWithRoleSerializer(
+        serializer = UserRequestWithTeamRoleSerializer(
             data=request.data, context={"requesting_user": request.user}
         )
 
@@ -184,6 +149,9 @@ class TeamMembershipApiView(GenericAPIView):
         membership.role = serializer.validated_data["role"]
         membership.save()
 
+        # Refresh the `modified_date` field
+        team.save()
+
         membership_serializer = SurveyTeamMembershipSerializer(membership)
         team_serializer = SurveyTeamSerializer(team, context={"user": request.user})
 
@@ -196,7 +164,7 @@ class TeamMembershipApiView(GenericAPIView):
         )
 
     def delete(self, request, *args, **kwargs):
-        serializer = TeamMembershipDataSerializer(
+        serializer = UserRequestSerializer(
             data=request.data, context={"requesting_user": request.user}
         )
 
@@ -225,6 +193,9 @@ class TeamMembershipApiView(GenericAPIView):
         # Deactivate the user membership to the team
         membership.deactivate(deactivated_by=request.user)
         membership.save()
+
+        # Refresh the `modified_date` field
+        team.save()
 
         team_serializer = SurveyTeamSerializer(team, context={"user": request.user})
 

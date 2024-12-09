@@ -5,13 +5,12 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import UserHasLeaderAccess
-from speleodb.api.v1.permissions import UserHasLeaderAccessOrReadOnlyForMembers
 from speleodb.api.v1.permissions import UserHasMemberAccess
 from speleodb.api.v1.serializers import SurveyTeamListSerializer
 from speleodb.api.v1.serializers import SurveyTeamSerializer
 from speleodb.users.models import SurveyTeam
-from speleodb.utils.api_decorators import method_permission_classes
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
@@ -35,10 +34,7 @@ class CreateTeamApiView(GenericAPIView):
 
 class TeamApiView(GenericAPIView):
     queryset = SurveyTeam.objects.all()
-    permission_classes = [
-        permissions.IsAuthenticated,
-        UserHasLeaderAccessOrReadOnlyForMembers,
-    ]
+    permission_classes = [UserHasLeaderAccess | (IsReadOnly & UserHasMemberAccess)]
     serializer_class = SurveyTeamSerializer
     lookup_field = "id"
 
@@ -83,11 +79,10 @@ class TeamApiView(GenericAPIView):
 
 
 class ListUserTeams(GenericAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [UserHasMemberAccess]
     serializer_class = SurveyTeamListSerializer
     lookup_field = "id"
 
-    @method_permission_classes((UserHasMemberAccess,))
     def get(self, request, *args, **kwargs):
         serializer = self.get_serializer(
             request.user.teams, context={"user": request.user}
