@@ -203,13 +203,13 @@ class TeamMembershipApiView(GenericAPIView):
             {
                 "team": team_serializer.data,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK,
         )
 
 
 class TeamMembershipListApiView(GenericAPIView):
     queryset = SurveyTeam.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasLeaderAccess]
+    permission_classes = [UserHasMemberAccess]
     serializer_class = SurveyTeamSerializer
     lookup_field = "id"
 
