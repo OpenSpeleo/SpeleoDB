@@ -275,11 +275,11 @@ class TestTeamDelete(TestCase):
 
         assert response.status_code == status.HTTP_200_OK
 
-    @parameterized.expand([True, False])
-    def test_delete_error(self, is_member: bool):  # noqa: FBT001
-        if is_member:
+    @parameterized.expand([SurveyTeamMembership.Role.MEMBER, None])
+    def test_delete_error(self, role: SurveyTeamMembership.Role | None):
+        if role is not None:
             _ = SurveyTeamMembership.objects.create(
-                team=self.team, user=self.user, role=SurveyTeamMembership.Role.MEMBER
+                team=self.team, user=self.user, role=role
             )
 
         auth = self.header_prefix + self.token.key
@@ -326,9 +326,9 @@ class TestGetTeam(TestCase):
 
             serializer = SurveyTeamSerializer(self.team, context={"user": self.user})
 
-            assert serializer.data == dict(response.data["data"]), {
+            assert serializer.data == response.data["data"], {
                 "reserialized": serializer.data,
-                "response_data": dict(response.data["data"]),
+                "response_data": response.data["data"],
             }
 
     def test_get_non_existing_team(self):
@@ -339,3 +339,33 @@ class TestGetTeam(TestCase):
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND, response.status_code
+
+    @parameterized.expand(
+        [SurveyTeamMembership.Role.LEADER, SurveyTeamMembership.Role.MEMBER, None]
+    )
+    def test_get_all_user_team(self, role: SurveyTeamMembership.Role | None):
+        if role is not None:
+            _ = SurveyTeamMembership.objects.create(
+                team=self.team, user=self.user, role=role
+            )
+
+        auth = self.header_prefix + self.token.key
+        response = self.client.get(
+            reverse("api:v1:list_user_teams"),
+            headers={"authorization": auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK, response.status_code
+
+        if role is None:
+            assert len(response.data["data"]) == 0
+
+        else:
+            assert len(response.data["data"]) == 1
+
+            serializer = SurveyTeamSerializer(self.team, context={"user": self.user})
+
+            assert serializer.data == response.data["data"][0], {
+                "reserialized": serializer.data,
+                "response_data": response.data["data"],
+            }
