@@ -6,7 +6,6 @@ from django_countries import countries
 from rest_framework import serializers
 
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 from speleodb.utils.serializer_fields import CustomChoiceField
 

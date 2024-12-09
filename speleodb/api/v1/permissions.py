@@ -47,16 +47,38 @@ class BaseTeamAccessLevel(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj: SurveyTeamMembership):
         try:
-            return obj.get_membership(user=request.user)._role >= self.MIN_ACCESS_LEVEL  # noqa: SLF001
+            membership = obj.get_membership(user=request.user)
+            return bool(
+                membership._role >= self.MIN_ACCESS_LEVEL  # noqa: SLF001
+                and membership.is_active
+            )
         except ObjectDoesNotExist:
             return False
 
 
 class UserHasLeaderAccess(BaseTeamAccessLevel):
     MIN_ACCESS_LEVEL = SurveyTeamMembership.Role.LEADER
-    message = f"You must have {SurveyTeamMembership.Role.LEADER.label} access."
 
 
 class UserHasMemberAccess(BaseTeamAccessLevel):
     MIN_ACCESS_LEVEL = SurveyTeamMembership.Role.MEMBER
-    message = "You must have member or leader access for this project."
+
+
+class UserHasLeaderAccessOrReadOnlyForMembers(permissions.BasePermission):
+    MIN_ACCESS_LEVEL = None
+
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj: SurveyTeamMembership):
+        try:
+            membership = obj.get_membership(user=request.user)
+            return bool(
+                request.method in permissions.SAFE_METHODS
+                or (
+                    membership._role >= SurveyTeamMembership.Role.LEADER  # noqa: SLF001
+                    and membership.is_active
+                )
+            )
+        except ObjectDoesNotExist:
+            return False

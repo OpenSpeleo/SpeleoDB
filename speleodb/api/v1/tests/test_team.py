@@ -6,6 +6,7 @@ from parameterized import parameterized
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from speleodb.api.v1.serializers import SurveyTeamSerializer
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserFactory
@@ -288,3 +289,53 @@ class TestTeamDelete(TestCase):
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+class TestGetTeam(TestCase):
+    header_prefix = "Token "
+
+    def setUp(self):
+        self.client = APIClient(enforce_csrf_checks=False)
+
+        self.user = UserFactory()
+        self.token = TokenFactory(user=self.user)
+        self.team = SurveyTeamFactory()
+
+    @parameterized.expand(
+        [SurveyTeamMembership.Role.LEADER, SurveyTeamMembership.Role.MEMBER, None]
+    )
+    def test_get_team(self, role: SurveyTeamMembership.Role | None):
+        if role is not None:
+            _ = SurveyTeamMembership.objects.create(
+                team=self.team, user=self.user, role=role
+            )
+
+        auth = self.header_prefix + self.token.key
+        response = self.client.get(
+            reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id}),
+            headers={"authorization": auth},
+        )
+
+        if role is None:
+            assert (
+                response.status_code == status.HTTP_403_FORBIDDEN
+            ), response.status_code
+
+        else:
+            assert response.status_code == status.HTTP_200_OK, response.status_code
+
+            serializer = SurveyTeamSerializer(self.team, context={"user": self.user})
+
+            assert serializer.data == dict(response.data["data"]), {
+                "reserialized": serializer.data,
+                "response_data": dict(response.data["data"]),
+            }
+
+    def test_get_non_existing_team(self):
+        auth = self.header_prefix + self.token.key
+        response = self.client.get(
+            reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id + 1}),
+            headers={"authorization": auth},
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND, response.status_code

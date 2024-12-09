@@ -12,6 +12,7 @@ from speleodb.utils.serializer_fields import CustomChoiceField
 
 class SurveyTeamSerializer(serializers.ModelSerializer):
     country = CustomChoiceField(choices=countries)
+    role = serializers.SerializerMethodField()
 
     class Meta:
         fields = "__all__"
@@ -29,7 +30,7 @@ class SurveyTeamSerializer(serializers.ModelSerializer):
 
         return team
 
-    def get_permission(self, obj):
+    def get_role(self, obj):
         if isinstance(obj, dict):
             # Unsaved object
             return None
@@ -38,10 +39,12 @@ class SurveyTeamSerializer(serializers.ModelSerializer):
 
         try:
             return obj.get_membership(user=user).role
-            if membership is None:
-                return None
         except ObjectDoesNotExist:
             return None
+
+
+class SurveyTeamListSerializer(serializers.ListSerializer):
+    child = SurveyTeamSerializer()
 
 
 class SurveyTeamMembershipSerializer(serializers.ModelSerializer):
@@ -49,5 +52,9 @@ class SurveyTeamMembershipSerializer(serializers.ModelSerializer):
     role = CustomChoiceField(choices=SurveyTeamMembership.Role, source="_role")
 
     class Meta:
-        fields = ("user", "role", "creation_date", "modified_date")
+        fields = ("user", "team", "role", "creation_date", "modified_date")
         model = SurveyTeamMembership
+
+
+class SurveyTeamMembershipListSerializer(serializers.ListSerializer):
+    child = SurveyTeamMembershipSerializer()
