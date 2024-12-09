@@ -15,9 +15,6 @@ class BaseProjectAccessLevel(permissions.BasePermission):
         return request.user and request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
-        if request.user.is_superuser:
-            return True
-
         try:
             return obj.get_permission(user=request.user)._level >= self.MIN_ACCESS_LEVEL  # noqa: SLF001
         except ObjectDoesNotExist:
@@ -46,9 +43,6 @@ class BaseTeamAccessLevel(permissions.BasePermission):
         return request.user and request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
-        if request.user.is_superuser:
-            return True
-
         try:
             return obj.get_membership(user=request.user)._role >= self.MIN_ACCESS_LEVEL  # noqa: SLF001
         except ObjectDoesNotExist:
