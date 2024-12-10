@@ -21,7 +21,7 @@ from speleodb.utils.response import SuccessResponse
 
 class ProjectUserPermissionListView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
+    permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -42,7 +42,7 @@ class ProjectUserPermissionListView(GenericAPIView):
 
 class ProjectUserPermissionView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasAdminAccess]
+    permission_classes = [UserHasAdminAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 

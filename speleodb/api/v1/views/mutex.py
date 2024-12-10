@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class ProjectAcquireApiView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
+    permission_classes = [UserHasWriteAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -46,7 +46,7 @@ class ProjectAcquireApiView(GenericAPIView):
 
 class ProjectReleaseApiView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
+    permission_classes = [UserHasWriteAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 

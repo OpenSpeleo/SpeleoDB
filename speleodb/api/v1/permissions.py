@@ -25,14 +25,13 @@ class BaseProjectAccessLevel(permissions.BasePermission):
         except ObjectDoesNotExist:
             user_access = False
 
-        if self.MIN_ACCESS_TEAM_LEVEL is not None:
-            teams = request.user.teams
-            return user_access or any(
-                obj.get_team_permission(team=team)._level >= self.MIN_ACCESS_TEAM_LEVEL  # noqa: SLF001
-                for team in teams
-            )
+        if user_access or self.MIN_ACCESS_TEAM_LEVEL is None:
+            return user_access
 
-        return user_access
+        for team in request.user.teams:
+            if obj.get_team_permission(team=team)._level >= self.MIN_ACCESS_TEAM_LEVEL:  # noqa: SLF001
+                return True
+        return False
 
 
 class UserHasAdminAccess(BaseProjectAccessLevel):
@@ -46,7 +45,7 @@ class UserHasWriteAccess(BaseProjectAccessLevel):
 
 class UserHasReadAccess(BaseProjectAccessLevel):
     MIN_ACCESS_USER_LEVEL = UserPermission.Level.READ_ONLY
-    MIN_ACCESS_TEAM_LEVEL = TeamPermission.Level.READ_AND_WRITE
+    MIN_ACCESS_TEAM_LEVEL = TeamPermission.Level.READ_ONLY
 
 
 class BaseTeamAccessLevel(permissions.BasePermission):

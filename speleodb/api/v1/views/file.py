@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 class FileUploadView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
+    permission_classes = [UserHasWriteAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -139,7 +139,7 @@ class FileUploadView(GenericAPIView):
 
 class FileDownloadView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
+    permission_classes = [UserHasReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
     lookup_field = "id"
@@ -203,7 +203,7 @@ class FileDownloadView(GenericAPIView):
 
 class BlobDownloadView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
+    permission_classes = [UserHasReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
     lookup_field = "id"

@@ -1,4 +1,5 @@
-import pytest
+import random
+
 from django.test import TestCase
 from django.urls import reverse
 from parameterized import parameterized
@@ -7,20 +8,18 @@ from rest_framework.test import APIClient
 
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.api.v1.tests.factories import SurveyTeamFactory
+from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
+from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
+from speleodb.users.models import SurveyTeamMembership
+
+AnyPermissionLevel = UserPermission.Level | TeamPermission.Level
 
 
-@pytest.mark.parametrize(
-    "level",
-    [
-        UserPermission.Level.ADMIN,
-        UserPermission.Level.READ_AND_WRITE,
-        UserPermission.Level.READ_ONLY,
-    ],
-)
 class TestProjectInteraction(TestCase):
     """Token authentication"""
 
@@ -33,20 +32,47 @@ class TestProjectInteraction(TestCase):
         self.token = TokenFactory(user=self.user)
         self.project = ProjectFactory()
 
+    def set_test_permission(self, level: AnyPermissionLevel):
+        if isinstance(level, UserPermission.Level):
+            _ = UserPermissionFactory(
+                target=self.user, level=level, project=self.project
+            )
+
+        elif isinstance(level, TeamPermission.Level):
+            # Create a team for the user - assign the user to the team
+            team = SurveyTeamFactory()
+            _ = SurveyTeamMembership.objects.create(
+                user=self.user,
+                team=team,
+                role=random.choice(SurveyTeamMembership.Role.values),
+            )
+
+            # Give the newly created permission to the project
+            _ = TeamPermissionFactory(
+                target=team,
+                level=level,
+                project=self.project,
+            )
+
+        else:
+            raise TypeError(f"Received unexpected level type: `{type(level)}`")
+
     @parameterized.expand(
         [
             UserPermission.Level.ADMIN,
             UserPermission.Level.READ_AND_WRITE,
             UserPermission.Level.READ_ONLY,
+            TeamPermission.Level.READ_AND_WRITE,
+            TeamPermission.Level.READ_ONLY,
         ]
     )
-    def test_get_user_project(self, level):
+    def test_get_user_project(self, level: AnyPermissionLevel):
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
 
-        _ = UserPermissionFactory(target=self.user, project=self.project, level=level)
+        self.set_test_permission(level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
@@ -100,15 +126,16 @@ class TestProjectInteraction(TestCase):
         [
             UserPermission.Level.ADMIN,
             UserPermission.Level.READ_AND_WRITE,
+            TeamPermission.Level.READ_AND_WRITE,
         ]
     )
-    def test_acquire_and_release_user_project(self, level):
+    def test_acquire_and_release_user_project(self, level: AnyPermissionLevel):
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
 
-        _ = UserPermissionFactory(target=self.user, project=self.project, level=level)
+        self.set_test_permission(level=level)
 
         # =================== ACQUIRE PROJECT =================== #
 
@@ -175,15 +202,18 @@ class TestProjectInteraction(TestCase):
         [
             UserPermission.Level.ADMIN,
             UserPermission.Level.READ_AND_WRITE,
+            TeamPermission.Level.READ_AND_WRITE,
         ]
     )
-    def test_acquire_and_release_user_project_with_comment(self, level):
+    def test_acquire_and_release_user_project_with_comment(
+        self, level: AnyPermissionLevel
+    ):
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
 
-        _ = UserPermissionFactory(target=self.user, project=self.project, level=level)
+        self.set_test_permission(level=level)
 
         # =================== ACQUIRE PROJECT =================== #
 
@@ -246,15 +276,19 @@ class TestProjectInteraction(TestCase):
         assert mutex.closing_comment == test_comment, (mutex, test_comment)
         assert mutex.closing_user == self.user, (mutex, self.user)
 
-    def test_fail_acquire_readonly_project(self):
+    @parameterized.expand(
+        [
+            UserPermission.Level.READ_ONLY,
+            TeamPermission.Level.READ_ONLY,
+        ]
+    )
+    def test_fail_acquire_readonly_project(self, level: AnyPermissionLevel):
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
 
-        _ = UserPermissionFactory(
-            target=self.user, project=self.project, level=UserPermission.Level.READ_ONLY
-        )
+        self.set_test_permission(level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -265,10 +299,19 @@ class TestProjectInteraction(TestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN, response.status_code
         assert not response.data["success"], response.data
 
-    def test_fail_release_readonly_project(self):
-        _ = UserPermissionFactory(
-            target=self.user, project=self.project, level=UserPermission.Level.READ_ONLY
-        )
+    @parameterized.expand(
+        [
+            UserPermission.Level.READ_ONLY,
+            TeamPermission.Level.READ_ONLY,
+        ]
+    )
+    def test_fail_release_readonly_project(self, level: AnyPermissionLevel):
+        """
+        Ensure POSTing json over token auth with correct
+        credentials passes and does not require CSRF
+        """
+
+        self.set_test_permission(level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
