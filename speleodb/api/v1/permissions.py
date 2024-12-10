@@ -76,3 +76,16 @@ class UserHasMemberAccess(BaseTeamAccessLevel):
 class IsReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.method in permissions.SAFE_METHODS
+
+
+class UserOwnsProjectMutex(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        mutex = obj.active_mutex
+
+        if mutex is None:
+            return False
+
+        return mutex.user == request.user

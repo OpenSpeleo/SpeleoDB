@@ -9,12 +9,12 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.http import Http404
-from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
+from speleodb.api.v1.permissions import UserOwnsProjectMutex
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import UploadSerializer
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 class FileUploadView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [UserHasWriteAccess]
+    permission_classes = [UserHasWriteAccess, UserOwnsProjectMutex]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
