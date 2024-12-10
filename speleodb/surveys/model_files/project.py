@@ -211,7 +211,7 @@ class Project(models.Model):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
 
         try:
-            return self.get_team_permission(target=team)._level >= permission  # noqa: SLF001
+            return self.get_team_permission(team=team)._level >= permission  # noqa: SLF001
         except ObjectDoesNotExist:
             return False
 
@@ -223,11 +223,23 @@ class Project(models.Model):
         raise TypeError(f"Unexpected value received for: `{target=}`")
 
     def has_write_access(self, user: User):
+        from speleodb.surveys.model_files.permission_team import TeamPermission
         from speleodb.surveys.model_files.permission_user import UserPermission
 
-        return self._has_user_permission(
+        user_permission = self._has_user_permission(
             user, permission=UserPermission.Level.READ_AND_WRITE
         )
+
+        if user_permission:
+            return True
+
+        for team in user.teams:
+            if self._has_team_permission(
+                team, permission=TeamPermission.Level.READ_AND_WRITE
+            ):
+                return True
+
+        return False
 
     def is_admin(self, user: User):
         from speleodb.surveys.model_files.permission_user import UserPermission
