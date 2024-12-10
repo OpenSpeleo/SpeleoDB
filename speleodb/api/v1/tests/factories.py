@@ -72,7 +72,7 @@ class ProjectFactory(DjangoModelFactory):
 
 
 class UserPermissionFactory(DjangoModelFactory):
-    level = random.choice(UserPermission.Level.choices)[0]
+    level = random.choice(UserPermission.Level.values)
     target = factory.SubFactory(UserFactory)
     project = factory.SubFactory(ProjectFactory)
 
@@ -81,7 +81,7 @@ class UserPermissionFactory(DjangoModelFactory):
 
 
 class TeamPermissionFactory(DjangoModelFactory):
-    level = random.choice(TeamPermission.Level.choices)[0]
+    level = random.choice(TeamPermission.Level.values)
     target = factory.SubFactory(SurveyTeamFactory)
     project = factory.SubFactory(ProjectFactory)
 
