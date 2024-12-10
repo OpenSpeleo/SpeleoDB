@@ -48,7 +48,7 @@ class FileUploadView(GenericAPIView):
 
         if fileformat.label.lower() not in Format.FileFormat.upload_choices:
             msg = f"The format: {fileformat} is not supported for upload"
-            logger.exception(f"{msg}, expected: {Format.FileFormat.upload_choices}")  # noqa: G004
+            logger.exception(f"{msg}, expected: {Format.FileFormat.upload_choices}")
             return ErrorResponse(
                 {"error": msg},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -155,7 +155,7 @@ class FileDownloadView(GenericAPIView):
 
         if fileformat.label.lower() not in Format.FileFormat.download_choices:
             msg = f"The format: {fileformat} is not supported for download"
-            logger.exception(f"{msg}, expected: {Format.FileFormat.download_choices}")  # noqa: G004
+            logger.exception(f"{msg}, expected: {Format.FileFormat.download_choices}")
             return ErrorResponse(
                 {"error": msg},
                 status=status.HTTP_400_BAD_REQUEST,
