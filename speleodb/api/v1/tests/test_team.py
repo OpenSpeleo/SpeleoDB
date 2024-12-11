@@ -1,33 +1,17 @@
 import random
 
-from django.test import TestCase
 from django.urls import reverse
 from parameterized import parameterized
 from rest_framework import status
-from rest_framework.test import APIClient
 
 from speleodb.api.v1.serializers import SurveyTeamSerializer
+from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
-from speleodb.api.v1.tests.factories import TokenFactory
-from speleodb.api.v1.tests.factories import UserFactory
+from speleodb.api.v1.tests.utils import is_subset
 from speleodb.users.models import SurveyTeamMembership
 
 
-def is_subset(subset_dict, super_dict):
-    return all(item in super_dict.items() for item in subset_dict.items())
-
-
-class TestTeamCreation(TestCase):
-    """Test creation of `SurveyTeam`."""
-
-    header_prefix = "Token "
-
-    def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
-
+class TestTeamCreation(BaseAPITestCase):
     def test_create_team(self):
         """
         Ensure POSTing json over token auth with correct
@@ -119,14 +103,9 @@ class TestTeamCreation(TestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-class TestTeamUpdate(TestCase):
-    header_prefix = "Token "
-
+class TestTeamUpdate(BaseAPITestCase):
     def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
+        super().setUp()
         self.team = SurveyTeamFactory()
 
         # Must make the user a team leader to modify the team
@@ -212,14 +191,9 @@ class TestTeamUpdate(TestCase):
         assert is_subset(subset_dict=data, super_dict=response.data["data"])
 
 
-class TestTeamUpdateErrors(TestCase):
-    header_prefix = "Token "
-
+class TestTeamUpdateErrors(BaseAPITestCase):
     def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
+        super().setUp()
         self.team = SurveyTeamFactory()
 
     @parameterized.expand(["PATCH", "PUT"])
@@ -251,14 +225,9 @@ class TestTeamUpdateErrors(TestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-class TestTeamDelete(TestCase):
-    header_prefix = "Token "
-
+class TestTeamDelete(BaseAPITestCase):
     def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
+        super().setUp()
         self.team = SurveyTeamFactory()
 
     def test_delete(self):
@@ -291,14 +260,9 @@ class TestTeamDelete(TestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-class TestGetTeam(TestCase):
-    header_prefix = "Token "
-
+class TestGetTeam(BaseAPITestCase):
     def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
+        super().setUp()
         self.team = SurveyTeamFactory()
 
     @parameterized.expand(

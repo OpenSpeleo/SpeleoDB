@@ -1,16 +1,15 @@
 import pathlib
-import re
 
 import pytest
-from django.test import TestCase
 from django.urls import reverse
 from parameterized import parameterized
 from rest_framework import status
-from rest_framework.test import APIClient
 
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.api.v1.tests.base_project_testcase import AnyPermissionLevel
-from speleodb.api.v1.tests.base_project_testcase import BaseProjectTestCase
+from speleodb.api.v1.tests.base_testcase import AnyPermissionLevel
+from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v1.tests.utils import is_subset
+from speleodb.api.v1.tests.utils import is_valid_git_sha
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
@@ -24,17 +23,7 @@ TEST_FILES = [
 ]
 
 
-def is_valid_git_sha(hash_string: str) -> bool:
-    """Check if the provided string is a valid Git SHA-1 hash."""
-    pattern = r"^[0-9a-fA-F]{40}$"
-    return bool(re.fullmatch(pattern, hash_string))
-
-
-def is_subset(subset_dict, super_dict):
-    return all(item in super_dict.items() for item in subset_dict.items())
-
-
-class FileViewTests(BaseProjectTestCase):
+class FileViewTests(BaseAPIProjectTestCase):
     @parameterized.expand(
         named_product(
             testfile=TEST_FILES,
@@ -53,7 +42,7 @@ class FileViewTests(BaseProjectTestCase):
         """
         assert testfile.exists()
 
-        self.set_test_permission(level=uploader_access_level)
+        self.set_test_project_permission(level=uploader_access_level)
 
         self.project.acquire_mutex(self.user)
 
@@ -124,7 +113,7 @@ class FileViewTests(BaseProjectTestCase):
         """
         assert testfile.exists()
 
-        self.set_test_permission(level=uploader_access_level)
+        self.set_test_project_permission(level=uploader_access_level)
 
         fileformat = None
         match testfile.suffix.lstrip(".").upper():
@@ -173,7 +162,7 @@ class FileViewTests(BaseProjectTestCase):
         """
         assert testfile.exists()
 
-        self.set_test_permission(level=uploader_access_level)
+        self.set_test_project_permission(level=uploader_access_level)
 
         with pytest.raises(PermissionError):
             self.project.acquire_mutex(self.user)

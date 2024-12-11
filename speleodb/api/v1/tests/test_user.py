@@ -1,27 +1,17 @@
 import json
 import random
 
-from django.test import TestCase
 from django.urls import reverse
 from django_countries import countries
 from faker import Faker
 from parameterized import parameterized
 from rest_framework import status
-from rest_framework.test import APIClient
 
-from speleodb.api.v1.tests.factories import TokenFactory
-from speleodb.api.v1.tests.factories import UserFactory
+from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.utils.test_utils import named_product
 
 
-class TestUserAPI(TestCase):
-    header_prefix = "Token "
-
-    def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
-
+class TestUserAPI(BaseAPITestCase):
     def test_get_user_info(self):
         endpoint = reverse("api:v1:user_info")
 
