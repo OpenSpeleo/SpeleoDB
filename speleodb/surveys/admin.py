@@ -3,6 +3,7 @@
 
 # """Admin module for Django."""
 from django.contrib import admin
+from django.db.models import F
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Mutex
@@ -24,7 +25,7 @@ class FormatAdmin(admin.ModelAdmin):
 @admin.register(Mutex)
 class MutexAdmin(admin.ModelAdmin):
     list_display = (
-        "project",
+        "project_name",
         "user",
         "creation_date",
         "modified_date",
@@ -32,7 +33,17 @@ class MutexAdmin(admin.ModelAdmin):
         "closing_comment",
     )
     ordering = ("-modified_date",)
-    list_filter = ["closing_user"]
+    list_filter = ["closing_user", "project__name"]
+
+    def get_queryset(self, request):
+        # Annotate the queryset with project name for sorting
+        qs = super().get_queryset(request)
+        return qs.annotate(project_name=F("project__name"))
+
+    def project_name(self, obj):
+        return obj.project.name
+
+    project_name.admin_order_field = "project_name"  # Make 'project_name' sortable
 
 
 @admin.register(TeamPermission)
