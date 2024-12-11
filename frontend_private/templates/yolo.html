@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Files</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+
+<body>
+    <h1>Upload Files</h1>
+    <form id="upload-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" id="files" name="files[]" multiple>
+        <button type="submit">Upload</button>
+    </form>
+    <div id="response"></div>
+
+    <script>
+        $(document).ready(function () {
+            $("#upload-form").on("submit", function (e) {
+                e.preventDefault();
+
+                let formData = new FormData();
+                let files = $("#files")[0].files;
+
+                if (files.length === 0) {
+                    alert("No files selected!");
+                    return;
+                }
+
+                if (files.length > 20) {
+                    alert("You can upload a maximum of 20 files.");
+                    return;
+                }
+
+                // Append files to formData
+                for (let i = 0; i < files.length; i++) {
+                    formData.append("files[]", files[i]);
+                }
+
+                var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+                $.ajax({
+                    url: "http://localhost:8000/api/v1/yolo/",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    cache: false,
+                    beforeSend: function (xhr) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                        return true;
+    
+                    },
+                    success: function (response) {
+                        $("#response").html("Uploaded files:<br>" + response.files.join("<br>"));
+                    },
+                    error: function (xhr) {
+                        const error = JSON.parse(xhr.responseText);
+                        $("#response").html(`<span style="color: red;">Error: ${error.error}</span>`);
+                    },
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

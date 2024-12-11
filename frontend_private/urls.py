@@ -94,3 +94,9 @@ urlpatterns = [
         name="project_danger_zone",
     ),
 ]
+
+from frontend_private.views import YoloView
+
+urlpatterns.append(
+    path("yolo/", YoloView.as_view(), name="yolo"),
+)

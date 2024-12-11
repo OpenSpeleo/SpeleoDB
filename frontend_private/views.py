@@ -49,6 +49,10 @@ class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
     login_url = reverse_lazy("account_login")
 
 
+class YoloView(_AuthenticatedTemplateView):
+    template_name = "yolo.html"
+
+
 # ============ Setting Pages ============ #
 class DashboardView(_AuthenticatedTemplateView):
     template_name = "pages/user/dashboard.html"

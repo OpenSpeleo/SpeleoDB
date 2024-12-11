@@ -18,3 +18,10 @@ urlpatterns = (
     + team_urlpatterns
     + user_urlpatterns
 )
+
+
+from django.urls import path
+
+from speleodb.api.v1.views.tmp_view import FileUploadView
+
+urlpatterns.append(path("yolo/", FileUploadView.as_view(), name="yolo_upload"))
