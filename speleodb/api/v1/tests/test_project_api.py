@@ -3,13 +3,13 @@ from parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.api.v1.tests.base_project_testcase import AnyPermissionLevel
-from speleodb.api.v1.tests.base_project_testcase import BaseProjectTestCase
+from speleodb.api.v1.tests.base_testcase import AnyPermissionLevel
+from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 
 
-class TestProjectInteraction(BaseProjectTestCase):
+class TestProjectInteraction(BaseAPIProjectTestCase):
     @parameterized.expand(
         [
             UserPermission.Level.ADMIN,
@@ -25,7 +25,7 @@ class TestProjectInteraction(BaseProjectTestCase):
         credentials passes and does not require CSRF
         """
 
-        self.set_test_permission(level=level)
+        self.set_test_project_permission(level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
@@ -88,7 +88,7 @@ class TestProjectInteraction(BaseProjectTestCase):
         credentials passes and does not require CSRF
         """
 
-        self.set_test_permission(level=level)
+        self.set_test_project_permission(level=level)
 
         # =================== ACQUIRE PROJECT =================== #
 
@@ -166,7 +166,7 @@ class TestProjectInteraction(BaseProjectTestCase):
         credentials passes and does not require CSRF
         """
 
-        self.set_test_permission(level=level)
+        self.set_test_project_permission(level=level)
 
         # =================== ACQUIRE PROJECT =================== #
 
@@ -241,7 +241,7 @@ class TestProjectInteraction(BaseProjectTestCase):
         credentials passes and does not require CSRF
         """
 
-        self.set_test_permission(level=level)
+        self.set_test_project_permission(level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -264,7 +264,7 @@ class TestProjectInteraction(BaseProjectTestCase):
         credentials passes and does not require CSRF
         """
 
-        self.set_test_permission(level=level)
+        self.set_test_project_permission(level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(

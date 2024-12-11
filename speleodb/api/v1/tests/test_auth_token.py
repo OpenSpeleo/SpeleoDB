@@ -1,25 +1,14 @@
 from django.contrib.auth import get_user
-from django.test import TestCase
 from django.urls import reverse
 from parameterized import parameterized
 from rest_framework import status
-from rest_framework.test import APIClient
 
-from speleodb.api.v1.tests.factories import TokenFactory
+from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.utils.test_utils import named_product
 
 
-class TestTokenAuth(TestCase):
-    """Token authentication"""
-
-    header_prefix = "Token "
-
-    def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
-
+class TestTokenAuth(BaseAPITestCase):
     def test_token_retrieval_works(self):
         endpoint = reverse("api:v1:auth_token")
         response = self.client.post(

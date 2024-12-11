@@ -16,8 +16,8 @@ from speleodb.users.models import SurveyTeamMembership
 AnyPermissionLevel = UserPermission.Level | TeamPermission.Level
 
 
-class BaseProjectTestCase(TestCase):
-    """Token authentication"""
+class BaseAPITestCase(TestCase):
+    """API-enabled TestCase Token authentication"""
 
     header_prefix = "Token "
 
@@ -26,9 +26,14 @@ class BaseProjectTestCase(TestCase):
 
         self.user = UserFactory()
         self.token = TokenFactory(user=self.user)
+
+
+class BaseAPIProjectTestCase(BaseAPITestCase):
+    def setUp(self):
+        super().setUp()
         self.project = ProjectFactory()
 
-    def set_test_permission(self, level: AnyPermissionLevel):
+    def set_test_project_permission(self, level: AnyPermissionLevel):
         if isinstance(level, UserPermission.Level):
             _ = UserPermissionFactory(
                 target=self.user, level=level, project=self.project

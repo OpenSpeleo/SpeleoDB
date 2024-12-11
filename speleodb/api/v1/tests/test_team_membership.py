@@ -2,34 +2,22 @@ import random
 
 import pytest
 from django.core.exceptions import ObjectDoesNotExist
-from django.test import TestCase
 from django.urls import reverse
 from parameterized import parameterized
 from rest_framework import status
-from rest_framework.test import APIClient
 
 from speleodb.api.v1.serializers import SurveyTeamMembershipSerializer
 from speleodb.api.v1.serializers import SurveyTeamSerializer
+from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
-from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserFactory
+from speleodb.api.v1.tests.utils import is_subset
 from speleodb.users.models import SurveyTeamMembership
 
 
-def is_subset(subset_dict, super_dict):
-    return all(item in super_dict.items() for item in subset_dict.items())
-
-
-class TestTeamMembershipCreation(TestCase):
-    """Test creation of `SurveyTeam`."""
-
-    header_prefix = "Token "
-
+class TestTeamMembershipCreation(BaseAPITestCase):
     def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
+        super().setUp()
         self.team = SurveyTeamFactory()
 
     @parameterized.expand(
@@ -152,14 +140,9 @@ class TestTeamMembershipCreation(TestCase):
         )
 
 
-class TestTeamMembershipUpdate(TestCase):
-    header_prefix = "Token "
-
+class TestTeamMembershipUpdate(BaseAPITestCase):
     def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
+        super().setUp()
         self.team = SurveyTeamFactory()
 
     @parameterized.expand(
@@ -287,14 +270,9 @@ class TestTeamMembershipUpdate(TestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-class TestTeamMembershipDelete(TestCase):
-    header_prefix = "Token "
-
+class TestTeamMembershipDelete(BaseAPITestCase):
     def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
+        super().setUp()
         self.team = SurveyTeamFactory()
 
         self.target_user = UserFactory()
@@ -337,14 +315,9 @@ class TestTeamMembershipDelete(TestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-class TestGetTeamMembership(TestCase):
-    header_prefix = "Token "
-
+class TestGetTeamMembership(BaseAPITestCase):
     def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
+        super().setUp()
         self.team = SurveyTeamFactory()
 
     @parameterized.expand(

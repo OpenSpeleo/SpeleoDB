@@ -1,32 +1,20 @@
 import random
 
-from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APIClient
 
+from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import TeamPermissionFactory
-from speleodb.api.v1.tests.factories import TokenFactory
-from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeamMembership
 
 
-class TestProjectInteraction(TestCase):
-    """Token authentication"""
-
-    header_prefix = "Token "
+class TestProjectInteraction(BaseAPITestCase):
     PROJECT_COUNT = 10
-
-    def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
 
     def test_get_user_projects(self):
         """
