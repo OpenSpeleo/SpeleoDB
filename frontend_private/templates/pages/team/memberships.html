@@ -16,7 +16,7 @@
 
             <!-- Left: Title -->
             <div class="mb-4 sm:mb-0 w-fit block float-left">
-                <h1 class="text-2xl md:text-3xl text-slate-800 text-slate-100 font-bold">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
                     Team's Memberships
                 </h1>
             </div>
@@ -41,7 +41,7 @@
         </div>
 
         <!-- Table -->
-        <div class="bg-white bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
 
             <div>
 
@@ -75,12 +75,12 @@
                                 <tr>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
-                                            <div class="font-medium text-slate-800 text-slate-100">{{ forloop.counter }}</div>
+                                            <div class="font-medium text-slate-100">{{ forloop.counter }}</div>
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
-                                            <div class="font-medium text-slate-800 text-slate-100">{{ membership.user.name }}</div>
+                                            <div class="font-medium text-slate-100">{{ membership.user.name }}</div>
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
@@ -89,11 +89,17 @@
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">
                                             {% if membership.role == "MEMBER" %}
-                                                <div class="inline-flex font-medium bg-indigo-100 bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5" style="color: rgb(171 178 255);">Member</div>
+                                                <div class="inline-flex font-medium bg-pastel-purple rounded-full text-white text-center px-2.5 py-1 py-0.5">
+                                                    Member
+                                                </div>
                                             {% elif membership.role == "LEADER" %}
-                                                <div class="inline-flex font-medium bg-amber-100 bg-amber-400/30 text-amber-600 text-amber-400 rounded-full text-center px-2.5 py-0.5">Leader</div>
+                                                <div class="inline-flex font-medium bg-pastel-orange text-white rounded-full text-center px-2.5 py-0.5">
+                                                    Leader
+                                                </div>
                                             {% else %}
-                                                <div class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-500 text-rose-400 rounded-full text-center px-2.5 py-0.5">Unknown</div>
+                                                <div class="inline-flex font-medium bg-rose-500/30 text-rose-400 rounded-full text-center px-2.5 py-0.5">
+                                                    Unknown
+                                                </div>
                                             {% endif %}
                                         </div>
                                     </td>
