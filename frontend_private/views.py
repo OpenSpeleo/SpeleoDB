@@ -14,7 +14,6 @@ from rest_framework.authtoken.models import Token
 from speleodb.git_engine.exceptions import GitCommitNotFoundError
 from speleodb.surveys.models import Project
 from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembership
 from speleodb.utils.gitlab_manager import GitlabManager
 
 
@@ -66,14 +65,11 @@ class NewTeamView(_AuthenticatedTemplateView):
 class _BaseTeamView(LoginRequiredMixin, View):
     def get(self, request, team_id: int):
         team = SurveyTeam.objects.get(id=team_id)
-        membership = team.get_membership(request.user)
-        if request.user and request.user.is_authenticated and membership is not None:
-            return {
-                "team": team,
-                "is_team_leader": membership._role == SurveyTeamMembership.Role.LEADER,  # noqa: SLF001
-            }
-
-        raise ObjectDoesNotExist
+        if request.user and request.user.is_authenticated:
+            if not team.is_member(request.user):
+                return redirect(reverse("private:teams"))
+            return {"team": team, "is_team_leader": team.is_leader(request.user)}
+        return redirect(reverse("home"))
 
 
 class TeamDetailsView(_BaseTeamView):
@@ -178,8 +174,8 @@ class ProjectDetailsView(_BaseProjectView):
         return render(request, ProjectDetailsView.template_name, data)
 
 
-class ProjectPermissionsView(_BaseProjectView):
-    template_name = "pages/project/permissions.html"
+class ProjectUserPermissionsView(_BaseProjectView):
+    template_name = "pages/project/user_permissions.html"
 
     def get(self, request, project_id: str):
         try:
@@ -187,8 +183,21 @@ class ProjectPermissionsView(_BaseProjectView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        data["permissions"] = data["project"].get_all_permissions()
-        return render(request, ProjectPermissionsView.template_name, data)
+        data["permissions"] = data["project"].get_all_user_permissions()
+        return render(request, ProjectUserPermissionsView.template_name, data)
+
+
+class ProjectTeamPermissionsView(_BaseProjectView):
+    template_name = "pages/project/team_permissions.html"
+
+    def get(self, request, project_id: str):
+        try:
+            data = super().get(request, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
+
+        data["permissions"] = data["project"].get_all_team_permissions()
+        return render(request, ProjectTeamPermissionsView.template_name, data)
 
 
 class ProjectMutexesView(_BaseProjectView):

@@ -42,8 +42,8 @@ class Migration(migrations.Migration):
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rel_team_memberships', to=settings.AUTH_USER_MODEL)),
             ],
             options={
-                'verbose_name': 'Survey Team Membership',
-                'verbose_name_plural': 'Survey Memberships',
+                'verbose_name': 'Team Membership',
+                'verbose_name_plural': 'Team Memberships',
                 'unique_together': {('user', 'team')},
             },
         ),

@@ -1,0 +1,513 @@
+Fulford Cave
+SURVEY NAME: A
+SURVEY DATE: 6 29 1987  COMMENT:Entrance Passage
+SURVEY TEAM: 
+ , , , ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+          A1           A2    21.75    63.50   -28.00     2.60     2.60     2.60     2.60
+          A2           A3    23.75    15.50   -17.00     8.00     0.00     2.10     2.70
+          A3           A4    13.35   303.00   -13.50    11.80     3.00     6.00     9.20
+          A4           A5    14.00    51.00   -14.00 -9999.00     6.00     4.20 -9999.00
+          A5           A6    32.90   105.50    -8.00     8.00     6.60     5.00 -9999.00
+          A6           A7    21.10   123.00    22.00     4.00    22.00     4.90     0.00
+          A6           A8    32.85    76.00    11.00     4.00    22.00     4.90     0.00
+          A8           A9    19.20    16.00     4.00     6.00    12.00     0.00     2.50
+          A9          A10    23.75   276.50   -33.50     3.00     6.00     4.50     0.00
+         A10          A11     9.25     3.50   -16.00     5.80     3.90     0.50 -9999.00
+         A11          A12    16.60    20.00    -8.00     1.40     0.00     3.90     3.80
+         A12          A13    30.80    13.00     0.00     5.00     0.00     4.70     3.30
+
+Fulford Cave
+SURVEY NAME: A+
+SURVEY DATE: 6 20 1987  COMMENT:Big Meander Area
+SURVEY TEAM: 
+Steve Reames,Stan Allison, , ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         A13          A14    18.20     8.50     6.00     6.90     6.00     2.00     4.00
+         A14          A15    17.70   333.00     7.00     0.60     3.00     4.30     3.40
+         A15          A16    20.50     7.50    -5.00 -9999.00     4.00     2.20     1.00
+         A13          A17    27.20   303.00   -17.00     6.90     6.00     2.00     4.00
+         A17          A18    14.80   272.00   -31.00     3.00     6.00     4.00     4.20
+         A18          A19    12.30   346.00   -13.00     2.20     0.90     1.30 -9999.00
+         A19          A20    22.00    18.00    16.00     2.90 -9999.00     5.60     5.30
+         A20          A21    33.20    89.00    19.00     2.90     4.00     4.00     5.30
+         A21          A22    10.10    65.00    32.00     4.00     5.00     5.00     9.00
+         A16          A22    14.50    97.00     3.00 -9999.00     2.70     2.70 -9999.00
+         A22          A23    43.40    15.00     3.00     4.00     5.00     5.00     9.00
+         A23          A24    20.60    21.00     0.00 -9999.00    12.00     5.00 -9999.00
+         A24          A25    11.80    28.00     4.00 -9999.00    10.00     2.00 -9999.00
+         A25          A26    10.70    29.00     9.00     3.00     2.00     2.00     2.00
+         A26          A27    17.80    55.00    19.00     3.00     2.00     2.00     2.00
+         A27          A28    21.70   110.00     9.00     3.80     6.00     3.70     3.00
+         A28          A29    11.40   177.00    26.00     0.50     1.30     3.30     5.30
+         A29          A30    12.40   150.00    34.00     3.50     0.00     3.90     2.00
+         A30          A31    15.60   172.00   -48.00     0.00     1.00     2.00     1.80
+         A31          A32    18.60    38.00   -28.00     3.50     5.70     0.00     1.00
+
+Fulford Cave
+SURVEY NAME: B
+SURVEY DATE: 9 5 1987  COMMENT:Stream Gallery
+SURVEY TEAM: 
+Steve Reames,Paul Burger,Todd Warren, ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+          B2          A32    46.10   146.50    27.00    14.60     4.00     1.50    11.00
+          B2           B1    14.20   240.00   -31.00    14.60     4.00     1.50    11.00
+          B2          B2A    21.70   352.00    -9.00    14.60     4.00     1.50    11.00
+         A32           B3    57.40   159.50    16.00    11.00     3.50     1.50 -9999.00
+          B3           B4    41.20   131.00    16.00    15.00     5.00    12.00     3.00
+          B4           B5    11.60    26.00    -8.00    12.00    14.00     4.00     8.00
+          B5           B6    30.40   125.00     9.00    10.00    16.00     0.00    10.00
+          B6           B7    38.50    61.00    30.00     4.00    20.00     4.00     1.00
+          B7           B8    30.50   154.00    18.00     5.00     3.00     4.00 -9999.00
+          B8           B9    11.90   148.00    -5.00     0.00     9.00     5.50     6.00
+          B9          B10    21.80   122.50    -5.00     2.00     3.00     4.00     4.00
+         B10          B11     8.40    33.00     0.00 -9999.00     3.00     1.00     6.50
+          B4          B12    25.60   143.00    45.00     4.00    20.00     4.00     1.00
+         B12          B13    90.10   120.50    25.00    23.00    15.00     5.00     8.00
+         B14          B13    27.60    33.00    35.00     0.00    30.00    15.00    24.00
+         B14          B15    61.20    86.00    21.50    22.00    20.00     5.00     2.00
+         B15          B16    45.60   115.00    18.00     4.00    13.00     5.00     0.00
+         B16          B17    36.00   135.50    25.00     3.00     5.00     0.00     5.00
+         B17          B18    11.70   128.00    13.00     4.00     5.00     5.00     4.00
+         B18          B19    16.70   138.00     9.50     5.00     4.00     0.00     3.00
+         B19          B20     8.80   180.00    50.00     3.00     5.50     3.00     1.00
+         B20          B21    15.10    56.00    45.00     4.50     6.50     4.00     0.00
+         B21          B21     0.00     0.00     0.00     6.00    12.00     5.00     7.00
+
+Fulford Cave
+SURVEY NAME: C
+SURVEY DATE: 7 16 1988  COMMENT:Breakdown Room
+SURVEY TEAM: 
+Steve Reames,Paul Burger, , ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         A24           C1    20.85    72.00    26.00 -9999.00    10.00     2.00 -9999.00
+          C1           C2    21.35    76.50    38.00     0.50     7.00     1.00     9.00
+          C2           C3     8.15    67.50    24.00     6.00     0.00     3.00 -9999.00
+          C3           C4     7.00   158.00     8.50     3.00     0.50     2.00     4.00
+          C4           C5    11.55    32.00    61.00     2.00     2.50     1.00     2.50
+         C5A           C5     9.55    18.00    56.00     3.00     0.00     5.00     5.00
+         C5A          C5B     4.10     0.00   -90.00 -9999.00 -9999.00 -9999.00 -9999.00
+         A30          C5B     4.00   260.00    16.00     0.00     1.10     2.00     1.80
+          C6           C5    16.70   342.00   -39.00    30.00     0.00     5.50     7.00
+          C6          C6A    30.40   304.50   -11.00    30.00     0.00     5.50     7.00
+          C6          C6B    17.00   151.00    31.00    30.00     0.00     5.50     7.00
+          C6          C6C    26.50    80.00    22.00    30.00     0.00     5.50     7.00
+          C6           C7    33.30   270.00    -7.00    30.00     0.00     5.50     7.00
+          C7           C8    46.85   171.00    13.50    30.00     0.00     5.50     7.00
+          C8           C9    25.15   189.00     4.00    15.00     3.00     2.00    20.00
+          C9          C10    39.35   203.00   -12.00    15.00     2.00     0.00    14.00
+         C10          C11    74.65   181.00    -2.00    34.00     1.00     3.00    15.00
+
+Fulford Cave
+SURVEY NAME: C+
+SURVEY DATE: 7 17 1988  COMMENT:Moon Milk Corridor
+SURVEY TEAM: 
+Steve Reames,Paul Burger , , ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         C11          C12    63.60   203.50     2.00     4.00    10.00     6.00    18.00
+         C12          C13    30.35    70.00    -1.50     0.00     8.00     2.00    12.00
+         C13          C14    41.10    42.50    20.50     7.00    10.00     2.00     0.00
+         C14          CA1    13.80    21.00    11.00    10.00     5.00     8.00     5.00
+         CA1          CA2    26.25   357.00   -21.00     4.00     3.50     2.00    10.00
+         CA2          CA3    30.45     4.00     3.00     3.00     4.00     2.00     4.00
+         CA3          CA4    15.55   266.00     0.00 -9999.00     6.00     0.50 -9999.00
+         CA4          C10    34.60   325.00   -13.00     6.00     0.00     5.00     7.00
+
+Fulford Cave
+SURVEY NAME: C++
+SURVEY DATE: 8 27 1988  COMMENT:Stalagmite Room
+SURVEY TEAM: 
+Steve Reames,Garry Petrie,Paul Burger,Ted Lappin,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         C14          C15    30.30    43.00    21.00    10.00     5.00     8.00     5.00
+         C15         C15A    21.10   153.00    12.50     3.00     0.50     2.50    12.00
+         C15          C16    16.70    62.00     2.00     3.00     0.50     2.50    12.00
+         C16          C17     3.80    55.50    45.00     2.50     1.00     2.00     1.00
+         C17          C18     9.15   131.00    46.00     3.00     2.00     2.00     2.00
+         C18          C19     8.70    63.00    54.50     0.00     2.00     5.00     3.00
+         C19          C20    16.85   123.00    20.50 -9999.00     8.00     4.00 -9999.00
+         C20          C21    40.50   349.00     2.00    14.00    10.00     2.00     9.00
+         C21         C21A    26.35   303.00   -11.00    13.00     2.00     5.00    11.00
+         C21          C22    27.50   351.50    13.50    13.00     2.00     5.00    11.00
+         C22          C23     6.00    32.00   -25.00     1.00     3.00     1.00     5.00
+         C23          C24     2.50     0.00   -90.00     0.75     1.50     3.00     1.00
+         C25          C24    21.60   183.00     0.00 -9999.00    27.00     2.00 -9999.00
+         C25          C26    15.85    65.00    11.00 -9999.00    27.00     2.00 -9999.00
+         C26          C27    11.45    48.00    -5.00 -9999.00 -9999.00 -9999.00     3.00
+         C28          C27    34.80    86.00   -25.50    18.00     5.00 -9999.00    10.00
+         C28          C29    14.90   193.00     8.50    18.00     5.00 -9999.00    10.00
+         C30          C29    51.40   155.00    30.00     9.00    10.00     3.00     0.00
+          C6          C30    69.10   164.00    38.00    30.00     0.00     5.50     7.00
+         CB1          C29    46.70   131.00    24.00     3.00     3.00     5.00     0.00
+         CB1          CB2     9.25   244.00     1.00     3.00     3.00     5.00     0.00
+         CB2          CB3     9.30   301.00    -6.50     0.00     2.50     5.00     2.50
+         CB3          CB4    15.85   202.00     7.00     3.00     2.50     5.00     0.00
+         CB4          CB5     4.50     5.50     0.00     0.00     4.50     5.50     4.00
+         CB5          CB6    10.10   221.00     6.00     3.00     3.00     3.00     0.00
+         CB6          CB7    15.30   302.00    -1.00     0.00     1.00     9.00     2.00
+         CB7          CB8    19.95     8.00    -6.00     1.00     1.50     7.00     1.00
+         CB8          CB9    13.60   102.00    20.50     0.00     4.00     4.50     3.00
+         CB9         CB10    13.55   346.00     4.00 -9999.00     4.50     4.50     3.00
+        CB10         CB11    18.90    33.00    25.00     0.00     7.50     4.50     1.50
+        CB11         CB12     8.05    12.00     0.00     1.50     6.00     5.00     0.00
+        CB12         CB13     3.05   322.00     9.00     1.50     5.50     6.00     2.00
+
+Fulford Cave
+SURVEY NAME: A3
+SURVEY DATE: 8 28 1988  COMMENT:Upper Entrance Connection
+SURVEY TEAM: 
+Steve Reames,Garry Petrie,Ted Lappin,Brent Hymel,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         A3A           A3    25.80   303.00   -51.00     0.00    20.00     5.00     4.10
+         A3A         AM11    14.80   239.00    47.50 -9999.00 -9999.00 -9999.00 -9999.00
+
+Fulford Cave
+SURVEY NAME: AN
+SURVEY DATE: 8 27 1988  COMMENT:North Entrance
+SURVEY TEAM: 
+Mike Roberts,Rick Rhinehart, , ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+          A1           S2    13.00   170.00    35.00     2.60     2.60     2.60     2.60  #|P#
+          S2          AN1    76.71     4.00    11.00 -9999.00 -9999.00 -9999.00 -9999.00  #|P#
+         AN1          AN2     4.92   121.50   -23.00 -9999.00 -9999.00 -9999.00 -9999.00
+         AN2          AN3    11.96    17.50   -26.00 -9999.00     3.50     0.00     1.50
+         AN3          AN4    21.75   301.00   -30.00     4.00     3.00     3.00     0.00
+         AN4          AN5     9.92   340.50   -29.00     0.00     4.00     3.00     5.00
+         AN5          AN6    17.13    24.00   -16.00     0.00     7.00     4.00     2.00
+         AN6          AN7    21.08   330.50     0.00     4.00     3.00     5.00     0.00
+         AN7          AN8     7.13   218.50    -8.00     3.50     2.00     1.50     2.00
+         AN8          AN9     9.21   340.00     0.00     1.00     1.00     2.50 -9999.00
+
+Fulford Cave
+SURVEY NAME: AA
+SURVEY DATE: 8 27 1988  COMMENT:Lower Room
+SURVEY TEAM: 
+Ken Kreager,Ben Longwell,Tamara Beltran,Brent Hymel,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         A13         A13A    30.40   203.00    -9.00     6.90     6.00     2.00     4.00
+        A13A         A13B    17.00   183.00    12.00     7.00 -9999.00 -9999.00 -9999.00
+        A13B         A13C    17.50   205.00    30.50     7.00 -9999.00 -9999.00 -9999.00
+        A13B          AA1    14.90   236.00    -6.60     7.00 -9999.00 -9999.00 -9999.00
+         AA1          AA2     6.25   147.00    -3.00     7.00 -9999.00 -9999.00 -9999.00
+         AA2          AA3    12.40   293.00   -21.00    12.00     0.00     3.00     2.00
+         AA3          AA4     8.50   289.00   -38.00    10.00     4.00     3.00 -9999.00
+         AA4          AA5    26.00   314.00   -52.00     2.00     1.00    10.00    10.00
+         AA5          AA6    32.60   298.00   -39.00     9.00     8.00    25.00    20.00
+         AA6          AA7    30.30   283.00   -23.00    15.00    30.00     4.00    20.00
+         AA7         AA7A    25.00   219.00    14.00    20.00    25.00     0.00    20.00
+         AA7          AA8    21.70   336.00   -11.00    20.00    25.00     0.00    20.00
+         AA8          AA9    17.50   324.00   -11.00     4.00     1.00     1.50     4.00
+
+Fulford Cave
+SURVEY NAME: AM
+SURVEY DATE: 8 28 1988  COMMENT:North Entrance To Main Cave
+SURVEY TEAM: 
+Mike Roberts,Rick Rhinehart, , ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         AN1          AM1    17.90   102.50     3.00 -9999.00 -9999.00 -9999.00 -9999.00
+         AM1          AM2    12.20   130.50    12.00     0.00     1.00     3.50     3.50
+         AM2          AM3     8.88    93.00   -24.00     3.00     0.00     4.00     2.00
+         AM3          AM4     4.60    91.00    15.00     0.00     2.50     1.50     2.50
+         AM4          AM5     7.80    39.00   -16.00     3.00     1.00     3.00     0.00
+         AM5          AM6     6.90   135.00   -21.50     0.50     4.00     2.00 -9999.00
+         AM6          AM7    17.60   127.00    11.50     0.00     6.00     1.50     3.00
+         AM7          AM8    14.55   198.50    11.50     1.50     2.50     4.00 -9999.00
+         AM8          AM9    10.90   192.00     9.00     0.00     5.00     5.00     2.00
+         AM9         AM10     8.10   208.50   -25.00     0.00     4.00     4.00     3.00
+        AM10         AM11    17.10   273.00   -16.50 -9999.00     4.00     5.00     4.00
+        AM10          AL1    17.05   122.00     0.00 -9999.00     4.00     5.00     4.00
+
+Fulford Cave
+SURVEY NAME: CD
+SURVEY DATE: 8 28 1988  COMMENT:Upper Level
+SURVEY TEAM: 
+Steve Reames,Garry Petrie,Ted Lappin,Brent Hymel,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         AM7          CD1    30.00    15.20   -56.00     1.50     2.50     4.00 -9999.00
+         CD1          AD1     6.75   343.50   -34.00     5.00    12.00     3.00     0.00
+         AD1          AD2    21.40   274.00   -43.00     5.00    14.00     3.00     0.50
+         XA6          AD2     7.75   287.00    17.00 -9999.00 -9999.00 -9999.00 -9999.00
+         CD1          CD2    12.30   107.00    49.00     5.00    12.30     3.00     0.00
+         CD2          CD3    16.85    39.00    38.50     3.00    12.00     4.00     8.00
+         CD3          CD4    22.80    67.00     5.50     8.00     4.00     7.00     6.00
+        XC11          CD4    19.45   276.50    -6.00 -9999.00 -9999.00 -9999.00 -9999.00
+
+Fulford Cave
+SURVEY NAME: XS
+SURVEY DATE: 8 28 1988  COMMENT:Entrance To Upper Entrance Connection
+SURVEY TEAM: 
+Mike Roberts,Ken Kreager,Rick Rhinehart, ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+          A1          XS2    18.30   126.00    39.00 -9999.00 -9999.00 -9999.00 -9999.00  #|P#
+         XS2           S4    23.96    60.00    20.00 -9999.00 -9999.00 -9999.00 -9999.00  #|P#
+          S4         AM11    12.46     1.00   -35.00 -9999.00 -9999.00 -9999.00 -9999.00
+
+Fulford Cave
+SURVEY NAME: AL
+SURVEY DATE: 8 28 1988  COMMENT:Upper Level Side Passage
+SURVEY TEAM: 
+Mike Roberts,Ken Kreager,Rick Rhinehart, ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         AL1          AL2     9.85   140.50    -1.50     2.00     6.00     0.00     9.00
+         AL2          AL3    21.85   186.50     3.50     4.00     8.00     3.50     4.00
+         AL3          AL4    13.40   156.00    27.50     3.50     2.50     0.50     2.00
+         AL4          AL4     0.00     0.00     0.00     2.00     1.00     3.00     0.00
+
+Fulford Cave
+SURVEY NAME: CC
+SURVEY DATE: 10 8 1988  COMMENT:Attic, Stove Pipe, Two Level Room
+SURVEY TEAM: 
+Bethany Jablonsky,Paul Burger,June Miller,Clarence Williams,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         CC1          C29    28.30    23.00    -2.50    19.60     6.00     2.00     4.00
+         CC1          CC2    39.45   119.00    35.00    19.60     6.00     2.00     4.00
+         CC2          CC3     8.60   151.00     8.00     5.50     4.00     4.00     2.00
+         CC3          CC4     6.00   161.00    22.00     0.20     0.50     0.00     0.00
+         CC4          CC5     5.70   205.00    21.00     0.20     0.50     0.00     0.20
+         CC5          CC6     3.40   142.00    18.00     0.20     2.00     2.00     0.20
+         CC6          CC7     4.90   237.00    -1.00     0.00     1.00     8.50     8.00
+         CC7          CC8     5.70   169.00     9.00     0.80     1.50     1.30     0.00
+         CC8          CC9    16.70   200.00    15.00     0.00     2.70     2.10     1.50
+         CC9         CC10    35.50   124.50   -17.00     0.10     3.00     7.50     1.00
+        CC10        CCCP1    19.70   163.00    24.00    16.00     7.60     0.50 -9999.00
+       CCCP1        CCCP2     9.70   171.00    54.00     3.20     2.80     1.00     1.50
+       CCCP2        CCCP3    11.20   246.00    22.50     0.00     2.50     1.40     2.00
+       CCCP3        ACCP3    12.50   134.00    -8.50     0.00     3.90     0.50     4.50
+       CCCP3        CCCP4     6.10   359.00   -16.00 -9999.00 -9999.00 -9999.00 -9999.00
+       CCCP4        CCCP5     6.70     0.00   -90.00     3.00     0.00 -9999.00     3.00
+       CCCP5        CCCP6    22.90   338.50   -36.00 -9999.00 -9999.00 -9999.00 -9999.00
+       CCCP6         CC10    12.90    69.00     8.50 -9999.00 -9999.00 -9999.00 -9999.00
+        CC10         CC11    16.90   266.00   -10.50 -9999.00 -9999.00 -9999.00 -9999.00
+        CC11         CC12    12.60     0.00   -90.00 -9999.00    11.00 -9999.00 -9999.00
+        CC12         CC13    16.40   186.00   -40.00 -9999.00 -9999.00 -9999.00 -9999.00
+        CC13         CC14    11.80   314.00   -11.00     6.50     7.30     0.50 -9999.00
+        CC14         CC15    23.00     0.00    -2.00     5.00     1.50     1.50     4.00
+
+Fulford Cave
+SURVEY NAME: CE
+SURVEY DATE: 10 8 1988  COMMENT:Cathedral Room
+SURVEY TEAM: 
+Steve Reames,Garry Petrie,Ted Lappin, ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         C25          CE1    25.08   147.00     9.00 -9999.00    27.00     2.00 -9999.00
+         CE1          CE2    16.42    51.00    49.00 -9999.00     3.00     5.00     0.00
+         CE2          CE3    20.54   209.00    47.00     4.00     4.50     4.00     2.00
+         CE3          CE4    26.67   101.00     9.00 -9999.00     4.00     4.00 -9999.00
+         CE4          CE5    18.25    77.00    30.00    10.00     2.00     1.00     5.00
+         CE5          CE6    22.75   108.00    18.00     4.80     1.50     1.60     0.00
+         CE6          CE7    31.00   119.00   -18.00     5.00    15.00     0.00     7.00
+         CE7          CE8    14.67   319.00   -20.00     7.00    21.00     3.00     1.00
+         CE9          CE8    60.10   160.00    87.00 -9999.00 -9999.00 -9999.00 -9999.00
+         B14          CE9    20.80    14.00    12.50 -9999.00 -9999.00 -9999.00 -9999.00
+
+Fulford Cave
+SURVEY NAME: BS
+SURVEY DATE: 2 11 1989  COMMENT:Upper Stream
+SURVEY TEAM: 
+Steve Reames,Paul Burger,Stan Allison,Ted Lappin,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         BS1           B5    22.10     0.00   -39.00 -9999.00     8.00     6.00 -9999.00
+         BS2          BS1    15.85   134.00   -31.50     7.00     9.00     3.00     8.00
+         BS2          BS3    10.20     7.50    55.00     7.00     9.00     3.00     8.00
+         BS3          BS4    27.35   110.50    31.00     2.50     1.50     2.50 -9999.00
+         BS4         BSA1    17.30   142.00    -1.50 -9999.00     4.00     2.00 -9999.00
+         BS4          BS5     2.10    91.00   -27.00 -9999.00     4.00     2.00 -9999.00
+         BS5          BS6     7.70     0.00    90.00 -9999.00     9.50     0.00 -9999.00
+         BS7          BS6     9.95    10.00   -52.50     4.00     0.50     3.00     1.00
+         BS7          BS8    19.80   242.50    37.00     4.00     0.50     3.00     1.00
+         BS8          C27     6.25    15.50    -1.00     5.00     3.00     0.00 -9999.00
+         BS7         BSB1    20.90   109.00    -9.50     4.00     0.50     3.00     1.00
+        BSB2         BSB1    21.75   325.00   -29.50     7.00     4.00     7.00     0.00
+        BSB2         XCE8    44.40   134.00   -27.00     7.00     4.00     7.00     0.00
+        BSA1         BSA2    22.05   159.00   -48.00 -9999.00 -9999.00 -9999.00 -9999.00
+        BSA2          BS1    37.85   307.00   -23.00 -9999.00 -9999.00 -9999.00 -9999.00
+
+Fulford Cave
+SURVEY NAME: CF
+SURVEY DATE: 2 11 1989  COMMENT:Hidden Pit
+SURVEY TEAM: 
+Steve Reames,Stan Allison,Ted Lappin,Paul Burger,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         C12          CF1    17.00   311.00   -18.00     0.00     8.00     2.00    12.00
+         CF1          CF2     7.10   353.00   -19.00     3.00     1.50     1.00     4.00
+         CF2          CF3    10.60     7.00     2.00     2.00     1.00     2.50     0.00
+         CF3          CF4    15.80   356.00   -66.00     2.00 -9999.00 -9999.00     2.00
+         CF5          CF4    22.50   111.00    54.50     4.00     4.00     1.00     2.00
+          A7          CF5     3.40   270.00    24.00 -9999.00 -9999.00 -9999.00 -9999.00
+
+Fulford Cave
+SURVEY NAME: CG
+SURVEY DATE: 2 11 1989  COMMENT:Moon Milk Side Passage
+SURVEY TEAM: 
+Steve Reames,Stan Allison,Ted Lappin,Paul Burger,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         C15          CG1    23.10   169.00    -2.00 -9999.00 -9999.00 -9999.00 -9999.00
+         CG1          CG2    28.00   194.00    -4.00     6.00     6.00     5.00     2.50
+         CG2          CG3    20.90   164.00     2.00     3.00     2.00     1.50     9.00
+
+Fulford Cave
+SURVEY NAME: CH
+SURVEY DATE: 2 12 1989  COMMENT:Devils Washboard Connection
+SURVEY TEAM: 
+Steve Reames,Stan Allison,Paul Burger,Ted Lappin,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+          C6          CH1    37.50   172.00    32.00    30.00     0.00     5.50     7.00
+         CH1          CH2    21.25    82.00    31.00 -9999.00     8.00     4.00 -9999.00
+         CH2          CH3    25.10   144.00    20.00 -9999.00 -9999.00 -9999.00 -9999.00
+         CH3          CH4    11.30   137.00    49.00    18.00     6.00     4.00     5.00
+         CH4          CH5    12.15   172.00    34.00     4.00     3.00     5.00     2.50
+         CH6          CH5     8.60     9.00    -4.00 -9999.00    19.00     3.00    10.00
+         CH6          C25    21.25   194.00   -16.00 -9999.00    19.00     3.00    10.00
+
+Fulford Cave
+SURVEY NAME: AAA
+SURVEY DATE: 6 10 1989  COMMENT:Lower Room +
+SURVEY TEAM: 
+Steve Reames,Paul Burger,Stan Allison,Dave Fazzina,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         AA7         AAA1    29.50   224.00    17.50    20.00    25.00     0.00    20.00
+        AAA1         AAA2     8.50   205.50     1.50     4.50     3.00     4.00     0.50
+        AAA2         AAA3    14.35   205.00   -49.50     2.00     0.00 -9999.00     1.00
+        AAA3         AAA4    25.15   125.00   -71.50     3.50     5.00 -9999.00     0.00
+
+Fulford Cave
+SURVEY NAME: AB
+SURVEY DATE: 6 10 1989  COMMENT:JFK Room
+SURVEY TEAM: 
+Steve Reames,Paul Burger,Stan Allison,Dave Fazzina,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         A13          AB1    26.40   164.50    22.50     6.90     6.00     2.00     4.00
+        AB1A          AB1    15.60   179.50   -27.00    12.00     5.00     0.00     4.00
+        AB1A         AB1B    14.30    11.00    18.00     5.00     8.00     5.00     0.00
+        AB1B         AB1C    14.60    60.50    24.50 -9999.00 -9999.00 -9999.00 -9999.00
+        AB1C         AB1D    12.95   354.00    21.00 -9999.00 -9999.00 -9999.00 -9999.00
+         AB1          AB2    16.55   121.00    40.00 -9999.00 -9999.00 -9999.00 -9999.00
+         AB2          AB3    17.00   208.00     8.50     0.00    10.00     7.00     5.00
+         AB3          AB4     4.00   253.00   -21.00     0.50     1.00     1.00     2.00
+         AB5          AB4     8.45    16.50    25.50 -9999.00 -9999.00 -9999.00 -9999.00
+
+Fulford Cave
+SURVEY NAME: AC
+SURVEY DATE: 6 10 1989  COMMENT:Big Meander Side Passage
+SURVEY TEAM: 
+Steve Reames,Paul Burger,Stan Allison,Dave Fazzina,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         A20          AC1    13.10   126.00    -8.50 -9999.00 -9999.00 -9999.00 -9999.00
+         AC1          AC2    33.70    27.50     5.00 -9999.00 -9999.00 -9999.00 -9999.00
+         AC2          AC3    20.95   342.00   -11.50 -9999.00 -9999.00 -9999.00 -9999.00
+         AC3          AC4    21.60    56.00    25.00     5.00     0.00     1.50     4.00
+         AC4          AC5    29.85    21.50     5.50 -9999.00 -9999.00 -9999.00 -9999.00
+         AC5          AC6    37.45   343.50   -15.50 -9999.00 -9999.00 -9999.00 -9999.00
+         AC6          AC7    40.90    18.00    12.00 -9999.00 -9999.00 -9999.00 -9999.00
+
+Fulford Cave
+SURVEY NAME: CJ
+SURVEY DATE: 6 10 1989  COMMENT:Balconies
+SURVEY TEAM: 
+Steve Reames,Paul Burger,Stan Allison,Dave Fazzina,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+          C6          CJ1    27.20   110.00    28.50    30.00     0.00     5.50     7.00
+         CJ1          CJ2    41.15   152.50    34.50 -9999.00 -9999.00 -9999.00 -9999.00
+         CJ2          CJ3    14.40   137.00   -42.50 -9999.00 -9999.00 -9999.00 -9999.00
+         CJ3          CJ4    26.75    73.50   -43.50 -9999.00 -9999.00 -9999.00 -9999.00
+         CJ4          CJ5     6.80   268.00   -22.50 -9999.00 -9999.00 -9999.00 -9999.00
+         CJ5          CJ6    36.50   151.00   -10.00 -9999.00 -9999.00 -9999.00 -9999.00
+          B5          CJ6    26.85   124.00    26.00 -9999.00 -9999.00 -9999.00 -9999.00
+
+Fulford Cave
+SURVEY NAME: CK
+SURVEY DATE: 6 10 1989  COMMENT:Hidden Room
+SURVEY TEAM: 
+Steve Reames,Paul Burger,Stan Allison,Dave Fazzina,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         C28          CK1    39.80    40.00    20.00 -9999.00 -9999.00 -9999.00 -9999.00
+         CK1          CK2    15.30   334.00    -1.50 -9999.00 -9999.00 -9999.00 -9999.00
+
+Fulford Cave
+SURVEY NAME: CL
+SURVEY DATE: 6 10 1989  COMMENT:Moon Milk Side Passage
+SURVEY TEAM: 
+Steve Reames,Paul Burger,Stan Allison,Dave Fazzina,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         CA3          CL1    16.25    93.00    31.50 -9999.00 -9999.00 -9999.00 -9999.00
+         CL1          CL2    12.70   199.00     0.00 -9999.00 -9999.00 -9999.00 -9999.00
+         CL2          CL3    15.45   138.50     0.00 -9999.00 -9999.00 -9999.00 -9999.00
+         CL3          CL4    14.75   163.50    21.50 -9999.00 -9999.00 -9999.00 -9999.00
+         CL4          C15    12.50   217.50     8.00 -9999.00 -9999.00 -9999.00 -9999.00
+
+

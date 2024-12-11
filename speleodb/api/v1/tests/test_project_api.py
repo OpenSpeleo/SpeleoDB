@@ -1,52 +1,31 @@
-import pytest
-from django.test import TestCase
 from django.urls import reverse
 from parameterized import parameterized
 from rest_framework import status
-from rest_framework.test import APIClient
 
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.api.v1.tests.factories import PermissionFactory
-from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import TokenFactory
-from speleodb.api.v1.tests.factories import UserFactory
-from speleodb.surveys.models import Permission
+from speleodb.api.v1.tests.base_testcase import AnyPermissionLevel
+from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.surveys.models import TeamPermission
+from speleodb.surveys.models import UserPermission
 
 
-@pytest.mark.parametrize(
-    "level",
-    [
-        Permission.Level.ADMIN,
-        Permission.Level.READ_AND_WRITE,
-        Permission.Level.READ_ONLY,
-    ],
-)
-class TestProjectInteraction(TestCase):
-    """Token authentication"""
-
-    header_prefix = "Token "
-
-    def setUp(self):
-        self.client = APIClient(enforce_csrf_checks=False)
-
-        self.user = UserFactory()
-        self.token = TokenFactory(user=self.user)
-        self.project = ProjectFactory()
-
+class TestProjectInteraction(BaseAPIProjectTestCase):
     @parameterized.expand(
         [
-            Permission.Level.ADMIN,
-            Permission.Level.READ_AND_WRITE,
-            Permission.Level.READ_ONLY,
+            UserPermission.Level.ADMIN,
+            UserPermission.Level.READ_AND_WRITE,
+            UserPermission.Level.READ_ONLY,
+            TeamPermission.Level.READ_AND_WRITE,
+            TeamPermission.Level.READ_ONLY,
         ]
     )
-    def test_get_user_project(self, level):
+    def test_get_user_project(self, level: AnyPermissionLevel):
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
 
-        _ = PermissionFactory(user=self.user, project=self.project, level=level)
+        self.set_test_project_permission(level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
@@ -98,17 +77,18 @@ class TestProjectInteraction(TestCase):
 
     @parameterized.expand(
         [
-            Permission.Level.ADMIN,
-            Permission.Level.READ_AND_WRITE,
+            UserPermission.Level.ADMIN,
+            UserPermission.Level.READ_AND_WRITE,
+            TeamPermission.Level.READ_AND_WRITE,
         ]
     )
-    def test_acquire_and_release_user_project(self, level):
+    def test_acquire_and_release_user_project(self, level: AnyPermissionLevel):
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
 
-        _ = PermissionFactory(user=self.user, project=self.project, level=level)
+        self.set_test_project_permission(level=level)
 
         # =================== ACQUIRE PROJECT =================== #
 
@@ -173,17 +153,20 @@ class TestProjectInteraction(TestCase):
 
     @parameterized.expand(
         [
-            Permission.Level.ADMIN,
-            Permission.Level.READ_AND_WRITE,
+            UserPermission.Level.ADMIN,
+            UserPermission.Level.READ_AND_WRITE,
+            TeamPermission.Level.READ_AND_WRITE,
         ]
     )
-    def test_acquire_and_release_user_project_with_comment(self, level):
+    def test_acquire_and_release_user_project_with_comment(
+        self, level: AnyPermissionLevel
+    ):
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
 
-        _ = PermissionFactory(user=self.user, project=self.project, level=level)
+        self.set_test_project_permission(level=level)
 
         # =================== ACQUIRE PROJECT =================== #
 
@@ -246,15 +229,19 @@ class TestProjectInteraction(TestCase):
         assert mutex.closing_comment == test_comment, (mutex, test_comment)
         assert mutex.closing_user == self.user, (mutex, self.user)
 
-    def test_fail_acquire_readonly_project(self):
+    @parameterized.expand(
+        [
+            UserPermission.Level.READ_ONLY,
+            TeamPermission.Level.READ_ONLY,
+        ]
+    )
+    def test_fail_acquire_readonly_project(self, level: AnyPermissionLevel):
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
 
-        _ = PermissionFactory(
-            user=self.user, project=self.project, level=Permission.Level.READ_ONLY
-        )
+        self.set_test_project_permission(level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -265,10 +252,19 @@ class TestProjectInteraction(TestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN, response.status_code
         assert not response.data["success"], response.data
 
-    def test_fail_release_readonly_project(self):
-        _ = PermissionFactory(
-            user=self.user, project=self.project, level=Permission.Level.READ_ONLY
-        )
+    @parameterized.expand(
+        [
+            UserPermission.Level.READ_ONLY,
+            TeamPermission.Level.READ_ONLY,
+        ]
+    )
+    def test_fail_release_readonly_project(self, level: AnyPermissionLevel):
+        """
+        Ensure POSTing json over token auth with correct
+        credentials passes and does not require CSRF
+        """
+
+        self.set_test_project_permission(level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(

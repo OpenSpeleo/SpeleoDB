@@ -1,4 +1,5 @@
 import pytest
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import IntegrityError
 
 from speleodb.users.models import SurveyTeam
@@ -68,7 +69,8 @@ class TestSurveyTeam:
 
     def test_get_membership_not_found(self, team: SurveyTeam, user: User):
         """Test get_membership returns None if no active membership is found."""
-        assert team.get_membership(user) is None
+        with pytest.raises(ObjectDoesNotExist):
+            _ = team.get_membership(user)
 
     def test_is_leader_true(self, team, leader_membership):
         """Test is_leader returns True for a user with the leader role."""

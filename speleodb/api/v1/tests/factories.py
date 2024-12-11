@@ -7,8 +7,10 @@ from factory import post_generation
 from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
-from speleodb.surveys.models import Permission
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import TeamPermission
+from speleodb.surveys.models import UserPermission
+from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 
 
@@ -36,6 +38,17 @@ class UserFactory(DjangoModelFactory):
         return "password"
 
 
+class SurveyTeamFactory(DjangoModelFactory):
+    name = Faker("name")
+    description = factory.LazyAttribute(
+        lambda obj: f"Team description for `{obj.name}`"
+    )
+    country = random.choice(countries)[0]
+
+    class Meta:
+        model = SurveyTeam
+
+
 class TokenFactory(DjangoModelFactory):
     key = Faker("password", length=40, special_chars=True, upper_case=True)
     user = factory.SubFactory(UserFactory)
@@ -58,10 +71,19 @@ class ProjectFactory(DjangoModelFactory):
         model = Project
 
 
-class PermissionFactory(DjangoModelFactory):
-    level = random.choice(Permission.Level.choices)[0]
-    user = factory.SubFactory(UserFactory)
+class UserPermissionFactory(DjangoModelFactory):
+    level = random.choice(UserPermission.Level.values)
+    target = factory.SubFactory(UserFactory)
     project = factory.SubFactory(ProjectFactory)
 
     class Meta:
-        model = Permission
+        model = UserPermission
+
+
+class TeamPermissionFactory(DjangoModelFactory):
+    level = random.choice(TeamPermission.Level.values)
+    target = factory.SubFactory(SurveyTeamFactory)
+    project = factory.SubFactory(ProjectFactory)
+
+    class Meta:
+        model = TeamPermission
