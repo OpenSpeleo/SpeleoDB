@@ -31,7 +31,7 @@ class BaseAPITestCase(TestCase):
 class BaseAPIProjectTestCase(BaseAPITestCase):
     def setUp(self):
         super().setUp()
-        self.project = ProjectFactory()
+        self.project = ProjectFactory(created_by=self.user)
 
     def set_test_project_permission(self, level: AnyPermissionLevel):
         if isinstance(level, UserPermission.Level):

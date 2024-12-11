@@ -67,6 +67,8 @@ class ProjectFactory(DjangoModelFactory):
 
     country = random.choice(countries)[0]
 
+    created_by = factory.SubFactory(UserFactory)
+
     class Meta:
         model = Project
 
