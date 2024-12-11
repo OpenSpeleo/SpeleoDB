@@ -41,7 +41,7 @@ urlpatterns = [
         name="team_memberships",
     ),
     path(
-        "project/<int:team_id>/danger_zone/",
+        "team/<int:team_id>/danger_zone/",
         TeamDangerZoneView.as_view(),
         name="team_danger_zone",
     ),

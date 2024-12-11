@@ -2,6 +2,7 @@
 {% load static i18n compress%}
 
 {% load countries %}
+{% load is_in_list %}
 {% load set_var %}
 
 {% block content %}
@@ -151,7 +152,7 @@
 
                             <!-- Project Revision History -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                {% if request.url_name == 'project_revisions' or request.url_name == 'project_revision_explorer' %}
+                              {% if request.url_name|is_in_list:"project_revisions,project_revision_explorer" %}
                                 {% set is_active = True %}
                                 {% endif %}
                                 <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if is_active %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_revisions' project_id=project.id %}">

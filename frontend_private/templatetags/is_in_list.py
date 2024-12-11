@@ -4,5 +4,7 @@ register = template.Library()
 
 
 @register.filter(name="is_in_list")
-def is_in_list(value, given_list):
-    return value in given_list
+def is_in_list(value, values: str | list) -> bool:
+    if isinstance(values, str):
+        values = values.split(",")
+    return value in values
