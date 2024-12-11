@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from django.core.exceptions import ObjectDoesNotExist
-from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 

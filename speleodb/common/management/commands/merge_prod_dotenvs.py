@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = (
-        "Merge all the different `.env` files inside `.env/production` into a single file "
-        "`.env` file at the project root level"
+        "Merge all the different `.env` files inside `.env/production` into a single "
+        "file `.env` file at the project root level"
     )
 
     def merge_dot_env_files(self, input_files: Sequence[Path], out_file: Path) -> None:

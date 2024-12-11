@@ -193,6 +193,20 @@ class Project(models.Model):
     def get_team_permission_count(self):
         return self.rel_team_permissions.filter(is_active=True).count()
 
+    def get_total_collaborators(self) -> int:
+        users = [
+            perm.target for perm in self.rel_user_permissions.filter(is_active=True)
+        ]
+
+        teams = [
+            perm.target for perm in self.rel_team_permissions.filter(is_active=True)
+        ]
+        for team in teams:
+            users += [mbrship.user for mbrship in team.get_all_memberships()]
+
+        users = list(set(users))
+        return len(users)
+
     def _has_user_permission(self, user: User, permission):
         from speleodb.surveys.model_files.permission_user import UserPermission
 
