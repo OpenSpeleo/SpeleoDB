@@ -107,9 +107,9 @@
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
 
                                     <!-- Edit Link -->
-                                    <span class="cursor-pointer btn_open_edit_perm" data-team="{{permission.target.id}}" data-level="{{permission.level}}">
+                                    <span class="cursor-pointer {% if is_project_admin %}btn_open_edit_perm" data-team="{{permission.target.id}}" data-level="{{permission.level}}{% endif %}">
                                         <svg xmlns="http://www.w3.org/2000/svg"
-                                            class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 text-amber-500 inline"
+                                            class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if is_project_admin %}text-amber-500{% else %}text-slate-500{% endif %} inline"
                                             viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
                                             stroke-linecap="round" stroke-linejoin="round">
                                             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -119,9 +119,9 @@
                                     </span>
 
                                     <!-- Delete Link -->
-                                    <span class="cursor-pointer btn_delete_perm" data-team="{{permission.target.id}}">
+                                    <span class="cursor-pointer {% if is_project_admin %}btn_delete_perm" data-team="{{permission.target.id}}{% endif %}">
                                         <svg xmlns="http://www.w3.org/2000/svg"
-                                            class="icon icon-tabler icon-tabler-x stroke-current h-6  text-rose-500 inline"
+                                            class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if is_project_admin %}text-rose-500{% else %}text-slate-500{% endif %} inline"
                                             viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
                                             stroke-linecap="round" stroke-linejoin="round">
                                             <path stroke="none" d="M0 0h24v24H0z" fill="none" />

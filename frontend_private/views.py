@@ -14,7 +14,6 @@ from rest_framework.authtoken.models import Token
 from speleodb.git_engine.exceptions import GitCommitNotFoundError
 from speleodb.surveys.models import Project
 from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembership
 from speleodb.utils.gitlab_manager import GitlabManager
 
 
@@ -69,10 +68,7 @@ class _BaseTeamView(LoginRequiredMixin, View):
         if request.user and request.user.is_authenticated:
             if not team.is_member(request.user):
                 return redirect(reverse("private:teams"))
-            return {
-                "team": team,
-                "is_team_leader": team.is_leader(request.user)
-            }
+            return {"team": team, "is_team_leader": team.is_leader(request.user)}
 
 
 class TeamDetailsView(_BaseTeamView):
