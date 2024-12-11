@@ -85,22 +85,43 @@
                             </li>
                             {% endif %}
 
-                            <!-- Project Permissions -->
+                            <!-- Project User Permissions -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_permissions' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_permissions' project_id=project.id %}">
-                                    {% if request.url_name == 'project_permissions' %}
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_user_permissions' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_user_permissions' project_id=project.id %}">
+                                    {% if request.url_name == 'project_user_permissions' %}
                                         <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
                                     {% else %}
                                         <svg class="w-4 h-4 shrink-0 fill-current text-slate-400 text-slate-500 mr-2" viewBox="0 0 16 16">
                                     {% endif %}
                                         <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
                                     </svg>
-                                    {% if request.url_name == 'project_permissions' %}
+                                    {% if request.url_name == 'project_user_permissions' %}
                                         <span class="text-sm font-medium text-indigo-400">
                                     {% else %}
                                         <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
                                     {% endif %}
-                                        Permissions
+                                        User Access Control
+                                    </span>
+                                </a>
+                            </li>
+
+                            <!-- Project Team Permissions -->
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_team_permissions' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:project_team_permissions' project_id=project.id %}">
+                                    {% if request.url_name == 'project_team_permissions' %}
+                                        <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="666.09 614.6 26.01 25.9">
+                                    {% else %}
+                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-400 text-slate-500 mr-2" viewBox="666.09 614.6 26.01 25.9">
+                                    {% endif %}
+                                        <path d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z"></path>
+                                        <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z"></path>
+                                    </svg>
+                                    {% if request.url_name == 'project_team_permissions' %}
+                                        <span class="text-sm font-medium text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                                    {% endif %}
+                                        Team Access Control
                                     </span>
                                 </a>
                             </li>

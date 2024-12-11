@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
   # dependencies for building Python packages
-  build-essential gcc \
+  build-essential \
   # psycopg dependencies
   libpq-dev \
   # cleaning up unused files
@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 
 # Requirements are installed here to ensure they will be cached.
 COPY ./requirements /requirements
+
+# Update PIP to latest version
+RUN pip install --no-cache-dir --upgrade pip
 
 # create python dependency wheels
 RUN pip wheel --no-cache-dir --wheel-dir /usr/src/app/wheels  \
@@ -49,6 +52,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 
 # copy python dependency wheels from python-build-stage
 COPY --from=python-build-stage /usr/src/app/wheels /wheels
+
+# Update PIP to latest version
+RUN pip install --no-cache-dir --upgrade pip
 
 # use wheels to install python dependencies
 RUN pip install --no-cache /wheels/* \

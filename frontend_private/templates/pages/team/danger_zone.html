@@ -65,7 +65,7 @@
             $("#modal_confirmation").hide();
 
             $.ajax({
-                url: "{% url 'api:v1_users:one_team_apiview' id=team.id %}",
+                url: "{% url 'api:v1:one_team_apiview' id=team.id %}",
                 method: "DELETE",
                 contentType: "application/json; charset=utf-8",
                 cache: false,

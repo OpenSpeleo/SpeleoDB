@@ -9,12 +9,12 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.http import Http404
-from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
+from speleodb.api.v1.permissions import UserOwnsProjectMutex
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import UploadSerializer
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 class FileUploadView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasWriteAccess]
+    permission_classes = [UserHasWriteAccess, UserOwnsProjectMutex]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -48,7 +48,7 @@ class FileUploadView(GenericAPIView):
 
         if fileformat.label.lower() not in Format.FileFormat.upload_choices:
             msg = f"The format: {fileformat} is not supported for upload"
-            logger.exception(f"{msg}, expected: {Format.FileFormat.upload_choices}")  # noqa: G004
+            logger.exception(f"{msg}, expected: {Format.FileFormat.upload_choices}")
             return ErrorResponse(
                 {"error": msg},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -139,7 +139,7 @@ class FileUploadView(GenericAPIView):
 
 class FileDownloadView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
+    permission_classes = [UserHasReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
     lookup_field = "id"
@@ -155,7 +155,7 @@ class FileDownloadView(GenericAPIView):
 
         if fileformat.label.lower() not in Format.FileFormat.download_choices:
             msg = f"The format: {fileformat} is not supported for download"
-            logger.exception(f"{msg}, expected: {Format.FileFormat.download_choices}")  # noqa: G004
+            logger.exception(f"{msg}, expected: {Format.FileFormat.download_choices}")
             return ErrorResponse(
                 {"error": msg},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -203,7 +203,7 @@ class FileDownloadView(GenericAPIView):
 
 class BlobDownloadView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated, UserHasReadAccess]
+    permission_classes = [UserHasReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
     lookup_field = "id"

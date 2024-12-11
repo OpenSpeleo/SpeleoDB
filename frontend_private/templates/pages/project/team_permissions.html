@@ -1,0 +1,334 @@
+{% extends "pages/project/base.html" %}
+{% load static i18n compress%}
+
+{% load countries %}
+{% load set_var %}
+
+{% block right_panel %}
+
+{% csrf_token %}
+
+<div class="grow">
+    <div class="p-6 space-y-6">
+
+        <!-- Page header -->
+        <div class="mb-16 block">
+
+            <!-- Left: Title -->
+            <div class="mb-4 sm:mb-0 w-fit block float-left">
+                <h1 class="text-2xl md:text-3xl text-slate-800 text-slate-100 font-bold">
+                    Project's Team Permissions
+                </h1>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2 w-fit block float-right">
+
+                <!-- New button -->
+                {% if not is_project_admin %}
+                <button class="btn bg-slate-600 text-white" disabled>
+                    {% else %}
+                    <button id="btn_open_add_team" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                        {% endif %}
+                        <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24"
+                            viewBox="666.09 614.6 26.01 25.9">
+                            <path
+                                d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z">
+                            </path>
+                            <path
+                                d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z">
+                            </path>
+                        </svg>
+                        <span class="hidden xs:block ml-2">Grant Access</span>
+                    </button>
+
+            </div>
+
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+
+            <div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full text-slate-300">
+                        <!-- Table header -->
+                        <thead
+                            class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                            <tr>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">#</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Team Name</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Access Level</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Actions</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <!-- Table body -->
+                        <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
+                            {% for permission in permissions %}
+                            <!-- Row -->
+                            <tr>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="text-center">
+                                        <div class="font-medium text-slate-800 text-slate-100">{{ forloop.counter }}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="text-center">
+                                        <div class="font-medium text-slate-800 text-slate-100">{{ permission.target.name }}</div>
+                                    </div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="text-center">
+                                        {% if permission.level == "READ_ONLY" %}
+                                        <div
+                                            class="inline-flex font-medium bg-slate-700 text-slate-100 text-slate-400 rounded-full text-center px-2.5 py-0.5">
+                                            Read Only</div>
+                                        {% elif permission.level == "READ_AND_WRITE" %}
+                                        <div class="inline-flex font-medium bg-indigo-100 bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5"
+                                            style="color: rgb(171 178 255);">Read And Write</div>
+                                        {% else %}
+                                        <div
+                                            class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-500 text-rose-400 rounded-full text-center px-2.5 py-0.5">
+                                            Unknown</div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
+
+                                    <!-- Edit Link -->
+                                    <span class="cursor-pointer {% if is_project_admin %}btn_open_edit_perm" data-team="{{permission.target.id}}" data-level="{{permission.level}}{% endif %}">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if is_project_admin %}text-amber-500{% else %}text-slate-500{% endif %} inline"
+                                            viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                            <path d="M13.5 6.5l4 4" />
+                                        </svg>
+                                    </span>
+
+                                    <!-- Delete Link -->
+                                    <span class="cursor-pointer {% if is_project_admin %}btn_delete_perm" data-team="{{permission.target.id}}{% endif %}">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if is_project_admin %}text-rose-500{% else %}text-slate-500{% endif %} inline"
+                                            viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <path d="M18 6l-12 12" />
+                                            <path d="M6 6l12 12" />
+                                        </svg>
+                                        </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+{% include 'snippets/modal_team_permission_form.html' %}
+
+{% endblock right_panel %}
+
+
+{% if is_project_admin %}
+{% block inline_extra_js %}
+<script>
+
+    $(document).ready(function () {
+
+        $(".btn_close").click(function () {
+            if ($("#permission_modal").is(":visible")) {
+                $("#permission_modal").hide();
+            }
+        });
+
+        $("body").click(function () {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+
+        function lockSelect(selector) {
+            $(selector)
+                .addClass("readonly") // Add a class to indicate the readonly state
+                .on("mousedown keydown", preventInteraction); // Block interactions
+        }
+        
+        function preventInteraction(e) {
+            e.preventDefault(); // Prevent user interaction
+        }
+
+        function unlockSelect(selector) {
+            $(selector)
+                .removeClass("readonly") // Remove the readonly indication
+                .off("mousedown keydown", preventInteraction); // Restore interactions
+        }
+
+        /* ------------------------------------------------------------------------- */
+        /* --------------------------- ADDING PERMISSION --------------------------- */
+        /* ------------------------------------------------------------------------- */
+
+        $("#btn_open_add_team").click(function () {
+            var form = document.getElementById("permission_form");
+            form.reset();
+            form.method = "POST"
+            $("#permission_modal_title").text("Add a Team to the project");
+            $("#permission_modal_header").text("What team would you like to add 🙌 ?");
+            $("#permission_modal").css('display', 'flex');
+            unlockSelect("#team");
+        });
+
+        /* ------------------------------------------------------------------------- */
+        /* --------------------------- EDITING PERMISSION -------------------------- */
+        /* ------------------------------------------------------------------------- */
+
+        $(".btn_open_edit_perm").click(function () {
+            var form = document.getElementById("permission_form");
+            form.method = "PUT"
+            $("#permission_modal_title").text("How shall we modify this team's access ?");
+            $("#permission_modal_header").text("");
+            $("#permission_modal").css('display', 'flex');
+            $("#team").val($(this).data("team"));
+            $("#level").val($(this).data("level"));
+            lockSelect("#team");
+        });
+
+        /* ------------------------------------------------------------------------- */
+        /* ---------------------- ADD/EDITING PERMISSION AJAX ---------------------- */
+        /* ------------------------------------------------------------------------- */
+
+        $('#btn_submit_add').click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+            let permission_form = document.getElementById('permission_form');
+            var formData = new FormData(permission_form);
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            $.ajax({
+                url: "{% url 'api:v1:project_team_permission' id=project.id %}",
+                method: $("#permission_form").attr('method'),
+                data: JSON.stringify(Object.fromEntries(formData)),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+
+                    if ($("#team").val() == "") {
+                        $("#modal_error_txt").text("The team is empty !");
+                        $("#modal_error").css('display', 'flex');
+                        return false;
+                    }
+
+                    if ($("#level").val() == "") {
+                        $("#modal_error_txt").text("The Access Level field is empty !");
+                        $("#modal_error").css('display', 'flex');
+                        return false;
+                    }
+                    return true;
+
+                },
+                success: function (data) {
+                    $("#modal_success_txt").text("Action executed with success!");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function () {
+                        // Refresh the page
+                        window.location.reload();
+                    }, 2000);
+                },
+                error: function (data) {
+                    if (data.status == 429) {
+                        $("#modal_error_txt").text(data.responseJSON["detail"]);
+                        $("#modal_error").css('display', 'flex');
+                    }
+                    else {
+                        if ("error" in data.responseJSON) {
+                            $("#modal_error_txt").text(data.responseJSON["error"]);
+                        } else {
+                            $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                        }
+                        $("#modal_error").css('display', 'flex');
+                    }
+                }
+            });
+            return false; // prevent default
+        });
+
+        /* ------------------------------------------------------------------------- */
+        /* -------------------------- REMOVING PERMISSION -------------------------- */
+        /* ------------------------------------------------------------------------- */
+
+        $(".btn_delete_perm").click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+            var formData = new FormData();
+            formData.append("team", $(this).data("team"));
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            $.ajax({
+                url: "{% url 'api:v1:project_team_permission' id=project.id %}",
+                method: "DELETE",
+                data: JSON.stringify(Object.fromEntries(formData)),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The permission has been deleted succesfully.");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function () {
+                        // Refresh the page
+                        window.location.reload();
+                    }, 2000);
+                },
+                error: function (data) {
+                    if (data.status == 429) {
+                        $("#modal_error_txt").text(data.responseJSON["detail"]);
+                        $("#modal_error").css('display', 'flex');
+                    }
+                    else {
+                        if ("error" in data.responseJSON) {
+                            $("#modal_error_txt").text(data.responseJSON["error"]);
+                        } else {
+                            $("#modal_error_txt").text(data.responseJSON["errors"][0]);
+                        }
+                        $("#modal_error").css('display', 'flex');
+                    }
+                }
+            });
+            return false; // prevent default
+        });
+
+    });
+</script>
+{% endblock inline_extra_js %}
+{% endif %}

@@ -27,27 +27,33 @@ class SurveyTeam(models.Model):
     def __str__(self):
         return self.name
 
-    def get_all_memberships(self):
+    def get_membership(self, user: User) -> "SurveyTeamMembership":
+        try:
+            return self.rel_team_memberships.get(user=user, is_active=True)
+        except (SurveyTeamMembership.DoesNotExist, ObjectDoesNotExist) as e:
+            raise ObjectDoesNotExist from e
+
+    def get_member_count(self) -> int:
+        return self.get_all_memberships().count()
+
+    def get_all_memberships(self) -> list["SurveyTeamMembership"]:
         return self.rel_team_memberships.filter(is_active=True).order_by(
             "-_role", "user__email"
         )
 
-    def get_member_count(self):
-        return self.get_all_memberships().count()
-
-    def get_membership(self, user: User):
+    def is_member(self, user: User) -> bool:
         try:
             return self.rel_team_memberships.get(user=user, is_active=True)
-        except ObjectDoesNotExist:
-            return None
+        except (SurveyTeamMembership.DoesNotExist, ObjectDoesNotExist):
+            return False
 
-    def is_leader(self, user: User):
+    def is_leader(self, user: User) -> bool:
         try:
             return (
                 self.rel_team_memberships.get(user=user, is_active=True)._role  # noqa: SLF001
                 == SurveyTeamMembership.Role.LEADER
             )
-        except ObjectDoesNotExist:
+        except (SurveyTeamMembership.DoesNotExist, ObjectDoesNotExist):
             return False
 
 
@@ -94,8 +100,8 @@ class SurveyTeamMembership(models.Model):
 
     class Meta:
         unique_together = ("user", "team")
-        verbose_name = "Survey Team Membership"
-        verbose_name_plural = "Survey Memberships"
+        verbose_name = "Team Membership"
+        verbose_name_plural = "Team Memberships"
 
     def __str__(self):
         return f"{self.user} => {self.team} [{self.role}]"

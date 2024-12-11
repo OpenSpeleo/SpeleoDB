@@ -82,38 +82,39 @@
                         </thead>
                         <!-- Table body -->
                         <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
-                            {% for data in user.get_all_projects %}
+                            {% for permission in user.permissions %}
                                 <!-- Row -->
                                 <tr>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
                                         <div class="text-center">
-                                            <div class="font-medium text-slate-800 text-slate-100">{{ data.project.name }}</div>
+                                            <div class="font-medium text-slate-800 text-slate-100">{{ permission.project.name }}</div>
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% get_country data.project.country as country %}
+                                            {% get_country permission.project.country as country %}
                                             {{ country.name }}
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {{ data.project.get_permission_count }}
+                                            {{ permission.project.get_total_collaborators }}
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center" id="async_revision_{{ forloop.counter0 }}">
-                                            <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{data.project.id}}" class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner.svg' %}">
+                                            <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{permission.project.id}}"
+                                            class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner.svg' %}">
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
-                                            {% if data.level == "READ_ONLY" %}
+                                            {% if permission.level == "READ_ONLY" %}
                                                 bg-pastel-blue">Read Only</div>
-                                            {% elif data.level == "READ_AND_WRITE" %}
+                                            {% elif permission.level == "READ_AND_WRITE" %}
                                                 bg-pastel-purple">Read And Write</div>
-                                            {% elif data.level == "ADMIN" %}
+                                            {% elif permission.level == "ADMIN" %}
                                                 bg-pastel-orange">Admin</div>
                                             {% endif %}
                                         </div>
@@ -121,9 +122,10 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% if data.project.latitude and data.project.longitude %}
-                                                <a href="https://www.google.com/maps/place/{{data.project.latitude}},{{data.project.longitude}}" target="_blank" class="text-sky-500">
-                                                    ({{ data.project.latitude }}, {{ data.project.longitude }})
+                                            {% if permission.project.latitude and permission.project.longitude %}
+                                                <a href="https://www.google.com/maps/place/{{permission.project.latitude}},{{permission.project.longitude}}"
+                                                target="_blank" class="text-sky-500">
+                                                    ({{ permission.project.latitude }}, {{ permission.project.longitude }})
                                                 </a>
                                             {% else %}
                                             -
@@ -132,8 +134,8 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% if data.project.mutex_owner %}
-                                                {{ data.project.mutex_owner }}
+                                            {% if permission.project.mutex_owner %}
+                                                {{ permission.project.mutex_owner }}
                                             {% else %}
                                             -
                                             {% endif %}
@@ -141,8 +143,8 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% if data.project.mutex_dt %}
-                                                {{ data.project.mutex_dt|date:"Y/m/d H:i" }}
+                                            {% if permission.project.mutex_dt %}
+                                                {{ permission.project.mutex_dt|date:"Y/m/d H:i" }}
                                             {% else %}
                                             -
                                             {% endif %}
@@ -151,7 +153,7 @@
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="flex items-center text-slate-800">
                                             <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-100 bg-slate-700 rounded-full mr-2 sm:mr-3">
-                                                <a href="{% url 'private:project_details' project_id=data.project.id %}">
+                                                <a href="{% url 'private:project_details' project_id=permission.project.id %}">
                                                     <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="Icon 01">
                                                 </a>
                                             </div>

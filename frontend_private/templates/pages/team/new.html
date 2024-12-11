@@ -119,7 +119,7 @@
             var formData = new FormData(new_team_form);
 
             $.ajax({
-                url: "{% url 'api:v1_users:create_team' %}",
+                url: "{% url 'api:v1:create_team' %}",
                 method: "POST",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
