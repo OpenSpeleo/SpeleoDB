@@ -96,34 +96,36 @@
                                         
                                         {% if permission.team %}
                                         {% if permission.level.label == "READ_ONLY" %}
-                                        <div
-                                            class="inline-flex font-medium bg-slate-700 text-slate-100 text-slate-400 rounded-full text-center px-2.5 py-0.5">
-                                            TEAM: Read Only</div>
+                                        <div class="inline-flex font-medium bg-slate-700 text-slate-300 rounded-full text-center px-2.5 py-0.5">
+                                            &#60;{{ permission.team.name }}&#62; Read Only
+                                        </div>
                                         {% elif permission.level.label == "READ_AND_WRITE" %}
-                                        <div class="inline-flex font-medium bg-indigo-100 bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5"
-                                            style="color: rgb(171 178 255);">TEAM: Read And Write</div>
+                                        <div class="inline-flex font-medium bg-indigo-500/30 text-indigo-300 rounded-full text-center px-2.5 py-1 py-0.5">
+                                            &#60;{{ permission.team.name }}&#62; Read And Write
+                                        </div>
                                         {% else %}
-                                        <div
-                                            class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-500 text-rose-400 rounded-full text-center px-2.5 py-0.5">
-                                            Unknown</div>
+                                        <div class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-400 rounded-full text-center px-2.5 py-0.5">
+                                            &#60;{{ permission.team.name }}&#62; Unknown
+                                        </div>
                                         {% endif %}
                                         {% else %}
 
                                         {% if permission.level.label == "READ_ONLY" %}
-                                        <div
-                                            class="inline-flex font-medium bg-slate-700 text-slate-100 text-slate-400 rounded-full text-center px-2.5 py-0.5">
-                                            Read Only</div>
+                                        <div class="inline-flex font-medium bg-slate-700 text-slate-300 rounded-full text-center px-2.5 py-0.5">
+                                            Read Only
+                                        </div>
                                         {% elif permission.level.label == "READ_AND_WRITE" %}
-                                        <div class="inline-flex font-medium bg-indigo-100 bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5"
-                                            style="color: rgb(171 178 255);">Read And Write</div>
+                                        <div class="inline-flex font-medium bg-indigo-500/30 text-indigo-300 rounded-full text-center px-2.5 py-1 py-0.5">
+                                            Read And Write
+                                        </div>
                                         {% elif permission.level.label == "ADMIN" %}
-                                        <div
-                                            class="inline-flex font-medium bg-amber-100 bg-amber-400/30 text-amber-600 text-amber-400 rounded-full text-center px-2.5 py-0.5">
-                                            Admin</div>
+                                        <div class="inline-flex font-medium bg-amber-500 text-white rounded-full text-center px-2.5 py-0.5">
+                                            Admin
+                                        </div>
                                         {% else %}
-                                        <div
-                                            class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-500 text-rose-400 rounded-full text-center px-2.5 py-0.5">
-                                            Unknown</div>
+                                        <div class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-400 rounded-full text-center px-2.5 py-0.5">
+                                            Unknown
+                                        </div>
                                         {% endif %}
 
                                         {% endif %}
@@ -184,52 +186,6 @@
                                         </a>
                                     </span>
                                     {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-
-                            {% for permission in team_permissions %}
-                            <!-- Row -->
-                            <tr>
-                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                    <div class="text-center">
-                                        <div class="font-medium text-slate-800 text-slate-100">{{ forloop.counter }}
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                    <div class="text-center">
-                                        <div class="font-medium text-slate-800 text-slate-100">{{ permission.user.name }}</div>
-                                    </div>
-                                </td>
-                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                    <div class="text-center">{{ permission.user.email }}</div>
-                                </td>
-                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                    <div class="text-center">
-                                        {% if permission.level.label == "READ_ONLY" %}
-                                        <div
-                                            class="inline-flex font-medium bg-slate-700 text-slate-100 text-slate-400 rounded-full text-center px-2.5 py-0.5">
-                                            TEAM: Read Only</div>
-                                        {% elif permission.level.label == "READ_AND_WRITE" %}
-                                        <div class="inline-flex font-medium bg-indigo-100 bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5"
-                                            style="color: rgb(171 178 255);">TEAM: Read And Write</div>
-                                        {% else %}
-                                        <div
-                                            class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-500 text-rose-400 rounded-full text-center px-2.5 py-0.5">
-                                            Unknown</div>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
-
-                                    <!-- Team Link -->
-                                    <a class="cursor-pointer" href="{% url 'private:team_details' team_id=permission.team.id %}">
-                                        <svg class="icon icon-tabler icon-tabler-lock-open stroke-current h-4 text-amber-500 inline" viewBox="666.09 614.6 26.01 25.9" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z"></path>
-                                            <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z"></path>
-                                        </svg>
-                                    </span>
                                 </td>
                             </tr>
                             {% endfor %}
