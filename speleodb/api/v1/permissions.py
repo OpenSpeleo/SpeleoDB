@@ -29,8 +29,14 @@ class BaseProjectAccessLevel(permissions.BasePermission):
             return user_access
 
         for team in request.user.teams:
-            if obj.get_team_permission(team=team)._level >= self.MIN_ACCESS_TEAM_LEVEL:  # noqa: SLF001
-                return True
+            try:
+                if (
+                    obj.get_team_permission(team=team)._level  # noqa: SLF001
+                    >= self.MIN_ACCESS_TEAM_LEVEL
+                ):
+                    return True
+            except TeamPermission.DoesNotExist:
+                continue
         return False
 
 
