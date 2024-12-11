@@ -88,9 +88,9 @@ class CreateProjectApiView(GenericAPIView):
     serializer_class = ProjectSerializer
 
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(
-            data=request.data, context={"user": request.user}
-        )
+        data = request.data
+        data["created_by"] = request.user.email
+        serializer = self.get_serializer(data=data, context={"user": request.user})
         if serializer.is_valid():
             serializer.save()
             return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)

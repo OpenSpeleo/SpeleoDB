@@ -24,7 +24,7 @@ class TestProjectInteraction(BaseAPITestCase):
 
         for project_id in range(self.PROJECT_COUNT):
             # spread equally some projects with user and team access
-            project = ProjectFactory()
+            project = ProjectFactory(created_by=self.user)
             if project_id % 2 == 0:
                 _ = UserPermissionFactory(
                     target=self.user,

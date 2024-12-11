@@ -34,7 +34,7 @@ def user(db) -> User:
 
 @pytest.fixture
 def project(db) -> Project:
-    return ProjectFactory()
+    return ProjectFactory(created_by=UserFactory())
 
 
 @pytest.fixture

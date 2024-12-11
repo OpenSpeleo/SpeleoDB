@@ -7,6 +7,7 @@ from rest_framework import serializers
 
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import UserPermission
+from speleodb.users.models import User
 from speleodb.utils.serializer_fields import CustomChoiceField
 
 
@@ -21,11 +22,17 @@ class ProjectSerializer(serializers.ModelSerializer):
     user_permission = serializers.SerializerMethodField()
     active_mutex = serializers.SerializerMethodField()
 
+    created_by = serializers.EmailField()
+
     class Meta:
         model = Project
         exclude = ("_visibility",)
 
     def create(self, validated_data):
+        validated_data["created_by"] = User.objects.get(
+            email=validated_data["created_by"]
+        )
+
         project = super().create(validated_data)
 
         # assign current user as project admin

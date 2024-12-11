@@ -40,10 +40,9 @@ class MutexAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs.annotate(project_name=F("project__name"))
 
+    @admin.display(ordering="project_name")
     def project_name(self, obj):
         return obj.project.name
-
-    project_name.admin_order_field = "project_name"  # Make 'project_name' sortable
 
 
 @admin.register(TeamPermission)
@@ -72,5 +71,6 @@ class ProjectAdmin(admin.ModelAdmin):
         "latitude",
         "longitude",
         "fork_from",
+        "created_by",
     )
     ordering = ("name",)

@@ -48,6 +48,15 @@ class Project(models.Model):
         default=None,
     )
 
+    created_by = models.ForeignKey(
+        User,
+        related_name="rel_projects_created",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+    )
+
     # Geo Coordinates
     latitude = models.DecimalField(
         max_digits=11,
