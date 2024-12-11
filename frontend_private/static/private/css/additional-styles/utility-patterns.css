@@ -78,7 +78,7 @@ input[type="search"]::-webkit-search-results-decoration {
 .form-textarea,
 .form-multiselect,
 .form-select {
-    @apply text-sm text-slate-800 text-slate-100 leading-5 py-2 px-3 border-slate-200 hover:border-slate-300 focus:border-slate-300 border-slate-700 hover:border-slate-600 focus:border-slate-600 shadow-sm;
+    @apply text-sm text-slate-100 leading-5 py-2 px-3 border-slate-200 hover:border-slate-300 focus:border-slate-300 border-slate-700 hover:border-slate-600 focus:border-slate-600 shadow-sm;
 }
 
 .form-input,
@@ -124,7 +124,7 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .form-switch input[type="checkbox"]:disabled + label {
-    @apply cursor-not-allowed bg-slate-100 bg-slate-700/20 border border-slate-200 border-slate-700;
+    @apply cursor-not-allowed bg-slate-700/20 border border-slate-200 border-slate-700;
 }
 
 .form-switch input[type="checkbox"]:disabled + label > span:first-child {

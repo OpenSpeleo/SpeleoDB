@@ -16,7 +16,7 @@
 
             <!-- Left: Title -->
             <div class="mb-4 sm:mb-0 w-fit block float-left">
-                <h1 class="text-2xl md:text-3xl text-slate-800 text-slate-100 font-bold">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
                     Project's Team Permissions
                 </h1>
             </div>
@@ -47,7 +47,7 @@
         </div>
 
         <!-- Table -->
-        <div class="bg-white bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
 
             <div>
 
@@ -79,28 +79,29 @@
                             <tr>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="text-center">
-                                        <div class="font-medium text-slate-800 text-slate-100">{{ forloop.counter }}
+                                        <div class="font-medium text-slate-100">{{ forloop.counter }}
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="text-center">
-                                        <div class="font-medium text-slate-800 text-slate-100 underline"><a href="{% url 'private:team_memberships' team_id=permission.target.id %}">{{ permission.target.name }}</a></div>
+                                        <div class="font-medium text-slate-100 underline"><a href="{% url 'private:team_memberships' team_id=permission.target.id %}">{{ permission.target.name }}</a></div>
                                     </div>
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="text-center">
                                         {% if permission.level == "READ_ONLY" %}
-                                        <div
-                                            class="inline-flex font-medium bg-slate-700 text-slate-100 text-slate-400 rounded-full text-center px-2.5 py-0.5">
-                                            Read Only</div>
+                                        <div class="inline-flex font-medium bg-slate-700 text-slate-300 rounded-full text-center px-2.5 py-0.5">
+                                            Read Only
+                                        </div>
                                         {% elif permission.level == "READ_AND_WRITE" %}
-                                        <div class="inline-flex font-medium bg-indigo-100 bg-indigo-500/30 rounded-full text-center px-2.5 py-1 py-0.5"
-                                            style="color: rgb(171 178 255);">Read And Write</div>
+                                        <div class="inline-flex font-medium bg-indigo-500/30 text-indigo-300 rounded-full text-center px-2.5 py-1 py-0.5">
+                                            Read And Write
+                                        </div>
                                         {% else %}
-                                        <div
-                                            class="inline-flex font-medium bg-rose-100 bg-rose-500/30 text-rose-500 text-rose-400 rounded-full text-center px-2.5 py-0.5">
-                                            Unknown</div>
+                                        <div class="inline-flex font-medium bg-rose-500/30 text-rose-400 rounded-full text-center px-2.5 py-0.5">
+                                            Unknown
+                                        </div>
                                         {% endif %}
                                     </div>
                                 </td>

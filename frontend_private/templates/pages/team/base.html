@@ -13,7 +13,7 @@
 
             <!-- Left: Title -->
             <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-800 text-slate-100 font-bold">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
                     Team: {{ team.name }}
                 </h1>
             </div>
@@ -21,23 +21,23 @@
         </div>
 
         <!-- Team Details -->
-        <div class="bg-white bg-slate-800 shadow-lg rounded-sm mb-8">
+        <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
             <div class="flex flex-col md:flex-row md:-mr-px">
 
                 <!-- Sidebar -->
                 <div class="flex flex-nowrap overflow-x-scroll no-scrollbar md:block md:overflow-auto px-3 py-6 border-b md:border-b-0 md:border-r border-slate-200 border-slate-700 min-w-60 md:space-y-3">
                     <!-- Group 1 -->
                     <div>
-                        <div class="text-xs font-semibold text-slate-400 text-slate-500 uppercase mb-2">Team Settings</div>
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Team Settings</div>
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
 
                             <!-- Team Details -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'team_details' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:team_details' team_id=team.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'team_details' %}bg-indigo-500/30{% endif %}" href="{% url 'private:team_details' team_id=team.id %}">
                                     {% if request.url_name == 'team_details' %}
                                         <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22"  stroke-width="2" fill="none">
                                     {% else %}
-                                        <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-slate-400 text-slate-500 mr-2" viewBox="0 0 22 22" stroke-width="2" fill="none">
+                                        <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="0 0 22 22" stroke-width="2" fill="none">
                                     {% endif %}
                                             <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                             <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
@@ -62,11 +62,11 @@
 
                             <!-- Team Membership -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'team_memberships' %}bg-indigo-50 bg-indigo-500/30{% endif %}" href="{% url 'private:team_memberships' team_id=team.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'team_memberships' %}bg-indigo-500/30{% endif %}" href="{% url 'private:team_memberships' team_id=team.id %}">
                                     {% if request.url_name == 'team_memberships' %}
                                         <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
                                     {% else %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-400 text-slate-500 mr-2" viewBox="0 0 16 16">
+                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-500 mr-2" viewBox="0 0 16 16">
                                     {% endif %}
                                         <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
                                     </svg>
@@ -91,11 +91,11 @@
 
                             <!-- Team Danger Zone -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'team_danger_zone' %}bg-rose-50 bg-rose-500/30{% endif %}" href="{% url 'private:team_danger_zone' team_id=team.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'team_danger_zone' %}bg-rose-500/30{% endif %}" href="{% url 'private:team_danger_zone' team_id=team.id %}">
                                     {% if request.url_name == 'team_danger_zone' %}
                                         <svg class="w-4 h-4 shrink-0 stroke-current text-rose-500 mr-2" viewBox="0 0 22 22" fill="none" stroke-width=2>
                                     {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-400 text-slate-500 mr-2" viewBox="0 0 22 22" fill="none"  stroke-width=2>
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="0 0 22 22" fill="none"  stroke-width=2>
                                     {% endif %}
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                         <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
@@ -103,7 +103,7 @@
                                         <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
                                       </svg>
                                     {% if request.url_name == 'team_danger_zone' %}
-                                        <span class="text-sm font-medium text-rose-500 text-rose-400">
+                                        <span class="text-sm font-medium text-rose-400">
                                     {% else %}
                                         <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
                                     {% endif %}

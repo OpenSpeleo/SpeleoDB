@@ -12,7 +12,7 @@
 
             <!-- Left: Title -->
             <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-800 text-slate-100 font-bold">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
                     My Survey Teams
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chart-dots-3 inline h-10" viewBox="0 0 24 24">
                         <path class="fill-current text-indigo-600" d="M18.974 8H22a2 2 0 012 2v6h-2v5a1 1 0 01-1 1h-2a1 1 0 01-1-1v-5h-2v-6a2 2 0 012-2h.974zM20 7a2 2 0 11-.001-3.999A2 2 0 0120 7zM2.974 8H6a2 2 0 012 2v6H6v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5H0v-6a2 2 0 012-2h.974zM4 7a2 2 0 11-.001-3.999A2 2 0 014 7z"></path>
@@ -37,7 +37,7 @@
         </div>
 
         <!-- Table -->
-        <div class="bg-white bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
 
             <div>
 
@@ -70,7 +70,7 @@
                                 <tr>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
                                         <div class="text-center">
-                                            <div class="font-medium text-slate-800 text-slate-100">{{ membership.team.name }}</div>
+                                            <div class="font-medium text-slate-100">{{ membership.team.name }}</div>
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
@@ -88,15 +88,17 @@
                                         <div class="text-center">
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
                                             {% if membership.role == "MEMBER" %}
-                                                bg-pastel-purple">Member</div>
+                                                bg-pastel-purple text-white">Member</div>
                                             {% elif membership.role == "LEADER" %}
-                                                bg-pastel-orange">Leader</div>
+                                                bg-pastel-orange text-white">Leader</div>
+                                            {% else %}
+                                                bg-rose-500/30 text-rose-400">Unknown</div>
                                             {% endif %}
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="flex items-center text-slate-800">
-                                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-100 bg-slate-700 rounded-full mr-2 sm:mr-3">
+                                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3">
                                                 <a href="{% url 'private:team_details' team_id=membership.team.id %}">
                                                     <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="Icon 01">
                                                 </a>

@@ -7,26 +7,26 @@
 
     <!-- Panel body -->
     <div class="p-6 space-y-6">
-        <h2 class="text-2xl text-slate-800 text-slate-100 font-bold mb-5">My Preferences</h2>
+        <h2 class="text-2xl text-slate-100 font-bold mb-5">My Preferences</h2>
 
         <!-- General -->
         <section>
-            <h3 class="text-xl leading-snug text-slate-800 text-slate-100 font-bold mb-1">Email Preferences</h3>
+            <h3 class="text-xl leading-snug text-slate-100 font-bold mb-1">Email Preferences</h3>
             <ul>
                 <form id="preference_form">
                     {% csrf_token %}
                     <li class="flex justify-between items-center py-3 border-b border-slate-200 border-slate-700">
                         <!-- Left -->
                         <div>
-                            <div class="text-slate-800 text-slate-100 font-semibold">Receive updates from SpeleoDB</div>
+                            <div class="text-slate-100 font-semibold">Receive updates from SpeleoDB</div>
                             <div class="text-sm">We promise to keep the volume low. Only important updates about SpeleoDB.</div>
                         </div>
                         <!-- Right -->
                         <div class="flex items-center ml-4" x-data="{ checked: {% if user.email_on_speleodb_updates %}true{% else %}false{% endif %} }">
-                            <div class="text-sm text-slate-400 text-slate-500 italic mr-2" x-text="checked ? 'On' : 'Off'"></div>
+                            <div class="text-sm text-slate-500 italic mr-2" x-text="checked ? 'On' : 'Off'"></div>
                             <div class="form-switch">
                                 <input type="checkbox" name="email_on_speleodb_updates" id="email_on_speleodb_updates" class="sr-only" x-model="checked" />
-                                <label class="bg-slate-400 bg-slate-700" for="email_on_speleodb_updates">
+                                <label class="bg-slate-700" for="email_on_speleodb_updates">
                                     <span class="bg-white shadow-sm" aria-hidden="true"></span>
                                     <span class="sr-only">Enable smart sync</span>
                                 </label>
@@ -36,15 +36,15 @@
                     <li class="flex justify-between items-center py-3 border-b border-slate-200 border-slate-700">
                         <!-- Left -->
                         <div>
-                            <div class="text-slate-800 text-slate-100 font-semibold">Receive update summary when one of your projects gets updated.</div>
+                            <div class="text-slate-100 font-semibold">Receive update summary when one of your projects gets updated.</div>
                             <div class="text-sm">Receive a quick summary email everytime a project gets updated. Beware of the potential high volume of emails.</div>
                         </div>
                         <!-- Right -->
                         <div class="flex items-center ml-4" x-data="{ checked: {% if user.email_on_projects_updates %}true{% else %}false{% endif %} }">
-                            <div class="text-sm text-slate-400 text-slate-500 italic mr-2" x-text="checked ? 'On' : 'Off'"></div>
+                            <div class="text-sm text-slate-500 italic mr-2" x-text="checked ? 'On' : 'Off'"></div>
                             <div class="form-switch">
                                 <input type="checkbox" id="email_on_projects_updates" name="email_on_projects_updates" class="sr-only" x-model="checked" />
-                                <label class="bg-slate-400 bg-slate-700" for="email_on_projects_updates">
+                                <label class="bg-slate-700" for="email_on_projects_updates">
                                     <span class="bg-white shadow-sm" aria-hidden="true"></span>
                                     <span class="sr-only">Enable smart sync</span>
                                 </label>
