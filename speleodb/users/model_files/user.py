@@ -118,8 +118,12 @@ class User(AbstractUser):
         for team in self.teams:
             permissions.extend(team.rel_permissions.filter(is_active=True))
 
-        return filter_permissions_by_best(permissions)
+        permissions = filter_permissions_by_best(permissions)
+        return sorted(permissions, key=lambda perm: perm.project.name)
 
     @property
     def permissions(self):
-        return filter_permissions_by_best(self.permissions_user + self.permissions_team)
+        permissions = filter_permissions_by_best(
+            self.permissions_user + self.permissions_team
+        )
+        return sorted(permissions, key=lambda perm: perm.project.name)

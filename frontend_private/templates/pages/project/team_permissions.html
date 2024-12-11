@@ -85,7 +85,7 @@
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="text-center">
-                                        <div class="font-medium text-slate-800 text-slate-100">{{ permission.target.name }}</div>
+                                        <div class="font-medium text-slate-800 text-slate-100 underline"><a href="{% url 'private:team_memberships' team_id=permission.target.id %}">{{ permission.target.name }}</a></div>
                                     </div>
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">

@@ -1,6 +1,7 @@
 {% load static i18n compress%}
 {% get_current_language as LANGUAGE_CODE %}
 
+{% load is_in_list %}
 {% load set_var %}
 
 <!DOCTYPE html>
@@ -102,7 +103,7 @@
                         </h3>
                         <ul class="mt-3">
                             <!-- Dashboard -->
-                            {% if request.url_name == 'dashboard' or request.url_name == 'preferences' %}
+                            {% if request.url_name|is_in_list:"dashboard,password,auth-token,preferences" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:dashboard' %}">
@@ -125,7 +126,7 @@
                             </li>
 
                             <!-- My Teams -->
-                            {% if request.url_name == 'teams' or request.url_name == 'new_team' %}
+                            {% if request.url_name|is_in_list:"teams,team_new,team_details,team_memberships,team_danger_zone" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:teams' %}">
@@ -172,7 +173,7 @@
                             </li>
 
                             <!-- My Survey Projects -->
-                            {% if request.url_name == 'projects' or request.url_name == 'project_details' %}
+                            {% if request.url_name|is_in_list:"projects,project_details,project_upload,project_user_permissions,project_team_permissions,project_mutexes,project_revisions,project_revision_explorer,project_danger_zone" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:projects' %}">
