@@ -8,7 +8,9 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        exclude: ^speleodb/api/v1/tests/artifacts/
       - id: end-of-file-fixer
+        exclude: ^speleodb/api/v1/tests/artifacts/
       - id: check-json
       - id: check-toml
       - id: check-xml
@@ -32,8 +34,10 @@ repos:
       # Linter
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+        exclude: ^speleodb/api/v1/tests/artifacts/
       # Formatter
       - id: ruff-format
+        exclude: ^speleodb/api/v1/tests/artifacts/
 
   - repo: https://github.com/Riverside-Healthcare/djLint
     rev: v1.34.1

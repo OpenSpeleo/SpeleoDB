@@ -4,7 +4,6 @@
 import logging
 
 from django.core.exceptions import ValidationError
-from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 

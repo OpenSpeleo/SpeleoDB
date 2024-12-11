@@ -69,6 +69,7 @@ class _BaseTeamView(LoginRequiredMixin, View):
             if not team.is_member(request.user):
                 return redirect(reverse("private:teams"))
             return {"team": team, "is_team_leader": team.is_leader(request.user)}
+        return redirect(reverse("home"))
 
 
 class TeamDetailsView(_BaseTeamView):
