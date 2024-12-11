@@ -9,11 +9,10 @@ from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
+from speleodb.surveys.models import AnyPermissionLevel
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeamMembership
-
-AnyPermissionLevel = UserPermission.Level | TeamPermission.Level
 
 
 class BaseAPITestCase(TestCase):

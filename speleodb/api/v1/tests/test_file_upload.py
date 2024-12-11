@@ -6,10 +6,10 @@ from parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.api.v1.tests.base_testcase import AnyPermissionLevel
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.api.v1.tests.utils import is_valid_git_sha
+from speleodb.surveys.models import AnyPermissionLevel
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission

@@ -27,7 +27,7 @@
                         <label class="block text-sm font-medium mb-1" for="team">Team <span class="text-rose-500">*</span></label>
                         <select id="team" name="team" class="form-select max-w-full w-128 h-10 mb-4">
                             <option disabled selected value>Select a team ...</option>
-                        {% for team in user.teams %}
+                        {% for team in available_teams %}
                             <option value="{{ team.id }}">{{ team.name }}</option>
                         {% endfor %}
                         </select>

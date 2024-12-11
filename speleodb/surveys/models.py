@@ -7,4 +7,13 @@ from speleodb.surveys.model_files.permission_team import TeamPermission
 from speleodb.surveys.model_files.mutex import Mutex
 from speleodb.surveys.model_files.format import Format
 
-__all__ = ["Format", "Mutex", "Project", "TeamPermission", "UserPermission"]
+AnyPermissionLevel = UserPermission.Level | TeamPermission.Level
+
+__all__ = [
+    "AnyPermissionLevel",
+    "Format",
+    "Mutex",
+    "Project",
+    "TeamPermission",
+    "UserPermission",
+]

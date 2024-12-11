@@ -44,8 +44,12 @@ class BasePermissionModel(models.Model):
         return f"<{self.__class__.__name__}: {self}>"
 
     @property
+    def level_obj(self) -> str:
+        return self.Level(self._level)
+
+    @property
     def level(self) -> str:
-        return self.Level(self._level).label
+        return self.level_obj.label
 
     @level.setter
     def level(self, value):
