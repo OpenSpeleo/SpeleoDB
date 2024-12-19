@@ -2958,6 +2958,10 @@ input[type="search"]::-webkit-search-results-decoration {
   border-left-width: 2px;
 }
 
+.border-dashed {
+  border-top-style: dashed;
+}
+
 .border-t {
   border-top-width: 1px;
 }
@@ -2984,6 +2988,10 @@ input[type="search"]::-webkit-search-results-decoration {
 
 .border-slate-300\/10 {
   border-color: rgb(203 213 225 / 0.1);
+}
+
+.border-slate-300\/30 {
+  border-color: rgb(203 213 225 / 0.3);
 }
 
 .border-slate-700 {

@@ -1,0 +1,92 @@
+{% load static i18n compress%}
+{% get_current_language as LANGUAGE_CODE %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+
+<head>
+    <meta charset="utf-8">
+    <title>SpeleoDB - Ariane</title>
+
+    <meta property="og:locale" content="en_US" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="SpeleoDB Collaboration and Survey Data Exchange Server" />
+    <meta name="author" content="Jonathan Dekhtiar" />
+
+    {% compress css %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% endcompress %}
+
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
+    <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
+
+</head>
+
+<body class="font-inter antialiased bg-slate-900 tracking-tight">
+
+    <!-- Page wrapper -->
+    <div class="flex flex-col">
+
+        <img class="max-w-none block m-auto mt-4" src="{% static 'media/logo.svg' %}" style="height:42px" alt="SpeleoDB">
+
+        <section>
+
+            <!-- Illustration -->
+            <div class="absolute inset-0 -z-10 -mx-28 rounded-b-[3rem] pointer-events-none overflow-hidden" aria-hidden="true">
+                <div class="absolute left-1/2 -translate-x-1/2 bottom-0 -z-10">
+                    <img src="{% static 'media/glow-top.svg' %}" class="max-w-none" width="1404" height="658" alt="Features Illustration">
+                </div>
+            </div>
+
+            <div class="pt-4">
+
+                <!-- Section content -->
+                <div class="flex flex-col">
+
+                    <!-- Content -->
+                    <div class="text-center mt-2 mb-2">
+                        <span class="bg-clip-text text-lg text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60">
+                            Survey Collaboration
+                        </span>
+                        <p class="text-md text-slate-400 mt-2 mb-2">
+                            <b>SpeleoDB</b> is a non-profit project allow you to improve survey collaboration and file versioning, backup and history.
+                        </p>
+                    </div>
+
+                    <hr class="border-slate-300/30 border-dashed">
+
+                    <!-- Content -->
+                    <div class="text-center mt-2 mb-2">
+                        <span class="bg-clip-text text-lg text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60">
+                            It's Free To Use !
+                        </span>
+                        <p class="text-md text-slate-400 mt-2 mb-2">
+                            Being a registered 501c3 US Non Profit allows us to provide this service <b>entirely for free</b> to the entire community.
+                        </p>
+                    </div>
+
+                    <hr class="border-slate-300/30 border-dashed">
+
+                    <!-- Content -->
+                    <div class="text-center mt-2 mb-2">
+                        <span class="bg-clip-text text-lg text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60">
+                            Data Privacy & Transparency
+                        </span>
+                        <p class="text-md text-slate-400 mt-2 mb-2">
+                            We understand the critical importance of data privacy, ownership, and attribution. Our open-source platform is built on a foundation of transparency, allowing anyone to review the code. With a technical steering committee guiding its evolution.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+</body>
+
+</html>
