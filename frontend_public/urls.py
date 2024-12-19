@@ -11,6 +11,11 @@ from frontend_public.views import SignUpView
 urlpatterns = [
     path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
     path(
+        "webview/ariane/",
+        TemplateView.as_view(template_name="webviews/ariane.html"),
+        name="home_ariane",
+    ),
+    path(
         "about/", TemplateView.as_view(template_name="pages/about.html"), name="about"
     ),
     path(
