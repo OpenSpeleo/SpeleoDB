@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.http import Http404
+from git.exc import GitCommandError
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
@@ -76,9 +77,19 @@ class FileUploadView(GenericAPIView):
             )
 
         try:
-            processor = AutoSelector.get_upload_processor(
-                fileformat=fileformat, file=file_uploaded, project=project
-            )
+            git_error = None
+            for _ in range(5):  # maximum retry attempts in case of Git exception
+                try:
+                    processor = AutoSelector.get_upload_processor(
+                        fileformat=fileformat, file=file_uploaded, project=project
+                    )
+                    break
+                except GitCommandError as e:
+                    git_error = str(e)
+            else:
+                return ErrorResponse(
+                    f"Git Error: {git_error}", status=status.HTTP_400_BAD_REQUEST
+                )
 
             if fileformat == Format.FileFormat.AUTO:
                 fileformat = processor.ASSOC_FILEFORMAT

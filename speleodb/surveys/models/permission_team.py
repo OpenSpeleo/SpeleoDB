@@ -3,8 +3,8 @@
 
 from django.db import models
 
-from speleodb.surveys.model_files.permission_base import BasePermissionModel
 from speleodb.surveys.models import Project
+from speleodb.surveys.models.permission_base import BasePermissionModel
 from speleodb.users.models import SurveyTeam
 
 
