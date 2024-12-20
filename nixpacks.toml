@@ -1,0 +1,12 @@
+# https://nixpacks.com/docs/configuration/file
+
+# force python as the only provider
+providers = ['python']
+
+# set up some variables to minimize annoyance
+[variables]
+# set python version to install
+NIXPACKS_PYTHON_VERSION = '3.13'
+
+# the pip update notification is relatively useless in a production environment
+PIP_DISABLE_PIP_VERSION_CHECK = '1'
