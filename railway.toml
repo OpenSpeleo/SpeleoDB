@@ -1,0 +1,16 @@
+# Documentation: https://docs.railway.com/reference/config-as-code#nixpacks-version
+[build]
+nixpacksPlan = { "providers" = ["python"] }
+builder = "NIXPACKS"
+nixpacksVersion = "1.30.0"                  # https://github.com/railwayapp/nixpacks/releases/
+nixpacksConfigPath = "./nixpacks.toml"
+
+[deploy]
+runtime = "V2"
+numReplicas = 1
+sleepApplication = false
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.13" # https://nixpacks.com/docs/providers/python
