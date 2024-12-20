@@ -23,6 +23,7 @@ TEST_FILES = [
 ]
 
 
+@pytest.mark.skip_if_lighttest
 class FileViewTests(BaseAPIProjectTestCase):
     @parameterized.expand(
         named_product(
