@@ -217,7 +217,7 @@ class Project(models.Model):
         return len(users)
 
     def _has_user_permission(self, user: User, permission):
-        from speleodb.surveys.model_files.permission_user import UserPermission
+        from speleodb.surveys.models.permission_user import UserPermission
 
         if not isinstance(permission, UserPermission.Level):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
@@ -228,7 +228,7 @@ class Project(models.Model):
             return False
 
     def _has_team_permission(self, team: SurveyTeam, permission) -> bool:
-        from speleodb.surveys.model_files.permission_team import TeamPermission
+        from speleodb.surveys.models.permission_team import TeamPermission
 
         if not isinstance(permission, TeamPermission.Level):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
@@ -246,8 +246,8 @@ class Project(models.Model):
         raise TypeError(f"Unexpected value received for: `{target=}`")
 
     def has_write_access(self, user: User):
-        from speleodb.surveys.model_files.permission_team import TeamPermission
-        from speleodb.surveys.model_files.permission_user import UserPermission
+        from speleodb.surveys.models.permission_team import TeamPermission
+        from speleodb.surveys.models.permission_user import UserPermission
 
         user_permission = self._has_user_permission(
             user, permission=UserPermission.Level.READ_AND_WRITE
@@ -265,7 +265,7 @@ class Project(models.Model):
         return False
 
     def is_admin(self, user: User):
-        from speleodb.surveys.model_files.permission_user import UserPermission
+        from speleodb.surveys.models.permission_user import UserPermission
 
         return self._has_user_permission(user, permission=UserPermission.Level.ADMIN)
 
