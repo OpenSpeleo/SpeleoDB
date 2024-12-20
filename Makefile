@@ -23,6 +23,12 @@ test:
 	pytest
 
 deploy:
-	python3 merge_production_dotenvs_in_dotenv.py
+	python manage.py merge_prod_dotenvs.py
 	docker compose -f production.yml --env-file .envs/.production/.django build
 	docker compose -f production.yml --env-file .envs/.production/.django up
+
+wipe_gitlab_test:
+	python manage.py wipe_test_gitlab --accept_danger
+
+generate_enc_key:
+	python manage.py generate_field_encryption_key
