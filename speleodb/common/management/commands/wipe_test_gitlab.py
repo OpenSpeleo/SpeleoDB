@@ -26,7 +26,22 @@ class Command(BaseCommand):
             ),
         )
 
-    def handle(self, *args, skip_user_confirmation: bool = False, **kwargs):
+        parser.add_argument(
+            "--skip_user_confirmation",
+            action="store_true",
+            help=(
+                "[DANGER] Actually proceed with the deletion. Execute first the script "
+                "without this flag to verify everything is good."
+            ),
+        )
+
+    def handle(
+        self,
+        *,
+        skip_user_confirmation: bool = False,
+        accept_danger: bool = False,
+        **kwargs,
+    ):
         project_base_dir = Path(__file__).parents[4].resolve()
         if (env_file := project_base_dir / ".envs/test.env").exists():
             assert load_dotenv(env_file)
@@ -86,7 +101,7 @@ class Command(BaseCommand):
                     f"[{project_id + 1}/{len(projects)}] Deleting project: "
                     f"`{project.name}` - {project.web_url}"
                 )
-                if kwargs["accept_danger"]:  # Not a dummy run - Actually proceed
+                if accept_danger:  # Not a dummy run - Actually proceed
                     project = gl.projects.get(project.id)  # noqa: PLW2901
                     project.delete()
                     time.sleep(5)  # Time Throttling Mitigation

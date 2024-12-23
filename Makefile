@@ -28,7 +28,7 @@ deploy:
 	docker compose -f production.yml --env-file .envs/.production/.django up
 
 wipe_gitlab_test:
-	python manage.py wipe_test_gitlab --accept_danger
+	python manage.py wipe_test_gitlab --accept_danger --skip_user_confirmation
 
 generate_enc_key:
 	python manage.py generate_field_encryption_key
