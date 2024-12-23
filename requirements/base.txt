@@ -15,7 +15,7 @@ timeago==1.0.16  # https://github.com/hustcc/timeago
 
 # Git Management
 # ------------------------------------------------------------------------------
-python-gitlab==5.1.0  # https://python-gitlab.readthedocs.io/en/stable/
+python-gitlab==5.2.0  # https://python-gitlab.readthedocs.io/en/stable/
 GitPython==3.1.43  # https://github.com/gitpython-developers/GitPython
 
 # Django
@@ -31,7 +31,7 @@ django-compressor==4.5.1  # https://github.com/django-compressor/django-compress
 django-dynamic-raw-id==4.4  # https://github.com/lincolnloop/django-dynamic-raw-id
 django-redis==5.4.0  # https://github.com/jazzband/django-redis
 django-encrypted-model-fields==0.6.5  # https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/
-django-hijack==3.7.0  # https://github.com/django-hijack/django-hijack/
+django-hijack==3.7.1  # https://github.com/django-hijack/django-hijack/
 # Django REST Framework
 djangorestframework==3.15.2  # https://github.com/encode/django-rest-framework
 django-cors-headers==4.6.0  # https://github.com/adamchainz/django-cors-headers
