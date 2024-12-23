@@ -99,19 +99,34 @@ DJANGO_APPS = [
     "django.forms",
 ]
 THIRD_PARTY_APPS = [
-    "crispy_forms",
-    "crispy_bootstrap5",
     "allauth",
     "allauth.account",
     "allauth.headless",
     "django_celery_beat",
-    "django_countries",
-    "dynamic_raw_id",
-    "encrypted_model_fields",
-    "rest_framework",
-    "rest_framework.authtoken",
+    # DRF
     "corsheaders",
     "drf_spectacular",
+    "rest_framework",
+    "rest_framework.authtoken",
+    # ============ CUSTOM ADDITIONS ============ #
+    # https://github.com/SmileyChris/django-countries
+    # A Django application that provides country choices for use with forms,
+    # flag icons static files, and a country field for models.
+    "django_countries",
+    # https://github.com/lincolnloop/django-dynamic-raw-id
+    # A raw_id_fields widget replacement that handles display of an object's
+    # string value on change and can be overridden via a template.
+    "dynamic_raw_id",
+    # https://github.com/enderlabs/django-cryptographic-fields
+    # A set of fields that wrap standard Django fields with encryption provided
+    # by the python cryptography library.
+    "encrypted_model_fields",
+    # https://github.com/django-hijack/django-hijack
+    # With Django Hijack, admins can log in and work on behalf of other users
+    # without having to know their credentials.
+    # Author's NOTE: Unfortunately this mechanism is necessary for debugging any
+    #                user's issue - being able to see what they see. This needs
+    #                to be used as an absolute last last resort.
     "hijack",
     "hijack.contrib.admin",
 ]
@@ -296,10 +311,6 @@ TEMPLATES = [
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#form-renderer
 FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
-
-# http://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs
-CRISPY_TEMPLATE_PACK = "bootstrap5"
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 
 # FIXTURES
 # ------------------------------------------------------------------------------
