@@ -1,0 +1,68 @@
+name: Nightly Gitlab Cleaning Job
+
+on:
+  schedule:
+    - cron: "0 10 * * *" # 10 AM UTC corresponds to 5 AM ET during Standard Time
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  nightly-job:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:6
+        ports:
+          - 6379:6379
+      postgres:
+        image: postgres:16
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
+
+    env:
+      DJANGO_DEBUG: True
+      USE_DOCKER: yes
+      CELERY_FLOWER_USER: debug
+      CELERY_FLOWER_PASSWORD: debug
+      # no effect. This job does not access the DB
+      DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      # no effect. This job does not access the DB
+      REDIS_URL: "redis://redis:6379/0"
+      # Dummy Key - Not Used
+      DJANGO_SECRET_KEY: "s&=i@9h+)6bge)6!6vhbcx@=#^6nr73&7+6ep-xpbebhi5#)+_"
+      # Dummy Key - Not Used
+      DJANGO_FIELD_ENCRYPTION_KEY: "Mi2dyK2q9uTi9_Yn2mpsmU2fFUM4P0U7XpEgxiGPtto="
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements/base.txt
+            requirements/local.txt
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/local.txt
+
+      - name: Clean Gitlab Test Database
+        run: make wipe_gitlab_test
+        env:
+          DJANGO_FIELD_ENCRYPTION_KEY: ${{ secrets.DJANGO_FIELD_ENCRYPTION_KEY }}
+          GITLAB_GROUP_ID: ${{ secrets.GITLAB_GROUP_ID }}
+          GITLAB_GROUP_NAME: ${{ secrets.GITLAB_GROUP_NAME }}
+          GITLAB_HOST_URL: ${{ secrets.GITLAB_HOST_URL }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
