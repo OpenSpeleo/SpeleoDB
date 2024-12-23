@@ -1,18 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import pathlib
-
 import pytest
-from django.apps import apps
-from dotenv import load_dotenv
-
-from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import SurveyTeamFactory
-from speleodb.surveys.models import Project
-from speleodb.users.models import SurveyTeam
-from speleodb.users.models import User
-from speleodb.users.tests.factories import UserFactory
 
 
 def pytest_addoption(parser):
