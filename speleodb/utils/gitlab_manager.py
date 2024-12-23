@@ -95,6 +95,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
 
             git_repo = git.Repo.init(project_dir)
             origin = git_repo.create_remote("origin", url=git_url)
+            origin.fetch()
             assert origin.exists()
 
             # Create an initial empty commit
@@ -103,14 +104,14 @@ class _GitlabManager(metaclass=SingletonMetaClass):
                 author=GIT_COMMITTER,
                 committer=GIT_COMMITTER,
             )
-            git_repo.git.push("--set-upstream", "origin", "master")
+            git_repo.git.push("--set-upstream", origin.name, "master")
 
         except gitlab.exceptions.GitlabCreateError:
             # The repository already exists in Gitlab - git clone instead
 
             # Ensure the parent directory exists
             project_dir.parent.mkdir(exist_ok=True, parents=True)
-            git_repo = git.Repo.clone_from(git_url, project_dir)
+            git_repo = git.Repo.clone_from(url=git_url, to_path=project_dir)
 
         return GitRepo.from_repo(repo=git_repo)
 

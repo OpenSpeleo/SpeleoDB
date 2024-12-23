@@ -1,3 +1,5 @@
+from django.core.files.uploadedfile import InMemoryUploadedFile
+
 from speleodb.processors._impl.ariane import AGRFileProcessor
 from speleodb.processors._impl.ariane import TMLFileProcessor
 from speleodb.processors._impl.ariane import TMLUFileProcessor
@@ -46,7 +48,11 @@ class AutoSelector:
         return BaseFileProcessor
 
     @staticmethod
-    def get_upload_processor(fileformat: Format.FileFormat, file, project: Project):
+    def get_upload_processor(
+        fileformat: Format.FileFormat, file: InMemoryUploadedFile, project: Project
+    ):
+        assert isinstance(file, InMemoryUploadedFile)
+
         if not isinstance(fileformat, Format.FileFormat):
             raise TypeError(
                 "Unknown `fileformat` received, expected one of "
