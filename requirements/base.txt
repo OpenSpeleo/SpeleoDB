@@ -15,7 +15,7 @@ timeago==1.0.16  # https://github.com/hustcc/timeago
 
 # Git Management
 # ------------------------------------------------------------------------------
-python-gitlab==5.1.0  # https://python-gitlab.readthedocs.io/en/stable/
+python-gitlab==5.2.0  # https://python-gitlab.readthedocs.io/en/stable/
 GitPython==3.1.43  # https://github.com/gitpython-developers/GitPython
 
 # Django
