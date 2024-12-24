@@ -12,6 +12,7 @@ from git import Commit
 from git import Repo
 from git import Tree
 from git.exc import GitCommandError
+from git.exc import InvalidGitRepositoryError
 
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
@@ -341,6 +342,21 @@ class GitHead(HEAD):
 
 class GitRepo(Repo):
     @classmethod
+    def from_directory(cls, directory: pathlib.Path) -> Self:
+        if not isinstance(directory, pathlib.Path):
+            directory = pathlib.Path(directory)
+
+        if not directory.is_dir():
+            directory.unlink(missing_ok=True)
+            raise RuntimeError(f"The folder `{directory}` is not a folder.")
+
+        try:
+            return cls(directory)
+        except InvalidGitRepositoryError as e:
+            directory.unlink(missing_ok=True)
+            raise RuntimeError from e
+
+    @classmethod
     def from_repo(cls, repo: Repo) -> Self:
         return cls(repo.working_dir)
 
@@ -450,7 +466,7 @@ class GitRepo(Repo):
         origin = self.remotes.origin
         for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
             with contextlib.suppress(GitCommandError):
-                origin.pull()
+                origin.pull("+refs/heads/*:refs/heads/*")
                 break
         else:
             raise GitBaseError(
@@ -496,7 +512,15 @@ class GitRepo(Repo):
 
             commit = self.index.commit(message, author=author, committer=GIT_COMMITTER)
 
-            self.git.push("--set-upstream", "origin", self.active_branch)
+            for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
+                with contextlib.suppress(GitCommandError):
+                    self.git.push("--set-upstream", "origin", self.active_branch)
+                    break
+            else:
+                raise GitBaseError(
+                    "Impossible to push to repository: "
+                    f"{self.remotes.origin.url.split('@')[-1]}"  # Removes OAUTH2 token
+                )
 
             return commit.hexsha
 
