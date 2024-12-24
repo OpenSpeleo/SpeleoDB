@@ -273,18 +273,28 @@ class Project(models.Model):
     def git_repo(self):
         project_dir = (settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)).resolve()
 
-        if not project_dir.exists():
-            git_repo = GitlabManager.create_or_clone_project(self.id)
-            git_repo_path = pathlib.Path(git_repo.path).resolve()
+        for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
+            if not project_dir.exists():
+                git_repo = GitlabManager.create_or_clone_project(self.id)
+                git_repo_path = pathlib.Path(git_repo.path).resolve()
 
-            if project_dir != git_repo_path:
-                raise ValueError(
-                    f"Difference detected between `{git_repo_path=}` "
-                    f"and `{project_dir=}`"
-                )
-            return git_repo
+                if project_dir != git_repo_path:
+                    raise ValueError(
+                        f"Difference detected between `{git_repo_path=}` "
+                        f"and `{project_dir=}`"
+                    )
+                return git_repo
 
-        return GitRepo(project_dir)
+            try:
+                return GitRepo.from_directory(project_dir)
+            except RuntimeError:
+                # In case a `RuntimeError` is being triggered, the `project_dir` is
+                # being cleaned up.
+                continue
+
+        raise RuntimeError(
+            "Impossible to create, clone or open the git repository " f"`{project_dir}`"
+        )
 
     @property
     def commit_history(self):
