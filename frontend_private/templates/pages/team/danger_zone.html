@@ -84,18 +84,7 @@
                     }, 2000);
                 },
                 error: function (data) {
-                  if (data.status == 429) {
-                    $("#modal_error_txt").text(data.responseJSON["detail"]);
-                    $("#modal_error").css('display', 'flex');
-                  }
-                  else {
-                    if ("error" in data.responseJSON) {
-                        $("#modal_error_txt").text(data.responseJSON["error"]);
-                    } else {
-                        $("#modal_error_txt").text(data.responseJSON["errors"][0]);
-                    }
-                    $("#modal_error").css('display', 'flex');
-                  }
+                    {% include 'snippets/ajax_error_modal_management.js' %}
                 }
             });
             return false; // prevent default

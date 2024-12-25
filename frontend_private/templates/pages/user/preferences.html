@@ -108,7 +108,7 @@
                     $("#modal_success").css('display', 'flex');  // show modal
                 },
                 error: function (data) {
-                    $("#modal_error").css('display', 'flex');  // show modal
+                    {% include 'snippets/ajax_error_modal_management.js' %}
                 }
             });
             return false; // prevent default
