@@ -107,23 +107,7 @@
                     $("#modal_success").css('display', 'flex');
                 },
                 error: function (data) {
-                    if (data.status == 429) {
-                        $("#modal_error_txt").text(data.responseJSON["detail"]);
-                        $("#modal_error").css('display', 'flex');
-                    }
-                    else {
-                        if ("error" in data.responseJSON) {
-                            $("#modal_error_txt").text(data.responseJSON["error"]);
-                        }
-                        else if ("errors" in data.responseJSON) {
-                            var error_msg = "";
-                            for (var key in data.responseJSON["errors"]){
-                                error_msg += "- <b>Error:</b> `" + key + "`: " + data.responseJSON["errors"][key] + "<br>";
-                            }
-                            $("#modal_error_txt").html(error_msg);
-                        }
-                        $("#modal_error").css('display', 'flex');
-                    }
+                    {% include 'snippets/ajax_error_modal_management.js' %}
                 }
             });
             return false; // prevent default

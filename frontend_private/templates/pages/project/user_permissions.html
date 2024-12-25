@@ -93,7 +93,7 @@
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="text-center">
-                                        
+
                                         {% if permission.team %}
                                         {% if permission.level.label == "READ_ONLY" %}
                                         <div class="inline-flex font-medium bg-slate-700 text-slate-300 rounded-full text-center px-2.5 py-0.5">
@@ -148,7 +148,7 @@
                                             <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z"></path>
                                         </svg>
                                     </span>
-                                    
+
                                     {% else %}
 
                                     {% comment %} A user can not edit/delete their own permission. Must be another ADMIN
@@ -305,18 +305,7 @@
                     }, 2000);
                 },
                 error: function (data) {
-                    if (data.status == 429) {
-                        $("#modal_error_txt").text(data.responseJSON["detail"]);
-                        $("#modal_error").css('display', 'flex');
-                    }
-                    else {
-                        if ("error" in data.responseJSON) {
-                            $("#modal_error_txt").text(data.responseJSON["error"]);
-                        } else {
-                            $("#modal_error_txt").text(data.responseJSON["errors"][0]);
-                        }
-                        $("#modal_error").css('display', 'flex');
-                    }
+                    {% include 'snippets/ajax_error_modal_management.js' %}
                 }
             });
             return false; // prevent default
@@ -356,18 +345,7 @@
                     }, 2000);
                 },
                 error: function (data) {
-                    if (data.status == 429) {
-                        $("#modal_error_txt").text(data.responseJSON["detail"]);
-                        $("#modal_error").css('display', 'flex');
-                    }
-                    else {
-                        if ("error" in data.responseJSON) {
-                            $("#modal_error_txt").text(data.responseJSON["error"]);
-                        } else {
-                            $("#modal_error_txt").text(data.responseJSON["errors"][0]);
-                        }
-                        $("#modal_error").css('display', 'flex');
-                    }
+                    {% include 'snippets/ajax_error_modal_management.js' %}
                 }
             });
             return false; // prevent default
