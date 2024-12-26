@@ -9,8 +9,7 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
-from speleodb.users.models import User
-from speleodb.utils.exceptions import ProjectNotFound
+from speleodb.utils.timing_ctx import timed_section
 
 
 class Artifact:
@@ -86,28 +85,16 @@ class BaseFileProcessor:
     TARGET_DOWNLOAD_FILENAME = None
     ASSOC_FILEFORMAT = Format.FileFormat.OTHER
 
-    def __init__(self, project: Project, hexsha=None):
+    def __init__(self, project: Project):
         self._project = project
-        self._hexsha = hexsha
-        self.checkout_commit_or_master()
 
     @property
     def project(self) -> Project:
         return self._project
 
-    @property
-    def hexsha(self) -> str:
-        return self._hexsha
-
-    def commit_file(
-        self,
-        file: InMemoryUploadedFile | TemporaryUploadedFile,
-        user: User,
-        commit_msg: str,
-    ) -> tuple[Artifact, str | None]:
-        # Make sure the project is update to ToT (Top of Tree)
-        self.project.git_repo.checkout_branch(branch_name="master")
-
+    def add_file_to_project(
+        self, file: InMemoryUploadedFile | TemporaryUploadedFile
+    ) -> Artifact:
         file = Artifact(file)
         file.assert_valid(
             allowed_extensions=self.ALLOWED_EXTENSIONS,
@@ -121,25 +108,13 @@ class BaseFileProcessor:
         )
 
         target_path = self.project.git_repo.path / filename
-        file.write(path=target_path)
 
-        return file, self.project.git_repo.commit_and_push_project(
-            message=commit_msg, author_name=user.name, author_email=user.email
-        )
+        with timed_section("File copy to project dir"):
+            file.write(path=target_path)
 
-    def checkout_commit_or_master(self) -> None:
-        if not self.project.git_repo:
-            raise ProjectNotFound("This project does not exist on gitlab or on drive")
+        return file
 
-        if self.hexsha is None:
-            # Make sure the project is update to ToT (Top of Tree)
-            self.project.git_repo.checkout_branch_or_commit(branch_name="master")
-            self.project.git_repo.pull()
-
-        else:
-            self.project.git_repo.checkout_branch_or_commit(hexsha=self.hexsha)
-
-    def postprocess_file_before_download(self, filepath: Path) -> None:
+    def postprocess_file_before_download(self, filepath: Path):
         with contextlib.suppress(shutil.SameFileError):
             shutil.copy(src=self.source_f, dst=filepath)
 

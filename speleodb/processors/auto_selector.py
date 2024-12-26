@@ -1,4 +1,5 @@
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import TemporaryUploadedFile
 
 from speleodb.processors._impl.ariane import AGRFileProcessor
 from speleodb.processors._impl.ariane import TMLFileProcessor
@@ -10,6 +11,7 @@ from speleodb.processors.base import Artifact
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
+from speleodb.utils.timing_ctx import timed_section
 
 
 class AutoSelector:
@@ -51,9 +53,12 @@ class AutoSelector:
 
     @staticmethod
     def get_upload_processor(
-        fileformat: Format.FileFormat, file: InMemoryUploadedFile, project: Project
+        fileformat: Format.FileFormat,
+        file: InMemoryUploadedFile | TemporaryUploadedFile,
+        project: Project,
     ) -> type[BaseFileProcessor]:
-        assert isinstance(file, InMemoryUploadedFile)
+        if not isinstance(file, (InMemoryUploadedFile, TemporaryUploadedFile)):
+            raise TypeError(f"Unexpected object type received: {type(file)}")
 
         if not isinstance(fileformat, Format.FileFormat):
             raise TypeError(
@@ -61,16 +66,18 @@ class AutoSelector:
                 f"{Format.FileFormat.choices}"
             )
 
-        file = Artifact(file)
-        processor_cls = AutoSelector.get_processor(
-            fileformat=fileformat, f_extension=file.extension
-        )
-        return processor_cls(project=project)
+        with timed_section("Get Processor - Func"):
+            file = Artifact(file)
+            processor_cls = AutoSelector.get_processor(
+                fileformat=fileformat, f_extension=file.extension
+            )
+        with timed_section("Get Processor - Instanciation"):
+            return processor_cls(project=project)
 
     @staticmethod
     def get_download_processor(
-        fileformat: Format.FileFormat, project: Project, hexsha: str
+        fileformat: Format.FileFormat, project: Project
     ) -> type[BaseFileProcessor]:
         processor_cls = AutoSelector.get_processor(fileformat=fileformat)
 
-        return processor_cls(project=project, hexsha=hexsha)
+        return processor_cls(project=project)

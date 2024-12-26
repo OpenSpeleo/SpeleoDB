@@ -474,7 +474,7 @@ class GitRepo(Repo):
                 f"{self.remotes.origin.url.split('@')[-1]}"  # Removes OAUTH2 token
             )
 
-    def checkout_branch_or_commit(
+    def _checkout_branch_or_commit(
         self, hexsha: str | None = None, branch_name: str | None = None
     ):
         if hexsha and branch_name:
@@ -488,17 +488,19 @@ class GitRepo(Repo):
             )
 
         try:
+            self.pull()
             self.git.checkout(branch_name or hexsha)
         except git.exc.GitCommandError:
-            if branch_name:
+            if branch_name:  # Create the branch if it doesn't exist yet
                 self.git.checkout("-b", branch_name)
             else:
                 raise
 
-    def checkout_branch(self, branch_name: str = "master", pull=True):
-        self.checkout_branch_or_commit(branch_name=branch_name)
-        if pull:
-            self.pull()
+    def checkout_default_branch(self):
+        self._checkout_branch_or_commit(branch_name=settings.DJANGO_GIT_BRANCH_NAME)
+
+    def checkout_commit(self, hexsha):
+        self._checkout_branch_or_commit(hexsha=hexsha)
 
     def commit_and_push_project(
         self, message: str, author_name: str, author_email: str

@@ -104,7 +104,9 @@ class _GitlabManager(metaclass=SingletonMetaClass):
                 author=GIT_COMMITTER,
                 committer=GIT_COMMITTER,
             )
-            git_repo.git.push("--set-upstream", origin.name, "master")
+            git_repo.git.push(
+                "--set-upstream", origin.name, settings.DJANGO_GIT_BRANCH_NAME
+            )
 
         except gitlab.exceptions.GitlabCreateError:
             # The repository already exists in Gitlab - git clone instead
