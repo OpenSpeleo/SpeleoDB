@@ -2307,6 +2307,10 @@ span.flatpickr-weekday {
   max-width: 100%;
 }
 
+.min-h-28 {
+  min-height: 7rem;
+}
+
 .min-h-\[100dvh\] {
   min-height: 100dvh;
 }

@@ -1,6 +1,7 @@
 import contextlib
 from dataclasses import dataclass
 
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
@@ -168,6 +169,13 @@ class ProjectUploadView(_BaseProjectView):
     def get(self, request, project_id: str):
         try:
             data = super().get(request, project_id=project_id)
+            data["limit_individual_filesize"] = (
+                settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
+            )
+            data["limit_total_filesize"] = (
+                settings.DJANGO_UPLOAD_TOTAL_FILESIZE_MB_LIMIT
+            )
+            data["limit_number_files"] = settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
@@ -293,7 +301,7 @@ class ProjectCommitsView(_BaseProjectView):
 
         data["commits"] = []
         with contextlib.suppress(ValueError):
-            project.git_repo.checkout_branch("master")
+            project.git_repo.checkout_default_branch()
             data["commits"] = sorted(
                 project.git_repo.commits,
                 key=lambda commit: commit.date,
@@ -320,7 +328,7 @@ class ProjectGitExplorerView(_BaseProjectView):
 
         # Guard against non-existing commit ID
         try:
-            project.git_repo.checkout_branch("master")
+            project.git_repo.checkout_default_branch()
             data["n_commits"] = len(list(project.git_repo.commits))
             data["commit"] = project.git_repo.commit(hexsha)
         except (ValueError, GitCommitNotFoundError, GitRevBadName):

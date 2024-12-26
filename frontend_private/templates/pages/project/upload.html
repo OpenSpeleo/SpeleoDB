@@ -28,28 +28,23 @@
                 <div class="mt-6">
                     <div class="text-sm font-semibold text-slate-100 mb-2">Survey File</div>
 
-                    <div id="dropzone" class="rounded border-dashed text-center h-28 border border-slate-700 bg-slate-700/30">
-                        <input class="w-full h-full opacity-0" id="artifact" name="artifact" type="file">
-                        <div class="-mt-20 text-center">
-                            <span id="icon_waiting_for_file">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="inline-flex w-4 h-4 text-slate-400 mb-3 stroke-current fill-none" viewBox="3.25 3.25 17.5 18.5">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"></path>
-                                    <path d="M7 9l5 -5l5 5"></path>
-                                    <path d="M12 4l0 12"></path>
-                                </svg>
-                            </span>
+                        <div id="dropzone" class="rounded border-dashed text-center min-h-28 border border-slate-700 bg-slate-700/30">
+                            <input id="artifact" name="artifact" type="file" style="" multiple>
+                            <div class="text-center">
+                                <span id="icon_waiting_for_file">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="inline-flex w-4 h-4 text-slate-400 mb-3 stroke-current fill-none" viewBox="3.25 3.25 17.5 18.5">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"></path>
+                                        <path d="M7 9l5 -5l5 5"></path>
+                                        <path d="M12 4l0 12"></path>
+                                    </svg>
+                                </span>
 
-                            <span id="icon_file_added" style="display: none;">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="inline-flex w-4 h-4 text-slate-400 mb-3 stroke-current fill-none" viewBox="4.25 6.25 16.5 11.5">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <path d="M5 12l5 5l10 -10"></path>
-                                </svg>
-                            </span>
-
-                            <label for="artifact" class="block text-sm text-slate-400 italic">We accept files generated from Ariane (only currently).</label>
+                                <label for="artifact" class="block text-sm text-slate-400 italic">
+                                    Please upload up to {{ limit_number_files }} files, each under {{ limit_individual_filesize }} Mb [Total under {{ limit_total_filesize }} Mb].
+                                </label>
+                            </div>
                         </div>
-                    </div>
                 </div>
             </section>
 
@@ -101,26 +96,45 @@
         });
 
         $('#dropzone input').on('change', function(e) {
-            var file = this.files[0];
-            var filetype = "." + file.name.split('.').pop();
+            var files = this.files;
 
-            if (this.accept && $.inArray(filetype, this.accept.split(/, ?/)) == -1) {
-                $("#modal_error_txt").text('File type not allowed: ' + filetype);
-                $("#modal_error").css('display', 'flex');
+            // Verify the max number of files:
+            if (files.length > {{ limit_number_files }}) {
+                $("#modal_error_txt").text("You can upload a maximum of {{ limit_number_files }} files at a time.");
+                $("#modal_error").css("display", "flex");
+                return false;
+            }
+
+            // Verify each file is under the max size [2Mb]
+            let totalSize = 0;
+            Array.from(files).forEach((file) => {
+                totalSize += file.size;
+                if (file.size > {{ limit_individual_filesize }} * 1024 * 1024) { // Check if any file exceeds limit
+                    $("#modal_error_txt").text("File too large: " + file.name + " (Max {{ limit_individual_filesize }} Mb).");
+                    $("#modal_error").css("display", "flex");
+                    return false;
+                }
+            });
+
+            // Verify the total size is under the max size [50Mb]
+            if (totalSize > {{ limit_total_filesize }} * 1024 * 1024) {
+                $("#modal_error_txt").text("Total upload size exceeds {{ limit_total_filesize }} Mb.");
+                $("#modal_error").css("display", "flex");
                 return false;
             }
 
             // If it was done with drag & drop
             $('#dropzone').removeClass('border-amber-500/50 bg-amber-400/10');
+
             // If it was done with filepicker
             $('#dropzone').removeClass('hover bg-slate-700/30 border-slate-700');
             $('#dropzone').addClass('bg-emerald-500/10 border-emerald-300');
 
             $("#icon_waiting_for_file").hide();
-            $("#icon_file_added").show();
-
             $('#dropzone').addClass('dropped');
-            $('#dropzone label').text("File uploaded: " + file.name);
+
+            let fileNames = Array.from(files).map(file => "- " + file.name).join("<br>");
+            $('#dropzone label').html("<b>** Files to upload **</b><hr class='my-4'>" + fileNames);
         });
 
         $('#btn_submit').click(function () {
@@ -129,7 +143,9 @@
             const fileInput = document.getElementById('artifact');
 
             var formData = new FormData();
-            formData.append("artifact", fileInput.files[0]);
+            Array.from(fileInput.files).forEach((file, index) => {
+                formData.append("artifact", file);
+            });
             formData.append("message", $('#message').val());
 
             $("#error_div").hide();
@@ -160,7 +176,7 @@
                     $("#loading_spinner").hide();
 
                     if (data["hexsha"] === null) {
-                        $("#modal_error_txt").text("The file uploaded is identical to the one currently stored.");
+                        $("#modal_error_txt").text("The file(s) uploaded is/are identical to the one(s) currently stored.");
                         $("#modal_error").css('display', 'flex');
                     } else {
                         $("#modal_success_txt").html("The file has been succesfully uploaded.");

@@ -78,7 +78,8 @@ class FileViewTests(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_200_OK, response.data
 
         expected_data = {
-            "content_type": "application/octet-stream",
+            "files": [f"project.{testfile.suffix.lstrip(".").lower()}"],
+            "content_types": ["application/octet-stream"],
             "message": commit_message,
         }
 

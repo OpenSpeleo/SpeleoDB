@@ -22,6 +22,7 @@ from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitRepo
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
+from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.gitlab_manager import GitlabManager
 
 if TYPE_CHECKING:
@@ -286,33 +287,36 @@ class Project(models.Model):
         return self._has_user_permission(user, permission=UserPermission.Level.ADMIN)
 
     @property
-    def git_repo(self) -> GitRepo:
-        project_dir = (settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)).resolve()
+    def git_repo_dir(self):
+        return (settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)).resolve()
 
+    @property
+    def git_repo(self) -> GitRepo:
         for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
-            if not project_dir.exists():
+            if not self.git_repo_dir.exists():
                 git_repo = GitlabManager.create_or_clone_project(self.id)
                 if git_repo is None:
                     raise RuntimeError("Impossible to connect to the Gitlab API.")
 
                 git_repo_path = pathlib.Path(git_repo.path).resolve()
 
-                if project_dir != git_repo_path:
+                if self.git_repo_dir != git_repo_path:
                     raise ValueError(
                         f"Difference detected between `{git_repo_path=}` "
-                        f"and `{project_dir=}`"
+                        f"and `{self.git_repo_dir=}`"
                     )
                 return git_repo
 
             try:
-                return GitRepo.from_directory(project_dir)
+                return GitRepo.from_directory(self.git_repo_dir)
             except RuntimeError:
                 # In case a `RuntimeError` is being triggered, the `project_dir` is
                 # being cleaned up.
                 continue
 
         raise RuntimeError(
-            "Impossible to create, clone or open the git repository " f"`{project_dir}`"
+            "Impossible to create, clone or open the git repository "
+            f"`{self.git_repo_dir}`"
         )
 
     @property
@@ -321,3 +325,19 @@ class Project(models.Model):
         if isinstance(commits, (list, tuple)):
             return commits
         return []
+
+    def commit_and_push_project(self, message: str, author: User) -> str | None:
+        return self.git_repo.commit_and_push_project(
+            message=message, author_name=author.name, author_email=author.email
+        )
+
+    def checkout_commit_or_default_branch(self, hexsha: str | None = None) -> None:
+        if not self.git_repo:
+            raise ProjectNotFound("This project does not exist on gitlab or on drive")
+
+        if hexsha is None:
+            # Make sure the project is update to ToT (Top of Tree)
+            self.git_repo.checkout_default_branch()
+
+        else:
+            self.git_repo.checkout_commit(hexsha=hexsha)
