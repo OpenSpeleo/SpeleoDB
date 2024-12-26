@@ -79,7 +79,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             self._gl.enable_debug()
 
     @check_initialized
-    def create_or_clone_project(self, project_id: uuid.UUID) -> pathlib.Path:
+    def create_or_clone_project(self, project_id: uuid.UUID) -> pathlib.Path | None:
         if self._gl is None:
             return None
 
