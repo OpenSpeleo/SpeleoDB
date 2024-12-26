@@ -276,6 +276,9 @@ class Project(models.Model):
         for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
             if not project_dir.exists():
                 git_repo = GitlabManager.create_or_clone_project(self.id)
+                if git_repo is None:
+                    raise RuntimeError("Impossible to connect to the Gitlab API.")
+
                 git_repo_path = pathlib.Path(git_repo.path).resolve()
 
                 if project_dir != git_repo_path:
