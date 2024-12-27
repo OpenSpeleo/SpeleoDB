@@ -28,6 +28,7 @@ from speleodb.utils.gitlab_manager import GitlabManager
 if TYPE_CHECKING:
     import datetime
 
+    from speleodb.surveys.models import Format
     from speleodb.surveys.models import TeamPermission
     from speleodb.surveys.models import UserPermission
 
@@ -341,3 +342,17 @@ class Project(models.Model):
 
         else:
             self.git_repo.checkout_commit(hexsha=hexsha)
+
+    @property
+    def formats(self) -> list[Format]:
+        return self.rel_formats.all().order_by("_format")
+
+    @property
+    def formats_downloadable(self) -> list[Format]:
+        from speleodb.surveys.models import Format
+
+        return [
+            _format
+            for _format in self.formats
+            if _format.raw_format not in Format.FileFormat.__excluded_download_formats__
+        ]
