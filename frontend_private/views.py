@@ -20,7 +20,6 @@ from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
-from speleodb.utils.gitlab_manager import GitlabManager
 
 
 @dataclass
@@ -297,21 +296,6 @@ class ProjectCommitsView(_BaseProjectView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        project = Project.objects.get(id=project_id)
-
-        data["commits"] = []
-        with contextlib.suppress(ValueError):
-            project.git_repo.checkout_default_branch()
-            data["commits"] = sorted(
-                project.git_repo.commits,
-                key=lambda commit: commit.date,
-                reverse=True,
-            )
-
-        data["skip_download_names"] = [
-            GitlabManager.FIRST_COMMIT_NAME,
-            "Initial Empty",
-        ]
         return render(request, ProjectCommitsView.template_name, data)
 
 

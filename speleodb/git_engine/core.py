@@ -254,7 +254,10 @@ class GitCommit(Commit):
 
     @property
     def hexsha_short(self) -> str:
-        return self.hexsha[:8]
+        """
+        Returns the short version of the commit hash (7 characters by GitHub standard).
+        """
+        return self.hexsha[:7]
 
     @property
     def repo(self):
@@ -410,7 +413,13 @@ class GitRepo(Repo):
 
     @property
     def commits(self):
-        return self.get_commits()
+        from speleodb.utils.gitlab_manager import GitlabManager
+
+        return [
+            commit
+            for commit in self.get_commits()
+            if commit.message != GitlabManager.FIRST_COMMIT_NAME
+        ]
 
     def get_commits(self, num=None, since=None, until=None, branch=None, path=None):
         """Retrieve the commits of repository

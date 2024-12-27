@@ -13,8 +13,4 @@ def get_survey_formats() -> list[str]:
 
 @register.simple_tag
 def get_project_formats(project: Project) -> list[Format]:
-    return [
-        _format
-        for _format in project.rel_formats.all().order_by("_format")
-        if _format.raw_format not in Format.FileFormat.__excluded_download_formats__
-    ]
+    return project.formats_downloadable

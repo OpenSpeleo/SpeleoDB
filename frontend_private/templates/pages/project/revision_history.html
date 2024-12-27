@@ -50,84 +50,167 @@
                     </tr>
                 </thead>
                 <!-- Table body -->
-                <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
-                    {% for commit in commits %}
-                        <!-- Row -->
-                        <tr>
-                            <!-- Commit ID -->
-                            <td class="px-2 first:pl-5 last:pr-5 py-3">
-                                <div class="text-center">
-                                    <div class="font-medium text-slate-100">{{ commit.hexsha_short }}</div>
-                                </div>
-                            </td>
-                            <!-- Commit Author -->
-                            <td class="px-2 first:pl-5 last:pr-5 py-3">
-                                <div class="text-center">
-                                    <div class="font-medium text-slate-100">{{ commit.author }}</div>
-                                </div>
-                            </td>
-                            <!-- Commit Date -->
-                            <td class="px-2 first:pl-5 last:pr-5 py-3">
-                                <div class="text-center">{{ commit.date|time_struct_format }}</div>
-                            </td>
-                            <!-- Commit Message -->
-                            <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-lg">
-                                <div class="text-center">
-                                    <div class="font-medium text-slate-100">{{ commit.message }}</div>
-                                </div>
-                            </td>
-                            <!-- Commit Download -->
-                            <td class="px-2 first:pl-5 last:pr-5 py-3 text-center w-16">
-                                {% if not commit.message|is_in_list:skip_download_names %}
-                                <!-- Menu button -->
-                                <div class="relative inline-flex" x-data="{ open: false }">
-                                    <button class="rounded-full" :class="open ? 'bg-slate-700 text-slate-400': 'text-slate-500 hover:text-slate-400'" aria-haspopup="true" @click.prevent="open = !open" :aria-expanded="open">
-                                        <span class="sr-only">Menu</span>
-                                        <svg class="w-8 h-8 fill-current" viewBox="0 0 32 32">
-                                            <circle cx="16" cy="16" r="2" />
-                                            <circle cx="10" cy="16" r="2" />
-                                            <circle cx="22" cy="16" r="2" />
-                                        </svg>
-                                    </button>
-                                    <div class="origin-top-right z-10 absolute top-full right-0 min-w-36 bg-slate-800 border border-slate-700 py-1.5 rounded shadow-lg overflow-hidden mt-1" @click.outside="open = false" @keydown.escape.window="open = false" x-show="open" x-transition:enter="transition ease-out duration-200 transform" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-out duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak>
-                                        <ul>
-                                            {% get_project_formats project as dl_formats %}
-                                            {% for dl_format in dl_formats %}
-                                                {% if dl_format.creation_date|date:"Y/m/d H:i" <= commit.date|time_struct_format %}
-                                                <li>
-                                                    <a class="font-medium text-sm text-slate-300 hover:text-slate-200 flex py-1 px-3 mb-2" @click="open = false" @click="open = false" @focus="open = true" @focusout="open = false" target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha=commit.hexsha fileformat=dl_format.format|lower %}">{{ dl_format.raw_format.webname }}</a>
-                                                </li>
-                                                {% endif %}
-                                            {% endfor %}
+                <tbody id="commit-table-body" class="text-sm divide-y divide-slate-200 divide-slate-700">
+                    <!-- Hidden Template Row -->
+                    <tr id="commit-template" style="display: none;">
+                        <!-- Commit ID -->
+                        <td class="px-2 first:pl-5 last:pr-5 py-3">
+                            <div class="text-center">
+                                <div class="font-medium text-slate-100"></div>
+                            </div>
+                        </td>
+                        <!-- Commit Author -->
+                        <td class="px-2 first:pl-5 last:pr-5 py-3">
+                            <div class="text-center">
+                                <div class="font-medium text-slate-100"></div>
+                            </div>
+                        </td>
+                        <!-- Commit Date -->
+                        <td class="px-2 first:pl-5 last:pr-5 py-3">
+                            <div class="text-center"></div>
+                        </td>
+                        <!-- Commit Message -->
+                        <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-lg">
+                            <div class="text-center">
+                                <div class="font-medium text-slate-100"></div>
+                            </div>
+                        </td>
+                        <!-- Commit Download -->
+                        <td class="px-2 first:pl-5 last:pr-5 py-3 text-center w-16">
+                            <!-- Menu button -->
+                            <div class="relative inline-flex" x-data="{ open: false }">
+                                <button class="rounded-full" :class="open ? 'bg-slate-700 text-slate-400': 'text-slate-500 hover:text-slate-400'" aria-haspopup="true" @click.prevent="open = !open" :aria-expanded="open">
+                                    <span class="sr-only">Menu</span>
+                                    <svg class="w-8 h-8 fill-current" viewBox="0 0 32 32">
+                                        <circle cx="16" cy="16" r="2" />
+                                        <circle cx="10" cy="16" r="2" />
+                                        <circle cx="22" cy="16" r="2" />
+                                    </svg>
+                                </button>
+                                <div class="origin-top-right z-10 absolute top-full right-0 min-w-36 bg-slate-800 border border-slate-700 py-1.5 rounded shadow-lg overflow-hidden mt-1" @click.outside="open = false" @keydown.escape.window="open = false" x-show="open" x-transition:enter="transition ease-out duration-200 transform" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-out duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak>
+                                    <ul>
+                                        {% get_project_formats project as dl_formats %}
+                                        {% for dl_format in dl_formats %}
                                             <li>
-                                                <a class="font-medium text-sm text-slate-300 hover:text-slate-200 flex py-1 px-3 mb-2" @click="open = false" @click="open = false" @focus="open = true" @focusout="open = false" target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha=commit.hexsha fileformat='dump' %}"> Everything (ZIP)</a>
+                                                <a data-target="{{ dl_format.format|lower }}" class="dl_link_format font-medium text-sm text-slate-300 hover:text-slate-200 flex py-1 px-3 mb-2" @click="open = false" @click="open = false" @focus="open = true" @focusout="open = false" target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha='0000000' fileformat=dl_format.format|lower %}">{{ dl_format.raw_format.webname }}</a>
                                             </li>
-                                        </ul>
-                                    </div>
+                                        {% endfor %}
+                                        <li>
+                                            <a data-target="dump" class="dl_link_format font-medium text-sm text-slate-300 hover:text-slate-200 flex py-1 px-3 mb-2" @click="open = false" @click="open = false" @focus="open = true" @focusout="open = false" target="_blank" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha='0000000' fileformat='dump' %}"> Everything (ZIP)</a>
+                                        </li>
+                                    </ul>
                                 </div>
-                                {% endif %}
-                            </td>
-                            <!-- Commit File Explorer -->
-                            <td class="px-2 first:pl-5 last:pr-5 py-3 text-center w-28">
-                                {% if not commit.message|is_in_list:skip_download_names %}
-                                <div class="relative inline-flex" x-data="{ open: false }">
-                                    <a href="{% url 'private:project_revision_explorer' project_id=project.id hexsha=commit.hexsha %}" class="rounded-full">
-                                        <span class="sr-only">Menu</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-folders stroke-current" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round" height="1.5em" viewBox="2.25 3.25 19.5 18.5">
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                            <path d="M9 4h3l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"></path>
-                                            <path d="M17 17v2a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2h2"></path>
-                                        </svg>
-                                    </a>
-                                </div>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
+                            </div>
+                        </td>
+                        <!-- Commit File Explorer -->
+                        <td class="px-2 first:pl-5 last:pr-5 py-3 text-center w-28">
+                            <div class="relative inline-flex" x-data="{ open: false }">
+                                <a href="{% url 'private:project_revision_explorer' project_id=project.id hexsha='0000000' %}" class="revision_explorer rounded-full">
+                                    <span class="sr-only">Menu</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-folders stroke-current" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round" height="1.5em" viewBox="2.25 3.25 19.5 18.5">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M9 4h3l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"></path>
+                                        <path d="M17 17v2a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2h2"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- End of Hidden Template Row -->
                 </tbody>
             </table>
         </div>
 
     </div>
 </div>
+
+<div id="loading_spinner" class="loading" style="display:none;"></div>
+
 {% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+$( document ).ready(function() {
+
+    $("#loading_spinner").show();
+
+    $.ajax({
+        url : "{% url 'api:v1:one_project_revisions_apiview' id=project.id %}",
+        type : "GET",
+        dataType : "json",
+        success: function(data){
+            $("#loading_spinner").hide();
+            if (data.success && data.data.commits) {
+
+                // Iterate over each commit and append a new row to the table
+                data.data.commits.forEach(function (commit) {
+
+                    // Clone the hidden template row
+                    var $row = $('#commit-template').clone();
+
+                    // Remove the "ID" (to prevent deletion/cleanup) and make it unique
+                    $row.removeAttr('id');
+
+                    // Remove the "hidden" style (make it visible)
+                    $row.removeAttr('style');
+
+                    // Populate the row with commit data
+                    // ---------------------------------------------------------------------
+                    $row.find('td').eq(0).find('.font-medium').text(commit.commit_hash_short);  // Commit ID
+                    $row.find('td').eq(1).find('.font-medium').text(commit.author_name);        // Author
+                    $row.find('td').eq(2).find('.text-center').text(commit.committed_date);     // Date
+                    $row.find('td').eq(3).find('.font-medium').text(commit.message);            // Message
+
+                    // Fixing the links which include a `0000000` template for `commit_hash`
+                    // ---------------------------------------------------------------------
+
+                    // 1. Project Explorer Link
+                    var $link = $row.find("a.revision_explorer");
+                    if ($link.length) {  // if found
+                        var new_link = $link.attr("href").replace("0000000", commit.commit_hash);
+                        $link.attr("href", new_link);
+                    }
+
+                    // 2. File Download Link
+                    let download_formats = [];
+                    {% get_project_formats project as dl_formats %}
+                    {% for dl_format in dl_formats %}
+                    download_formats.push("{{dl_format.format|lower}}");
+                    {% endfor %}
+                    download_formats.push("dump");
+
+                    download_formats.forEach(function(dl_format) {
+                        var $link = $row.find('a[data-target="' + dl_format + '"]');
+                        // Check if the value is in commit.formats or `dump` (all commits allow dump download)
+                        if (commit.formats.includes(dl_format) || dl_format == "dump") {
+                            if ($link.length) {  // if found
+                                var new_link = $link.attr("href").replace("0000000", commit.commit_hash);
+                                $link.attr("href", new_link);
+                            }
+                        } else {
+                            // if not available - remove the link
+                            $link.closest('li').remove();
+                        }
+                    });
+
+                    // FINALLY: Append the populated row to the table body
+                    // ---------------------------------------------------------------------
+                    $('#commit-table-body').append($row);
+                    
+                });
+            }
+            else {
+                console.log("ERROR: " + data.error);
+            }
+
+            // Cleanup the template row
+            $('#commit-template').remove();
+        },
+        error: function (textStatus, errorThrown) {
+            $("#loading_spinner").hide();
+            console.log("ERROR: " + data.textStatus + " & " + errorThrown);
+        }
+    });
+});
+</script>
+{% endblock inline_extra_js %}
