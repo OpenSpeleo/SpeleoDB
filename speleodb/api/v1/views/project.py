@@ -109,7 +109,7 @@ class ProjectListApiView(GenericAPIView):
         usr_projects = [perm.project for perm in request.user.permissions]
 
         usr_projects = sorted(
-            set(usr_projects), key=lambda proj: proj.modified_date, reverse=True
+            set(usr_projects), key=lambda proj: proj.name
         )
 
         serializer = self.get_serializer(
