@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import contextlib
 import decimal
 import pathlib
 import uuid
@@ -140,7 +141,7 @@ class Project(models.Model):
             f"[{'LOCKED' if self.active_mutex is not None else 'UNLOCKED'}]> "
         )
 
-    def acquire_mutex(self, user: User):
+    def acquire_mutex(self, user: User) -> None:
         if not self.has_write_access(user):
             raise PermissionError(f"User: `{user.email} can not execute this action.`")
 
@@ -160,7 +161,7 @@ class Project(models.Model):
             self.active_mutex = Mutex.objects.create(project=self, user=user)
             self.save()
 
-    def release_mutex(self, user: User, comment: str = ""):
+    def release_mutex(self, user: User, comment: str = "") -> None:
         if self.active_mutex is None:
             # if nobody owns the project, returns without error.
             return
@@ -171,11 +172,16 @@ class Project(models.Model):
         # AutoSave in the background
         self.active_mutex.release_mutex(user=user, comment=comment)
 
-    def get_date(self):
-        return self.when.strftime("%Y/%m/%d %H:%M")
+    def get_best_permission(self, user: User) -> str:
+        permissions = []
+        with contextlib.suppress(ObjectDoesNotExist):
+            permissions.append(self.get_user_permission(user))
 
-    def get_shortdate(self):
-        return self.when.strftime("%Y/%m/%d")
+        for team in user.teams:
+            with contextlib.suppress(ObjectDoesNotExist):
+                permissions.append(self.get_team_permission(team))
+
+        return sorted(permissions, key=lambda perm: perm._level, reverse=True)[0]  # noqa: SLF001
 
     def get_user_permission(self, user: User) -> str:
         return self.rel_user_permissions.get(target=user, is_active=True)

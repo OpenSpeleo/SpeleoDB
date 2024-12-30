@@ -65,7 +65,7 @@ class TestProjectInteraction(BaseAPITestCase):
             "modified_date",
             "active_mutex",
             "name",
-            "user_permission",
+            "permission",
         ]
 
         for project in response.data["data"]:
