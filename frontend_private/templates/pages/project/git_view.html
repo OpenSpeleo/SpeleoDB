@@ -2,7 +2,6 @@
 {% load static i18n compress %}
 
 {% load filter_utils %}
-{% load set_var %}
 
 {% block right_panel %}
 <div class="grow">
@@ -50,35 +49,58 @@
                            <div class="md:col-span-3 hidden md:flex items-center truncate ml-auto text-sm text-gray-300">
                               <span class="mr-1">{{ commit.hexsha_short }}</span> - {{ commit.date|time_struct_since }}
                            </div>
-                       </div>
-                        <ul class="mb-8 rounded-b-lg border border-t-0 border-gray-600 bg-gray-900/50">
+                        </div>
 
-                           {% for file in commit.root_files %}
-                           <li class="grid h-10 grid-cols-12 place-content-center gap-x-3 border-t px-3 border-gray-600">
+                        <ul id="git-viewer-container" class="mb-8 rounded-b-lg border border-t-0 border-gray-600 bg-gray-900/50">
+
+                           <!-- FOLDER TEMPLATE -->
+
+                           <li id="row-template-folder" class="grid h-10 grid-cols-12 place-content-center gap-x-3 border-t px-3 border-gray-600" style="display: none">
                               <div class="sm:col-span-8 md:col-span-3 flex items-center">
-                                 <a class="group flex items-center truncate hover:underline" download href="{% url 'api:v1:download_blob' id=project.id hexsha=file.hexsha %}">
-                                    <svg class="flex-none mr-2 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 32 32">
-                                       <path d="M25.7 9.3l-7-7A.908.908 0 0 0 18 2H8a2.006 2.006 0 0 0-2 2v24a2.006 2.006 0 0 0 2 2h16a2.006 2.006 0 0 0 2-2V10a.908.908 0 0 0-.3-.7zM18 4.4l5.6 5.6H18zM24 28H8V4h8v6a2.006 2.006 0 0 0 2 2h6z" fill="currentColor"></path>
+                                 <a class="group flex items-center truncate hover:underline" download="" href="#">
+
+                                    <svg class="flex-none mr-2 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16">
+                                       <path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z"></path>
                                     </svg>
-                                    <span class="truncate">{{ file.name }}</span>
+                                    <span class="truncate">images</span>
+
                                  </a>
                               </div>
-                              <a class="group sm:col-span-4 md:col-span-2 flex items-center justify-self-end truncate text-right font-mono text-[0.8rem] leading-6 text-gray-400 xl:pr-10 hover:underline" title="Download file" download href="{% url 'api:v1:download_blob' id=project.id hexsha=file.hexsha %}">
-                                 {{ file.size|format_byte_size }}
+
+                              <div class="group sm:col-span-4 md:col-span-2"></div>
+
+                              <a class="md:col-span-5 hidden md:flex items-center font-mono text-sm text-gray-400 hover:underline" href="#">
+                                 <span class="truncate">This is my first commit message</span>
+                              </a>
+
+                              <a class="md:col-span-2 hidden md:flex truncate ml-auto text-sm text-gray-400 items-center hover:underline" href="/private/project/b789c859-9593-4292-b8fb-2ee6f9ace220/browser/17ccac71c15923b5233879fe6ed5bb8c5adde057/">
+                                 2 weeks ago
+                              </a>
+                           </li>
+
+                           <!-- FILE TEMPLATE -->
+
+                           <li id="row-template-file" class="grid h-10 grid-cols-12 place-content-center gap-x-3 border-t px-3 border-gray-600" style="display: none">
+                              <div class="sm:col-span-8 md:col-span-3 flex items-center">
+                                 <a class="download-file-link group flex items-center truncate hover:underline" download="" href="#">
+
+                                    <svg class="flex-none mr-2 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16">
+                                       <path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"></path>
+                                    </svg>
+                                    <span class="download-file-name truncate"></span>
+                                 </a>
+                              </div>
+                              <a class="file-size-link group sm:col-span-4 md:col-span-2 flex items-center justify-self-end truncate text-right font-mono text-[0.8rem] leading-6 text-gray-400 xl:pr-10 hover:underline" title="Download file" download="" href="#">
+                                 <span class="file-size"></span>
                                  <div class="ml-2 flex h-5 w-5 items-center justify-center rounded border text-gray-500 border-gray-600 xl:ml-4">
                                     <svg class="" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" role="img" width="1em" height="1em" viewBox="0 0 32 32">
                                        <path fill="currentColor" d="M26 24v4H6v-4H4v4a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-4zm0-10l-1.41-1.41L17 20.17V2h-2v18.17l-7.59-7.58L6 14l10 10l10-10z"></path>
                                     </svg>
                                  </div>
                               </a>
-                              <a class="md:col-span-5 hidden md:flex items-center font-mono text-sm text-gray-400 hover:underline" href="{% url 'private:project_revision_explorer' project_id=project.id hexsha=file.commit.hexsha %}">
-                                 <span class="truncate">{{ file.commit.message }}</span>
-                              </a>
-                              <a class="md:col-span-2 hidden md:flex truncate ml-auto text-sm text-gray-400 items-center hover:underline" href="{% url 'private:project_revision_explorer' project_id=project.id hexsha=file.commit.hexsha %}">
-                                 <time datetime="2024-06-15T01:00:03" title="Sat, 15 Jun 2024 01:00:03 GMT">{{ file.commit.date|time_struct_since }}</time>
-                              </a>
+                              <a class="commit-message md:col-span-5 hidden md:flex items-center font-mono text-sm text-gray-400 hover:underline truncate" href="#"></a>
+                              <a class="commit-time-ago md:col-span-2 hidden md:flex truncate ml-auto text-sm text-gray-400 items-center hover:underline" href="#"></a>
                            </li>
-                           {% endfor %}
 
                         </ul>
                      </div>
@@ -89,4 +111,64 @@
 
     </div>
 </div>
+
+<div id="loading_spinner" class="loading" style="display:none;"></div>
 {% endblock right_panel %}
+
+
+{% block inline_extra_js %}
+<script>
+$( document ).ready(function() {
+
+    $("#loading_spinner").show();
+
+    $.ajax({
+        url : "{% url 'api:v1:one_project_gitexplorer_apiview' id=project.id hexsha=commit.hexsha %}",
+        type : "GET",
+        dataType : "json",
+        success: function(data){
+            $("#loading_spinner").hide();
+
+            if (data.success && data.data.files) {
+
+               // Iterate over each commit and append a new row to the table
+               data.data.files.forEach(function (file) {
+                  console.log("file: " + file.name);
+                  var $file_row = $('#row-template-file').clone();
+
+                  // Remove the "ID" (to prevent deletion/cleanup) and make it unique
+                  $file_row.removeAttr('id');
+
+                  // Remove the "hidden" style (make it visible)
+                  $file_row.removeAttr('style');
+                  
+                  // File Related Content
+                  $file_row.find(".download-file-link").attr("href", file.download_url);
+                  $file_row.find(".download-file-name").text(file.name);
+                  $file_row.find(".file-size-link").attr("href", file.download_url);
+                  $file_row.find(".file-size").text(file.size);
+
+                  // Commit Related Content
+                  $file_row.find(".commit-message").attr("href", file.commit.url).text(file.commit.message);
+                  $file_row.find(".commit-time-ago").attr("href", file.commit.url).text(file.commit.dt_since);
+                  
+                  
+
+                  // FINALLY: Append the populated row to the table body
+                  // ---------------------------------------------------------------------
+                  $('#git-viewer-container').append($file_row);
+               });
+            
+            }
+            else {
+                console.log("ERROR: " + data.error);
+            }
+        },
+        error: function (textStatus, errorThrown) {
+            $("#loading_spinner").hide();
+            console.log("ERROR: " + data.textStatus + " & " + errorThrown);
+        }
+    });
+});
+</script>
+{% endblock inline_extra_js %}
