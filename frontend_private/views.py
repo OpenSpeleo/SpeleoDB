@@ -111,7 +111,7 @@ class TeamDetailsView(_BaseTeamView):
         if not isinstance(data_or_redirect, dict):
             return data_or_redirect
 
-        return render(request, TeamDetailsView.template_name, data_or_redirect)
+        return render(request, self.template_name, data_or_redirect)
 
 
 class TeamMembershipsView(_BaseTeamView):
@@ -124,7 +124,7 @@ class TeamMembershipsView(_BaseTeamView):
 
         data_or_redirect["memberships"] = data_or_redirect["team"].get_all_memberships()
 
-        return render(request, TeamMembershipsView.template_name, data_or_redirect)
+        return render(request, self.template_name, data_or_redirect)
 
 
 class TeamDangerZoneView(_BaseTeamView):
@@ -140,7 +140,7 @@ class TeamDangerZoneView(_BaseTeamView):
                 reverse("private:team_details", kwargs={"team_id": team_id})
             )
 
-        return render(request, TeamDangerZoneView.template_name, data_or_redirect)
+        return render(request, self.template_name, data_or_redirect)
 
 
 # ============ Project Pages ============ #
@@ -178,7 +178,7 @@ class ProjectUploadView(_BaseProjectView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        return render(request, ProjectUploadView.template_name, data)
+        return render(request, self.template_name, data)
 
 
 class ProjectDangerZoneView(_BaseProjectView):
@@ -195,7 +195,7 @@ class ProjectDangerZoneView(_BaseProjectView):
                 reverse("private:project_details", kwargs={"project_id": project_id})
             )
 
-        return render(request, ProjectDangerZoneView.template_name, data)
+        return render(request, self.template_name, data)
 
 
 class ProjectDetailsView(_BaseProjectView):
@@ -207,7 +207,7 @@ class ProjectDetailsView(_BaseProjectView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        return render(request, ProjectDetailsView.template_name, data)
+        return render(request, self.template_name, data)
 
 
 class ProjectUserPermissionsView(_BaseProjectView):
@@ -254,7 +254,7 @@ class ProjectUserPermissionsView(_BaseProjectView):
             permission_map.values(),
             key=lambda perm: (-perm.level.value, perm.user.email),
         )
-        return render(request, ProjectUserPermissionsView.template_name, data)
+        return render(request, self.template_name, data)
 
 
 class ProjectTeamPermissionsView(_BaseProjectView):
@@ -271,7 +271,7 @@ class ProjectTeamPermissionsView(_BaseProjectView):
             set(request.user.teams + [perm.target for perm in data["permissions"]]),
             key=lambda team: team.name.upper(),
         )
-        return render(request, ProjectTeamPermissionsView.template_name, data)
+        return render(request, self.template_name, data)
 
 
 class ProjectMutexesView(_BaseProjectView):
@@ -284,10 +284,10 @@ class ProjectMutexesView(_BaseProjectView):
             return redirect(reverse("private:projects"))
 
         data["mutexes"] = data["project"].rel_mutexes.all().order_by("-creation_date")
-        return render(request, ProjectMutexesView.template_name, data)
+        return render(request, self.template_name, data)
 
 
-class ProjectCommitsView(_BaseProjectView):
+class ProjectRevisionHistoryView(_BaseProjectView):
     template_name = "pages/project/revision_history.html"
 
     def get(self, request, project_id: str):
@@ -296,7 +296,7 @@ class ProjectCommitsView(_BaseProjectView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        return render(request, ProjectCommitsView.template_name, data)
+        return render(request, self.template_name, data)
 
 
 class ProjectGitExplorerView(_BaseProjectView):
@@ -319,4 +319,4 @@ class ProjectGitExplorerView(_BaseProjectView):
             # commit does not exists
             return redirect("private:project_revisions", project_id=project.id)
 
-        return render(request, ProjectGitExplorerView.template_name, data)
+        return render(request, self.template_name, data)
