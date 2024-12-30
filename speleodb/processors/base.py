@@ -24,15 +24,15 @@ class Artifact:
         self._path = None
 
     @property
-    def file(self):
+    def file(self) -> InMemoryUploadedFile | TemporaryUploadedFile:
         return self._file
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._file.name
 
     @property
-    def path(self):
+    def path(self) -> Path:
         if self._path is None:
             raise RuntimeError(
                 f"This {self.__class__.__name__} has not been saved to disk yet."
@@ -40,17 +40,17 @@ class Artifact:
         return self._path
 
     @property
-    def extension(self):
+    def extension(self) -> str:
         return Path(self.name).suffix.lower()
 
     @property
-    def content_type(self):
+    def content_type(self) -> str | None:
         return self.file.content_type
 
-    def read(self):
+    def read(self) -> str:
         return self.file.read()
 
-    def write(self, path: Path):
+    def write(self, path: Path) -> None:
         if self._path is not None:
             raise RuntimeError(f"This file as been already saved at: `{self.path}`.")
 
@@ -59,7 +59,7 @@ class Artifact:
 
         self._path = path
 
-    def assert_valid(self, allowed_mimetypes, allowed_extensions):
+    def assert_valid(self, allowed_mimetypes, allowed_extensions) -> None:
         if not isinstance(allowed_mimetypes, (list, tuple)):
             raise TypeError(f"Unexpected type: {type(allowed_mimetypes)=}")
 
@@ -92,14 +92,19 @@ class BaseFileProcessor:
         self.checkout_commit_or_master()
 
     @property
-    def project(self):
+    def project(self) -> Project:
         return self._project
 
     @property
-    def hexsha(self):
+    def hexsha(self) -> str:
         return self._hexsha
 
-    def commit_file(self, file, user: User, commit_msg: str):
+    def commit_file(
+        self,
+        file: InMemoryUploadedFile | TemporaryUploadedFile,
+        user: User,
+        commit_msg: str,
+    ) -> tuple[Artifact, str | None]:
         # Make sure the project is update to ToT (Top of Tree)
         self.project.git_repo.checkout_branch(branch_name="master")
 
@@ -122,7 +127,7 @@ class BaseFileProcessor:
             message=commit_msg, author_name=user.name, author_email=user.email
         )
 
-    def checkout_commit_or_master(self):
+    def checkout_commit_or_master(self) -> None:
         if not self.project.git_repo:
             raise ProjectNotFound("This project does not exist on gitlab or on drive")
 
@@ -134,18 +139,18 @@ class BaseFileProcessor:
         else:
             self.project.git_repo.checkout_branch_or_commit(hexsha=self.hexsha)
 
-    def postprocess_file_before_download(self, filepath: Path):
+    def postprocess_file_before_download(self, filepath: Path) -> None:
         with contextlib.suppress(shutil.SameFileError):
-            return shutil.copy(src=self.source_f, dst=filepath)
+            shutil.copy(src=self.source_f, dst=filepath)
 
     @property
-    def source_f(self):
+    def source_f(self) -> Path:
         source_f = self.project.git_repo.path / self.TARGET_SAVE_FILENAME
         if not source_f.is_file():
             raise ValidationError(f"Impossible to find the file: `{source_f}` ...")
         return source_f
 
-    def get_file_for_download(self, target_f: Path):
+    def get_file_for_download(self, target_f: Path) -> str:
         if not isinstance(target_f, Path):
             raise TypeError(f"Unexpected `target_f` type received: {type(target_f)}")
 

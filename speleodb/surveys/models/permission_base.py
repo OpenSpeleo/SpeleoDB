@@ -37,7 +37,7 @@ class BasePermissionModel(models.Model):
         abstract = True
         unique_together = ("target", "project")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.target} => {self.project} [{self.level}]"
 
     def __repr__(self) -> str:
@@ -52,15 +52,15 @@ class BasePermissionModel(models.Model):
         return self.level_obj.label
 
     @level.setter
-    def level(self, value):
+    def level(self, value) -> None:
         self._level = value
 
-    def deactivate(self, deactivated_by: User):
+    def deactivate(self, deactivated_by: User) -> None:
         self.is_active = False
         self.deactivated_by = deactivated_by
         self.save()
 
-    def reactivate(self, level: Level):
+    def reactivate(self, level: Level) -> None:
         self.is_active = True
         self.deactivated_by = None
         self.level = level

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from functools import lru_cache
+from typing import Self
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -16,14 +16,14 @@ class Option(models.Model):
     name = models.CharField(max_length=255, primary_key=True)
     value = EncryptedCharField(max_length=255, default="")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         value = f"`{self.value}`" if settings.DEBUG else "<ENCRYPTED>"
         return f"[{self.__class__.__name__}: `{self.name}`]: {value}"
 
-    def as_bool(self):
+    def as_bool(self) -> bool:
         return self.value.lower() in [
             "true",
             "1",
@@ -37,12 +37,11 @@ class Option(models.Model):
         ]
 
     @classmethod
-    @lru_cache(100)
-    def get(cls, name):
+    def get(cls, name) -> Self:
         return cls.objects.get(name=name)
 
     @classmethod
-    def get_or_empty(cls, name):
+    def get_or_empty(cls, name) -> str:
         try:
             return cls.get(name=name).value
         except ObjectDoesNotExist:

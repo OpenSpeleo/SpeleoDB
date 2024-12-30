@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django_countries.fields import CountryField
@@ -24,27 +26,25 @@ class SurveyTeam(models.Model):
         verbose_name = "Survey Team"
         verbose_name_plural = "Survey Teams"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def get_membership(self, user: User) -> "SurveyTeamMembership":
-        try:
-            return self.rel_team_memberships.get(user=user, is_active=True)
-        except (SurveyTeamMembership.DoesNotExist, ObjectDoesNotExist) as e:
-            raise ObjectDoesNotExist from e
+    def get_membership(self, user: User) -> SurveyTeamMembership:
+        return self.rel_team_memberships.get(user=user, is_active=True)
 
     def get_member_count(self) -> int:
         return self.get_all_memberships().count()
 
-    def get_all_memberships(self) -> list["SurveyTeamMembership"]:
+    def get_all_memberships(self) -> list[SurveyTeamMembership]:
         return self.rel_team_memberships.filter(is_active=True).order_by(
             "-_role", "user__email"
         )
 
     def is_member(self, user: User) -> bool:
         try:
-            return self.rel_team_memberships.get(user=user, is_active=True)
-        except (SurveyTeamMembership.DoesNotExist, ObjectDoesNotExist):
+            _ = self.rel_team_memberships.get(user=user, is_active=True)
+            return True
+        except ObjectDoesNotExist:
             return False
 
     def is_leader(self, user: User) -> bool:
@@ -53,7 +53,7 @@ class SurveyTeam(models.Model):
                 self.rel_team_memberships.get(user=user, is_active=True)._role  # noqa: SLF001
                 == SurveyTeamMembership.Role.LEADER
             )
-        except (SurveyTeamMembership.DoesNotExist, ObjectDoesNotExist):
+        except ObjectDoesNotExist:
             return False
 
 
@@ -103,7 +103,7 @@ class SurveyTeamMembership(models.Model):
         verbose_name = "Team Membership"
         verbose_name_plural = "Team Memberships"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user} => {self.team} [{self.role}]"
 
     def __repr__(self) -> str:
@@ -114,15 +114,15 @@ class SurveyTeamMembership(models.Model):
         return self.Role(self._role).label
 
     @role.setter
-    def role(self, value):
+    def role(self, value) -> None:
         self._role = value
 
-    def deactivate(self, deactivated_by: User):
+    def deactivate(self, deactivated_by: User) -> None:
         self.is_active = False
         self.deactivated_by = deactivated_by
         self.save()
 
-    def reactivate(self, role: Role):
+    def reactivate(self, role: Role) -> None:
         self.is_active = True
         self.deactivated_by = None
         self.role = role

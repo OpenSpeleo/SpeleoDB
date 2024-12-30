@@ -46,7 +46,7 @@ class ProjectTeamPermissionView(GenericAPIView):
     lookup_field = "id"
 
     def get(self, request, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
 
         serializer = TeamRequestSerializer(data=request.data)
 
@@ -94,7 +94,7 @@ class ProjectTeamPermissionView(GenericAPIView):
         team = serializer.validated_data["team"]
         access_level = serializer.validated_data["level"]
 
-        project = self.get_object()
+        project: Project = self.get_object()
         permission, created = TeamPermission.objects.get_or_create(
             project=project, target=team
         )
@@ -148,7 +148,7 @@ class ProjectTeamPermissionView(GenericAPIView):
         team = serializer.validated_data["team"]
         access_level = serializer.validated_data["level"]
 
-        project = self.get_object()
+        project: Project = self.get_object()
         try:
             permission = TeamPermission.objects.get(project=project, target=team)
         except ObjectDoesNotExist:
@@ -195,7 +195,7 @@ class ProjectTeamPermissionView(GenericAPIView):
             )
 
         team = serializer.validated_data["team"]
-        project = self.get_object()
+        project: Project = self.get_object()
         try:
             permission = TeamPermission.objects.get(project=project, target=team)
 

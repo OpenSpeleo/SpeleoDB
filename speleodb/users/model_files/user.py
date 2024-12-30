@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser
@@ -8,8 +11,16 @@ from django_countries.fields import CountryField
 
 from speleodb.users.managers import UserManager
 
+if TYPE_CHECKING:
+    from speleodb.surveys.models import Project
+    from speleodb.surveys.models import TeamPermission
+    from speleodb.surveys.models import UserPermission
+    from speleodb.users.models import SurveyTeamMembership
 
-def filter_permissions_by_best(permissions: list) -> list:
+
+def filter_permissions_by_best(
+    permissions: list[UserPermission, TeamPermission],
+) -> list[UserPermission, TeamPermission]:
     """
     A user can have access to a project by name or from N teams.
     This function keep the "best access level" for each project
@@ -64,13 +75,13 @@ class User(AbstractUser):
         ]
 
     @property
-    def team_memberships(self):
+    def team_memberships(self) -> list[SurveyTeamMembership]:
         return self.rel_team_memberships.filter(is_active=True).order_by(
             "-modified_date"
         )
 
     @property
-    def user_projects(self):
+    def user_projects(self) -> list[Project]:
         return sorted(
             [perm.project for perm in self.permissions_user],
             key=lambda data: data.modified_date,
@@ -78,7 +89,7 @@ class User(AbstractUser):
         )
 
     @property
-    def team_projects(self):
+    def team_projects(self) -> list[Project]:
         return sorted(
             [perm.project for perm in self.team_permissions],
             key=lambda data: data.modified_date,
@@ -86,7 +97,7 @@ class User(AbstractUser):
         )
 
     @property
-    def projects(self):
+    def projects(self) -> list[Project]:
         return sorted(
             set(self.user_projects + self.team_projects),
             key=lambda data: data.modified_date,
@@ -94,7 +105,9 @@ class User(AbstractUser):
         )
 
     @property
-    def projects_with_level(self):
+    def projects_with_level(
+        self,
+    ) -> list[dict[str, Project | TeamPermission | UserPermission]]:
         projects = [
             {"project": perm.project, "level": perm.level}
             for perm in self.permissions_user
@@ -105,7 +118,7 @@ class User(AbstractUser):
         )
 
     @property
-    def permissions_user(self):
+    def permissions_user(self) -> list[UserPermission]:
         return list(
             self.rel_permissions.filter(is_active=True).order_by(
                 "-project__modified_date"
@@ -113,7 +126,7 @@ class User(AbstractUser):
         )
 
     @property
-    def permissions_team(self):
+    def permissions_team(self) -> list[TeamPermission]:
         permissions = []
         for team in self.teams:
             permissions.extend(team.rel_permissions.filter(is_active=True))
@@ -122,7 +135,7 @@ class User(AbstractUser):
         return sorted(permissions, key=lambda perm: perm.project.name)
 
     @property
-    def permissions(self):
+    def permissions(self) -> list[TeamPermission, UserPermission]:
         permissions = filter_permissions_by_best(
             self.permissions_user + self.permissions_team
         )

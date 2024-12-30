@@ -55,7 +55,7 @@ class FileUploadView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        project = self.get_object()
+        project: Project = self.get_object()
 
         commit_message = request.data.get("message", None)
         if commit_message is None or commit_message == "":
@@ -172,7 +172,7 @@ class FileDownloadView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        project = self.get_object()
+        project: Project = self.get_object()
 
         try:
             processor = AutoSelector.get_download_processor(
@@ -220,7 +220,7 @@ class BlobDownloadView(GenericAPIView):
     lookup_field = "id"
 
     def get(self, request, hexsha: str, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
 
         try:
             obj = project.git_repo.find_blob(hexsha)

@@ -10,7 +10,7 @@ import gitlab.exceptions
 from cachetools import TTLCache
 from cachetools import cached
 from django.conf import settings
-from gitlab.v4.objects.projects import ProjectManager
+from gitlab.v4.objects.projects import ProjectManager as Gitlab_ProjectManager
 
 from speleodb.common.models import Option
 from speleodb.git_engine.core import GitRepo
@@ -51,7 +51,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
         self._is_initialized = False
         self._is_error = False
 
-    def _initialize(self):
+    def _initialize(self) -> None:
         # Allow Starting SpeleoDB without GITLAB Options to be defined.
         self._gitlab_instance = LazyString(
             lambda: Option.get_or_empty(name="GITLAB_HOST_URL")
@@ -118,7 +118,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
     # cache data for no longer than ten minutes
     @cached(cache=TTLCache(maxsize=100, ttl=600))
     @check_initialized
-    def _get_project(self, project_id: uuid.UUID) -> ProjectManager:
+    def _get_project(self, project_id: uuid.UUID) -> Gitlab_ProjectManager:
         if self._gl is None:
             return None
 
@@ -129,7 +129,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             return None
 
     @check_initialized
-    def get_commit_history(self, project_id: uuid.UUID):
+    def get_commit_history(self, project_id: uuid.UUID) -> list | None:
         if self._gl is None:
             return None
 

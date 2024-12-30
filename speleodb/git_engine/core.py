@@ -138,11 +138,11 @@ class GitFile:
         return self.blob.type
 
     @property
-    def binsha(self):
+    def binsha(self) -> str:
         return self.blob.binsha
 
     @property
-    def hexsha(self):
+    def hexsha(self) -> str:
         return self.blob.hexsha
 
 
@@ -253,7 +253,7 @@ class GitCommit(Commit):
         return time.gmtime(self.committed_date)
 
     @property
-    def hexsha_short(self):
+    def hexsha_short(self) -> str:
         return self.hexsha[:8]
 
     @property
@@ -336,7 +336,7 @@ class GitCommit(Commit):
 
 class GitHead(HEAD):
     @property
-    def commit(self):
+    def commit(self) -> GitCommit:
         return GitCommit(repo=self.repo, binsha=super().commit.binsha)
 
 
@@ -361,7 +361,7 @@ class GitRepo(Repo):
         return cls(repo.working_dir)
 
     @classmethod
-    def clone_from(cls, *args, **kwargs):
+    def clone_from(cls, *args, **kwargs) -> Self:
         for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
             repo = super().clone_from(*args, **kwargs)
             break
@@ -375,7 +375,7 @@ class GitRepo(Repo):
 
         return cls.from_repo(repo)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if not isinstance(other, (GitRepo, Repo)):
             return False
 
@@ -385,11 +385,11 @@ class GitRepo(Repo):
         return self.path == other.path
 
     @property
-    def path(self):
+    def path(self) -> pathlib.Path:
         return pathlib.Path(self.working_dir)
 
     @property
-    def branches(self):
+    def branches(self) -> dict[str, str]:
         branches = {}
         for ref in self.branches:
             branches[ref.name] = ref.commit.hexsha
@@ -502,7 +502,7 @@ class GitRepo(Repo):
 
     def commit_and_push_project(
         self, message: str, author_name: str, author_email: str
-    ) -> str:
+    ) -> str | None:
         # Add every file pending
         self.index.add("*")
 

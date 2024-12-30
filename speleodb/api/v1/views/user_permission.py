@@ -25,7 +25,7 @@ class ProjectUserPermissionListView(GenericAPIView):
     lookup_field = "id"
 
     def get(self, request, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
         permissions = project.get_all_user_permissions()
 
         project_serializer = ProjectSerializer(project, context={"user": request.user})
@@ -87,7 +87,7 @@ class ProjectUserPermissionView(GenericAPIView):
         return perm_data
 
     def post(self, request, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
 
         perm_data = self._process_request_data(data=request.data)
 
@@ -137,7 +137,7 @@ class ProjectUserPermissionView(GenericAPIView):
         )
 
     def put(self, request, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
 
         perm_data = self._process_request_data(data=request.data)
 
@@ -196,7 +196,7 @@ class ProjectUserPermissionView(GenericAPIView):
         )
 
     def delete(self, request, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
 
         perm_data = self._process_request_data(data=request.data, skip_level=True)
 

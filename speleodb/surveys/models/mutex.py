@@ -34,13 +34,13 @@ class Mutex(models.Model):
     class Meta:
         verbose_name_plural = "mutexes"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user} => {self.project} @ {self.creation_date}"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
 
-    def release_mutex(self, user: User, comment: str):
+    def release_mutex(self, user: User, comment: str) -> None:
         self.closing_user = user
         self.closing_comment = comment
         self.save()
@@ -50,5 +50,5 @@ class Mutex(models.Model):
         mutexed_project.save()
 
     @property
-    def is_active(self):
+    def is_active(self) -> bool:
         return self.closing_user is None

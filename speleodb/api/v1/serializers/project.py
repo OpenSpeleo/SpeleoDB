@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import datetime
+
 from django.core.exceptions import ObjectDoesNotExist
 from django_countries import countries
 from rest_framework import serializers
@@ -28,7 +30,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         exclude = ("_visibility",)
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Project:
         validated_data["created_by"] = User.objects.get(
             email=validated_data["created_by"]
         )
@@ -44,19 +46,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         return project
 
-    # def get_team_permission(self, obj):
-    #     if isinstance(obj, dict):
-    #         # Unsaved object
-    #         return None
-    #
-    #     user = self.context.get("user")
-    #
-    #     try:
-    #         return obj.get_team_permission(team=user).level
-    #     except ObjectDoesNotExist:
-    #         return None
-
-    def get_permission(self, obj):
+    def get_permission(self, obj: Project) -> str:
         if isinstance(obj, dict):
             # Unsaved object
             return None
@@ -68,7 +58,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         except ObjectDoesNotExist:
             return None
 
-    def get_active_mutex(self, obj):
+    def get_active_mutex(self, obj: Project) -> dict[str, str | datetime.datetime]:
         if isinstance(obj, dict):
             # Unsaved object
             return None

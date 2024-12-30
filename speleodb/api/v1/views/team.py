@@ -39,13 +39,13 @@ class TeamApiView(GenericAPIView):
     lookup_field = "id"
 
     def get(self, request, *args, **kwargs):
-        team = self.get_object()
+        team: SurveyTeam = self.get_object()
         serializer = self.get_serializer(team, context={"user": request.user})
 
         return SuccessResponse(serializer.data)
 
     def put(self, request, *args, **kwargs):
-        team = self.get_object()
+        team: SurveyTeam = self.get_object()
         serializer = self.get_serializer(
             team, data=request.data, context={"user": request.user}
         )
@@ -58,7 +58,7 @@ class TeamApiView(GenericAPIView):
         )
 
     def patch(self, request, *args, **kwargs):
-        team = self.get_object()
+        team: SurveyTeam = self.get_object()
         serializer = self.get_serializer(
             team, data=request.data, context={"user": request.user}, partial=True
         )
@@ -71,7 +71,7 @@ class TeamApiView(GenericAPIView):
         )
 
     def delete(self, request, *args, **kwargs):
-        team = self.get_object()
+        team: SurveyTeam = self.get_object()
         team_id = team.id
         team.delete()
 

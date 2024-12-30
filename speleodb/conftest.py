@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pathlib
+from collections.abc import Generator
 
 import pytest
 from django.apps import apps
@@ -16,7 +17,7 @@ from speleodb.users.tests.factories import UserFactory
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _load_test_env():
+def _load_test_env() -> None:
     project_base_dir = pathlib.Path(__file__).parents[1].resolve()
     if (env_file := project_base_dir / ".envs/test.env").exists():
         assert load_dotenv(env_file)
@@ -53,7 +54,7 @@ def sha1_hash(db) -> str:
 
 
 @pytest.fixture(autouse=True)
-def cleanup_database(db):
+def cleanup_database(db) -> Generator:
     """
     Cleanup fixture that deletes all objects from the database after each test.
     Automatically applied to all tests that use the database.

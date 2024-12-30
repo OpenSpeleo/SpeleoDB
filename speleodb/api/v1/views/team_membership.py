@@ -26,7 +26,7 @@ class TeamMembershipApiView(GenericAPIView):
     lookup_field = "id"
 
     def get(self, request, *args, **kwargs):
-        team = self.get_object()
+        team: SurveyTeam = self.get_object()
         try:
             membership = SurveyTeamMembership.objects.get(
                 team=team, user=request.user, is_active=True
@@ -64,7 +64,7 @@ class TeamMembershipApiView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        team = self.get_object()
+        team: SurveyTeam = self.get_object()
         membership, created = SurveyTeamMembership.objects.get_or_create(
             team=team, user=serializer.validated_data["user"]
         )
@@ -115,7 +115,7 @@ class TeamMembershipApiView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        team = self.get_object()
+        team: SurveyTeam = self.get_object()
         try:
             membership = SurveyTeamMembership.objects.get(
                 team=team,
@@ -173,7 +173,7 @@ class TeamMembershipApiView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        team = self.get_object()
+        team: SurveyTeam = self.get_object()
         try:
             membership = SurveyTeamMembership.objects.get(
                 team=team, user=serializer.validated_data["user"], is_active=True
@@ -213,7 +213,7 @@ class TeamMembershipListApiView(GenericAPIView):
     lookup_field = "id"
 
     def get(self, request, *args, **kwargs):
-        team = self.get_object()
+        team: SurveyTeam = self.get_object()
         membership_list = SurveyTeamMembership.objects.filter(team=team, is_active=True)
 
         membership_serializer = SurveyTeamMembershipListSerializer(membership_list)
