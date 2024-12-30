@@ -3,6 +3,7 @@
 import pathlib
 import shutil
 import tempfile
+import types
 import unittest
 from unittest import TestCase
 
@@ -52,7 +53,7 @@ class CloneRepoTest(TestCase):
 
     def test_read_changes(self):
         changes = self.repo.head.commit.changes
-        assert isinstance(changes, list)
+        assert isinstance(changes, types.GeneratorType)
 
         for diff in changes:
             assert isinstance(diff, git.Diff), type(diff)
