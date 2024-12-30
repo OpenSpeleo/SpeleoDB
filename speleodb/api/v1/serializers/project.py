@@ -19,7 +19,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         default=Project.Visibility.PRIVATE,
     )
 
-    user_permission = serializers.SerializerMethodField()
+    permission = serializers.SerializerMethodField()
     active_mutex = serializers.SerializerMethodField()
 
     created_by = serializers.EmailField()
@@ -56,7 +56,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     #     except ObjectDoesNotExist:
     #         return None
 
-    def get_user_permission(self, obj):
+    def get_permission(self, obj):
         if isinstance(obj, dict):
             # Unsaved object
             return None
@@ -64,7 +64,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         user = self.context.get("user")
 
         try:
-            return obj.get_user_permission(user=user).level
+            return obj.get_best_permission(user=user).level
         except ObjectDoesNotExist:
             return None
 
