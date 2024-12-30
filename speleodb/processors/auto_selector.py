@@ -14,7 +14,9 @@ from speleodb.surveys.models import Project
 
 class AutoSelector:
     @staticmethod
-    def get_processor(fileformat: Format.FileFormat, f_extension=None):
+    def get_processor(
+        fileformat: Format.FileFormat, f_extension: str | None = None
+    ) -> type[BaseFileProcessor]:
         match fileformat:
             case Format.FileFormat.ARIANE_TML:
                 return TMLFileProcessor
@@ -50,7 +52,7 @@ class AutoSelector:
     @staticmethod
     def get_upload_processor(
         fileformat: Format.FileFormat, file: InMemoryUploadedFile, project: Project
-    ):
+    ) -> type[BaseFileProcessor]:
         assert isinstance(file, InMemoryUploadedFile)
 
         if not isinstance(fileformat, Format.FileFormat):
@@ -68,7 +70,7 @@ class AutoSelector:
     @staticmethod
     def get_download_processor(
         fileformat: Format.FileFormat, project: Project, hexsha: str
-    ):
+    ) -> type[BaseFileProcessor]:
         processor_cls = AutoSelector.get_processor(fileformat=fileformat)
 
         return processor_cls(project=project, hexsha=hexsha)

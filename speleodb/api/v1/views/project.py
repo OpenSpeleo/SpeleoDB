@@ -28,7 +28,7 @@ class ProjectApiView(GenericAPIView):
 
     @method_permission_classes((UserHasReadAccess,))
     def get(self, request, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
         serializer = self.get_serializer(project, context={"user": request.user})
 
         try:
@@ -44,7 +44,7 @@ class ProjectApiView(GenericAPIView):
 
     @method_permission_classes((UserHasWriteAccess,))
     def put(self, request, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
         serializer = self.get_serializer(
             project, data=request.data, context={"user": request.user}
         )
@@ -58,7 +58,7 @@ class ProjectApiView(GenericAPIView):
 
     @method_permission_classes((UserHasWriteAccess,))
     def patch(self, request, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
         serializer = self.get_serializer(
             project, data=request.data, context={"user": request.user}, partial=True
         )
@@ -76,7 +76,7 @@ class ProjectApiView(GenericAPIView):
         # users. After 30 days, the project gets automatically deleted by a cronjob.
         # This is done to protect users from malicious/erronous project deletion.
 
-        project = self.get_object()
+        project: Project = self.get_object()
         for perm in project.get_all_permissions():
             perm.deactivate(deactivated_by=request.user)
 
@@ -108,9 +108,7 @@ class ProjectListApiView(GenericAPIView):
     def get(self, request, *args, **kwargs):
         usr_projects = [perm.project for perm in request.user.permissions]
 
-        usr_projects = sorted(
-            set(usr_projects), key=lambda proj: proj.name
-        )
+        usr_projects = sorted(set(usr_projects), key=lambda proj: proj.name)
 
         serializer = self.get_serializer(
             usr_projects, many=True, context={"user": request.user}

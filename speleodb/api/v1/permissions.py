@@ -4,8 +4,10 @@
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 
+from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
+from speleodb.users.model_files.team import SurveyTeam
 from speleodb.users.model_files.team import SurveyTeamMembership
 
 
@@ -16,7 +18,7 @@ class BaseProjectAccessLevel(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request, view, obj: Project) -> bool:
         try:
             user_access = (
                 obj.get_user_permission(user=request.user)._level  # noqa: SLF001
@@ -35,7 +37,7 @@ class BaseProjectAccessLevel(permissions.BasePermission):
                     >= self.MIN_ACCESS_TEAM_LEVEL
                 ):
                     return True
-            except TeamPermission.DoesNotExist:
+            except ObjectDoesNotExist:
                 continue
         return False
 
@@ -60,10 +62,10 @@ class BaseTeamAccessLevel(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated
 
-    def has_object_permission(self, request, view, obj: SurveyTeamMembership):
+    def has_object_permission(self, request, view, obj: SurveyTeam) -> bool:
         try:
             membership = obj.get_membership(user=request.user)
-            return bool(
+            return (
                 membership._role >= self.MIN_ACCESS_LEVEL  # noqa: SLF001
                 and membership.is_active
             )
@@ -88,7 +90,7 @@ class UserOwnsProjectMutex(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request, view, obj: Project):
         mutex = obj.active_mutex
 
         if mutex is None:

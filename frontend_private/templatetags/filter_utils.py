@@ -25,20 +25,20 @@ def datetime_of_struct_time(st: time.struct_time) -> datetime.datetime:
 
 
 @register.filter(name="time_struct_since")
-def time_struct_since(time_struct: time.struct_time):
+def time_struct_since(time_struct: time.struct_time) -> str:
     dt = datetime_of_struct_time(time_struct)
     dt_now = timezone.now()
     return timeago.format(dt, dt_now)
 
 
 @register.filter(name="time_struct_format")
-def time_struct_format(time_struct: time.struct_time):
+def time_struct_format(time_struct: time.struct_time) -> str:
     dt = datetime_of_struct_time(time_struct)
     return dt.strftime("%Y/%m/%d %H:%M")
 
 
 @register.filter(name="format_byte_size")
-def format_byte_size(size_bytes):
+def format_byte_size(size_bytes) -> str:
     if size_bytes == 0:
         return "0 B"
 

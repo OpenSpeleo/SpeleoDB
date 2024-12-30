@@ -33,7 +33,7 @@ class PasswordChangeSerializer(serializers.Serializer):
         required=True,
     )
 
-    def validate(self, attrs):
+    def validate(self, attrs) -> dict[str, str]:
         oldpassword = attrs.get("oldpassword")
         password1 = attrs.get("password1")
         password2 = attrs.get("password2")
@@ -54,7 +54,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 
         return {"password": password1}
 
-    def save(self):
+    def save(self) -> None:
         password = self.validated_data["password"]
         request = self.context.get("request")
         user = request.user

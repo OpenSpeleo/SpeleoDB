@@ -9,7 +9,7 @@ class DumpProcessor(BaseFileProcessor):
     TARGET_DOWNLOAD_FILENAME = "project_{timestamp}.zip"
     ASSOC_FILEFORMAT = Format.FileFormat.DUMP
 
-    def postprocess_file_before_download(self, filepath: Path):
+    def postprocess_file_before_download(self, filepath: Path) -> Path:
         with zipfile.ZipFile(filepath, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
             for file in self.project.git_repo.path.glob("*"):
                 if not file.is_file() or file.name.startswith("."):

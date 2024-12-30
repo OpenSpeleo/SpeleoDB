@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from speleodb.surveys.models import TeamPermission
@@ -9,11 +10,11 @@ from speleodb.users.models import User
 class UserRequestSerializer(serializers.Serializer):
     user = serializers.EmailField()
 
-    def validate_user(self, value):
+    def validate_user(self, value: str) -> User:
         try:
             user = User.objects.get(email=value)
 
-        except User.DoesNotExist as e:
+        except ObjectDoesNotExist as e:
             raise serializers.ValidationError(
                 f"The user `{value}` does not exist."
             ) from e
@@ -38,18 +39,18 @@ class UserRequestWithTeamRoleSerializer(UserRequestSerializer):
         choices=[name for _, name in SurveyTeamMembership.Role.choices]
     )
 
-    def validate_role(self, value):
+    def validate_role(self, value: str) -> SurveyTeamMembership.Role:
         return getattr(SurveyTeamMembership.Role, value.upper())
 
 
 class TeamRequestSerializer(serializers.Serializer):
     team = serializers.IntegerField()
 
-    def validate_team(self, value):
+    def validate_team(self, value: int) -> SurveyTeam:
         try:
             team = SurveyTeam.objects.get(id=value)
 
-        except team.DoesNotExist as e:
+        except ObjectDoesNotExist as e:
             raise serializers.ValidationError(
                 f"The team `{team}` does not exist."
             ) from e
@@ -62,5 +63,5 @@ class TeamRequestWithProjectLevelSerializer(TeamRequestSerializer):
         choices=[name for _, name in TeamPermission.Level.choices]
     )
 
-    def validate_level(self, value):
+    def validate_level(self, value: str) -> TeamPermission.Level:
         return getattr(TeamPermission.Level, value.upper())

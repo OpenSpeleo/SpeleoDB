@@ -57,6 +57,10 @@ class Format(models.Model):
         # StickMaps
         STICKMAPS = (40, "STICKMAPS")
 
+        @property
+        def webname(self) -> str:
+            return self.label.replace("_", " ")
+
         @classmethod
         def filtered_choices(cls, exclude_vals=None, as_str=True):
             exclude_vals = exclude_vals if not None else []
@@ -67,33 +71,29 @@ class Format(models.Model):
             return filtered_list
 
         @classproperty
-        def download_choices(cls):  # noqa: N805
+        def download_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
             return cls.filtered_choices(exclude_vals=cls.__excluded_download_formats__)
 
         @classproperty
-        def upload_choices(cls):  # noqa: N805
+        def upload_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
             return cls.filtered_choices(exclude_vals=cls.__excluded_upload_formats__)
 
         @classproperty
-        def db_choices(cls):  # noqa: N805
+        def db_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
             return cls.filtered_choices(
                 exclude_vals=cls.__excluded_db_formats__, as_str=False
             )
 
-        @property
-        def webname(self):
-            return self.label.replace("_", " ")
-
         @classproperty
-        def __excluded_download_formats__(cls):  # noqa: N805
+        def __excluded_download_formats__(cls) -> list[tuple[int, str]]:  # noqa: N805
             return [cls.OTHER, cls.AUTO]
 
         @classproperty
-        def __excluded_upload_formats__(cls):  # noqa: N805
+        def __excluded_upload_formats__(cls) -> list[tuple[int, str]]:  # noqa: N805
             return [cls.DUMP]
 
         @classproperty
-        def __excluded_db_formats__(cls):  # noqa: N805
+        def __excluded_db_formats__(cls) -> list[tuple[int, str]]:  # noqa: N805
             return [cls.DUMP, cls.AUTO]
 
     _format = models.IntegerField(
@@ -114,10 +114,10 @@ class Format(models.Model):
             "_format",
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.project} -> {self.format}"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         # Only allows object creation. Otherwise bypass.
         if self.pk is None:
             super().save(*args, **kwargs)
@@ -134,5 +134,5 @@ class Format(models.Model):
         return self.raw_format.label
 
     @format.setter
-    def format(self, value):
+    def format(self, value) -> None:
         self._format = value

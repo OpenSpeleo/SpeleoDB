@@ -18,7 +18,7 @@ class FormatAdmin(admin.ModelAdmin):
     ordering = ("-creation_date",)
     list_filter = ["project"]
 
-    def has_change_permission(self, request, obj=None):
+    def has_change_permission(self, request, obj=None) -> bool:
         return False
 
 
@@ -41,7 +41,7 @@ class MutexAdmin(admin.ModelAdmin):
         return qs.annotate(project_name=F("project__name"))
 
     @admin.display(ordering="project_name")
-    def project_name(self, obj):
+    def project_name(self, obj) -> str:
         return obj.project.name
 
 

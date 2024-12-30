@@ -6,7 +6,7 @@ from collections import OrderedDict
 from django.utils import timezone
 
 
-def get_timestamp():
+def get_timestamp() -> str:
     return timezone.localtime().strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -22,9 +22,9 @@ def maybe_sort_data(data):
     return data
 
 
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
+def str2bool(v: str) -> bool:
+    if not isinstance(v, str):
+        raise TypeError(f"Expected `str`, received: `{type(v)}`")
     return v.lower() in [
         "true",
         "1",

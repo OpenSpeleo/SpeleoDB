@@ -7,12 +7,12 @@ register = template.Library()
 
 
 @register.simple_tag
-def get_survey_formats():
+def get_survey_formats() -> list[str]:
     return [name for _, name in Format.FileFormat.choices]
 
 
 @register.simple_tag
-def get_project_formats(project: Project):
+def get_project_formats(project: Project) -> list[Format]:
     return [
         _format
         for _format in project.rel_formats.all().order_by("_format")

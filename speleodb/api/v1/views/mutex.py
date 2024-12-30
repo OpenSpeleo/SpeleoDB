@@ -23,7 +23,7 @@ class ProjectAcquireApiView(GenericAPIView):
     lookup_field = "id"
 
     def post(self, request, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
 
         try:
             project.acquire_mutex(user=request.user)
@@ -50,8 +50,9 @@ class ProjectReleaseApiView(GenericAPIView):
     lookup_field = "id"
 
     def post(self, request, *args, **kwargs):
-        project = self.get_object()
+        project: Project = self.get_object()
         comment = request.data.get("comment", "")
+
         try:
             project.release_mutex(user=request.user, comment=comment)
 
