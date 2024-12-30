@@ -43,16 +43,6 @@ def team(db) -> SurveyTeam:
     return SurveyTeamFactory()
 
 
-@pytest.fixture
-def sha1_hash(db) -> str:
-    import random
-    import string
-    from hashlib import sha1
-
-    rand_str = "".join(random.sample(string.ascii_lowercase, 8))
-    return sha1(rand_str.encode("utf-8")).hexdigest()  # noqa: S324
-
-
 @pytest.fixture(autouse=True)
 def cleanup_database(db) -> Generator:
     """

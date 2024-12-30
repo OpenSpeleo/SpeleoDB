@@ -9,7 +9,6 @@ from speleodb.api.v1.permissions import IsObjectCreation
 from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import UserHasLeaderAccess
 from speleodb.api.v1.permissions import UserHasMemberAccess
-from speleodb.api.v1.serializers import SurveyTeamListSerializer
 from speleodb.api.v1.serializers import SurveyTeamSerializer
 from speleodb.users.models import SurveyTeam
 from speleodb.utils.response import ErrorResponse
