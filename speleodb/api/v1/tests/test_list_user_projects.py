@@ -47,7 +47,7 @@ class TestProjectInteraction(BaseAPITestCase):
                     project=project,
                 )
 
-        endpoint = reverse("api:v1:list_all_projects")
+        endpoint = reverse("api:v1:project_api")
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(endpoint, headers={"authorization": auth})

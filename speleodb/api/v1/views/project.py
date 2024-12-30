@@ -20,7 +20,7 @@ from speleodb.utils.response import SuccessResponse
 logger = logging.getLogger(__name__)
 
 
-class ProjectApiView(GenericAPIView):
+class ProjectSpecificApiView(GenericAPIView):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
@@ -83,25 +83,7 @@ class ProjectApiView(GenericAPIView):
         return SuccessResponse({"id": str(project.id)})
 
 
-class CreateProjectApiView(GenericAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = ProjectSerializer
-
-    def post(self, request, *args, **kwargs):
-        data = request.data
-        data["created_by"] = request.user.email
-        serializer = self.get_serializer(data=data, context={"user": request.user})
-        if serializer.is_valid():
-            serializer.save()
-            return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
-
-        return ErrorResponse(
-            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-
-class ProjectListApiView(GenericAPIView):
-    queryset = Project.objects.all()
+class ProjectApiView(GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
 
@@ -115,3 +97,15 @@ class ProjectListApiView(GenericAPIView):
         )
 
         return SuccessResponse(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        data = request.data
+        data["created_by"] = request.user.email
+        serializer = self.get_serializer(data=data, context={"user": request.user})
+        if serializer.is_valid():
+            serializer.save()
+            return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
+
+        return ErrorResponse(
+            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )

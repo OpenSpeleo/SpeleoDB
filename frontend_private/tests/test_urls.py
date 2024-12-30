@@ -57,11 +57,6 @@ from django.urls import reverse
         ),
         (
             "private:project_revision_explorer",
-            "project/{project_id}/browser/",
-            {"project_id": uuid.uuid4()},
-        ),
-        (
-            "private:project_revision_explorer",
             "project/{project_id}/browser/{hexsha}/",
             {
                 "project_id": uuid.uuid4(),

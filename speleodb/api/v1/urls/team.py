@@ -1,28 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from django.urls import include
 from django.urls import path
 
-from speleodb.api.v1.views.team import CreateTeamApiView
-from speleodb.api.v1.views.team import ListUserTeams
 from speleodb.api.v1.views.team import TeamApiView
+from speleodb.api.v1.views.team import TeamSpecificApiView
 from speleodb.api.v1.views.team_membership import TeamMembershipApiView
 from speleodb.api.v1.views.team_membership import TeamMembershipListApiView
 
-urlpatterns = [
-    # Team APIs
-    path("team/", CreateTeamApiView.as_view(), name="create_team"),
-    path("team/<int:id>/", TeamApiView.as_view(), name="one_team_apiview"),
-    path("teams/", ListUserTeams.as_view(), name="list_user_teams"),
+team_url_patterns = [
+    path("", TeamSpecificApiView.as_view(), name="one_team_apiview"),
     # Team Membership APIs
     path(
-        "team/<int:id>/membership/",
+        "membership/",
         TeamMembershipApiView.as_view(),
         name="team_membership",
     ),
     path(
-        "team/<int:id>/memberships/",
+        "memberships/",
         TeamMembershipListApiView.as_view(),
         name="team_list_membership",
     ),
+]
+
+urlpatterns = [
+    path("", TeamApiView.as_view(), name="team_api"),
+    path("<int:id>/", include(team_url_patterns)),
 ]
