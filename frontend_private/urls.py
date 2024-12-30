@@ -8,12 +8,12 @@ from frontend_private.views import NewProjectView
 from frontend_private.views import NewTeamView
 from frontend_private.views import PassWordView
 from frontend_private.views import PreferencesView
-from frontend_private.views import ProjectCommitsView
 from frontend_private.views import ProjectDangerZoneView
 from frontend_private.views import ProjectDetailsView
 from frontend_private.views import ProjectGitExplorerView
 from frontend_private.views import ProjectListingView
 from frontend_private.views import ProjectMutexesView
+from frontend_private.views import ProjectRevisionHistoryView
 from frontend_private.views import ProjectTeamPermissionsView
 from frontend_private.views import ProjectUploadView
 from frontend_private.views import ProjectUserPermissionsView
@@ -75,7 +75,7 @@ urlpatterns = [
     ),
     path(
         "project/<uuid:project_id>/revisions/",
-        ProjectCommitsView.as_view(),
+        ProjectRevisionHistoryView.as_view(),
         name="project_revisions",
     ),
     path(
