@@ -86,6 +86,11 @@ class IsReadOnly(permissions.BasePermission):
         return request.method in permissions.SAFE_METHODS
 
 
+class IsObjectCreation(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.method == "POST"
+
+
 class UserOwnsProjectMutex(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated

@@ -26,7 +26,7 @@ class TestTeamCreation(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:create_team"),
+            reverse("api:v1:team_api"),
             data=team_data,
             headers={"authorization": auth},
         )
@@ -95,7 +95,7 @@ class TestTeamCreation(BaseAPITestCase):
     def test_improper_team_creation(self, kwargs):
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:create_team"),
+            reverse("api:v1:team_api"),
             data=kwargs,
             headers={"authorization": auth},
         )
@@ -315,7 +315,7 @@ class TestGetTeam(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
-            reverse("api:v1:list_user_teams"),
+            reverse("api:v1:team_api"),
             headers={"authorization": auth},
         )
 

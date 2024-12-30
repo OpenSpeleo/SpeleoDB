@@ -12,40 +12,50 @@ from speleodb.surveys.models import Project
 @pytest.mark.parametrize(
     ("name", "path", "kwargs"),
     [
-        ("api:v1:create_project", "/api/v1/project/", None),
+        ("api:v1:project_api", "/api/v1/projects/", None),
         (
             "api:v1:one_project_apiview",
-            "/api/v1/project/{id}/",
+            "/api/v1/projects/{id}/",
+            {"id": uuid.uuid4()},
+        ),
+        (
+            "api:v1:one_project_revisions_apiview",
+            "/api/v1/projects/{id}/revisions/",
+            {"id": uuid.uuid4()},
+        ),
+        (
+            "api:v1:one_project_gitexplorer_apiview",
+            "/api/v1/projects/{id}/git_explorer/",
             {"id": uuid.uuid4()},
         ),
         (
             "api:v1:list_project_user_permissions",
-            "/api/v1/project/{id}/permissions/user/",
+            "/api/v1/projects/{id}/permissions/user/",
             {"id": uuid.uuid4()},
         ),
         (
             "api:v1:list_project_team_permissions",
-            "/api/v1/project/{id}/permissions/team/",
+            "/api/v1/projects/{id}/permissions/team/",
             {"id": uuid.uuid4()},
         ),
         (
             "api:v1:project_user_permission",
-            "/api/v1/project/{id}/permission/user/",
+            "/api/v1/projects/{id}/permission/user/",
             {"id": uuid.uuid4()},
         ),
         (
             "api:v1:project_team_permission",
-            "/api/v1/project/{id}/permission/team/",
+            "/api/v1/projects/{id}/permission/team/",
             {"id": uuid.uuid4()},
         ),
         (
             "api:v1:acquire_project",
-            "/api/v1/project/{id}/acquire/",
+            "/api/v1/projects/{id}/acquire/",
             {"id": uuid.uuid4()},
         ),
         (
             "api:v1:release_project",
-            "/api/v1/project/{id}/release/",
+            "/api/v1/projects/{id}/release/",
             {"id": uuid.uuid4()},
         ),
     ],
@@ -69,7 +79,7 @@ def test_upload_project(fileformat: str, project: Project):
         "api:v1:upload_project",
         kwargs={"id": project.id, "fileformat": fileformat},
     )
-    expected_endpoint = f"/api/v1/project/{project.id}/upload/{fileformat}/"
+    expected_endpoint = f"/api/v1/projects/{project.id}/upload/{fileformat}/"
 
     assert endpoint == expected_endpoint, endpoint
 
@@ -84,7 +94,7 @@ def test_download_project(fileformat: str, project: Project):
         "api:v1:download_project",
         kwargs={"id": project.id, "fileformat": fileformat},
     )
-    expected_endpoint = f"/api/v1/project/{project.id}/download/{fileformat}/"
+    expected_endpoint = f"/api/v1/projects/{project.id}/download/{fileformat}/"
 
     assert endpoint == expected_endpoint, endpoint
 
@@ -100,7 +110,7 @@ def test_download_project_at_hash(fileformat: str, project: Project, sha1_hash: 
         kwargs={"id": project.id, "hexsha": sha1_hash, "fileformat": fileformat},
     )
     expected_endpoint = (
-        f"/api/v1/project/{project.id}/download/{fileformat}/{sha1_hash}/"
+        f"/api/v1/projects/{project.id}/download/{fileformat}/{sha1_hash}/"
     )
 
     assert endpoint == expected_endpoint, endpoint
@@ -135,21 +145,20 @@ def test_user_api_urls(name: str, path: str):
 @pytest.mark.parametrize(
     ("name", "path", "kwargs"),
     [
-        ("api:v1:create_team", "/api/v1/team/", None),
-        ("api:v1:list_user_teams", "/api/v1/teams/", None),
+        ("api:v1:team_api", "/api/v1/teams/", None),
         (
             "api:v1:one_team_apiview",
-            "/api/v1/team/{id}/",
+            "/api/v1/teams/{id}/",
             {"id": random.randint(1, 100)},
         ),
         (
             "api:v1:team_membership",
-            "/api/v1/team/{id}/membership/",
+            "/api/v1/teams/{id}/membership/",
             {"id": random.randint(1, 100)},
         ),
         (
             "api:v1:team_list_membership",
-            "/api/v1/team/{id}/memberships/",
+            "/api/v1/teams/{id}/memberships/",
             {"id": random.randint(1, 100)},
         ),
     ],
