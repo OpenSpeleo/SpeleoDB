@@ -11,6 +11,7 @@ from speleodb.api.v1.views.mutex import ProjectAcquireApiView
 from speleodb.api.v1.views.mutex import ProjectReleaseApiView
 from speleodb.api.v1.views.project import ProjectApiView
 from speleodb.api.v1.views.project import ProjectSpecificApiView
+from speleodb.api.v1.views.project_explorer import ProjectGitExplorerApiView
 from speleodb.api.v1.views.project_explorer import ProjectRevisionsApiView
 from speleodb.api.v1.views.team_permission import ProjectTeamPermissionListView
 from speleodb.api.v1.views.team_permission import ProjectTeamPermissionView
@@ -26,8 +27,8 @@ project_base_urlpatterns = [
         name="one_project_revisions_apiview",
     ),
     path(
-        "git_explorer/",
-        ProjectRevisionsApiView.as_view(),
+        "git_explorer/<gitsha:hexsha>/",
+        ProjectGitExplorerApiView.as_view(),
         name="one_project_gitexplorer_apiview",
     ),
     # ========================= PROJECT PERMISSIONS ========================= #

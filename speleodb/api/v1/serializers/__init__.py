@@ -3,8 +3,10 @@
 
 # flake8: noqa
 
-from speleodb.api.v1.serializers.git import CommitListSerializer
-from speleodb.api.v1.serializers.git import CommitSerializer
+from speleodb.api.v1.serializers.git import GitCommitListSerializer
+from speleodb.api.v1.serializers.git import GitCommitSerializer
+from speleodb.api.v1.serializers.git import GitFileSerializer
+from speleodb.api.v1.serializers.git import GitFileListSerializer
 from speleodb.api.v1.serializers.file import UploadSerializer
 from speleodb.api.v1.serializers.password import PasswordChangeSerializer
 from speleodb.api.v1.serializers.permissions import TeamPermissionListSerializer

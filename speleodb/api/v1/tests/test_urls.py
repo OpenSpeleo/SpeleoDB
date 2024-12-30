@@ -1,5 +1,7 @@
 import random
+import string
 import uuid
+from hashlib import sha1
 
 import pytest
 from django.urls import resolve
@@ -7,6 +9,11 @@ from django.urls import reverse
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
+
+
+def sha1_hash() -> str:
+    rand_str = "".join(random.sample(string.ascii_lowercase, 8))
+    return sha1(rand_str.encode("utf-8")).hexdigest()  # noqa: S324
 
 
 @pytest.mark.parametrize(
@@ -25,8 +32,8 @@ from speleodb.surveys.models import Project
         ),
         (
             "api:v1:one_project_gitexplorer_apiview",
-            "/api/v1/projects/{id}/git_explorer/",
-            {"id": uuid.uuid4()},
+            "/api/v1/projects/{id}/git_explorer/{hexsha}/",
+            {"id": uuid.uuid4(), "hexsha": sha1_hash()},
         ),
         (
             "api:v1:list_project_user_permissions",
@@ -104,14 +111,13 @@ def test_download_project(fileformat: str, project: Project):
 
 
 @pytest.mark.parametrize("fileformat", Format.FileFormat.download_choices)
-def test_download_project_at_hash(fileformat: str, project: Project, sha1_hash: str):
+def test_download_project_at_hash(fileformat: str, project: Project):
+    hexsha = sha1_hash()
     endpoint = reverse(
         "api:v1:download_project_at_hash",
-        kwargs={"id": project.id, "hexsha": sha1_hash, "fileformat": fileformat},
+        kwargs={"id": project.id, "hexsha": hexsha, "fileformat": fileformat},
     )
-    expected_endpoint = (
-        f"/api/v1/projects/{project.id}/download/{fileformat}/{sha1_hash}/"
-    )
+    expected_endpoint = f"/api/v1/projects/{project.id}/download/{fileformat}/{hexsha}/"
 
     assert endpoint == expected_endpoint, endpoint
 

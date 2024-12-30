@@ -1,19 +1,23 @@
 import datetime
 
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 from rest_framework import serializers
 
+from frontend_private.templatetags.filter_utils import format_byte_size
+from frontend_private.templatetags.filter_utils import time_struct_since
 from speleodb.git_engine.core import GitCommit
+from speleodb.git_engine.core import GitFile
 from speleodb.surveys.models import Project
 
 
-class CommitSerializer(serializers.Serializer):
+class GitCommitSerializer(serializers.Serializer):
     """
     Serializer for Git Commit objects.
     """
 
     commit_hash = serializers.CharField(source="hexsha")
-    commit_hash_short = serializers.SerializerMethodField()
+    commit_hash_short = serializers.CharField(source="hexsha_short")
     author_name = serializers.CharField(source="author.name")
     author_email = serializers.CharField(source="author.email")
     authored_date = serializers.DateTimeField(
@@ -24,7 +28,7 @@ class CommitSerializer(serializers.Serializer):
     committed_date = serializers.DateTimeField(
         source="committed_datetime", format="%Y/%m/%d %H:%M"
     )
-    message = serializers.CharField(read_only=True)
+    message = serializers.CharField()
     parents = serializers.ListField(child=serializers.CharField())
 
     formats = serializers.SerializerMethodField()
@@ -34,12 +38,6 @@ class CommitSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         raise serializers.ValidationError("This serializer is read-only.")
-
-    def get_commit_hash_short(self, obj: GitCommit) -> str:
-        """
-        Returns the short version of the commit hash (7 characters by GitHub standard).
-        """
-        return obj.hexsha_short
 
     def get_formats(self, obj: GitCommit) -> list[str]:
         """
@@ -78,12 +76,12 @@ class CommitSerializer(serializers.Serializer):
         return representation
 
 
-class CommitListSerializer(serializers.ListSerializer):
+class GitCommitListSerializer(serializers.ListSerializer):
     """
     Serializer for a list of Git Commit objects.
     """
 
-    child = CommitSerializer()
+    child = GitCommitSerializer()
 
     def to_representation(self, data):
         """
@@ -91,4 +89,57 @@ class CommitListSerializer(serializers.ListSerializer):
         """
         # Sort commits by date (descending) if needed
         data = sorted(data, key=lambda commit: commit.authored_datetime, reverse=True)
+        return super().to_representation(data)
+
+
+class GitFileSerializer(serializers.Serializer):
+    """
+    Serializer for GitFile objects.
+    """
+
+    name = serializers.CharField()
+    hexsha = serializers.CharField()
+    path = serializers.CharField()
+    size = serializers.SerializerMethodField()
+    url = serializers.SerializerMethodField()
+
+    # Commit aspects
+    commit_hexsha = serializers.CharField(source="commit.hexsha")
+    commit_message = serializers.CharField(source="commit.message")
+    commit_dt_since = serializers.SerializerMethodField()
+
+    def create(self, validated_data):
+        raise serializers.ValidationError("This serializer is read-only.")
+
+    def update(self, instance, validated_data):
+        raise serializers.ValidationError("This serializer is read-only.")
+
+    def get_size(self, obj: GitFile) -> list[str]:
+        return format_byte_size(obj.size)
+
+    def get_url(self, obj: GitFile) -> list[str]:
+        project = self.context.get("project")
+        if project is not None:
+            return reverse(
+                "api:v1:download_blob", kwargs={"id": project.id, "hexsha": obj.hexsha}
+            )
+        return None
+
+    def get_commit_dt_since(self, obj: GitFile) -> list[str]:
+        return time_struct_since(obj.commit.date)
+
+
+class GitFileListSerializer(serializers.ListSerializer):
+    """
+    Serializer for a list of Git Commit objects.
+    """
+
+    child = GitFileSerializer()
+
+    def to_representation(self, data):
+        """
+        Customize the list serialization.
+        """
+        # Sort commits by date (descending) if needed
+        data = sorted(data, key=lambda file: file.path)
         return super().to_representation(data)
