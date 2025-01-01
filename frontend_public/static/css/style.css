@@ -2026,6 +2026,11 @@ input[type="search"]::-webkit-search-results-decoration {
   margin-bottom: 1.5rem;
 }
 
+.my-8 {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
 .-mb-16 {
   margin-bottom: -4rem;
 }
