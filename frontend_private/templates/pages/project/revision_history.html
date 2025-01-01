@@ -132,7 +132,7 @@
     </div>
 </div>
 
-<div id="loading_spinner" class="loading" style="display:none;"></div>
+<div id="loading_spinner" class="loading"></div>
 
 {% endblock right_panel %}
 
@@ -140,14 +140,15 @@
 <script>
 $( document ).ready(function() {
 
+    // Ensure the loading spinner is being displayed
     $("#loading_spinner").show();
 
     $.ajax({
         url : "{% url 'api:v1:one_project_revisions_apiview' id=project.id %}",
         type : "GET",
         dataType : "json",
+        async: false,
         success: function(data){
-            $("#loading_spinner").hide();
             if (data.success && data.data.commits) {
 
                 // Iterate over each commit and append a new row to the table
@@ -219,11 +220,13 @@ $( document ).ready(function() {
             $('#commit-template').remove();
         },
         error: function (textStatus, errorThrown) {
-            $("#loading_spinner").hide();
             console.error("ERROR: " + data.textStatus + " & " + errorThrown);
             return;
         }
     });
+
+    $("#loading_spinner").hide();
+
 });
 </script>
 {% endblock inline_extra_js %}
