@@ -10,10 +10,8 @@ from django.urls import reverse
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView
-from gitdb.exc import BadName as GitRevBadName
 from rest_framework.authtoken.models import Token
 
-from speleodb.git_engine.exceptions import GitCommitNotFoundError
 from speleodb.surveys.models import AnyPermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
@@ -308,15 +306,6 @@ class ProjectGitExplorerView(_BaseProjectView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        project = Project.objects.get(id=project_id)
-
-        # Guard against non-existing commit ID
-        try:
-            project.git_repo.checkout_default_branch()
-            data["n_commits"] = len(list(project.git_repo.commits))
-            data["commit"] = project.git_repo.commit(hexsha)
-        except (ValueError, GitCommitNotFoundError, GitRevBadName):
-            # commit does not exists
-            return redirect("private:project_revisions", project_id=project.id)
+        data["hexsha"] = hexsha
 
         return render(request, self.template_name, data)

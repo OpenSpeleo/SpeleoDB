@@ -15,7 +15,8 @@
                      <header class="flex flex-wrap items-center justify-start pb-2 md:justify-end lg:flex-nowrap">
 
                        <div class="mb-2 mr-2 flex w-full items-center md:w-auto">
-                           <a class="btn git_btn group mr-0 flex-grow-0 cursor-pointer rounded-full text-sm md:px-4 md:text-base" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha=commit.hexsha fileformat='dump' %}">
+                           <a class="btn git_btn group mr-0 flex-grow-0 cursor-pointer rounded-full text-sm md:px-4 md:text-base" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha=hexsha fileformat='dump' %}">
+                           
                               <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-type-zip mr-2" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round"  width="1.5em" height="1.5em" viewBox="4.25 2.25 15.5 19.5">
                                  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                                  <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
@@ -35,7 +36,7 @@
                                  <path d="M12 8l0 4l2 2"></path>
                                  <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"></path>
                                </svg>
-                              <span class="mr-1 text-gray-600">History: {{n_commits}} commits</span>
+                              <span class="mr-1 text-gray-600">History: <span id="n-commits-count"></span> commits</span>
                            </a>
                        </div>
 
@@ -44,10 +45,11 @@
                      <div class=" contents mt-4">
                         <div class="grid grid-cols-12 from-gray-100-to-white flex items-baseline rounded-t-lg border border-b-0 bg-gradient-to-t px-3 py-2 border-gray-600">
                            <div class="sm:col-span-12 md:col-span-9 flex flex-none items-center truncate text-gray-300">
-                              {{ commit.author }}:<span class="ml-4 text-sm text-gray-400 truncate">{{ commit.message }}</span>
+                              <span id="commit-author"></span>:
+                              <span id="commit-message" class="ml-4 text-sm text-gray-400 truncate"></span>
                            </div>
                            <div class="md:col-span-3 hidden md:flex items-center truncate ml-auto text-sm text-gray-300">
-                              <span class="mr-1">{{ commit.hexsha_short }}</span> - {{ commit.date|time_struct_since }}
+                              <span id="commit-hexsha_short" class="mr-1"></span>&#20;-&#20;<span id="commit-dt_since"></span>
                            </div>
                         </div>
 
@@ -77,16 +79,6 @@
 
       </a>
    </div>
-
-   {% comment %} <div class="group sm:col-span-4 md:col-span-7"></div>
-
-   <a class="md:col-span-5 hidden md:flex items-center font-mono text-sm text-gray-400 hover:underline" href="#">
-      <span class="truncate">This is my first commit message</span>
-   </a>
-
-   <a class="md:col-span-2 hidden md:flex truncate ml-auto text-sm text-gray-400 items-center hover:underline" href="/private/project/b789c859-9593-4292-b8fb-2ee6f9ace220/browser/17ccac71c15923b5233879fe6ed5bb8c5adde057/">
-      2 weeks ago
-   </a> {% endcomment %}
 </li>
 
 <!-- FILE TEMPLATE -->
@@ -133,12 +125,17 @@ $( document ).ready(function() {
     */
    function fetch_git_tree() {
       return $.ajax({
-         url : "{% url 'api:v1:one_project_gitexplorer_apiview' id=project.id hexsha=commit.hexsha %}",
+         url : "{% url 'api:v1:one_project_gitexplorer_apiview' id=project.id hexsha=hexsha %}",
          type : "GET",
          dataType : "json",
          async : false,
          success: function(data){
             if (data.success && data.data) {
+               $('#commit-author').text(data.data.commit.author_name);
+               $('#commit-message').text(data.data.commit.message);
+               $('#commit-hexsha_short').text(data.data.commit.hexsha_short);
+               $('#commit-dt_since').text(data.data.commit.dt_since);
+               $('#n-commits-count').text(data.data.project.n_commits);
                return data.data;
             }
             else {

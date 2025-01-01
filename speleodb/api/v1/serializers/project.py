@@ -24,6 +24,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     permission = serializers.SerializerMethodField()
     active_mutex = serializers.SerializerMethodField()
 
+    n_commits = serializers.SerializerMethodField()
+
     created_by = serializers.EmailField()
 
     class Meta:
@@ -71,3 +73,10 @@ class ProjectSerializer(serializers.ModelSerializer):
             "creation_date": obj.active_mutex.creation_date,
             "modified_date": obj.active_mutex.modified_date,
         }
+
+    def get_n_commits(self, obj: Project) -> int | None:
+        # Check if the condition to include the expensive field is met
+        if self.context.get("n_commits", False):
+            # return len(obj.commit_history)
+            return obj.git_repo.commit_count
+        return None
