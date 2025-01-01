@@ -14,14 +14,25 @@
     <meta name="description" content="SpeleoDB Collaboration and Survey Data Exchange Server" />
     <meta name="author" content="Jonathan Dekhtiar" />
 
-    {% compress css %}
-    <link rel="stylesheet" href="{% static 'css/vendors/aos.css' %}">
-    {% endcompress %}
 
     {% if debug %}
-    <link rel="stylesheet" href="{% static 'css/vendors/swiper-bundle.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/vendors/aos.css' %}">
+    {% comment %} <link rel="stylesheet" href="{% static 'css/vendors/swiper-bundle.min.css' %}" /> {% endcomment %}
     {% else %}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8.4.7/swiper-bundle.min.css">
+    <link 
+        rel="stylesheet" 
+        href="https://cdnjs.cloudflare.com/ajax/libs/aos/3.0.0-beta.6/aos.css" 
+        integrity="sha512-hoGlO+71fSG6lgS60I4bKvsFVB+bAnrVFDYlwSXoyNLppDcoupwJB7KbWq/63iACKn3gcgK9jMXd+T+YDeVrGQ==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer" 
+    />
+    {% comment %} <link 
+        rel="stylesheet" 
+        href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/8.4.7/swiper-bundle.min.css" 
+        integrity="sha512-N2IsWuKsBYYiHNYdaEuK4eaRJ0onfUG+cdZilndYaMEhUGQq/McsFU75q3N+jbJUNXm6O+K52DRrK+bSpBGj0w==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer" 
+    /> {% endcomment %}
     {% endif %}
 
     {% compress css %}
@@ -163,30 +174,39 @@
     </div>
 
     {% if debug %}
-    <script src="{% static 'cdn/jquery-3.7.1.js' %}"></script>
-    {% else %}
-    <script
-        src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
-        crossorigin="anonymous">
-    </script>
-    {% endif %}
-
-    {% compress js %}
+    <script src="{% static 'js/vendors/jquery-3.7.1.js' %}"></script>
     <script src="{% static 'js/vendors/alpinejs.min.js' %}" defer></script>
     <script src="{% static 'js/vendors/aos.js' %}"></script>
-    {% endcompress %}
-
-    {% if debug %}
-    <script src="{% static 'js/vendors/swiper-bundle.min.js' %}"></script>
+    {% comment %} <script src="{% static 'js/vendors/swiper-bundle.min.js' %}"></script> {% endcomment %}
     {% else %}
-    <script src="https://cdn.jsdelivr.net/npm/swiper@8.4.7/swiper-bundle.min.js"></script>
+    <script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" 
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer">
+    </script>
+    <script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.11.1/cdn.min.js" 
+        integrity="sha512-p5D8PQLs985Yn0ag6o2zDx/YTzcZKq7YsO+rM79PnqJ0ahDrdR9jg8iCZXdIjdA8vBh4vgsdp4wcO1S+ShE43Q==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer">
+    </script>
+    <script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" 
+        integrity="sha512-A7AYk1fGKX6S2SsHywmPkrnzTZHrgiVT7GcQkLGDe2ev0aWb8zejytzS8wjo7PGEXKqJOrjQ4oORtnimIRZBtw==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer">
+    </script>
+    {% comment %} <script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/8.4.7/swiper-bundle.min.js" 
+        integrity="sha512-h5Vv+n+z0eRnlJoUlWMZ4PLQv4JfaCVtgU9TtRjNYuNltS5QCqi4D4eZn4UkzZZuG2p4VBz3YIlsB7A2NVrbww==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer">
+    </script> {% endcomment %}
     {% endif %}
 
     {% compress js %}
     <script src="{% static 'js/main.js' %}"></script>
-
-    {% block extra_js %}{% endblock extra_js %}
     {% endcompress %}
 
     {% block inline_extra_js %}{% endblock inline_extra_js %}

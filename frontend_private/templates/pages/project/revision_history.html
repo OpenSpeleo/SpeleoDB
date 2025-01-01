@@ -138,7 +138,6 @@
 
 {% block inline_extra_js %}
 <script>
-document.addEventListener('alpine:init', () => {
 $( document ).ready(function() {
 
     $("#loading_spinner").show();
@@ -225,7 +224,6 @@ $( document ).ready(function() {
             return;
         }
     });
-});
 });
 </script>
 {% endblock inline_extra_js %}
