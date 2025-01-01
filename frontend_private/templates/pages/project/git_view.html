@@ -115,16 +115,16 @@
 
 <!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%% ROW TEMPLATES %%%%%%%%%%%%%%%%%%%%%%%%%%% -->
 
-<div id="loading_spinner" class="loading" style="display:none;"></div>
+<div id="loading_spinner" class="loading"></div>
 
 {% endblock right_panel %}
 
 
 {% block inline_extra_js %}
 <script>
-   
 $( document ).ready(function() {
-
+   
+   // Ensure the loading spinner is being displayed
    $("#loading_spinner").show();
 
    /**
@@ -273,17 +273,14 @@ $( document ).ready(function() {
    }
 
    // Fetch the Git Tree and store it as a constant for later re-use
-   let globalGitTree = fetch_git_tree();
+   const globalGitTree = fetch_git_tree();
 
    if ((typeof globalGitTree !== 'undefined') || globalGitTree !== null) {
       refresh_ux(path="");
-      {% comment %} // Example Usage
-      console.log("Root level:", get_files_and_folders_at_path(""));
-      console.log("Files and folders in 'images':", get_files_and_folders_at_path("images"));
-      console.log("Files and folders in 'images/hello':", get_files_and_folders_at_path("images/hello")); {% endcomment %}
    }
 
    $("#loading_spinner").hide();
+   
 });
 </script>
 {% endblock inline_extra_js %}
