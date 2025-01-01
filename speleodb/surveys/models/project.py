@@ -322,7 +322,11 @@ class Project(models.Model):
 
     @property
     def commit_history(self) -> list[GitCommit]:
-        commits = GitlabManager.get_commit_history(project_id=self.id)
+        commits = [
+            commit
+            for commit in GitlabManager.get_commit_history(project_id=self.id)
+            if commit["message"] != GitlabManager.FIRST_COMMIT_NAME
+        ]
         if isinstance(commits, (list, tuple)):
             return commits
         return []
