@@ -2,11 +2,15 @@ import contextlib
 import re
 import shutil
 import time
+from datetime import UTC
+from datetime import datetime
 from pathlib import Path
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
+from django.utils.text import slugify
+from django.utils.timezone import get_default_timezone
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
@@ -112,7 +116,7 @@ class BaseFileProcessor:
         return self._project
 
     @property
-    def hexsha(self) -> Project:
+    def hexsha(self) -> str | None:
         return self._hexsha
 
     def add_file_to_project(
@@ -162,11 +166,24 @@ class BaseFileProcessor:
         except PermissionError as e:
             raise RuntimeError from e
 
+        # 2.
+
         # 2. Generate the filename that will be seen in the browser
-        commit_date = time.gmtime(self.project.git_repo.head.commit.committed_date)
+        if self.hexsha is not None:
+            commit = self.project.git_repo.commit(self.hexsha)
+        else:
+            commit = self.project.git_repo.head.commit
+
+        commit_date = time.gmtime(commit.committed_date)
+
+        # 3. Convert `time.struct_time` to datetime to be "timezone-aware"
+        naive_datetime = datetime(*commit_date[:6], tzinfo=UTC)
+        tz_aware_datetime = naive_datetime.astimezone(tz=get_default_timezone())
+
         return (
             self.TARGET_DOWNLOAD_FILENAME.format(
-                timestamp=time.strftime("%Y-%m-%d_%Hh%M", commit_date)
+                project_name=slugify(self.project.name, allow_unicode=False).lower(),
+                timestamp=tz_aware_datetime.strftime("%Y-%m-%d_%Hh%M"),
             )
             if self.TARGET_DOWNLOAD_FILENAME is not None
             else target_f.name

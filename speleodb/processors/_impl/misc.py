@@ -10,7 +10,7 @@ from speleodb.surveys.models import Format
 
 
 class DumpProcessor(BaseFileProcessor):
-    TARGET_DOWNLOAD_FILENAME = "project_{timestamp}.zip"
+    TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.zip"
     ASSOC_FILEFORMAT = Format.FileFormat.DUMP
 
     def preprocess_file_before_download(self, destination_f: Path) -> None:
