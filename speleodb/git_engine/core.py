@@ -595,7 +595,7 @@ class GitRepo(Repo):
         try:
             self.pull()
             self.git.checkout(branch_name or hexsha)
-        except git.exc.GitCommandError:
+        except GitCommandError:
             if branch_name:  # Create the branch if it doesn't exist yet
                 self.git.checkout("-b", branch_name)
             else:

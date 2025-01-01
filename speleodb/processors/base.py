@@ -1,4 +1,5 @@
 import contextlib
+import re
 import shutil
 import time
 from pathlib import Path
@@ -85,12 +86,34 @@ class BaseFileProcessor:
     TARGET_DOWNLOAD_FILENAME = None
     ASSOC_FILEFORMAT = Format.FileFormat.OTHER
 
-    def __init__(self, project: Project):
+    def __init__(self, project: Project, hexsha: str | None = None):
+        if not isinstance(project, Project):
+            raise TypeError(f"Invalid project type: {type(project)}")
+
+        if hexsha is not None and not self.validate_hexsha(hexsha):
+            raise ValueError(f"Invalid Git SHA value: `{hexsha}`")
+
         self._project = project
+        self._hexsha = hexsha
+
+    def validate_hexsha(self, hexsha: str) -> bool:
+        """
+        Verify if the provided hexsha is a valid Git SHA (could be a full or partial).
+        A valid partial SHA-1 can be between 4 and 40 hexadecimal characters long.
+        """
+        # Regular expression for a valid partial or full Git SHA-1 hash
+        git_sha_pattern = r"^[a-fA-F0-9]{4,40}$"
+
+        # Return True if the hexsha matches the pattern, else False
+        return bool(re.match(git_sha_pattern, hexsha))
 
     @property
     def project(self) -> Project:
         return self._project
+
+    @property
+    def hexsha(self) -> Project:
+        return self._hexsha
 
     def add_file_to_project(
         self, file: InMemoryUploadedFile | TemporaryUploadedFile
@@ -114,9 +137,9 @@ class BaseFileProcessor:
 
         return file
 
-    def postprocess_file_before_download(self, filepath: Path):
+    def preprocess_file_before_download(self, destination_f: Path) -> None:
         with contextlib.suppress(shutil.SameFileError):
-            shutil.copy(src=self.source_f, dst=filepath)
+            shutil.copy(src=self.source_f, dst=destination_f)
 
     @property
     def source_f(self) -> Path:
@@ -125,23 +148,26 @@ class BaseFileProcessor:
             raise ValidationError(f"Impossible to find the file: `{source_f}` ...")
         return source_f
 
-    def get_file_for_download(self, target_f: Path) -> str:
+    def get_file_for_download(self, target_f: Path) -> Path:
+        if isinstance(target_f, str):
+            target_f = Path(target_f)
+
         if not isinstance(target_f, Path):
             raise TypeError(f"Unexpected `target_f` type received: {type(target_f)}")
 
+        # 1. Prepare the file for download
+        try:
+            self.preprocess_file_before_download(destination_f=target_f)
+
+        except PermissionError as e:
+            raise RuntimeError from e
+
+        # 2. Generate the filename that will be seen in the browser
         commit_date = time.gmtime(self.project.git_repo.head.commit.committed_date)
-        filename = (
+        return (
             self.TARGET_DOWNLOAD_FILENAME.format(
                 timestamp=time.strftime("%Y-%m-%d_%Hh%M", commit_date)
             )
             if self.TARGET_DOWNLOAD_FILENAME is not None
             else target_f.name
         )
-
-        try:
-            self.postprocess_file_before_download(target_f)
-
-        except PermissionError as e:
-            raise RuntimeError from e
-
-        return filename

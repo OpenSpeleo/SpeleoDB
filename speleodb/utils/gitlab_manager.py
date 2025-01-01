@@ -138,8 +138,8 @@ class _GitlabManager(metaclass=SingletonMetaClass):
         try:
             try:
                 project = self._get_project(project_id)
-            except gitlab.exceptions.GitlabGetError:
-                return "ERROR: Project does not exist in Gitlab."
+            except gitlab.exceptions.GitlabGetError as e:
+                raise RuntimeError from e
 
             if project is None:
                 return None

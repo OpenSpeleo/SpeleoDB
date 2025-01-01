@@ -322,14 +322,21 @@ class Project(models.Model):
 
     @property
     def commit_history(self) -> list[GitCommit]:
-        commits = [
-            commit
-            for commit in GitlabManager.get_commit_history(project_id=self.id)
-            if commit["message"] != GitlabManager.FIRST_COMMIT_NAME
-        ]
-        if isinstance(commits, (list, tuple)):
-            return commits
-        return []
+        try:
+            commits = [
+                commit
+                for commit in GitlabManager.get_commit_history(project_id=self.id)
+                if commit["message"] != GitlabManager.FIRST_COMMIT_NAME
+            ]
+            if isinstance(commits, (list, tuple)):
+                return commits
+
+            # No Commit was found
+            return []
+
+        except RuntimeError:
+            #  Gitlab API Error
+            return []
 
     def commit_and_push_project(self, message: str, author: User) -> str | None:
         return self.git_repo.commit_and_push_project(

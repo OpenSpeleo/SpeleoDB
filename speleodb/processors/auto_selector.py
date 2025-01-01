@@ -76,8 +76,8 @@ class AutoSelector:
 
     @staticmethod
     def get_download_processor(
-        fileformat: Format.FileFormat, project: Project
+        fileformat: Format.FileFormat, project: Project, hexsha: str
     ) -> type[BaseFileProcessor]:
         processor_cls = AutoSelector.get_processor(fileformat=fileformat)
 
-        return processor_cls(project=project)
+        return processor_cls(project=project, hexsha=hexsha)
