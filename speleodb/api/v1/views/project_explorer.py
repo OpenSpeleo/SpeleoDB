@@ -65,8 +65,6 @@ class ProjectGitExplorerApiView(GenericAPIView):
 
     def get(self, request, hexsha: str, *args, **kwargs):
         project: Project = self.get_object()
-        serializer = self.get_serializer(project, context={"user": request.user})
-
         try:
             # Checkout default branch and pull repository
             project.git_repo.checkout_default_branch()
@@ -84,9 +82,14 @@ class ProjectGitExplorerApiView(GenericAPIView):
                 context={"project": project},
             )
 
+            # Important to be done last so that the repo is actualized
+            project_serializer = self.get_serializer(
+                project, context={"user": request.user, "n_commits": True}
+            )
+
             return SuccessResponse(
                 {
-                    "project": serializer.data,
+                    "project": project_serializer.data,
                     "commit": commit_serializer.data,
                     "files": file_serializer.data,
                 }

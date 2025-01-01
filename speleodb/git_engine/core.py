@@ -548,6 +548,17 @@ class GitRepo(Repo):
             yield GitCommit(repo=self, binsha=commit.binsha)
 
     @property
+    def commit_count(self):
+        from utils.gitlab_manager import GitlabManager
+
+        # Memoery efficient to compute the length of a generator
+        return sum(
+            1
+            for commit in self.iter_commits()
+            if commit.message != GitlabManager.FIRST_COMMIT_NAME
+        )
+
+    @property
     def tree(self) -> GitTree:
         return GitTree.from_tree(tree=super().tree())
 
