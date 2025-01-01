@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import contextlib
 import logging
 import pathlib
 import tempfile
@@ -290,11 +291,10 @@ class FileDownloadView(GenericAPIView):
             )
 
         project: Project = self.get_object()
-        project.checkout_commit_or_default_branch(hexsha=hexsha)
 
         try:
             processor = AutoSelector.get_download_processor(
-                fileformat=fileformat, project=project
+                fileformat=fileformat, project=project, hexsha=hexsha
             )
 
         except (ValidationError, FileNotFoundError) as e:
@@ -305,21 +305,32 @@ class FileDownloadView(GenericAPIView):
                 temp_filepath = pathlib.Path(temp_file.name)
 
                 try:
-                    filename = processor.get_file_for_download(target_f=temp_filepath)
+                    filename: str = processor.get_file_for_download(
+                        target_f=temp_filepath
+                    )
                 except ValidationError as e:
                     raise Http404(
                         f"The file: `{processor.TARGET_SAVE_FILENAME}` does not exists."
                     ) from e
 
-                return DownloadResponseFromFile(
-                    filename=filename,
-                    filepath=temp_filepath,
-                    attachment=True,
-                )
+                if filename is not None and temp_filepath.is_file():
+                    return DownloadResponseFromFile(
+                        filename=filename,
+                        filepath=temp_filepath,
+                        attachment=True,
+                    )
 
             except ProjectNotFound as e:
                 return ErrorResponse(
                     {"error": str(e)}, status=status.HTTP_404_NOT_FOUND
+                )
+
+            except RuntimeError as e:
+                logger.exception(
+                    f"Error - While getting the file to download @ `{hexsha}`"
+                )
+                return ErrorResponse(
+                    {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
                 )
 
             except GitlabError:
@@ -340,15 +351,18 @@ class BlobDownloadView(GenericAPIView):
     def get(self, request, hexsha: str, *args, **kwargs):
         project: Project = self.get_object()
 
-        try:
-            obj = project.git_repo.find_blob(hexsha)
+        for retry_attempt in range(2):
+            with contextlib.suppress(GitBlobNotFoundError):
+                obj = project.git_repo.find_blob(hexsha)
+                return DownloadResponseFromBlob(
+                    obj=obj.content, filename=obj.name, attachment=True
+                )
 
-        except GitBlobNotFoundError:
-            return ErrorResponse(
-                {"error": f"Object id=`{hexsha}` not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            if retry_attempt == 0:
+                # Ensure we pull the project to update just in case
+                project.checkout_commit_or_default_branch()
 
-        return DownloadResponseFromBlob(
-            obj=obj.content, filename=obj.name, attachment=True
+        return ErrorResponse(
+            {"error": f"Object id=`{hexsha}` not found."},
+            status=status.HTTP_404_NOT_FOUND,
         )
