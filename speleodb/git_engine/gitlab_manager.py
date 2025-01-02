@@ -1,6 +1,5 @@
 import json
 import logging
-import pathlib
 import uuid
 from functools import wraps
 
@@ -10,7 +9,7 @@ import gitlab.exceptions
 from cachetools import TTLCache
 from cachetools import cached
 from django.conf import settings
-from gitlab.v4.objects.projects import ProjectManager as Gitlab_ProjectManager
+from gitlab.v4.objects.projects import Project
 
 from speleodb.common.models import Option
 from speleodb.git_engine.core import GitRepo
@@ -36,10 +35,14 @@ def check_initialized(func):
                 raise GitlabError from e
 
         try:
+            if self._gl is None:
+                raise GitlabError("`_gl` is None. Not authenticated with Gitlab.")  # noqa: TRY301
             return func(self, *args, **kwargs)
+
         except GitlabError:
             # Force re-auth just in case
             self._is_initialized = False
+            raise
 
     return _impl
 
@@ -79,10 +82,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             self._gl.enable_debug()
 
     @check_initialized
-    def create_or_clone_project(self, project_id: uuid.UUID) -> pathlib.Path | None:
-        if self._gl is None:
-            return None
-
+    def create_or_clone_project(self, project_id: uuid.UUID) -> GitRepo | None:
         project_dir = settings.DJANGO_GIT_PROJECTS_DIR / str(project_id)
         git_url = f"https://oauth2:{self._gitlab_token}@{self._gitlab_instance}/{self._gitlab_group_name}/{project_id}.git"
 
@@ -120,10 +120,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
     # cache data for no longer than ten minutes
     @cached(cache=TTLCache(maxsize=100, ttl=600))
     @check_initialized
-    def _get_project(self, project_id: uuid.UUID) -> Gitlab_ProjectManager:
-        if self._gl is None:
-            return None
-
+    def _get_project(self, project_id: uuid.UUID) -> Project | None:
         try:
             return self._gl.projects.get(f"{self._gitlab_group_name}/{project_id}")
         except gitlab.exceptions.GitlabHttpError:
@@ -132,9 +129,6 @@ class _GitlabManager(metaclass=SingletonMetaClass):
 
     @check_initialized
     def get_commit_history(self, project_id: uuid.UUID) -> list | None:
-        if self._gl is None:
-            return None
-
         try:
             try:
                 project = self._get_project(project_id)

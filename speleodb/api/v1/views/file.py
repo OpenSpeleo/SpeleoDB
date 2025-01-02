@@ -22,11 +22,11 @@ from speleodb.api.v1.permissions import UserOwnsProjectMutex
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import UploadSerializer
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
+from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors.auto_selector import AutoSelector
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import ProjectNotFound
-from speleodb.utils.gitlab_manager import GitlabError
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import DownloadResponseFromFile
 from speleodb.utils.response import ErrorResponse

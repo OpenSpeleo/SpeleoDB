@@ -20,10 +20,10 @@ from django_countries.fields import CountryField
 
 from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitRepo
+from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 from speleodb.utils.exceptions import ProjectNotFound
-from speleodb.utils.gitlab_manager import GitlabManager
 
 if TYPE_CHECKING:
     import datetime

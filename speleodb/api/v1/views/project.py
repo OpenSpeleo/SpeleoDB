@@ -11,9 +11,9 @@ from speleodb.api.v1.permissions import UserHasAdminAccess
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
+from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
 from speleodb.utils.api_decorators import method_permission_classes
-from speleodb.utils.gitlab_manager import GitlabError
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
