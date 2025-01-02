@@ -45,7 +45,7 @@
                      <div class=" contents mt-4">
                         <div class="grid grid-cols-12 from-gray-100-to-white flex items-baseline rounded-t-lg border border-b-0 bg-gradient-to-t px-3 py-2 border-gray-600">
                            <div class="sm:col-span-12 md:col-span-9 flex flex-none items-center truncate text-gray-300">
-                              <span id="commit-author"></span>
+                              <span id="commit-author" class="font-bold"></span>
                               <span id="commit-message" class="ml-4 text-sm text-gray-400 truncate"></span>
                            </div>
                            <div class="md:col-span-3 hidden md:flex items-center truncate ml-auto text-sm text-gray-300">
@@ -68,9 +68,17 @@
 
 <!-- ============================ ROW TEMPLATES =========================== -->
 
- <!-- FOLDER TEMPLATE -->
+<!-- CURRENT DIR TEMPLATE -->
 
- <li id="row-template-folder" class="grid h-10 grid-cols-12 place-content-center gap-x-3 border-t px-3 border-gray-600" style="display: none">
+<li id="row-template-currentdir" class="grid h-10 grid-cols-12 place-content-center gap-x-3 border-t px-3 border-gray-600 bg-sky-950" style="display: none">
+   <div class="sm:col-span-12 md:col-span-12 flex text-center items-center">
+      <span class="current-gitfolder-name truncate w-full font-heavy">Current Folder: /</span>
+   </div>
+</li>
+
+<!-- FOLDER TEMPLATE -->
+
+<li id="row-template-folder" class="grid h-10 grid-cols-12 place-content-center gap-x-3 border-t px-3 border-gray-600" style="display: none">
    <div class="sm:col-span-8 md:col-span-5 flex items-center">
       <a class="gitfolder-link group flex items-center truncate hover:underline" href="#">
 
@@ -216,6 +224,16 @@ $( document ).ready(function() {
       
       // Empty the Git View
       $('#git-viewer-container').empty();
+
+      $githeader = $("#row-template-currentdir").clone();
+      // Remove the "ID" (to prevent deletion/cleanup) and make it unique
+      $githeader.removeAttr('id');
+      // Remove the "hidden" style (make it visible)
+      $githeader.removeAttr('style');
+
+      // Set the folder name:
+      $githeader.find(".current-gitfolder-name").text("Current Folder: /" + path);
+      $('#git-viewer-container').append($githeader);
 
       // Fetch the files & folders at the path requested
       data = get_files_and_folders_at_path(path);
