@@ -1,4 +1,4 @@
-from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import InMemoryUploadedFile  # noqa: I001
 from django.core.files.uploadedfile import TemporaryUploadedFile
 
 from speleodb.processors._impl.ariane import AGRFileProcessor
@@ -6,7 +6,8 @@ from speleodb.processors._impl.ariane import TMLFileProcessor
 from speleodb.processors._impl.ariane import TMLUFileProcessor
 from speleodb.processors._impl.compass import DATFileProcessor
 from speleodb.processors._impl.compass import MAKFileProcessor
-from speleodb.processors._impl.misc import DumpProcessor
+from speleodb.processors._impl.dump import DumpProcessor
+
 from speleodb.processors.base import Artifact
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Format
@@ -46,10 +47,14 @@ class AutoSelector:
                     except TypeError:  # Only allows downloads
                         continue
 
+                # if no known processor is matching
+                return BaseFileProcessor
+
             case Format.FileFormat.DUMP:
                 return DumpProcessor
 
-        return BaseFileProcessor
+            case _:
+                return BaseFileProcessor
 
     @staticmethod
     def get_upload_processor(

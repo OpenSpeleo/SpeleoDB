@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.http import Http404
+from django.urls import reverse
 from git.exc import GitCommandError
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -196,13 +197,15 @@ class FileUploadView(GenericAPIView):
 
                             with timed_section("File Management"):
                                 if fileformat == Format.FileFormat.AUTO:
-                                    fileformat = processor.ASSOC_FILEFORMAT
+                                    target_fileformat = processor.ASSOC_FILEFORMAT
+                                else:
+                                    target_fileformat = fileformat
 
                                 # Associates the project with the format, ignore if
                                 # already done. We have to start with this in order to
                                 # have: `commit_date` > creation_date.
                                 f_obj, created = Format.objects.get_or_create(
-                                    project=project, _format=fileformat
+                                    project=project, _format=target_fileformat
                                 )
                                 format_assoc[f_obj] = format_assoc[f_obj] or created
 
@@ -233,6 +236,17 @@ class FileUploadView(GenericAPIView):
                                 ],
                                 "message": commit_message,
                                 "hexsha": hexsha,
+                                "browser_url": (
+                                    reverse(
+                                        "private:project_revision_explorer",
+                                        kwargs={
+                                            "project_id": project.id,
+                                            "hexsha": hexsha,
+                                        },
+                                    )
+                                    if hexsha is not None
+                                    else None
+                                ),
                                 "project": ProjectSerializer(
                                     project, context={"user": request.user}
                                 ).data,

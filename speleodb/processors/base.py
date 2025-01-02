@@ -86,6 +86,7 @@ class Artifact:
 class BaseFileProcessor:
     ALLOWED_EXTENSIONS = ["*"]
     ALLOWED_MIMETYPES = ["*"]
+    TARGET_FOLDER = "misc"
     TARGET_SAVE_FILENAME = None
     TARGET_DOWNLOAD_FILENAME = None
     ASSOC_FILEFORMAT = Format.FileFormat.OTHER
@@ -134,7 +135,12 @@ class BaseFileProcessor:
             else file.name
         )
 
-        target_path = self.project.git_repo.path / filename
+        folder = self.project.git_repo.path
+        if self.TARGET_FOLDER is not None:
+            folder: Path = folder / self.TARGET_FOLDER
+            folder.mkdir(parents=True, exist_ok=True)
+
+        target_path = folder / filename
 
         with timed_section("File copy to project dir"):
             file.write(path=target_path)
@@ -165,8 +171,6 @@ class BaseFileProcessor:
 
         except PermissionError as e:
             raise RuntimeError from e
-
-        # 2.
 
         # 2. Generate the filename that will be seen in the browser
         if self.hexsha is not None:
