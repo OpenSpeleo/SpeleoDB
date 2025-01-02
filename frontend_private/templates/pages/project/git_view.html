@@ -79,7 +79,7 @@
 <!-- FOLDER TEMPLATE -->
 
 <li id="row-template-folder" class="grid h-10 grid-cols-12 place-content-center gap-x-3 border-t px-3 border-gray-600" style="display: none">
-   <div class="sm:col-span-8 md:col-span-5 flex items-center">
+   <div class="sm:col-span-12 md:col-span-7 flex items-center">
       <a class="gitfolder-link group flex items-center truncate hover:underline" href="#">
 
          <svg class="flex-none mr-2 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16">
@@ -89,6 +89,8 @@
 
       </a>
    </div>
+   <a class="commit-message md:col-span-3 hidden md:flex items-center font-mono text-sm text-gray-400 hover:underline truncate" href="#"></a>
+   <a class="commit-time-ago md:col-span-2 hidden md:flex truncate ml-auto text-sm text-gray-400 items-center hover:underline" href="#"></a>
 </li>
 
 <!-- FILE TEMPLATE -->
@@ -120,6 +122,21 @@
 <div id="loading_spinner" class="loading"></div>
 
 {% endblock right_panel %}
+
+
+{% block extra_js %}
+{% if debug %}
+<script src="{% static 'private/js/vendors/moment.js' %}"></script>
+{% else %}
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js" 
+    integrity="sha512-+H4iLjY3JsKiF2V6N366in5IQHj2uEsGV7Pp/GRcm0fn76aPAk5V8xB6n8fQhhSonTqTXs/klFz4D0GIn6Br9g==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+{% endif %}
+
+{% endblock extra_js %}
 
 
 {% block inline_extra_js %}
@@ -171,37 +188,50 @@ $( document ).ready(function() {
          folders: []
       };
 
-      if (path === "") {
-         // Root-level files and folders
-         globalGitTree.files.forEach(file => {
-            const parts = file.path.split('/');
+      const normalizedPath = path === "" ? path : path.endsWith("/") ? path : path + "/";
+
+      globalGitTree.files.forEach(file => {
+         if (path === "" || file.path.startsWith(normalizedPath)) {
+            const relativePath = file.path.substring(normalizedPath.length);
+            const parts = path == "" ? relativePath.split('/') : file.path.substring(normalizedPath.length).split("/");
+            const folder_name = parts[0];
+
             if (parts.length === 1) {
-                  result.files.push(file);
-               } else if (!result.folders.some(folder => folder.name === parts[0])) {
+               // We are processing a file
+               result.files.push(file);
+            } 
+            else {
+               const index = result.folders.findIndex(folder => folder.name === folder_name);
+               if (index !== -1) {
+                  // Use moment.js to parse the datetime string with custom format
+                  // Let's find if there's a newer commit.
+                  const currentDate = moment(result.folders[index].datetime, "YYYY/MM/DD HH:mm");
+                  const newDate = moment(file.commit.authored_date, "YYYY/MM/DD HH:mm");
+                  
+                  if (newDate.isAfter(currentDate)) {
+                     result.folders[index] = {
+                        ...result.folders[index], // copies all existing properties
+                        message: file.commit.message,
+                        dt_since: file.commit.dt_since,
+                        commit_url: file.commit.url,
+                        datetime: file.commit.authored_date
+                     };
+                 }
+               } else {
                   result.folders.push({
-                      name: parts[0],
-                      path: `${parts[0]}`
-                  });
-               }
-         });
-      } else {
-         // Files and folders within the specified directory
-         const normalizedPath = path.endsWith("/") ? path : path + "/";
-         globalGitTree.files.forEach(file => {
-            if (file.path.startsWith(normalizedPath)) {
-               const relativePath = file.path.substring(normalizedPath.length);
-               const parts = relativePath.split('/');
-               if (parts.length === 1) {
-                  result.files.push(file);
-               } else if (!result.folders.some(folder => folder.name === parts[0])) {
-                  result.folders.push({
-                     name: parts[0],
-                     path: `${normalizedPath}${parts[0]}`
+                     name: folder_name,
+                     path: `${normalizedPath}${folder_name}`,
+                     message: file.commit.message,
+                     dt_since: file.commit.dt_since,
+                     commit_url: file.commit.url,
+                     datetime: file.commit.authored_date
                   });
                }
             }
-         });
+         }
+      });
 
+      if (path != "") {
          // Add a reference to the parent directory
          const parentPath = path.split('/').slice(0, -1).join('/') || "/";
          result.folders.unshift({
@@ -210,10 +240,12 @@ $( document ).ready(function() {
          });
       }
 
-      // Sort folders alphabetically
-      result.folders.sort();
-  
       // Sort files alphabetically by their "name" property
+      result.folders.sort((a, b) => {
+         if (a.name < b.name) return -1;
+         if (a.name > b.name) return 1;
+         return 0;
+      });
       result.files.sort((a, b) => a.name.localeCompare(b.name));
 
       return result;
@@ -257,6 +289,8 @@ $( document ).ready(function() {
          });
 
          $folder_row.find(".gitfolder-name").text(folder.name);
+         $folder_row.find(".commit-message").attr("href", folder.commit_url).text(folder.message);
+         $folder_row.find(".commit-time-ago").attr("href", folder.commit_url).text(folder.dt_since);
 
          // FINALLY: Append the populated row to the table body
          // ---------------------------------------------------------------------
