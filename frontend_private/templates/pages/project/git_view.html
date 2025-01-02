@@ -36,7 +36,7 @@
                                  <path d="M12 8l0 4l2 2"></path>
                                  <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"></path>
                                </svg>
-                              <span class="mr-1 text-gray-600">History: <span id="n-commits-count"></span> commits</span>
+                              <span class="mr-1 text-gray-600">History: <span id="n-commits-count">#</span> commits</span>
                            </a>
                        </div>
 
@@ -45,16 +45,18 @@
                      <div class=" contents mt-4">
                         <div class="grid grid-cols-12 from-gray-100-to-white flex items-baseline rounded-t-lg border border-b-0 bg-gradient-to-t px-3 py-2 border-gray-600">
                            <div class="sm:col-span-12 md:col-span-9 flex flex-none items-center truncate text-gray-300">
-                              <span id="commit-author"></span>:
+                              <span id="commit-author"></span>
                               <span id="commit-message" class="ml-4 text-sm text-gray-400 truncate"></span>
                            </div>
                            <div class="md:col-span-3 hidden md:flex items-center truncate ml-auto text-sm text-gray-300">
                               <span id="commit-hexsha_short" class="mr-1"></span>&#20;-&#20;<span id="commit-dt_since"></span>
                            </div>
                         </div>
-
+                        
+                        <!-- ============================ Git View Container =========================== -->
                         <ul id="git-viewer-container" class="mb-8 rounded-b-lg border border-t-0 border-gray-600 bg-gray-900/50">
                         </ul>
+
                      </div>
                   </section>
                </div>
@@ -69,7 +71,7 @@
  <!-- FOLDER TEMPLATE -->
 
  <li id="row-template-folder" class="grid h-10 grid-cols-12 place-content-center gap-x-3 border-t px-3 border-gray-600" style="display: none">
-   <div class="sm:col-span-8 md:col-span-3 flex items-center">
+   <div class="sm:col-span-8 md:col-span-5 flex items-center">
       <a class="gitfolder-link group flex items-center truncate hover:underline" href="#">
 
          <svg class="flex-none mr-2 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16">
@@ -84,7 +86,7 @@
 <!-- FILE TEMPLATE -->
 
 <li id="row-template-file" class="grid h-10 grid-cols-12 place-content-center gap-x-3 border-t px-3 border-gray-600" style="display: none">
-   <div class="sm:col-span-8 md:col-span-3 flex items-center">
+   <div class="sm:col-span-8 md:col-span-5 flex items-center">
       <a class="download-file-link group flex items-center truncate hover:underline" download="" href="#">
 
          <svg class="flex-none mr-2 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16">
@@ -101,7 +103,7 @@
          </svg>
       </div>
    </a>
-   <a class="commit-message md:col-span-5 hidden md:flex items-center font-mono text-sm text-gray-400 hover:underline truncate" href="#"></a>
+   <a class="commit-message md:col-span-3 hidden md:flex items-center font-mono text-sm text-gray-400 hover:underline truncate" href="#"></a>
    <a class="commit-time-ago md:col-span-2 hidden md:flex truncate ml-auto text-sm text-gray-400 items-center hover:underline" href="#"></a>
 </li>
 
@@ -131,7 +133,7 @@ $( document ).ready(function() {
          async : false,
          success: function(data){
             if (data.success && data.data) {
-               $('#commit-author').text(data.data.commit.author_name);
+               $('#commit-author').text(data.data.commit.author_name + ": ");
                $('#commit-message').text(data.data.commit.message);
                $('#commit-hexsha_short').text(data.data.commit.hexsha_short);
                $('#commit-dt_since').text(data.data.commit.dt_since);
