@@ -15,8 +15,8 @@ from speleodb.api.v1.serializers import GitFileListSerializer
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.core import GitFile
 from speleodb.git_engine.exceptions import GitCommitNotFoundError
+from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
-from speleodb.utils.gitlab_manager import GitlabError
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 

@@ -514,7 +514,7 @@ class GitRepo(Repo):
 
     @property
     def commits(self) -> Generator[GitCommit]:
-        from speleodb.utils.gitlab_manager import GitlabManager
+        from speleodb.git_engine.gitlab_manager import GitlabManager
 
         for commit in self.get_commits():
             if commit.message != GitlabManager.FIRST_COMMIT_NAME:
@@ -549,7 +549,7 @@ class GitRepo(Repo):
 
     @property
     def commit_count(self):
-        from utils.gitlab_manager import GitlabManager
+        from speleodb.git_engine.gitlab_manager import GitlabManager
 
         # Memoery efficient to compute the length of a generator
         return sum(
