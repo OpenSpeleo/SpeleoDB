@@ -175,16 +175,16 @@
                 success: function (data) {
                     $("#loading_spinner").hide();
 
-                    if (data["hexsha"] === null) {
+                    if (data.data.hexsha === null) {
                         $("#modal_error_txt").text("The file(s) uploaded is/are identical to the one(s) currently stored.");
                         $("#modal_error").css('display', 'flex');
                     } else {
-                        $("#modal_success_txt").html("The file has been succesfully uploaded.");
+                        $("#modal_success_txt").html("The file(s) has/have been succesfully uploaded.");
                         $("#modal_success").css('display', 'flex');
 
                         window.setTimeout(function(){
                             // Redirect to project revisions
-                            window.location.href = "{% url 'private:project_revisions' project_id=project.id %}";
+                            window.location.href = data.data.browser_url;
                         }, 2000);
                     }
                 },

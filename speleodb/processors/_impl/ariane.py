@@ -7,6 +7,7 @@ class TMLFileProcessor(BaseFileProcessor):
     ALLOWED_MIMETYPES = ["application/octet-stream", "application/zip"]
     ASSOC_FILEFORMAT = Format.FileFormat.ARIANE_TML
 
+    TARGET_FOLDER = None
     TARGET_SAVE_FILENAME = "project.tml"
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.tml"
 
@@ -14,14 +15,18 @@ class TMLFileProcessor(BaseFileProcessor):
 class TMLUFileProcessor(BaseFileProcessor):
     ALLOWED_EXTENSIONS = [".tmlu"]
     ALLOWED_MIMETYPES = ["application/octet-stream", "text/plain"]
+    ASSOC_FILEFORMAT = Format.FileFormat.ARIANE_TMLU
+
+    TARGET_FOLDER = None
     TARGET_SAVE_FILENAME = "project.tmlu"
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.tmlu"
-    ASSOC_FILEFORMAT = Format.FileFormat.ARIANE_TMLU
 
 
 class AGRFileProcessor(BaseFileProcessor):
     ALLOWED_EXTENSIONS = [".agr"]
     ALLOWED_MIMETYPES = ["application/octet-stream", "text/plain"]
+    ASSOC_FILEFORMAT = Format.FileFormat.ARIANE_AGR
+
+    TARGET_FOLDER = None
     TARGET_SAVE_FILENAME = "project.agr"
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.agr"
-    ASSOC_FILEFORMAT = Format.FileFormat.ARIANE_AGR
