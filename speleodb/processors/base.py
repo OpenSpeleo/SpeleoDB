@@ -11,95 +11,64 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.utils.text import slugify
 from django.utils.timezone import get_default_timezone
+from git.exc import GitCommandError
 
+from speleodb.git_engine.core import GitCommit
+from speleodb.git_engine.exceptions import GitBaseError
+from speleodb.processors.artifact import Artifact
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.utils.timing_ctx import timed_section
 
 
-class Artifact:
-    def __init__(self, file: InMemoryUploadedFile | TemporaryUploadedFile) -> None:
-        if not isinstance(file, (InMemoryUploadedFile, TemporaryUploadedFile)):
-            raise TypeError(
-                "Expected `InMemoryUploadedFile` or `TemporaryUploadedFile`, received: "
-                f"{type(file)}"
-            )
-        self._file = file
-        self._path = None
-
-    @property
-    def file(self) -> InMemoryUploadedFile | TemporaryUploadedFile:
-        return self._file
-
-    @property
-    def name(self) -> str:
-        return self._file.name
-
-    @property
-    def path(self) -> Path:
-        if self._path is None:
-            raise RuntimeError(
-                f"This {self.__class__.__name__} has not been saved to disk yet."
-            )
-        return self._path
-
-    @property
-    def extension(self) -> str:
-        return Path(self.name).suffix.lower()
-
-    @property
-    def content_type(self) -> str | None:
-        return self.file.content_type
-
-    def read(self) -> str:
-        return self.file.read()
-
-    def write(self, path: Path) -> None:
-        if self._path is not None:
-            raise RuntimeError(f"This file as been already saved at: `{self.path}`.")
-
-        with path.open(mode="wb") as f:
-            f.write(self.read())
-
-        self._path = path
-
-    def assert_valid(self, allowed_mimetypes, allowed_extensions) -> None:
-        if not isinstance(allowed_mimetypes, (list, tuple)):
-            raise TypeError(f"Unexpected type: {type(allowed_mimetypes)=}")
-
-        if not isinstance(allowed_extensions, (list, tuple)):
-            raise TypeError(f"Unexpected type: {type(allowed_mimetypes)=}")
-
-        if self.content_type not in allowed_mimetypes and "*" not in allowed_mimetypes:
-            raise ValidationError(
-                f"Invalid file type received: `{self.content_type}`, "
-                f"expected one of: {allowed_mimetypes}"
-            )
-
-        if self.extension not in allowed_extensions and "*" not in allowed_extensions:
-            raise ValidationError(
-                f"Invalid file extension received: `{self.extension}`, "
-                f"expected one of: {allowed_extensions}"
-            )
-
-
 class BaseFileProcessor:
     ALLOWED_EXTENSIONS = ["*"]
     ALLOWED_MIMETYPES = ["*"]
+
+    ASSOC_FILEFORMAT = Format.FileFormat.OTHER
+
     TARGET_FOLDER = "misc"
     TARGET_SAVE_FILENAME = None
     TARGET_DOWNLOAD_FILENAME = None
-    ASSOC_FILEFORMAT = Format.FileFormat.OTHER
 
-    def __init__(self, project: Project, hexsha: str | None = None):
-        if not isinstance(project, Project):
-            raise TypeError(f"Invalid project type: {type(project)}")
+    DATETIME_FORMAT = "%Y-%m-%d_%Hh%M"
 
-        if hexsha is not None and not self.validate_hexsha(hexsha):
-            raise ValueError(f"Invalid Git SHA value: `{hexsha}`")
+    def __init__(self, project: Project, hexsha: str | None = None) -> None:
+        self.project = project
+        self.hexsha = hexsha
 
-        self._project = project
-        self._hexsha = hexsha
+    # -------------------------- Getters & Setters -------------------------- #
+
+    @property
+    def project(self) -> Project:
+        return self._project
+
+    @project.setter
+    def project(self, value: Project) -> None:
+        if not isinstance(value, Project):
+            raise TypeError(f"Invalid Project type: `{type(value)}`.")
+
+        self._project = value
+
+    @property
+    def hexsha(self) -> str | None:
+        return self._hexsha
+
+    @hexsha.setter
+    def hexsha(self, value: str) -> None:
+        if value is not None and not self.validate_hexsha(value):
+            raise ValueError(f"Invalid Git SHA value: `{value}`.")
+
+        self._hexsha = value
+
+    @property
+    def source_f(self) -> Path:
+        source_f = self.project.git_repo.path / self.TARGET_SAVE_FILENAME
+        if not source_f.is_file():
+            raise ValidationError(f"Impossible to find the file: `{source_f}` ...")
+        return source_f
+
+    # ------------------------------ Validators ----------------------------- #
 
     def validate_hexsha(self, hexsha: str) -> bool:
         """
@@ -112,83 +81,129 @@ class BaseFileProcessor:
         # Return True if the hexsha matches the pattern, else False
         return bool(re.match(git_sha_pattern, hexsha))
 
-    @property
-    def project(self) -> Project:
-        return self._project
-
-    @property
-    def hexsha(self) -> str | None:
-        return self._hexsha
+    # ----------------------------- Public APIs ----------------------------- #
 
     def add_file_to_project(
         self, file: InMemoryUploadedFile | TemporaryUploadedFile
     ) -> Artifact:
-        file = Artifact(file)
-        file.assert_valid(
+        artifact = Artifact(file)
+        artifact.assert_valid(
             allowed_extensions=self.ALLOWED_EXTENSIONS,
             allowed_mimetypes=self.ALLOWED_MIMETYPES,
         )
 
-        filename = (
-            self.TARGET_SAVE_FILENAME
-            if self.TARGET_SAVE_FILENAME is not None
-            else file.name
+        target_path = self._get_storage_path(artifact=artifact)
+
+        with timed_section("File copy to project dir"):
+            artifact.write(path=target_path)
+
+        return artifact
+
+    def get_file_for_download(self, target_f: Path) -> Path:
+        if not isinstance(target_f, Path):
+            target_f = Path(target_f)
+
+        # 1. Fetch the commit requested by the user - pull repository if needed.
+        try:
+            if self.hexsha is not None:
+                try:
+                    commit = self.project.git_repo.commit(self.hexsha)
+                except ValueError:
+                    # In case the commit doesn't exist - pull and retry
+                    self.project.git_repo.pull()
+                    commit = self.project.git_repo.commit(self.hexsha)
+            else:
+                # If we select the HEAD commit - no other choice than pull first
+                self.project.git_repo.pull()
+                commit = self.project.git_repo.head.commit
+
+            if commit is None:
+                raise ValueError  # noqa: TRY301
+
+        except (ValueError, GitBaseError, GitCommandError) as e:
+            raise RuntimeError(f"Impossible to find commit: `{self.hexsha}`") from e
+
+        # 2. Generate or copy the file to be downloaded to path `target_f`:
+        # What file(s) to download is determined by the `Processor` class.
+        try:
+            self._generate_or_copy_file_for_download(commit=commit, target_f=target_f)
+
+            if not target_f.is_file():
+                raise RuntimeError(f"The file `{target_f}` does not exist.")
+
+        except PermissionError as e:
+            raise RuntimeError from e
+
+        # 3. Fetch the date at which the commit was submitted.
+        commit_date = time.gmtime(commit.committed_date)
+
+        # 4. Convert `time.struct_time` to datetime to be "timezone-aware"
+        naive_datetime = datetime(*commit_date[:6], tzinfo=UTC)
+        tz_aware_datetime = naive_datetime.astimezone(tz=get_default_timezone())
+
+        # 5. Generate the filename that will be seen in the browser
+        return (
+            self.TARGET_DOWNLOAD_FILENAME.format(
+                project_name=slugify(self.project.name, allow_unicode=False).lower(),
+                timestamp=tz_aware_datetime.strftime(self.DATETIME_FORMAT),
+            )
+            if self.TARGET_DOWNLOAD_FILENAME is not None
+            else target_f.name
         )
+
+    # ----------------------------- Private APIs ----------------------------- #
+
+    # ~~~~~~~~~~~~~ Download API ~~~~~~~~~~~~~ #
+
+    def _generate_or_copy_file_for_download(
+        self, commit: GitCommit, target_f: Path
+    ) -> None:
+        with contextlib.suppress(shutil.SameFileError):
+            shutil.copy(src=self.source_f, dst=target_f)
+
+    # ~~~~~~~~~~~~~ Upload APIs ~~~~~~~~~~~~~ #
+
+    def _get_storage_path(self, artifact: Artifact) -> Path:
+        """This returns the full file path where the file will be stored.
+        If needed, the corresponding folder will be created."""
 
         folder = self.project.git_repo.path
         if self.TARGET_FOLDER is not None:
             folder: Path = folder / self.TARGET_FOLDER
             folder.mkdir(parents=True, exist_ok=True)
 
-        target_path = folder / filename
+        filename = self._validate_and_get_storage_name(folder=folder, artifact=artifact)
 
-        with timed_section("File copy to project dir"):
-            file.write(path=target_path)
+        return folder / filename
 
-        return file
+    def _validate_and_get_storage_name(self, folder: Path, artifact: Artifact) -> str:
+        """This generates the filename to be used while stored in git.
+        This function may implement some collision avoidance logic.
 
-    def preprocess_file_before_download(self, destination_f: Path) -> None:
-        with contextlib.suppress(shutil.SameFileError):
-            shutil.copy(src=self.source_f, dst=destination_f)
+        This function is not designed to be subclassed - use `_get_storage_name` instead
 
-    @property
-    def source_f(self) -> Path:
-        source_f = self.project.git_repo.path / self.TARGET_SAVE_FILENAME
-        if not source_f.is_file():
-            raise ValidationError(f"Impossible to find the file: `{source_f}` ...")
-        return source_f
+        If collision is detected - raises `FileExistsError`.
+        """
 
-    def get_file_for_download(self, target_f: Path) -> Path:
-        if isinstance(target_f, str):
-            target_f = Path(target_f)
+        if not isinstance(folder, Path):
+            folder = Path(folder)
 
-        if not isinstance(target_f, Path):
-            raise TypeError(f"Unexpected `target_f` type received: {type(target_f)}")
+        if not folder.exists():
+            raise FileNotFoundError(f"The folder: `{folder}` does not exists.")
 
-        # 1. Prepare the file for download
-        try:
-            self.preprocess_file_before_download(destination_f=target_f)
+        if not folder.is_dir():
+            raise TypeError(f"The folder: `{folder}` is not a folder.")
 
-        except PermissionError as e:
-            raise RuntimeError from e
-
-        # 2. Generate the filename that will be seen in the browser
-        if self.hexsha is not None:
-            commit = self.project.git_repo.commit(self.hexsha)
-        else:
-            commit = self.project.git_repo.head.commit
-
-        commit_date = time.gmtime(commit.committed_date)
-
-        # 3. Convert `time.struct_time` to datetime to be "timezone-aware"
-        naive_datetime = datetime(*commit_date[:6], tzinfo=UTC)
-        tz_aware_datetime = naive_datetime.astimezone(tz=get_default_timezone())
-
-        return (
-            self.TARGET_DOWNLOAD_FILENAME.format(
-                project_name=slugify(self.project.name, allow_unicode=False).lower(),
-                timestamp=tz_aware_datetime.strftime("%Y-%m-%d_%Hh%M"),
+        if not isinstance(artifact, Artifact):
+            raise TypeError(
+                f"The artifact `{artifact}` is of unknown type: `{type(artifact)}`."
             )
-            if self.TARGET_DOWNLOAD_FILENAME is not None
-            else target_f.name
+
+        return self._get_storage_name(folder=folder, artifact=artifact)
+
+    def _get_storage_name(self, folder: Path, artifact: Artifact) -> str:
+        return (
+            self.TARGET_SAVE_FILENAME
+            if self.TARGET_SAVE_FILENAME is not None
+            else artifact.name
         )

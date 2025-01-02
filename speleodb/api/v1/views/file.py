@@ -209,11 +209,18 @@ class FileUploadView(GenericAPIView):
                                 )
                                 format_assoc[f_obj] = format_assoc[f_obj] or created
 
-                                with timed_section("File copy to project"):
-                                    uploaded_file = processor.add_file_to_project(
-                                        file=file
+                                try:
+                                    with timed_section("File copy to project"):
+                                        uploaded_file = processor.add_file_to_project(
+                                            file=file
+                                        )
+                                        uploaded_files.append(uploaded_file)
+                                except FileExistsError:
+                                    logger.info(
+                                        f"File collision detected for: `{file.name}` "
+                                        "- Skipping ..."
                                     )
-                                    uploaded_files.append(uploaded_file)
+                                    continue
 
                     with timed_section(f"GIT Commit and Push: `{file.name}`"):
                         # Finally commit the project - None if project not dirty
@@ -365,6 +372,9 @@ class BlobDownloadView(GenericAPIView):
     def get(self, request, hexsha: str, *args, **kwargs):
         project: Project = self.get_object()
 
+        # Using a retry-loop to prevent "pulling the repo" first.
+        # If - by any chance - the blob is already known by GIT, we can reply fast
+        # Otherwise, we detect the blob to not be found and pull the repo and try again.
         for retry_attempt in range(2):
             with contextlib.suppress(GitBlobNotFoundError):
                 obj = project.git_repo.find_blob(hexsha)

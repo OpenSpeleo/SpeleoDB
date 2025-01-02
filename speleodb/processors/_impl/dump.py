@@ -13,10 +13,8 @@ class DumpProcessor(BaseFileProcessor):
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.zip"
     ASSOC_FILEFORMAT = Format.FileFormat.DUMP
 
-    def preprocess_file_before_download(self, destination_f: Path) -> None:
-        with zipfile.ZipFile(
-            destination_f, "w", compression=zipfile.ZIP_DEFLATED
-        ) as zipf:
+    def _generate_or_copy_file_for_download(self, target_f: Path) -> None:
+        with zipfile.ZipFile(target_f, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
             try:
                 try:
                     commit = self.project.git_repo.commit(self.hexsha)
