@@ -19,12 +19,12 @@ class UploadFormatsConverter(BaseChoicesConverter):
 
 urlpatterns = [
     path(
-        "<str:repo_name>.git/info/<str:command>",
+        "<uuid:id>.git/info/<str:command>",
         InfoRefsView.as_view(),
-        name="git_proxy",
+        name="git_info",
     ),
     path(
-        "<str:repo_name>.git/<git_service:service>",
+        "<uuid:id>.git/<git_service:service>",
         ServiceView.as_view(),
         name="git_service",
     ),

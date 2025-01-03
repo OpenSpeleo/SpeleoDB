@@ -8,13 +8,15 @@ from requests.exceptions import Timeout
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.exceptions import NotAuthenticated
+from rest_framework.generics import GenericAPIView
 from rest_framework.renderers import BaseRenderer
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
+from speleodb.api.v1.authentication import BearerAuthentication
+from speleodb.api.v1.permissions import UserHasReadAccess
+from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.common.models import Option
+from speleodb.surveys.models import Project
 from speleodb.utils.lazy_string import LazyString
 
 
@@ -23,22 +25,29 @@ class GitService(Enum):
     UPLOAD = "git-upload-pack"
 
 
-class AllEverythingRenderer(BaseRenderer):
+class AcceptEverythingRenderer(BaseRenderer):
     """
     A renderer that accepts everything and does not process anything
     """
 
     media_type = "*/*"
+    format = "api"
 
 
-class BaseGitProxyAPIView(APIView):
+class BaseGitProxyAPIView(GenericAPIView):
     """
     A DRF view that proxies Git commands (e.g., clone, push, pull) to GitLab.
     """
 
+    queryset = Project.objects.all()
+    permission_classes = [UserHasReadAccess]
+    serializer_class = ProjectSerializer
+    lookup_field = "id"
+
     authentication_classes = [
-        TokenAuthentication,
         BasicAuthentication,
+        TokenAuthentication,
+        BearerAuthentication,
     ]
 
     def __init__(self, *args, **kwargs):
@@ -54,27 +63,15 @@ class BaseGitProxyAPIView(APIView):
             lambda: Option.get_or_empty(name="GITLAB_GROUP_NAME")
         )
 
-    def handle_exception(self, exc):
-        """Override to customize error handling."""
-        if isinstance(exc, (NotAuthenticated, AuthenticationFailed)):
-            response = Response(
-                {"detail": "Authentication failed. Please provide valid credentials."},
-                status=401,
-            )
-            # Add the WWW-Authenticate header for Basic Auth
-            response["WWW-Authenticate"] = 'Basic realm="Authentication required"'
-            return response
-        return super().handle_exception(exc)
-
-    def proxy_git_request(
-        self, request, repo_name, path, query_params: dict | None = None
-    ):
+    def proxy_git_request(self, request, path: str, query_params: dict | None = None):
         """
         Forward the request to GitLab and return the response to the client.
         """
         try:
+            project: Project = self.get_object()
+
             # Construct the target GitLab URL
-            target_url = f"https://oauth2:{self._gitlab_token}@{self._gitlab_instance}/{self._gitlab_group_name}/{repo_name}.git/{path}"
+            target_url = f"https://oauth2:{self._gitlab_token}@{self._gitlab_instance}/{self._gitlab_group_name}/{project.id}.git/{path}"
 
             # Forward the request using requests with streaming
             headers = dict(request.headers.copy())
@@ -137,7 +134,7 @@ class BaseGitProxyAPIView(APIView):
 
 
 class InfoRefsView(BaseGitProxyAPIView):
-    def get(self, request, repo_name, command):
+    def get(self, request, command: str, *args, **kwargs):
         """
         Handles Git clone commands (GET for fetch).
         """
@@ -148,18 +145,15 @@ class InfoRefsView(BaseGitProxyAPIView):
             )
 
         return self.proxy_git_request(
-            request,
-            repo_name,
-            path=f"info/{command}",
-            query_params=request.query_params,
+            request, path=f"info/{command}", query_params=request.query_params
         )
 
 
 class ServiceView(BaseGitProxyAPIView):
     # Necessary to accept the custom media-types from Git
-    renderer_classes = [AllEverythingRenderer]
+    renderer_classes = [AcceptEverythingRenderer]
 
-    def post(self, request, repo_name, service):
+    def post(self, request, service: str, *args, **kwargs):
         """
         Handles Git commands (POST for push/pull).
         """
@@ -167,4 +161,4 @@ class ServiceView(BaseGitProxyAPIView):
             return JsonResponse(
                 {"error": "Invalid service"}, status=status.HTTP_400_BAD_REQUEST
             )
-        return self.proxy_git_request(request, repo_name, path=service)
+        return self.proxy_git_request(request, path=service)
