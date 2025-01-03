@@ -3,7 +3,7 @@ from django.urls import path
 from drf_spectacular.views import SpectacularAPIView
 from drf_spectacular.views import SpectacularSwaggerView
 
-from speleodb.gitserver.urls import urlpatterns as gitserver_patterns
+from speleodb.git_proxy.urls import urlpatterns as git_proxy_patterns
 
 urlpatterns = [
     # Even when using headless, the third-party provider endpoints are stil
@@ -18,7 +18,7 @@ urlpatterns = [
 # API URLS
 urlpatterns += [
     # Git URLs
-    path("git/", include(gitserver_patterns)),
+    path("git/", include(git_proxy_patterns)),
     # API base url
     path("api/", include("speleodb.api_router")),
     path("api/schema/", SpectacularAPIView.as_view(), name="api-schema"),

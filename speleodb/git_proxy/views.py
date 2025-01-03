@@ -103,7 +103,6 @@ class BaseGitProxyAPIView(GenericAPIView):
                 if (
                     header_key
                     not in [
-                        "accept-ranges",
                         "connection",
                         "content-length",
                         "nel",

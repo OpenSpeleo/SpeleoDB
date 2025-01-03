@@ -3,13 +3,13 @@
 
 from django.urls import path
 
-from speleodb.gitserver.views import GitService
-from speleodb.gitserver.views import InfoRefsView
-from speleodb.gitserver.views import ServiceView
+from speleodb.git_proxy.views import GitService
+from speleodb.git_proxy.views import InfoRefsView
+from speleodb.git_proxy.views import ServiceView
 from speleodb.utils.url_converters import BaseChoicesConverter
 from speleodb.utils.url_converters import register_converter
 
-app_name = "gitserver"
+app_name = "git_proxy"
 
 
 @register_converter("git_service")

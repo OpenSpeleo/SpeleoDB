@@ -142,7 +142,7 @@ LOCAL_APPS = [
     # API Apps
     "speleodb.api.v1",
     # Git Apps
-    "speleodb.gitserver",
+    "speleodb.git_proxy",
     # Object Apps
     "speleodb.common",
     "speleodb.surveys",
