@@ -15,7 +15,7 @@ class TestTokenAuth(BaseAPITestCase):
             endpoint,
             {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD()},
         )
-        assert response.status_code == status.HTTP_200_OK, response.status_code
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         target = {
             "success": True,
@@ -32,7 +32,7 @@ class TestTokenAuth(BaseAPITestCase):
 
         auth = f"{token_header} {self.token.key}"
         response = self.client.get(endpoint, headers={"authorization": auth})
-        assert response.status_code == status.HTTP_200_OK, response.status_code
+        assert response.status_code == status.HTTP_200_OK, response.data
 
     @parameterized.expand(
         named_product(method=["POST", "PUT", "PATCH"], is_authenticated=[True, False])
@@ -61,7 +61,7 @@ class TestTokenAuth(BaseAPITestCase):
             status.HTTP_200_OK if method.upper() == "POST" else status.HTTP_201_CREATED
         )
         assert response.status_code == expected_status, (
-            response.status_code,
+            response.data,
             expected_status,
             method,
         )
@@ -85,7 +85,7 @@ class TestTokenAuth(BaseAPITestCase):
             reverse("api:v1:auth_token"),
             {"email": self.user.email, "password": "YeeOfLittleFaith"},
         )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.status_code
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
         assert "token" not in response.data, response.data
         assert not response.data["success"], response.data
@@ -95,7 +95,7 @@ class TestTokenAuth(BaseAPITestCase):
             reverse("api:v1:auth_token"),
             {"email": "chuck@norris.com", "password": UserFactory.DEFAULT_PASSWORD()},
         )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.status_code
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
         assert "token" not in response.data, response.data
         assert not response.data["success"], response.data
@@ -105,7 +105,7 @@ class TestTokenAuth(BaseAPITestCase):
             reverse("api:v1:auth_token"),
             {"email": self.user.email},
         )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.status_code
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
         assert "token" not in response.data, response.data
         assert not response.data["success"], response.data
@@ -120,7 +120,7 @@ class TestTokenAuth(BaseAPITestCase):
             reverse("api:v1:auth_token"),
             {"password": UserFactory.DEFAULT_PASSWORD()},
         )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.status_code
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
         assert "token" not in response.data, response.data
         assert not response.data["success"], response.data

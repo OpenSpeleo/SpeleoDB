@@ -52,7 +52,7 @@ class TestProjectInteraction(BaseAPITestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.get(endpoint, headers={"authorization": auth})
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
         assert len(response.data["data"]) == self.PROJECT_COUNT
 
         attributes = [

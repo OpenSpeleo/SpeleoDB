@@ -18,7 +18,7 @@ class TestUserAPI(BaseAPITestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.get(endpoint, headers={"authorization": auth})
 
-        assert response.status_code == status.HTTP_200_OK, response.status_code
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         target = {
             "success": True,
@@ -99,8 +99,6 @@ class TestUserAPI(BaseAPITestCase):
                 assert target == val, (target, val)
 
         else:
-            assert (
-                response.status_code == status.HTTP_400_BAD_REQUEST
-            ), response.status_code
+            assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
         return response.data

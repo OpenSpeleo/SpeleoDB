@@ -33,7 +33,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK, response.status_code
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         # Verify data can be de-serialized
         serializer = ProjectSerializer(data=response.data["data"]["project"])
@@ -100,7 +100,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
                 headers={"authorization": auth},
             )
 
-            assert response.status_code == status.HTTP_200_OK, response.status_code
+            assert response.status_code == status.HTTP_200_OK, response.data
 
             # refresh mutex data
             self.project.refresh_from_db()
@@ -132,7 +132,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
                 headers={"authorization": auth},
             )
 
-            assert response.status_code == status.HTTP_200_OK, response.status_code
+            assert response.status_code == status.HTTP_200_OK, response.data
 
             # refresh mutex data
             self.project.refresh_from_db()
@@ -176,7 +176,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK, response.status_code
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         # refresh mutex data
         self.project.refresh_from_db()
@@ -209,7 +209,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             data={"comment": test_comment},
         )
 
-        assert response.status_code == status.HTTP_200_OK, response.status_code
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         # refresh mutex data
         mutex.refresh_from_db()
@@ -249,7 +249,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN, response.status_code
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
         assert not response.data["success"], response.data
 
     @parameterized.expand(
@@ -272,5 +272,5 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN, response.status_code
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
         assert not response.data["success"], response.data

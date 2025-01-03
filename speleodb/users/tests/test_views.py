@@ -17,6 +17,7 @@
 # from speleodb.users.views import UserRedirectView
 # from speleodb.users.views import UserUpdateView
 # from speleodb.users.views import user_detail_view
+# from rest_framework import status
 
 # pytestmark = pytest.mark.django_db
 
@@ -87,7 +88,7 @@
 #         request.user = UserFactory()
 #         response = user_detail_view(request, pk=user.pk)
 
-#         assert response.status_code == HTTPStatus.OK
+#         assert response.status_code == status.HTTP_200_OK, response.data
 
 #     def test_not_authenticated(self, user: User, rf: RequestFactory):
 #         request = rf.get("/fake-url/")
@@ -96,5 +97,5 @@
 #         login_url = reverse(settings.LOGIN_URL)
 
 #         assert isinstance(response, HttpResponseRedirect)
-#         assert response.status_code == HTTPStatus.FOUND
+#         assert response.status_code == status.HTTP_302_FOUND, response.data
 #         assert response.url == f"{login_url}?next=/fake-url/"
