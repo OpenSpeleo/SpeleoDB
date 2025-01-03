@@ -176,8 +176,36 @@
                             </li>
                         </ul>
                     </div>
-                    {% if is_project_admin %}
                     <!-- Group 2 -->
+                    <div>
+                        <hr class="mt-4 mb-4" style="border-color: rgb(255 255 255 / 40%);">
+                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+
+                            <!-- Project Git Clone -->
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_git_instructions' %}bg-amber-500/30{% endif %}" href="{% url 'private:project_git_instructions' project_id=project.id %}">
+                                    {% if request.url_name == 'project_git_instructions' %}
+                                    <svg class="w-4 h-4 shrink-0 stroke-current text-amber-500 mr-2" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="1 1.67 22 19.33">
+                                    {% else %}
+                                    <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="1 1.67 22 19.33">
+                                    {% endif %}
+                                        <path d="M12 9v4"></path>
+                                        <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"></path>
+                                        <path d="M12 16h.01"></path>
+                                    </svg>
+                                    {% if request.url_name == 'project_git_instructions' %}
+                                        <span class="text-sm font-medium text-amber-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                                    {% endif %}
+                                        Git Access
+                                    </span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    {% if is_project_admin %}
+                    <!-- Group 3 -->
                     <div>
                         <hr class="mt-4 mb-4" style="border-color: rgb(255 255 255 / 40%);">
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">

@@ -309,3 +309,15 @@ class ProjectGitExplorerView(_BaseProjectView):
         data["hexsha"] = hexsha
 
         return render(request, self.template_name, data)
+
+
+class ProjectGitInstructionsView(_BaseProjectView):
+    template_name = "pages/project/git_instructions.html"
+
+    def get(self, request, project_id: str, hexsha: str | None = None):
+        try:
+            data = super().get(request, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
+
+        return render(request, self.template_name, data)

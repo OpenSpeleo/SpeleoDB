@@ -2663,6 +2663,10 @@ span.flatpickr-weekday {
   list-style-type: disc;
 }
 
+.list-chevron {
+  list-style-type: disclosure-closed;
+}
+
 .appearance-none {
   -webkit-appearance: none;
   -moz-appearance: none;

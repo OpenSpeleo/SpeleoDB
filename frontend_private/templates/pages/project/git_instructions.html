@@ -1,0 +1,73 @@
+{% extends "pages/project/base.html" %}
+{% load static i18n compress%}
+
+{% load countries %}
+
+{% block right_panel %}
+<div class="grow">
+
+    <!-- Panel body -->
+    <div class="p-6 space-y-6">
+        <h2 class="text-2xl text-slate-100 font-bold mb-16">Project - GIT instructions</h2>
+
+        {% csrf_token %}
+
+        <!-- Project Name -->
+        <section>
+            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="w-full border p-6">
+                    <h1 class="mb-6 underline font-heavy text-rose-600">! WARNING ! WARNING ! WARNING ! WARNING ! WARNING ! WARNING !</h1>
+                    <span class="block text-sm font-medium mb-1" for="name">
+                        SpeleoDB has <b>very</b> limited control over your actions if you choose to use `git` directly.</br>
+                        <b>Only and solely experienced `git` users</b> should consider using direct `git` access, you assume the entire responsability of any mistake.</br>
+                        We are not verifying, and able to prevent any definitive and permanent data loss.</br></br>
+
+                        <b>Consequently - There will be no instructions beside the absolute bare minimum on how to use `git`.</b></br>
+                        <b class="text-rose-300">If you need more informations and instructions, you should stay away!</b></br></br>
+
+                        <b class="text-rose-600">You are exposing yourself to permanent data loss if you choose to proceed !</b></br></br>
+
+                        <b class="underline">As a safety measure, the following `git features` are deactivated:</b>
+                        <ul class="list-inside list-chevron">
+                            <li class="my-4">Force Push over the repository will be rejected.</li>
+                            <li class="my-4">Any other branch than `master` will be rejected <i>(we are not able to support multiple branches)</i>.</li>
+                            <li class="my-4">
+                                You are <b>required</b> to `acquire` the project lock before being able to push to the repository:
+                                <ul class="ml-4 list-inside list-chevron">
+                                    <li class="my-4">
+                                        If you start working on your local copy  <b>without first acquiring the lock</b>, 
+                                        you expose yourself to <b>merge conflicts and data loss.</b>
+                                    </li>
+                                    <li class="my-4">
+                                        You <b>absolutely can overwrite the work of others</b> if you don't use `Project Locking` to prevent edition while you are working.
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </span>
+                    <button id="btn_show_git_instructions" class="btn bg-rose-500 hover:bg-rose-600 text-white mt-4">I understand the risk, I want to use GIT !</button>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</div>
+
+
+{% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+
+    $(document).ready(function () {
+
+        $("#btn_show_git_instructions").click(function () {
+            {% comment %} $("#modal_confirmation").css('display', 'flex'); {% endcomment %}
+            console.log("Show Modal Git Info");
+            return false; // prevent default
+        });
+    });
+</script>
+
+{% endblock inline_extra_js %}
