@@ -100,7 +100,7 @@ class TestTeamCreation(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
 
 class TestTeamUpdate(BaseAPITestCase):
@@ -127,7 +127,7 @@ class TestTeamUpdate(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         assert is_subset(subset_dict=team_data, super_dict=response.data["data"])
 
@@ -186,7 +186,7 @@ class TestTeamUpdate(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         assert is_subset(subset_dict=data, super_dict=response.data["data"])
 
@@ -222,7 +222,7 @@ class TestTeamUpdateErrors(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
 
 
 class TestTeamDelete(BaseAPITestCase):
@@ -242,7 +242,7 @@ class TestTeamDelete(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
 
     @parameterized.expand([SurveyTeamMembership.Role.MEMBER, None])
     def test_delete_error(self, role: SurveyTeamMembership.Role | None):
@@ -257,7 +257,7 @@ class TestTeamDelete(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
 
 
 class TestGetTeam(BaseAPITestCase):
@@ -281,9 +281,7 @@ class TestGetTeam(BaseAPITestCase):
         )
 
         if role is None:
-            assert (
-                response.status_code == status.HTTP_403_FORBIDDEN
-            ), response.status_code
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
 
         else:
             assert response.status_code == status.HTTP_200_OK, response.status_code

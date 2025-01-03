@@ -112,7 +112,7 @@ class TestTeamMembershipCreation(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
     @parameterized.expand([SurveyTeamMembership.Role.MEMBER, None])
     def test_create_team_membership_non_authorized(
@@ -174,7 +174,7 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         response_data = response.data["data"]
 
@@ -218,7 +218,7 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
 
     @parameterized.expand(
         [
@@ -267,7 +267,7 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
 
 class TestTeamMembershipDelete(BaseAPITestCase):
@@ -293,7 +293,7 @@ class TestTeamMembershipDelete(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         with pytest.raises(ObjectDoesNotExist):
             self.team.get_membership(user=self.target_user)
@@ -312,7 +312,7 @@ class TestTeamMembershipDelete(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
 
 
 class TestGetTeamMembership(BaseAPITestCase):
@@ -336,12 +336,10 @@ class TestGetTeamMembership(BaseAPITestCase):
         )
 
         if role is None:
-            assert (
-                response.status_code == status.HTTP_403_FORBIDDEN
-            ), response.status_code
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
 
         else:
-            assert response.status_code == status.HTTP_200_OK, response.status_code
+            assert response.status_code == status.HTTP_200_OK, response.data
 
             mbrship_serializer = SurveyTeamMembershipSerializer(membership)
 
@@ -368,7 +366,7 @@ class TestGetTeamMembership(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND, response.status_code
+        assert response.status_code == status.HTTP_404_NOT_FOUND, response.data
 
     @parameterized.expand(
         [SurveyTeamMembership.Role.LEADER, SurveyTeamMembership.Role.MEMBER, None]
@@ -394,12 +392,10 @@ class TestGetTeamMembership(BaseAPITestCase):
         )
 
         if role is None:
-            assert (
-                response.status_code == status.HTTP_403_FORBIDDEN
-            ), response.status_code
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
 
         else:
-            assert response.status_code == status.HTTP_200_OK, response.status_code
+            assert response.status_code == status.HTTP_200_OK, response.data
 
             response_data = response.data["data"]
 
@@ -420,4 +416,4 @@ class TestGetTeamMembership(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND, response.status_code
+        assert response.status_code == status.HTTP_404_NOT_FOUND, response.data
