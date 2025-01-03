@@ -26,6 +26,14 @@ class TestTokenAuth(BaseAPITestCase):
         for key, val in target.items():
             assert val == response.data[key], response.data
 
+    @parameterized.expand(["Token", "Bearer"])
+    def test_token_auth_works(self, token_header: str):
+        endpoint = reverse("api:v1:auth_token")
+
+        auth = f"{token_header} {self.token.key}"
+        response = self.client.get(endpoint, headers={"authorization": auth})
+        assert response.status_code == status.HTTP_200_OK, response.status_code
+
     @parameterized.expand(
         named_product(method=["POST", "PUT", "PATCH"], is_authenticated=[True, False])
     )
