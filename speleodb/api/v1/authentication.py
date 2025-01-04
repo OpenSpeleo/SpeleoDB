@@ -1,4 +1,6 @@
+from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
+from rest_framework.authentication import BasicAuthentication
 from rest_framework.authentication import TokenAuthentication
 
 
@@ -30,3 +32,31 @@ class BearerAuthentication(TokenAuthentication):
     """
 
     keyword = "Bearer"
+
+
+class GitOAuth2Authentication(BasicAuthentication):
+    """
+    A combination of `BasicAuthentication` and `TokenAuthentication`.
+    Specific for git `oauth2:<token>` authentication scheme.
+    """
+
+    model = None
+
+    def get_model(self):
+        if self.model is not None:
+            return self.model
+        from rest_framework.authtoken.models import Token
+
+        return Token
+
+    def authenticate_credentials(self, userid, password, request=None):
+        model = self.get_model()
+        try:
+            token = model.objects.select_related("user").get(key=password)
+        except model.DoesNotExist as e:
+            raise exceptions.AuthenticationFailed("Invalid token.") from e
+
+        if not token.user.is_active:
+            raise exceptions.AuthenticationFailed("User inactive or deleted.")
+
+        return (token.user, token)
