@@ -138,5 +138,23 @@ class _GitlabManager(metaclass=SingletonMetaClass):
 
         return data
 
+    def get_last_commit_hash(self, project_id: uuid.UUID) -> str | None:
+        try:
+            try:
+                project = self._get_project(project_id)
+            except gitlab.exceptions.GitlabGetError as e:
+                raise RuntimeError from e
+
+            if project is None:
+                return None
+
+            branch = project.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
+
+            # Get the current hash of the branch
+            return branch.commit["id"]
+
+        except gitlab.exceptions.GitlabHttpError:
+            return None
+
 
 GitlabManager = _GitlabManager()

@@ -1,6 +1,5 @@
 import contextlib
 from dataclasses import dataclass
-from itertools import chain
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -312,5 +311,20 @@ class ProjectGitExplorerView(_BaseProjectView):
             return redirect(reverse("private:projects"))
 
         data["hexsha"] = hexsha
+
+        return render(request, self.template_name, data)
+
+
+class ProjectGitInstructionsView(_BaseProjectView):
+    template_name = "pages/project/git_instructions.html"
+
+    def get(self, request, project_id: str, hexsha: str | None = None):
+        try:
+            data = self.get_project_data(user=request.user, project_id=project_id)
+        except ObjectDoesNotExist:
+            return redirect(reverse("private:projects"))
+
+        data["auth_token"], _ = Token.objects.get_or_create(user=request.user)
+        data["default_branch"] = settings.DJANGO_GIT_BRANCH_NAME
 
         return render(request, self.template_name, data)

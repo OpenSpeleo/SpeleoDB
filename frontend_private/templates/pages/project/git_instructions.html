@@ -1,0 +1,174 @@
+{% extends "pages/project/base.html" %}
+{% load static i18n compress%}
+
+{% load countries %}
+
+{% block extra_css %}
+{% if debug %}
+<link href="{% static 'private/css/vendors/prism-okaidia.min.css' %}" rel="stylesheet">
+<link href="{% static 'private/css/vendors/prism-line-numbers.min.css' %}" rel="stylesheet">
+{% else %}
+<link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" 
+    integrity="sha512-mIs9kKbaw6JZFfSuo+MovjU+Ntggfoj8RwAmJbVXQ5mkAX5LlgETQEweFPI18humSPHymTb5iikEOKWF7I8ncQ==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer" 
+/>
+<link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" 
+    integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer" 
+/>
+{% endif %}
+{% endblock extra_css %}
+
+{% block right_panel %}
+<div class="grow">
+
+    <!-- Panel body -->
+    <div class="p-6 space-y-6">
+        <h2 class="text-2xl text-slate-100 font-bold mb-16">Project - GIT instructions</h2>
+
+        {% csrf_token %}
+
+        <!-- Project Name -->
+        <section>
+            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="w-full border p-6">
+                    <h1 class="mb-6 underline font-heavy text-rose-600">! WARNING ! WARNING ! WARNING ! WARNING ! WARNING ! WARNING !</h1>
+                    <span class="block text-sm font-medium mb-1" for="name">
+                        SpeleoDB has <b>very</b> limited control over your actions if you choose to use `git` directly.</br>
+                        <b>Only and solely experienced `git` users</b> should consider using direct `git` access, you assume the entire responsability of any mistake.</br>
+                        We are not verifying, and able to prevent any definitive and permanent data loss.</br></br>
+
+                        <b>Consequently - There will be no instructions beside the absolute bare minimum on how to use `git`.</b></br>
+                        <b class="text-rose-300">If you need more informations and instructions, you should stay away!</b></br></br>
+
+                        <b class="text-rose-600">You are exposing yourself to permanent data loss if you choose to proceed !</b></br></br>
+
+                        <b class="underline">As a safety measure, the following `git features` are deactivated:</b>
+                        <ul class="list-inside list-chevron">
+                            <li class="my-4">Force Push over the repository will be rejected.</li>
+                            <li class="my-4">Any other branch than `master` will be rejected <i>(we are not able to support multiple branches)</i>.</li>
+                            <li class="my-4">
+                                You are <b>required</b> to `acquire` the project lock before being able to push to the repository:
+                                <ul class="ml-4 list-inside list-chevron">
+                                    <li class="my-4">
+                                        If you start working on your local copy  <b>without first acquiring the lock</b>, 
+                                        you expose yourself to <b>merge conflicts and data loss.</b>
+                                    </li>
+                                    <li class="my-4">
+                                        You <b>absolutely can overwrite the work of others</b> if you don't use `Project Locking` to prevent edition while you are working.
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </span>
+                    <button id="btn_show_git_instructions" class="btn bg-rose-500 hover:bg-rose-600 text-white mt-4">I understand the risk, I want to use GIT !</button>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</div>
+
+<!-- Modal Git instruction dialog -->
+<div id="modal_git_instructions" class="fixed inset-0 z-40 overflow-hidden flex items-center my-4 justify-center px-4 sm:px-6" style="display: none">
+    <div class="bg-slate-800 rounded shadow-lg overflow-auto max-w-6xl w-full max-h-full border-2 border-slate-700">
+        <!-- Modal header -->
+        <div class="px-5 py-3 border-b border-slate-700">
+            <div class="flex justify-between items-center">
+                <div id="permission_modal_title" class="font-semibold text-slate-100">Git Usage Instruction</div>
+                <button class="btn_close text-slate-500 hover:text-slate-400">
+                    <div class="sr-only">Close</div>
+                    <svg class="w-4 h-4 fill-current">
+                        <path d="M7.95 6.536l4.242-4.243a1 1 0 111.415 1.414L9.364 7.95l4.243 4.242a1 1 0 11-1.415 1.415L7.95 9.364l-4.243 4.243a1 1 0 01-1.414-1.415L6.536 7.95 2.293 3.707a1 1 0 011.414-1.414L7.95 6.536z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <!-- Modal content -->
+        <div class="px-5 py-4">
+            <h1 class="font-heavy mt-2 mb-6">Do not share the code below, it includes your private authentication token:</h1>
+            <div class="text-xs">
+            <pre class="line-numbers language-shell">
+<code># 1. First clone the repository with your personal token
+git clone http{% if request.is_secure %}s{%endif%}://oauth2:{{ auth_token.key }}@{{ request.get_host }}/git/{{ project.id }}.git
+
+# 2. Then move into the directory
+cd ./{{project.id}}/
+
+# 3. IMPORTANT: Acquire the lock if you plan on adding / modifying some files.
+
+# 4. Modify and Commit your changes
+#     - Force push will be rejected.
+#     - Any other branch than `{{ default_branch }}` will be rejected.
+#     - If you do not own the project's lock, your commits will be rejected. 
+#     - If you are not careful, you will create data corruption and potentially permanent data loss.
+#     - Be very systematic at acquiring and releasing the project. This is the best protection you have.
+git add .
+git commit -m "I push to SpeleoDB using GIT"
+git push
+
+# 5. IMPORTANT: Release the project lock when you're done modifying the project.</code></pre></div>
+        </div>
+        <!-- Modal footer -->
+        <div class="px-5 py-4 border-t border-slate-700">
+            <div class="flex flex-wrap justify-end space-x-2">
+                <button class="btn_close btn-sm bg-indigo-500 hover:bg-indigo-600 text-white w-32">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock right_panel %}
+
+{% block extra_js %}
+{% if debug %}
+<script src="{% static 'private/js/vendors/prism.min.js' %}" defer></script>
+<script src="{% static 'private/js/vendors/prism-line-numbers.min.js' %}" defer></script>
+<script src="{% static 'private/js/vendors/prism-bash.min.js' %}" defer></script>
+{% else %}
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" 
+    integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js" 
+    integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js" 
+    integrity="sha512-whYhDwtTmlC/NpZlCr6PSsAaLOrfjVg/iXAnC4H/dtiHawpShhT2SlIMbpIhT/IL/NrpdMm+Hq2C13+VKpHTYw==" 
+    crossorigin="anonymous" 
+    ="no-referrer">
+</script>
+{% endif %}
+{% endblock extra_js %}
+
+{% block inline_extra_js %}
+<script>
+
+    $(document).ready(function () {
+
+        $("#btn_show_git_instructions").click(function () {
+            $("#modal_git_instructions").css('display', 'flex');
+            return false; // prevent default
+        });
+
+        $(".btn_close").click(function() {
+            if ($("#modal_git_instructions").is(":visible")) {
+                $("#modal_git_instructions").hide();
+            }
+        });
+    });
+</script>
+
+{% endblock inline_extra_js %}

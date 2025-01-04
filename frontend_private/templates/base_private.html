@@ -33,10 +33,9 @@
     {% compress css %}
     <link href="{% static 'private/css/style.css' %}" rel="stylesheet">
     <link href="{% static 'private/css/custom.css' %}" rel="stylesheet">
+    {% endcompress %}
 
     {% block extra_css %}{% endblock extra_css %}
-
-    {% endcompress %}
 
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">

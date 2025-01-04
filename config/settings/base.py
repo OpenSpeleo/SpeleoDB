@@ -147,6 +147,8 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     # API Apps
     "speleodb.api.v1",
+    # Git Apps
+    "speleodb.git_proxy",
     # Object Apps
     "speleodb.common",
     "speleodb.surveys",

@@ -12,6 +12,7 @@ from frontend_private.views import PreferencesView
 from frontend_private.views import ProjectDangerZoneView
 from frontend_private.views import ProjectDetailsView
 from frontend_private.views import ProjectGitExplorerView
+from frontend_private.views import ProjectGitInstructionsView
 from frontend_private.views import ProjectListingView
 from frontend_private.views import ProjectMutexesView
 from frontend_private.views import ProjectRevisionHistoryView
@@ -57,6 +58,11 @@ project_patterns = [
         "danger_zone/",
         ProjectDangerZoneView.as_view(),
         name="project_danger_zone",
+    ),
+    path(
+        "git_instructions/",
+        ProjectGitInstructionsView.as_view(),
+        name="project_git_instructions",
     ),
 ]
 
