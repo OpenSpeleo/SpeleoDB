@@ -4,7 +4,7 @@
         "pk": 1,
         "fields": {
             "user": 1,
-            "email": "contact@speleodb.com",
+            "email": "contact@speleodb.org",
             "verified": true,
             "primary": true
         }
@@ -24,7 +24,7 @@
         "pk": 3,
         "fields": {
             "user": 4,
-            "email": "test@speleodb.com",
+            "email": "test@speleodb.org",
             "verified": true,
             "primary": true
         }

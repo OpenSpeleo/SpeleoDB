@@ -66,7 +66,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             for commit_data in response.data["data"]["history"]:
                 assert all(key in commit_data for key in commit_keys), commit_data
                 assert (
-                    commit_data["committer_email"] == "contact@speleodb.com"
+                    commit_data["committer_email"] == "contact@speleodb.org"
                 ), commit_data["committer_email"]
                 assert commit_data["committer_name"] == "SpeleoDB", commit_data[
                     "committer_name"

@@ -3,7 +3,7 @@
 # DJANGO_READ_DOT_ENV_FILE=True
 DJANGO_SETTINGS_MODULE=config.settings.production
 DJANGO_SECRET_KEY="<secret_key>"  # https://djecrety.ir/
-DJANGO_ALLOWED_HOSTS="www.speleodb.com"
+DJANGO_ALLOWED_HOSTS="www.speleodb.org"
 DJANGO_ADMIN_URL="sudo/"
 DJANGO_DEBUG=False
 DJANGO_FIELD_ENCRYPTION_KEY="<secret_key>"  # `python manage.py generate_field_encryption_key`
