@@ -1,6 +1,9 @@
+import re
 from enum import Enum
 
 import requests
+from django.conf import settings
+from django.http import HttpResponseNotAllowed
 from django.http import JsonResponse
 from django.http import StreamingHttpResponse
 from requests.exceptions import RequestException
@@ -31,7 +34,31 @@ class AcceptEverythingRenderer(BaseRenderer):
     """
 
     media_type = "*/*"
-    format = "api"
+    format = "text"
+    charset = "iso-8859-1"
+
+    def render(self, data, media_type=None, renderer_context=None):
+        return data.encode(self.charset)
+
+
+def parse_git_push_preamble(payload: bytes):
+    """
+    Parse the Git push preamble to extract branch name and check if it's a force push.
+    Returns a tuple (branch_name, is_force_push).
+    """
+    # Decode the payload until the binary packfile starts
+    decoded_data = payload.decode(errors="ignore")
+
+    old_hash = new_hash = branch_name = None
+    match = re.search(
+        r"([0-9a-f]{40}) ([0-9a-f]{40}) refs/heads/([\w\-_/]+)\x00", decoded_data
+    )
+    if match:
+        old_hash = match.group(1)
+        new_hash = match.group(2)
+        branch_name = match.group(3)
+
+    return (old_hash, new_hash), branch_name
 
 
 class BaseGitProxyAPIView(GenericAPIView):
@@ -70,6 +97,22 @@ class BaseGitProxyAPIView(GenericAPIView):
         try:
             project: Project = self.get_object()
 
+            (old_hash, _), branch_name = parse_git_push_preamble(request.body)
+
+            if (
+                branch_name is not None
+                and branch_name != settings.DJANGO_GIT_BRANCH_NAME
+            ):
+                return HttpResponseNotAllowed(
+                    f"Only commits on {settings.DJANGO_GIT_BRANCH_NAME} are allowed.",
+                    content_type="text/plain",
+                )
+
+            if old_hash is not None and all(char == "0" for char in old_hash):
+                return HttpResponseNotAllowed(
+                    "Force push commits are not allowed.", content_type="text/plain"
+                )
+
             # Construct the target GitLab URL
             target_url = f"https://oauth2:{self._gitlab_token}@{self._gitlab_instance}/{self._gitlab_group_name}/{project.id}.git/{path}"
 
@@ -80,7 +123,7 @@ class BaseGitProxyAPIView(GenericAPIView):
             # Add Accept-Encoding: identity to prevent automatic content decoding
             headers["Accept-Encoding"] = "identity"
 
-            # Forward the request using httpx
+            # Forward the request using `requests`
             gitlab_response = requests.request(
                 method=request.method,
                 url=target_url,
