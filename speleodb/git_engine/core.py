@@ -29,7 +29,7 @@ from speleodb.git_engine.exceptions import GitPathNotFoundError
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-GIT_COMMITTER = git.Actor("SpeleoDB", "contact@speleodb.com")
+GIT_COMMITTER = git.Actor("SpeleoDB", "contact@speleodb.org")
 
 logger = logging.getLogger(__name__)
 

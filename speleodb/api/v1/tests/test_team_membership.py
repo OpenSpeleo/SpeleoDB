@@ -75,7 +75,7 @@ class TestTeamMembershipCreation(BaseAPITestCase):
             (
                 # User that doesn't exist
                 {
-                    "user": f"{random.randint(1, int(1e9))}@speleodb.com",
+                    "user": f"{random.randint(1, int(1e9))}@speleodb.org",
                     "role": "LEADER",
                 },
             ),
@@ -239,7 +239,7 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
             # User that doesn't exist
             (
                 {
-                    "user": f"{random.randint(1, int(1e9))}@speleodb.com",
+                    "user": f"{random.randint(1, int(1e9))}@speleodb.org",
                     "role": "LEADER",
                 },
             ),

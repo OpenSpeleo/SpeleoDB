@@ -355,7 +355,7 @@ HIJACK_INSERT_BEFORE = None
 # Django Admin URL.
 ADMIN_URL = "admin/"
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = [("""Jonathan Dekhtiar""", "contact@speleodb.com")]
+ADMINS = [("""Jonathan Dekhtiar""", "contact@speleodb.org")]
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
 # https://cookiecutter-django.readthedocs.io/en/latest/settings.html#other-environment-settings

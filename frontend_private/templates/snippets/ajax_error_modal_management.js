@@ -21,7 +21,7 @@ for (key_idx in error_keys) {
 }
 if (!found) {
     $("#modal_error_txt").text(
-        "Unknown error occured. Email: contact@speleodb.com"
+        "Unknown error occured. Email: contact@speleodb.org"
     );
 }
 $("#modal_error").css('display', 'flex');

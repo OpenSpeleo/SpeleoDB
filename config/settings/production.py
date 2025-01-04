@@ -80,7 +80,7 @@ STORAGES = {
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
 DEFAULT_FROM_EMAIL = env(
     "DJANGO_DEFAULT_FROM_EMAIL",
-    default="SpeleoDB <noreply@mail.speleodb.com>",
+    default="SpeleoDB <noreply@mail.speleodb.org>",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#server-email
 SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
@@ -177,7 +177,7 @@ LOGGING = {
 # -------------------------------------------------------------------------------
 # Tools that generate code samples can use SERVERS to point to the correct domain
 SPECTACULAR_SETTINGS["SERVERS"] = [
-    {"url": "https://www.speleodb.com", "description": "Production server"},
+    {"url": "https://www.speleodb.org", "description": "Production server"},
 ]
 # Your stuff...
 # ------------------------------------------------------------------------------

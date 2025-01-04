@@ -22,7 +22,7 @@ certificatesResolvers:
   letsencrypt:
     # https://doc.traefik.io/traefik/https/acme/#lets-encrypt
     acme:
-      email: "contact@speleodb.com"
+      email: "contact@speleodb.org"
       storage: /etc/traefik/acme/acme.json
       # https://doc.traefik.io/traefik/https/acme/#httpchallenge
       httpChallenge:
@@ -31,7 +31,7 @@ certificatesResolvers:
 http:
   routers:
     web-secure-router:
-      rule: "Host(`www.speleodb.com`)"
+      rule: "Host(`www.speleodb.org`)"
       entryPoints:
         - web-secure
       middlewares:
@@ -42,7 +42,7 @@ http:
         certResolver: letsencrypt
 
     flower-secure-router:
-      rule: "Host(`www.speleodb.com`)"
+      rule: "Host(`www.speleodb.org`)"
       entryPoints:
         - flower
       service: flower
@@ -51,7 +51,7 @@ http:
         certResolver: letsencrypt
 
     web-media-router:
-      rule: "(Host(`speleodb.com`) || Host(`www.speleodb.com`)) && PathPrefix(`/media/`)"
+      rule: "(Host(`speleodb.org`) || Host(`www.speleodb.org`)) && PathPrefix(`/media/`)"
       entryPoints:
         - web-secure
       middlewares:

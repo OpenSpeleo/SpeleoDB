@@ -16,7 +16,7 @@ from speleodb.git_engine.core import GitRepo
 from speleodb.utils.lazy_string import LazyString
 from speleodb.utils.metaclasses import SingletonMetaClass
 
-GIT_COMMITTER = git.Actor("SpeleoDB", "contact@speleodb.com")
+GIT_COMMITTER = git.Actor("SpeleoDB", "contact@speleodb.org")
 
 logger = logging.getLogger(__name__)
 
