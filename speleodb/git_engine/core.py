@@ -651,3 +651,29 @@ class GitRepo(Repo):
                     return git_file
 
         raise GitBlobNotFoundError(f"Git Object with id `{hexsha}` not found.")
+
+    def reset_and_remove_untracked(self):
+        # Step 1: Get the commit object to reset to
+        target_commit = self.commit("HEAD")
+
+        # Step 2: Reset HEAD to the target commit
+        self.head.reference = target_commit
+        self.head.reset(index=True, working_tree=True)
+
+        # Step 3: Remove untracked files and directories manually
+        # Get all untracked files and directories
+        untracked_files = [self.path / path for path in self.untracked_files]
+        maybe_untracked_dirs = [
+            path.parent for path in untracked_files if path.parent != self.path
+        ]
+
+        # Delete untracked files
+        for file_path in untracked_files:
+            with contextlib.suppress(FileNotFoundError):
+                file_path.unlink()
+
+        # Delete untracked directories (if empty)
+        # Reverse ensures inner directories are handled first
+        for dir_path in sorted(maybe_untracked_dirs, reverse=True):
+            with contextlib.suppress(OSError):
+                dir_path.rmdir()

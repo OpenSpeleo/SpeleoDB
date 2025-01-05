@@ -56,5 +56,23 @@ def test_no_duplicate_extensions(cls_processor: type[BaseFileProcessor]):
     assert not duplicate_extensions, "\n".join(duplicate_extensions)
 
 
+@pytest.mark.parametrize(
+    "cls_processor",
+    list(BaseFileProcessor.__subclasses__()),
+)
+def test_no_dangerous_extension_is_allowed(cls_processor: type[BaseFileProcessor]):
+    error_messages = []
+
+    # Check for duplicates by comparing original list with a set
+    for ext in cls_processor.ALLOWED_EXTENSIONS:
+        if ext in BaseFileProcessor.REJECTED_EXTENSIONS:
+            error_messages.append(  # noqa: PERF401
+                f"Dangerous extension found: Extension '{ext}' in class: "
+                f"{cls_processor.__name__}"
+            )
+
+    assert not error_messages, "\n".join(error_messages)
+
+
 if __name__ == "__main__":
     unittest.main()
