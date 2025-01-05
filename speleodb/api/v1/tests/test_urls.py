@@ -132,8 +132,8 @@ def test_download_project_at_hash(fileformat: str, project: Project):
 @pytest.mark.parametrize(
     ("name", "path"),
     [
+        ("api:v1:user_info", "/api/v1/user/"),
         ("api:v1:auth_token", "/api/v1/user/auth-token/"),
-        ("api:v1:user_info", "/api/v1/user/info/"),
         ("api:v1:update_user_password", "/api/v1/user/password/"),
     ],
 )
