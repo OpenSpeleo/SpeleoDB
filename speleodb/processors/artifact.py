@@ -4,6 +4,8 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 
+from speleodb.utils.exceptions import FileRejectedError
+
 
 class Artifact:
     def __init__(self, file: InMemoryUploadedFile | TemporaryUploadedFile) -> None:
@@ -51,21 +53,35 @@ class Artifact:
 
         self._path = path
 
-    def assert_valid(self, allowed_mimetypes, allowed_extensions) -> None:
+    def assert_valid(
+        self,
+        allowed_extensions: list[str],
+        allowed_mimetypes: list[str],
+        rejected_extensions: list[str],
+    ) -> None:
+        if not isinstance(allowed_extensions, (list, tuple)):
+            raise TypeError(f"Unexpected type: {type(allowed_extensions)=}")
+
         if not isinstance(allowed_mimetypes, (list, tuple)):
             raise TypeError(f"Unexpected type: {type(allowed_mimetypes)=}")
 
-        if not isinstance(allowed_extensions, (list, tuple)):
-            raise TypeError(f"Unexpected type: {type(allowed_mimetypes)=}")
+        if not isinstance(rejected_extensions, (list, tuple)):
+            raise TypeError(f"Unexpected type: {type(rejected_extensions)=}")
 
-        if self.content_type not in allowed_mimetypes and "*" not in allowed_mimetypes:
-            raise ValidationError(
-                f"Invalid file type received: `{self.content_type}`, "
-                f"expected one of: {allowed_mimetypes}"
+        if self.extension in rejected_extensions:
+            raise FileRejectedError(
+                f"Invalid file extension received: `{self.extension}`, "
+                f"this extension is rejected for security reasons."
             )
 
         if self.extension not in allowed_extensions and "*" not in allowed_extensions:
             raise ValidationError(
                 f"Invalid file extension received: `{self.extension}`, "
                 f"expected one of: {allowed_extensions}"
+            )
+
+        if self.content_type not in allowed_mimetypes and "*" not in allowed_mimetypes:
+            raise ValidationError(
+                f"Invalid file type received: `{self.content_type}`, "
+                f"expected one of: {allowed_mimetypes}"
             )

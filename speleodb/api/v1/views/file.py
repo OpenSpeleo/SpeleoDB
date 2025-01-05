@@ -27,6 +27,7 @@ from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors.auto_selector import AutoSelector
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
+from speleodb.utils.exceptions import FileRejectedError
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import DownloadResponseFromFile
@@ -35,6 +36,22 @@ from speleodb.utils.response import SuccessResponse
 from speleodb.utils.timing_ctx import timed_section
 
 logger = logging.getLogger(__name__)
+
+
+def handle_exception(
+    exception: type,
+    message: str,
+    status_code: int,
+    format_assoc: dict[str, bool],
+    project: Project,
+) -> ErrorResponse:
+    # Cleanup created formats
+    for f_obj, created in format_assoc.items():
+        if created:
+            f_obj.delete()
+    # Reset project state
+    project.git_repo.reset_and_remove_untracked()
+    return ErrorResponse({"error": message.format(exception)}, status=status_code)
 
 
 class FileUploadView(GenericAPIView):
@@ -173,6 +190,7 @@ class FileUploadView(GenericAPIView):
 
                 format_assoc = defaultdict(lambda: False)
                 uploaded_files = []
+
                 try:
                     for file in files:
                         with timed_section(f"File Adding: `{file.name}`"):
@@ -261,29 +279,39 @@ class FileUploadView(GenericAPIView):
                         )
 
                 except (ValidationError, FileNotFoundError) as e:
-                    for f_obj, created in format_assoc.items():
-                        if created:
-                            f_obj.delete()
-                    return ErrorResponse(
-                        {"error": e}, status=status.HTTP_400_BAD_REQUEST
+                    return handle_exception(
+                        e,
+                        "An error occurred: {}",
+                        status.HTTP_400_BAD_REQUEST,
+                        format_assoc,
+                        project,
                     )
 
                 except GitlabError as e:
-                    for f_obj, created in format_assoc.items():
-                        if created:
-                            f_obj.delete()
-                    return ErrorResponse(
-                        {"error": f"There has been a problem accessing gitlab: `{e}`"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    return handle_exception(
+                        e,
+                        "There has been a problem accessing GitLab: `{}`",
+                        status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        format_assoc,
+                        project,
+                    )
+
+                except FileRejectedError as e:
+                    return handle_exception(
+                        e,
+                        "One of the uploaded files has been rejected: `{}`",
+                        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                        format_assoc,
+                        project,
                     )
 
                 except Exception as e:  # noqa: BLE001
-                    for f_obj, created in format_assoc.items():
-                        if created:
-                            f_obj.delete()
-                    return ErrorResponse(
-                        {"error": f"There has been a problem committing the file: {e}"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    return handle_exception(
+                        e,
+                        "There has been a problem committing the files: {}",
+                        status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        format_assoc,
+                        project,
                     )
 
 

@@ -13,20 +13,18 @@ class TextFileProcessor(BaseFileProcessor):
         ".rtf",  # Rich Text Format, supports basic text styling.
         ".log",  # Log files, typically used for recording events or processes.
         ".ini",  # Initialization files, used for configuration settings.
+        ".rst",  # reStructuredText, used for technical documentation.
+        ".adoc",  # AsciiDoc, similar to Markdown but more powerful.
+        ".texinfo",  # GNU Texinfo, used for documentation.
         #
         # --------------------- Programming and markup languages --------------------- #
         #
-        ".html",  # Hypertext Markup Language, used in web development.
         ".xml",  # Extensible Markup Language, used for structured data.
         ".json",  # JavaScript Object Notation, a lightweight data-interchange format.
         ".yml",  # YAML Ain't Markup Language, used for configuration files.
         ".yaml",  # YAML Ain't Markup Language, used for configuration files.
         ".toml",  # TOML, a configuration file format with minimal syntax.
-        ".php",  # PHP Hypertext Preprocessor, often contains text and code.
         ".css",  # Cascading Style Sheets, describes how HTML elements are displayed.
-        ".js",  # JavaScript files, can include both text and code.
-        ".py",  # Python script files, often mixed text and code.
-        ".sh",  # Shell scripts, plain text files containing shell commands.
         #
         # -------------------- Documentation and technical formats ------------------- #
         #
@@ -38,14 +36,6 @@ class TextFileProcessor(BaseFileProcessor):
         ".pptx",  # PowerPoint files (text content within slides).
         ".epub",  # eBook format, often includes structured text.
         ".pdf",  # Portable Document Format (can include plain or rich text).
-        #
-        # -------------------------- Code and scripting logs ------------------------- #
-        #
-        ".bat",  # Batch files, plain text commands for Windows.
-        ".cmd",  # Command script files, similar to .bat but on Windows NT.
-        ".pl",  # Perl scripts, plain text code with Perl syntax.
-        ".java",  # Java source files, plain text containing Java code.
-        ".cpp",  # C++ source files, plain text containing C++ code.
         #
         # ------------------------- Specialized text formats ------------------------- #
         #
@@ -72,19 +62,6 @@ class TextFileProcessor(BaseFileProcessor):
         #
         ".ldif",  # LDAP Data Interchange Format, used for directory entries.
         ".rdf",  # Resource Description Framework, structured data format.
-        #
-        # --------------------------- Miscellaneous formats -------------------------- #
-        #
-        ".rst",  # reStructuredText, used for technical documentation.
-        ".adoc",  # AsciiDoc, similar to Markdown but more powerful.
-        ".vtt",  # WebVTT, used for subtitles in videos.
-        ".srt",  # SubRip subtitle format, used for video captions.
-        ".texinfo",  # GNU Texinfo, used for documentation.
-        ".c",  # C source code, often treated as plain text.
-        ".h",  # Header files for C/C++.
-        ".go",  # Go programming language source code.
-        ".rb",  # Ruby scripts, plain text with Ruby syntax.
-        ".lua",  # Lua scripts, plain text scripting files.
     ]
 
     ALLOWED_MIMETYPES = ["*"]

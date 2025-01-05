@@ -20,10 +20,80 @@ from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.utils.timing_ctx import timed_section
 
+# ruff: noqa: E501
+
 
 class BaseFileProcessor:
     ALLOWED_EXTENSIONS = ["*"]
     ALLOWED_MIMETYPES = ["*"]
+
+    REJECTED_EXTENSIONS = [
+        # Executable files
+        ".exe",  # Windows Executable File. Can execute programs and potentially harmful code.
+        ".bat",  # Batch File. Used to execute commands in Windows; can automate harmful scripts.
+        ".cmd",  # Command Script. Similar to .bat but with enhanced scripting features.
+        ".com",  # Command File. Old-style executable in DOS/Windows.
+        ".msi",  # Microsoft Installer Package. Can install or execute programs.
+        ".msp",  # Microsoft Installer Patch. Can be used to deliver harmful updates.
+        ".scr",  # Windows Screensaver File. Often executable and a common malware disguise.
+        # Script files
+        ".vbs",  # VBScript File. Used in Windows scripting; can automate malicious actions.
+        ".js",  # JavaScript File. Can execute scripts on local machines or browsers.
+        ".jse",  # Encoded JavaScript File. Often used to obfuscate malicious scripts.
+        ".wsf",  # Windows Script File. Can execute VBScript or JScript on a Windows system.
+        ".ps1",  # PowerShell Script. Can execute commands on Windows with administrative privileges.
+        ".sh",  # Shell Script. Used on Unix/Linux for executing commands, potentially harmful.
+        ".php",  # PHP Script. Can execute on servers or, if misconfigured, on a local machine.
+        ".pl",  # Perl Script. Can automate tasks, including malicious actions.
+        ".py",  # Python Script. Can execute harmful scripts on systems with Python installed.
+        ".rb",  # Ruby Script. Can execute harmful actions on systems with Ruby installed.
+        ".lua",  # Lua Script. Can execute harmful actions on systems with Lua installed.
+        ".go",  # GO Script. Can execute harmful actions on systems with GO installed.
+        # Macro and document files with potential for embedded malware
+        ".docm",  # Word Document with Macros. Macros can run malicious code.
+        ".xlsm",  # Excel Workbook with Macros. Macros can run harmful scripts.
+        ".pptm",  # PowerPoint Presentation with Macros. Similar risk as .docm and .xlsm.
+        ".dotm",  # Word Macro-Enabled Template. Macros can execute malicious scripts.
+        # Web and ActiveX-related files
+        ".html",  # HTML File. Can include malicious scripts if opened locally.
+        ".htm",  # HTML File. Same risk as .html.
+        ".mht",  # MHTML File. May contain embedded scripts or links to harmful code.
+        ".hta",  # HTML Application. Executable format for web-based apps, often abused by malware.
+        # Archive files (can contain harmful executables)
+        ".zip",  # ZIP Archive. Can conceal malicious files.
+        ".rar",  # RAR Archive. Similar risk as .zip.
+        ".7z",  # 7-Zip Archive. Similar risk as .zip.
+        ".iso",  # Disk Image File. Can contain harmful executables.
+        ".gz",  # Gzip Archive. Can contain malicious scripts or binaries.
+        # System and configuration files
+        ".sys",  # Windows System File. Can be exploited to modify or harm the system.
+        ".dll",  # Dynamic Link Library. Can be injected into processes to execute malicious code.
+        ".drv",  # Driver File. Can be used to exploit hardware or system vulnerabilities.
+        ".inf",  # Setup Information File. Can automate installation of malicious software.
+        ".plist",  # macOS/iOS Property List File. Can contain malicious configurations.
+        # Mobile-related files
+        ".apk",  # Android Package File. Can install malicious applications on Android devices.
+        ".dex",  # Dalvik Executable File. Used in Android; can execute malicious code.
+        ".ipa",  # iOS App Package. Can install harmful applications on iOS devices.
+        # macOS-related files
+        ".app",  # macOS Application Bundle. Can execute programs and potentially harmful code.
+        ".dmg",  # macOS Disk Image. Can contain harmful applications.
+        ".pkg",  # macOS Installer Package. Can install malicious software.
+        ".command",  # macOS Executable Script. Can run harmful shell scripts.
+        # Linux-related files
+        ".bin",  # Binary Executable File. Commonly used on Linux, can execute harmful programs.
+        ".run",  # Linux Executable File. Often used for installers or scripts.
+        ".deb",  # Debian Package. Can install software, including malicious programs.
+        ".rpm",  # Red Hat Package Manager File. Similar risk as .deb.
+        ".so",  # Shared Object File. Can be used to inject malicious code into applications.
+        # Other potentially harmful files
+        ".reg",  # Windows Registry File. Can modify or harm the Windows registry.
+        ".lnk",  # Windows Shortcut File. Can link to and execute malicious programs.
+        ".jar",  # Java Archive File. Can execute harmful Java programs.
+        ".class",  # Java Class File. Compiled Java bytecode, potentially harmful.
+        ".psd1",  # PowerShell Data File. Can accompany malicious PowerShell scripts.
+        ".psm1",  # PowerShell Module File. Similar risk as PowerShell scripts.
+    ]
 
     ASSOC_FILEFORMAT = Format.FileFormat.OTHER
 
@@ -90,6 +160,7 @@ class BaseFileProcessor:
         artifact.assert_valid(
             allowed_extensions=self.ALLOWED_EXTENSIONS,
             allowed_mimetypes=self.ALLOWED_MIMETYPES,
+            rejected_extensions=self.REJECTED_EXTENSIONS,
         )
 
         target_path = self._get_storage_path(artifact=artifact)

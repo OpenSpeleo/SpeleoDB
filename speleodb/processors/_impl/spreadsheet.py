@@ -10,7 +10,6 @@ class SpreadsheetFileProcessor(BaseFileProcessor):
         #
         ".xls",  # Microsoft Excel 97-2003 Workbook format.
         ".xlsx",  # Microsoft Excel Open XML Workbook format (default from Excel 2007 onwards).
-        ".xlsm",  # Excel Workbook with macros enabled.
         ".xlsb",  # Excel Binary Workbook format.
         ".xlt",  # Excel 97-2003 Template format.
         ".xltx",  # Excel Open XML Template format.
