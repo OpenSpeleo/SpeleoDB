@@ -7,8 +7,8 @@ from rest_framework import permissions
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
-from speleodb.users.model_files.team import SurveyTeam
-from speleodb.users.model_files.team import SurveyTeamMembership
+from speleodb.users.models.team import SurveyTeam
+from speleodb.users.models.team import SurveyTeamMembership
 
 
 class BaseProjectAccessLevel(permissions.BasePermission):

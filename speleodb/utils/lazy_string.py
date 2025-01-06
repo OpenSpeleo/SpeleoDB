@@ -25,20 +25,8 @@
 # Deactivate Code Linter
 # ruff: noqa
 
-import sys
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable
-    from collections.abc import Mapping
-
-    List = list
-    Tuple = tuple
-
-else:
-    from typing import Callable
-    from typing import List
-    from typing import Mapping
-    from typing import Tuple
+from collections.abc import Callable
+from collections.abc import Mapping
 
 from collections import UserString
 from typing import Any
@@ -64,7 +52,7 @@ class LazyString(UserString):
     )
 
     def __new__(
-        cls, func: Union[Callable, str], *args: Tuple, **kwargs: Mapping
+        cls, func: Union[Callable, str], *args: tuple, **kwargs: Mapping
     ) -> object:
         if isinstance(func, str):
             # Many UserString's functions like `lower`, `__add__` and so on wrap
@@ -77,7 +65,7 @@ class LazyString(UserString):
         return object.__new__(cls)
 
     def __init__(
-        self, func: Callable[..., str], *args: Tuple, **kwargs: Mapping
+        self, func: Callable[..., str], *args: tuple, **kwargs: Mapping
     ) -> None:
         self._func = func
         self._args = args
@@ -87,20 +75,20 @@ class LazyString(UserString):
     def data(self) -> str:
         return self._func(*self._args, **self._kwargs)
 
-    def __getnewargs_ex__(self) -> Tuple[Tuple, Mapping]:
+    def __getnewargs_ex__(self) -> tuple[tuple, Mapping]:
         args = (self._func,) + self._args
         return (args, self._kwargs)
 
-    def __getstate__(self) -> Tuple[Callable, Tuple, Mapping]:
+    def __getstate__(self) -> tuple[Callable, tuple, Mapping]:
         return (self._func, self._args, self._kwargs)
 
-    def __setstate__(self, state: Tuple[Callable, Tuple, Mapping]) -> None:
+    def __setstate__(self, state: tuple[Callable, tuple, Mapping]) -> None:
         self._func, self._args, self._kwargs = state
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self.data, name)
 
-    def __dir__(self) -> List[str]:
+    def __dir__(self) -> list[str]:
         return dir(str)
 
     def __copy__(self) -> LazyString:

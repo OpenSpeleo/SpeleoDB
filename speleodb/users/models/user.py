@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from itertools import groupby
+from operator import attrgetter
 from typing import TYPE_CHECKING
 from typing import ClassVar
 
@@ -7,6 +9,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db.models import BooleanField
 from django.db.models import CharField
 from django.db.models import EmailField
+from django.db.models.functions import Lower
 from django_countries.fields import CountryField
 
 from speleodb.users.managers import UserManager
@@ -27,17 +30,20 @@ def filter_permissions_by_best(
     and discard the permissions less interesting.
     Only one permission per project is being kept.
     """
-    permission_map = {}
-    for perm in permissions:
-        if (
-            perm.project not in permission_map
-            or permission_map[perm.project]._level < perm._level  # noqa: SLF001
-        ):
-            permission_map[perm.project] = perm
 
-    return sorted(
-        permission_map.values(), key=lambda data: data.modified_date, reverse=True
+    # Step 1: Sort the permissions by project and then by _level in descending order
+    sorted_permissions = sorted(
+        permissions,
+        key=lambda perm: (perm.project.id, -perm._level),  # noqa: SLF001
     )
+
+    # Step 2: Group by project and keep the first (highest _level) permission in each
+    #         group
+    grouped_permissions = []
+    for _, group in groupby(sorted_permissions, key=attrgetter("project")):
+        grouped_permissions.append(next(group))  # Take the first item in the group
+
+    return sorted(grouped_permissions, key=lambda perm: perm.project.name.lower())
 
 
 class User(AbstractUser):
@@ -64,6 +70,12 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ["name"]
 
     objects: ClassVar[UserManager] = UserManager()
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}: {self.name} [{self.email}]>"
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
     @property
     def teams(self):
@@ -120,23 +132,24 @@ class User(AbstractUser):
     @property
     def permissions_user(self) -> list[UserPermission]:
         return list(
-            self.rel_permissions.filter(is_active=True).order_by(
-                "-project__modified_date"
-            )
+            self.rel_permissions.filter(is_active=True).order_by(Lower("project__name"))
         )
 
     @property
     def permissions_team(self) -> list[TeamPermission]:
-        permissions = []
-        for team in self.teams:
-            permissions.extend(team.rel_permissions.filter(is_active=True))
+        from speleodb.surveys.models import TeamPermission
+        from speleodb.users.models import SurveyTeam
 
-        permissions = filter_permissions_by_best(permissions)
-        return sorted(permissions, key=lambda perm: perm.project.name)
+        active_user_teams = SurveyTeam.objects.filter(
+            rel_team_memberships__user=self, rel_team_memberships__is_active=True
+        )
+
+        team_permissions = TeamPermission.objects.filter(
+            target__in=active_user_teams
+        ).order_by(Lower("project__name"))
+
+        return filter_permissions_by_best(team_permissions)
 
     @property
     def permissions(self) -> list[TeamPermission, UserPermission]:
-        permissions = filter_permissions_by_best(
-            self.permissions_user + self.permissions_team
-        )
-        return sorted(permissions, key=lambda perm: perm.project.name)
+        return filter_permissions_by_best(self.permissions_user + self.permissions_team)
