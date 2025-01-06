@@ -26,7 +26,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     n_commits = serializers.SerializerMethodField()
 
-    created_by = serializers.EmailField()
+    created_by = serializers.EmailField(read_only=True)
 
     class Meta:
         model = Project
