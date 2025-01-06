@@ -326,7 +326,7 @@ class Project(models.Model):
             commits = [
                 commit
                 for commit in GitlabManager.get_commit_history(project_id=self.id)
-                if commit["message"] != GitlabManager.FIRST_COMMIT_NAME
+                if commit["message"] != settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
             ]
             if isinstance(commits, (list, tuple)):
                 return commits

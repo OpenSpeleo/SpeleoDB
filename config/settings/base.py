@@ -45,6 +45,12 @@ DJANGO_GIT_PROJECTS_DIR = env(
 )
 DJANGO_TMP_DL_DIR = env("DJANGO_TMP_DL_DIR", default=BASE_DIR / ".workdir/tmp_dl_dir")
 
+DJANGO_GIT_COMMITTER_NAME = env("GIT_COMMITTER_NAME", default="SpeleoDB")
+DJANGO_GIT_COMMITTER_EMAIL = env("GIT_COMMITTER_EMAIL", default="contact@speleodb.org")
+DJANGO_GIT_FIRST_COMMIT_MESSAGE = env(
+    "GIT_FIRST_COMMIT_MESSAGE", default="[Automated] Project Creation"
+)
+
 DJANGO_GIT_RETRY_ATTEMPTS = 5
 DJANGO_GIT_BRANCH_NAME = "master"
 
@@ -354,9 +360,19 @@ HIJACK_INSERT_BEFORE = None
 # ------------------------------------------------------------------------------
 # Django Admin URL.
 ADMIN_URL = "admin/"
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = [("""Jonathan Dekhtiar""", "contact@speleodb.org")]
+# A list of all the people who get code error notifications.
+# When DEBUG=False and AdminEmailHandler is configured in LOGGING
+# (done by default), Django emails these people the details of
+# exceptions raised in the request/response cycle.
+# NOTE: Please do not change this email - It helps us to get crash reports
+ADMINS = [("""Jonathan Dekhtiar""", "jonathan@dekhtiar.com")]
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
+# A list in the same format as ADMINS that specifies who should get broken
+# link notifications when BrokenLinkEmailsMiddleware is enabled.
+# NOTE: Please do not change this email - It helps us to get crash reports
 MANAGERS = ADMINS
 # https://cookiecutter-django.readthedocs.io/en/latest/settings.html#other-environment-settings
 # Force the `admin` sign in process to go through the `django-allauth` workflow

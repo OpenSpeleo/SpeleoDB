@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import reverse
 from parameterized import parameterized
 from rest_framework import status
@@ -66,11 +67,12 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             for commit_data in response.data["data"]["history"]:
                 assert all(key in commit_data for key in commit_keys), commit_data
                 assert (
-                    commit_data["committer_email"] == "contact@speleodb.org"
+                    commit_data["committer_email"]
+                    == settings.DJANGO_GIT_COMMITTER_EMAIL
                 ), commit_data["committer_email"]
-                assert commit_data["committer_name"] == "SpeleoDB", commit_data[
-                    "committer_name"
-                ]
+                assert (
+                    commit_data["committer_name"] == settings.DJANGO_GIT_COMMITTER_NAME
+                ), commit_data["committer_name"]
         else:
             # error fetching project from gitlab. TODO
             pass
