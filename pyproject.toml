@@ -165,6 +165,8 @@ ignore = [
   # maintain than functions or methods with fewer branches.
   "G004",   # Checks for uses of f-strings to format logging messages.
   "TRY300", # Checks for return statements in try blocks.
+  "FBT001", # Checks for the use of boolean positional arguments in function definitions,
+  # as determined by the presence of a bool type hint.
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]

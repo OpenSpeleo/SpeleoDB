@@ -3,7 +3,6 @@ import logging
 import uuid
 from functools import wraps
 
-import git
 import gitlab
 import gitlab.exceptions
 from cachetools import TTLCache
@@ -15,8 +14,6 @@ from speleodb.common.models import Option
 from speleodb.git_engine.core import GitRepo
 from speleodb.utils.lazy_string import LazyString
 from speleodb.utils.metaclasses import SingletonMetaClass
-
-GIT_COMMITTER = git.Actor("SpeleoDB", "contact@speleodb.org")
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +45,6 @@ def check_initialized(func):
 
 
 class _GitlabManager(metaclass=SingletonMetaClass):
-    FIRST_COMMIT_NAME = "[Automated] Project Creation"
-
     def __init__(self):
         self._is_initialized = False
         self._is_error = False
@@ -91,31 +86,24 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             _ = self._gl.projects.create(
                 {"name": str(project_id), "namespace_id": str(self._gitlab_group_id)}
             )
-            project_dir.mkdir(exist_ok=True, parents=True)
+            project_dir.parent.mkdir(exist_ok=True, parents=True)
 
-            git_repo = git.Repo.init(project_dir)
+            git_repo = GitRepo.init(project_dir)
             origin = git_repo.create_remote("origin", url=git_url)
             origin.fetch()
             assert origin.exists()
 
             # Create an initial empty commit
-            git_repo.index.commit(
-                _GitlabManager.FIRST_COMMIT_NAME,
-                author=GIT_COMMITTER,
-                committer=GIT_COMMITTER,
-            )
-            git_repo.git.push(
-                "--set-upstream", origin.name, settings.DJANGO_GIT_BRANCH_NAME
-            )
+            git_repo.publish_first_commit()
+
+            return git_repo
 
         except gitlab.exceptions.GitlabCreateError:
             # The repository already exists in Gitlab - git clone instead
 
             # Ensure the parent directory exists
             project_dir.parent.mkdir(exist_ok=True, parents=True)
-            git_repo = git.Repo.clone_from(url=git_url, to_path=project_dir)
-
-        return GitRepo.from_repo(repo=git_repo)
+            return GitRepo.clone_from(url=git_url, to_path=project_dir)
 
     # cache data for no longer than ten minutes
     @cached(cache=TTLCache(maxsize=100, ttl=600))

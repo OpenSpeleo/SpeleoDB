@@ -29,7 +29,10 @@ from speleodb.git_engine.exceptions import GitPathNotFoundError
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-GIT_COMMITTER = git.Actor("SpeleoDB", "contact@speleodb.org")
+GIT_COMMITTER = git.Actor(
+    settings.DJANGO_GIT_COMMITTER_NAME,
+    settings.DJANGO_GIT_COMMITTER_EMAIL,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -457,7 +460,7 @@ class GitRepo(Repo):
         try:
             return cls(directory)
         except InvalidGitRepositoryError as e:
-            directory.unlink(missing_ok=True)
+            directory.rmdir()
             raise RuntimeError from e
 
     @classmethod
@@ -514,10 +517,8 @@ class GitRepo(Repo):
 
     @property
     def commits(self) -> Generator[GitCommit]:
-        from speleodb.git_engine.gitlab_manager import GitlabManager
-
         for commit in self.get_commits():
-            if commit.message != GitlabManager.FIRST_COMMIT_NAME:
+            if commit.message != settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE:
                 yield commit
 
     def get_commits(
@@ -549,13 +550,11 @@ class GitRepo(Repo):
 
     @property
     def commit_count(self):
-        from speleodb.git_engine.gitlab_manager import GitlabManager
-
         # Memoery efficient to compute the length of a generator
         return sum(
             1
             for commit in self.iter_commits()
-            if commit.message != GitlabManager.FIRST_COMMIT_NAME
+            if commit.message != settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
         )
 
     @property
@@ -574,9 +573,7 @@ class GitRepo(Repo):
     def init(cls, path: pathlib.Path) -> Self:
         if path.exists():
             raise FileExistsError
-        path.mkdir(parents=True)
-
-        return super().init(path=path, bare=True)
+        return super().init(path=path)
 
     def pull(self) -> None:
         origin = self.remotes.origin
@@ -619,13 +616,17 @@ class GitRepo(Repo):
         self._checkout_branch_or_commit(hexsha=hexsha)
 
     def commit_and_push_project(
-        self, message: str, author_name: str, author_email: str
+        self,
+        message: str,
+        author_name: str,
+        author_email: str,
+        force_empty_commit: bool = False,
     ) -> str | None:
         # Add every file pending
         self.index.add("*")
 
         # If there are modified files:
-        if self.is_dirty():
+        if self.is_dirty() or force_empty_commit:
             author = git.Actor(author_name, author_email)
 
             commit = self.index.commit(message, author=author, committer=GIT_COMMITTER)
@@ -677,3 +678,12 @@ class GitRepo(Repo):
         for dir_path in sorted(maybe_untracked_dirs, reverse=True):
             with contextlib.suppress(OSError):
                 dir_path.rmdir()
+
+    def publish_first_commit(self):
+        # Create an initial empty commit
+        self.commit_and_push_project(
+            settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE,
+            author_name=GIT_COMMITTER.name,
+            author_email=GIT_COMMITTER.email,
+            force_empty_commit=True,
+        )
