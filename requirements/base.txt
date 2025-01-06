@@ -1,5 +1,5 @@
 python-slugify==8.0.4  # https://github.com/un33k/python-slugify
-Pillow==11.0.0  # https://github.com/python-pillow/Pillow
+Pillow==11.1.0  # https://github.com/python-pillow/Pillow
 rcssmin==1.1.2  # https://github.com/ndparker/rcssmin
 argon2-cffi==23.1.0  # https://github.com/hynek/argon2_cffi
 whitenoise==6.8.2  # https://github.com/evansd/whitenoise
@@ -16,7 +16,7 @@ timeago==1.0.16  # https://github.com/hustcc/timeago
 # Git Management
 # ------------------------------------------------------------------------------
 python-gitlab==5.3.0  # https://python-gitlab.readthedocs.io/en/stable/
-GitPython==3.1.43  # https://github.com/gitpython-developers/GitPython
+GitPython==3.1.44  # https://github.com/gitpython-developers/GitPython
 
 # Django
 # ------------------------------------------------------------------------------
