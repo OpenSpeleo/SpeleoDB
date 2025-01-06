@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from typing import TYPE_CHECKING
 
 from rest_framework import permissions
 from rest_framework import status
@@ -13,20 +14,24 @@ from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import TeamPermission
+from speleodb.surveys.models import UserPermission
 from speleodb.utils.api_decorators import method_permission_classes
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
 
 logger = logging.getLogger(__name__)
 
 
 class ProjectSpecificApiView(GenericAPIView):
     queryset = Project.objects.all()
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    @method_permission_classes((UserHasReadAccess,))
     def get(self, request, *args, **kwargs):
         project: Project = self.get_object()
         serializer = self.get_serializer(project, context={"user": request.user})
@@ -87,10 +92,12 @@ class ProjectApiView(GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
 
-    def get(self, request, *args, **kwargs):
-        usr_projects = [perm.project for perm in request.user.permissions]
+    def get_queryset(self) -> list[UserPermission, TeamPermission]:
+        user: User = self.request.user
+        return [perm.project for perm in user.permissions]
 
-        usr_projects = sorted(set(usr_projects), key=lambda proj: proj.name)
+    def get(self, request, *args, **kwargs):
+        usr_projects: list[UserPermission, TeamPermission] = self.get_queryset()
 
         serializer = self.get_serializer(
             usr_projects, many=True, context={"user": request.user}
@@ -99,9 +106,12 @@ class ProjectApiView(GenericAPIView):
         return SuccessResponse(serializer.data)
 
     def post(self, request, *args, **kwargs):
+        user: User = request.user
+
         data = request.data
-        data["created_by"] = request.user.email
-        serializer = self.get_serializer(data=data, context={"user": request.user})
+        data["created_by"] = user.email
+
+        serializer = self.get_serializer(data=data, context={"user": user})
         if serializer.is_valid():
             serializer.save()
             return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)

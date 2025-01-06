@@ -87,15 +87,15 @@ class TestSurveyTeamMembership:
         """Test the __str__ method."""
         assert (
             str(leader_membership)
-            == f"{leader_membership.user.email} => {leader_membership.team.name} [LEADER]"  # noqa: E501
-        )
+            == f"{leader_membership.user} => {leader_membership.team} [LEADER]"
+        ), str(leader_membership)
 
     def test_str_representation_member(self, member_membership):
         """Test the __str__ method."""
         assert (
             str(member_membership)
-            == f"{member_membership.user.email} => {member_membership.team.name} [MEMBER]"  # noqa: E501
-        )
+            == f"{member_membership.user} => {member_membership.team} [MEMBER]"
+        ), str(member_membership)
 
     def test_role_property_getter(self, member_membership):
         """Test the role property getter."""
