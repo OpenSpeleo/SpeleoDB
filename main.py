@@ -26,4 +26,4 @@ from speleodb.users.models import User
 
 if __name__ == "__main__":
     user = User.objects.get(email="contact@speleodb.com")
-    print(user)
+    print(f"{user=}")

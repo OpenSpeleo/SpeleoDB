@@ -17,9 +17,6 @@ load_data:
 	python manage.py loaddata fixtures/emailaddresses.json
 
 test:
-# pytest -vvv --capture=no speleodb/surveys/tests/test_auth_token.py
-# pytest -vvv --capture=no speleodb/surveys/tests/test_project_api.py
-# pytest -vvv --capture=no speleodb/surveys/tests/test_list_user_projects.py
 	pytest
 
 deploy:
