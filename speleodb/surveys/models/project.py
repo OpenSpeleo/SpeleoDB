@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     import datetime
 
     from speleodb.surveys.models import Format
+    from speleodb.surveys.models import Mutex
     from speleodb.surveys.models import TeamPermission
     from speleodb.surveys.models import UserPermission
 
@@ -105,25 +106,8 @@ class Project(models.Model):
         verbose_name="visibility",
     )
 
-    # MUTEX Management
-    active_mutex = models.OneToOneField(
-        "Mutex",
-        related_name="rel_active_mutexed_project",
-        on_delete=models.RESTRICT,
-        null=True,
-        blank=True,
-        default=None,
-    )
-
     def __str__(self) -> str:
         return self.name
-
-    def save(self, *args, **kwargs) -> None:
-        if self.active_mutex and self.active_mutex.project != self:
-            raise ValueError(
-                f"Mutex Project mismatch: {self.active_mutex.project=} && {self=}"
-            )
-        super().save(*args, **kwargs)
 
     @property
     def visibility(self) -> str:
@@ -134,18 +118,26 @@ class Project(models.Model):
         self._visibility = value
 
     @property
-    def mutex_owner(self) -> User | None:
+    def active_mutex(self) -> Mutex | None:
         try:
-            return self.active_mutex.user
-        except AttributeError:
+            return self.rel_mutexes.filter(closing_user=None)[0]
+        except IndexError:
             return None
 
     @property
-    def mutex_dt(self) -> datetime.datetime:
-        try:
-            return self.active_mutex.modified_date
-        except AttributeError:
+    def mutex_owner(self) -> User | None:
+        active_mutex: Mutex = self.active_mutex
+        if active_mutex is None:
             return None
+
+        return active_mutex.user
+
+    @property
+    def mutex_dt(self) -> datetime.datetime | None:
+        active_mutex: Mutex = self.active_mutex
+        if active_mutex is None:
+            return None
+        return active_mutex.modified_date
 
     def __repr__(self) -> str:
         return (
@@ -159,22 +151,23 @@ class Project(models.Model):
 
         # if the user is already the mutex_owner, just refresh the mutex_dt
         # => re-acquire mutex
-        if self.mutex_owner is not None:
-            if self.mutex_owner != user:
+        active_mutex: Mutex = self.active_mutex
+        if active_mutex is not None:
+            if active_mutex.user != user:
                 raise ValidationError(
                     "Another user already is currently editing this file: "
-                    f"{self.mutex_owner}"
+                    f"{active_mutex.user}"
                 )
-            self.active_mutex.modified_date = timezone.localtime()
-            self.active_mutex.save()
+            active_mutex.modified_date = timezone.localtime()
+            active_mutex.save()
         else:
             from speleodb.surveys.models import Mutex
 
-            self.active_mutex = Mutex.objects.create(project=self, user=user)
-            self.save()
+            _ = Mutex.objects.create(project=self, user=user)
 
     def release_mutex(self, user: User, comment: str = "") -> None:
-        if self.active_mutex is None:
+        active_mutex: Mutex = self.active_mutex
+        if active_mutex is None:
             # if nobody owns the project, returns without error.
             return
 
@@ -182,9 +175,7 @@ class Project(models.Model):
             raise PermissionError(f"User: `{user.email} can not execute this action.`")
 
         # AutoSave in the background
-        self.active_mutex.release_mutex(user=user, comment=comment)
-        # Needs to refresh since `active_mutex` has been modified in the background
-        self.refresh_from_db()
+        active_mutex.release_mutex(user=user, comment=comment)
 
     def get_best_permission(self, user: User) -> TeamPermission | UserPermission:
         permissions = []
