@@ -14,8 +14,6 @@ from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
 from speleodb.utils.api_decorators import method_permission_classes
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
@@ -91,16 +89,13 @@ class ProjectSpecificApiView(GenericAPIView):
 class ProjectApiView(GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
-
-    def get_queryset(self) -> list[UserPermission, TeamPermission]:
-        user: User = self.request.user
-        return [perm.project for perm in user.permissions]
+    queryset = Project.objects.all()
 
     def get(self, request, *args, **kwargs):
-        usr_projects: list[UserPermission, TeamPermission] = self.get_queryset()
+        user: User = request.user
 
         serializer = self.get_serializer(
-            usr_projects, many=True, context={"user": request.user}
+            user.projects, many=True, context={"user": user}
         )
 
         return SuccessResponse(serializer.data)
@@ -109,7 +104,7 @@ class ProjectApiView(GenericAPIView):
         user: User = request.user
 
         data = request.data
-        data["created_by"] = user.email
+        data["created_by"] = user
 
         serializer = self.get_serializer(data=data, context={"user": user})
         if serializer.is_valid():

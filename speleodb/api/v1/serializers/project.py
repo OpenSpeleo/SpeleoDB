@@ -13,6 +13,16 @@ from speleodb.users.models import User
 from speleodb.utils.serializer_fields import CustomChoiceField
 
 
+class UserField(serializers.RelatedField):
+    def to_representation(self, value):
+        return value.email
+
+    def to_internal_value(self, data):
+        if isinstance(data, User):
+            return data
+        return User.objects.get(email=data)
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     country = CustomChoiceField(choices=countries)
     visibility = CustomChoiceField(
@@ -26,23 +36,19 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     n_commits = serializers.SerializerMethodField()
 
-    created_by = serializers.EmailField(read_only=True)
+    created_by = UserField(queryset=User.objects.all())
 
     class Meta:
         model = Project
         exclude = ("_visibility",)
 
     def create(self, validated_data: dict) -> Project:
-        validated_data["created_by"] = User.objects.get(
-            email=validated_data["created_by"]
-        )
-
         project = super().create(validated_data)
 
-        # assign current user as project admin
-        UserPermission.objects.create(
+        # assign an ADMIN permission to the creator
+        _ = UserPermission.objects.create(
             project=project,
-            target=self.context.get("user"),
+            target=validated_data["created_by"],
             level=UserPermission.Level.ADMIN,
         )
 

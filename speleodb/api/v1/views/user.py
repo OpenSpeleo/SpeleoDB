@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from typing import TYPE_CHECKING
+
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -15,6 +17,9 @@ from speleodb.api.v1.serializers import UserSerializer
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
 
 
 class UserInfo(GenericAPIView):
@@ -64,7 +69,9 @@ class UserAuthTokenView(ObtainAuthToken):
         return NoWrapResponse({"token": token.key})
 
     def _fetch_token(self, request, refresh_token=False, *args, **kwargs):
-        if not request.user.is_authenticated:
+        user: User = request.user
+
+        if not user.is_authenticated:
             serializer = self.get_serializer(data=request.data)
 
             if not serializer.is_valid():
@@ -72,9 +79,6 @@ class UserAuthTokenView(ObtainAuthToken):
                     {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
                 )
             user = serializer.validated_data["user"]
-
-        else:
-            user = request.user
 
         if refresh_token:
             # delete to recreate a fresh token

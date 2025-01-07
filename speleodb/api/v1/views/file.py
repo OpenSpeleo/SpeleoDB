@@ -45,13 +45,33 @@ def handle_exception(
     format_assoc: dict[str, bool],
     project: Project,
 ) -> ErrorResponse:
+    additional_errors = []
     # Cleanup created formats
     for f_obj, created in format_assoc.items():
         if created:
-            f_obj.delete()
+            try:
+                f_obj.delete()
+            except Exception:  # noqa: BLE001
+                additional_errors.append(
+                    "Error during removal of created new format association"
+                )
+
     # Reset project state
-    project.git_repo.reset_and_remove_untracked()
-    return ErrorResponse({"error": message.format(exception)}, status=status_code)
+    try:
+        project.git_repo.reset_and_remove_untracked()
+    except Exception:  # noqa: BLE001
+        additional_errors.append(
+            "Error during resetting of the project to HEAD and removal of untracked "
+            "files."
+        )
+
+    error_msg = message.format(exception)
+
+    if additional_errors:
+        error_msg += " - Additional Errors During Exception Handling: "
+        error_msg += ", ".join(additional_errors)
+
+    return ErrorResponse({"error": error_msg}, status=status_code)
 
 
 class FileUploadView(GenericAPIView):
@@ -180,18 +200,19 @@ class FileUploadView(GenericAPIView):
             # ~~~~~~~~~~~~~~~~~~~~ END of Form Data Validation ~~~~~~~~~~~~~~~~~~~~ #
 
             # ~~~~~~~~~~~~~~~~~ START of writing files to project ~~~~~~~~~~~~~~~~~ #
-            with timed_section("Git Project - Checkout and Pull"):
-                project: Project = self.get_object()
-                # Make sure the project is update to ToT (Top of Tree)
-                project.git_repo.checkout_default_branch()
+            format_assoc = defaultdict(lambda: False)
+            project: Project = self.get_object()
 
-            with timed_section("Project Edition - File Adding - Git Commit & Push"):
-                project: Project = self.get_object()
+            try:
+                with timed_section("Git Project - Checkout and Pull"):
+                    # Make sure the project is update to ToT (Top of Tree)
+                    project.git_repo.checkout_default_branch()
 
-                format_assoc = defaultdict(lambda: False)
-                uploaded_files = []
+                with timed_section("Project Edition - File Adding - Git Commit & Push"):
+                    project: Project = self.get_object()
 
-                try:
+                    uploaded_files = []
+
                     for file in files:
                         with timed_section(f"File Adding: `{file.name}`"):
                             # maximum retry attempts in case of Git exception
@@ -278,41 +299,41 @@ class FileUploadView(GenericAPIView):
                             }
                         )
 
-                except (ValidationError, FileNotFoundError) as e:
-                    return handle_exception(
-                        e,
-                        "An error occurred: {}",
-                        status.HTTP_400_BAD_REQUEST,
-                        format_assoc,
-                        project,
-                    )
+            except (ValidationError, FileNotFoundError) as e:
+                return handle_exception(
+                    e,
+                    "An error occurred: {}",
+                    status.HTTP_400_BAD_REQUEST,
+                    format_assoc,
+                    project,
+                )
 
-                except GitlabError as e:
-                    return handle_exception(
-                        e,
-                        "There has been a problem accessing GitLab: `{}`",
-                        status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        format_assoc,
-                        project,
-                    )
+            except GitlabError as e:
+                return handle_exception(
+                    e,
+                    "There has been a problem accessing GitLab: `{}`",
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    format_assoc,
+                    project,
+                )
 
-                except FileRejectedError as e:
-                    return handle_exception(
-                        e,
-                        "One of the uploaded files has been rejected: `{}`",
-                        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                        format_assoc,
-                        project,
-                    )
+            except FileRejectedError as e:
+                return handle_exception(
+                    e,
+                    "One of the uploaded files has been rejected: `{}`",
+                    status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                    format_assoc,
+                    project,
+                )
 
-                except Exception as e:  # noqa: BLE001
-                    return handle_exception(
-                        e,
-                        "There has been a problem committing the files: {}",
-                        status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        format_assoc,
-                        project,
-                    )
+            except Exception as e:  # noqa: BLE001
+                return handle_exception(
+                    e,
+                    "There has been a problem committing the files: {}",
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    format_assoc,
+                    project,
+                )
 
 
 class FileDownloadView(GenericAPIView):

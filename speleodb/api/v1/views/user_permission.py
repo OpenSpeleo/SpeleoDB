@@ -35,7 +35,8 @@ class ProjectUserPermissionListView(GenericAPIView):
             {
                 "project": project_serializer.data,
                 "permissions": permission_serializer.data,
-            }
+            },
+            status=status.HTTP_200_OK,
         )
 
 
@@ -70,7 +71,7 @@ class ProjectUserPermissionView(GenericAPIView):
                     except ObjectDoesNotExist:
                         return ErrorResponse(
                             {"error": f"The user: `{value}` does not exist."},
-                            status=status.HTTP_400_BAD_REQUEST,
+                            status=status.HTTP_404_NOT_FOUND,
                         )
                     if not perm_data[key].is_active:
                         return ErrorResponse(
@@ -164,7 +165,7 @@ class ProjectUserPermissionView(GenericAPIView):
                         "does not exist."
                     )
                 },
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         if not permission.is_active:
@@ -192,7 +193,7 @@ class ProjectUserPermissionView(GenericAPIView):
                 "project": project_serializer.data,
                 "permission": permission_serializer.data,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK,
         )
 
     def delete(self, request, *args, **kwargs):
@@ -223,7 +224,7 @@ class ProjectUserPermissionView(GenericAPIView):
                         "does not exist."
                     )
                 },
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         permission.deactivate(deactivated_by=request.user)
@@ -236,5 +237,5 @@ class ProjectUserPermissionView(GenericAPIView):
             {
                 "project": project_serializer.data,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_204_NO_CONTENT,
         )

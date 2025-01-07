@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from django.db import models
+from django.db import transaction
 
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
@@ -40,14 +41,15 @@ class Mutex(models.Model):
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
 
+    @transaction.atomic
     def release_mutex(self, user: User, comment: str) -> None:
+        mutexed_project: Project = self.project
+        mutexed_project.active_mutex = None
+        mutexed_project.save()
+
         self.closing_user = user
         self.closing_comment = comment
         self.save()
-
-        mutexed_project = self.rel_active_mutexed_project
-        mutexed_project.active_mutex = None
-        mutexed_project.save()
 
     @property
     def is_active(self) -> bool:

@@ -183,6 +183,8 @@ class Project(models.Model):
 
         # AutoSave in the background
         self.active_mutex.release_mutex(user=user, comment=comment)
+        # Needs to refresh since `active_mutex` has been modified in the background
+        self.refresh_from_db()
 
     def get_best_permission(self, user: User) -> TeamPermission | UserPermission:
         permissions = []
