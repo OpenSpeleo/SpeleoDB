@@ -64,7 +64,7 @@ class ProjectTeamPermissionView(GenericAPIView):
         except ObjectDoesNotExist:
             return ErrorResponse(
                 {"error": (f"A permission for this team: `{team}` does not exist.")},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         permission_serializer = TeamPermissionSerializer(permission)
@@ -154,7 +154,7 @@ class ProjectTeamPermissionView(GenericAPIView):
         except ObjectDoesNotExist:
             return ErrorResponse(
                 {"error": (f"A permission for this team: `{team}` does not exist.")},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         if not permission.is_active:
@@ -182,7 +182,7 @@ class ProjectTeamPermissionView(GenericAPIView):
                 "project": project_serializer.data,
                 "permission": permission_serializer.data,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK,
         )
 
     def delete(self, request, *args, **kwargs):
@@ -202,7 +202,7 @@ class ProjectTeamPermissionView(GenericAPIView):
         except ObjectDoesNotExist:
             return ErrorResponse(
                 {"error": (f"A permission for this team: `{team}` does not exist.")},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         # Deactivate the project permission
@@ -218,5 +218,5 @@ class ProjectTeamPermissionView(GenericAPIView):
             {
                 "project": project_serializer.data,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_204_NO_CONTENT,
         )

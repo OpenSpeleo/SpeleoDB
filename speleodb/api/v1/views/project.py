@@ -42,7 +42,7 @@ class ProjectSpecificApiView(GenericAPIView):
             logger.exception("There has been a problem accessing gitlab")
             return ErrorResponse(
                 {"error": "There has been a problem accessing gitlab"},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @method_permission_classes((UserHasWriteAccess,))

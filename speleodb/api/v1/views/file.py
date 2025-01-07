@@ -231,7 +231,7 @@ class FileUploadView(GenericAPIView):
                                 else:
                                     return ErrorResponse(
                                         f"Git Error: {git_error}",
-                                        status=status.HTTP_400_BAD_REQUEST,
+                                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                                     )
 
                             with timed_section("File Management"):
@@ -400,14 +400,14 @@ class FileDownloadView(GenericAPIView):
                     f"Error - While getting the file to download @ `{hexsha}`"
                 )
                 return ErrorResponse(
-                    {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
+                    {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
             except GitlabError:
                 logger.exception("There has been a problem accessing gitlab")
                 return ErrorResponse(
                     {"error": "There has been a problem accessing gitlab"},
-                    status=status.HTTP_400_BAD_REQUEST,
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
 

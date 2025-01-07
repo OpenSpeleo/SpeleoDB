@@ -293,7 +293,7 @@ class TestTeamMembershipDelete(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.status_code == status.HTTP_204_NO_CONTENT, response.data
 
         with pytest.raises(ObjectDoesNotExist):
             self.team.get_membership(user=self.target_user)
