@@ -82,7 +82,7 @@ class ProjectSpecificApiView(GenericAPIView):
         # This is done to protect users from malicious/erronous project deletion.
 
         project: Project = self.get_object()
-        for perm in project.get_all_permissions():
+        for perm in project.permissions:
             perm.deactivate(deactivated_by=request.user)
 
         return SuccessResponse({"id": str(project.id)})

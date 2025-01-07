@@ -26,7 +26,7 @@ class ProjectUserPermissionListView(GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         project: Project = self.get_object()
-        permissions = project.get_all_user_permissions()
+        permissions = project.user_permissions
 
         project_serializer = ProjectSerializer(project, context={"user": request.user})
         permission_serializer = UserPermissionListSerializer(permissions)

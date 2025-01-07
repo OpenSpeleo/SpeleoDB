@@ -1,5 +1,6 @@
 import contextlib
 from dataclasses import dataclass
+from itertools import chain
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -151,12 +152,12 @@ class NewProjectView(_AuthenticatedTemplateView):
 
 
 class _BaseProjectView(LoginRequiredMixin, View):
-    def get(self, request, project_id: str):
+    def get_project_data(self, user: User, project_id: str) -> dict:
         project = Project.objects.get(id=project_id)
         return {
             "project": project,
-            "is_project_admin": project.is_admin(request.user),
-            "has_write_access": project.has_write_access(request.user),
+            "is_project_admin": project.is_admin(user),
+            "has_write_access": project.has_write_access(user),
         }
 
 
@@ -165,7 +166,7 @@ class ProjectUploadView(_BaseProjectView):
 
     def get(self, request, project_id: str):
         try:
-            data = super().get(request, project_id=project_id)
+            data = self.get_project_data(user=request.user, project_id=project_id)
             data["limit_individual_filesize"] = (
                 settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
             )
@@ -184,7 +185,7 @@ class ProjectDangerZoneView(_BaseProjectView):
 
     def get(self, request, project_id: str):
         try:
-            data = super().get(request, project_id=project_id)
+            data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
@@ -201,7 +202,7 @@ class ProjectDetailsView(_BaseProjectView):
 
     def get(self, request, project_id: str):
         try:
-            data = super().get(request, project_id=project_id)
+            data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
@@ -213,21 +214,21 @@ class ProjectUserPermissionsView(_BaseProjectView):
 
     def get(self, request, project_id: str):
         try:
-            data = super().get(request, project_id=project_id)
+            data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
         # Collecting all the `user` aka. direct permissions of the project
         user_permissions = [
             UserAccessLevel(user=perm.target, level=perm.level_obj)
-            for perm in data["project"].get_all_user_permissions()
+            for perm in data["project"].user_permissions
         ]
 
         filtered_team_permissions = []
 
         # Scanning through all the team memberships to collect users who get
         # project access via team permission.
-        team_permissions = data["project"].get_all_team_permissions()
+        team_permissions = data["project"].team_permissions
         for team_permission in team_permissions:
             for membership in team_permission.target.get_all_memberships():
                 filtered_team_permissions.append(  # noqa: PERF401
@@ -260,13 +261,17 @@ class ProjectTeamPermissionsView(_BaseProjectView):
 
     def get(self, request, project_id: str):
         try:
-            data = super().get(request, project_id=project_id)
+            data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        data["permissions"] = data["project"].get_all_team_permissions()
+        project: Project = data["project"]
+        data["permissions"] = project.team_permissions
+
+        project_teams = SurveyTeam.objects.filter(rel_permissions__project=project)
+
         data["available_teams"] = sorted(
-            set(request.user.teams + [perm.target for perm in data["permissions"]]),
+            [team for team in request.user.teams if team not in project_teams],
             key=lambda team: team.name.upper(),
         )
         return render(request, self.template_name, data)
@@ -277,7 +282,7 @@ class ProjectMutexesView(_BaseProjectView):
 
     def get(self, request, project_id: str):
         try:
-            data = super().get(request, project_id=project_id)
+            data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
@@ -290,7 +295,7 @@ class ProjectRevisionHistoryView(_BaseProjectView):
 
     def get(self, request, project_id: str):
         try:
-            data = super().get(request, project_id=project_id)
+            data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
@@ -302,7 +307,7 @@ class ProjectGitExplorerView(_BaseProjectView):
 
     def get(self, request, project_id: str, hexsha: str | None = None):
         try:
-            data = super().get(request, project_id=project_id)
+            data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
