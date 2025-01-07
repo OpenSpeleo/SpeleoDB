@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from itertools import groupby
 from operator import attrgetter
 from typing import TYPE_CHECKING
@@ -9,7 +10,6 @@ from django.contrib.auth.models import AbstractUser
 from django.db.models import BooleanField
 from django.db.models import CharField
 from django.db.models import EmailField
-from django.db.models.functions import Lower
 from django_countries.fields import CountryField
 
 from speleodb.users.managers import UserManager
@@ -79,12 +79,12 @@ class User(AbstractUser):
 
     @property
     def teams(self):
-        return [
-            team_membership.team
-            for team_membership in self.rel_team_memberships.filter(
-                is_active=True
-            ).order_by("-modified_date")
-        ]
+        from speleodb.users.models import SurveyTeam
+
+        return SurveyTeam.objects.filter(
+            rel_team_memberships__user=self,
+            rel_team_memberships__is_active=True,
+        )
 
     @property
     def team_memberships(self) -> list[SurveyTeamMembership]:
@@ -93,63 +93,35 @@ class User(AbstractUser):
         )
 
     @property
-    def user_projects(self) -> list[Project]:
-        return sorted(
-            [perm.project for perm in self.permissions_user],
-            key=lambda data: data.modified_date,
-            reverse=True,
-        )
-
-    @property
-    def team_projects(self) -> list[Project]:
-        return sorted(
-            [perm.project for perm in self.team_permissions],
-            key=lambda data: data.modified_date,
-            reverse=True,
-        )
-
-    @property
     def projects(self) -> list[Project]:
-        return sorted(
-            set(self.user_projects + self.team_projects),
-            key=lambda data: data.modified_date,
-            reverse=True,
-        )
+        return [perm.project for perm in self.permissions]
 
     @property
     def projects_with_level(
         self,
     ) -> list[dict[str, Project | TeamPermission | UserPermission]]:
-        projects = [
-            {"project": perm.project, "level": perm.level}
-            for perm in self.permissions_user
+        return [
+            {"project": perm.project, "level": perm.level} for perm in self.permissions
         ]
 
-        return sorted(
-            projects, key=lambda data: data["project"].modified_date, reverse=True
-        )
-
     @property
-    def permissions_user(self) -> list[UserPermission]:
-        return list(
-            self.rel_permissions.filter(is_active=True).order_by(Lower("project__name"))
-        )
+    def permissions(self) -> list[TeamPermission, UserPermission]:
+        """Returns a sorted list of `TeamPermission` or `UserPermission` by project
+        name. The method finds the best permission (user or team) for each project."""
 
-    @property
-    def permissions_team(self) -> list[TeamPermission]:
         from speleodb.surveys.models import TeamPermission
         from speleodb.users.models import SurveyTeam
+
+        # -------------------------- USER PERMISSIONS -------------------------- #
+
+        user_permissions = self.rel_permissions.filter(is_active=True)
+
+        # -------------------------- TEAM PERMISSIONS -------------------------- #
 
         active_user_teams = SurveyTeam.objects.filter(
             rel_team_memberships__user=self, rel_team_memberships__is_active=True
         )
 
-        team_permissions = TeamPermission.objects.filter(
-            target__in=active_user_teams
-        ).order_by(Lower("project__name"))
+        team_permissions = TeamPermission.objects.filter(target__in=active_user_teams)
 
-        return filter_permissions_by_best(team_permissions)
-
-    @property
-    def permissions(self) -> list[TeamPermission, UserPermission]:
-        return filter_permissions_by_best(self.permissions_user + self.permissions_team)
+        return filter_permissions_by_best(chain(user_permissions, team_permissions))

@@ -11,23 +11,24 @@ from speleodb.api.v1.permissions import UserHasLeaderAccess
 from speleodb.api.v1.permissions import UserHasMemberAccess
 from speleodb.api.v1.serializers import SurveyTeamSerializer
 from speleodb.users.models import SurveyTeam
+from speleodb.users.models import User
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 
 class TeamApiView(GenericAPIView):
     serializer_class = SurveyTeamSerializer
+    queryset = SurveyTeam.objects.all()
 
     permission_classes = [
         (permissions.IsAuthenticated & IsObjectCreation)
         | (IsReadOnly & UserHasMemberAccess)
     ]
 
-    lookup_field = "id"
-
     def get(self, request, *args, **kwargs):
+        user: User = request.user
         serializer = self.get_serializer(
-            request.user.teams, context={"user": request.user}, many=True
+            user.teams, context={"user": request.user}, many=True
         )
 
         return SuccessResponse(serializer.data)
