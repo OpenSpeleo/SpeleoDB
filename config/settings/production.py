@@ -80,7 +80,7 @@ STORAGES = {
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
 DEFAULT_FROM_EMAIL = env(
     "DJANGO_DEFAULT_FROM_EMAIL",
-    default="SpeleoDB <noreply@noreply.speleodb.org>",
+    default="SpeleoDB <noreply@mail.speleodb.org>",
 )
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#server-email
