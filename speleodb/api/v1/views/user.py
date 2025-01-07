@@ -27,7 +27,9 @@ class UserInfo(GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        return SuccessResponse(self.get_serializer(request.user).data)
+        return SuccessResponse(
+            self.get_serializer(request.user).data, status=status.HTTP_200_OK
+        )
 
     def put(self, request, *args, **kwargs):
         serializer = self.get_serializer(

@@ -39,7 +39,7 @@ class TeamMembershipApiView(GenericAPIView):
                         f"`{request.user}` does not exist."
                     )
                 },
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         membership_serializer = SurveyTeamMembershipSerializer(membership)
@@ -129,7 +129,7 @@ class TeamMembershipApiView(GenericAPIView):
                         f"`{serializer.validated_data['user']}` does not exist."
                     )
                 },
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         if not membership.is_active:
@@ -186,7 +186,7 @@ class TeamMembershipApiView(GenericAPIView):
                         f"`{serializer.validated_data['user']}` does not exist."
                     )
                 },
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         # Deactivate the user membership to the team
@@ -202,7 +202,7 @@ class TeamMembershipApiView(GenericAPIView):
             {
                 "team": team_serializer.data,
             },
-            status=status.HTTP_200_OK,
+            status=status.HTTP_204_NO_CONTENT,
         )
 
 
