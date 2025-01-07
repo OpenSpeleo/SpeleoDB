@@ -73,7 +73,6 @@
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("X-CSRFToken", csrftoken);
                     return true;
-
                 },
                 success: function (data) {
                     $("#modal_success_txt").html("The project has been deleted succesfully.");

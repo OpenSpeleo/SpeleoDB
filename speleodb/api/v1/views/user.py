@@ -124,3 +124,18 @@ class UserPasswordChangeView(GenericAPIView):
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class ReleaseAllUserLocksView(GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        user: User = request.user
+
+        active_mutexes = user.active_mutexes
+        for mutex in active_mutexes:
+            mutex.release_mutex(user=user, comment="Batch unlocking")
+
+        return SuccessResponse(
+            "All locks have been released", status=status.HTTP_204_NO_CONTENT
+        )

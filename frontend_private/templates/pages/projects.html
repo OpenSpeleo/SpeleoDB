@@ -30,6 +30,17 @@
             <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
 
                 <!-- New button -->
+                <button class="btn bg-sky-500 hover:bg-sky-600 text-white mr-4">
+                    <svg class="w-4 h-4 stroke-current opacity-50 shrink-0" fill="none"  stroke-width="2" viewBox="2 2 20 20">
+                        <path d="M3 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"></path>
+                        <path d="M9 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"></path>
+                        <path d="M13 11v-4a4 4 0 1 1 8 0v4"></path>
+                      </svg>
+                    {% csrf_token %}
+                    <a id="btn_release_all_locks" class="hidden xs:block ml-2">Unlock All My Projects</a>
+                </button>
+
+                <!-- New button -->
                 <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
                     <svg class="w-4 h-4 fill-current opacity-50 shrink-0" viewBox="0 0 16 16">
                         <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
@@ -178,11 +189,66 @@
 
     </div>
 </main>
+
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+{% include 'snippets/modal_confirmation.html' %}
+
 {% endblock content %}
 
 {% block inline_extra_js %}
 <script>
 $( document ).ready(function() {
+
+    $("body").click(function() {
+        if ($("#modal_success").is(":visible")) {
+            $("#modal_success").hide();
+        }
+        if ($("#modal_error").is(":visible")) {
+            $("#modal_error").hide();
+        }
+        if ($("#modal_confirmation").is(":visible")) {
+            $("#modal_confirmation").hide();
+        }
+    });
+
+    $('#btn_release_all_locks').click(function (e) {
+        $("#modal_confirmation").css('display', 'flex');
+        return false; // prevent default
+    });
+
+    $('#btn_confirmed_submit').click(function () {
+        var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+        $("#error_div").hide();
+        $("#success_div").hide();
+        $("#modal_confirmation").hide();
+
+        $.ajax({
+            url: "{% url 'api:v1:release_all_locks' %}",
+            method: "DELETE",
+            contentType: "application/json; charset=utf-8",
+            cache: false,
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                return true;
+            },
+            success: function (data) {
+                $("#modal_success_txt").html("All the projects have been unlocked.");
+                $("#modal_success").css('display', 'flex');
+
+                window.setTimeout(function(){
+                    // Redirect to project listing
+                    window.location.href = "{% url 'private:projects' %}";
+                }, 2000);
+            },
+            error: function (data) {
+                {% include 'snippets/ajax_error_modal_management.js' %}
+            }
+        });
+        return false; // prevent default
+    });
 
     $('.async_revision').each(function(){
         var target_div = $("#" + $(this).data('id'));
