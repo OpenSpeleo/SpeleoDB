@@ -161,7 +161,7 @@
 
                                     <!-- Edit Link -->
                                     <span class="cursor-pointer {% if can_edit %}btn_open_edit_perm"
-                                        data-user="{{permission.user}}" data-level="{{ permission.level.label }}{% endif %}">
+                                        data-user="{{permission.user.email}}" data-level="{{ permission.level.label }}{% endif %}">
                                         <svg xmlns="http://www.w3.org/2000/svg"
                                             class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline"
                                             viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
@@ -174,7 +174,7 @@
 
                                     <!-- Delete Link -->
                                     <span class="cursor-pointer {% if can_edit %}btn_delete_perm"
-                                        data-user="{{permission.user}}{% endif %}">
+                                        data-user="{{permission.user.email}}{% endif %}">
                                         <svg xmlns="http://www.w3.org/2000/svg"
                                             class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline"
                                             viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
