@@ -201,26 +201,32 @@ class Project(models.Model):
     def get_team_permission(self, team: SurveyTeam) -> TeamPermission:
         return self.rel_team_permissions.get(target=team, is_active=True)
 
-    def get_all_user_permissions(self) -> list[UserPermission]:
+    @property
+    def user_permissions(self) -> list[UserPermission]:
         return self.rel_user_permissions.filter(is_active=True).order_by(
             "-_level", "target__email"
         )
 
-    def get_all_team_permissions(self) -> list[TeamPermission]:
+    @property
+    def team_permissions(self) -> list[TeamPermission]:
         return self.rel_team_permissions.filter(is_active=True).order_by(
             "-_level", "target__name"
         )
 
-    def get_all_permissions(self) -> list[TeamPermission, UserPermission]:
-        return self.get_all_user_permissions() + self.get_all_team_permissions()
+    @property
+    def permissions(self) -> list[TeamPermission, UserPermission]:
+        return self.user_permissions + self.team_permissions
 
-    def get_user_permission_count(self) -> int:
+    @property
+    def user_permission_count(self) -> int:
         return self.rel_user_permissions.filter(is_active=True).count()
 
-    def get_team_permission_count(self) -> int:
+    @property
+    def team_permission_count(self) -> int:
         return self.rel_team_permissions.filter(is_active=True).count()
 
-    def get_total_collaborators(self) -> int:
+    @property
+    def collaborator_count(self) -> int:
         users = [
             perm.target for perm in self.rel_user_permissions.filter(is_active=True)
         ]

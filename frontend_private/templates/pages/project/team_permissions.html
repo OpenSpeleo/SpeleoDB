@@ -25,7 +25,7 @@
             <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2 w-fit block float-right">
 
                 <!-- New button -->
-                {% if not is_project_admin %}
+                {% if not is_project_admin or not available_teams %}
                 <button class="btn bg-slate-600 text-white" disabled>
                     {% else %}
                     <button id="btn_open_add_team" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
@@ -39,7 +39,11 @@
                                 d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z">
                             </path>
                         </svg>
+                        {% if available_teams %}
                         <span class="hidden xs:block ml-2">Grant Access</span>
+                        {% else %}
+                        <span class="hidden xs:block ml-2">No Additional Team Available</span>
+                        {% endif %}
                     </button>
 
             </div>
