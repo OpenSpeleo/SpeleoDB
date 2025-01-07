@@ -6,6 +6,7 @@ from rest_framework import status
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.surveys.models import AnyPermissionLevel
+from speleodb.surveys.models import Mutex
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 
@@ -200,7 +201,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
         # =================== RELEASE PROJECT =================== #
 
-        mutex = self.project.active_mutex
+        mutex: Mutex = self.project.active_mutex
 
         test_comment = "hello world"
 
@@ -227,7 +228,10 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             "reserialized": project_data,
             "response_data": response.data["data"],
         }
-        assert response.data["data"]["active_mutex"] is None, response.data
+
+        assert response.data["data"]["active_mutex"] is None, response.data["data"][
+            "active_mutex"
+        ]
         assert mutex.closing_comment == test_comment, (mutex, test_comment)
         assert mutex.closing_user == self.user, (mutex, self.user)
 

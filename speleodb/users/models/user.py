@@ -15,6 +15,7 @@ from django_countries.fields import CountryField
 from speleodb.users.managers import UserManager
 
 if TYPE_CHECKING:
+    from speleodb.surveys.models import Mutex
     from speleodb.surveys.models import Project
     from speleodb.surveys.models import TeamPermission
     from speleodb.surveys.models import UserPermission
@@ -125,3 +126,7 @@ class User(AbstractUser):
         team_permissions = TeamPermission.objects.filter(target__in=active_user_teams)
 
         return filter_permissions_by_best(chain(user_permissions, team_permissions))
+
+    @property
+    def active_mutexes(self) -> list[Mutex]:
+        return self.rel_mutexes.filter(closing_user=None)
