@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def timed_section(section_name: str) -> Generator[None, None, None]:
+def timed_section(section_name: str) -> Generator[None]:
     if not settings.DEBUG:
         yield
 
