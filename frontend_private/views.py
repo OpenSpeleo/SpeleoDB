@@ -3,12 +3,11 @@ from dataclasses import dataclass
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
-from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
-from django.views import View
 from django.views.generic import TemplateView
 from rest_framework.authtoken.models import Token
 
@@ -45,6 +44,15 @@ class UserAccessLevel:
 
 class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
     login_url = reverse_lazy("account_login")
+
+    def refresh_user_login(self, user: User) -> None:
+        with contextlib.suppress(Exception):
+            update_last_login(None, user=user)
+
+    def get(self, request, *args, **kwargs):
+        render = super().get(request, *args, **kwargs)
+        self.refresh_user_login(user=request.user)
+        return render
 
 
 # ============ Setting Pages ============ #
@@ -88,57 +96,59 @@ class NewTeamView(_AuthenticatedTemplateView):
     template_name = "pages/team/new.html"
 
 
-class _BaseTeamView(LoginRequiredMixin, View):
-    def get(self, request, team_id: int):
+class _BaseTeamView(_AuthenticatedTemplateView):
+    def get_data_or_redirect(self, request, team_id: int):
         try:
             team = SurveyTeam.objects.get(id=team_id)
             if request.user and request.user.is_authenticated:
                 if not team.is_member(request.user):
                     return redirect(reverse("private:teams"))
-                return {"team": team, "is_team_leader": team.is_leader(request.user)}
-            return redirect(reverse("home"))
+            else:
+                return redirect(reverse("home"))
         except ObjectDoesNotExist:
             return redirect(reverse("private:teams"))
+
+        return {"team": team, "is_team_leader": team.is_leader(request.user)}
 
 
 class TeamDetailsView(_BaseTeamView):
     template_name = "pages/team/details.html"
 
-    def get(self, request, team_id: int):
-        data_or_redirect = super().get(request, team_id=team_id)
-        if not isinstance(data_or_redirect, dict):
-            return data_or_redirect
+    def get(self, request, team_id: int, *args, **kwargs):
+        data = self.get_data_or_redirect(request, team_id=team_id)
+        if not isinstance(data, dict):
+            return data  # redirection
 
-        return render(request, self.template_name, data_or_redirect)
+        return super().get(request, *args, **data, **kwargs)
 
 
 class TeamMembershipsView(_BaseTeamView):
     template_name = "pages/team/memberships.html"
 
-    def get(self, request, team_id: int):
-        data_or_redirect = super().get(request, team_id=team_id)
-        if not isinstance(data_or_redirect, dict):
-            return data_or_redirect
+    def get(self, request, team_id: int, *args, **kwargs):
+        data = self.get_data_or_redirect(request, team_id=team_id)
+        if not isinstance(data, dict):
+            return data  # redirection
 
-        data_or_redirect["memberships"] = data_or_redirect["team"].get_all_memberships()
+        data["memberships"] = data["team"].get_all_memberships()
 
-        return render(request, self.template_name, data_or_redirect)
+        return super().get(request, *args, **data, **kwargs)
 
 
 class TeamDangerZoneView(_BaseTeamView):
     template_name = "pages/team/danger_zone.html"
 
-    def get(self, request, team_id: int):
-        data_or_redirect = super().get(request, team_id=team_id)
-        if not isinstance(data_or_redirect, dict):
-            return data_or_redirect
+    def get(self, request, team_id: int, *args, **kwargs):
+        data = self.get_data_or_redirect(request, team_id=team_id)
+        if not isinstance(data, dict):
+            return data  # redirection
 
-        if not data_or_redirect["is_team_leader"]:
+        if not data["is_team_leader"]:
             return redirect(
                 reverse("private:team_details", kwargs={"team_id": team_id})
             )
 
-        return render(request, self.template_name, data_or_redirect)
+        return super().get(request, *args, **data, **kwargs)
 
 
 # ============ Project Pages ============ #
@@ -150,7 +160,7 @@ class NewProjectView(_AuthenticatedTemplateView):
     template_name = "pages/project/new.html"
 
 
-class _BaseProjectView(LoginRequiredMixin, View):
+class _BaseProjectView(_AuthenticatedTemplateView):
     def get_project_data(self, user: User, project_id: str) -> dict:
         project = Project.objects.get(id=project_id)
         return {
@@ -163,7 +173,7 @@ class _BaseProjectView(LoginRequiredMixin, View):
 class ProjectUploadView(_BaseProjectView):
     template_name = "pages/project/upload.html"
 
-    def get(self, request, project_id: str):
+    def get(self, request, project_id: str, *args, **kwargs):
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
             data["limit_individual_filesize"] = (
@@ -176,13 +186,13 @@ class ProjectUploadView(_BaseProjectView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        return render(request, self.template_name, data)
+        return super().get(request, *args, **data, **kwargs)
 
 
 class ProjectDangerZoneView(_BaseProjectView):
     template_name = "pages/project/danger_zone.html"
 
-    def get(self, request, project_id: str):
+    def get(self, request, project_id: str, *args, **kwargs):
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -193,25 +203,25 @@ class ProjectDangerZoneView(_BaseProjectView):
                 reverse("private:project_details", kwargs={"project_id": project_id})
             )
 
-        return render(request, self.template_name, data)
+        return super().get(request, *args, **data, **kwargs)
 
 
 class ProjectDetailsView(_BaseProjectView):
     template_name = "pages/project/details.html"
 
-    def get(self, request, project_id: str):
+    def get(self, request, project_id: str, *args, **kwargs):
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        return render(request, self.template_name, data)
+        return super().get(request, *args, **data, **kwargs)
 
 
 class ProjectUserPermissionsView(_BaseProjectView):
     template_name = "pages/project/user_permissions.html"
 
-    def get(self, request, project_id: str):
+    def get(self, request, project_id: str, *args, **kwargs):
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -252,13 +262,14 @@ class ProjectUserPermissionsView(_BaseProjectView):
             permission_map.values(),
             key=lambda perm: (-perm.level.value, perm.user.email),
         )
-        return render(request, self.template_name, data)
+
+        return super().get(request, *args, **data, **kwargs)
 
 
 class ProjectTeamPermissionsView(_BaseProjectView):
     template_name = "pages/project/team_permissions.html"
 
-    def get(self, request, project_id: str):
+    def get(self, request, project_id: str, *args, **kwargs):
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -273,38 +284,40 @@ class ProjectTeamPermissionsView(_BaseProjectView):
             [team for team in request.user.teams if team not in project_teams],
             key=lambda team: team.name.upper(),
         )
-        return render(request, self.template_name, data)
+
+        return super().get(request, *args, **data, **kwargs)
 
 
 class ProjectMutexesView(_BaseProjectView):
     template_name = "pages/project/mutex_history.html"
 
-    def get(self, request, project_id: str):
+    def get(self, request, project_id: str, *args, **kwargs):
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
         data["mutexes"] = data["project"].rel_mutexes.all().order_by("-creation_date")
-        return render(request, self.template_name, data)
+
+        return super().get(request, *args, **data, **kwargs)
 
 
 class ProjectRevisionHistoryView(_BaseProjectView):
     template_name = "pages/project/revision_history.html"
 
-    def get(self, request, project_id: str):
+    def get(self, request, project_id: str, *args, **kwargs):
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
-        return render(request, self.template_name, data)
+        return super().get(request, *args, **data, **kwargs)
 
 
 class ProjectGitExplorerView(_BaseProjectView):
     template_name = "pages/project/git_view.html"
 
-    def get(self, request, project_id: str, hexsha: str | None = None):
+    def get(self, request, project_id: str, hexsha: str | None = None, *args, **kwargs):
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -312,13 +325,13 @@ class ProjectGitExplorerView(_BaseProjectView):
 
         data["hexsha"] = hexsha
 
-        return render(request, self.template_name, data)
+        return super().get(request, *args, **data, **kwargs)
 
 
 class ProjectGitInstructionsView(_BaseProjectView):
     template_name = "pages/project/git_instructions.html"
 
-    def get(self, request, project_id: str, hexsha: str | None = None):
+    def get(self, request, project_id: str, hexsha: str | None = None, *args, **kwargs):
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -327,4 +340,4 @@ class ProjectGitInstructionsView(_BaseProjectView):
         data["auth_token"], _ = Token.objects.get_or_create(user=request.user)
         data["default_branch"] = settings.DJANGO_GIT_BRANCH_NAME
 
-        return render(request, self.template_name, data)
+        return super().get(request, *args, **data, **kwargs)

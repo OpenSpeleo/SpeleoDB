@@ -3,6 +3,7 @@
 
 from typing import TYPE_CHECKING
 
+from django.contrib.auth.models import update_last_login
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -67,7 +68,11 @@ class UserAuthTokenView(ObtainAuthToken):
                 data={"error": "Not authenticated"},
             )
 
-        token, _ = Token.objects.get_or_create(user=request.user)
+        user: User = request.user
+
+        token, _ = Token.objects.get_or_create(user=user)
+        update_last_login(None, user=user)
+
         return NoWrapResponse({"token": token.key})
 
     def _fetch_token(self, request, refresh_token=False, *args, **kwargs):
@@ -80,13 +85,15 @@ class UserAuthTokenView(ObtainAuthToken):
                 return ErrorResponse(
                     {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
                 )
-            user = serializer.validated_data["user"]
+            user: User = serializer.validated_data["user"]
 
         if refresh_token:
             # delete to recreate a fresh token
             Token.objects.filter(user=user).delete()
 
         token, created = Token.objects.get_or_create(user=user)
+        update_last_login(None, user=user)
+
         return NoWrapResponse(
             {"token": token.key},
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
