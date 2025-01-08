@@ -133,7 +133,7 @@
 
 {% block inline_extra_js %}
 <script>
-$( document ).ready(function() {
+$(window).on('load', function() {
 
     // Ensure the loading spinner is being displayed
     $("#loading_spinner").show();

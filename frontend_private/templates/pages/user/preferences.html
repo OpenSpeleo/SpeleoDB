@@ -72,7 +72,7 @@
 
 {% block inline_extra_js %}
 <script>
-    $(document).ready(function () {
+    $(window).on('load', function() {
         $("body").click(function() {
             if ($("#modal_success").is(":visible")) {
                 $("#modal_success").hide();

@@ -210,7 +210,7 @@
 {% block inline_extra_js %}
 <script>
 
-    $(document).ready(function () {
+    $(window).on('load', function() {
 
         $(".btn_close").click(function () {
             if ($("#permission_modal").is(":visible")) {
