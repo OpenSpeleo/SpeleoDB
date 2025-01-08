@@ -9,12 +9,8 @@ from frontend_public.views import PasswordResetView
 from frontend_public.views import SignUpView
 
 urlpatterns = [
+    # Main Pages
     path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
-    path(
-        "webview/ariane/",
-        TemplateView.as_view(template_name="webviews/ariane.html"),
-        name="home_ariane",
-    ),
     path(
         "about/", TemplateView.as_view(template_name="pages/about.html"), name="about"
     ),
@@ -38,10 +34,11 @@ urlpatterns = [
         TemplateView.as_view(template_name="pages/privacy_policy.html"),
         name="privacy_policy",
     ),
+    # Webviews
     path(
-        "about/",
-        TemplateView.as_view(template_name="pages/about.html"),
-        name="about",
+        "webview/ariane/",
+        TemplateView.as_view(template_name="webviews/ariane.html"),
+        name="webview_ariane",
     ),
     # User Auth Management
     path("login/", LoginView.as_view(), name="account_login"),
