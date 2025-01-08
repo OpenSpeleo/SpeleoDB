@@ -82,7 +82,7 @@
 {% block inline_extra_js %}
 <script>
 
-    $(document).ready(function () {
+    $(window).on('load', function() {
 
         $('.feedback_score').click(function() {
             $('.feedback_score').removeClass("bg-indigo-500 border-indigo-500").addClass("bg-slate-800 border-slate-500");

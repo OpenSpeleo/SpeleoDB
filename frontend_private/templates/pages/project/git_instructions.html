@@ -156,7 +156,7 @@ git push
 {% block inline_extra_js %}
 <script>
 
-    $(document).ready(function () {
+    $(window).on('load', function() {
 
         $("#btn_show_git_instructions").click(function () {
             $("#modal_git_instructions").css('display', 'flex');
