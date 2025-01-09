@@ -15,6 +15,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from django_countries.fields import CountryField
 
@@ -105,6 +106,17 @@ class Project(models.Model):
         default=Visibility.PRIVATE,
         verbose_name="visibility",
     )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    (Q(latitude__isnull=True) & Q(longitude__isnull=True))
+                    | (Q(latitude__isnull=False) & Q(longitude__isnull=False))
+                ),
+                name="Latitude & Longitude must both me null/not null simultaneously",
+            )
+        ]
 
     def __str__(self) -> str:
         return self.name
