@@ -10,7 +10,7 @@ import pytest
 # ready. Simple workaround to fix the issue and barely noticeable.
 def pytest_sessionstart(session):
     """Hook to delay the start of the pytest session."""
-    initial_wait_time = 0.2  # seconds
+    initial_wait_time = 0.5  # seconds
     print(f"Waiting for {initial_wait_time} seconds before starting pytest session...")  # noqa: T201
     time.sleep(initial_wait_time)
 

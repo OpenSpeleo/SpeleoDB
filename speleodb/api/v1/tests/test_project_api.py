@@ -5,6 +5,8 @@ from rest_framework import status
 
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
+from speleodb.api.v1.tests.utils import is_subset
 from speleodb.surveys.models import AnyPermissionLevel
 from speleodb.surveys.models import Mutex
 from speleodb.surveys.models import TeamPermission
@@ -280,3 +282,97 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
         assert not response.data["success"], response.data
+
+
+class TestProjectCreation(BaseAPITestCase):
+    @parameterized.expand([True, False])
+    def test_create_project(self, use_lat_long: bool):
+        data = {
+            "name": "My Cool Project",
+            "description": "A super cool project",
+            "country": "US",
+        }
+
+        if use_lat_long:
+            data.update({"longitude": "100.423897", "latitude": "-100.367573"})
+
+        auth = self.header_prefix + self.token.key
+        response = self.client.post(
+            reverse("api:v1:project_api"),
+            data=data,
+            format="json",
+            headers={"authorization": auth},
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+
+        assert is_subset(data, response.data["data"]), response.data
+
+    @parameterized.expand(["longitude", "latitude"])
+    def test_create_project_failure_with_only_one_geo(self, geokey: str):
+        data = {
+            "name": "My Cool Project",
+            "description": "A super cool project",
+            "country": "US",
+            geokey: "100.423897",
+        }
+
+        auth = self.header_prefix + self.token.key
+        response = self.client.post(
+            reverse("api:v1:project_api"),
+            data=data,
+            format="json",
+            headers={"authorization": auth},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
+
+        assert (
+            "`latitude` and `longitude` must be simultaneously specified or empty"
+            in response.data["errors"]["non_field_errors"]
+        ), response.data
+
+    def test_create_project_failure_with_non_existing_country(self):
+        data = {
+            "name": "My Cool Project",
+            "description": "A super cool project",
+            "country": "YOLO",
+        }
+
+        auth = self.header_prefix + self.token.key
+        response = self.client.post(
+            reverse("api:v1:project_api"),
+            data=data,
+            format="json",
+            headers={"authorization": auth},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
+
+        assert (
+            '"YOLO" is not a valid choice.' in response.data["errors"]["country"]
+        ), response.data
+
+    @parameterized.expand(["name", "description", "country"])
+    def test_create_project_failure_with_missing_data(self, missing_param_key: str):
+        data = {
+            "name": "My Cool Project",
+            "description": "A super cool project",
+            "country": "YOLO",
+        }
+
+        del data[missing_param_key]
+
+        auth = self.header_prefix + self.token.key
+        response = self.client.post(
+            reverse("api:v1:project_api"),
+            data=data,
+            format="json",
+            headers={"authorization": auth},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
+
+        assert (
+            "This field is required." in response.data["errors"][missing_param_key]
+        ), response.data
