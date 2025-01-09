@@ -190,7 +190,7 @@ HEADLESS_FRONTEND_URLS = {
 }
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-redirect-url
-LOGIN_REDIRECT_URL = "private:dashboard"
+LOGIN_REDIRECT_URL = "private:user_dashboard"
 # https://docs.djangoproject.com/en/dev/ref/settings/#logout-redirect-url
 LOGOUT_REDIRECT_URL = "home"
 

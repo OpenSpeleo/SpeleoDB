@@ -7,6 +7,7 @@ from rest_framework import status
 from speleodb.api.v1.serializers import SurveyTeamSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
+from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.users.models import SurveyTeamMembership
 
@@ -109,7 +110,7 @@ class TestTeamUpdate(BaseAPITestCase):
         self.team = SurveyTeamFactory()
 
         # Must make the user a team leader to modify the team
-        _ = SurveyTeamMembership.objects.create(
+        _ = SurveyTeamMembershipFactory(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
         )
 
@@ -202,7 +203,7 @@ class TestTeamUpdateErrors(BaseAPITestCase):
 
     @parameterized.expand(["PATCH", "PUT"])
     def test_update_as_a_member(self, method_type):
-        _ = SurveyTeamMembership.objects.create(
+        _ = SurveyTeamMembershipFactory(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.MEMBER
         )
 
@@ -232,7 +233,7 @@ class TestTeamDelete(BaseAPITestCase):
 
     def test_delete(self):
         # Must make the user a team leader to modify the team
-        _ = SurveyTeamMembership.objects.create(
+        _ = SurveyTeamMembershipFactory(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
         )
 
@@ -247,9 +248,7 @@ class TestTeamDelete(BaseAPITestCase):
     @parameterized.expand([SurveyTeamMembership.Role.MEMBER, None])
     def test_delete_error(self, role: SurveyTeamMembership.Role | None):
         if role is not None:
-            _ = SurveyTeamMembership.objects.create(
-                team=self.team, user=self.user, role=role
-            )
+            _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
 
         auth = self.header_prefix + self.token.key
         response = self.client.delete(
@@ -270,9 +269,7 @@ class TestGetTeam(BaseAPITestCase):
     )
     def test_get_team(self, role: SurveyTeamMembership.Role | None):
         if role is not None:
-            _ = SurveyTeamMembership.objects.create(
-                team=self.team, user=self.user, role=role
-            )
+            _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
@@ -307,9 +304,7 @@ class TestGetTeam(BaseAPITestCase):
     )
     def test_get_all_user_team(self, role: SurveyTeamMembership.Role | None):
         if role is not None:
-            _ = SurveyTeamMembership.objects.create(
-                team=self.team, user=self.user, role=role
-            )
+            _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(

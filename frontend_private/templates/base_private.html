@@ -21,12 +21,12 @@
     {% comment %} {% if debug %}
     <link href="{% static 'private/css/vendors/flatpickr.min.css' %}" rel="stylesheet">
     {% else %}
-    <link 
-        rel="stylesheet" 
-        href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css" 
-        integrity="sha512-MQXduO8IQnJVq1qmySpN87QQkiR1bZHtorbJBD0tzy7/0U9+YIC93QWHeGTEoojMVHWWNkoCp8V6OzVSYrX0oQ==" 
-        crossorigin="anonymous" 
-        referrerpolicy="no-referrer" 
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css"
+        integrity="sha512-MQXduO8IQnJVq1qmySpN87QQkiR1bZHtorbJBD0tzy7/0U9+YIC93QWHeGTEoojMVHWWNkoCp8V6OzVSYrX0oQ=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
     />
     {% endif %} {% endcomment %}
 
@@ -105,15 +105,15 @@
                             <span class="hidden lg:block lg:sidebar-expanded:hidden 2xl:hidden text-center w-6" aria-hidden="true">•••</span>
                         </h3>
                         <ul class="mt-3">
-                            <!-- Dashboard -->
-                            {% if request.url_name|is_in_list:"dashboard,password,auth-token,preferences" %}
+                            <!-- User Dashboard -->
+                            {% if request.url_name|is_in_list:"user_dashboard,user_password,user_authtoken,user_preferences" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:dashboard' %}">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:user_dashboard' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:dashboard' %}">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:user_dashboard' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center">
@@ -202,14 +202,14 @@
                             <hr class="mt-5 mb-5" style="border-color: rgb(255 255 255 / 40%);">
 
                             <!-- Feedback -->
-                            {% if request.url_name == 'feedback' %}
+                            {% if request.url_name == 'user_feedback' %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:feedback' %}">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:user_feedback' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:feedback' %}">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:user_feedback' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center">
@@ -483,7 +483,7 @@
                             <div class="relative inline-flex">
                                 <form action="{% url 'hijack:release' %}" method="POST">
                                     {% csrf_token %}
-                                    <input type="hidden" name="next" value="{% url 'private:dashboard' %}">
+                                    <input type="hidden" name="next" value="{% url 'private:user_dashboard' %}">
                                     <button class="inline-flex justify-center items-center group" type="submit">
                                         <div class="flex items-center truncate">
                                             <span class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200">
@@ -580,7 +580,7 @@
                                     </div>
                                     <ul>
                                         <li>
-                                            <a class="font-medium text-sm text-indigo-500 hover:text-indigo-400 flex items-center py-1 px-3" href={% url 'private:dashboard' %}>Settings</a>
+                                            <a class="font-medium text-sm text-indigo-500 hover:text-indigo-400 flex items-center py-1 px-3" href={% url 'private:user_dashboard' %}>Settings</a>
                                         </li>
                                         <li>
                                             <a class="font-medium text-sm text-indigo-500 hover:text-indigo-400 flex items-center py-1 px-3" href={% url 'account_logout' %}>Sign Out</a>
@@ -619,41 +619,41 @@
     <script src="{% static 'private/js/vendors/flatpickr.js' %}"></script>
     {% endcomment %}
     {% else %}
-    <script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" 
-        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" 
-        crossorigin="anonymous" 
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous"
         referrerpolicy="no-referrer">
     </script>
-    <script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.11.1/cdn.min.js" 
-        integrity="sha512-p5D8PQLs985Yn0ag6o2zDx/YTzcZKq7YsO+rM79PnqJ0ahDrdR9jg8iCZXdIjdA8vBh4vgsdp4wcO1S+ShE43Q==" 
-        crossorigin="anonymous" 
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.11.1/cdn.min.js"
+        integrity="sha512-p5D8PQLs985Yn0ag6o2zDx/YTzcZKq7YsO+rM79PnqJ0ahDrdR9jg8iCZXdIjdA8vBh4vgsdp4wcO1S+ShE43Q=="
+        crossorigin="anonymous"
         referrerpolicy="no-referrer">
     </script>
     {% comment %}
     <script
         src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.0/chart.min.js"
         integrity="sha512-mlz/Fs1VtBou2TrUkGzX4VoGvybkD9nkeXWJm3rle0DPHssYYx4j+8kIS15T78ttGfmOjH0lLaBXGcShaVkdkg=="
-        crossorigin="anonymous" 
+        crossorigin="anonymous"
         referrerpolicy="no-referrer">
     </script>
-    <script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js" 
-        integrity="sha512-+H4iLjY3JsKiF2V6N366in5IQHj2uEsGV7Pp/GRcm0fn76aPAk5V8xB6n8fQhhSonTqTXs/klFz4D0GIn6Br9g==" 
-        crossorigin="anonymous" 
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"
+        integrity="sha512-+H4iLjY3JsKiF2V6N366in5IQHj2uEsGV7Pp/GRcm0fn76aPAk5V8xB6n8fQhhSonTqTXs/klFz4D0GIn6Br9g=="
+        crossorigin="anonymous"
         referrerpolicy="no-referrer">
     </script>
-    <script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.1/chartjs-adapter-moment.min.js" 
-        integrity="sha512-hVy4KxCKgnXi2ok7rlnlPma4JHXI1VPQeempoaclV1GwRHrDeaiuS1pI6DVldaj5oh6Opy2XJ2CTljQLPkaMrQ==" 
-        crossorigin="anonymous" 
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.1/chartjs-adapter-moment.min.js"
+        integrity="sha512-hVy4KxCKgnXi2ok7rlnlPma4JHXI1VPQeempoaclV1GwRHrDeaiuS1pI6DVldaj5oh6Opy2XJ2CTljQLPkaMrQ=="
+        crossorigin="anonymous"
         referrerpolicy="no-referrer">
     </script>
-    <script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js" 
-        integrity="sha512-K/oyQtMXpxI4+K0W7H25UopjM8pzq0yrVdFdG21Fh5dBe91I40pDd9A4lzNlHPHBIP2cwZuoxaUSX0GJSObvGA==" 
-        crossorigin="anonymous" 
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"
+        integrity="sha512-K/oyQtMXpxI4+K0W7H25UopjM8pzq0yrVdFdG21Fh5dBe91I40pDd9A4lzNlHPHBIP2cwZuoxaUSX0GJSObvGA=="
+        crossorigin="anonymous"
         referrerpolicy="no-referrer">
     </script>
     {% endcomment %}

@@ -6,6 +6,7 @@ from rest_framework import status
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
+from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import TeamPermission
@@ -34,7 +35,7 @@ class TestProjectInteraction(BaseAPITestCase):
             else:
                 # Create a team for the user - assign the user to the team
                 team = SurveyTeamFactory()
-                _ = SurveyTeamMembership.objects.create(
+                _ = SurveyTeamMembershipFactory(
                     user=self.user,
                     team=team,
                     role=random.choice(SurveyTeamMembership.Role.values),

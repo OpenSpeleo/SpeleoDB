@@ -89,7 +89,7 @@
 
                 },
                 success: function (data) {
-                    window.location.href = "{% url 'private:dashboard' %}";
+                    window.location.href = "{% url 'private:user_dashboard' %}";
                 },
                 error: function (data) {
                     if (data.status == 401) {

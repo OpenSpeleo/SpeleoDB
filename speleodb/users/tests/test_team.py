@@ -2,6 +2,7 @@ import pytest
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import IntegrityError
 
+from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
@@ -14,8 +15,8 @@ def leader_membership(db, team: SurveyTeam) -> SurveyTeamMembership:
     Fixture for creating a SurveyTeamMembership instance with a leader role.
     """
     user = UserFactory()
-    return SurveyTeamMembership.objects.create(
-        team=team, user=user, _role=SurveyTeamMembership.Role.LEADER
+    return SurveyTeamMembershipFactory(
+        team=team, user=user, role=SurveyTeamMembership.Role.LEADER
     )
 
 
@@ -25,8 +26,8 @@ def member_membership(db, team: SurveyTeam) -> SurveyTeamMembership:
     Fixture for creating a SurveyTeamMembership instance with a member role.
     """
     user = UserFactory()
-    return SurveyTeamMembership.objects.create(
-        team=team, user=user, _role=SurveyTeamMembership.Role.MEMBER
+    return SurveyTeamMembershipFactory(
+        team=team, user=user, role=SurveyTeamMembership.Role.MEMBER
     )
 
 
@@ -124,12 +125,12 @@ class TestSurveyTeamMembership:
     @pytest.mark.django_db(transaction=True)
     def test_unique_together_constraint(self, team: SurveyTeam, user: User):
         """Test unique_together prevents duplicate memberships."""
-        SurveyTeamMembership.objects.create(
-            team=team, user=user, _role=SurveyTeamMembership.Role.MEMBER
+        SurveyTeamMembershipFactory(
+            team=team, user=user, role=SurveyTeamMembership.Role.MEMBER
         )
         with pytest.raises(IntegrityError):
-            SurveyTeamMembership.objects.create(
-                team=team, user=user, _role=SurveyTeamMembership.Role.MEMBER
+            SurveyTeamMembershipFactory(
+                team=team, user=user, role=SurveyTeamMembership.Role.MEMBER
             )
 
     def test_inactive_membership_not_included(
