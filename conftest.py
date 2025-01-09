@@ -1,7 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import time
+
 import pytest
+
+
+# Note: This wait time is necessary because of django-countries sometimes being not
+# ready. Simple workaround to fix the issue and barely noticeable.
+def pytest_sessionstart(session):
+    """Hook to delay the start of the pytest session."""
+    initial_wait_time = 0.2  # seconds
+    print(f"Waiting for {initial_wait_time} seconds before starting pytest session...")  # noqa: T201
+    time.sleep(initial_wait_time)
 
 
 def pytest_addoption(parser):
