@@ -81,11 +81,12 @@ team_urls = [
 ]
 
 urlpatterns = [
-    path("", DashboardView.as_view(), name="dashboard"),
-    path("password/", PassWordView.as_view(), name="password"),
-    path("auth-token/", AuthTokenView.as_view(), name="auth-token"),
-    path("feedback/", FeedbackView.as_view(), name="feedback"),
-    path("preferences/", PreferencesView.as_view(), name="preferences"),
+    # User URLs
+    path("", DashboardView.as_view(), name="user_dashboard"),
+    path("auth-token/", AuthTokenView.as_view(), name="user_authtoken"),
+    path("feedback/", FeedbackView.as_view(), name="user_feedback"),
+    path("password/", PassWordView.as_view(), name="user_password"),
+    path("preferences/", PreferencesView.as_view(), name="user_preferences"),
     # Teams URLs
     path("teams/", TeamListingView.as_view(), name="teams"),
     path("team/new/", NewTeamView.as_view(), name="team_new"),

@@ -26,7 +26,7 @@
                 <h2 class="mb-6">
                     If you believe your token has been compromised, you can generate a new one.<br>
                     Treat this value just like you would treat your password.</h2>
-                <form action="{% url 'private:auth-token' %}" method="POST">
+                <form action="{% url 'private:user_authtoken' %}" method="POST">
                     {% csrf_token %}
                     <button class="btn bg-rose-500 hover:bg-rose-600 text-white ml-3">Refresh Token</button>
                 </form>

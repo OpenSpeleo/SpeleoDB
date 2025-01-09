@@ -11,6 +11,7 @@ from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeam
+from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
 
 
@@ -47,6 +48,15 @@ class SurveyTeamFactory(DjangoModelFactory):
 
     class Meta:
         model = SurveyTeam
+
+
+class SurveyTeamMembershipFactory(DjangoModelFactory):
+    user = factory.SubFactory(UserFactory)
+    team = factory.SubFactory(SurveyTeamFactory)
+    role = random.choice(SurveyTeamMembership.Role.values)
+
+    class Meta:
+        model = SurveyTeamMembership
 
 
 class TokenFactory(DjangoModelFactory):

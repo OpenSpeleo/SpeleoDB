@@ -186,6 +186,15 @@ class ProjectUploadView(_BaseProjectView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:projects"))
 
+        # Redirect users who don't own the mutex
+        mutex = data["project"].active_mutex
+        if mutex is None or mutex.user != request.user:
+            return redirect(
+                reverse(
+                    "private:project_mutexes", kwargs={"project_id": data["project"].id}
+                )
+            )
+
         return super().get(request, *args, **data, **kwargs)
 
 

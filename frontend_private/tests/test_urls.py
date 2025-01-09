@@ -11,11 +11,11 @@ from django.urls import reverse
     ("name", "path", "kwargs"),
     [
         # General routes
-        ("private:dashboard", "", None),
-        ("private:password", "password/", None),
-        ("private:auth-token", "auth-token/", None),
-        ("private:feedback", "feedback/", None),
-        ("private:preferences", "preferences/", None),
+        ("private:user_dashboard", "", None),
+        ("private:user_password", "password/", None),
+        ("private:user_authtoken", "auth-token/", None),
+        ("private:user_feedback", "feedback/", None),
+        ("private:user_preferences", "preferences/", None),
         # Teams routes
         ("private:teams", "teams/", None),
         ("private:team_new", "team/new/", None),
