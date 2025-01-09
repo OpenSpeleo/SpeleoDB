@@ -42,6 +42,16 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         exclude = ("_visibility",)
 
+    def validate(self, attrs):
+        latitude = attrs.get("latitude", None)
+        longitude = attrs.get("longitude", None)
+        if (longitude is None) != (latitude is None):
+            raise serializers.ValidationError(
+                "`latitude` and `longitude` must be simultaneously specified or empty"
+            )
+
+        return attrs
+
     def create(self, validated_data: dict) -> Project:
         project = super().create(validated_data)
 

@@ -4,6 +4,7 @@
 import logging
 from typing import TYPE_CHECKING
 
+from django.db.utils import IntegrityError
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -106,11 +107,18 @@ class ProjectApiView(GenericAPIView):
         data = request.data
         data["created_by"] = user
 
-        serializer = self.get_serializer(data=data, context={"user": user})
-        if serializer.is_valid():
-            serializer.save()
-            return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            serializer = self.get_serializer(data=data, context={"user": user})
+            if serializer.is_valid():
+                serializer.save()
+                return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
-        return ErrorResponse(
-            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-        )
+            return ErrorResponse(
+                {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        except IntegrityError:
+            ErrorResponse(
+                {"error": "This query violates a project requirement"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

@@ -1,7 +1,6 @@
 import hashlib
 import random
 
-import pytest
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.test import TestCase
@@ -167,7 +166,7 @@ class ProjectViewsTest(BaseTestCase):
                     UserPermission.Level.READ_ONLY,
                     TeamPermission.Level.READ_ONLY,
                 ]:
-                    pytest.skip("This user can not acquire the lock")
+                    return  # this user can not acquire the lock
                 self.project.acquire_mutex(self.user)
                 expected_status = status.HTTP_200_OK
             case False:
