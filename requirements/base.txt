@@ -9,7 +9,7 @@ celery==5.4.0  # pyup: < 6.0  # https://github.com/celery/celery
 django-celery-beat==2.7.0  # https://github.com/celery/django-celery-beat
 flower==2.0.1  # https://github.com/mher/flower
 uvicorn[standard]==0.34.0  # https://github.com/encode/uvicorn
-wrapt==1.17.0  # https://github.com/GrahamDumpleton/wrapt
+wrapt==1.17.1  # https://github.com/GrahamDumpleton/wrapt
 cachetools==5.5.0  # https://github.com/tkem/cachetools
 timeago==1.0.16  # https://github.com/hustcc/timeago
 
