@@ -30,6 +30,17 @@ if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()
 
     if "debug_toolbar" in settings.INSTALLED_APPS:
-        import debug_toolbar
+        urlpatterns += [
+            path("__debug__/", include("debug_toolbar.urls")),
+        ]
 
-        urlpatterns = [path("__debug__/", include(debug_toolbar.urls))] + urlpatterns
+    if "schema_viewer" in settings.INSTALLED_APPS:
+        urlpatterns += [
+            path("schema-viewer/", include("schema_viewer.urls")),
+        ]
+
+
+    if "silk" in settings.INSTALLED_APPS:
+        urlpatterns += [
+            path("silk/", include("silk.urls")),
+        ]

@@ -111,6 +111,7 @@ DJANGO_APPS = [
     "django.contrib.admin",
     "django.forms",
 ]
+
 THIRD_PARTY_APPS = [
     "allauth",
     "allauth.account",
@@ -143,6 +144,12 @@ THIRD_PARTY_APPS = [
     "hijack",
     "hijack.contrib.admin",
 ]
+
+if DEBUG:
+    THIRD_PARTY_APPS += [
+        "schema_viewer",
+        "silk",
+    ]
 
 LOCAL_APPS = [
     # API Apps
@@ -274,6 +281,9 @@ MIDDLEWARE = [
     "speleodb.middleware.ViewNameMiddleware",
     "speleodb.middleware.DRFWrapResponseMiddleware",
 ]
+
+if DEBUG:
+    MIDDLEWARE += ["silk.middleware.SilkyMiddleware"]
 
 # STATIC
 # ------------------------------------------------------------------------------
