@@ -37,5 +37,5 @@ pre-commit==4.0.1  # https://github.com/pre-commit/pre-commit
 # ------------------------------------------------------------------------------
 django-debug-toolbar==4.4.2  # https://github.com/jazzband/django-debug-toolbar
 django-extensions==3.2.3  # https://github.com/django-extensions/django-extensions
-django-schema-viewer==0.4.2  # https://github.com/pikhovkin/django-schema-viewer
+django-schema-viewer==0.5.2  # https://github.com/pikhovkin/django-schema-viewer
 django-silk==5.3.2  # https://github.com/jazzband/django-silk
