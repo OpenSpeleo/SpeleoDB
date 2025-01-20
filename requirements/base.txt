@@ -21,7 +21,7 @@ GitPython==3.1.44  # https://github.com/gitpython-developers/GitPython
 # Django
 # ------------------------------------------------------------------------------
 django==5.1.4  # https://www.djangoproject.com/
-django-environ==0.11.2  # https://github.com/joke2k/django-environ
+django-environ==0.12.0  # https://github.com/joke2k/django-environ
 django-model-utils==5.0.0  # https://github.com/jazzband/django-model-utils
 django-countries==7.6.1  # https://github.com/SmileyChris/django-countries/
 django-allauth==65.3.1  # https://github.com/pennersr/django-allauth
