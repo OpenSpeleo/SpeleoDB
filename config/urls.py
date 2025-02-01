@@ -39,7 +39,6 @@ if settings.DEBUG:
             path("schema-viewer/", include("schema_viewer.urls")),
         ]
 
-
     if "silk" in settings.INSTALLED_APPS:
         urlpatterns += [
             path("silk/", include("silk.urls")),
