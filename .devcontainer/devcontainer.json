@@ -39,8 +39,10 @@
                     "editor.defaultFormatter": "charliermarsh.ruff",
                     "languageServer": "Pylance",
                     "linting.enabled": true,
+                    "linting.flake8Enabled": true,
                     "linting.mypyEnabled": true,
-                    "linting.mypyPath": "/usr/local/bin/mypy"
+                    "linting.mypyPath": "/usr/local/bin/mypy",
+                    "linting.pylintEnabled": true
                 }
             },
             // https://code.visualstudio.com/docs/remote/devcontainerjson-reference#_vs-code-specific-properties
