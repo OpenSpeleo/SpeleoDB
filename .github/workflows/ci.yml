@@ -78,7 +78,6 @@ jobs:
           python manage.py validate_templates --ignore-app allauth
           pytest
         env:
-          DJANGO_FIELD_ENCRYPTION_KEY: ${{ secrets.DJANGO_FIELD_ENCRYPTION_KEY }}
           GITLAB_GROUP_ID: ${{ secrets.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ secrets.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ secrets.GITLAB_HOST_URL }}
