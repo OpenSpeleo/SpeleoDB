@@ -24,7 +24,7 @@ django==5.1.5  # https://www.djangoproject.com/
 django-environ==0.12.0  # https://github.com/joke2k/django-environ
 django-model-utils==5.0.0  # https://github.com/jazzband/django-model-utils
 django-countries==7.6.1  # https://github.com/SmileyChris/django-countries/
-django-allauth==65.3.1  # https://github.com/pennersr/django-allauth
+django-allauth==65.4.1  # https://github.com/pennersr/django-allauth
 django-compressor==4.5.1  # https://github.com/django-compressor/django-compressor
 django-dynamic-raw-id==4.4  # https://github.com/lincolnloop/django-dynamic-raw-id
 django-redis==5.4.0  # https://github.com/jazzband/django-redis
