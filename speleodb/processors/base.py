@@ -155,7 +155,7 @@ class BaseFileProcessor:
 
     def add_file_to_project(
         self, file: InMemoryUploadedFile | TemporaryUploadedFile
-    ) -> Artifact:
+    ) -> Artifact | Path | list[Path]:
         artifact = Artifact(file)
         artifact.assert_valid(
             allowed_extensions=self.ALLOWED_EXTENSIONS,
@@ -163,12 +163,7 @@ class BaseFileProcessor:
             rejected_extensions=self.REJECTED_EXTENSIONS,
         )
 
-        target_path = self._get_storage_path(artifact=artifact)
-
-        with timed_section("File copy to project dir"):
-            artifact.write(path=target_path)
-
-        return artifact
+        return self._add_file_to_project(artifact=artifact)
 
     def get_file_for_download(self, target_f: Path) -> Path:
         if not isinstance(target_f, Path):
@@ -234,20 +229,25 @@ class BaseFileProcessor:
 
     # ~~~~~~~~~~~~~ Upload APIs ~~~~~~~~~~~~~ #
 
-    def _get_storage_path(self, artifact: Artifact) -> Path:
-        """This returns the full file path where the file will be stored.
-        If needed, the corresponding folder will be created."""
+    @property
+    def folder(self):
+        """If needed, the corresponding folder will be created."""
 
         folder = self.project.git_repo.path
         if self.TARGET_FOLDER is not None:
             folder: Path = folder / self.TARGET_FOLDER
             folder.mkdir(parents=True, exist_ok=True)
 
-        filename = self._validate_and_get_storage_name(folder=folder, artifact=artifact)
+        return folder
 
-        return folder / filename
+    def _get_storage_path(self, artifact: Artifact) -> Path:
+        """This returns the full file path where the file will be stored."""
 
-    def _validate_and_get_storage_name(self, folder: Path, artifact: Artifact) -> str:
+        filename = self._validate_and_get_storage_name(artifact=artifact)
+
+        return self.folder / filename
+
+    def _validate_and_get_storage_name(self, artifact: Artifact) -> str:
         """This generates the filename to be used while stored in git.
         This function may implement some collision avoidance logic.
 
@@ -256,25 +256,24 @@ class BaseFileProcessor:
         If collision is detected - raises `FileExistsError`.
         """
 
-        if not isinstance(folder, Path):
-            folder = Path(folder)
-
-        if not folder.exists():
-            raise FileNotFoundError(f"The folder: `{folder}` does not exists.")
-
-        if not folder.is_dir():
-            raise TypeError(f"The folder: `{folder}` is not a folder.")
-
         if not isinstance(artifact, Artifact):
             raise TypeError(
                 f"The artifact `{artifact}` is of unknown type: `{type(artifact)}`."
             )
 
-        return self._get_storage_name(folder=folder, artifact=artifact)
+        return self._get_storage_name(artifact=artifact)
 
-    def _get_storage_name(self, folder: Path, artifact: Artifact) -> str:
+    def _get_storage_name(self, artifact: Artifact) -> str:
         return (
             self.TARGET_SAVE_FILENAME
             if self.TARGET_SAVE_FILENAME is not None
             else artifact.name
         )
+
+    def _add_file_to_project(self, artifact: Artifact) -> Artifact | Path | list[Path]:
+        target_path = self._get_storage_path(artifact=artifact)
+
+        with timed_section("File copy to project dir"):
+            artifact.write(path=target_path)
+
+        return artifact
