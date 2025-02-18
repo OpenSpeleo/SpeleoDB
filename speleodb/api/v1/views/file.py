@@ -166,7 +166,7 @@ class FileUploadView(GenericAPIView):
                             {
                                 "error": (
                                     f"The file size for `{file.name}` "
-                                    f"[{file.size / 1024. /1204. } Mb], exceeds the limit: "  # noqa: E501
+                                    f"[{file.size / 1024.0 / 1204.0} Mb], exceeds the limit: "  # noqa: E501
                                     f"{settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT} Mb"  # noqa: E501
                                 )
                             },
@@ -190,8 +190,8 @@ class FileUploadView(GenericAPIView):
                         {
                             "error": (
                                 f"The total file size submitted: "
-                                f"[{file.size / 1024. /1204. } Mb], exceeds the limit: "
-                                f"{settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT} Mb"
+                                f"[{file.size / 1024.0 / 1204.0} Mb], exceeds the "
+                                f"limit: {settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT} Mb"
                             )
                         },
                         status=status.HTTP_400_BAD_REQUEST,
@@ -253,7 +253,10 @@ class FileUploadView(GenericAPIView):
                                         uploaded_file = processor.add_file_to_project(
                                             file=file
                                         )
-                                        uploaded_files.append(uploaded_file)
+                                        if isinstance(uploaded_file, (list, tuple)):
+                                            uploaded_files.extend(uploaded_file)
+                                        else:
+                                            uploaded_files.append(uploaded_file)
                                 except FileExistsError:
                                     logger.info(
                                         f"File collision detected for: `{file.name}` "
@@ -271,14 +274,16 @@ class FileUploadView(GenericAPIView):
                         # Refresh the `modified_date` field
                         project.save()
 
+                        uploaded_files = [
+                            f if isinstance(f, pathlib.Path) else f.path
+                            for f in uploaded_files
+                        ]
+
                         return SuccessResponse(
                             {
                                 "files": [
-                                    str(f.path.relative_to(project.git_repo_dir))
+                                    str(f.relative_to(project.git_repo_dir))
                                     for f in uploaded_files
-                                ],
-                                "content_types": [
-                                    f.content_type for f in uploaded_files
                                 ],
                                 "message": commit_message,
                                 "hexsha": hexsha,
