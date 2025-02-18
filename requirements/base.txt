@@ -37,4 +37,4 @@ django-cors-headers==4.7.0  # https://github.com/adamchainz/django-cors-headers
 drf-spectacular==0.28.0  # https://github.com/tfranzel/drf-spectacular
 
 # Speleo Packages
-mnemo-lib==0.0.2  # https://github.com/OpenSpeleo/pytool_mnemo_lib
+mnemo-lib==0.0.3  # https://github.com/OpenSpeleo/pytool_mnemo_lib
