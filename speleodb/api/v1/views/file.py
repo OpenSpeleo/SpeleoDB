@@ -305,6 +305,9 @@ class FileUploadView(GenericAPIView):
                         )
 
             except (ValidationError, FileNotFoundError) as e:
+                if settings.DEBUG:
+                    raise
+
                 return handle_exception(
                     e,
                     "An error occurred: {}",
@@ -314,6 +317,9 @@ class FileUploadView(GenericAPIView):
                 )
 
             except GitlabError as e:
+                if settings.DEBUG:
+                    raise
+
                 return handle_exception(
                     e,
                     "There has been a problem accessing GitLab: `{}`",
@@ -323,6 +329,9 @@ class FileUploadView(GenericAPIView):
                 )
 
             except FileRejectedError as e:
+                if settings.DEBUG:
+                    raise
+
                 return handle_exception(
                     e,
                     "One of the uploaded files has been rejected: `{}`",
@@ -331,7 +340,10 @@ class FileUploadView(GenericAPIView):
                     project,
                 )
 
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
+                if settings.DEBUG:
+                    raise
+
                 return handle_exception(
                     e,
                     "There has been a problem committing the files: {}",
