@@ -11,6 +11,8 @@ updates:
     # Every weekday
     schedule:
       interval: "weekly"
+    # on demand
+    workflow_dispatch:
 
   # Enable version updates for Docker
   # We need to specify each Dockerfile in a separate entry because Dependabot doesn't
