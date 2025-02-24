@@ -121,9 +121,9 @@ def test_download_project_at_hash(fileformat: str, project: Project):
 
     assert endpoint == expected_endpoint, endpoint
 
-    assert (
-        resolve(expected_endpoint).view_name == "api:v1:download_project_at_hash"
-    ), resolve(expected_endpoint).view_name
+    assert resolve(expected_endpoint).view_name == "api:v1:download_project_at_hash", (
+        resolve(expected_endpoint).view_name
+    )
 
 
 # ================================= USER APIs ================================= #

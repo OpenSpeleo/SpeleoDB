@@ -114,6 +114,9 @@ class Format(models.Model):
             "_format",
         )
 
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}: {self}>"
+
     def __str__(self) -> str:
         return f"{self.project} -> {self.format}"
 
@@ -121,9 +124,6 @@ class Format(models.Model):
         # Only allows object creation. Otherwise bypass.
         if self.pk is None:
             super().save(*args, **kwargs)
-
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}: {self}>"
 
     @property
     def raw_format(self) -> str:

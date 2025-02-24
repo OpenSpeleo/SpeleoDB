@@ -35,8 +35,7 @@ class TeamMembershipApiView(GenericAPIView):
             return ErrorResponse(
                 {
                     "error": (
-                        "A membership for this user: "
-                        f"`{request.user}` does not exist."
+                        f"A membership for this user: `{request.user}` does not exist."
                     )
                 },
                 status=status.HTTP_404_NOT_FOUND,

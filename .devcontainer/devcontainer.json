@@ -60,6 +60,8 @@
                 "charliermarsh.ruff",
                 // django
                 "batisteo.vscode-django",
+                // HTML Linting
+                "monosans.djlint",
                 // Postman
                 "Postman.postman-for-vscode",
                 // TOML
