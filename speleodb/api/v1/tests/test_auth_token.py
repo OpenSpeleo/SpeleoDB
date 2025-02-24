@@ -111,9 +111,9 @@ class TestTokenAuth(BaseAPITestCase):
         assert not response.data["success"], response.data
 
         assert "password" in response.data["errors"], response.data
-        assert "This field is required" in str(
-            response.data["errors"]["password"]
-        ), response.data
+        assert "This field is required" in str(response.data["errors"]["password"]), (
+            response.data
+        )
 
     def test_missing_email(self):
         response = self.client.post(
@@ -126,6 +126,6 @@ class TestTokenAuth(BaseAPITestCase):
         assert not response.data["success"], response.data
 
         assert "email" in response.data["errors"], response.data
-        assert "This field is required" in str(
-            response.data["errors"]["email"]
-        ), response.data
+        assert "This field is required" in str(response.data["errors"]["email"]), (
+            response.data
+        )

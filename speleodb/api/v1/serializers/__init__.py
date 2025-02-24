@@ -26,5 +26,5 @@ from speleodb.api.v1.serializers.team import SurveyTeamListSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamMembershipListSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamMembershipSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamSerializer
-from speleodb.api.v1.serializers.token import AuthTokenSerializer
+from speleodb.api.v1.serializers.authtoken import AuthTokenSerializer
 from speleodb.api.v1.serializers.user import UserSerializer

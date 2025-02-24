@@ -104,7 +104,7 @@ class ProjectTeamPermissionView(GenericAPIView):
                 return ErrorResponse(
                     {
                         "error": (
-                            f"The permission for this team: `{team}` " "already exists."
+                            f"The permission for this team: `{team}` already exists."
                         )
                     },
                     status=status.HTTP_400_BAD_REQUEST,

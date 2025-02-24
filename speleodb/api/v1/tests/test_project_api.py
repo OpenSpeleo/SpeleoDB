@@ -349,9 +349,9 @@ class TestProjectCreation(BaseAPITestCase):
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
-        assert (
-            '"YOLO" is not a valid choice.' in response.data["errors"]["country"]
-        ), response.data
+        assert '"YOLO" is not a valid choice.' in response.data["errors"]["country"], (
+            response.data
+        )
 
     @parameterized.expand(["name", "description", "country"])
     def test_create_project_failure_with_missing_data(self, missing_param_key: str):

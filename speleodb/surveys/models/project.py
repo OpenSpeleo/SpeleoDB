@@ -79,8 +79,8 @@ class Project(models.Model):
         null=True,
         blank=True,
         validators=[
-            MinValueValidator(decimal.Decimal(-180.0)),
-            MaxValueValidator(decimal.Decimal(180.0)),
+            MinValueValidator(decimal.Decimal("-180.0")),
+            MaxValueValidator(decimal.Decimal("180.0")),
         ],
     )
 
@@ -90,8 +90,8 @@ class Project(models.Model):
         null=True,
         blank=True,
         validators=[
-            MinValueValidator(decimal.Decimal(-180.0)),
-            MaxValueValidator(decimal.Decimal(180.0)),
+            MinValueValidator(decimal.Decimal("-180.0")),
+            MaxValueValidator(decimal.Decimal("180.0")),
         ],
     )
 
@@ -117,6 +117,12 @@ class Project(models.Model):
                 name="Latitude & Longitude must both me null/not null simultaneously",
             )
         ]
+
+    def __repr__(self) -> str:
+        return (
+            f"<{self.__class__.__name__}: {self.name} "
+            f"[{'LOCKED' if self.active_mutex is not None else 'UNLOCKED'}]> "
+        )
 
     def __str__(self) -> str:
         return self.name
@@ -150,12 +156,6 @@ class Project(models.Model):
         if active_mutex is None:
             return None
         return active_mutex.modified_date
-
-    def __repr__(self) -> str:
-        return (
-            f"<{self.__class__.__name__}: {self.name} "
-            f"[{'LOCKED' if self.active_mutex is not None else 'UNLOCKED'}]> "
-        )
 
     def acquire_mutex(self, user: User) -> None:
         if not self.has_write_access(user):

@@ -22,14 +22,14 @@ repos:
       - id: detect-private-key
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: "1.16.0"
+    rev: "1.23.1"
     hooks:
       - id: django-upgrade
         args: ["--target-version", "5.0"]
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.1
+    rev: v0.9.7
     hooks:
       # Linter
       - id: ruff
@@ -40,7 +40,7 @@ repos:
         exclude: ^speleodb/api/v1/tests/artifacts/
 
   - repo: https://github.com/Riverside-Healthcare/djLint
-    rev: v1.34.1
+    rev: v1.36.4
     hooks:
       - id: djlint-reformat-django
       - id: djlint-django
