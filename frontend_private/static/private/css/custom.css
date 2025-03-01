@@ -135,33 +135,48 @@
 }
 
 #dropzone {
-    position: relative; /* Establishes a positioning context for the input */
-    overflow: hidden; /* Ensure no overflow issues occur */
-    display: flex; /* Flexbox ensures proper alignment */
+    position: relative;
+    /* Establishes a positioning context for the input */
+    overflow: hidden;
+    /* Ensure no overflow issues occur */
+    display: flex;
+    /* Flexbox ensures proper alignment */
     flex-direction: column;
-    justify-content: center; /* Center content vertically */
-    align-items: center; /* Center content horizontally */
+    justify-content: center;
+    /* Center content vertically */
+    align-items: center;
+    /* Center content horizontally */
     min-height: 7rem;
     padding: 1rem;
 }
 
 #dropzone [type="file"] {
     cursor: pointer;
-    position: absolute; /* Position the input relative to its container */
+    position: absolute;
+    /* Position the input relative to its container */
     top: 0;
     left: 0;
-    width: 100%; /* Full width of the dropzone */
-    height: 100%; /* Full height of the dropzone */
-    opacity: 0; /* Make the input invisible */
-    cursor: pointer; /* Indicate it's clickable */
-    z-index: 1; /* Ensure it’s above the other content in the dropzone */
+    width: 100%;
+    /* Full width of the dropzone */
+    height: 100%;
+    /* Full height of the dropzone */
+    opacity: 0;
+    /* Make the input invisible */
+    cursor: pointer;
+    /* Indicate it's clickable */
+    z-index: 1;
+    /* Ensure it’s above the other content in the dropzone */
 }
 
 #dropzone label {
-    display: block; /* Ensure the label occupies its own line */
-    text-align: center; /* Center the text */
-    white-space: normal; /* Allow text to wrap */
-    margin: 0 auto; /* Center within the container */
+    display: block;
+    /* Ensure the label occupies its own line */
+    text-align: center;
+    /* Center the text */
+    white-space: normal;
+    /* Allow text to wrap */
+    margin: 0 auto;
+    /* Center within the container */
 }
 
 /* Git Webview */
@@ -172,4 +187,22 @@
     --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);
     --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
     --tw-gradient-to: #f3f4f6 var(--tw-gradient-to-position);
+}
+
+
+#dropzone {
+    cursor: pointer;
+}
+
+#dropzone .text-center {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#dropzone.dropped .text-center {
+    display: block;
+    width: 100%;
+    height: auto;
 }

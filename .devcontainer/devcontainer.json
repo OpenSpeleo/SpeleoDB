@@ -61,7 +61,7 @@
                 // django
                 "batisteo.vscode-django",
                 // HTML Linting
-                "monosans.djlint",
+                // "monosans.djlint",
                 // Postman
                 "Postman.postman-for-vscode",
                 // TOML
