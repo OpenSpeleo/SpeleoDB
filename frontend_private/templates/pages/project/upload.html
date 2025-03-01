@@ -1,201 +1,251 @@
 {% extends "pages/project/base.html" %}
-{% load static i18n compress%}
 
+{% load static i18n compress %}
 {% load countries %}
 
 {% block right_panel %}
-<div class="grow">
-
-    <!-- Panel body -->
-    <div class="p-6 space-y-6">
-        <h2 class="text-2xl text-slate-100 font-bold mb-5">Upload a New Project Revision</h2>
-
-        <form id="file_upload_form" autocomplete="off">
-            {% csrf_token %}
-
-            <!-- Project Name -->
-            <section>
-                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                    <div class="w-full">
-                        <label class="block text-sm font-medium mb-1" for="message">Revision Title:</label>
-                        <input id="message" name="message" class="form-input max-w-full w-full" type="text" placeholder="What did you change in this revision (Max 125 characters) ?" />
+    <div class="grow">
+        <!-- Panel body -->
+        <div class="p-6 space-y-6">
+            <h2 class="text-2xl text-slate-100 font-bold mb-5">Upload a New Project Revision</h2>
+            <form id="file_upload_form" autocomplete="off">
+                {% csrf_token %}
+                <!-- Project Name -->
+                <section>
+                    <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                        <div class="w-full">
+                            <label class="block text-sm font-semibold text-slate-100 mb-2" for="message">
+                              Revision Title <span class="text-rose-600 text-lg">*</span>
+                            </label>
+                            <input id="message"
+                                   name="message"
+                                   class="form-input max-w-full w-full placeholder-slate-400"
+                                   type="text"
+                                   placeholder="What did you change in this revision - include date and people (Max 125 characters) ?" />
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- Upload File -->
-            <section>
-                <div class="mt-6">
-                    <div class="text-sm font-semibold text-slate-100 mb-2">Survey File</div>
-
-                        <div id="dropzone" class="rounded border-dashed text-center min-h-28 border border-slate-700 bg-slate-700/30">
-                            <input id="artifact" name="artifact" type="file" style="" multiple>
+                <!-- Upload File -->
+                <section>
+                    <div class="mt-6">
+                        <div class="text-sm font-semibold text-slate-100 mb-2">
+                          Survey File <span class="text-rose-600 text-lg">*</span>
+                        </div>
+                        <input id="artifact" name="artifact" type="file" class="hidden" multiple />
+                        <div id="dropzone"
+                              class="rounded border-dashed text-center min-h-28 border border-slate-700 bg-slate-700/30 cursor-pointer relative">
                             <div class="text-center">
                                 <span id="icon_waiting_for_file">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="inline-flex w-4 h-4 text-slate-400 mb-3 stroke-current fill-none" viewBox="3.25 3.25 17.5 18.5">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"></path>
-                                        <path d="M7 9l5 -5l5 5"></path>
-                                        <path d="M12 4l0 12"></path>
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                          class="inline-flex w-4 h-4 text-slate-400 mb-3 stroke-current fill-none"
+                                          viewBox="3.25 3.25 17.5 18.5">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+                                        <path d="M7 9l5 -5l5 5" />
+                                        <path d="M12 4l0 12" />
                                     </svg>
                                 </span>
-
                                 <label for="artifact" class="block text-sm text-slate-400 italic">
                                     Please upload up to {{ limit_number_files }} files, each under {{ limit_individual_filesize }} Mb [Total under {{ limit_total_filesize }} Mb].
                                 </label>
                             </div>
                         </div>
-                </div>
-            </section>
+                    </div>
+                </section>
 
-        </form>
-
-    </div>
-
-    <!-- Panel footer -->
-    <footer>
-        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-            <div class="flex self-end">
-                <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:project_details' project_id=project.id %}">Cancel</a>
-                <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Upload Revision</button>
-            </div>
+            </form>
         </div>
-    </footer>
-
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
-
-</div>
-
-<div id="loading_spinner" class="loading" style="display:none;"></div>
-
+        <!-- Panel footer -->
+        <footer>
+            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+                <div class="flex self-end">
+                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
+                       href="{% url 'private:project_details' project_id=project.id %}">Cancel</a>
+                    <button id="btn_submit"
+                            class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Upload Revision</button>
+                </div>
+            </div>
+        </footer>
+        {% include 'snippets/modal_success.html' %}
+        {% include 'snippets/modal_error.html' %}
+    </div>
+    <div id="loading_spinner" class="loading" style="display:none;"></div>
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
-<script>
-
-    $(window).on('load', function() {
+    <script>
+      $(window).on('load', function() {
 
         $("body").click(function() {
-            if ($("#modal_success").is(":visible")) {
-                $("#modal_success").hide();
-            }
-            if ($("#modal_error").is(":visible")) {
-                $("#modal_error").hide();
-            }
+          if ($("#modal_success").is(":visible")) {
+            $("#modal_success").hide();
+          }
+          if ($("#modal_error").is(":visible")) {
+            $("#modal_error").hide();
+          }
         });
 
-        $('#dropzone').on('dragover', function() {
+        let filesArray = [];
+
+        $('#dropzone').on('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             $(this).removeClass('border-slate-700 bg-slate-700/30');
             $(this).addClass('border-amber-500/50 bg-amber-400/10');
         });
-
-        $('#dropzone').on('dragleave', function() {
+        
+        $('#dropzone').on('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             $(this).removeClass('border-amber-500/50 bg-amber-400/10');
             $(this).addClass('border-slate-700 bg-slate-700/30');
         });
-
-        $('#dropzone input').on('change', function(e) {
-            var files = this.files;
-
+        
+        $('#dropzone').on('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).removeClass('border-amber-500/50 bg-amber-400/10');
+            let newFiles = Array.from(e.originalEvent.dataTransfer.files);
+            handleFiles(newFiles);
+        });
+        
+        $('#dropzone').on('click', function(e) {
+            e.preventDefault();
+            $('#artifact').click();
+        });
+        
+        $('#artifact').on('change', function(e) {
+            let newFiles = Array.from(this.files);
+            handleFiles(newFiles);
+            // Clear the input field to allow the same file to be selected again
+            $('#artifact').val('');
+        });
+        
+        function handleFiles(newFiles) {
             // Verify the max number of files:
-            if (files.length > {{ limit_number_files }}) {
+            if (filesArray.length + newFiles.length > {{ limit_number_files }}) {
                 $("#modal_error_txt").text("You can upload a maximum of {{ limit_number_files }} files at a time.");
                 $("#modal_error").css("display", "flex");
                 return false;
             }
-
+        
             // Verify each file is under the max size [2Mb]
-            let totalSize = 0;
-            Array.from(files).forEach((file) => {
+            let totalSize = filesArray.reduce((acc, file) => acc + file.size, 0);
+            for (let file of newFiles) {
                 totalSize += file.size;
                 if (file.size > {{ limit_individual_filesize }} * 1024 * 1024) { // Check if any file exceeds limit
                     $("#modal_error_txt").text("File too large: " + file.name + " (Max {{ limit_individual_filesize }} Mb).");
                     $("#modal_error").css("display", "flex");
                     return false;
                 }
-            });
-
+            }
+        
             // Verify the total size is under the max size [50Mb]
             if (totalSize > {{ limit_total_filesize }} * 1024 * 1024) {
                 $("#modal_error_txt").text("Total upload size exceeds {{ limit_total_filesize }} Mb.");
                 $("#modal_error").css("display", "flex");
                 return false;
             }
-
+        
+            // Add new files to the array
+            filesArray = filesArray.concat(newFiles);
+        
             // If it was done with drag & drop
             $('#dropzone').removeClass('border-amber-500/50 bg-amber-400/10');
-
+        
             // If it was done with filepicker
             $('#dropzone').removeClass('hover bg-slate-700/30 border-slate-700');
             $('#dropzone').addClass('bg-emerald-500/10 border-emerald-300');
-
+        
             $("#icon_waiting_for_file").hide();
             $('#dropzone').addClass('dropped');
+        
+            updateFileList();
+        }
+        
+        function updateFileList() {
+            if (filesArray.length === 0) {
+                // Reset to initial state
+                $('#dropzone').removeClass('bg-emerald-500/10 border-emerald-300 dropped');
+                $('#dropzone').addClass('bg-slate-700/30 border-slate-700');
+                $("#icon_waiting_for_file").show();
+                $('#dropzone label').html('Please upload up to {{ limit_number_files }} files, each under {{ limit_individual_filesize }} Mb [Total under {{ limit_total_filesize }} Mb].');
+            } else {
+                let fileNames = filesArray.map((file, index) => 
+                    `<div>
+                        - ${file.name} <span class="remove-file" data-index="${index}" style="color: red; font-size: 20px; cursor: pointer;">&times;</span>
+                    </div>`
+                ).join("");
+                $('#dropzone label').html("<b>** Files to upload **</b><hr class='my-4'>" + fileNames);
+        
+                $('.remove-file').on('click', function(event) {
+                    event.stopPropagation(); // Prevent the file picker from opening
+                    event.preventDefault(); // Prevent the default behavior
+                    let index = $(this).data('index');
+                    filesArray.splice(index, 1);
+                    updateFileList();
+                });
+            }
+        }
 
-            let fileNames = Array.from(files).map(file => "- " + file.name).join("<br>");
-            $('#dropzone label').html("<b>** Files to upload **</b><hr class='my-4'>" + fileNames);
+        $('#btn_submit').click(function() {
+          var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+          var formData = new FormData();
+          filesArray.forEach((file, index) => {
+            formData.append("artifact", file);
+          });
+          formData.append("message", $('#message').val());
+
+          $("#error_div").hide();
+          $("#success_div").hide();
+
+          $.ajax({
+            url: "{% url 'api:v1:upload_project' id=project.id fileformat='auto' %}",
+            method: "PUT",
+            data: formData,
+            contentType: false,
+            processData: false,
+            cache: false,
+            beforeSend: function(xhr) {
+              xhr.setRequestHeader("X-CSRFToken", csrftoken);
+
+              if ($("#message").val().length > 125) {
+                $("#modal_error_txt").text("The `message` is too long. Maximum 125 characters.");
+                $("#modal_error").css('display', 'flex');
+                return false;
+              }
+
+              $("#loading_spinner").show();
+
+              return true;
+
+            },
+            success: function(data) {
+              $("#loading_spinner").hide();
+
+              if (data.data.hexsha === null) {
+                $("#modal_error_txt").text("The file(s) uploaded is/are identical to the one(s) currently stored.");
+                $("#modal_error").css('display', 'flex');
+              } else {
+                $("#modal_success_txt").html("The file(s) has/have been succesfully uploaded.");
+                $("#modal_success").css('display', 'flex');
+
+                window.setTimeout(function() {
+                  // Redirect to project revisions
+                  window.location.href = data.data.browser_url;
+                }, 2000);
+              }
+            },
+            error: function(data) {
+              $("#loading_spinner").hide();
+              {% include 'snippets/ajax_error_modal_management.js' %}
+            }
+          });
+          return false; // prevent default
         });
 
-        $('#btn_submit').click(function () {
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-
-            const fileInput = document.getElementById('artifact');
-
-            var formData = new FormData();
-            Array.from(fileInput.files).forEach((file, index) => {
-                formData.append("artifact", file);
-            });
-            formData.append("message", $('#message').val());
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            $.ajax({
-                url: "{% url 'api:v1:upload_project' id=project.id fileformat='auto' %}",
-                method: "PUT",
-                data: formData,
-                contentType: false,
-                processData: false,
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-
-                    if ($("#message").val().length > 125){
-                        $("#modal_error_txt").text("The `message` is too long. Maximum 125 characters.");
-                        $("#modal_error").css('display', 'flex');
-                        return false;
-                    }
-
-                    $("#loading_spinner").show();
-
-                    return true;
-
-                },
-                success: function (data) {
-                    $("#loading_spinner").hide();
-
-                    if (data.data.hexsha === null) {
-                        $("#modal_error_txt").text("The file(s) uploaded is/are identical to the one(s) currently stored.");
-                        $("#modal_error").css('display', 'flex');
-                    } else {
-                        $("#modal_success_txt").html("The file(s) has/have been succesfully uploaded.");
-                        $("#modal_success").css('display', 'flex');
-
-                        window.setTimeout(function(){
-                            // Redirect to project revisions
-                            window.location.href = data.data.browser_url;
-                        }, 2000);
-                    }
-                },
-                error: function (data) {
-                    $("#loading_spinner").hide();
-                    {% include 'snippets/ajax_error_modal_management.js' %}
-                }
-            });
-            return false; // prevent default
-        });
-
-    });
-</script>
+      });
+    </script>
 {% endblock inline_extra_js %}
