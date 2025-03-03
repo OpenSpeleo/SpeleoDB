@@ -1,12 +1,28 @@
+# Files
+# ls -al | grep '^-r' | awk '{print $9}'
+.DS_Store
 .editorconfig
+.env
 .gitattributes
-.github
 .gitignore
-.gitlab-ci.yml
-.idea
-.pre-commit-config.yaml
-.readthedocs.yml
-.travis.yml
-venv
+LICENSE
+Makefile
+Procfile
+*.md
+*.yml
+*.yaml
+*.toml
+
+# Directories
+# ls -al | grep '^d' | awk '{print $9}'
+.envs
 .git
-.envs/
+.github
+.ipython
+.pytest_cache
+.ruff_cache
+.venv
+.vscode
+.workdir
+docs
+fixtures

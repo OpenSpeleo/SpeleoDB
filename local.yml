@@ -1,5 +1,3 @@
-version: "3"
-
 volumes:
   speleodb_local_postgres_data: {}
   speleodb_local_postgres_data_backups: {}
@@ -9,6 +7,8 @@ services:
     build:
       context: .
       dockerfile: ./compose/local/django/Dockerfile
+      args:
+        - DOCKER_BUILDKIT=1
     image: speleodb_local_django
     container_name: speleodb_local_django
     depends_on:
@@ -28,6 +28,8 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
+      args:
+        - DOCKER_BUILDKIT=1
     image: speleodb_production_postgres
     container_name: speleodb_local_postgres
     volumes:
