@@ -295,3 +295,6 @@ git_projects/
 !.workdir/emails/.gitkeep
 
 .envs/test.env
+
+# UV Cache
+.uv/
