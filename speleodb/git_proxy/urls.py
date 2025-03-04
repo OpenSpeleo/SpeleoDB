@@ -12,7 +12,7 @@ app_name = "git_proxy"
 
 urlpatterns = [
     path(
-        "<uuid:id>.git/info/<str:command>",
+        "<uuid:id>.git/info/refs",
         InfoRefsView.as_view(),
         name="git_info",
     ),
