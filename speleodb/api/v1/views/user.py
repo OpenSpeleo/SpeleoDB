@@ -134,6 +134,7 @@ class UserPasswordChangeView(GenericAPIView):
 
 
 class ReleaseAllUserLocksView(GenericAPIView):
+    serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request, *args, **kwargs):

@@ -90,9 +90,6 @@ class _GitlabManager(metaclass=SingletonMetaClass):
 
         try:
             # try to create the repository in Gitlab
-            _ = self._gl.projects.create(
-                {"name": str(project_id), "namespace_id": str(self._gitlab_group_id)}
-            )
             _ = self.create_project(project_id=project_id)
             project_dir.parent.mkdir(exist_ok=True, parents=True)
 
