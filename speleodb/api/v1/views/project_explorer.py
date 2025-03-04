@@ -14,6 +14,7 @@ from speleodb.api.v1.serializers import GitCommitSerializer
 from speleodb.api.v1.serializers import GitFileListSerializer
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.core import GitFile
+from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.exceptions import GitCommitNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
@@ -36,18 +37,24 @@ class ProjectRevisionsApiView(GenericAPIView):
         commits = None
         with contextlib.suppress(ValueError):
             # Checkout default branch and pull repository
-            project.git_repo.checkout_default_branch()
+            try:
+                project.git_repo.checkout_default_branch()
+                commits = project.git_repo.commits
+            except GitBaseError:
+                commits = []
 
             # Collect all the commits and sort them by date
             # Order: from most recent to oldest
             commits_serializer = GitCommitListSerializer(
-                project.git_repo.commits, context={"project": project}
+                commits, context={"project": project}
             )
 
-            commits = commits_serializer.data
+            serialized_commits = commits_serializer.data
 
         try:
-            return SuccessResponse({"project": serializer.data, "commits": commits})
+            return SuccessResponse(
+                {"project": serializer.data, "commits": serialized_commits}
+            )
 
         except GitlabError:
             logger.exception("There has been a problem accessing gitlab")
@@ -67,6 +74,14 @@ class ProjectGitExplorerApiView(GenericAPIView):
         project: Project = self.get_object()
         try:
             # Checkout default branch and pull repository
+            try:
+                project.git_repo.checkout_default_branch()
+            except GitBaseError:
+                return ErrorResponse(
+                    {"error": f"Problem checking out the commit `{hexsha}`"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
             project.git_repo.checkout_default_branch()
 
             commit = project.git_repo.commit(hexsha)
