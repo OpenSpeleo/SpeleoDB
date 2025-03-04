@@ -77,6 +77,13 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             self._gl.enable_debug()
 
     @check_initialized
+    def create_project(self, project_id: uuid.UUID) -> bool:
+        # try to create the repository in Gitlab
+        return self._gl.projects.create(
+            {"name": str(project_id), "namespace_id": str(self._gitlab_group_id)}
+        )
+
+    @check_initialized
     def create_or_clone_project(self, project_id: uuid.UUID) -> GitRepo | None:
         project_dir = settings.DJANGO_GIT_PROJECTS_DIR / str(project_id)
         git_url = f"https://oauth2:{self._gitlab_token}@{self._gitlab_instance}/{self._gitlab_group_name}/{project_id}.git"
@@ -86,6 +93,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             _ = self._gl.projects.create(
                 {"name": str(project_id), "namespace_id": str(self._gitlab_group_id)}
             )
+            _ = self.create_project(project_id=project_id)
             project_dir.parent.mkdir(exist_ok=True, parents=True)
 
             git_repo = GitRepo.init(project_dir)
