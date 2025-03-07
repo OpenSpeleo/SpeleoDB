@@ -171,7 +171,7 @@ $( document ).ready(function() {
             }
          },
          error: function (textStatus, errorThrown) {
-            console.log("ERROR: " + data.textStatus + " & " + errorThrown);
+            console.log("ERROR: " + textStatus + " & " + errorThrown);
             return null;
          }
       }).responseJSON.data;
