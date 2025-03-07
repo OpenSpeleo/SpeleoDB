@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import decimal
 
 from django.core.exceptions import ObjectDoesNotExist
 from django_countries import countries
@@ -36,16 +37,43 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     n_commits = serializers.SerializerMethodField()
 
-    created_by = UserField(queryset=User.objects.all())
+    created_by = UserField(queryset=User.objects.all(), required=False)
 
     class Meta:
         model = Project
         exclude = ("_visibility",)
 
+    def to_internal_value(self, data):
+        latitude = data.get("latitude", None)
+        longitude = data.get("longitude", None)
+
+        if (
+            latitude is not None
+            and latitude != ""
+            and longitude is not None
+            and longitude != ""
+        ):
+            data["latitude"] = str(round(decimal.Decimal(latitude), 8))
+            data["longitude"] = str(round(decimal.Decimal(longitude), 8))
+
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
         latitude = attrs.get("latitude", None)
         longitude = attrs.get("longitude", None)
-        if (longitude is None) != (latitude is None):
+        created_by = attrs.get("created_by", None)
+
+        if self.instance is None and created_by is None:
+            raise serializers.ValidationError(
+                "`created_by` must be specified during creation."
+            )
+
+        if self.instance is not None and "created_by" in attrs:
+            raise serializers.ValidationError("`created_by` cannot be updated.")
+
+        if (longitude is None) != (latitude is None) or (longitude != "") != (
+            latitude != ""
+        ):
             raise serializers.ValidationError(
                 "`latitude` and `longitude` must be simultaneously specified or empty"
             )
@@ -63,6 +91,11 @@ class ProjectSerializer(serializers.ModelSerializer):
         )
 
         return project
+
+    def update(self, instance, validated_data):
+        validated_data.pop("created_by", None)  # Remove created_by if present
+
+        return super().update(instance, validated_data)
 
     def get_permission(self, obj: Project) -> str:
         if isinstance(obj, dict):
