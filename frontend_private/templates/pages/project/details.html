@@ -126,6 +126,11 @@
                 success: function (data) {
                     $("#modal_success_txt").html("The project your has been updated.");
                     $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function(){
+                        // Refresh the page
+                        window.location.reload();
+                    }, 2000);
                 },
                 error: function (data) {
                     {% include 'snippets/ajax_error_modal_management.js' %}
