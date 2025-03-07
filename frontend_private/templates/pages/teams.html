@@ -117,38 +117,3 @@
     </div>
 </main>
 {% endblock content %}
-
-{% block inline_extra_js %}
-<script>
-$( document ).ready(function() {
-
-    $('.async_revision').each(function(){
-        var target_div = $("#" + $(this).data('id'));
-        var project_id = $(this).data('project_id');
-        get_commit_history(project_id, target_div);
-    });
-
-    function get_commit_history(project_id, target_div){
-        var base_api_url = "{% url 'api:v1:one_project_apiview' id='00000000-0000-0000-0000-000000000000' %}";
-        var api_url = base_api_url.substr(0, base_api_url.lastIndexOf('/', base_api_url.lastIndexOf('/') -1 ) + 1) + project_id + "/";
-
-        $.ajax({
-            url : api_url,
-            type : "GET",
-            dataType : "json",
-            success: function(data){
-                if (data.success) {
-                    target_div.html(data.data.history.length);
-                }
-                else {
-                    console.log("ERROR: " + data.error);
-                }
-            },
-            error: function (textStatus, errorThrown) {
-                console.log("ERROR: " + data.textStatus + " & " + errorThrown);
-            }
-        });
-    };
-});
-</script>
-{% endblock inline_extra_js %}

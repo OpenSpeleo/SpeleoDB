@@ -2,6 +2,7 @@
 {% load static i18n compress%}
 
 {% load countries %}
+{% load set_var %}
 {% load survey_formats %}
 {% load visibility_scopes %}
 
@@ -171,7 +172,9 @@
 
                     window.setTimeout(function(){
                         // Redirect to project listing
-                        window.location.href = "{% url 'private:projects' %}";
+                        {% set base_project_id = "00000000-0000-0000-0000-000000000000" %}
+                        var redirect_url = "{% url 'private:project_details' project_id=base_project_id %}";
+                        window.location.href = redirect_url.replace("{{ base_project_id }}", data["data"]["id"]);
                     }, 2000);
                 },
                 error: function (data) {

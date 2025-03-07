@@ -215,8 +215,8 @@ $(window).on('load', function() {
             $('#commit-template').remove();
         },
         error: function (textStatus, errorThrown) {
-            console.error("ERROR: " + data.textStatus + " & " + errorThrown);
-            return;
+            console.error("ERROR: " + textStatus + " & " + errorThrown);
+            return null;
         }
     });
 
