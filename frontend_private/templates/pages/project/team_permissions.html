@@ -112,7 +112,7 @@
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
 
                                     <!-- Edit Link -->
-                                    <span class="cursor-pointer {% if is_project_admin %}btn_open_edit_perm" data-team="{{permission.target.id}}" data-level="{{permission.level}}{% endif %}">
+                                    <span class="cursor-pointer {% if is_project_admin %}btn_open_edit_perm" data-team-name="{{permission.target.name}}" data-team="{{permission.target.id}}" data-level="{{permission.level}}{% endif %}">
                                         <svg xmlns="http://www.w3.org/2000/svg"
                                             class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if is_project_admin %}text-amber-500{% else %}text-slate-500{% endif %} inline"
                                             viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
@@ -215,8 +215,18 @@
             $("#permission_modal_title").text("How shall we modify this team's access ?");
             $("#permission_modal_header").text("");
             $("#permission_modal").css('display', 'flex');
-            $("#team").val($(this).data("team"));
-            $("#level").val($(this).data("level"));
+
+            var team_id = $(this).data("team");
+            var team_name = $(this).data("team-name");
+            var access_level = $(this).data("level");
+
+            var option = new Option(team_name, team_id); 
+            
+            $('#team').append($(option));
+
+            $("#team").val(team_id);
+            $("#level").val(access_level);
+
             lockSelect("#team");
         });
 
