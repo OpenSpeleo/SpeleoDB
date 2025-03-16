@@ -4,8 +4,11 @@ name = "SpeleoDB_Repo"
 version = "1.0.0"
 authors = [{ name = "Jonathan Dekhtiar", email = "jonathan@dekhtiar.com" }]
 readme = "README.md"
-dependencies = []
 requires-python = ">=3.13"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements/production.txt"]}
 
 # ==== pytest ====
 [tool.pytest.ini_options]
