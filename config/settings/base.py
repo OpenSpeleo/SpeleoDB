@@ -456,13 +456,11 @@ ACCOUNT_LOGIN_METHODS = {"email"}
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_CHANGE_EMAIL = True
 # https://docs.allauth.org/en/latest/account/configuration.html
-ACCOUNT_EMAIL_REQUIRED = True
-# https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_LOGOUT_ON_GET = True
 # https://docs.allauth.org/en/latest/account/configuration.html
-ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_SIGNUP_FIELDS = ["name*", "country*", "email*", "password1*", "password2*"]
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 # https://docs.allauth.org/en/latest/account/configuration.html
