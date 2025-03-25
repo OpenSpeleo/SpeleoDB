@@ -5,7 +5,7 @@
 <!-- Panel -->
 <div class="grow">
 
-    <form id="feedback_form" autocomplete="off">
+    <form id="feedback_form" autocomplete="off" method="POST">
 
         <!-- Panel body -->
         <div class="p-6 space-y-6">
@@ -100,26 +100,30 @@
          });
 
         var feedback_form = document.getElementById('feedback_form');
+
         async function handleSubmit(event) {
             event.preventDefault();
             var data = new FormData(feedback_form);
             fetch(
-                "https://formspree.io/f/myyrrknj",
+                "https://formspree.io/f/moveleyo",
                 {
-                    method: form.method,
+                    method: feedback_form.method,
                     body: data,
                     headers: {
                         'Accept': 'application/json'
                     }
                 }
             ).then(response => {
+                console.log(response);
+                console.log(response.ok);
                 if (response.ok) {
-                    status.innerHTML = "Thanks for your submission!";
-                    form.reset();
+                    response.json().then(data => {
+                        status.innerHTML = "Thanks for your submission!";
+                        feedback_form.reset();
 
-                    $("#modal_success_txt").html("Thanks for your feedback. We appreciate a lot!");
-                    $("#modal_success").css('display', 'flex');
-
+                        $("#modal_success_txt").html("Thanks for your feedback. We appreciate a lot!");
+                        $("#modal_success").css('display', 'flex');
+                    })
                 } else {
                     response.json().then(data => {
                         if (Object.hasOwn(data, 'errors')) {
