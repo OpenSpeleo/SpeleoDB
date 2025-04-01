@@ -28,11 +28,11 @@ else:
 END
 }
 
+python manage.py collectstatic --noinput
+# python manage.py compilemessages -i site-packages
+
 # echo "FORCE_COMPRESS_ENABLED = ${FORCE_COMPRESS_ENABLED}"
 
 if [[ compress_enabled || ${FORCE_COMPRESS_ENABLED} == "1" ]]; then
   python manage.py compress --force
 fi
-
-python manage.py collectstatic --noinput
-# python manage.py compilemessages -i site-packages
