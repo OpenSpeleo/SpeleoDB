@@ -1,4 +1,4 @@
-rcssmin==1.1.2  # https://github.com/ndparker/rcssmin
+rcssmin==1.2.1  # https://github.com/ndparker/rcssmin
 argon2-cffi==23.1.0  # https://github.com/hynek/argon2-cffi
 whitenoise==6.9.0  # https://github.com/evansd/whitenoise
 redis==5.2.1  # https://github.com/redis/redis-py
