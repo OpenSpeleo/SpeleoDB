@@ -2,8 +2,8 @@
 [build]
 nixpacksPlan = { "providers" = ["python"] }
 builder = "NIXPACKS"
-nixpacksVersion = "1.30.0"                  # https://github.com/railwayapp/nixpacks/releases/
-buildEnvironment = "V2"
+# https://github.com/railwayapp/nixpacks/releases/
+nixpacksVersion = "1.30.0"
 nixpacksConfigPath = "./nixpacks.toml"
 
 [deploy]
