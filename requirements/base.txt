@@ -18,7 +18,7 @@ GitPython==3.1.44  # https://github.com/gitpython-developers/GitPython
 # Django
 # ------------------------------------------------------------------------------
 django==5.1.7  # https://www.djangoproject.com/
-django-allauth==65.6.0  # https://github.com/pennersr/django-allauth
+django-allauth==65.7.0  # https://github.com/pennersr/django-allauth
 django-celery-beat==2.7.0  # https://github.com/celery/django-celery-beat
 django-compressor==4.5.1  # https://github.com/django-compressor/django-compressor
 django-countries==7.6.1  # https://github.com/SmileyChris/django-countries/
