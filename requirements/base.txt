@@ -5,7 +5,7 @@ redis==5.2.1  # https://github.com/redis/redis-py
 hiredis==3.1.0  # https://github.com/redis/hiredis-py
 celery==5.4.0  # pyup: < 6.0  # https://github.com/celery/celery
 flower==2.0.1  # https://github.com/mher/flower
-uvicorn[standard]==0.34.0  # https://github.com/encode/uvicorn
+uvicorn[standard]==0.34.1  # https://github.com/encode/uvicorn
 wrapt==1.17.2  # https://github.com/GrahamDumpleton/wrapt
 cachetools==5.5.2  # https://github.com/tkem/cachetools
 timeago==1.0.16  # https://github.com/hustcc/timeago
