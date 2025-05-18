@@ -5,10 +5,102 @@ version = "1.0.0"
 authors = [{ name = "Jonathan Dekhtiar", email = "jonathan@dekhtiar.com" }]
 readme = "README.md"
 requires-python = ">=3.13"
-dynamic = ["dependencies"]
+dependencies = [
+  "rcssmin==1.1.2",            # https://github.com/ndparker/rcssmin
+  "argon2-cffi==23.1.0",       # https://github.com/hynek/argon2-cffi
+  "whitenoise==6.9.0",         # https://github.com/evansd/whitenoise
+  "redis==5.2.1",              # https://github.com/redis/redis-py
+  "hiredis==3.1.0",            # https://github.com/redis/hiredis-py
+  "celery==5.5.1",             # https://github.com/celery/celery
+  "flower==2.0.1",             # https://github.com/mher/flower
+  "uvicorn[standard]==0.34.1", # https://github.com/encode/uvicorn
+  "wrapt==1.17.2",             # https://github.com/GrahamDumpleton/wrapt
+  "cachetools==5.5.2",         # https://github.com/tkem/cachetools
+  "timeago==1.0.16",           # https://github.com/hustcc/timeago
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements/production.txt"]}
+  # Git Management
+  # ------------------------------------------------------------------------------
+  "python-gitlab==5.6.0", # https://python-gitlab.readthedocs.io/en/stable/
+  "GitPython==3.1.44",    # https://github.com/gitpython-developers/GitPython
+
+  # Django
+  # ------------------------------------------------------------------------------
+  "django==5.1.8",                        # https://www.djangoproject.com/
+  "django-allauth==65.7.0",               # https://github.com/pennersr/django-allauth
+  "django-celery-beat==2.7.0",            # https://github.com/celery/django-celery-beat
+  "django-compressor==4.5.1",             # https://github.com/django-compressor/django-compressor
+  "django-countries==7.6.1",              # https://github.com/SmileyChris/django-countries/
+  "django-dynamic-raw-id==4.4",           # https://github.com/lincolnloop/django-dynamic-raw-id
+  "django-encrypted-model-fields==0.6.5", # https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/
+  "django-environ==0.12.0",               # https://github.com/joke2k/django-environ
+  "django-hijack==3.7.1",                 # https://github.com/django-hijack/django-hijack/
+  "django-model-utils==5.0.0",            # https://github.com/jazzband/django-model-utils
+  "django-redis==5.4.0",                  # https://github.com/jazzband/django-redis
+  # Django REST Framework
+  "djangorestframework==3.16.0", # https://github.com/encode/django-rest-framework
+  "django-cors-headers==4.7.0",  # https://github.com/adamchainz/django-cors-headers
+  # DRF-spectacular for api documentation
+  "drf-spectacular==0.28.0", # https://github.com/tfranzel/drf-spectacular
+
+  # Speleo Packages
+  # ------------------------------------------------------------------------------
+  "mnemo-lib==0.0.3", # https://github.com/OpenSpeleo/pytool_mnemo_lib
+]
+
+[project.optional-dependencies]
+production = [
+  "gunicorn==23.0.0",  # https://github.com/benoitc/gunicorn
+  "psycopg[c]==3.2.6", # https://github.com/psycopg/psycopg
+
+  # Django
+  # ------------------------------------------------------------------------------
+  "django-anymail[mailersend]==13.0", # https://github.com/anymail/django-anymail
+  "django-storages==1.14.6",          # https://github.com/jschneier/django-storages
+]
+local = [
+  "Werkzeug[watchdog]==3.1.3", # https://github.com/pallets/werkzeug
+  "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
+  "psycopg[binary]==3.2.6",    # https://github.com/psycopg/psycopg
+  "watchfiles==1.0.5",         # https://github.com/samuelcolvin/watchfiles
+
+  # Testing
+  # ------------------------------------------------------------------------------
+  "deepdiff>=7.0,<9.0",               # https://github.com/seperman/deepdiff
+  "factory-boy==3.3.3",               # https://github.com/FactoryBoy/factory_boy
+  "mypy==1.15.0",                     # https://github.com/python/mypy
+  "parameterized==0.9.0",             # https://github.com/wolever/parameterized
+  "pytest-dotenv==0.5.2",             # https://github.com/quiqua/pytest-dotenv
+  "pytest-env==1.1.5",                # https://github.com/pytest-dev/pytest-env
+  "pytest-sugar==1.0.0",              # https://github.com/Frozenball/pytest-sugar
+  "pytest==8.3.5",                    # https://github.com/pytest-dev/pytest
+  "types-cachetools==5.5.0.20240820", # https://github.com/python/typeshed
+
+  # Django Testing
+  # ------------------------------------------------------------------------------
+  "django-coverage-plugin==3.1.0",                      # https://github.com/nedbat/django_coverage_plugin
+  "django-stubs[compatible-mypy]==5.1.3",               # https://github.com/typeddjango/django-stubs
+  "djangorestframework-stubs[compatible-mypy]==3.15.3", # https://github.com/typeddjango/djangorestframework-stubs
+  "pytest-django==4.11.1",                              # https://github.com/pytest-dev/pytest-django
+
+  # Documentation
+  # ------------------------------------------------------------------------------
+  "sphinx==8.2.3",               # https://github.com/sphinx-doc/sphinx
+  "sphinx-autobuild==2024.10.3", # https://github.com/GaretJax/sphinx-autobuild
+
+  # Code quality
+  # ------------------------------------------------------------------------------
+  "ruff==0.11.5",      # https://github.com/astral-sh/ruff
+  "coverage==7.8.0",   # https://github.com/nedbat/coveragepy
+  "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
+  "pre-commit==4.2.0", # https://github.com/pre-commit/pre-commit
+
+  # Django
+  # ------------------------------------------------------------------------------
+  "django-debug-toolbar==5.1.0", # https://github.com/jazzband/django-debug-toolbar
+  "django-extensions==4.1",      # https://github.com/django-extensions/django-extensions
+  "django-schema-viewer==0.5.3", # https://github.com/pikhovkin/django-schema-viewer
+  "django-silk==5.3.2",          # https://github.com/jazzband/django-silk
+]
 
 # ==== pytest ====
 [tool.pytest.ini_options]

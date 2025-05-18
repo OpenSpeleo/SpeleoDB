@@ -12,6 +12,7 @@ Procfile
 *.yml
 *.yaml
 *.toml
+!pyproject.toml
 
 # Directories
 # ls -al | grep '^d' | awk '{print $9}'

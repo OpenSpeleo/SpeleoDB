@@ -48,11 +48,13 @@ RUN pip install --no-cache-dir --upgrade pip uv
 # UV settings
 ENV UV_MOUNT_CACHE_DIR=/tmp/.cache
 ENV UV_CACHE_DIR=${UV_MOUNT_CACHE_DIR}/cache
+# Use the system Python environment
+ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
 
 # Install Project Dependencies
-COPY ./requirements .
+COPY pyproject.toml .
 RUN --mount=type=bind,source=.uv,target=${UV_MOUNT_CACHE_DIR},readonly=false \
-    uv pip install --link-mode=copy --verbose --system -r ${BUILD_ENVIRONMENT}.txt
+    uv sync --extra ${BUILD_ENV}
 
 COPY ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
