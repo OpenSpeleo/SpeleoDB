@@ -44,7 +44,7 @@ def format_byte_size(size_bytes) -> str:
 
     size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
 
-    i = int(math.floor(math.log(size_bytes, 1000)))
+    i = math.floor(math.log(size_bytes, 1000))
     p = math.pow(1000, i)
     s = round(size_bytes / p, 2)
 

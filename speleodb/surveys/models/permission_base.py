@@ -7,8 +7,8 @@ from speleodb.users.models import User
 
 class BasePermissionModel(models.Model):
     # abstract parameter
-    target = NotImplementedError()
-    project = NotImplementedError()
+    target: models.ForeignKey
+    project: models.ForeignKey
 
     is_active = models.BooleanField(default=True)
 
@@ -43,16 +43,20 @@ class BasePermissionModel(models.Model):
         return f"<{self.__class__.__name__}: {self}>"
 
     @property
-    def level_obj(self) -> str:
+    def level_obj(self) -> Level:
         return self.Level(self._level)
+
+    @level_obj.setter
+    def level_obj(self, value: Level) -> None:
+        self._level = value
 
     @property
     def level(self) -> str:
         return self.level_obj.label
 
     @level.setter
-    def level(self, value) -> None:
-        self._level = value
+    def level(self, value: str) -> None:
+        self._level = self.Level(value)
 
     def deactivate(self, deactivated_by: User) -> None:
         self.is_active = False
@@ -62,5 +66,5 @@ class BasePermissionModel(models.Model):
     def reactivate(self, level: Level) -> None:
         self.is_active = True
         self.deactivated_by = None
-        self.level = level
+        self.level_obj = level
         self.save()

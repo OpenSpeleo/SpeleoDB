@@ -37,11 +37,11 @@ class Option(models.Model):
         ]
 
     @classmethod
-    def get(cls, name) -> Self:
+    def get(cls, name: str) -> Self:
         return cls.objects.get(name=name)
 
     @classmethod
-    def get_or_empty(cls, name) -> str:
+    def get_or_empty(cls, name: str) -> str:
         try:
             return cls.get(name=name).value
         except ObjectDoesNotExist:

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from django.urls import URLPattern
+from django.urls import URLResolver
 from django.urls import include
 from django.urls import path
 
@@ -19,7 +21,7 @@ from speleodb.api.v1.views.team_permission import ProjectTeamPermissionView
 from speleodb.api.v1.views.user_permission import ProjectUserPermissionListView
 from speleodb.api.v1.views.user_permission import ProjectUserPermissionView
 
-project_base_urlpatterns = [
+project_base_urlpatterns: list[URLPattern] = [
     path("", ProjectSpecificApiView.as_view(), name="one_project_apiview"),
     # =============================== GIT VIEW ============================== #
     path(
@@ -90,7 +92,7 @@ project_base_urlpatterns = [
     ),
 ]
 
-urlpatterns = [
+urlpatterns: list[URLPattern | URLResolver] = [
     path("", ProjectApiView.as_view(), name="project_api"),
     path("<uuid:id>/", include(project_base_urlpatterns)),
 ]

@@ -104,7 +104,7 @@ local = [
 
 # ==== pytest ====
 [tool.pytest.ini_options]
-norecursedirs = "git_projects/*"
+norecursedirs = ".uv/*"
 minversion = "6.0"
 # addopts = "--ds=config.settings.test --import-mode=importlib"
 addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
@@ -119,13 +119,14 @@ plugins = ["django_coverage_plugin"]
 
 # ==== mypy ====
 [tool.mypy]
-python_version = "3.13"
 check_untyped_defs = true
+exclude = '.uv'
 ignore_missing_imports = true
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+python_version = "3.13"
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
-plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
 
 [[tool.mypy.overrides]]
 # Django migrations should not produce any errors:
@@ -280,6 +281,10 @@ unfixable = []
 extend-unsafe-fixes = ["UP038"]
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore `F401` (import violations) in all `__init__.py` files, and in `path/to/file.py`.
+"__init__.py" = ["F401"]
 
 [tool.ruff.format]
 quote-style = "double"

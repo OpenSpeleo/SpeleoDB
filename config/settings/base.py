@@ -490,10 +490,10 @@ REST_FRAMEWORK = {
 
 if env.bool("DJANGO_DEBUG_DRF_AUTH", default=False):
     # Needs to be insert as the very first Auth Processor to ensure it being processed.
-    REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"].insert(
-        0,
+    REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] = [
         "speleodb.api.v1.authentication.DebugHeaderAuthentication",
-    )
+        *REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"],
+    ]
 
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
 CORS_URLS_REGEX = r"^/api/.*$"
