@@ -29,7 +29,7 @@ repos:
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.5
+    rev: v0.11.10
     hooks:
       # Linter
       - id: ruff
@@ -88,7 +88,6 @@ repos:
             "--remove-all-unused-imports",
             "--remove-unused-variables",
             "--expand-star-imports",
-            "--ignore-init-module-imports",
           ]
         additional_dependencies: ["autoflake"]
 

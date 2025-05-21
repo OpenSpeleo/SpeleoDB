@@ -26,3 +26,27 @@ from speleodb.api.v1.serializers.team import SurveyTeamMembershipListSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamMembershipSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamSerializer
 from speleodb.api.v1.serializers.user import UserSerializer
+
+__all__ = [
+    "AuthTokenSerializer",
+    "GitCommitListSerializer",
+    "GitCommitSerializer",
+    "GitFileListSerializer",
+    "GitFileSerializer",
+    "PasswordChangeSerializer",
+    "ProjectSerializer",
+    "SurveyTeamListSerializer",
+    "SurveyTeamMembershipListSerializer",
+    "SurveyTeamMembershipSerializer",
+    "SurveyTeamSerializer",
+    "TeamPermissionListSerializer",
+    "TeamPermissionSerializer",
+    "TeamRequestSerializer",
+    "TeamRequestWithProjectLevelSerializer",
+    "UploadSerializer",
+    "UserPermissionListSerializer",
+    "UserPermissionSerializer",
+    "UserRequestSerializer",
+    "UserRequestWithTeamRoleSerializer",
+    "UserSerializer",
+]

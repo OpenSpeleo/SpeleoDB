@@ -3,10 +3,13 @@
 
 import contextlib
 import logging
+from typing import Any
 
 from gitdb.exc import BadName as GitRevBadName
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.serializers import GitCommitListSerializer
@@ -24,13 +27,13 @@ from speleodb.utils.response import SuccessResponse
 logger = logging.getLogger(__name__)
 
 
-class ProjectRevisionsApiView(GenericAPIView):
+class ProjectRevisionsApiView(GenericAPIView[Project]):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project: Project = self.get_object()
         serializer = self.get_serializer(project, context={"user": request.user})
 
@@ -39,7 +42,7 @@ class ProjectRevisionsApiView(GenericAPIView):
             # Checkout default branch and pull repository
             try:
                 project.git_repo.checkout_default_branch()
-                commits = project.git_repo.commits
+                commits = list(project.git_repo.commits)
             except GitBaseError:
                 commits = []
 
@@ -64,13 +67,13 @@ class ProjectRevisionsApiView(GenericAPIView):
             )
 
 
-class ProjectGitExplorerApiView(GenericAPIView):
+class ProjectGitExplorerApiView(GenericAPIView[Project]):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def get(self, request, hexsha: str, *args, **kwargs):
+    def get(self, request: Request, hexsha: str, *args: Any, **kwargs: Any) -> Response:
         project: Project = self.get_object()
         try:
             # Checkout default branch and pull repository

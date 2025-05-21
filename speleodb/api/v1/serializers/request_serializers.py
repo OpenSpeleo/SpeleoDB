@@ -40,7 +40,7 @@ class UserRequestWithTeamRoleSerializer(UserRequestSerializer):
     )
 
     def validate_role(self, value: str) -> SurveyTeamMembership.Role:
-        return getattr(SurveyTeamMembership.Role, value.upper())
+        return SurveyTeamMembership.Role.from_str(value.upper())
 
 
 class TeamRequestSerializer(serializers.Serializer):
@@ -64,4 +64,4 @@ class TeamRequestWithProjectLevelSerializer(TeamRequestSerializer):
     )
 
     def validate_level(self, value: str) -> TeamPermission.Level:
-        return getattr(TeamPermission.Level, value.upper())
+        return TeamPermission.Level.from_str(value.upper())

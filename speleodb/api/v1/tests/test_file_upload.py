@@ -36,8 +36,10 @@ class FileViewTests(BaseAPIProjectTestCase):
         )
     )
     def test_upload_valid_file(
-        self, testfile: pathlib.Path, uploader_access_level: AnyPermissionLevel
-    ):
+        self,
+        testfile: pathlib.Path,
+        uploader_access_level: AnyPermissionLevel,
+    ) -> None:
         """
         Test file uploads with valid formats.
         """
@@ -61,7 +63,7 @@ class FileViewTests(BaseAPIProjectTestCase):
         commit_message = "Valid commit message"
 
         with testfile.open(mode="rb") as file_data:
-            auth = self.header_prefix + self.token.key
+            auth = f"{self.header_prefix}{self.token.key}"
             response = self.client.put(
                 reverse(
                     "api:v1:upload_project",
@@ -109,7 +111,7 @@ class FileViewTests(BaseAPIProjectTestCase):
     )
     def test_upload_file_error_without_mutex(
         self, testfile: pathlib.Path, uploader_access_level: AnyPermissionLevel
-    ):
+    ) -> None:
         """
         Test file uploads with valid formats.
         """
@@ -158,7 +160,7 @@ class FileViewTests(BaseAPIProjectTestCase):
     )
     def test_upload_error_in_readonly(
         self, testfile: pathlib.Path, uploader_access_level: AnyPermissionLevel
-    ):
+    ) -> None:
         """
         Test file uploads with valid formats.
         """

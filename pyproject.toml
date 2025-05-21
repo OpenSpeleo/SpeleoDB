@@ -89,7 +89,7 @@ local = [
 
   # Code quality
   # ------------------------------------------------------------------------------
-  "ruff==0.11.5",      # https://github.com/astral-sh/ruff
+  "ruff==0.11.10",     # https://github.com/astral-sh/ruff
   "coverage==7.8.0",   # https://github.com/nedbat/coveragepy
   "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
   "pre-commit==4.2.0", # https://github.com/pre-commit/pre-commit
@@ -122,16 +122,29 @@ plugins = ["django_coverage_plugin"]
 check_untyped_defs = true
 exclude = '.uv'
 ignore_missing_imports = true
+strict = true
 plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
 python_version = "3.13"
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
 
+[tool.mypy-speleodb.api.v1.tests]
+disallow_untyped_calls = false
+allow_untyped_calls = true
+
 [[tool.mypy.overrides]]
 # Django migrations should not produce any errors:
 module = "*.migrations.*"
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Django migrations should not produce any errors:
+module = "*.tests.*"
+# Check for untyped calls
+disallow_untyped_calls = false
+# Check for untyped decorator functions
+disallow_untyped_decorators = false
 
 [tool.django-stubs]
 django_settings_module = "config.settings.test"
@@ -281,10 +294,6 @@ unfixable = []
 extend-unsafe-fixes = ["UP038"]
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
-
-[tool.ruff.lint.per-file-ignores]
-# Ignore `F401` (import violations) in all `__init__.py` files, and in `path/to/file.py`.
-"__init__.py" = ["F401"]
 
 [tool.ruff.format]
 quote-style = "double"

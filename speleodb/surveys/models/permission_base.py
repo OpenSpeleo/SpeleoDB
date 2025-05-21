@@ -2,13 +2,16 @@
 # -*- coding: utf-8 -*-
 from django.db import models
 
+from speleodb.surveys.models import Project
+from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
+from speleodb.utils.django_base_models import BaseIntegerChoices
 
 
 class BasePermissionModel(models.Model):
     # abstract parameter
-    target: models.ForeignKey
-    project: models.ForeignKey
+    target: models.ForeignKey[User | SurveyTeam]
+    project: models.ForeignKey[Project]
 
     is_active = models.BooleanField(default=True)
 
@@ -23,7 +26,7 @@ class BasePermissionModel(models.Model):
         default=None,
     )
 
-    class Level(models.IntegerChoices):
+    class Level(BaseIntegerChoices):
         READ_ONLY = (0, "READ_ONLY")
         READ_AND_WRITE = (1, "READ_AND_WRITE")
         # ADMIN = (2, "ADMIN")

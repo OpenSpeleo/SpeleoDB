@@ -67,7 +67,7 @@ def sha1_hash() -> str:
         ),
     ],
 )
-def test_url_resolution(name: str, path: str, kwargs: dict | None):
+def test_url_resolution(name: str, path: str, kwargs: dict | None) -> None:
     """
     Tests URL resolution and path generation for various endpoints.
     """
@@ -81,7 +81,7 @@ def test_url_resolution(name: str, path: str, kwargs: dict | None):
 
 
 @pytest.mark.parametrize("fileformat", Format.FileFormat.upload_choices)
-def test_upload_project(fileformat: str, project: Project):
+def test_upload_project(fileformat: str, project: Project) -> None:
     endpoint = reverse(
         "api:v1:upload_project",
         kwargs={"id": project.id, "fileformat": fileformat},
@@ -96,7 +96,7 @@ def test_upload_project(fileformat: str, project: Project):
 
 
 @pytest.mark.parametrize("fileformat", Format.FileFormat.download_choices)
-def test_download_project(fileformat: str, project: Project):
+def test_download_project(fileformat: str, project: Project) -> None:
     endpoint = reverse(
         "api:v1:download_project",
         kwargs={"id": project.id, "fileformat": fileformat},
@@ -111,7 +111,7 @@ def test_download_project(fileformat: str, project: Project):
 
 
 @pytest.mark.parametrize("fileformat", Format.FileFormat.download_choices)
-def test_download_project_at_hash(fileformat: str, project: Project):
+def test_download_project_at_hash(fileformat: str, project: Project) -> None:
     hexsha = sha1_hash()
     endpoint = reverse(
         "api:v1:download_project_at_hash",
@@ -137,7 +137,7 @@ def test_download_project_at_hash(fileformat: str, project: Project):
         ("api:v1:update_user_password", "/api/v1/user/password/"),
     ],
 )
-def test_user_api_urls(name: str, path: str):
+def test_user_api_urls(name: str, path: str) -> None:
     """
     Test the reverse and resolve for user-related API URLs.
     """
@@ -169,7 +169,7 @@ def test_user_api_urls(name: str, path: str):
         ),
     ],
 )
-def test_team_dynamic_urls(name: str, path: str, kwargs: dict | None):
+def test_team_dynamic_urls(name: str, path: str, kwargs: dict | None) -> None:
     """
     Test the reverse and resolve for dynamic team-related API URLs.
     """

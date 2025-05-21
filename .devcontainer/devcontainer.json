@@ -75,7 +75,9 @@
                 // Docker
                 "ms-azuretools.vscode-docker",
                 // Env
-                "IronGeek.vscode-env"
+                "IronGeek.vscode-env",
+                // MyPy
+                "ms-python.mypy-type-checker"
             ]
         }
     },

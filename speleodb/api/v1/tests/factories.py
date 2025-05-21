@@ -16,15 +16,15 @@ from speleodb.users.models import User
 
 
 class UserFactory(DjangoModelFactory):
-    email = Faker("email")
-    name = Faker("name")
-    country = random.choice(countries)[0]
+    email: str = Faker("email")
+    name: str = Faker("name")
+    country: str = random.choice(countries)[0]
 
     class Meta:
         model = User
 
     @post_generation
-    def password(self, *args, **kwargs):
+    def password(self, *args, **kwargs) -> None:
         self.set_password(UserFactory.DEFAULT_PASSWORD())
 
     @classmethod

@@ -25,11 +25,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Rust & Cargo for `watchfiles` dependency
-RUN apt-get update && apt-get install --no-install-recommends -y \
-    rustc cargo \
-    # cleaning up unused files
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && rm -rf /var/lib/apt/lists/*
+RUN curl https://sh.rustup.rs -sSf | \
+    sh -s -- --default-toolchain stable -y
+
+ENV PATH=/root/.cargo/bin:$PATH
 
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \

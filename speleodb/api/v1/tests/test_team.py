@@ -9,11 +9,12 @@ from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.utils import is_subset
+from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 
 
 class TestTeamCreation(BaseAPITestCase):
-    def test_create_team(self):
+    def test_create_team(self) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
@@ -93,11 +94,11 @@ class TestTeamCreation(BaseAPITestCase):
             ),
         ]
     )
-    def test_improper_team_creation(self, kwargs):
+    def test_improper_team_creation(self, data: dict[str, str]) -> None:
         auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse("api:v1:team_api"),
-            data=kwargs,
+            data=data,
             headers={"authorization": auth},
         )
 
@@ -105,16 +106,18 @@ class TestTeamCreation(BaseAPITestCase):
 
 
 class TestTeamUpdate(BaseAPITestCase):
-    def setUp(self):
+    team: SurveyTeam
+
+    def setUp(self) -> None:
         super().setUp()
-        self.team = SurveyTeamFactory()
+        self.team = SurveyTeamFactory.create()
 
         # Must make the user a team leader to modify the team
         _ = SurveyTeamMembershipFactory(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
         )
 
-    def test_full_update_team(self):
+    def test_full_update_team(self) -> None:
         team_data = {
             "name": f"My Super Awesome {random.randint(1, int(1e9))} Team",
             "description": "My awesome Team",
@@ -179,7 +182,7 @@ class TestTeamUpdate(BaseAPITestCase):
             ),
         ]
     )
-    def test_partial_update_team(self, data):
+    def test_partial_update_team(self, data: dict[str, str]) -> None:
         auth = self.header_prefix + self.token.key
         response = self.client.patch(
             reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id}),
@@ -193,23 +196,25 @@ class TestTeamUpdate(BaseAPITestCase):
 
 
 class TestTeamUpdateErrors(BaseAPITestCase):
-    def setUp(self):
+    team: SurveyTeam
+
+    def setUp(self) -> None:
         super().setUp()
-        self.team = SurveyTeamFactory()
+        self.team = SurveyTeamFactory.create()
 
     @parameterized.expand(["PATCH", "PUT"])
-    def test_update_as_a_non_member(self, method_type):
+    def test_update_as_a_non_member(self, method_type: str) -> None:
         self.base_test(method_type=method_type)
 
     @parameterized.expand(["PATCH", "PUT"])
-    def test_update_as_a_member(self, method_type):
+    def test_update_as_a_member(self, method_type: str) -> None:
         _ = SurveyTeamMembershipFactory(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.MEMBER
         )
 
         self.base_test(method_type=method_type)
 
-    def base_test(self, method_type):
+    def base_test(self, method_type: str) -> None:
         team_data = {
             "name": f"My Super Awesome {random.randint(1, int(1e9))} Team",
             "description": "My awesome Team",
@@ -227,11 +232,13 @@ class TestTeamUpdateErrors(BaseAPITestCase):
 
 
 class TestTeamDelete(BaseAPITestCase):
-    def setUp(self):
-        super().setUp()
-        self.team = SurveyTeamFactory()
+    team: SurveyTeam
 
-    def test_delete(self):
+    def setUp(self) -> None:
+        super().setUp()
+        self.team = SurveyTeamFactory.create()
+
+    def test_delete(self) -> None:
         # Must make the user a team leader to modify the team
         _ = SurveyTeamMembershipFactory(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
@@ -246,7 +253,7 @@ class TestTeamDelete(BaseAPITestCase):
         assert response.status_code == status.HTTP_204_NO_CONTENT, response.data
 
     @parameterized.expand([SurveyTeamMembership.Role.MEMBER, None])
-    def test_delete_error(self, role: SurveyTeamMembership.Role | None):
+    def test_delete_error(self, role: SurveyTeamMembership.Role | None) -> None:
         if role is not None:
             _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
 
@@ -260,14 +267,16 @@ class TestTeamDelete(BaseAPITestCase):
 
 
 class TestGetTeam(BaseAPITestCase):
-    def setUp(self):
+    team: SurveyTeam
+
+    def setUp(self) -> None:
         super().setUp()
-        self.team = SurveyTeamFactory()
+        self.team = SurveyTeamFactory.create()
 
     @parameterized.expand(
         [SurveyTeamMembership.Role.LEADER, SurveyTeamMembership.Role.MEMBER, None]
     )
-    def test_get_team(self, role: SurveyTeamMembership.Role | None):
+    def test_get_team(self, role: SurveyTeamMembership.Role | None) -> None:
         if role is not None:
             _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
 
@@ -290,7 +299,7 @@ class TestGetTeam(BaseAPITestCase):
                 "response_data": response.data["data"],
             }
 
-    def test_get_non_existing_team(self):
+    def test_get_non_existing_team(self) -> None:
         auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id + 1}),
@@ -302,7 +311,7 @@ class TestGetTeam(BaseAPITestCase):
     @parameterized.expand(
         [SurveyTeamMembership.Role.LEADER, SurveyTeamMembership.Role.MEMBER, None]
     )
-    def test_get_all_user_team(self, role: SurveyTeamMembership.Role | None):
+    def test_get_all_user_team(self, role: SurveyTeamMembership.Role | None) -> None:
         if role is not None:
             _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
 

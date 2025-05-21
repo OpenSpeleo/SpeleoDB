@@ -3,11 +3,14 @@
 
 import logging
 from typing import TYPE_CHECKING
+from typing import Any
 
 from django.db.utils import IntegrityError
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasAdminAccess
 from speleodb.api.v1.permissions import UserHasReadAccess
@@ -25,13 +28,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ProjectSpecificApiView(GenericAPIView):
+class ProjectSpecificApiView(GenericAPIView[Project]):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project: Project = self.get_object()
         serializer = self.get_serializer(project, context={"user": request.user})
 
@@ -47,7 +50,7 @@ class ProjectSpecificApiView(GenericAPIView):
             )
 
     @method_permission_classes((UserHasWriteAccess,))
-    def put(self, request, *args, **kwargs):
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project: Project = self.get_object()
         serializer = self.get_serializer(
             project, data=request.data, context={"user": request.user}
@@ -61,7 +64,7 @@ class ProjectSpecificApiView(GenericAPIView):
         )
 
     @method_permission_classes((UserHasWriteAccess,))
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project: Project = self.get_object()
         serializer = self.get_serializer(
             project, data=request.data, context={"user": request.user}, partial=True
@@ -75,7 +78,7 @@ class ProjectSpecificApiView(GenericAPIView):
         )
 
     @method_permission_classes((UserHasAdminAccess,))
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Note: We only delete the permissions, rendering the project invisible to the
         # users. After 30 days, the project gets automatically deleted by a cronjob.
         # This is done to protect users from malicious/erronous project deletion.
@@ -87,13 +90,13 @@ class ProjectSpecificApiView(GenericAPIView):
         return SuccessResponse({"id": str(project.id)})
 
 
-class ProjectApiView(GenericAPIView):
+class ProjectApiView(GenericAPIView[Project]):
+    queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
-    queryset = Project.objects.all()
 
-    def get(self, request, *args, **kwargs):
-        user: User = request.user
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user: User = request.user  # type: ignore[assignment]
 
         serializer = self.get_serializer(
             user.projects, many=True, context={"user": user}
@@ -101,8 +104,8 @@ class ProjectApiView(GenericAPIView):
 
         return SuccessResponse(serializer.data)
 
-    def post(self, request, *args, **kwargs):
-        user: User = request.user
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = request.user
 
         data = request.data
         data["created_by"] = user
@@ -118,7 +121,7 @@ class ProjectApiView(GenericAPIView):
             )
 
         except IntegrityError:
-            ErrorResponse(
+            return ErrorResponse(
                 {"error": "This query violates a project requirement"},
                 status=status.HTTP_400_BAD_REQUEST,
             )

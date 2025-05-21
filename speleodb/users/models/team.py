@@ -5,6 +5,7 @@ from django.db import models
 from django_countries.fields import CountryField
 
 from speleodb.users.models import User
+from speleodb.utils.django_base_models import BaseIntegerChoices
 
 
 class SurveyTeam(models.Model):
@@ -90,7 +91,7 @@ class SurveyTeamMembership(models.Model):
         default=None,
     )
 
-    class Role(models.IntegerChoices):
+    class Role(BaseIntegerChoices):
         MEMBER = (0, "MEMBER")
         LEADER = (1, "LEADER")
 

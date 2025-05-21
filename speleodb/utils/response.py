@@ -17,8 +17,12 @@ class DownloadResponseFromBlob(FileResponse):
 
 
 class DownloadResponseFromFile(FileResponse):
-    def __init__(self, filepath: str, filename: str, attachment=True):
-        filepath = Path(filepath)
+    def __init__(
+        self, filepath: str | Path, filename: str, attachment: bool = True
+    ) -> None:
+        if not isinstance(filepath, Path):
+            filepath = Path(filepath)
+
         super().__init__(
             filepath.open(mode="rb"),
             as_attachment=attachment,

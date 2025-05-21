@@ -24,6 +24,7 @@ from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
+from speleodb.utils.django_base_models import BaseIntegerChoices
 from speleodb.utils.exceptions import ProjectNotFound
 
 if TYPE_CHECKING:
@@ -95,7 +96,7 @@ class Project(models.Model):
         ],
     )
 
-    class Visibility(models.IntegerChoices):
+    class Visibility(BaseIntegerChoices):
         PRIVATE = (0, "PRIVATE")
         PUBLIC = (1, "PUBLIC")
 

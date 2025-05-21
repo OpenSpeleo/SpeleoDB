@@ -6,6 +6,7 @@ from django.db import models
 from speleodb.surveys.models import Project
 from speleodb.surveys.models.permission_base import BasePermissionModel
 from speleodb.users.models import User
+from speleodb.utils.django_base_models import BaseIntegerChoices
 
 
 class UserPermission(BasePermissionModel):
@@ -19,7 +20,7 @@ class UserPermission(BasePermissionModel):
         on_delete=models.CASCADE,
     )
 
-    class Level(models.IntegerChoices):
+    class Level(BaseIntegerChoices):
         READ_ONLY = (
             BasePermissionModel.Level.READ_ONLY,
             BasePermissionModel.Level.READ_ONLY.label,

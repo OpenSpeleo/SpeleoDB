@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from typing import Any
+
 from django.db import models
 
 from speleodb.surveys.models import Project
 from speleodb.utils.decorators import classproperty
+from speleodb.utils.django_base_models import BaseIntegerChoices
 
 
-class NoUpdateQuerySet(models.QuerySet):
-    def update(self, *args, **kwargs):
-        pass
+class NoUpdateQuerySet(models.QuerySet["Format"]):
+    def update(self, **kwargs: Any) -> int:
+        return 0
 
 
 class Format(models.Model):
@@ -20,7 +23,7 @@ class Format(models.Model):
         null=False,
     )
 
-    class FileFormat(models.IntegerChoices):
+    class FileFormat(BaseIntegerChoices):
         # NOTE: Special values that don't really represent a "file format":
         # ------------------------------------------------------------------------------
 
@@ -62,27 +65,36 @@ class Format(models.Model):
             return self.label.replace("_", " ")
 
         @classmethod
-        def filtered_choices(cls, exclude_vals=None, as_str=True):
-            exclude_vals = exclude_vals if not None else []
+        def filtered_choices(
+            cls, exclude_vals: list[tuple[int, str]] | None = None
+        ) -> list[tuple[int, str]]:
+            exclude_vals = exclude_vals if exclude_vals is not None else []
 
-            filtered_list = [f for f in cls.choices if f not in exclude_vals]
-            if as_str:
-                return [f.lower() for _, f in filtered_list]
-            return filtered_list
+            return [f for f in cls.choices if f not in exclude_vals]
+
+        @classmethod
+        def filtered_choices_as_str(
+            cls, exclude_vals: list[tuple[int, str]] | None = None
+        ) -> list[str]:
+            return [
+                f.lower() for _, f in cls.filtered_choices(exclude_vals=exclude_vals)
+            ]
 
         @classproperty
-        def download_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
-            return cls.filtered_choices(exclude_vals=cls.__excluded_download_formats__)
+        def download_choices(cls) -> list[str]:  # noqa: N805
+            return cls.filtered_choices_as_str(
+                exclude_vals=cls.__excluded_download_formats__
+            )
 
         @classproperty
-        def upload_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
-            return cls.filtered_choices(exclude_vals=cls.__excluded_upload_formats__)
+        def upload_choices(cls) -> list[str]:  # noqa: N805
+            return cls.filtered_choices_as_str(
+                exclude_vals=cls.__excluded_upload_formats__
+            )
 
         @classproperty
         def db_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
-            return cls.filtered_choices(
-                exclude_vals=cls.__excluded_db_formats__, as_str=False
-            )
+            return cls.filtered_choices(exclude_vals=cls.__excluded_db_formats__)
 
         @classproperty
         def __excluded_download_formats__(cls) -> list[tuple[int, str]]:  # noqa: N805
@@ -120,7 +132,7 @@ class Format(models.Model):
     def __str__(self) -> str:
         return f"{self.project} -> {self.format}"
 
-    def save(self, *args, **kwargs) -> None:
+    def save(self, *args: list[Any], **kwargs: dict[str, Any]) -> None:
         # Only allows object creation. Otherwise bypass.
         if self.pk is None:
             super().save(*args, **kwargs)

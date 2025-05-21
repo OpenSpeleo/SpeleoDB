@@ -11,6 +11,7 @@ from io import BytesIO
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Self
+from typing import override
 
 import git
 from django.conf import settings
@@ -28,6 +29,11 @@ from speleodb.git_engine.exceptions import GitPathNotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from collections.abc import Iterator
+
+    from git.objects.base import IndexObjUnion
+    from git.objects.tree import TraversedTreeTup
+    from git.types import Commit_ish
 
 GIT_COMMITTER = git.Actor(
     settings.DJANGO_GIT_COMMITTER_NAME,
@@ -221,7 +227,7 @@ class GitDir(GitObjectMixin):
 
 class GitTree(Tree, GitObjectMixin):
     @classmethod
-    def from_tree(cls, tree) -> Self:
+    def from_tree(cls, tree: Tree) -> Self:
         if not isinstance(tree, Tree):
             return TypeError(f"Expected `git.Tree` type, received: {type(tree)}")
 
@@ -260,6 +266,7 @@ class GitTree(Tree, GitObjectMixin):
             case _:
                 return item
 
+    @override
     def __truediv__(self, path: str | pathlib.Path) -> GitTree | GitFile | Any:
         """
         Overload the '/' operator to support custom path traversal.
@@ -277,11 +284,12 @@ class GitTree(Tree, GitObjectMixin):
         for item in super()._iter_convert_to_object(iterable=iterable):
             yield self._cast_to_type(item)
 
+    @override
     def __getitem__(self, item: Blob | Tree | Any) -> GitFile | GitTree | Any:
         return self._cast_to_type(super().__getitem__(item=item))
 
     @property
-    def root(self) -> Generator[GitDir, GitFile]:
+    def root(self) -> Generator[GitDir | GitFile]:
         """Retreive the root tree"""
         for sub_tree in self.trees:
             yield GitDir(sub_tree)
@@ -294,7 +302,7 @@ class GitTree(Tree, GitObjectMixin):
             blob = self[path]
             return GitFile(repo=self.repo, blob=blob)
         except KeyError as e:
-            raise GitPathNotFoundError("Path:" + path + " not found") from e
+            raise GitPathNotFoundError(f"Path: {path} not found") from e
 
     def __get_tree_files__(self, tree: GitTree, recursive=True) -> Generator[GitFile]:
         for blob in tree.blobs:
@@ -336,7 +344,10 @@ class GitTree(Tree, GitObjectMixin):
     def binsha(self, value: bytes) -> None:
         self._binsha = value
 
-    def traverse(self, *args, **kwargs) -> Generator[GitFile]:
+    @override
+    def traverse(
+        self, *args: Any, **kwargs: Any
+    ) -> Iterator[IndexObjUnion] | Iterator[TraversedTreeTup]:
         yield from super().traverse(*args, **kwargs)
 
     def scandir(self) -> Generator[GitFile, GitTree]:
@@ -363,15 +374,13 @@ class GitCommit(Commit):
 
     @property
     def repo(self) -> GitRepo:
-        if not isinstance(self._repo, GitRepo):
-            self._repo = GitRepo.from_repo(self._repo)
+        # if not isinstance(self._repo, GitRepo):
+        #     self._repo = GitRepo.from_repo(self._repo)
         return self._repo
 
     @repo.setter
-    def repo(self, value):
-        if not isinstance(value, GitRepo):
-            value = GitRepo.from_repo(value)
-        self._repo = value
+    def repo(self, repo: Repo | GitRepo) -> None:
+        self._repo = repo if isinstance(repo, GitRepo) else GitRepo.from_repo(repo)
 
     @property
     def changes(self) -> Generator[git.Diff]:
@@ -465,10 +474,12 @@ class GitRepo(Repo):
 
     @classmethod
     def from_repo(cls, repo: Repo) -> Self:
+        if not isinstance(repo, Repo):
+            raise TypeError(f"Expected `Repo` type - Received: {type(repo)}")
         return cls(repo.working_dir)
 
     @classmethod
-    def clone_from(cls, *args, **kwargs) -> Self:
+    def clone_from(cls, *args: list[Any], **kwargs: dict[str, Any]) -> Self:
         for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
             repo = super().clone_from(*args, **kwargs)
             break
@@ -482,6 +493,7 @@ class GitRepo(Repo):
 
         return cls.from_repo(repo)
 
+    @override
     def __eq__(self, other: GitRepo | Repo) -> bool:
         if not isinstance(other, (GitRepo, Repo)):
             return False
@@ -495,6 +507,7 @@ class GitRepo(Repo):
     def path(self) -> pathlib.Path:
         return pathlib.Path(self.working_dir)
 
+    @override
     @property
     def branches(self) -> dict[str, str]:
         branches = {}
@@ -502,6 +515,7 @@ class GitRepo(Repo):
             branches[ref.name] = ref.commit.hexsha
         return branches
 
+    @override
     @property
     def description(self) -> str:
         try:
@@ -509,7 +523,8 @@ class GitRepo(Repo):
         except OSError:
             return None
 
-    def commit(self, rev=None) -> GitCommit:
+    @override
+    def commit(self, rev: Commit_ish | str | None = None) -> GitCommit:
         if rev is None:
             return self.head.commit
         """Retrieve a GitCommit object represent single commit from reporistory"""
@@ -522,7 +537,7 @@ class GitRepo(Repo):
                 yield commit
 
     def get_commits(
-        self, num=None, since=None, until=None, branch=None, path=None
+        self, num: int | None = None, since=None, until=None, branch=None, path=None
     ) -> Generator[GitCommit]:
         """Retrieve the commits of repository
         Args:
@@ -549,7 +564,7 @@ class GitRepo(Repo):
             yield GitCommit(repo=self, binsha=commit.binsha)
 
     @property
-    def commit_count(self):
+    def commit_count(self) -> int:
         # Memoery efficient to compute the length of a generator
         return sum(
             1
@@ -653,7 +668,7 @@ class GitRepo(Repo):
 
         raise GitBlobNotFoundError(f"Git Object with id `{hexsha}` not found.")
 
-    def reset_and_remove_untracked(self):
+    def reset_and_remove_untracked(self) -> None:
         # Step 1: Get the commit object to reset to
         target_commit = self.commit("HEAD")
 
@@ -679,7 +694,7 @@ class GitRepo(Repo):
             with contextlib.suppress(OSError):
                 dir_path.rmdir()
 
-    def publish_first_commit(self):
+    def publish_first_commit(self) -> None:
         # Create an initial empty commit
         self.commit_and_push_project(
             settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE,
