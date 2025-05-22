@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from typing import Any
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import UserHasLeaderAccess
@@ -15,34 +19,32 @@ from speleodb.api.v1.serializers import UserRequestSerializer
 from speleodb.api.v1.serializers import UserRequestWithTeamRoleSerializer
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
+from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 
-class TeamMembershipApiView(GenericAPIView):
+class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
     queryset = SurveyTeam.objects.all()
     permission_classes = [UserHasLeaderAccess | (IsReadOnly & UserHasMemberAccess)]
     serializer_class = SurveyTeamSerializer
     lookup_field = "id"
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         team: SurveyTeam = self.get_object()
+        user = self.get_user()
         try:
             membership = SurveyTeamMembership.objects.get(
-                team=team, user=request.user, is_active=True
+                team=team, user=user, is_active=True
             )
         except ObjectDoesNotExist:
             return ErrorResponse(
-                {
-                    "error": (
-                        f"A membership for this user: `{request.user}` does not exist."
-                    )
-                },
+                {"error": (f"A membership for this user: `{user}` does not exist.")},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         membership_serializer = SurveyTeamMembershipSerializer(membership)
-        team_serializer = SurveyTeamSerializer(team, context={"user": request.user})
+        team_serializer = SurveyTeamSerializer(team, context={"user": user})
 
         return SuccessResponse(
             {
@@ -52,9 +54,10 @@ class TeamMembershipApiView(GenericAPIView):
             status=status.HTTP_200_OK,
         )
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         serializer = UserRequestWithTeamRoleSerializer(
-            data=request.data, context={"requesting_user": request.user}
+            data=request.data, context={"requesting_user": user}
         )
 
         if not serializer.is_valid():
@@ -93,7 +96,7 @@ class TeamMembershipApiView(GenericAPIView):
         team.save()
 
         membership_serializer = SurveyTeamMembershipSerializer(membership)
-        team_serializer = SurveyTeamSerializer(team, context={"user": request.user})
+        team_serializer = SurveyTeamSerializer(team, context={"user": user})
 
         return SuccessResponse(
             {
@@ -103,9 +106,10 @@ class TeamMembershipApiView(GenericAPIView):
             status=status.HTTP_201_CREATED,
         )
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         serializer = UserRequestWithTeamRoleSerializer(
-            data=request.data, context={"requesting_user": request.user}
+            data=request.data, context={"requesting_user": user}
         )
 
         if not serializer.is_valid():
@@ -151,7 +155,7 @@ class TeamMembershipApiView(GenericAPIView):
         team.save()
 
         membership_serializer = SurveyTeamMembershipSerializer(membership)
-        team_serializer = SurveyTeamSerializer(team, context={"user": request.user})
+        team_serializer = SurveyTeamSerializer(team, context={"user": user})
 
         return SuccessResponse(
             {
@@ -161,9 +165,10 @@ class TeamMembershipApiView(GenericAPIView):
             status=status.HTTP_200_OK,
         )
 
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         serializer = UserRequestSerializer(
-            data=request.data, context={"requesting_user": request.user}
+            data=request.data, context={"requesting_user": user}
         )
 
         if not serializer.is_valid():
@@ -189,13 +194,13 @@ class TeamMembershipApiView(GenericAPIView):
             )
 
         # Deactivate the user membership to the team
-        membership.deactivate(deactivated_by=request.user)
+        membership.deactivate(deactivated_by=user)
         membership.save()
 
         # Refresh the `modified_date` field
         team.save()
 
-        team_serializer = SurveyTeamSerializer(team, context={"user": request.user})
+        team_serializer = SurveyTeamSerializer(team, context={"user": user})
 
         return SuccessResponse(
             {
@@ -205,18 +210,19 @@ class TeamMembershipApiView(GenericAPIView):
         )
 
 
-class TeamMembershipListApiView(GenericAPIView):
+class TeamMembershipListApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
     queryset = SurveyTeam.objects.all()
     permission_classes = [UserHasMemberAccess]
     serializer_class = SurveyTeamSerializer
     lookup_field = "id"
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         team: SurveyTeam = self.get_object()
+        user = self.get_user()
         membership_list = SurveyTeamMembership.objects.filter(team=team, is_active=True)
 
         membership_serializer = SurveyTeamMembershipListSerializer(membership_list)
-        team_serializer = SurveyTeamSerializer(team, context={"user": request.user})
+        team_serializer = SurveyTeamSerializer(team, context={"user": user})
 
         return SuccessResponse(
             {

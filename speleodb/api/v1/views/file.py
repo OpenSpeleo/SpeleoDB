@@ -31,6 +31,7 @@ from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors.auto_selector import AutoSelector
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
+from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import FileRejectedError
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.response import DownloadResponseFromBlob
@@ -81,7 +82,7 @@ def handle_exception(
     return ErrorResponse({"error": error_msg}, status=status_code)
 
 
-class FileUploadView(GenericAPIView[Project]):
+class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasWriteAccess, UserOwnsProjectMutex]
     serializer_class = ProjectSerializer
@@ -90,26 +91,18 @@ class FileUploadView(GenericAPIView[Project]):
     def put(  # noqa: PLR0915
         self,
         request: Request,
-        fileformat: Format.FileFormat,
+        fileformat: str,
         *args: list[Any],
         **kwargs: dict[str, Any],
     ) -> Response:
+        user = self.get_user()
         with timed_section("Project Upload"):
             # ~~~~~~~~~~~~~~~~~~~~~~ START of URL Validation ~~~~~~~~~~~~~~~~~~~~ #
             with timed_section("URL Validation"):
-                if not isinstance(request, Format.FileFormat):
-                    return ErrorResponse(
-                        {
-                            "error": (
-                                "The file format requested is not recognized: "
-                                f"{fileformat}"
-                            )
-                        },
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
+                fileformat_f = Format.FileFormat.from_str(fileformat.upper())
 
-                if fileformat.label.lower() not in Format.FileFormat.upload_choices:
-                    msg = f"The format: {fileformat} is not supported for upload"
+                if fileformat_f.label.lower() not in Format.FileFormat.upload_choices:
+                    msg = f"The format: {fileformat_f} is not supported for upload"
                     logger.exception(
                         f"{msg}, expected: {Format.FileFormat.upload_choices}"
                     )
@@ -230,7 +223,7 @@ class FileUploadView(GenericAPIView[Project]):
                                 for _ in range(5):
                                     try:
                                         processor = AutoSelector.get_upload_processor(
-                                            fileformat=fileformat,
+                                            fileformat=fileformat_f,
                                             file=file,
                                             project=project,
                                         )
@@ -244,10 +237,10 @@ class FileUploadView(GenericAPIView[Project]):
                                     )
 
                             with timed_section("File Management"):
-                                if fileformat == Format.FileFormat.AUTO:
+                                if fileformat_f == Format.FileFormat.AUTO:
                                     target_fileformat = processor.ASSOC_FILEFORMAT
                                 else:
-                                    target_fileformat = fileformat
+                                    target_fileformat = fileformat_f
 
                                 # Associates the project with the format, ignore if
                                 # already done. We have to start with this in order to
@@ -273,11 +266,10 @@ class FileUploadView(GenericAPIView[Project]):
                                     )
                                     continue
 
-                    with timed_section(f"GIT Commit and Push: `{file.name}`"):
+                    with timed_section("GIT Commit and Push"):
                         # Finally commit the project - None if project not dirty
                         hexsha: str | None = project.commit_and_push_project(
-                            message=commit_message,
-                            author=request.user,  # type: ignore[arg-type]
+                            message=commit_message, author=user
                         )
 
                     with timed_section("HTTP Response Construction"):
@@ -309,7 +301,7 @@ class FileUploadView(GenericAPIView[Project]):
                                     else None
                                 ),
                                 "project": ProjectSerializer(
-                                    project, context={"user": request.user}
+                                    project, context={"user": user}
                                 ).data,
                             }
                         )
@@ -363,7 +355,7 @@ class FileUploadView(GenericAPIView[Project]):
                 )
 
 
-class FileDownloadView(GenericAPIView[Project]):
+class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = UploadSerializer
@@ -451,7 +443,7 @@ class FileDownloadView(GenericAPIView[Project]):
                 )
 
 
-class BlobDownloadView(GenericAPIView[Project]):
+class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = UploadSerializer

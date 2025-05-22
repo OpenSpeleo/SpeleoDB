@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 from typing import Any
 
 from django.db import models
@@ -7,6 +8,8 @@ from django.db import models
 from speleodb.surveys.models import Project
 from speleodb.utils.decorators import classproperty
 from speleodb.utils.django_base_models import BaseIntegerChoices
+
+type ListFileFormats = list["tuple[int, str] | Format.FileFormat"]
 
 
 class NoUpdateQuerySet(models.QuerySet["Format"]):
@@ -66,7 +69,7 @@ class Format(models.Model):
 
         @classmethod
         def filtered_choices(
-            cls, exclude_vals: list[tuple[int, str]] | None = None
+            cls, exclude_vals: ListFileFormats | None = None
         ) -> list[tuple[int, str]]:
             exclude_vals = exclude_vals if exclude_vals is not None else []
 
@@ -74,7 +77,7 @@ class Format(models.Model):
 
         @classmethod
         def filtered_choices_as_str(
-            cls, exclude_vals: list[tuple[int, str]] | None = None
+            cls, exclude_vals: ListFileFormats | None = None
         ) -> list[str]:
             return [
                 f.lower() for _, f in cls.filtered_choices(exclude_vals=exclude_vals)
@@ -97,15 +100,15 @@ class Format(models.Model):
             return cls.filtered_choices(exclude_vals=cls.__excluded_db_formats__)
 
         @classproperty
-        def __excluded_download_formats__(cls) -> list[tuple[int, str]]:  # noqa: N805
+        def __excluded_download_formats__(cls) -> ListFileFormats:  # noqa: N805
             return [cls.OTHER, cls.AUTO]
 
         @classproperty
-        def __excluded_upload_formats__(cls) -> list[tuple[int, str]]:  # noqa: N805
+        def __excluded_upload_formats__(cls) -> ListFileFormats:  # noqa: N805
             return [cls.DUMP]
 
         @classproperty
-        def __excluded_db_formats__(cls) -> list[tuple[int, str]]:  # noqa: N805
+        def __excluded_db_formats__(cls) -> ListFileFormats:  # noqa: N805
             return [cls.DUMP, cls.AUTO]
 
     _format = models.IntegerField(
@@ -132,13 +135,13 @@ class Format(models.Model):
     def __str__(self) -> str:
         return f"{self.project} -> {self.format}"
 
-    def save(self, *args: list[Any], **kwargs: dict[str, Any]) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:
         # Only allows object creation. Otherwise bypass.
         if self.pk is None:
             super().save(*args, **kwargs)
 
     @property
-    def raw_format(self) -> str:
+    def raw_format(self) -> FileFormat:
         return self.FileFormat(self._format)
 
     @property
@@ -146,5 +149,5 @@ class Format(models.Model):
         return self.raw_format.label
 
     @format.setter
-    def format(self, value) -> None:
+    def format(self, value: FileFormat) -> None:
         self._format = value

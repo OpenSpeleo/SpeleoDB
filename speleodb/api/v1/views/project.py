@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from typing import TYPE_CHECKING
 from typing import Any
 
 from django.db.utils import IntegrityError
@@ -19,24 +18,23 @@ from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
 from speleodb.utils.api_decorators import method_permission_classes
+from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
-
-if TYPE_CHECKING:
-    from speleodb.users.models import User
 
 logger = logging.getLogger(__name__)
 
 
-class ProjectSpecificApiView(GenericAPIView[Project]):
+class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         project: Project = self.get_object()
-        serializer = self.get_serializer(project, context={"user": request.user})
+        serializer = self.get_serializer(project, context={"user": user})
 
         try:
             return SuccessResponse(
@@ -51,9 +49,10 @@ class ProjectSpecificApiView(GenericAPIView[Project]):
 
     @method_permission_classes((UserHasWriteAccess,))
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         project: Project = self.get_object()
         serializer = self.get_serializer(
-            project, data=request.data, context={"user": request.user}
+            project, data=request.data, context={"user": user}
         )
         if serializer.is_valid():
             serializer.save()
@@ -65,9 +64,10 @@ class ProjectSpecificApiView(GenericAPIView[Project]):
 
     @method_permission_classes((UserHasWriteAccess,))
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         project: Project = self.get_object()
         serializer = self.get_serializer(
-            project, data=request.data, context={"user": request.user}, partial=True
+            project, data=request.data, context={"user": user}, partial=True
         )
         if serializer.is_valid():
             serializer.save()
@@ -83,20 +83,21 @@ class ProjectSpecificApiView(GenericAPIView[Project]):
         # users. After 30 days, the project gets automatically deleted by a cronjob.
         # This is done to protect users from malicious/erronous project deletion.
 
+        user = self.get_user()
         project: Project = self.get_object()
         for perm in project.permissions:
-            perm.deactivate(deactivated_by=request.user)
+            perm.deactivate(deactivated_by=user)
 
         return SuccessResponse({"id": str(project.id)})
 
 
-class ProjectApiView(GenericAPIView[Project]):
+class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        user: User = request.user  # type: ignore[assignment]
+        user = self.get_user()
 
         serializer = self.get_serializer(
             user.projects, many=True, context={"user": user}
@@ -105,7 +106,7 @@ class ProjectApiView(GenericAPIView[Project]):
         return SuccessResponse(serializer.data)
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        user = request.user
+        user = self.get_user()
 
         data = request.data
         data["created_by"] = user

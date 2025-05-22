@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -16,6 +17,7 @@ from speleodb.api.v1.serializers import UserPermissionSerializer
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import User
+from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import BadRequestError
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import UserNotActiveError
@@ -25,17 +27,18 @@ from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 
-class ProjectUserPermissionListView(GenericAPIView):
+class ProjectUserPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def get(self, request, *args, **kwargs):
-        project: Project = self.get_object()
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        project = self.get_object()
+        user = self.get_user()
         permissions = project.user_permissions
 
-        project_serializer = ProjectSerializer(project, context={"user": request.user})
+        project_serializer = ProjectSerializer(project, context={"user": user})
         permission_serializer = UserPermissionListSerializer(permissions)
 
         return SuccessResponse(
@@ -47,7 +50,7 @@ class ProjectUserPermissionListView(GenericAPIView):
         )
 
 
-class ProjectUserPermissionView(GenericAPIView):
+class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasAdminAccess]
     serializer_class = ProjectSerializer
@@ -56,7 +59,8 @@ class ProjectUserPermissionView(GenericAPIView):
     def _process_request_data(
         self, request: Request, data: dict[str, Any], skip_level: bool = False
     ) -> dict[str, Any]:
-        perm_data = {}
+        request_user = self.get_user()
+        perm_data: dict[str, Any] = {}
         for key in ["user", "level"]:
             try:
                 if key == "level" and skip_level:
@@ -91,7 +95,7 @@ class ProjectUserPermissionView(GenericAPIView):
                                 f"The user: `{value}` does not exist."
                             ) from e
 
-                        if request.user == user:
+                        if request_user == user:
                             # This by default make no sense because you need to be
                             # project admin to create permission. So you obviously can't
                             # create permission for yourself. Added just as safety and
@@ -101,7 +105,7 @@ class ProjectUserPermissionView(GenericAPIView):
                             )
 
                         if not user.is_active:
-                            return UserNotActiveError(
+                            raise UserNotActiveError(
                                 f"The user: `{value}` is inactive."
                             )
 
@@ -118,7 +122,8 @@ class ProjectUserPermissionView(GenericAPIView):
         return perm_data
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        project: Project = self.get_object()
+        project = self.get_object()
+        user = self.get_user()
 
         perm_data = self._process_request_data(request=request, data=request.data)
 
@@ -140,7 +145,7 @@ class ProjectUserPermissionView(GenericAPIView):
         permission.reactivate(level=perm_data["level"])
 
         permission_serializer = UserPermissionSerializer(permission)
-        project_serializer = ProjectSerializer(project, context={"user": request.user})
+        project_serializer = ProjectSerializer(project, context={"user": user})
 
         # Refresh the `modified_date` field
         project.save()
@@ -154,12 +159,13 @@ class ProjectUserPermissionView(GenericAPIView):
         )
 
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        project: Project = self.get_object()
+        project = self.get_object()
+        user = self.get_user()
 
         perm_data = self._process_request_data(request=request, data=request.data)
 
         # Can't edit your own permission
-        if request.user == perm_data["user"]:
+        if user == perm_data["user"]:
             return ErrorResponse(
                 {"error": ("A user can not edit their own permission")},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -195,7 +201,7 @@ class ProjectUserPermissionView(GenericAPIView):
         permission.save()
 
         permission_serializer = UserPermissionSerializer(permission)
-        project_serializer = ProjectSerializer(project, context={"user": request.user})
+        project_serializer = ProjectSerializer(project, context={"user": user})
 
         # Refresh the `modified_date` field
         project.save()
@@ -209,12 +215,15 @@ class ProjectUserPermissionView(GenericAPIView):
         )
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        project: Project = self.get_object()
+        project = self.get_object()
+        user = self.get_user()
 
-        perm_data = self._process_request_data(data=request.data, skip_level=True)
+        perm_data = self._process_request_data(
+            request=request, data=request.data, skip_level=True
+        )
 
         # Can't edit your own permission
-        if request.user == perm_data["user"]:
+        if user == perm_data["user"]:
             return ErrorResponse(
                 {"error": ("A user can not edit their own permission")},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -235,8 +244,8 @@ class ProjectUserPermissionView(GenericAPIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        permission.deactivate(deactivated_by=request.user)
-        project_serializer = ProjectSerializer(project, context={"user": request.user})
+        permission.deactivate(deactivated_by=user)
+        project_serializer = ProjectSerializer(project, context={"user": user})
 
         # Refresh the `modified_date` field
         project.save()

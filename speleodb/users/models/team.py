@@ -14,6 +14,10 @@ class SurveyTeam(models.Model):
     Each member has a role (Leader or Member) with timestamps for auditing changes.
     """
 
+    rel_team_memberships: models.QuerySet[SurveyTeamMembership]
+
+    id = models.AutoField(primary_key=True)  # Explicitly declared for typing
+
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=False, null=False)
 
@@ -36,7 +40,7 @@ class SurveyTeam(models.Model):
     def get_member_count(self) -> int:
         return self.get_all_memberships().count()
 
-    def get_all_memberships(self) -> list[SurveyTeamMembership]:
+    def get_all_memberships(self) -> models.QuerySet[SurveyTeamMembership]:
         return self.rel_team_memberships.filter(is_active=True).order_by(
             "-_role", "user__email"
         )

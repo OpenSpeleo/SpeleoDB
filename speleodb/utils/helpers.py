@@ -1,23 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 from collections import OrderedDict
+from typing import Any
+from typing import TypeVar
 
 from django.utils import timezone
+
+T = TypeVar("T")
 
 
 def get_timestamp() -> str:
     return timezone.localtime().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def maybe_sort_data(data):
-    if isinstance(data, (dict, OrderedDict)):
-        return OrderedDict(
-            {key: maybe_sort_data(val) for key, val in sorted(data.items())}
-        )
+def maybe_sort_data(data: T) -> OrderedDict[str, Any] | list[Any] | T:
+    match data:
+        case dict():
+            return OrderedDict(
+                {key: maybe_sort_data(val) for key, val in sorted(data.items())}
+            )
 
-    if isinstance(data, (tuple, list)):
-        return [maybe_sort_data(_data) for _data in data]
+        case tuple() | list():
+            return [maybe_sort_data(_data) for _data in data]
 
     return data
 

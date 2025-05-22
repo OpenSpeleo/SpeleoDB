@@ -19,7 +19,7 @@ class Mutex(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
-    closing_user = models.ForeignKey(
+    closing_user: models.ForeignKey[User | None] = models.ForeignKey(
         User,
         related_name="rel_closing_mutexes",
         on_delete=models.RESTRICT,

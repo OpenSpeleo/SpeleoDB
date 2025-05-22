@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from itertools import groupby
 from operator import attrgetter
 from typing import TYPE_CHECKING
@@ -15,6 +14,8 @@ from django_countries.fields import CountryField
 from speleodb.users.managers import UserManager
 
 if TYPE_CHECKING:
+    from django.db import models
+
     from speleodb.surveys.models import Mutex
     from speleodb.surveys.models import Project
     from speleodb.surveys.models import TeamPermission
@@ -23,8 +24,8 @@ if TYPE_CHECKING:
 
 
 def filter_permissions_by_best(
-    permissions: list[UserPermission, TeamPermission],
-) -> list[UserPermission, TeamPermission]:
+    permissions: list[UserPermission | TeamPermission],
+) -> list[UserPermission | TeamPermission]:
     """
     A user can have access to a project by name or from N teams.
     This function keep the "best access level" for each project
@@ -53,6 +54,11 @@ class User(AbstractUser):
     If adding fields that need to be filled at user signup,
     check forms.SignupForm.
     """
+
+    # FK Keys
+    rel_mutexes: models.QuerySet[Mutex]
+    rel_permissions: models.QuerySet[UserPermission]
+    rel_team_memberships: models.QuerySet[SurveyTeamMembership]
 
     # First and last name do not cover name patterns around the globe
     name = CharField("Name of User", blank=False, null=False, max_length=255)
@@ -88,7 +94,7 @@ class User(AbstractUser):
         )
 
     @property
-    def team_memberships(self) -> list[SurveyTeamMembership]:
+    def team_memberships(self) -> models.QuerySet[SurveyTeamMembership]:
         return self.rel_team_memberships.filter(is_active=True).order_by(
             "-modified_date"
         )
@@ -100,13 +106,13 @@ class User(AbstractUser):
     @property
     def projects_with_level(
         self,
-    ) -> list[dict[str, Project | TeamPermission | UserPermission]]:
+    ) -> list[dict[str, Project | str]]:
         return [
             {"project": perm.project, "level": perm.level} for perm in self.permissions
         ]
 
     @property
-    def permissions(self) -> list[TeamPermission, UserPermission]:
+    def permissions(self) -> list[TeamPermission | UserPermission]:
         """Returns a sorted list of `TeamPermission` or `UserPermission` by project
         name. The method finds the best permission (user or team) for each project."""
 
@@ -125,8 +131,8 @@ class User(AbstractUser):
 
         team_permissions = TeamPermission.objects.filter(target__in=active_user_teams)
 
-        return filter_permissions_by_best(chain(user_permissions, team_permissions))
+        return filter_permissions_by_best([*user_permissions, *team_permissions])
 
     @property
-    def active_mutexes(self) -> list[Mutex]:
+    def active_mutexes(self) -> models.QuerySet[Mutex]:
         return self.rel_mutexes.filter(closing_user=None)

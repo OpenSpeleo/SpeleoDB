@@ -21,23 +21,26 @@ from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.exceptions import GitCommitNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
+from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 logger = logging.getLogger(__name__)
 
 
-class ProjectRevisionsApiView(GenericAPIView[Project]):
+class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         project: Project = self.get_object()
-        serializer = self.get_serializer(project, context={"user": request.user})
+        serializer = self.get_serializer(project, context={"user": user})
 
         commits = None
+        serialized_commits = []
         with contextlib.suppress(ValueError):
             # Checkout default branch and pull repository
             try:
@@ -67,13 +70,14 @@ class ProjectRevisionsApiView(GenericAPIView[Project]):
             )
 
 
-class ProjectGitExplorerApiView(GenericAPIView[Project]):
+class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
     def get(self, request: Request, hexsha: str, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         project: Project = self.get_object()
         try:
             # Checkout default branch and pull repository
@@ -102,7 +106,7 @@ class ProjectGitExplorerApiView(GenericAPIView[Project]):
 
             # Important to be done last so that the repo is actualized
             project_serializer = self.get_serializer(
-                project, context={"user": request.user, "n_commits": True}
+                project, context={"user": user, "n_commits": True}
             )
 
             return SuccessResponse(

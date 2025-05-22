@@ -13,13 +13,14 @@ from rest_framework.response import Response
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Project
+from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 logger = logging.getLogger(__name__)
 
 
-class ProjectAcquireApiView(GenericAPIView[Project]):
+class ProjectAcquireApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasWriteAccess]
     serializer_class = ProjectSerializer
@@ -28,10 +29,11 @@ class ProjectAcquireApiView(GenericAPIView[Project]):
     def post(
         self, request: Request, *args: list[Any], **kwargs: dict[str, Any]
     ) -> Response:
+        user = self.get_user()
         project: Project = self.get_object()
 
         try:
-            project.acquire_mutex(user=request.user)  # type: ignore[arg-type]
+            project.acquire_mutex(user=user)
 
         except (ValidationError, PermissionError) as e:
             http_status = (
@@ -44,11 +46,11 @@ class ProjectAcquireApiView(GenericAPIView[Project]):
         # Refresh the `modified_date` field
         project.save()
 
-        serializer = ProjectSerializer(project, context={"user": request.user})
+        serializer = ProjectSerializer(project, context={"user": user})
         return SuccessResponse(serializer.data)
 
 
-class ProjectReleaseApiView(GenericAPIView[Project]):
+class ProjectReleaseApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasWriteAccess]
     serializer_class = ProjectSerializer
@@ -57,11 +59,12 @@ class ProjectReleaseApiView(GenericAPIView[Project]):
     def post(
         self, request: Request, *args: list[Any], **kwargs: dict[str, Any]
     ) -> Response:
+        user = self.get_user()
         project: Project = self.get_object()
         comment = request.data.get("comment", "")
 
         try:
-            project.release_mutex(user=request.user, comment=comment)  # type: ignore[arg-type]
+            project.release_mutex(user=user, comment=comment)
 
         except (ValidationError, PermissionError) as e:
             http_status = (
@@ -74,5 +77,5 @@ class ProjectReleaseApiView(GenericAPIView[Project]):
         # Refresh the `modified_date` field
         project.save()
 
-        serializer = ProjectSerializer(project, context={"user": request.user})
+        serializer = ProjectSerializer(project, context={"user": user})
         return SuccessResponse(serializer.data)
