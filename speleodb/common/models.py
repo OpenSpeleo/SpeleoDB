@@ -43,6 +43,6 @@ class Option(models.Model):
     @classmethod
     def get_or_empty(cls, name: str) -> str:
         try:
-            return cls.get(name=name).value
+            return str(cls.get(name=name).value)
         except ObjectDoesNotExist:
             return os.environ.get(name, default="")

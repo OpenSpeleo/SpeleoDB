@@ -42,6 +42,10 @@
                     "linting.flake8Enabled": true,
                     "linting.mypyEnabled": true,
                     "linting.mypyPath": "/usr/local/bin/mypy",
+                    "linting.mypyArgs": [
+                        "--config-file",
+                        "/app/pyproject.toml"
+                    ],
                     "linting.pylintEnabled": true
                 }
             },

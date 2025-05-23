@@ -3,14 +3,13 @@
 from django.db import models
 
 from speleodb.surveys.models import Project
-from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 from speleodb.utils.django_base_models import BaseIntegerChoices
 
 
 class BasePermissionModel(models.Model):
     # abstract parameter
-    target: models.ForeignKey[User | SurveyTeam]
+    # target: models.ForeignKey[User | SurveyTeam]
     project: models.ForeignKey[Project]
 
     is_active = models.BooleanField(default=True)

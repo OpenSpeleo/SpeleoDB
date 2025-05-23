@@ -86,7 +86,7 @@ class SurveyTeamMembership(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
-    deactivated_by = models.ForeignKey[User | None](
+    deactivated_by = models.ForeignKey(
         User,
         related_name="rel_deactivated_memberships",
         on_delete=models.RESTRICT,
@@ -115,7 +115,7 @@ class SurveyTeamMembership(models.Model):
 
     @property
     def role(self) -> str:
-        return self.Role(self._role).label  # type: ignore[arg-type]
+        return self.Role(self._role).label
 
     @role.setter
     def role(self, role: str) -> None:

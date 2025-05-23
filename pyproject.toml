@@ -138,9 +138,10 @@ exclude = [
 ]
 check_untyped_defs = true
 ignore_missing_imports = true
-strict = true
 plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
 python_version = "3.13"
+scripts_are_modules = true
+strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true

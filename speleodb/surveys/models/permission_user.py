@@ -11,8 +11,10 @@ from speleodb.utils.django_base_models import BaseIntegerChoices
 
 
 class UserPermission(BasePermissionModel):
-    target: User = models.ForeignKey[User](  #  pyright: ignore[reportAssignmentType]
-        User, related_name="rel_permissions", on_delete=models.CASCADE
+    target = models.ForeignKey(
+        User,
+        related_name="rel_permissions",
+        on_delete=models.CASCADE,
     )
 
     project = models.ForeignKey(

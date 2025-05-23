@@ -11,7 +11,7 @@ on:
     paths-ignore: ["docs/**"]
 
   push:
-    branches: ["master", "main", "dev"]
+    branches: ["master", "main", "dev", "type-checking"]
     paths-ignore: ["docs/**"]
 
 concurrency:
@@ -58,19 +58,19 @@ jobs:
     steps:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
+
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
-      - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: astral-sh/setup-uv@v6
         with:
+          version: "latest"
           python-version: "3.13"
+          activate-environment: true
 
       - name: Install Dependencies
-        run: uv sync --extra local
+        run: uv sync --extra local --frozen
 
-      - name: Test with pytest
+      - name: Run Tests
         run: |
-          source .venv/bin/activate
           python manage.py validate_templates --settings config.settings.test --ignore-app allauth
           pytest
         env:

@@ -9,6 +9,6 @@ if typing.TYPE_CHECKING:
     from django.http import HttpRequest
 
 
-class AccountAdapter(DefaultAccountAdapter):
+class AccountAdapter(DefaultAccountAdapter):  # type: ignore[misc]
     def is_open_for_signup(self, request: HttpRequest) -> bool:
         return getattr(settings, "ACCOUNT_ALLOW_REGISTRATION", True)
