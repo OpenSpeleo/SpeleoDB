@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = "Wipe all repositories from a specified GitLab group."
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser) -> None:
         parser.add_argument(
             "--accept_danger",
             action="store_true",
@@ -41,7 +41,7 @@ class Command(BaseCommand):
         skip_user_confirmation: bool = False,
         accept_danger: bool = False,
         **kwargs,
-    ):
+    ) -> None:
         project_base_dir = Path(__file__).parents[4].resolve()
         if (env_file := project_base_dir / ".envs/test.env").exists():
             assert load_dotenv(env_file)

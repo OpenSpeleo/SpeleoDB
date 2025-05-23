@@ -49,7 +49,7 @@ class GitOAuth2Authentication(BasicAuthentication):
 
         return Token
 
-    def authenticate_credentials(self, userid, password, request=None):
+    def authenticate_credentials(self, userid, password: str, request=None):
         model = self.get_model()
         try:
             token = model.objects.select_related("user").get(key=password)

@@ -18,7 +18,7 @@ from speleodb.utils.timing_ctx import timed_section
 def calculate_sha1(
     file_path: str | Path | None = None,
     file_obj: InMemoryUploadedFile | TemporaryUploadedFile | None = None,
-    buffer_size=65536,
+    buffer_size: int = 65536,
 ) -> str:
     """
     Calculate SHA-1 hash of a file in a memory-efficient way.

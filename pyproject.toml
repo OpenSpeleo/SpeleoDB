@@ -48,15 +48,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-production = [
-  "gunicorn==23.0.0",  # https://github.com/benoitc/gunicorn
-  "psycopg[c]==3.2.6", # https://github.com/psycopg/psycopg
-
-  # Django
-  # ------------------------------------------------------------------------------
-  "django-anymail[mailersend]==13.0", # https://github.com/anymail/django-anymail
-  "django-storages==1.14.6",          # https://github.com/jschneier/django-storages
-]
 local = [
   "Werkzeug[watchdog]==3.1.3", # https://github.com/pallets/werkzeug
   "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
@@ -75,6 +66,7 @@ local = [
   "pytest==8.3.5",                    # https://github.com/pytest-dev/pytest
   "types-cachetools==5.5.0.20240820", # https://github.com/python/typeshed
   "types-pytz==2025.2.0.20250516",    # https://github.com/python/typeshed
+  "types-factory-boy==0.4.1",         # https://github.com/youtux/types-factory-boy
 
   # Django Testing
   # ------------------------------------------------------------------------------
@@ -104,6 +96,18 @@ local = [
   "django-silk==5.3.2",          # https://github.com/jazzband/django-silk
 ]
 
+production = [
+  "gunicorn==23.0.0",  # https://github.com/benoitc/gunicorn
+  "psycopg[c]==3.2.6", # https://github.com/psycopg/psycopg
+
+  # Django
+  # ------------------------------------------------------------------------------
+  "django-anymail[mailersend]==13.0", # https://github.com/anymail/django-anymail
+  "django-storages==1.14.6",          # https://github.com/jschneier/django-storages
+]
+
+# Django
+# ------------------------------------------------------------------------------
 # ==== pytest ====
 [tool.pytest.ini_options]
 norecursedirs = ".uv/*"

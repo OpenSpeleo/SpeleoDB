@@ -17,7 +17,7 @@ from speleodb.users.models import SurveyTeamMembership
 class TestProjectInteraction(BaseAPITestCase):
     PROJECT_COUNT = 10
 
-    def test_get_user_projects(self):
+    def test_get_user_projects(self) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF

@@ -18,10 +18,9 @@ class BasePermissionModel(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
-    deactivated_by: models.ForeignKey[User | None] = models.ForeignKey(
+    deactivated_by = models.ForeignKey[User | None](
         User,
         on_delete=models.RESTRICT,
-        blank=True,
         null=True,
         default=None,
     )
@@ -47,7 +46,7 @@ class BasePermissionModel(models.Model):
 
     @property
     def level_obj(self) -> Level:
-        return self.Level(self._level)
+        return self.Level(int(self._level))
 
     @level_obj.setter
     def level_obj(self, value: Level) -> None:

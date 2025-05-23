@@ -32,7 +32,7 @@ from django.urls import reverse
         ),
     ],
 )
-def test_routes(name: str, path: str, kwargs: dict | None):
+def test_routes(name: str, path: str, kwargs: dict | None) -> None:
     path = f"/{path}" if kwargs is None else f"/{path.format(**kwargs)}"
 
     # Test reverse URL generation

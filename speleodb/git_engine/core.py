@@ -188,7 +188,7 @@ class GitFile(GitObjectMixin):
 
 
 class GitDir(GitObjectMixin):
-    def __init__(self, tree: Tree | GitTree, parent: Self | None = None):
+    def __init__(self, tree: Tree | GitTree, parent: Self | None = None) -> None:
         self._tree = tree if isinstance(tree, GitTree) else GitTree.from_tree(tree)
         self._parent = parent
 
@@ -304,7 +304,9 @@ class GitTree(Tree, GitObjectMixin):
         except KeyError as e:
             raise GitPathNotFoundError(f"Path: {path} not found") from e
 
-    def __get_tree_files__(self, tree: GitTree, recursive=True) -> Generator[GitFile]:
+    def __get_tree_files__(
+        self, tree: GitTree, recursive: bool = True
+    ) -> Generator[GitFile]:
         for blob in tree.blobs:
             yield GitFile(repo=self.repo, blob=blob)
 

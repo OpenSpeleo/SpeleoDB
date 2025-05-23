@@ -8,8 +8,9 @@ from speleodb.users.models import User
 
 
 class UserAdminChangeForm(admin_forms.UserChangeForm):
-    class Meta(admin_forms.UserChangeForm.Meta):
+    class Meta:
         model = User
+        fields = "__all__"
         field_classes = {"email": EmailField}
 
 
@@ -19,7 +20,7 @@ class UserAdminCreationForm(admin_forms.UserCreationForm):
     To change user signup, see UserSignupForm.
     """
 
-    class Meta(admin_forms.UserCreationForm.Meta):
+    class Meta:
         model = User
         fields = ("email",)
         field_classes = {"email": EmailField}
@@ -28,7 +29,7 @@ class UserAdminCreationForm(admin_forms.UserCreationForm):
         }
 
 
-def mandatory_field(self):
+def mandatory_field(self) -> None:
     for v in filter(lambda x: x.required, self.fields.values()):
         v.label = str(v.label) + "*"
 
@@ -50,10 +51,10 @@ class SignupForm(Form):
         widget=TextInput(attrs={"placeholder": "Country"}),
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def signup(self, request, user):
+    def signup(self, request, user) -> None:
         user.name = self.cleaned_data["name"]
         user.country = self.cleaned_data["country"]
         user.save()

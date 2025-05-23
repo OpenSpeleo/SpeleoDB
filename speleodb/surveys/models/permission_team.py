@@ -9,7 +9,7 @@ from speleodb.users.models import SurveyTeam
 
 
 class TeamPermission(BasePermissionModel):
-    target = models.ForeignKey(
+    target: SurveyTeam = models.ForeignKey[SurveyTeam](  #  pyright: ignore[reportAssignmentType]
         SurveyTeam, related_name="rel_permissions", on_delete=models.CASCADE
     )
 

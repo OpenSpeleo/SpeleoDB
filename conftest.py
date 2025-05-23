@@ -8,7 +8,7 @@ import pytest
 
 # Note: This wait time is necessary because of django-countries sometimes being not
 # ready. Simple workaround to fix the issue and barely noticeable.
-def pytest_sessionstart(session):
+def pytest_sessionstart(session) -> None:
     """Hook to delay the start of the pytest session."""
     from django_countries import countries  # noqa: F401
 

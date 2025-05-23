@@ -29,7 +29,7 @@ class GitService(Enum):
     UPLOAD = "git-upload-pack"
 
 
-def format_packet_line(line):
+def format_packet_line(line) -> str:
     """
     Format a line as a Git packet line.
     """
@@ -101,7 +101,7 @@ class BaseGitProxyAPIView(GenericAPIView):
         BearerAuthentication,
     ]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._gitlab_instance = LazyString(
             lambda: Option.get_or_empty(name="GITLAB_HOST_URL")

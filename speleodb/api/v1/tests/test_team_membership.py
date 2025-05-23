@@ -35,7 +35,7 @@ class TestTeamMembershipCreation(BaseAPITestCase):
         """
 
         # Must make the user a team leader to create/modify/delete team memberships
-        _ = SurveyTeamMembershipFactory(
+        _ = SurveyTeamMembershipFactory.create(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
         )
 
@@ -103,12 +103,12 @@ class TestTeamMembershipCreation(BaseAPITestCase):
     )
     def test_improper_team_membership_creation(self, data: dict[str, str]) -> None:
         # Must make the user a team leader to create/modify/delete team memberships
-        _ = SurveyTeamMembershipFactory(
+        _ = SurveyTeamMembershipFactory.create(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
         )
 
         if "user" in data and data["user"] is None:
-            data["user"] = UserFactory()
+            data["user"] = UserFactory.create()
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -124,9 +124,11 @@ class TestTeamMembershipCreation(BaseAPITestCase):
         self, role: SurveyTeamMembership.Role | None
     ) -> None:
         if role is not None:
-            _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
+            _ = SurveyTeamMembershipFactory.create(
+                team=self.team, user=self.user, role=role
+            )
 
-        new_user = UserFactory()
+        new_user = UserFactory.create()
 
         data = {"user": new_user.email, "role": SurveyTeamMembership.Role.MEMBER.label}
 
@@ -162,12 +164,14 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
         self, old_role: SurveyTeamMembership.Role, new_role: SurveyTeamMembership.Role
     ) -> None:
         # Must make the user a team leader to modify the team
-        _ = SurveyTeamMembershipFactory(
+        _ = SurveyTeamMembershipFactory.create(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
         )
 
         target_user: User = UserFactory.create()
-        _ = SurveyTeamMembershipFactory(team=self.team, user=target_user, role=old_role)
+        _ = SurveyTeamMembershipFactory.create(
+            team=self.team, user=target_user, role=old_role
+        )
         data = {"user": target_user.email, "role": new_role.label}
 
         auth = self.header_prefix + self.token.key
@@ -204,10 +208,12 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
         self, role: SurveyTeamMembership.Role | None
     ) -> None:
         if role is not None:
-            _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
+            _ = SurveyTeamMembershipFactory.create(
+                team=self.team, user=self.user, role=role
+            )
 
-        target_user = UserFactory()
-        _ = SurveyTeamMembershipFactory(
+        target_user = UserFactory.create()
+        _ = SurveyTeamMembershipFactory.create(
             team=self.team, user=target_user, role=SurveyTeamMembership.Role.LEADER
         )
 
@@ -258,7 +264,7 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
     def test_update_with_incomplete_data(
         self, data: dict[str, str | None] | None
     ) -> None:
-        _ = SurveyTeamMembershipFactory(
+        _ = SurveyTeamMembershipFactory.create(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
         )
 
@@ -283,13 +289,13 @@ class TestTeamMembershipDelete(BaseAPITestCase):
         self.team = SurveyTeamFactory.create()
 
         self.target_user = UserFactory.create()
-        _ = SurveyTeamMembershipFactory(
+        _ = SurveyTeamMembershipFactory.create(
             team=self.team, user=self.target_user, role=SurveyTeamMembership.Role.MEMBER
         )
 
     def test_delete(self) -> None:
         # Must make the user a team leader to modify the team
-        _ = SurveyTeamMembershipFactory(
+        _ = SurveyTeamMembershipFactory.create(
             team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
         )
 
@@ -308,7 +314,9 @@ class TestTeamMembershipDelete(BaseAPITestCase):
     @parameterized.expand([SurveyTeamMembership.Role.MEMBER, None])
     def test_delete_error(self, role: SurveyTeamMembership.Role | None) -> None:
         if role is not None:
-            _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
+            _ = SurveyTeamMembershipFactory.create(
+                team=self.team, user=self.user, role=role
+            )
 
         auth = self.header_prefix + self.token.key
         response = self.client.delete(
@@ -331,8 +339,9 @@ class TestGetTeamMembership(BaseAPITestCase):
         [SurveyTeamMembership.Role.LEADER, SurveyTeamMembership.Role.MEMBER, None]
     )
     def test_get_team_membership(self, role: SurveyTeamMembership.Role | None) -> None:
+        membership = None
         if role is not None:
-            membership = SurveyTeamMembershipFactory(
+            membership = SurveyTeamMembershipFactory.create(
                 team=self.team, user=self.user, role=role
             )
 
@@ -382,11 +391,13 @@ class TestGetTeamMembership(BaseAPITestCase):
         N_MEMBERS = 10  # noqa: N806
 
         if role is not None:
-            _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
+            _ = SurveyTeamMembershipFactory.create(
+                team=self.team, user=self.user, role=role
+            )
 
         for _ in range(N_MEMBERS):
-            user = UserFactory()
-            _ = SurveyTeamMembershipFactory(
+            user = UserFactory.create()
+            _ = SurveyTeamMembershipFactory.create(
                 team=self.team, user=user, role=SurveyTeamMembership.Role.MEMBER
             )
 

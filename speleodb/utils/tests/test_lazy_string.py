@@ -1,10 +1,10 @@
 from speleodb.utils.lazy_string import LazyString
 
 
-def test_lazy_evaluation():
+def test_lazy_evaluation() -> None:
     called = False
 
-    def lazy_func():
+    def lazy_func() -> str:
         nonlocal called
         called = True
         return "Lazy evaluated string"
@@ -19,7 +19,7 @@ def test_lazy_evaluation():
     assert called
 
 
-def test_direct_value_set():
+def test_direct_value_set() -> None:
     lazy_str = LazyString(lambda: "Lazy evaluated string")
 
     # Setting the value directly
@@ -27,14 +27,14 @@ def test_direct_value_set():
     assert lazy_str.data == "Directly set value"
 
 
-def test_lazy_str_with_str():
+def test_lazy_str_with_str() -> None:
     assert isinstance(LazyString("not a callable"), str)  # type: ignore[arg-type]
 
 
-def test_no_re_evaluation():
+def test_no_re_evaluation() -> None:
     called_count = 0
 
-    def lazy_func():
+    def lazy_func() -> str:
         nonlocal called_count
         called_count += 1
         return "Lazy evaluated string"
@@ -50,10 +50,10 @@ def test_no_re_evaluation():
     assert called_count == 1
 
 
-def test_inheritance_from_userstring():
+def test_inheritance_from_userstring() -> None:
     str_val = "Lazy evaluated string"
 
-    def lazy_func():
+    def lazy_func() -> str:
         return str_val
 
     lazy_str = LazyString(lazy_func)

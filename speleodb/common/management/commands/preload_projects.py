@@ -16,7 +16,7 @@ class Command(BaseCommand):
         "production servers to reduce user waiting time."
     )
 
-    def handle(self, *args, **kwargs):
+    def handle(self, *args, **kwargs) -> None:
         for project in Project.objects.all():
             logger.info(f"Processing Project: {project.id}")
             try:

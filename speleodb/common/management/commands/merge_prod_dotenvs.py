@@ -27,7 +27,7 @@ class Command(BaseCommand):
             merged_content += os.linesep
         out_file.write_text(merged_content)
 
-    def handle(self, *args, **kwargs):
+    def handle(self, *args, **kwargs) -> None:
         base_project_dir = Path(__file__).parents[4].resolve()
         source_dotenv_dir = base_project_dir / ".envs" / ".production"
         input_files = [

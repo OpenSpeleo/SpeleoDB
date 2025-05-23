@@ -8,8 +8,8 @@ from speleodb.users.models import User
 
 @pytest.mark.django_db
 class TestUserManager:
-    def test_create_user(self):
-        user = User.objects.create_user(
+    def test_create_user(self) -> None:
+        user = User.objects.create_user(  # type: ignore
             email="john@example.com",
             password="something-r@nd0m!",  # noqa: S106
         )
@@ -17,10 +17,10 @@ class TestUserManager:
         assert not user.is_staff
         assert not user.is_superuser
         assert user.check_password("something-r@nd0m!")
-        assert user.username is None
+        assert user.username is None  # type: ignore[has-type]
 
-    def test_create_superuser(self):
-        user = User.objects.create_superuser(
+    def test_create_superuser(self) -> None:
+        user = User.objects.create_superuser(  # type: ignore
             email="admin@example.com",
             password="something-r@nd0m!",  # noqa: S106
         )
@@ -29,8 +29,8 @@ class TestUserManager:
         assert user.is_superuser
         assert user.username is None
 
-    def test_create_superuser_username_ignored(self):
-        user = User.objects.create_superuser(
+    def test_create_superuser_username_ignored(self) -> None:
+        user = User.objects.create_superuser(  # type: ignore
             email="test@example.com",
             password="something-r@nd0m!",  # noqa: S106
         )
@@ -38,7 +38,7 @@ class TestUserManager:
 
 
 @pytest.mark.django_db
-def test_createsuperuser_command():
+def test_createsuperuser_command() -> None:
     """Ensure createsuperuser command works with our custom manager."""
     out = StringIO()
     command_result = call_command(

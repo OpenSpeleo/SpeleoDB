@@ -82,7 +82,7 @@ class UserHasMemberAccess(BaseTeamAccessLevel):
 
 
 class IsReadOnly(permissions.BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request, view) -> bool:
         return request.method in permissions.SAFE_METHODS
 
 

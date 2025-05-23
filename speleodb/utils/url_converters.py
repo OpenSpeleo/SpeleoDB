@@ -24,11 +24,11 @@ def register_converter(type_name: str) -> Callable[[type[object]], Any]:
 class BaseRegexConverter(ABC):
     @property
     @abstractmethod
-    def regex(self) -> re.Pattern[str]: ...
+    def regex(self) -> str: ...
 
     def to_python(self, value: str) -> str:
         # Validate the hexsha value with the regex
-        if not self.regex.match(value):
+        if not re.match(self.regex, value):
             raise ValueError(f"Invalid value: {value}")
         return value
 
@@ -39,24 +39,24 @@ class BaseRegexConverter(ABC):
 @register_converter("gitsha")
 class GitSHAConverter(BaseRegexConverter):
     @property
-    def regex(self) -> re.Pattern[str]:
-        return re.compile(r"[0-9a-fA-F]{6,40}")
+    def regex(self) -> str:
+        return r"[0-9a-fA-F]{6,40}"
 
 
 @register_converter("blobsha")
 class BlobSHAConverter(BaseRegexConverter):
     @property
-    def regex(self) -> re.Pattern[str]:
-        return re.compile(r"[0-9a-fA-F]{40}")
+    def regex(self) -> str:
+        return r"[0-9a-fA-F]{40}"
 
 
 class BaseChoicesConverter(BaseRegexConverter):
     choices: list[str]
 
     @property
-    def regex(self) -> re.Pattern[str]:
+    def regex(self) -> str:
         escaped_strings = map(re.escape, self.choices)
-        return re.compile(r"|".join(escaped_strings))
+        return r"|".join(escaped_strings)
 
 
 @register_converter("download_format")

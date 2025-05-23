@@ -45,7 +45,7 @@ def check_initialized(func):
 
 
 class _GitlabManager(metaclass=SingletonMetaClass):
-    def __init__(self):
+    def __init__(self) -> None:
         self._is_initialized = False
         self._is_error = False
 

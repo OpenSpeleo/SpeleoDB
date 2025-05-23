@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 from django.db.models import BooleanField
 from django.db.models import CharField
 from django.db.models import EmailField
@@ -14,13 +15,12 @@ from django_countries.fields import CountryField
 from speleodb.users.managers import UserManager
 
 if TYPE_CHECKING:
-    from django.db import models
-
     from speleodb.surveys.models import Mutex
     from speleodb.surveys.models import Project
     from speleodb.surveys.models import TeamPermission
     from speleodb.surveys.models import UserPermission
     from speleodb.users.models import SurveyTeamMembership
+    from speleodb.users.models.team import SurveyTeam
 
 
 def filter_permissions_by_best(
@@ -60,6 +60,8 @@ class User(AbstractUser):
     rel_permissions: models.QuerySet[UserPermission]
     rel_team_memberships: models.QuerySet[SurveyTeamMembership]
 
+    id = models.AutoField(primary_key=True)  # Explicitly declared for typing
+
     # First and last name do not cover name patterns around the globe
     name = CharField("Name of User", blank=False, null=False, max_length=255)
     email = EmailField("email address", unique=True)
@@ -85,7 +87,7 @@ class User(AbstractUser):
         return self.__repr__()
 
     @property
-    def teams(self):
+    def teams(self) -> models.BaseManager[SurveyTeam]:
         from speleodb.users.models import SurveyTeam
 
         return SurveyTeam.objects.filter(

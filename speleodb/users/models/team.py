@@ -32,7 +32,7 @@ class SurveyTeam(models.Model):
         verbose_name_plural = "Survey Teams"
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
     def get_membership(self, user: User) -> SurveyTeamMembership:
         return self.rel_team_memberships.get(user=user, is_active=True)
@@ -86,11 +86,10 @@ class SurveyTeamMembership(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
-    deactivated_by = models.ForeignKey(
+    deactivated_by = models.ForeignKey[User | None](
         User,
         related_name="rel_deactivated_memberships",
         on_delete=models.RESTRICT,
-        blank=True,
         null=True,
         default=None,
     )
@@ -116,11 +115,19 @@ class SurveyTeamMembership(models.Model):
 
     @property
     def role(self) -> str:
-        return self.Role(self._role).label
+        return self.Role(self._role).label  # type: ignore[arg-type]
 
     @role.setter
-    def role(self, value) -> None:
-        self._role = value
+    def role(self, role: str) -> None:
+        match role:
+            case str():
+                self._role = self.Role.from_str(role)
+            case int():
+                self._role = self.Role(role)
+            case self.Role():
+                self._role = role
+            case _:
+                raise TypeError
 
     def deactivate(self, deactivated_by: User) -> None:
         self.is_active = False
@@ -130,5 +137,5 @@ class SurveyTeamMembership(models.Model):
     def reactivate(self, role: Role) -> None:
         self.is_active = True
         self.deactivated_by = None
-        self.role = role
+        self.role = role.label
         self.save()

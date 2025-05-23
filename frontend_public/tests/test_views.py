@@ -31,10 +31,10 @@ class ViewFunctionalityTest(TestCase):
             ),
         ]
     )
-    def test_view_unauthenticated(self, name: str, kwargs: dict | None):
+    def test_view_unauthenticated(self, name: str, kwargs: dict | None) -> None:
         self.execute_test(name=name, kwargs=kwargs)
 
-    def test_view_logout(self):
+    def test_view_logout(self) -> None:
         user = UserFactory()
         self.client.login(email=user.email, password=UserFactory.DEFAULT_PASSWORD())
 
@@ -44,7 +44,7 @@ class ViewFunctionalityTest(TestCase):
 
     def execute_test(
         self, name: str, kwargs: dict | None, expected_status: int = status.HTTP_200_OK
-    ):
+    ) -> None:
         url = reverse(name, kwargs=kwargs)
 
         response = self.client.get(url)

@@ -22,7 +22,7 @@ from speleodb.users.models import SurveyTeamMembership
 
 
 class BaseTestCase(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.user = UserFactory()
 
@@ -31,7 +31,7 @@ class BaseTestCase(TestCase):
         view_name: str,
         kwargs: dict | None = None,
         expected_status: int = status.HTTP_200_OK,
-    ):
+    ) -> None:
         url = reverse(f"private:{view_name}", kwargs=kwargs)
         self.client.login(
             email=self.user.email, password=UserFactory.DEFAULT_PASSWORD()
@@ -60,7 +60,7 @@ class UserViewsTest(BaseTestCase):
             "user_preferences",
         ]
     )
-    def test_view_with_no_args(self, view_name: str):
+    def test_view_with_no_args(self, view_name: str) -> None:
         self.execute_test(view_name)
 
 
@@ -68,20 +68,22 @@ class UserViewsTest(BaseTestCase):
     ("role"), [(SurveyTeamMembership.Role.LEADER,), (SurveyTeamMembership.Role.MEMBER,)]
 )
 class TeamViewsTest(BaseTestCase):
-    def setUp(self):
+    role: SurveyTeamMembership.Role
+
+    def setUp(self) -> None:
         super().setUp()
 
-        self.team: SurveyTeam = SurveyTeamFactory()
+        self.team: SurveyTeam = SurveyTeamFactory.create()
 
         # Must make the user is at least a member of the team - one of each
         _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=self.role)
 
     @parameterized.expand(["teams", "team_new"])
-    def test_view_with_no_args(self, view_name: str):
+    def test_view_with_no_args(self, view_name: str) -> None:
         self.execute_test(view_name)
 
     @parameterized.expand(["team_details", "team_memberships", "team_danger_zone"])
-    def test_view_with_team_id(self, view_name: str):
+    def test_view_with_team_id(self, view_name: str) -> None:
         expected_status = (
             status.HTTP_200_OK
             if self.role == SurveyTeamMembership.Role.LEADER
@@ -104,13 +106,15 @@ class TeamViewsTest(BaseTestCase):
     ],
 )
 class ProjectViewsTest(BaseTestCase):
-    def setUp(self):
+    level: TeamPermission.Level
+
+    def setUp(self) -> None:
         super().setUp()
 
         self.project = ProjectFactory(created_by=self.user)
 
         if isinstance(self.level, TeamPermission.Level):
-            team: SurveyTeam = SurveyTeamFactory()
+            team: SurveyTeam = SurveyTeamFactory.create()
 
             # Must make the user is at least a member of the team - random role
             _ = SurveyTeamMembershipFactory(team=team, user=self.user)
@@ -126,7 +130,7 @@ class ProjectViewsTest(BaseTestCase):
             raise TypeError(f"Unknown type received for level: {type(self.level)}")
 
     @parameterized.expand(["projects", "project_new"])
-    def test_view_with_no_args(self, view_name: str):
+    def test_view_with_no_args(self, view_name: str) -> None:
         self.execute_test(view_name)
 
     @parameterized.expand(
@@ -140,7 +144,7 @@ class ProjectViewsTest(BaseTestCase):
             "project_danger_zone",
         ]
     )
-    def test_view_with_project_id(self, view_name: str):
+    def test_view_with_project_id(self, view_name: str) -> None:
         expected_status = (
             status.HTTP_200_OK
             if self.level == UserPermission.Level.ADMIN
@@ -192,7 +196,7 @@ class ProjectViewsTest(BaseTestCase):
             expected_status=expected_status,
         )
 
-    def test_view_with_project_id_and_gitsha(self):
+    def test_view_with_project_id_and_gitsha(self) -> None:
         self.execute_test(
             "project_revision_explorer",
             {

@@ -1,10 +1,16 @@
 import contextlib
 from dataclasses import dataclass
+from typing import Any
+from typing import override
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ObjectDoesNotExist
+from django.http import HttpRequest
+from django.shortcuts import HttpResponse
+from django.shortcuts import HttpResponsePermanentRedirect
+from django.shortcuts import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.urls import reverse_lazy
@@ -29,7 +35,7 @@ class UserAccessLevel:
     level: AnyPermissionLevel
     team: SurveyTeam | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.user, User):
             raise TypeError(f"`user` must be of type User: `{type(self.user)}`")
 
@@ -42,14 +48,23 @@ class UserAccessLevel:
             raise TypeError(type(self.level))
 
 
+class AuthenticatedHttpRequest(HttpRequest):
+    user: User
+
+
 class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
     login_url = reverse_lazy("account_login")
 
     def refresh_user_login(self, user: User) -> None:
         with contextlib.suppress(Exception):
-            update_last_login(None, user=user)
+            update_last_login(None, user=user)  # type: ignore[arg-type]
 
-    def get(self, request, *args, **kwargs):
+    def get(
+        self,
+        request: AuthenticatedHttpRequest,  # type: ignore[override]
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
         render = super().get(request, *args, **kwargs)
         self.refresh_user_login(user=request.user)
         return render
@@ -67,12 +82,22 @@ class PassWordView(_AuthenticatedTemplateView):
 class AuthTokenView(_AuthenticatedTemplateView):
     template_name = "pages/user/auth-token.html"
 
-    def get(self, request, *args, **kwargs):
+    def get(
+        self,
+        request: AuthenticatedHttpRequest,  # type: ignore[override]
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
         context = self.get_context_data(**kwargs)
         context["auth_token"], _ = Token.objects.get_or_create(user=request.user)
         return self.render_to_response(context)
 
-    def post(self, request, *args, **kwargs):
+    def post(
+        self,
+        request: AuthenticatedHttpRequest,  # type: ignore[override]
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
         with contextlib.suppress(ObjectDoesNotExist):
             Token.objects.get(user=request.user).delete()
 
@@ -97,7 +122,15 @@ class NewTeamView(_AuthenticatedTemplateView):
 
 
 class _BaseTeamView(_AuthenticatedTemplateView):
-    def get_data_or_redirect(self, request, team_id: int):
+    def get_data_or_redirect(
+        self,
+        request: AuthenticatedHttpRequest,
+        team_id: int,
+    ) -> (
+        HttpResponseRedirect
+        | HttpResponsePermanentRedirect
+        | dict[str, SurveyTeam | bool]
+    ):
         try:
             team = SurveyTeam.objects.get(id=team_id)
             if request.user and request.user.is_authenticated:
@@ -114,7 +147,18 @@ class _BaseTeamView(_AuthenticatedTemplateView):
 class TeamDetailsView(_BaseTeamView):
     template_name = "pages/team/details.html"
 
-    def get(self, request, team_id: int, *args, **kwargs):
+    def get(
+        self,
+        request: AuthenticatedHttpRequest,  # type: ignore[override]
+        team_id: int,
+        *args: Any,
+        **kwargs: Any,
+    ) -> (
+        HttpResponseRedirect
+        | HttpResponsePermanentRedirect
+        | HttpResponse
+        | dict[str, SurveyTeam | bool]
+    ):
         data = self.get_data_or_redirect(request, team_id=team_id)
         if not isinstance(data, dict):
             return data  # redirection
@@ -125,7 +169,10 @@ class TeamDetailsView(_BaseTeamView):
 class TeamMembershipsView(_BaseTeamView):
     template_name = "pages/team/memberships.html"
 
-    def get(self, request, team_id: int, *args, **kwargs):
+    @override
+    def get(
+        self, request: AuthenticatedHttpRequest, team_id: int, *args: Any, **kwargs: Any
+    ) -> HttpResponseRedirect | HttpResponsePermanentRedirect | HttpResponse:
         data = self.get_data_or_redirect(request, team_id=team_id)
         if not isinstance(data, dict):
             return data  # redirection
@@ -138,7 +185,9 @@ class TeamMembershipsView(_BaseTeamView):
 class TeamDangerZoneView(_BaseTeamView):
     template_name = "pages/team/danger_zone.html"
 
-    def get(self, request, team_id: int, *args, **kwargs):
+    def get(
+        self, request: AuthenticatedHttpRequest, team_id: int, *args: Any, **kwargs: Any
+    ) -> HttpResponseRedirect | HttpResponsePermanentRedirect | HttpResponse:
         data = self.get_data_or_redirect(request, team_id=team_id)
         if not isinstance(data, dict):
             return data  # redirection

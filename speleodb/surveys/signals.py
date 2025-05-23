@@ -5,5 +5,5 @@ git_push_done = Signal()
 
 
 @receiver(git_push_done)
-def notify_admin(sender, **kwargs):
+def notify_admin(sender, **kwargs) -> None:
     print(f"Git Push Executed! {sender=} | Task details: {kwargs=}")  # noqa: T201

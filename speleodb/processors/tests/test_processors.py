@@ -9,7 +9,7 @@ from speleodb.processors.base import BaseFileProcessor
     "cls_processor",
     list(BaseFileProcessor.__subclasses__()),
 )
-def test_no_extension_collisions(cls_processor: type[BaseFileProcessor]):
+def test_no_extension_collisions(cls_processor: type[BaseFileProcessor]) -> None:
     subclasses = BaseFileProcessor.__subclasses__()
     collisions = []
 
@@ -39,7 +39,7 @@ def test_no_extension_collisions(cls_processor: type[BaseFileProcessor]):
     "cls_processor",
     list(BaseFileProcessor.__subclasses__()),
 )
-def test_no_duplicate_extensions(cls_processor: type[BaseFileProcessor]):
+def test_no_duplicate_extensions(cls_processor: type[BaseFileProcessor]) -> None:
     duplicate_extensions = []
 
     allowed_extensions = cls_processor.ALLOWED_EXTENSIONS
@@ -60,7 +60,9 @@ def test_no_duplicate_extensions(cls_processor: type[BaseFileProcessor]):
     "cls_processor",
     list(BaseFileProcessor.__subclasses__()),
 )
-def test_no_dangerous_extension_is_allowed(cls_processor: type[BaseFileProcessor]):
+def test_no_dangerous_extension_is_allowed(
+    cls_processor: type[BaseFileProcessor],
+) -> None:
     error_messages = []
 
     # Check for duplicates by comparing original list with a set

@@ -121,7 +121,7 @@ class Format(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
 
     # Object Manager disabling update
-    objects = NoUpdateQuerySet.as_manager()
+    objects: models.Manager["Format"] = NoUpdateQuerySet.as_manager()
 
     class Meta:
         unique_together = (
@@ -149,5 +149,5 @@ class Format(models.Model):
         return self.raw_format.label
 
     @format.setter
-    def format(self, value: FileFormat) -> None:
-        self._format = value
+    def format(self, fmt: FileFormat) -> None:
+        self._format = fmt.value

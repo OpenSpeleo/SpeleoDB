@@ -7,6 +7,7 @@ import contextlib
 import decimal
 import pathlib
 import uuid
+from itertools import chain
 from typing import TYPE_CHECKING
 
 from django.conf import settings
@@ -37,6 +38,12 @@ if TYPE_CHECKING:
 
 
 class Project(models.Model):
+    # type checking
+    rel_formats: models.QuerySet[Format]
+    rel_mutexes: models.QuerySet[Mutex]
+    rel_user_permissions: models.QuerySet[UserPermission]
+    rel_team_permissions: models.QuerySet[TeamPermission]
+
     # Automatic fields
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -64,7 +71,7 @@ class Project(models.Model):
         default=None,
     )
 
-    created_by = models.ForeignKey(
+    created_by = models.ForeignKey[User | None](
         User,
         related_name="rel_projects_created",
         on_delete=models.SET_NULL,
@@ -145,16 +152,14 @@ class Project(models.Model):
 
     @property
     def mutex_owner(self) -> User | None:
-        active_mutex: Mutex = self.active_mutex
-        if active_mutex is None:
+        if (active_mutex := self.active_mutex) is None:
             return None
 
         return active_mutex.user
 
     @property
     def mutex_dt(self) -> datetime.datetime | None:
-        active_mutex: Mutex = self.active_mutex
-        if active_mutex is None:
+        if (active_mutex := self.active_mutex) is None:
             return None
         return active_mutex.modified_date
 
@@ -164,7 +169,7 @@ class Project(models.Model):
 
         # if the user is already the mutex_owner, just refresh the mutex_dt
         # => re-acquire mutex
-        active_mutex: Mutex = self.active_mutex
+        active_mutex = self.active_mutex
         if active_mutex is not None:
             if active_mutex.user != user:
                 raise ValidationError(
@@ -173,13 +178,14 @@ class Project(models.Model):
                 )
             active_mutex.modified_date = timezone.localtime()
             active_mutex.save()
+
         else:
             from speleodb.surveys.models import Mutex
 
             _ = Mutex.objects.create(project=self, user=user)
 
     def release_mutex(self, user: User, comment: str = "") -> None:
-        active_mutex: Mutex = self.active_mutex
+        active_mutex = self.active_mutex
         if active_mutex is None:
             # if nobody owns the project, returns without error.
             return
@@ -208,20 +214,20 @@ class Project(models.Model):
         return self.rel_team_permissions.get(target=team, is_active=True)
 
     @property
-    def user_permissions(self) -> list[UserPermission]:
+    def user_permissions(self) -> models.QuerySet[UserPermission]:
         return self.rel_user_permissions.filter(is_active=True).order_by(
             "-_level", "target__email"
         )
 
     @property
-    def team_permissions(self) -> list[TeamPermission]:
+    def team_permissions(self) -> models.QuerySet[TeamPermission]:
         return self.rel_team_permissions.filter(is_active=True).order_by(
             "-_level", "target__name"
         )
 
     @property
-    def permissions(self) -> list[TeamPermission, UserPermission]:
-        return self.user_permissions + self.team_permissions
+    def permissions(self) -> chain[TeamPermission | UserPermission]:
+        return chain(self.user_permissions, self.team_permissions)
 
     @property
     def user_permission_count(self) -> int:
@@ -272,7 +278,7 @@ class Project(models.Model):
         if isinstance(target, User):
             return self._has_user_permission(user=target, permission=permission)
         if isinstance(target, SurveyTeam):
-            return self._has_user_permission(team=target, permission=permission)
+            return self._has_team_permission(team=target, permission=permission)
         raise TypeError(f"Unexpected value received for: `{target=}`")
 
     def has_write_access(self, user: User) -> bool:
@@ -367,7 +373,7 @@ class Project(models.Model):
             self.git_repo.checkout_commit(hexsha=hexsha)
 
     @property
-    def formats(self) -> list[Format]:
+    def formats(self) -> models.QuerySet[Format]:
         return self.rel_formats.all().order_by("_format")
 
     @property

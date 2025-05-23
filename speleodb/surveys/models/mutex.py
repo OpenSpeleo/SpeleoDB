@@ -23,7 +23,6 @@ class Mutex(models.Model):
         User,
         related_name="rel_closing_mutexes",
         on_delete=models.RESTRICT,
-        blank=True,
         null=True,
         default=None,
     )
