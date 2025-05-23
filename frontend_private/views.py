@@ -8,8 +8,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
-from django.http import HttpResponsePermanentRedirect
-from django.http import HttpResponseRedirect
+from django.http.response import HttpResponseRedirectBase
+from django.shortcuts import HttpResponsePermanentRedirect
+from django.shortcuts import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.urls import reverse_lazy
@@ -73,9 +74,9 @@ class PassWordView(_AuthenticatedTemplateView):
 class AuthTokenView(_AuthenticatedTemplateView):
     template_name = "pages/user/auth-token.html"
 
-    def get(
+    def get(  # type: ignore[override]
         self,
-        request: AuthenticatedHttpRequest,  # type: ignore[override]
+        request: AuthenticatedHttpRequest,
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponse:
@@ -85,7 +86,7 @@ class AuthTokenView(_AuthenticatedTemplateView):
 
     def post(
         self,
-        request: AuthenticatedHttpRequest,  # type: ignore[override]
+        request: AuthenticatedHttpRequest,
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponse:
@@ -138,21 +139,16 @@ class _BaseTeamView(_AuthenticatedTemplateView):
 class TeamDetailsView(_BaseTeamView):
     template_name = "pages/team/details.html"
 
-    def get(
+    def get(  # type: ignore[override]
         self,
-        request: AuthenticatedHttpRequest,  # type: ignore[override]
+        request: AuthenticatedHttpRequest,
         team_id: int,
         *args: Any,
         **kwargs: Any,
-    ) -> (
-        HttpResponseRedirect
-        | HttpResponsePermanentRedirect
-        | HttpResponse
-        | dict[str, SurveyTeam | bool]
-    ):
+    ) -> HttpResponseRedirectBase | HttpResponse | dict[str, SurveyTeam | bool]:
         data = self.get_data_or_redirect(request, team_id=team_id)
-        if not isinstance(data, dict):
-            return data  # redirection
+        if isinstance(data, HttpResponseRedirectBase):
+            return data
 
         return super().get(request, *args, **data, **kwargs)
 
@@ -161,12 +157,16 @@ class TeamMembershipsView(_BaseTeamView):
     template_name = "pages/team/memberships.html"
 
     @override
-    def get(
-        self, request: AuthenticatedHttpRequest, team_id: int, *args: Any, **kwargs: Any
-    ) -> HttpResponseRedirect | HttpResponsePermanentRedirect | HttpResponse:
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        team_id: int,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         data: Any = self.get_data_or_redirect(request, team_id=team_id)
-        if not isinstance(data, dict):
-            return data  # redirection
+        if isinstance(data, HttpResponseRedirectBase):
+            return data
 
         data["memberships"] = data["team"].get_all_memberships()  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -176,9 +176,13 @@ class TeamMembershipsView(_BaseTeamView):
 class TeamDangerZoneView(_BaseTeamView):
     template_name = "pages/team/danger_zone.html"
 
-    def get(
-        self, request: AuthenticatedHttpRequest, team_id: int, *args: Any, **kwargs: Any
-    ) -> HttpResponseRedirect | HttpResponsePermanentRedirect | HttpResponse:
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        team_id: int,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         data = self.get_data_or_redirect(request, team_id=team_id)
         if not isinstance(data, dict):
             return data  # redirection
@@ -201,7 +205,7 @@ class NewProjectView(_AuthenticatedTemplateView):
 
 
 class _BaseProjectView(_AuthenticatedTemplateView):
-    def get_project_data(self, user: User, project_id: str) -> dict:
+    def get_project_data(self, user: User, project_id: str) -> dict[str, Any]:
         project = Project.objects.get(id=project_id)
         return {
             "project": project,
@@ -213,7 +217,13 @@ class _BaseProjectView(_AuthenticatedTemplateView):
 class ProjectUploadView(_BaseProjectView):
     template_name = "pages/project/upload.html"
 
-    def get(self, request, project_id: str, *args, **kwargs):
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        project_id: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
             data["limit_individual_filesize"] = (
@@ -241,7 +251,13 @@ class ProjectUploadView(_BaseProjectView):
 class ProjectDangerZoneView(_BaseProjectView):
     template_name = "pages/project/danger_zone.html"
 
-    def get(self, request, project_id: str, *args, **kwargs):
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        project_id: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -258,7 +274,13 @@ class ProjectDangerZoneView(_BaseProjectView):
 class ProjectDetailsView(_BaseProjectView):
     template_name = "pages/project/details.html"
 
-    def get(self, request, project_id: str, *args, **kwargs):
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        project_id: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -270,7 +292,13 @@ class ProjectDetailsView(_BaseProjectView):
 class ProjectUserPermissionsView(_BaseProjectView):
     template_name = "pages/project/user_permissions.html"
 
-    def get(self, request, project_id: str, *args, **kwargs):
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        project_id: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -298,7 +326,7 @@ class ProjectUserPermissionsView(_BaseProjectView):
                 )
 
         # Keeping the best permission for each user
-        permission_map = {}
+        permission_map: dict[Any, Any] = {}
         for permission in filtered_team_permissions:
             if (
                 permission.user not in permission_map
@@ -318,7 +346,13 @@ class ProjectUserPermissionsView(_BaseProjectView):
 class ProjectTeamPermissionsView(_BaseProjectView):
     template_name = "pages/project/team_permissions.html"
 
-    def get(self, request, project_id: str, *args, **kwargs):
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        project_id: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -340,7 +374,13 @@ class ProjectTeamPermissionsView(_BaseProjectView):
 class ProjectMutexesView(_BaseProjectView):
     template_name = "pages/project/mutex_history.html"
 
-    def get(self, request, project_id: str, *args, **kwargs):
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        project_id: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -354,7 +394,13 @@ class ProjectMutexesView(_BaseProjectView):
 class ProjectRevisionHistoryView(_BaseProjectView):
     template_name = "pages/project/revision_history.html"
 
-    def get(self, request, project_id: str, *args, **kwargs):
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        project_id: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -366,7 +412,14 @@ class ProjectRevisionHistoryView(_BaseProjectView):
 class ProjectGitExplorerView(_BaseProjectView):
     template_name = "pages/project/git_view.html"
 
-    def get(self, request, project_id: str, hexsha: str | None = None, *args, **kwargs):
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        project_id: str,
+        hexsha: str | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
@@ -380,7 +433,14 @@ class ProjectGitExplorerView(_BaseProjectView):
 class ProjectGitInstructionsView(_BaseProjectView):
     template_name = "pages/project/git_instructions.html"
 
-    def get(self, request, project_id: str, hexsha: str | None = None, *args, **kwargs):
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        project_id: str,
+        hexsha: str | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
         except ObjectDoesNotExist:
