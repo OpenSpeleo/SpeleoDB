@@ -1,7 +1,7 @@
 import random
 
 from django.urls import reverse
-from parameterized import parameterized
+from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.serializers import SurveyTeamSerializer

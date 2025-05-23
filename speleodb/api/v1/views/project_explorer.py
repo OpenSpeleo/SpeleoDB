@@ -36,11 +36,11 @@ class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
-        project: Project = self.get_object()
+        project = self.get_object()
         serializer = self.get_serializer(project, context={"user": user})
 
         commits = None
-        serialized_commits = []
+        serialized_commits: list[dict[str, Any]] = []
         with contextlib.suppress(ValueError):
             # Checkout default branch and pull repository
             try:
@@ -78,7 +78,7 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
     def get(self, request: Request, hexsha: str, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
-        project: Project = self.get_object()
+        project = self.get_object()
         try:
             # Checkout default branch and pull repository
             try:

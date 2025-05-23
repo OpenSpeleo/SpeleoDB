@@ -5,6 +5,7 @@ from django.db import models
 
 from speleodb.surveys.models import Project
 from speleodb.surveys.models.permission_base import BasePermissionModel
+from speleodb.surveys.models.permission_lvl import PermissionLevel
 from speleodb.users.models import SurveyTeam
 
 
@@ -21,6 +22,13 @@ class TeamPermission(BasePermissionModel):
         on_delete=models.CASCADE,
     )
 
-    class Meta(BasePermissionModel.Meta):
+    _level = models.IntegerField(
+        choices=PermissionLevel.choices_no_admin,
+        default=PermissionLevel.READ_ONLY,
+        verbose_name="level",
+    )
+
+    class Meta:
         verbose_name = "Team Permission"
         verbose_name_plural = "Team Permissions"
+        unique_together = ("target", "project")

@@ -9,6 +9,7 @@ from factory.base import StubObject
 from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
+from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
@@ -91,7 +92,7 @@ class ProjectFactory(DjangoModelFactory[Project]):
 
 
 class UserPermissionFactory(DjangoModelFactory[UserPermission]):
-    level = random.choice(UserPermission.Level.values)
+    level = random.choice(PermissionLevel.values)
     target: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
     project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
 
@@ -100,7 +101,7 @@ class UserPermissionFactory(DjangoModelFactory[UserPermission]):
 
 
 class TeamPermissionFactory(DjangoModelFactory[TeamPermission]):
-    level = random.choice(TeamPermission.Level.values)
+    level = random.choice(PermissionLevel.values)
     target: SurveyTeam = factory.SubFactory(SurveyTeamFactory)  # type: ignore[assignment]
     project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
 

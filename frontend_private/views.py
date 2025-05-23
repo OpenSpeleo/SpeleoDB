@@ -7,32 +7,27 @@ from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpRequest
-from django.shortcuts import HttpResponse
-from django.shortcuts import HttpResponsePermanentRedirect
-from django.shortcuts import HttpResponseRedirect
+from django.http import HttpResponse
+from django.http import HttpResponsePermanentRedirect
+from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView
 from rest_framework.authtoken.models import Token
 
-from speleodb.surveys.models import AnyPermissionLevel
+from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
+from speleodb.utils.requests import AuthenticatedHttpRequest
 
 
 @dataclass
 class UserAccessLevel:
-    ALLOWED_ACCESS_LEVELS = set(
-        UserPermission.Level.labels + TeamPermission.Level.labels
-    )
+    ALLOWED_ACCESS_LEVELS = PermissionLevel.labels
     user: User
-    # level: str
-    level: AnyPermissionLevel
+    level: PermissionLevel
     team: SurveyTeam | None = None
 
     def __post_init__(self) -> None:
@@ -44,12 +39,8 @@ class UserAccessLevel:
                 f"`team` must be of type SurveyTeam | None: `{type(self.team)}`"
             )
 
-        if not isinstance(self.level, (UserPermission.Level, TeamPermission.Level)):
+        if not isinstance(self.level, PermissionLevel):
             raise TypeError(type(self.level))
-
-
-class AuthenticatedHttpRequest(HttpRequest):
-    user: User
 
 
 class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
@@ -173,11 +164,11 @@ class TeamMembershipsView(_BaseTeamView):
     def get(
         self, request: AuthenticatedHttpRequest, team_id: int, *args: Any, **kwargs: Any
     ) -> HttpResponseRedirect | HttpResponsePermanentRedirect | HttpResponse:
-        data = self.get_data_or_redirect(request, team_id=team_id)
+        data: Any = self.get_data_or_redirect(request, team_id=team_id)
         if not isinstance(data, dict):
             return data  # redirection
 
-        data["memberships"] = data["team"].get_all_memberships()
+        data["memberships"] = data["team"].get_all_memberships()  # pyright: ignore[reportAttributeAccessIssue]
 
         return super().get(request, *args, **data, **kwargs)
 

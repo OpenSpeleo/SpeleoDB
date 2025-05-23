@@ -87,7 +87,7 @@ class User(AbstractUser):
         return self.__repr__()
 
     @property
-    def teams(self) -> models.BaseManager[SurveyTeam]:
+    def teams(self) -> models.QuerySet[SurveyTeam]:
         from speleodb.users.models import SurveyTeam
 
         return SurveyTeam.objects.filter(

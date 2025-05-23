@@ -5,7 +5,7 @@ from typing import Any
 from django.urls import reverse
 from django_countries import countries
 from faker import Faker
-from parameterized import parameterized
+from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
@@ -32,9 +32,7 @@ class TestUserAPI(BaseAPITestCase):
         for key, val in response.data["data"].items():
             assert getattr(self.user, key) == val, (getattr(self.user, key), val)
 
-    def _patch_user_info(
-        self, *, expect_success: bool = True, **kwargs: dict[str, Any]
-    ) -> None:
+    def _patch_user_info(self, *, expect_success: bool = True, **kwargs: Any) -> None:
         endpoint = reverse("api:v1:user_info")
 
         auth = self.header_prefix + self.token.key

@@ -2,7 +2,7 @@ import tempfile
 from pathlib import Path
 from unittest import TestCase
 
-from parameterized import parameterized
+from parameterized.parameterized import parameterized
 
 from speleodb.common.management.commands.merge_prod_dotenvs import Command
 

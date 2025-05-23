@@ -11,10 +11,8 @@ from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
-from speleodb.surveys.models import AnyPermissionLevel
+from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
@@ -42,13 +40,13 @@ class BaseAPIProjectTestCase(BaseAPITestCase):
         super().setUp()
         self.project = ProjectFactory.create(created_by=self.user)
 
-    def set_test_project_permission(self, level: AnyPermissionLevel) -> None:
-        if isinstance(level, UserPermission.Level):
+    def set_test_project_permission(self, level: PermissionLevel) -> None:
+        if isinstance(level, PermissionLevel):
             _ = UserPermissionFactory.create(
                 target=self.user, level=level, project=self.project
             )
 
-        elif isinstance(level, TeamPermission.Level):
+        elif isinstance(level, PermissionLevel):
             # Create a team for the user - assign the user to the team
             team: SurveyTeam = SurveyTeamFactory.create()
 

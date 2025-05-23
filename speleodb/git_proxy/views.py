@@ -115,7 +115,7 @@ class BaseGitProxyAPIView(GenericAPIView):
 
     def proxy_git_request(self, request, path: str, query_params: dict | None = None):
         try:
-            project: Project = self.get_object()
+            project = self.get_object()
             (old_hash, _), branch_name = parse_git_push_preamble(request.body)
 
             if (

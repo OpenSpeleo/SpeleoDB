@@ -6,8 +6,8 @@ from django.db import models
 
 from speleodb.surveys.models import Project
 from speleodb.surveys.models.permission_base import BasePermissionModel
+from speleodb.surveys.models.permission_lvl import PermissionLevel
 from speleodb.users.models import User
-from speleodb.utils.django_base_models import BaseIntegerChoices
 
 
 class UserPermission(BasePermissionModel):
@@ -23,21 +23,13 @@ class UserPermission(BasePermissionModel):
         on_delete=models.CASCADE,
     )
 
-    class Level(BaseIntegerChoices):
-        READ_ONLY = (
-            BasePermissionModel.Level.READ_ONLY,
-            BasePermissionModel.Level.READ_ONLY.label,
-        )
-        READ_AND_WRITE = (
-            BasePermissionModel.Level.READ_AND_WRITE,
-            BasePermissionModel.Level.READ_AND_WRITE.label,
-        )
-        ADMIN = (2, "ADMIN")
-
     _level = models.IntegerField(
-        choices=Level.choices, default=Level.READ_ONLY, verbose_name="level"
+        choices=PermissionLevel.choices,
+        default=PermissionLevel.READ_ONLY,
+        verbose_name="level",
     )
 
-    class Meta(BasePermissionModel.Meta):
+    class Meta:
         verbose_name = "User Permission"
         verbose_name_plural = "User Permissions"
+        unique_together = ("target", "project")

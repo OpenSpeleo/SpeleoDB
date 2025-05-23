@@ -108,17 +108,21 @@ class SurveyTeamMembership(models.Model):
         verbose_name_plural = "Team Memberships"
 
     def __str__(self) -> str:
-        return f"{self.user} => {self.team} [{self.role}]"
+        return f"{self.user} => {self.team} [{self.role_label}]"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
 
     @property
-    def role(self) -> str:
-        return self.Role(self._role).label
+    def role_label(self) -> str:
+        return self.role.label
+
+    @property
+    def role(self) -> Role:
+        return self.Role(self._role)
 
     @role.setter
-    def role(self, role: str) -> None:
+    def role(self, role: Role | int | str) -> None:
         match role:
             case str():
                 self._role = self.Role.from_str(role)
@@ -137,5 +141,5 @@ class SurveyTeamMembership(models.Model):
     def reactivate(self, role: Role) -> None:
         self.is_active = True
         self.deactivated_by = None
-        self.role = role.label
+        self.role = role
         self.save()

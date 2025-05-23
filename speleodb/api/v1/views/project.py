@@ -33,7 +33,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
-        project: Project = self.get_object()
+        project = self.get_object()
         serializer = self.get_serializer(project, context={"user": user})
 
         try:
@@ -50,7 +50,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
     @method_permission_classes((UserHasWriteAccess,))
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
-        project: Project = self.get_object()
+        project = self.get_object()
         serializer = self.get_serializer(
             project, data=request.data, context={"user": user}
         )
@@ -65,7 +65,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
     @method_permission_classes((UserHasWriteAccess,))
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
-        project: Project = self.get_object()
+        project = self.get_object()
         serializer = self.get_serializer(
             project, data=request.data, context={"user": user}, partial=True
         )
@@ -84,7 +84,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
         # This is done to protect users from malicious/erronous project deletion.
 
         user = self.get_user()
-        project: Project = self.get_object()
+        project = self.get_object()
         for perm in project.permissions:
             perm.deactivate(deactivated_by=user)
 

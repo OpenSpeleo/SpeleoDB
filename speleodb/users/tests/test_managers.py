@@ -9,7 +9,7 @@ from speleodb.users.models import User
 @pytest.mark.django_db
 class TestUserManager:
     def test_create_user(self) -> None:
-        user = User.objects.create_user(  # type: ignore
+        user = User.objects.create_user(
             email="john@example.com",
             password="something-r@nd0m!",  # noqa: S106
         )
@@ -20,21 +20,21 @@ class TestUserManager:
         assert user.username is None  # type: ignore[has-type]
 
     def test_create_superuser(self) -> None:
-        user = User.objects.create_superuser(  # type: ignore
+        user = User.objects.create_superuser(
             email="admin@example.com",
             password="something-r@nd0m!",  # noqa: S106
         )
         assert user.email == "admin@example.com"
         assert user.is_staff
         assert user.is_superuser
-        assert user.username is None
+        assert user.username is None  # type: ignore[has-type]
 
     def test_create_superuser_username_ignored(self) -> None:
-        user = User.objects.create_superuser(  # type: ignore
+        user = User.objects.create_superuser(
             email="test@example.com",
             password="something-r@nd0m!",  # noqa: S106
         )
-        assert user.username is None
+        assert user.username is None  # type: ignore[has-type]
 
 
 @pytest.mark.django_db

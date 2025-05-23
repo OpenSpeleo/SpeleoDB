@@ -23,6 +23,7 @@ from django_countries.fields import CountryField
 from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabManager
+from speleodb.surveys.models import PermissionLevel
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 from speleodb.utils.django_base_models import BaseIntegerChoices
@@ -253,9 +254,7 @@ class Project(models.Model):
         return len(users)
 
     def _has_user_permission(self, user: User, permission) -> bool:
-        from speleodb.surveys.models.permission_user import UserPermission
-
-        if not isinstance(permission, UserPermission.Level):
+        if not isinstance(permission, PermissionLevel):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
 
         try:
@@ -264,9 +263,7 @@ class Project(models.Model):
             return False
 
     def _has_team_permission(self, team: SurveyTeam, permission) -> bool:
-        from speleodb.surveys.models.permission_team import TeamPermission
-
-        if not isinstance(permission, TeamPermission.Level):
+        if not isinstance(permission, PermissionLevel):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
 
         try:
@@ -282,11 +279,8 @@ class Project(models.Model):
         raise TypeError(f"Unexpected value received for: `{target=}`")
 
     def has_write_access(self, user: User) -> bool:
-        from speleodb.surveys.models.permission_team import TeamPermission
-        from speleodb.surveys.models.permission_user import UserPermission
-
         user_permission = self._has_user_permission(
-            user, permission=UserPermission.Level.READ_AND_WRITE
+            user, permission=PermissionLevel.READ_AND_WRITE
         )
 
         if user_permission:
@@ -294,16 +288,14 @@ class Project(models.Model):
 
         for team in user.teams:
             if self._has_team_permission(
-                team, permission=TeamPermission.Level.READ_AND_WRITE
+                team, permission=PermissionLevel.READ_AND_WRITE
             ):
                 return True
 
         return False
 
     def is_admin(self, user: User) -> bool:
-        from speleodb.surveys.models.permission_user import UserPermission
-
-        return self._has_user_permission(user, permission=UserPermission.Level.ADMIN)
+        return self._has_user_permission(user, permission=PermissionLevel.ADMIN)
 
     @property
     def git_repo_dir(self):

@@ -18,25 +18,22 @@ from speleodb.api.v1.serializers import AuthTokenSerializer
 from speleodb.api.v1.serializers import PasswordChangeSerializer
 from speleodb.api.v1.serializers import UserSerializer
 from speleodb.users.models import User
+from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
-
-
-class AuthenticatedRequest(Request):
-    user: User
 
 
 class UserInfo(GenericAPIView[User]):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request: AuthenticatedRequest, *args: Any, **kwargs: Any) -> Response:
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return SuccessResponse(
             self.get_serializer(request.user).data, status=status.HTTP_200_OK
         )
 
-    def put(self, request: AuthenticatedRequest, *args: Any, **kwargs: Any) -> Response:
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = self.get_serializer(
             data=request.data, context={"request": request}
         )
@@ -48,9 +45,7 @@ class UserInfo(GenericAPIView[User]):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    def patch(
-        self, request: AuthenticatedRequest, *args: Any, **kwargs: Any
-    ) -> Response:
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = self.get_serializer(
             request.user, data=request.data, partial=True, context={"request": request}
         )
@@ -63,11 +58,11 @@ class UserInfo(GenericAPIView[User]):
         )
 
 
-class UserAuthTokenView(ObtainAuthToken):
+class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
     serializer_class = AuthTokenSerializer
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES  # type: ignore[assignment]
 
-    def get(self, request: AuthenticatedRequest, *args: Any, **kwargs: Any) -> Response:
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         if not request.user.is_authenticated:
             return ErrorResponse(
                 status=status.HTTP_401_UNAUTHORIZED,
@@ -81,9 +76,7 @@ class UserAuthTokenView(ObtainAuthToken):
 
         return NoWrapResponse({"token": token.key})
 
-    def _fetch_token(
-        self, request: AuthenticatedRequest, refresh_token: bool
-    ) -> Response:
+    def _fetch_token(self, request: Request, refresh_token: bool) -> Response:
         if not request.user.is_authenticated:
             serializer = self.get_serializer(data=request.data)
 
@@ -94,7 +87,7 @@ class UserAuthTokenView(ObtainAuthToken):
             user: User = serializer.validated_data["user"]
 
         else:
-            user = request.user
+            user = self.get_user()
 
         if refresh_token:
             # delete to recreate a fresh token
@@ -108,20 +101,13 @@ class UserAuthTokenView(ObtainAuthToken):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
-    def post(
-        self,
-        request: AuthenticatedRequest,  # type: ignore[override]
-        *args: Any,
-        **kwargs: Any,
-    ) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._fetch_token(request, refresh_token=False)
 
-    def patch(
-        self, request: AuthenticatedRequest, *args: Any, **kwargs: Any
-    ) -> Response:
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._fetch_token(request, refresh_token=True)
 
-    def put(self, request: AuthenticatedRequest, *args: Any, **kwargs: Any) -> Response:
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._fetch_token(request, refresh_token=True)
 
 
@@ -134,7 +120,7 @@ class UserPasswordChangeView(GenericAPIView[User]):
     throttle_classes = [PasswordChangeThrottle]
     permission_classes = [permissions.IsAuthenticated]
 
-    def put(self, request: AuthenticatedRequest, *args: Any, **kwargs: Any) -> Response:
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = self.get_serializer(
             data=request.data, partial=True, context={"request": request}
         )
@@ -149,14 +135,12 @@ class UserPasswordChangeView(GenericAPIView[User]):
         )
 
 
-class ReleaseAllUserLocksView(GenericAPIView[User]):
+class ReleaseAllUserLocksView(GenericAPIView[User], SDBAPIViewMixin):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def delete(
-        self, request: AuthenticatedRequest, *args: Any, **kwargs: Any
-    ) -> Response:
-        user = request.user
+    def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
 
         active_mutexes = user.active_mutexes
         for mutex in active_mutexes:

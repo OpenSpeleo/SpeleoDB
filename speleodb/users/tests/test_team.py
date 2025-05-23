@@ -10,7 +10,7 @@ from speleodb.users.tests.factories import UserFactory
 
 
 @pytest.fixture
-def leader_membership(db, team: SurveyTeam) -> SurveyTeamMembership:
+def leader_membership(db: None, team: SurveyTeam) -> SurveyTeamMembership:
     """
     Fixture for creating a SurveyTeamMembership instance with a leader role.
     """
@@ -110,7 +110,7 @@ class TestSurveyTeamMembership:
         self, member_membership: SurveyTeamMembership
     ) -> None:
         """Test the role property getter."""
-        assert member_membership.role == "MEMBER"
+        assert member_membership.role_label == "MEMBER"
 
     def test_role_property_setter(
         self, member_membership: SurveyTeamMembership
@@ -118,7 +118,7 @@ class TestSurveyTeamMembership:
         """Test the role property setter."""
         member_membership.role = SurveyTeamMembership.Role.LEADER
         member_membership.save()
-        assert member_membership._role == SurveyTeamMembership.Role.LEADER  # type: ignore # noqa: SLF001
+        assert member_membership._role == SurveyTeamMembership.Role.LEADER  # noqa: SLF001
 
     def test_deactivate(
         self, member_membership: SurveyTeamMembership, user: User
@@ -136,7 +136,7 @@ class TestSurveyTeamMembership:
         member_membership.reactivate(SurveyTeamMembership.Role.LEADER)
         assert member_membership.is_active
         assert member_membership.deactivated_by is None
-        assert member_membership.role == "LEADER"
+        assert member_membership.role_label == "LEADER"
 
     @pytest.mark.django_db(transaction=True)
     def test_unique_together_constraint(self, team: SurveyTeam, user: User) -> None:

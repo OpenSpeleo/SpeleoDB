@@ -9,8 +9,7 @@ from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
+from speleodb.surveys.models import PermissionLevel
 from speleodb.users.models import SurveyTeamMembership
 
 
@@ -25,11 +24,11 @@ class TestProjectInteraction(BaseAPITestCase):
 
         for project_id in range(self.PROJECT_COUNT):
             # spread equally some projects with user and team access
-            project = ProjectFactory(created_by=self.user)
+            project = ProjectFactory.create(created_by=self.user)
             if project_id % 2 == 0:
                 _ = UserPermissionFactory(
                     target=self.user,
-                    level=random.choice(UserPermission.Level.values),
+                    level=random.choice(PermissionLevel.values),
                     project=project,
                 )
             else:
@@ -44,7 +43,7 @@ class TestProjectInteraction(BaseAPITestCase):
                 # Give the newly created permission to the project
                 _ = TeamPermissionFactory(
                     target=team,
-                    level=random.choice(TeamPermission.Level.values),
+                    level=random.choice(PermissionLevel.values),
                     project=project,
                 )
 
@@ -69,8 +68,8 @@ class TestProjectInteraction(BaseAPITestCase):
             "permission",
         ]
 
-        for project in response.data["data"]:
-            assert all(attr in project for attr in attributes)
+        for project_data in response.data["data"]:
+            assert all(attr in project_data for attr in attributes)
 
         target = {
             "success": True,

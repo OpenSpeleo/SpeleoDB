@@ -14,6 +14,7 @@ from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import UserPermissionListSerializer
 from speleodb.api.v1.serializers import UserPermissionSerializer
+from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import User
@@ -71,16 +72,14 @@ class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
                 match key:
                     case "level":
                         if not isinstance(value, str) or value.upper() not in [
-                            name for _, name in UserPermission.Level.choices
+                            name for _, name in PermissionLevel.choices
                         ]:
                             raise BadRequestError(
                                 f"Invalid value received for `{key}`: `{value}`"
                             )
 
                         try:
-                            perm_data[key] = UserPermission.Level.from_str(
-                                value.upper()
-                            )
+                            perm_data[key] = PermissionLevel.from_str(value.upper())
                         except AttributeError as e:
                             raise ValueNotFoundError(
                                 f"The user permission level: `{value.upper()}` does "

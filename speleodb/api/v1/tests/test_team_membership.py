@@ -3,7 +3,7 @@ import random
 import pytest
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
-from parameterized import parameterized
+from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.serializers import SurveyTeamMembershipSerializer
@@ -108,7 +108,7 @@ class TestTeamMembershipCreation(BaseAPITestCase):
         )
 
         if "user" in data and data["user"] is None:
-            data["user"] = UserFactory.create()
+            data["user"] = UserFactory.create().email
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -269,7 +269,7 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
         )
 
         if data is not None and "user" in data and data["user"] is None:
-            data["user"] = UserFactory.create()
+            data["user"] = UserFactory.create().email
 
         auth = self.header_prefix + self.token.key
         response = self.client.put(

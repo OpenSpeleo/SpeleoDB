@@ -2,6 +2,7 @@ import random
 import string
 import uuid
 from hashlib import sha1
+from typing import Any
 
 import pytest
 from django.urls import resolve
@@ -67,7 +68,7 @@ def sha1_hash() -> str:
         ),
     ],
 )
-def test_url_resolution(name: str, path: str, kwargs: dict | None) -> None:
+def test_url_resolution(name: str, path: str, kwargs: dict[str, Any] | None) -> None:
     """
     Tests URL resolution and path generation for various endpoints.
     """
@@ -169,7 +170,7 @@ def test_user_api_urls(name: str, path: str) -> None:
         ),
     ],
 )
-def test_team_dynamic_urls(name: str, path: str, kwargs: dict | None) -> None:
+def test_team_dynamic_urls(name: str, path: str, kwargs: dict[str, Any] | None) -> None:
     """
     Test the reverse and resolve for dynamic team-related API URLs.
     """

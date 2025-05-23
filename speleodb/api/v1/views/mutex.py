@@ -26,11 +26,9 @@ class ProjectAcquireApiView(GenericAPIView[Project], SDBAPIViewMixin):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def post(
-        self, request: Request, *args: list[Any], **kwargs: dict[str, Any]
-    ) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
-        project: Project = self.get_object()
+        project = self.get_object()
 
         try:
             project.acquire_mutex(user=user)
@@ -56,11 +54,9 @@ class ProjectReleaseApiView(GenericAPIView[Project], SDBAPIViewMixin):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def post(
-        self, request: Request, *args: list[Any], **kwargs: dict[str, Any]
-    ) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
-        project: Project = self.get_object()
+        project = self.get_object()
         comment = request.data.get("comment", "")
 
         try:

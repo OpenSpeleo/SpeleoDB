@@ -211,6 +211,7 @@ exclude = [
   "venv",
   "*/migrations/*.py",
   "staticfiles/*",
+  "main.py",
 ]
 # Same as Django: https://github.com/cookiecutter/cookiecutter-django/issues/4792.
 line-length = 88

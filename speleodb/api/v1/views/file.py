@@ -92,8 +92,8 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
         self,
         request: Request,
         fileformat: str,
-        *args: list[Any],
-        **kwargs: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> Response:
         user = self.get_user()
         with timed_section("Project Upload"):
@@ -194,7 +194,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                         {
                             "error": (
                                 f"The total file size submitted: "
-                                f"[{file.size / 1024.0 / 1204.0} Mb], exceeds the "
+                                f"[{total_filesize / 1024.0 / 1204.0} Mb], exceeds the "
                                 f"limit: {settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT} Mb"
                             )
                         },
@@ -205,7 +205,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
             # ~~~~~~~~~~~~~~~~~ START of writing files to project ~~~~~~~~~~~~~~~~~ #
             format_assoc: dict[Format, bool] = defaultdict(lambda: False)
-            project: Project = self.get_object()
+            project = self.get_object()
 
             try:
                 with timed_section("Git Project - Checkout and Pull"):
@@ -367,8 +367,8 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
         request: Request,
         fileformat: str,
         hexsha: str | None = None,
-        *args: list[Any],
-        **kwargs: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> Response | FileResponse:
         try:
             fileformat_f: Format.FileFormat = getattr(
@@ -388,7 +388,7 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        project: Project = self.get_object()
+        project = self.get_object()
 
         try:
             processor = AutoSelector.get_download_processor(
@@ -451,9 +451,13 @@ class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     lookup_field = "id"
 
     def get(
-        self, request: Request, hexsha: str, *args: list[Any], **kwargs: dict[str, Any]
+        self,
+        request: Request,
+        hexsha: str,
+        *args: Any,
+        **kwargs: Any,
     ) -> Response | FileResponse:
-        project: Project = self.get_object()
+        project = self.get_object()
 
         # Using a retry-loop to prevent "pulling the repo" first.
         # If - by any chance - the blob is already known by GIT, we can reply fast

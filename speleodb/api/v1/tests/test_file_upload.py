@@ -2,17 +2,15 @@ import pathlib
 
 import pytest
 from django.urls import reverse
-from parameterized import parameterized
+from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.api.v1.tests.utils import is_valid_git_sha
-from speleodb.surveys.models import AnyPermissionLevel
 from speleodb.surveys.models import Format
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
+from speleodb.surveys.models import PermissionLevel
 from speleodb.utils.test_utils import named_product
 
 BASE_DIR = pathlib.Path(__file__).parent / "artifacts"
@@ -29,16 +27,16 @@ class FileViewTests(BaseAPIProjectTestCase):
         named_product(
             testfile=TEST_FILES,
             level=[
-                UserPermission.Level.ADMIN,
-                UserPermission.Level.READ_AND_WRITE,
-                TeamPermission.Level.READ_AND_WRITE,
+                PermissionLevel.ADMIN,
+                PermissionLevel.READ_AND_WRITE,
+                PermissionLevel.READ_AND_WRITE,
             ],
         )
     )
     def test_upload_valid_file(
         self,
         testfile: pathlib.Path,
-        uploader_access_level: AnyPermissionLevel,
+        uploader_access_level: PermissionLevel,
     ) -> None:
         """
         Test file uploads with valid formats.
@@ -103,14 +101,14 @@ class FileViewTests(BaseAPIProjectTestCase):
         named_product(
             testfile=TEST_FILES,
             level=[
-                UserPermission.Level.ADMIN,
-                UserPermission.Level.READ_AND_WRITE,
-                TeamPermission.Level.READ_AND_WRITE,
+                PermissionLevel.ADMIN,
+                PermissionLevel.READ_AND_WRITE,
+                PermissionLevel.READ_AND_WRITE,
             ],
         )
     )
     def test_upload_file_error_without_mutex(
-        self, testfile: pathlib.Path, uploader_access_level: AnyPermissionLevel
+        self, testfile: pathlib.Path, uploader_access_level: PermissionLevel
     ) -> None:
         """
         Test file uploads with valid formats.
@@ -153,13 +151,13 @@ class FileViewTests(BaseAPIProjectTestCase):
         named_product(
             testfile=TEST_FILES,
             level=[
-                UserPermission.Level.READ_ONLY,
-                TeamPermission.Level.READ_ONLY,
+                PermissionLevel.READ_ONLY,
+                PermissionLevel.READ_ONLY,
             ],
         )
     )
     def test_upload_error_in_readonly(
-        self, testfile: pathlib.Path, uploader_access_level: AnyPermissionLevel
+        self, testfile: pathlib.Path, uploader_access_level: PermissionLevel
     ) -> None:
         """
         Test file uploads with valid formats.
