@@ -28,7 +28,6 @@ dependencies = [
   "django==5.1.8",                        # https://www.djangoproject.com/
   "django-allauth==65.7.0",               # https://github.com/pennersr/django-allauth
   "django-celery-beat==2.7.0",            # https://github.com/celery/django-celery-beat
-  "django-choicefield==0.2.3",            # https://github.com/flaeppe/django-choicefield
   "django-compressor==4.5.1",             # https://github.com/django-compressor/django-compressor
   "django-countries==7.6.1",              # https://github.com/SmileyChris/django-countries/
   "django-dynamic-raw-id==4.4",           # https://github.com/lincolnloop/django-dynamic-raw-id

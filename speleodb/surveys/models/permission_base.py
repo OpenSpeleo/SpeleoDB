@@ -8,12 +8,11 @@ from speleodb.users.models import User
 
 
 class BasePermissionModel(models.Model):
-    # level: models.IntegerField  # type: ignore[arg-type]
-
-    # level = choicefield.ChoiceField
-
     level = models.IntegerField(
-        choices=PermissionLevel.choices, default=PermissionLevel.READ_ONLY
+        choices=PermissionLevel.choices,
+        default=PermissionLevel.READ_ONLY,
+        null=False,
+        blank=False,
     )
 
     is_active = models.BooleanField(default=True)
@@ -22,7 +21,11 @@ class BasePermissionModel(models.Model):
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
     deactivated_by = models.ForeignKey(
-        User, on_delete=models.RESTRICT, null=True, default=None, blank=True
+        User,
+        on_delete=models.RESTRICT,
+        blank=True,
+        null=True,
+        default=None,
     )
 
     class Meta:
@@ -44,3 +47,7 @@ class BasePermissionModel(models.Model):
         self.deactivated_by = None
         self.level = level
         self.save()
+
+    @property
+    def level_label(self) -> str:
+        return PermissionLevel.from_value(self.level).label

@@ -135,8 +135,9 @@ class GitCommitListSerializer(serializers.ListSerializer[GitCommit]):
         Customize the list serialization.
         """
         # Sort commits by date (descending) if needed
-        data = sorted(data, key=lambda commit: commit.authored_datetime, reverse=True)
-        return super().to_representation(data)
+        return super().to_representation(
+            sorted(data, key=lambda commit: commit.authored_datetime, reverse=True)
+        )
 
 
 class GitFileSerializer(serializers.Serializer[GitCommit]):
@@ -191,5 +192,4 @@ class GitFileListSerializer(serializers.ListSerializer[GitFile]):
         Customize the list serialization.
         """
         # Sort commits by date (descending) if needed
-        data = sorted(data, key=lambda file: file.path)
-        return super().to_representation(data)
+        return super().to_representation(sorted(data, key=lambda file: file.path))

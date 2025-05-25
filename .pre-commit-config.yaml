@@ -62,187 +62,32 @@ repos:
       - id: djlint-reformat-django
       - id: djlint-django
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+  # Use a Local Workflow to ensure that `mypy` picks up all the local up-to-date dependencies
+  - repo: local
     hooks:
-      - id: mypy
-        args: ["--config-file", "pyproject.toml"]
-        additional_dependencies:
-          - alabaster==1.0.0
-          - amqp==5.3.1
-          - annotated-types==0.7.0
-          - anyio==4.9.0
-          - argon2-cffi==23.1.0
-          - argon2-cffi-bindings==21.2.0
-          - asgiref==3.8.1
-          - asttokens==3.0.0
-          - attrs==25.3.0
-          - autopep8==2.3.2
-          - babel==2.17.0
-          - billiard==4.2.1
-          - cachetools==5.5.2
-          - celery==5.5.1
-          - celery-types==0.23.0
-          - certifi==2025.4.26
-          - cffi==1.17.1
-          - cfgv==3.4.0
-          - charset-normalizer==3.4.2
-          - click==8.2.0
-          - click-didyoumean==0.3.1
-          - click-plugins==1.1.1
-          - click-repl==0.3.0
-          - colorama==0.4.6
-          - coverage==7.8.0
-          - cron-descriptor==1.4.5
-          - cryptography==45.0.2
-          - cssbeautifier==1.15.4
-          - decorator==5.2.1
-          - deepdiff==8.5.0
-          - distlib==0.3.9
-          - django==5.1.8
-          - django-allauth==65.7.0
-          - django-appconf==1.1.0
-          - django-celery-beat==2.7.0
-          - django-compressor==4.5.1
-          - django-cors-headers==4.7.0
-          - django-countries==7.6.1
-          - django-coverage-plugin==3.1.0
-          - django-debug-toolbar==5.1.0
-          - django-dynamic-raw-id==4.4
-          - django-encrypted-model-fields==0.6.5
-          - django-environ==0.12.0
-          - django-extensions==4.1
-          - django-hijack==3.7.1
-          - django-model-utils==5.0.0
-          - django-redis==5.4.0
-          - django-schema-viewer==0.5.3
-          - django-silk==5.3.2
-          - django-stubs==5.1.3
-          - django-stubs-ext==5.2.0
-          - django-timezone-field==7.1
-          - django-types==0.20.0
-          - djangorestframework==3.16.0
-          - djangorestframework-stubs==3.15.3
-          # - djangorestframework-types==0.9.0
-          - djlint==1.36.4
-          - docutils==0.21.2
-          - drf-spectacular==0.28.0
-          - editorconfig==0.17.0
-          - executing==2.2.0
-          - factory-boy==3.3.3
-          - faker==37.3.0
-          - filelock==3.18.0
-          - flower==2.0.1
-          - gitdb==4.0.12
-          - gitpython==3.1.44
-          - gprof2dot==2025.4.14
-          - h11==0.16.0
-          - hiredis==3.1.0
-          - httptools==0.6.4
-          - humanize==4.12.3
-          - identify==2.6.10
-          - idna==3.10
-          - imagesize==1.4.1
-          - inflection==0.5.1
-          - iniconfig==2.1.0
-          - ipdb==0.13.13
-          - ipython==9.2.0
-          - ipython-pygments-lexers==1.1.1
-          - jedi==0.19.2
-          - jinja2==3.1.6
-          - jsbeautifier==1.15.4
-          - json5==0.12.0
-          - jsonschema==4.23.0
-          - jsonschema-specifications==2025.4.1
-          - kombu==5.5.3
-          - markupsafe==3.0.2
-          - matplotlib-inline==0.1.7
-          - mnemo-lib==0.0.3
-          - mypy==1.15.0
-          - mypy-extensions==1.1.0
-          - nodeenv==1.9.1
-          - orderly-set==5.4.1
-          - packaging==25.0
-          - parameterized==0.9.0
-          - parso==0.8.4
-          - pathspec==0.12.1
-          - pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
-          - platformdirs==4.3.8
-          - pluggy==1.6.0
-          - pre-commit==4.2.0
-          - prometheus-client==0.22.0
-          - prompt-toolkit==3.0.51
-          - psycopg==3.2.6
-          - psycopg-binary==3.2.6 ; implementation_name != 'pypy'
-          - ptyprocess==0.7.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
-          - pure-eval==0.2.3
-          - pycodestyle==2.13.0
-          - pycparser==2.22
-          - pydantic==2.10.6
-          - pydantic-core==2.27.2
-          - pygments==2.19.1
-          - pytest==8.3.5
-          - pytest-django==4.11.1
-          - pytest-dotenv==0.5.2
-          - pytest-env==1.1.5
-          - pytest-sugar==1.0.0
-          - python-crontab==3.2.0
-          - python-dateutil==2.9.0.post0
-          - python-dotenv==1.1.0
-          - python-gitlab==5.6.0
-          - pytz==2025.2
-          - pyyaml==6.0.2
-          - rcssmin==1.1.2
-          - redis==5.2.1
-          - referencing==0.36.2
-          - regex==2024.11.6
-          - requests==2.32.3
-          - requests-toolbelt==1.0.0
-          - rjsmin==1.2.2
-          - roman-numerals-py==3.1.0
-          - rpds-py==0.25.0
-          - ruff==0.11.10
-          - six==1.17.0
-          - smmap==5.0.2
-          - sniffio==1.3.1
-          - snowballstemmer==3.0.1
-          - sphinx==8.2.3
-          - sphinx-autobuild==2024.10.3
-          - sphinxcontrib-applehelp==2.0.0
-          - sphinxcontrib-devhelp==2.0.0
-          - sphinxcontrib-htmlhelp==2.1.0
-          - sphinxcontrib-jsmath==1.0.1
-          - sphinxcontrib-qthelp==2.0.0
-          - sphinxcontrib-serializinghtml==2.0.0
-          - sqlparse==0.5.3
-          - stack-data==0.6.3
-          - starlette==0.46.2
-          - termcolor==3.1.0
-          - timeago==1.0.16
-          - tornado==6.5
-          - tqdm==4.67.1
-          - traitlets==5.14.3
-          - types-cachetools==5.5.0.20240820
-          - types-factory-boy==0.4.1
-          - types-psycopg2==2.9.21.20250516
-          - types-pytz==2025.2.0.20250516
-          - types-pyyaml==6.0.12.20250516
-          - types-requests==2.32.0.20250515
-          - typing-extensions==4.13.2
-          - tzdata==2025.2
-          - uritemplate==4.1.1
-          - urllib3==2.4.0
-          - uvicorn==0.34.1
-          - uvloop==0.21.0 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
-          - vine==5.1.0
-          - virtualenv==20.31.2
-          - watchdog==6.0.0
-          - watchfiles==1.0.5
-          - wcwidth==0.2.13
-          - websockets==15.0.1
-          - werkzeug==3.1.3
-          - whitenoise==6.9.0
-          - wrapt==1.17.2
+      - args:
+          [
+            "run",
+            "--",
+            "--cache-fine-grained",
+            "--config-file",
+            "pyproject.toml",
+          ]
+        description: Static type checker for Python
+        # https://github.com/pre-commit/mirrors-mypy/blob/main/.pre-commit-hooks.yaml
+        entry: dmypy
+        id: mypy
+        language: system
+        name: mypy
+        require_serial: true
+        types_or: [python, pyi]
+
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.15.0
+  #   hooks:
+  #     - id: mypy
+  #       args: ["--config-file", "pyproject.toml"]
+  #       additional_dependencies: [...]
 
   - repo: https://github.com/PyCQA/autoflake
     rev: v2.3.1 # check for the latest version

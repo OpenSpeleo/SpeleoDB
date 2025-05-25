@@ -28,11 +28,7 @@ class TeamPermission(BasePermissionModel):
         unique_together = ("target", "project")
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(
-                    level__in=[
-                        v for v in PermissionLevel.values if v < PermissionLevel.ADMIN
-                    ]
-                ),
+                condition=models.Q(level__in=PermissionLevel.values_no_admin),
                 name="%(app_label)s_%(class)s_level_is_valid",
             )
         ]

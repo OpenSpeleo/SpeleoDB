@@ -34,7 +34,6 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
     country = CustomChoiceField(choices=list(countries))
     visibility = CustomChoiceField(
         choices=Project.Visibility,  # type: ignore[arg-type]
-        source="_visibility",
         default=Project.Visibility.PRIVATE,
     )
 
@@ -47,7 +46,7 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
 
     class Meta:
         model = Project
-        exclude = ("_visibility",)
+        fields = "__all__"
 
     def to_internal_value(self, data: Any) -> Any:
         latitude = data.get("latitude", None)
@@ -98,7 +97,7 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
 
         return project
 
-    def update(self, instance, validated_data):
+    def update(self, instance: Project, validated_data: Any) -> Project:
         validated_data.pop("created_by", None)  # Remove created_by if present
 
         return super().update(instance, validated_data)
@@ -114,7 +113,7 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
             return None
 
         try:
-            return obj.get_best_permission(user=user).level
+            return obj.get_best_permission(user=user).level_label
         except ObjectDoesNotExist:
             return None
 

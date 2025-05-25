@@ -11,20 +11,16 @@ from speleodb.utils.serializer_fields import CustomChoiceField
 
 class UserPermissionSerializer(serializers.ModelSerializer[UserPermission]):
     user = serializers.PrimaryKeyRelatedField(read_only=True, source="target")  # type: ignore[var-annotated]
-    level = CustomChoiceField(
-        choices=[x for x, _ in PermissionLevel.choices], source="level"
-    )
+    level = CustomChoiceField(choices=[x for x, _ in PermissionLevel.choices])
 
     class Meta:
         fields = ("user", "level", "creation_date", "modified_date")
-        model = PermissionLevel
+        model = UserPermission
 
 
 class TeamPermissionSerializer(serializers.ModelSerializer[TeamPermission]):
     team = serializers.PrimaryKeyRelatedField(read_only=True, source="target")  # type: ignore[var-annotated]
-    level = CustomChoiceField(
-        choices=[x for x, _ in PermissionLevel.choices_no_admin], source="level"
-    )
+    level = CustomChoiceField(choices=[x for x, _ in PermissionLevel.choices_no_admin])
 
     class Meta:
         fields = ("team", "level", "creation_date", "modified_date")

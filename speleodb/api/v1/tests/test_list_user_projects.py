@@ -43,7 +43,7 @@ class TestProjectInteraction(BaseAPITestCase):
                 # Give the newly created permission to the project
                 _ = TeamPermissionFactory(
                     target=team,
-                    level=random.choice(PermissionLevel.values),
+                    level=random.choice(PermissionLevel.values_no_admin),
                     project=project,
                 )
 

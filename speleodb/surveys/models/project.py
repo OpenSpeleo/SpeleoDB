@@ -108,12 +108,11 @@ class Project(models.Model):
         PRIVATE = (0, "PRIVATE")
         PUBLIC = (1, "PUBLIC")
 
-    _visibility = models.IntegerField(
+    visibility = models.IntegerField(
         choices=Visibility.choices,
         blank=False,
         null=False,
         default=Visibility.PRIVATE,
-        verbose_name="visibility",
     )
 
     class Meta:
@@ -135,14 +134,6 @@ class Project(models.Model):
 
     def __str__(self) -> str:
         return self.name
-
-    @property
-    def visibility(self) -> str:
-        return self.Visibility(self._visibility).label
-
-    @visibility.setter
-    def visibility(self, value) -> None:
-        self._visibility = value
 
     @property
     def active_mutex(self) -> Mutex | None:
@@ -198,7 +189,7 @@ class Project(models.Model):
         active_mutex.release_mutex(user=user, comment=comment)
 
     def get_best_permission(self, user: User) -> TeamPermission | UserPermission:
-        permissions = []
+        permissions: list[TeamPermission | UserPermission] = []
         with contextlib.suppress(ObjectDoesNotExist):
             permissions.append(self.get_user_permission(user))
 
@@ -206,7 +197,7 @@ class Project(models.Model):
             with contextlib.suppress(ObjectDoesNotExist):
                 permissions.append(self.get_team_permission(team))
 
-        return sorted(permissions, key=lambda perm: perm.level, reverse=True)[0]  # noqa: SLF001
+        return max(permissions, key=lambda perm: perm.level)
 
     def get_user_permission(self, user: User) -> UserPermission:
         return self.rel_user_permissions.get(target=user, is_active=True)
@@ -258,7 +249,7 @@ class Project(models.Model):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
 
         try:
-            return self.get_user_permission(user=user).level >= permission  # noqa: SLF001
+            return self.get_user_permission(user=user).level >= permission
         except ObjectDoesNotExist:
             return False
 
@@ -269,7 +260,7 @@ class Project(models.Model):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
 
         try:
-            return self.get_team_permission(team=team).level >= permission  # noqa: SLF001
+            return self.get_team_permission(team=team).level >= permission
         except ObjectDoesNotExist:
             return False
 
