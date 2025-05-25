@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import argparse
 import logging
 import os
 import time
 from pathlib import Path
+from typing import Any
 
-import gitlab
+import gitlab.exceptions
 from django.core.management.base import BaseCommand
 from dotenv import load_dotenv
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = "Wipe all repositories from a specified GitLab group."
 
-    def add_arguments(self, parser) -> None:
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--accept_danger",
             action="store_true",
@@ -40,7 +41,7 @@ class Command(BaseCommand):
         *,
         skip_user_confirmation: bool = False,
         accept_danger: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         project_base_dir = Path(__file__).parents[4].resolve()
         if (env_file := project_base_dir / ".envs/test.env").exists():
@@ -62,7 +63,7 @@ class Command(BaseCommand):
             value = "#" * len(value) if env_var == "GITLAB_TOKEN" else value
             logger.info(f"[*] {env_var}: {value}")
 
-        self.stdout.write()  # Visual Spacing
+        self.stdout.write("")  # Visual Spacing
         try:
             gl = gitlab.Gitlab(
                 f"https://{os.environ['GITLAB_HOST_URL']}/",
@@ -89,7 +90,7 @@ class Command(BaseCommand):
                         logger.info("Operation canceled.")
                         return
 
-            self.stdout.write()  # Visual Spacing
+            self.stdout.write("")  # Visual Spacing
             projects = group.projects.list(all=True)
 
             if not projects:

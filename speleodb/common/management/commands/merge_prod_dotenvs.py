@@ -5,6 +5,7 @@ import logging
 import os
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from django.core.management.base import BaseCommand
 
@@ -27,7 +28,7 @@ class Command(BaseCommand):
             merged_content += os.linesep
         out_file.write_text(merged_content)
 
-    def handle(self, *args, **kwargs) -> None:
+    def handle(self, *args: Any, **kwargs: Any) -> None:
         base_project_dir = Path(__file__).parents[4].resolve()
         source_dotenv_dir = base_project_dir / ".envs" / ".production"
         input_files = [

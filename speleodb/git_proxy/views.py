@@ -1,5 +1,7 @@
 import re
+from collections.abc import Generator
 from enum import Enum
+from typing import Any
 
 import requests
 from django.conf import settings
@@ -12,6 +14,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import GenericAPIView
 from rest_framework.renderers import BaseRenderer
+from rest_framework.request import Request
 
 from speleodb.api.v1.authentication import BearerAuthentication
 from speleodb.api.v1.authentication import GitOAuth2Authentication
@@ -29,14 +32,16 @@ class GitService(Enum):
     UPLOAD = "git-upload-pack"
 
 
-def format_packet_line(line) -> str:
+def format_packet_line(line: str) -> str:
     """
     Format a line as a Git packet line.
     """
     return f"{len(line) + 4:04x}{line}"
 
 
-def generate_git_error_response(message, service_name: str):
+def generate_git_error_response(
+    message: str, service_name: str
+) -> StreamingHttpResponse:
     """
     Generate an error response that will be properly displayed by the git client.
     """
@@ -49,7 +54,7 @@ def generate_git_error_response(message, service_name: str):
     # Add a flush packet to indicate the end of the response
     packet_line += "00000000"
 
-    def yield_from(iterable):
+    def yield_from(iterable: list[Any]) -> Generator[Any]:
         yield from iterable
 
     return StreamingHttpResponse(
@@ -60,7 +65,7 @@ def generate_git_error_response(message, service_name: str):
     )
 
 
-def parse_git_push_preamble(payload: bytes):
+def parse_git_push_preamble(payload: bytes) -> Any:
     decoded_data = payload.decode(errors="ignore")
     old_hash = new_hash = branch_name = None
     match = re.search(
@@ -80,15 +85,20 @@ class GitErrorRenderer(BaseRenderer):
 
     media_type = "*/*"
     format = "text"
-    charset = "iso-8859-1"
+    charset: str = "iso-8859-1"
 
-    def render(self, data, accepted_media_type=None, renderer_context=None):
+    def render(
+        self,
+        data: Any,
+        accepted_media_type: str | None = None,
+        renderer_context: Any | None = None,
+    ) -> Any:
         if isinstance(data, str):
             return data.encode(self.charset)
         return data
 
 
-class BaseGitProxyAPIView(GenericAPIView):
+class BaseGitProxyAPIView(GenericAPIView[Project]):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
     lookup_field = "id"
@@ -101,7 +111,7 @@ class BaseGitProxyAPIView(GenericAPIView):
         BearerAuthentication,
     ]
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._gitlab_instance = LazyString(
             lambda: Option.get_or_empty(name="GITLAB_HOST_URL")
@@ -113,7 +123,9 @@ class BaseGitProxyAPIView(GenericAPIView):
             lambda: Option.get_or_empty(name="GITLAB_GROUP_NAME")
         )
 
-    def proxy_git_request(self, request, path: str, query_params: dict | None = None):
+    def proxy_git_request(
+        self, request: Request, path: str, query_params: dict[str, Any] | None = None
+    ) -> StreamingHttpResponse:
         try:
             project = self.get_object()
             (old_hash, _), branch_name = parse_git_push_preamble(request.body)
@@ -142,7 +154,7 @@ class BaseGitProxyAPIView(GenericAPIView):
             for tentative_id in range(2):
                 data = None if request.method == "GET" else request.body
                 gitlab_response = requests.request(
-                    method=request.method,
+                    method=request.method,  # type: ignore[arg-type]
                     url=target_url,
                     headers=headers,
                     data=data,
@@ -156,8 +168,13 @@ class BaseGitProxyAPIView(GenericAPIView):
 
                 if tentative_id == 0:
                     GitlabManager.create_or_clone_project(project.id)
+            else:
+                return generate_git_error_response(
+                    "Impossible to connect with Gitlab distant server.",
+                    service_name=path,
+                )
 
-            def stream_response():
+            def stream_response() -> Generator[Any]:
                 for chunk in gitlab_response.iter_content(chunk_size=8192):
                     _chunk = chunk
                     if b"GitLab" in _chunk:
@@ -218,7 +235,7 @@ class BaseGitProxyAPIView(GenericAPIView):
 class InfoRefsView(BaseGitProxyAPIView):
     permission_classes = [UserHasReadAccess]
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> StreamingHttpResponse:
         git_service = request.query_params.get("service")
         if git_service not in [s.value for s in GitService]:
             return generate_git_error_response(
@@ -232,7 +249,7 @@ class InfoRefsView(BaseGitProxyAPIView):
 
 
 class RWServiceView(BaseGitProxyAPIView):
-    def handle_exception(self, exc):
+    def handle_exception(self, exc: BaseException) -> StreamingHttpResponse:  # type: ignore[override]
         if isinstance(exc, PermissionDenied):
             return generate_git_error_response(
                 "You do not have permission to access this resource.",
@@ -245,7 +262,9 @@ class RWServiceView(BaseGitProxyAPIView):
 class ReadServiceView(RWServiceView):
     permission_classes = [UserHasReadAccess]
 
-    def post(self, request, *args, **kwargs):
+    def post(
+        self, request: Request, *args: Any, **kwargs: Any
+    ) -> StreamingHttpResponse:
         git_service = "git-upload-pack"
         return self.proxy_git_request(request, path=git_service)
 
@@ -253,7 +272,9 @@ class ReadServiceView(RWServiceView):
 class WriteServiceView(RWServiceView):
     permission_classes = [UserHasWriteAccess]
 
-    def post(self, request, *args, **kwargs):
+    def post(
+        self, request: Request, *args: Any, **kwargs: Any
+    ) -> StreamingHttpResponse:
         git_service = "git-receive-pack"
 
         # Check for active mutex

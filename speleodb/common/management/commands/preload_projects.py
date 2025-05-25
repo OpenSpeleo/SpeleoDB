@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from typing import Any
 
 from django.core.management.base import BaseCommand
 
@@ -16,7 +17,7 @@ class Command(BaseCommand):
         "production servers to reduce user waiting time."
     )
 
-    def handle(self, *args, **kwargs) -> None:
+    def handle(self, *args: Any, **kwargs: Any) -> None:
         for project in Project.objects.all():
             logger.info(f"Processing Project: {project.id}")
             try:

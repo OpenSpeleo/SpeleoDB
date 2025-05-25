@@ -92,15 +92,19 @@ logger = logging.getLogger(__name__)
 
 
 class GitObjectMixin(metaclass=ABCMeta):
+    repo: GitRepo
+
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.abspath}>"
 
     @property
-    def commit(self):
+    def commit(self) -> GitCommit:
         for commit in self.repo.iter_commits(all=True, paths=self.path):
             with contextlib.suppress(KeyError):
                 item_path = str(self.path.parent).lstrip(".")
-                tree = commit.tree / item_path if item_path else commit.tree
+                tree: GitTree | GitFile = (
+                    (commit.tree / item_path) if item_path else commit.tree
+                )
                 if self.binsha in tree.binshas:
                     return commit
         raise FileNotFoundError

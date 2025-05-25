@@ -36,7 +36,7 @@ class ProjectTeamPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):
         team_permissions = project.team_permissions
 
         project_serializer = ProjectSerializer(project, context={"user": user})
-        permission_serializer = TeamPermissionListSerializer(team_permissions)
+        permission_serializer = TeamPermissionListSerializer(team_permissions)  # type: ignore[arg-type]
 
         return SuccessResponse(
             {

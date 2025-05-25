@@ -52,7 +52,8 @@ class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
             # Collect all the commits and sort them by date
             # Order: from most recent to oldest
             commits_serializer = GitCommitListSerializer(
-                commits, context={"project": project}
+                commits,  # type: ignore[arg-type]
+                context={"project": project},
             )
 
             serialized_commits = commits_serializer.data
@@ -100,7 +101,7 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
             )
 
             file_serializer = GitFileListSerializer(
-                [item for item in commit.tree.traverse() if isinstance(item, GitFile)],
+                [item for item in commit.tree.traverse() if isinstance(item, GitFile)],  # type: ignore[arg-type]
                 context={"project": project},
             )
 

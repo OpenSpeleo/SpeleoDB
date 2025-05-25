@@ -6,4 +6,5 @@
     ],
     "mypy-type-checker.reportingScope": "file",
     "mypy-type-checker.importStrategy": "fromEnvironment",
+    "python.analysis.autoImportCompletions": true,
 }
