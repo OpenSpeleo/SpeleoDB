@@ -8,7 +8,13 @@ from speleodb.users.models import User
 
 
 class BasePermissionModel(models.Model):
-    _level: models.IntegerField
+    # level: models.IntegerField  # type: ignore[arg-type]
+
+    # level = choicefield.ChoiceField
+
+    level = models.IntegerField(
+        choices=PermissionLevel.choices, default=PermissionLevel.READ_ONLY
+    )
 
     is_active = models.BooleanField(default=True)
 
@@ -16,10 +22,7 @@ class BasePermissionModel(models.Model):
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
     deactivated_by = models.ForeignKey(
-        User,
-        on_delete=models.RESTRICT,
-        null=True,
-        default=None,
+        User, on_delete=models.RESTRICT, null=True, default=None, blank=True
     )
 
     class Meta:
@@ -31,22 +34,6 @@ class BasePermissionModel(models.Model):
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
 
-    @property
-    def level_obj(self) -> PermissionLevel:
-        return PermissionLevel(self._level)
-
-    @level_obj.setter
-    def level_obj(self, value: PermissionLevel) -> None:
-        self._level = value
-
-    @property
-    def level(self) -> str:
-        return self.level_obj.label
-
-    @level.setter
-    def level(self, value: str) -> None:
-        self._level = PermissionLevel(value)
-
     def deactivate(self, deactivated_by: User) -> None:
         self.is_active = False
         self.deactivated_by = deactivated_by
@@ -55,5 +42,5 @@ class BasePermissionModel(models.Model):
     def reactivate(self, level: PermissionLevel) -> None:
         self.is_active = True
         self.deactivated_by = None
-        self.level_obj = level
+        self.level = level
         self.save()

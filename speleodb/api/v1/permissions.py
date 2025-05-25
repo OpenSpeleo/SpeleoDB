@@ -27,7 +27,7 @@ class BaseProjectAccessLevel(permissions.BasePermission):
     ) -> bool:
         try:
             user_access = (
-                obj.get_user_permission(user=request.user)._level  # noqa: SLF001
+                obj.get_user_permission(user=request.user).level
                 >= self.MIN_ACCESS_LEVEL
             )
         except ObjectDoesNotExist:
@@ -38,10 +38,7 @@ class BaseProjectAccessLevel(permissions.BasePermission):
 
         for team in request.user.teams:
             try:
-                if (
-                    obj.get_team_permission(team=team)._level  # noqa: SLF001
-                    >= self.MIN_ACCESS_LEVEL
-                ):
+                if obj.get_team_permission(team=team).level >= self.MIN_ACCESS_LEVEL:
                     return True
             except ObjectDoesNotExist:
                 continue

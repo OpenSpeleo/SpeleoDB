@@ -1,7 +1,10 @@
 import json
 import logging
 import uuid
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
+from typing import TypeVar
 
 import gitlab
 import gitlab.exceptions
@@ -22,9 +25,12 @@ class GitlabError(Exception):
     pass
 
 
-def check_initialized(func):
+RT = TypeVar("RT")
+
+
+def check_initialized(func: Callable[..., RT]) -> Callable[..., RT]:
     @wraps(func)
-    def _impl(self, *args, **kwargs):
+    def _impl(self: "GitlabManagerCls", *args: Any, **kwargs: Any) -> RT:
         if not self._is_initialized:
             try:
                 self._initialize()
@@ -44,7 +50,7 @@ def check_initialized(func):
     return _impl
 
 
-class _GitlabManager(metaclass=SingletonMetaClass):
+class GitlabManagerCls(metaclass=SingletonMetaClass):
     def __init__(self) -> None:
         self._is_initialized = False
         self._is_error = False
@@ -108,7 +114,7 @@ class _GitlabManager(metaclass=SingletonMetaClass):
 
             # Ensure the parent directory exists
             project_dir.parent.mkdir(exist_ok=True, parents=True)
-            return GitRepo.clone_from(url=git_url, to_path=project_dir)
+            return GitRepo.clone_from(url=git_url, to_path=project_dir)  # type: ignore[arg-type]
 
     # cache data for no longer than ten minutes
     @cached(cache=TTLCache(maxsize=100, ttl=600))
@@ -162,4 +168,4 @@ class _GitlabManager(metaclass=SingletonMetaClass):
             return None
 
 
-GitlabManager = _GitlabManager()
+GitlabManager: GitlabManagerCls = GitlabManagerCls()

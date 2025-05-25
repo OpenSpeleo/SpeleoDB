@@ -9,8 +9,6 @@ from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.http.response import HttpResponseRedirectBase
-from django.shortcuts import HttpResponsePermanentRedirect
-from django.shortcuts import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.urls import reverse_lazy
@@ -19,6 +17,7 @@ from rest_framework.authtoken.models import Token
 
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import TeamPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 from speleodb.utils.requests import AuthenticatedHttpRequest
@@ -31,17 +30,24 @@ class UserAccessLevel:
     level: PermissionLevel
     team: SurveyTeam | None = None
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.user, User):
+    def __init__(
+        self, user: User, level: PermissionLevel | int, team: SurveyTeam | None = None
+    ) -> None:
+        if not isinstance(user, User):
             raise TypeError(f"`user` must be of type User: `{type(self.user)}`")
+        self.user = user
 
+        self.level = (
+            PermissionLevel.from_value(level) if isinstance(level, int) else level
+        )
+        if not isinstance(self.level, PermissionLevel):
+            raise TypeError(type(self.level))
+
+        self.team = team
         if self.team is not None and not isinstance(self.team, SurveyTeam):
             raise TypeError(
                 f"`team` must be of type SurveyTeam | None: `{type(self.team)}`"
             )
-
-        if not isinstance(self.level, PermissionLevel):
-            raise TypeError(type(self.level))
 
 
 class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
@@ -118,11 +124,7 @@ class _BaseTeamView(_AuthenticatedTemplateView):
         self,
         request: AuthenticatedHttpRequest,
         team_id: int,
-    ) -> (
-        HttpResponseRedirect
-        | HttpResponsePermanentRedirect
-        | dict[str, SurveyTeam | bool]
-    ):
+    ) -> HttpResponseRedirectBase | dict[str, SurveyTeam | bool]:
         try:
             team = SurveyTeam.objects.get(id=team_id)
             if request.user and request.user.is_authenticated:
@@ -306,27 +308,28 @@ class ProjectUserPermissionsView(_BaseProjectView):
 
         # Collecting all the `user` aka. direct permissions of the project
         user_permissions = [
-            UserAccessLevel(user=perm.target, level=perm.level_obj)
+            UserAccessLevel(user=perm.target, level=perm.level)
             for perm in data["project"].user_permissions
         ]
 
-        filtered_team_permissions = []
+        filtered_team_permissions: list[UserAccessLevel] = []
 
         # Scanning through all the team memberships to collect users who get
         # project access via team permission.
-        team_permissions = data["project"].team_permissions
-        for team_permission in team_permissions:
-            for membership in team_permission.target.get_all_memberships():
-                filtered_team_permissions.append(  # noqa: PERF401
-                    UserAccessLevel(
-                        user=membership.user,
-                        level=team_permission.level_obj,
-                        team=team_permission.target,
-                    )
-                )
+        team_permissions: list[TeamPermission] = data["project"].team_permissions
+
+        filtered_team_permissions = [
+            UserAccessLevel(
+                user=membership.user,
+                level=team_permission.level,
+                team=team_permission.target,
+            )
+            for team_permission in team_permissions
+            for membership in team_permission.target.get_all_memberships()
+        ]
 
         # Keeping the best permission for each user
-        permission_map: dict[Any, Any] = {}
+        permission_map: dict[User, UserAccessLevel] = {}
         for permission in filtered_team_permissions:
             if (
                 permission.user not in permission_map

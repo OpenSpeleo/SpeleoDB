@@ -237,12 +237,14 @@ class InfoRefsView(BaseGitProxyAPIView):
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> StreamingHttpResponse:
         git_service = request.query_params.get("service")
-        if git_service not in [s.value for s in GitService]:
+
+        if git_service is None or git_service not in [s.value for s in GitService]:
             return generate_git_error_response(
                 f"Invalid service: `{git_service}`. "
                 f"Expected: {[s.value for s in GitService]}.",
-                service_name=git_service,
+                service_name=str(git_service),
             )
+
         return self.proxy_git_request(
             request, path="info/refs", query_params=request.query_params
         )

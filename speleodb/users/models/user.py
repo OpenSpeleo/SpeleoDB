@@ -33,13 +33,13 @@ def filter_permissions_by_best(
     Only one permission per project is being kept.
     """
 
-    # Step 1: Sort the permissions by project and then by _level in descending order
+    # Step 1: Sort the permissions by project and then by level in descending order
     sorted_permissions = sorted(
         permissions,
-        key=lambda perm: (perm.project.id, -perm._level),  # noqa: SLF001
+        key=lambda perm: (perm.project.id, -perm.level),
     )
 
-    # Step 2: Group by project and keep the first (highest _level) permission in each
+    # Step 2: Group by project and keep the first (highest level) permission in each
     #         group
     grouped_permissions = []
     for _, group in groupby(sorted_permissions, key=attrgetter("project")):
@@ -110,7 +110,8 @@ class User(AbstractUser):
         self,
     ) -> list[dict[str, Project | str]]:
         return [
-            {"project": perm.project, "level": perm.level} for perm in self.permissions
+            {"project": perm.project, "level": perm.level.label}
+            for perm in self.permissions
         ]
 
     @property

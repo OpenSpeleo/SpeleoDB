@@ -22,13 +22,17 @@ class TeamPermission(BasePermissionModel):
         on_delete=models.CASCADE,
     )
 
-    _level = models.IntegerField(
-        choices=PermissionLevel.choices_no_admin,
-        default=PermissionLevel.READ_ONLY,
-        verbose_name="level",
-    )
-
     class Meta:
         verbose_name = "Team Permission"
         verbose_name_plural = "Team Permissions"
         unique_together = ("target", "project")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    level__in=[
+                        v for v in PermissionLevel.values if v < PermissionLevel.ADMIN
+                    ]
+                ),
+                name="%(app_label)s_%(class)s_level_is_valid",
+            )
+        ]

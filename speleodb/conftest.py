@@ -5,8 +5,10 @@ import pathlib
 from collections.abc import Generator
 
 import pytest
+from _pytest.compat import LEGACY_PATH
 from django.apps import apps
 from dotenv import load_dotenv
+from pytest_django.fixtures import SettingsWrapper
 
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
@@ -24,27 +26,27 @@ def _load_test_env() -> None:
 
 
 @pytest.fixture(autouse=True)
-def _media_storage(settings, tmpdir) -> None:
+def _media_storage(settings: SettingsWrapper, tmpdir: LEGACY_PATH) -> None:
     settings.MEDIA_ROOT = tmpdir.strpath
 
 
 @pytest.fixture
-def user(db) -> User:
-    return UserFactory()
+def user(db: None) -> User:
+    return UserFactory.create()
 
 
 @pytest.fixture
-def project(db) -> Project:
-    return ProjectFactory(created_by=UserFactory())
+def project(db: None) -> Project:
+    return ProjectFactory.create(created_by=UserFactory())
 
 
 @pytest.fixture
-def team(db) -> SurveyTeam:
-    return SurveyTeamFactory()
+def team(db: None) -> SurveyTeam:
+    return SurveyTeamFactory.create()
 
 
 @pytest.fixture(autouse=True)
-def cleanup_database(db) -> Generator:
+def cleanup_database(db: None) -> Generator[None]:
     """
     Cleanup fixture that deletes all objects from the database after each test.
     Automatically applied to all tests that use the database.
@@ -52,4 +54,4 @@ def cleanup_database(db) -> Generator:
     yield  # Let the test run
     # Delete all objects from all models
     for model in apps.get_models():
-        model.objects.all().delete()
+        model.objects.all().delete()  # type: ignore[attr-defined]

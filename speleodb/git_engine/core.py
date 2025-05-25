@@ -485,7 +485,7 @@ class GitRepo(Repo):
         return cls(repo.working_dir)
 
     @classmethod
-    def clone_from(cls, *args: list[Any], **kwargs: dict[str, Any]) -> Self:
+    def clone_from(cls, *args: Any, **kwargs: Any) -> Self:
         for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
             repo = super().clone_from(*args, **kwargs)
             break
@@ -500,7 +500,7 @@ class GitRepo(Repo):
         return cls.from_repo(repo)
 
     @override
-    def __eq__(self, other: GitRepo | Repo) -> bool:
+    def __eq__(self, other: GitRepo | Repo) -> bool:  # type: ignore[override]
         if not isinstance(other, (GitRepo, Repo)):
             return False
 
@@ -513,17 +513,12 @@ class GitRepo(Repo):
     def path(self) -> pathlib.Path:
         return pathlib.Path(self.working_dir)
 
-    @override
     @property
-    def branches(self) -> dict[str, str]:
-        branches = {}
-        for ref in self.branches:
-            branches[ref.name] = ref.commit.hexsha
-        return branches
+    def branches(self) -> dict[str, str]:  # type: ignore[override]
+        return {ref.name: ref.commit.hexsha for ref in self.branches}
 
-    @override
     @property
-    def description(self) -> str:
+    def description(self) -> str | None:  # type: ignore[override]
         try:
             return self.description
         except OSError:
@@ -579,7 +574,7 @@ class GitRepo(Repo):
         )
 
     @property
-    def tree(self) -> GitTree:
+    def tree(self) -> GitTree:  # type: ignore[override]
         return GitTree.from_tree(tree=super().tree())
 
     @property
@@ -591,10 +586,10 @@ class GitRepo(Repo):
         return GitHead(self, "HEAD")
 
     @classmethod
-    def init(cls, path: pathlib.Path) -> Self:
+    def init(cls, path: pathlib.Path) -> Self:  # type: ignore[override]
         if path.exists():
             raise FileExistsError
-        return super().init(path=path)
+        return cls.from_repo(super().init(path=path))
 
     def pull(self) -> None:
         origin = self.remotes.origin
@@ -633,7 +628,7 @@ class GitRepo(Repo):
     def checkout_default_branch(self) -> None:
         self._checkout_branch_or_commit(branch_name=settings.DJANGO_GIT_BRANCH_NAME)
 
-    def checkout_commit(self, hexsha) -> None:
+    def checkout_commit(self, hexsha: str) -> None:
         self._checkout_branch_or_commit(hexsha=hexsha)
 
     def commit_and_push_project(
@@ -679,7 +674,7 @@ class GitRepo(Repo):
         target_commit = self.commit("HEAD")
 
         # Step 2: Reset HEAD to the target commit
-        self.head.reference = target_commit
+        self.head.reference = target_commit  # type: ignore[assignment]
         self.head.reset(index=True, working_tree=True)
 
         # Step 3: Remove untracked files and directories manually
@@ -704,7 +699,7 @@ class GitRepo(Repo):
         # Create an initial empty commit
         self.commit_and_push_project(
             settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE,
-            author_name=GIT_COMMITTER.name,
-            author_email=GIT_COMMITTER.email,
+            author_name=settings.DJANGO_GIT_COMMITTER_NAME,
+            author_email=settings.DJANGO_GIT_COMMITTER_EMAIL,
             force_empty_commit=True,
         )

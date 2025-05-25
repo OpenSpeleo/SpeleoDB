@@ -9,3 +9,7 @@ class BaseIntegerChoices(models.IntegerChoices):
         value = getattr(cls, value)
         assert isinstance(value, cls)
         return value
+
+    @classmethod
+    def from_value(cls, value: int) -> Self:
+        return cls._value2member_map_[value]  # type: ignore[return-value]

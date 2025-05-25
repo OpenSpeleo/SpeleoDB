@@ -16,7 +16,7 @@ from speleodb.users.models import User
 from speleodb.utils.serializer_fields import CustomChoiceField
 
 
-class UserField(serializers.RelatedField):
+class UserField(serializers.RelatedField[User, User, str]):
     def to_representation(self, value: User) -> str:
         return value.email
 

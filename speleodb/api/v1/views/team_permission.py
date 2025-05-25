@@ -18,6 +18,7 @@ from speleodb.api.v1.serializers import TeamPermissionListSerializer
 from speleodb.api.v1.serializers import TeamPermissionSerializer
 from speleodb.api.v1.serializers import TeamRequestSerializer
 from speleodb.api.v1.serializers import TeamRequestWithProjectLevelSerializer
+from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -99,8 +100,8 @@ class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        team = serializer.validated_data["team"]
-        access_level = serializer.validated_data["level"]
+        team: str = serializer.validated_data["team"]
+        access_level: str = serializer.validated_data["level"]
 
         project = self.get_object()
         permission, created = TeamPermission.objects.get_or_create(
@@ -119,7 +120,7 @@ class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
                 )
 
             # Reactivate permission
-            permission.reactivate(level=access_level)
+            permission.reactivate(level=PermissionLevel.from_str(access_level))
             permission.save()
 
         else:

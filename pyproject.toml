@@ -28,6 +28,7 @@ dependencies = [
   "django==5.1.8",                        # https://www.djangoproject.com/
   "django-allauth==65.7.0",               # https://github.com/pennersr/django-allauth
   "django-celery-beat==2.7.0",            # https://github.com/celery/django-celery-beat
+  "django-choicefield==0.2.3",            # https://github.com/flaeppe/django-choicefield
   "django-compressor==4.5.1",             # https://github.com/django-compressor/django-compressor
   "django-countries==7.6.1",              # https://github.com/SmileyChris/django-countries/
   "django-dynamic-raw-id==4.4",           # https://github.com/lincolnloop/django-dynamic-raw-id
@@ -56,25 +57,30 @@ local = [
 
   # Testing
   # ------------------------------------------------------------------------------
-  "deepdiff>=7.0,<9.0",               # https://github.com/seperman/deepdiff
-  "factory-boy==3.3.3",               # https://github.com/FactoryBoy/factory_boy
-  "mypy==1.15.0",                     # https://github.com/python/mypy
-  "parameterized==0.9.0",             # https://github.com/wolever/parameterized
-  "pytest-dotenv==0.5.2",             # https://github.com/quiqua/pytest-dotenv
-  "pytest-env==1.1.5",                # https://github.com/pytest-dev/pytest-env
-  "pytest-sugar==1.0.0",              # https://github.com/Frozenball/pytest-sugar
-  "pytest==8.3.5",                    # https://github.com/pytest-dev/pytest
+  "deepdiff>=7.0,<9.0",   # https://github.com/seperman/deepdiff
+  "factory-boy==3.3.3",   # https://github.com/FactoryBoy/factory_boy
+  "mypy==1.15.0",         # https://github.com/python/mypy
+  "parameterized==0.9.0", # https://github.com/wolever/parameterized
+  "pytest-dotenv==0.5.2", # https://github.com/quiqua/pytest-dotenv
+  "pytest-env==1.1.5",    # https://github.com/pytest-dev/pytest-env
+  "pytest-sugar==1.0.0",  # https://github.com/Frozenball/pytest-sugar
+  "pytest==8.3.5",        # https://github.com/pytest-dev/pytest
+
+  # Typing
+  # ------------------------------------------------------------------------------
+  "djangorestframework-stubs[compatible-mypy]==3.15.3", # https://github.com/typeddjango/djangorestframework-stubs
+  "django-stubs[compatible-mypy]==5.1.3",               # https://github.com/typeddjango/django-stubs
+  "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
+  # "django-types==0.20.0",             # https://github.com/sbdchd/django-types
+  # "djangorestframework-types==0.9.0", # https://github.com/sbdchd/djangorestframework-types
   "types-cachetools==5.5.0.20240820", # https://github.com/python/typeshed
-  "types-pytz==2025.2.0.20250516",    # https://github.com/python/typeshed
   "types-factory-boy==0.4.1",         # https://github.com/youtux/types-factory-boy
+  "types-pytz==2025.2.0.20250516",    # https://github.com/python/typeshed
 
   # Django Testing
   # ------------------------------------------------------------------------------
-  "django-coverage-plugin==3.1.0",                      # https://github.com/nedbat/django_coverage_plugin
-  "django-types==0.20.0",                               # https://github.com/sbdchd/django-types
-  "django-stubs[compatible-mypy]==5.1.3",               # https://github.com/typeddjango/django-stubs
-  "djangorestframework-stubs[compatible-mypy]==3.15.3", # https://github.com/typeddjango/djangorestframework-stubs
-  "pytest-django==4.11.1",                              # https://github.com/pytest-dev/pytest-django
+  "django-coverage-plugin==3.1.0", # https://github.com/nedbat/django_coverage_plugin
+  "pytest-django==4.11.1",         # https://github.com/pytest-dev/pytest-django
 
   # Documentation
   # ------------------------------------------------------------------------------
@@ -137,7 +143,9 @@ exclude = [
   "~/.cache",
 ]
 check_untyped_defs = true
-ignore_missing_imports = true
+# ignore_missing_imports = true
+disable_error_code = "method-assign"
+follow_untyped_imports = true
 plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
 python_version = "3.13"
 scripts_are_modules = true

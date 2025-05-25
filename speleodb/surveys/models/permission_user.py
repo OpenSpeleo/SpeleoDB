@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 from django.db import models
 
 from speleodb.surveys.models import Project
 from speleodb.surveys.models.permission_base import BasePermissionModel
-from speleodb.surveys.models.permission_lvl import PermissionLevel
 from speleodb.users.models import User
 
 
@@ -21,12 +19,6 @@ class UserPermission(BasePermissionModel):
         Project,
         related_name="rel_user_permissions",
         on_delete=models.CASCADE,
-    )
-
-    _level = models.IntegerField(
-        choices=PermissionLevel.choices,
-        default=PermissionLevel.READ_ONLY,
-        verbose_name="level",
     )
 
     class Meta:

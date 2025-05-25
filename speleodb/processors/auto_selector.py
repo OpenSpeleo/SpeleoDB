@@ -8,7 +8,7 @@ from speleodb.processors._impl.compass import DATFileProcessor
 from speleodb.processors._impl.compass import MAKFileProcessor
 from speleodb.processors._impl.dump import DumpProcessor
 
-from speleodb.processors.base import Artifact
+from speleodb.processors.artifact import Artifact
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project

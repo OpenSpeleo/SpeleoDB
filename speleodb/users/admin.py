@@ -24,7 +24,7 @@ if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
 
 
 @admin.register(User)
-class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):  # type: ignore[misc]
+class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):  # type: ignore[type-arg]
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm
     fieldsets = (
@@ -81,25 +81,25 @@ admin.site.unregister(EmailAddress)
 
 @admin.register(EmailAddress)
 class EmailAddressAdmin(DynamicRawIDMixin, _EmailAddressAdmin):
-    dynamic_raw_id_fields = ("user",)
-    raw_id_fields = ()
+    dynamic_raw_id_fields: tuple[str] = ("user",)  # type: ignore[assignment]
+    raw_id_fields: tuple[()] = ()  # type: ignore[assignment]
 
-    def get_form(
+    def get_form(  # type: ignore[override]
         self, request: HttpRequest, obj: EmailAddress | None = None, **kwargs: Any
-    ) -> type[ModelForm]:
+    ) -> type[ModelForm]:  # type: ignore[type-arg]
         form = super().get_form(request, obj, **kwargs)
         form.base_fields["user"].widget.attrs["style"] = "width: 20em;"  # pyright: ignore[reportAttributeAccessIssue]
         return form
 
 
 @admin.register(SurveyTeam)
-class SurveyTeamAdmin(admin.ModelAdmin):
+class SurveyTeamAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = ("name", "creation_date", "modified_date")
     ordering = ("name",)
 
 
 @admin.register(SurveyTeamMembership)
-class SurveyTeamMembershipAdmin(admin.ModelAdmin):
+class SurveyTeamMembershipAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "team",
         "user",

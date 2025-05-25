@@ -206,7 +206,7 @@ class Project(models.Model):
             with contextlib.suppress(ObjectDoesNotExist):
                 permissions.append(self.get_team_permission(team))
 
-        return sorted(permissions, key=lambda perm: perm._level, reverse=True)[0]  # noqa: SLF001
+        return sorted(permissions, key=lambda perm: perm.level, reverse=True)[0]  # noqa: SLF001
 
     def get_user_permission(self, user: User) -> UserPermission:
         return self.rel_user_permissions.get(target=user, is_active=True)
@@ -217,13 +217,13 @@ class Project(models.Model):
     @property
     def user_permissions(self) -> models.QuerySet[UserPermission]:
         return self.rel_user_permissions.filter(is_active=True).order_by(
-            "-_level", "target__email"
+            "-level", "target__email"
         )
 
     @property
     def team_permissions(self) -> models.QuerySet[TeamPermission]:
         return self.rel_team_permissions.filter(is_active=True).order_by(
-            "-_level", "target__name"
+            "-level", "target__name"
         )
 
     @property
@@ -253,25 +253,29 @@ class Project(models.Model):
         users = list(set(users))
         return len(users)
 
-    def _has_user_permission(self, user: User, permission) -> bool:
+    def _has_user_permission(self, user: User, permission: PermissionLevel) -> bool:
         if not isinstance(permission, PermissionLevel):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
 
         try:
-            return self.get_user_permission(user=user)._level >= permission  # noqa: SLF001
+            return self.get_user_permission(user=user).level >= permission  # noqa: SLF001
         except ObjectDoesNotExist:
             return False
 
-    def _has_team_permission(self, team: SurveyTeam, permission) -> bool:
+    def _has_team_permission(
+        self, team: SurveyTeam, permission: PermissionLevel
+    ) -> bool:
         if not isinstance(permission, PermissionLevel):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
 
         try:
-            return self.get_team_permission(team=team)._level >= permission  # noqa: SLF001
+            return self.get_team_permission(team=team).level >= permission  # noqa: SLF001
         except ObjectDoesNotExist:
             return False
 
-    def _has_permission(self, target: User | SurveyTeam, permission) -> bool:
+    def _has_permission(
+        self, target: User | SurveyTeam, permission: PermissionLevel
+    ) -> bool:
         if isinstance(target, User):
             return self._has_user_permission(user=target, permission=permission)
         if isinstance(target, SurveyTeam):
@@ -298,8 +302,8 @@ class Project(models.Model):
         return self._has_user_permission(user, permission=PermissionLevel.ADMIN)
 
     @property
-    def git_repo_dir(self):
-        return (settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)).resolve()
+    def git_repo_dir(self) -> pathlib.Path:
+        return pathlib.Path(settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)).resolve()
 
     @property
     def git_repo(self) -> GitRepo:
