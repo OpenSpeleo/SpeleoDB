@@ -28,7 +28,7 @@ def datetime_of_struct_time(st: time.struct_time) -> datetime.datetime:
 def time_struct_since(time_struct: time.struct_time) -> str:
     dt = datetime_of_struct_time(time_struct)
     dt_now = timezone.now()
-    return timeago.format(dt, dt_now)  # type: ignore[no-any-return]
+    return timeago.format(dt, dt_now)  # type: ignore[no-any-return,no-untyped-call]
 
 
 @register.filter(name="time_struct_format")

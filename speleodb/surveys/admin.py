@@ -44,7 +44,7 @@ class MutexAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def get_queryset(self, request: HttpRequest) -> QuerySet[Any, Any]:
         # Annotate the queryset with project name for sorting
         qs = super().get_queryset(request)
-        return qs.annotate(project_name=F("project__name"))
+        return qs.annotate(project_name=F("project__name"))  # type: ignore[no-any-return]
 
     @admin.display(ordering="project_name")
     def project_name(self, obj: Mutex) -> str:

@@ -1,6 +1,7 @@
 import hashlib
 import random
 import uuid
+from typing import Any
 
 import pytest
 from django.urls import resolve
@@ -72,7 +73,7 @@ from django.urls import reverse
         ),
     ],
 )
-def test_routes(name: str, path: str, kwargs: dict | None) -> None:
+def test_routes(name: str, path: str, kwargs: Any) -> None:
     path = f"/private/{path}" if kwargs is None else f"/private/{path.format(**kwargs)}"
 
     # Test reverse URL generation

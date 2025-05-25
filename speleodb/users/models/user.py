@@ -110,7 +110,7 @@ class User(AbstractUser):
         self,
     ) -> list[dict[str, Project | str]]:
         return [
-            {"project": perm.project, "level": perm.level.label}
+            {"project": perm.project, "level": perm.level_label}
             for perm in self.permissions
         ]
 

@@ -32,6 +32,6 @@ class UserSerializer(serializers.ModelSerializer[User]):
         email = validated_data.pop("email", None)
         if email is not None and email != request.user.email:
             validate_email(email)
-            EmailAddress.objects.add_new_email(request, request.user, email)  # pyright: ignore[reportAttributeAccessIssue]
+            EmailAddress.objects.add_new_email(request, request.user, email)  # type: ignore[no-untyped-call]
 
         return super().update(instance, validated_data)

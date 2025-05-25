@@ -158,6 +158,11 @@ disallow_untyped_calls = false
 allow_untyped_calls = true
 
 [[tool.mypy.overrides]]
+# Django settings use libraries that don't provide stubs (django-environ)
+disable_error_code = "no-untyped-call"
+
+module = "config.settings.*"
+[[tool.mypy.overrides]]
 # Django migrations should not produce any errors:
 module = "*.migrations.*"
 ignore_errors = true

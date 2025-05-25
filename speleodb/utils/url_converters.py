@@ -14,7 +14,7 @@ def register_converter(type_name: str) -> Callable[[type[object]], Any]:
     Decorator to register a custom path converter with a given type_name.z
     """
 
-    def decorator(cls: type[object]) -> Any:
+    def decorator(cls: type[Any]) -> Any:
         _register_converter(cls, type_name)
         return cls
 

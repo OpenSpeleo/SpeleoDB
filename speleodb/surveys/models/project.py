@@ -72,7 +72,7 @@ class Project(models.Model):
         default=None,
     )
 
-    created_by = models.ForeignKey[User | None](
+    created_by = models.ForeignKey(
         User,
         related_name="rel_projects_created",
         on_delete=models.SET_NULL,
@@ -328,9 +328,14 @@ class Project(models.Model):
     @property
     def commit_history(self) -> list[GitCommit]:
         try:
+            if (
+                commit_history := GitlabManager.get_commit_history(project_id=self.id)
+            ) is None:
+                return []
+
             commits = [
                 commit
-                for commit in GitlabManager.get_commit_history(project_id=self.id)
+                for commit in commit_history
                 if commit["message"] != settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
             ]
             if isinstance(commits, (list, tuple)):

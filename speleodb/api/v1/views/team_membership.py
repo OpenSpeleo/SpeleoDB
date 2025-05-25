@@ -219,9 +219,9 @@ class TeamMembershipListApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         team: SurveyTeam = self.get_object()
         user = self.get_user()
-        membership_list = SurveyTeamMembership.objects.filter(team=team, is_active=True)
+        team_mbrshps = SurveyTeamMembership.objects.filter(team=team, is_active=True)
 
-        membership_serializer = SurveyTeamMembershipListSerializer(membership_list)
+        membership_serializer = SurveyTeamMembershipListSerializer(team_mbrshps)  # type: ignore[arg-type]
         team_serializer = SurveyTeamSerializer(team, context={"user": user})
 
         return SuccessResponse(

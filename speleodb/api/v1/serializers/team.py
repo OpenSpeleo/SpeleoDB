@@ -12,7 +12,7 @@ from speleodb.users.models import SurveyTeamMembership
 from speleodb.utils.serializer_fields import CustomChoiceField
 
 
-class SurveyTeamSerializer(serializers.ModelSerializer):
+class SurveyTeamSerializer(serializers.ModelSerializer[SurveyTeam]):
     country = CustomChoiceField(choices=list(countries))
     role = serializers.SerializerMethodField()
 
@@ -64,5 +64,7 @@ class SurveyTeamMembershipSerializer(serializers.ModelSerializer[SurveyTeamMembe
         model = SurveyTeamMembership
 
 
-class SurveyTeamMembershipListSerializer(serializers.ListSerializer):
+class SurveyTeamMembershipListSerializer(
+    serializers.ListSerializer[SurveyTeamMembershipSerializer]
+):
     child = SurveyTeamMembershipSerializer()

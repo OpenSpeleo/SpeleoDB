@@ -7,7 +7,7 @@ from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
 
 
-class UserRequestSerializer(serializers.Serializer):
+class UserRequestSerializer(serializers.Serializer[User]):
     user = serializers.EmailField()
 
     def validate_user(self, value: str) -> User:
@@ -43,7 +43,7 @@ class UserRequestWithTeamRoleSerializer(UserRequestSerializer):
         return SurveyTeamMembership.Role.from_str(value.upper())
 
 
-class TeamRequestSerializer(serializers.Serializer):
+class TeamRequestSerializer(serializers.Serializer[SurveyTeam]):
     team = serializers.IntegerField()
 
     def validate_team(self, value: int) -> SurveyTeam:

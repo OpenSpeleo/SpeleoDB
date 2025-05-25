@@ -7,7 +7,7 @@ register = template.Library()
 
 @register.simple_tag
 def get_user_permission_levels() -> list[PermissionLevel]:
-    return PermissionLevel.members
+    return PermissionLevel.members  # type: ignore[arg-type,return-value]
 
 
 @register.simple_tag

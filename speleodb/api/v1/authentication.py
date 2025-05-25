@@ -44,7 +44,7 @@ class GitOAuth2Authentication(BasicAuthentication):
     Specific for git `oauth2:<token>` authentication scheme.
     """
 
-    model = None
+    model: type[Token] | None = None
 
     def get_model(self) -> type[Token]:
         if self.model is not None:
