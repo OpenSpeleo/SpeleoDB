@@ -2,4 +2,8 @@
 providers = ['python']
 
 [variables]
-PIP_DISABLE_PIP_VERSION_CHECK = '1'    # the pip update notification is relatively useless in a production environment
+PIP_DISABLE_PIP_VERSION_CHECK = "1"    # the pip update notification is relatively useless in a production environment
+NIXPACKS_UV_VERSION = "0.7.8"
+
+[phases.install]
+cmds = ["uv sync --extra production --frozen"]
