@@ -403,7 +403,9 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
                 temp_filepath = pathlib.Path(temp_file.name)
 
                 try:
-                    filename = processor.get_file_for_download(target_f=temp_filepath)
+                    filename = processor.get_filename_for_download(
+                        target_f=temp_filepath
+                    )
                 except ValidationError:
                     return ErrorResponse(
                         {

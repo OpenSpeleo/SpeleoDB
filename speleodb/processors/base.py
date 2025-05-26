@@ -98,8 +98,8 @@ class BaseFileProcessor:
     ASSOC_FILEFORMAT = Format.FileFormat.OTHER
 
     TARGET_FOLDER = "misc"
-    TARGET_SAVE_FILENAME = None
-    TARGET_DOWNLOAD_FILENAME = None
+    TARGET_SAVE_FILENAME: str | None = None
+    TARGET_DOWNLOAD_FILENAME: str | None = None
 
     DATETIME_FORMAT = "%Y-%m-%d_%Hh%M"
 
@@ -125,7 +125,7 @@ class BaseFileProcessor:
         return self._hexsha
 
     @hexsha.setter
-    def hexsha(self, value: str) -> None:
+    def hexsha(self, value: str | None) -> None:
         if value is not None and not self.validate_hexsha(value):
             raise ValueError(f"Invalid Git SHA value: `{value}`.")
 
@@ -133,6 +133,8 @@ class BaseFileProcessor:
 
     @property
     def source_f(self) -> Path:
+        # if self.TARGET_SAVE_FILENAME is None:
+        #     raise
         source_f = self.project.git_repo.path / self.TARGET_SAVE_FILENAME
         if not source_f.is_file():
             raise ValidationError(f"Impossible to find the file: `{source_f}` ...")
@@ -149,7 +151,7 @@ class BaseFileProcessor:
         git_sha_pattern = r"^[a-fA-F0-9]{4,40}$"
 
         # Return True if the hexsha matches the pattern, else False
-        return bool(re.match(git_sha_pattern, hexsha))
+        return bool(re.fullmatch(git_sha_pattern, hexsha))
 
     # ----------------------------- Public APIs ----------------------------- #
 
@@ -165,7 +167,7 @@ class BaseFileProcessor:
 
         return self._add_file_to_project(artifact=artifact)
 
-    def get_file_for_download(self, target_f: Path) -> Path:
+    def get_filename_for_download(self, target_f: Path) -> str:
         if not isinstance(target_f, Path):
             target_f = Path(target_f)
 
@@ -208,14 +210,13 @@ class BaseFileProcessor:
         tz_aware_datetime = naive_datetime.astimezone(tz=get_default_timezone())
 
         # 5. Generate the filename that will be seen in the browser
-        return (
-            self.TARGET_DOWNLOAD_FILENAME.format(
+        if self.TARGET_DOWNLOAD_FILENAME is not None:
+            return self.TARGET_DOWNLOAD_FILENAME.format(
                 project_name=slugify(self.project.name, allow_unicode=False).lower(),
                 timestamp=tz_aware_datetime.strftime(self.DATETIME_FORMAT),
             )
-            if self.TARGET_DOWNLOAD_FILENAME is not None
-            else target_f.name
-        )
+
+        return target_f.name
 
     # ----------------------------- Private APIs ----------------------------- #
 
@@ -230,12 +231,12 @@ class BaseFileProcessor:
     # ~~~~~~~~~~~~~ Upload APIs ~~~~~~~~~~~~~ #
 
     @property
-    def folder(self):
+    def folder(self) -> Path:
         """If needed, the corresponding folder will be created."""
 
         folder = self.project.git_repo.path
         if self.TARGET_FOLDER is not None:
-            folder: Path = folder / self.TARGET_FOLDER
+            folder = folder / self.TARGET_FOLDER
             folder.mkdir(parents=True, exist_ok=True)
 
         return folder
@@ -245,7 +246,7 @@ class BaseFileProcessor:
 
         filename = self._validate_and_get_storage_name(artifact=artifact)
 
-        return self.folder / filename
+        return Path(self.folder / filename)
 
     def _validate_and_get_storage_name(self, artifact: Artifact) -> str:
         """This generates the filename to be used while stored in git.
@@ -264,11 +265,14 @@ class BaseFileProcessor:
         return self._get_storage_name(artifact=artifact)
 
     def _get_storage_name(self, artifact: Artifact) -> str:
-        return (
+        ret_value = (
             self.TARGET_SAVE_FILENAME
             if self.TARGET_SAVE_FILENAME is not None
             else artifact.name
         )
+        if ret_value is None:
+            raise ValueError("Artifact name is undefined.")
+        return ret_value
 
     def _add_file_to_project(self, artifact: Artifact) -> Artifact | Path | list[Path]:
         target_path = self._get_storage_path(artifact=artifact)
