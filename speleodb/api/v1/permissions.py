@@ -3,39 +3,42 @@
 
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
+from rest_framework.request import Request
+from rest_framework.views import APIView
 
+from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
 from speleodb.users.models.team import SurveyTeam
 from speleodb.users.models.team import SurveyTeamMembership
+from speleodb.utils.requests import AuthenticatedDRFRequest
 
 
 class BaseProjectAccessLevel(permissions.BasePermission):
-    MIN_ACCESS_USER_LEVEL = None
-    MIN_ACCESS_TEAM_LEVEL = None
+    MIN_ACCESS_LEVEL: int
 
-    def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return bool(request.user and request.user.is_authenticated)
 
-    def has_object_permission(self, request, view, obj: Project) -> bool:
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: Project,
+    ) -> bool:
         try:
             user_access = (
-                obj.get_user_permission(user=request.user)._level  # noqa: SLF001
-                >= self.MIN_ACCESS_USER_LEVEL
+                obj.get_user_permission(user=request.user).level
+                >= self.MIN_ACCESS_LEVEL
             )
         except ObjectDoesNotExist:
             user_access = False
 
-        if user_access or self.MIN_ACCESS_TEAM_LEVEL is None:
+        if user_access or self.MIN_ACCESS_LEVEL is None:
             return user_access
 
         for team in request.user.teams:
             try:
-                if (
-                    obj.get_team_permission(team=team)._level  # noqa: SLF001
-                    >= self.MIN_ACCESS_TEAM_LEVEL
-                ):
+                if obj.get_team_permission(team=team).level >= self.MIN_ACCESS_LEVEL:
                     return True
             except ObjectDoesNotExist:
                 continue
@@ -43,31 +46,33 @@ class BaseProjectAccessLevel(permissions.BasePermission):
 
 
 class UserHasAdminAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_USER_LEVEL = UserPermission.Level.ADMIN
+    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
 
 
 class UserHasWriteAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_USER_LEVEL = UserPermission.Level.READ_AND_WRITE
-    MIN_ACCESS_TEAM_LEVEL = TeamPermission.Level.READ_AND_WRITE
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
 
 
 class UserHasReadAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_USER_LEVEL = UserPermission.Level.READ_ONLY
-    MIN_ACCESS_TEAM_LEVEL = TeamPermission.Level.READ_ONLY
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
 
 
 class BaseTeamAccessLevel(permissions.BasePermission):
-    MIN_ACCESS_LEVEL = None
+    MIN_ACCESS_LEVEL: int
 
-    def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return bool(request.user and request.user.is_authenticated)
 
-    def has_object_permission(self, request, view, obj: SurveyTeam) -> bool:
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: SurveyTeam,
+    ) -> bool:
         try:
             membership = obj.get_membership(user=request.user)
             return (
-                membership._role >= self.MIN_ACCESS_LEVEL  # noqa: SLF001
-                and membership.is_active
+                membership.role.value >= self.MIN_ACCESS_LEVEL and membership.is_active
             )
         except ObjectDoesNotExist:
             return False
@@ -82,20 +87,25 @@ class UserHasMemberAccess(BaseTeamAccessLevel):
 
 
 class IsReadOnly(permissions.BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: APIView) -> bool:
         return request.method in permissions.SAFE_METHODS
 
 
 class IsObjectCreation(permissions.BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: APIView) -> bool:
         return request.method == "POST"
 
 
 class UserOwnsProjectMutex(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return bool(request.user and request.user.is_authenticated)
 
-    def has_object_permission(self, request, view, obj: Project):
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: Project,
+    ) -> bool:
         mutex = obj.active_mutex
 
         if mutex is None:

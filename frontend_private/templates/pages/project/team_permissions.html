@@ -3,6 +3,7 @@
 
 {% load countries %}
 {% load set_var %}
+{% load str_format %}
 
 {% block right_panel %}
 
@@ -89,30 +90,28 @@
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="text-center">
-                                        <div class="font-medium text-slate-100 underline"><a href="{% url 'private:team_memberships' team_id=permission.target.id %}">{{ permission.target.name }}</a></div>
+                                        <div class="font-medium text-slate-100 underline">
+                                            <a href="{% url 'private:team_memberships' team_id=permission.target.id %}">{{ permission.target.name }}</a>
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="text-center">
-                                        {% if permission.level == "READ_ONLY" %}
+                                        {% if permission.level == 0 %}
                                         <div class="inline-flex font-medium bg-slate-700 text-slate-300 rounded-full text-center px-2.5 py-0.5">
-                                            Read Only
-                                        </div>
-                                        {% elif permission.level == "READ_AND_WRITE" %}
+                                        {% elif permission.level == 1 %}
                                         <div class="inline-flex font-medium bg-indigo-500/30 text-indigo-300 rounded-full text-center px-2.5 py-1 py-0.5">
-                                            Read And Write
-                                        </div>
                                         {% else %}
                                         <div class="inline-flex font-medium bg-rose-500/30 text-rose-400 rounded-full text-center px-2.5 py-0.5">
-                                            Unknown
-                                        </div>
                                         {% endif %}
+                                        {{ permission.level_label|normalize }}
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
 
                                     <!-- Edit Link -->
-                                    <span class="cursor-pointer {% if is_project_admin %}btn_open_edit_perm" data-team-name="{{permission.target.name}}" data-team="{{permission.target.id}}" data-level="{{permission.level}}{% endif %}">
+                                    <span class="cursor-pointer {% if is_project_admin %}btn_open_edit_perm" data-team-name="{{permission.target.name}}" data-team="{{permission.target.id}}" data-level="{{permission.level_label}}{% endif %}">
                                         <svg xmlns="http://www.w3.org/2000/svg"
                                             class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if is_project_admin %}text-amber-500{% else %}text-slate-500{% endif %} inline"
                                             viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"

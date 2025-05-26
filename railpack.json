@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "python",
+  "packages": {
+    "python": "3.13"
+  },
+  "steps": {
+    "install": {
+      "inputs": [
+        {
+          "step": "packages:mise"
+        }
+      ],
+      "commands": [
+        {
+          "path": "/root/.local/bin"
+        },
+        {
+          "path": "/app/.venv/bin"
+        },
+        {
+          "cmd": "pipx install uv"
+        },
+        {
+          "src": "pyproject.toml",
+          "dest": "pyproject.toml"
+        },
+        {
+          "src": "uv.lock",
+          "dest": "uv.lock"
+        },
+        {
+          "cmd": "uv sync --extra production --frozen"
+        }
+      ],
+      "caches": [
+        "uv"
+      ],
+      "variables": {
+        "PIP_DEFAULT_TIMEOUT": "100",
+        "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONFAULTHANDLER": "1",
+        "PYTHONHASHSEED": "random",
+        "PYTHONUNBUFFERED": "1",
+        "RAILPACK_DEPLOY_APT_PACKAGES": "git",
+        "UV_CACHE_DIR": "/opt/uv-cache",
+        "UV_COMPILE_BYTECODE": "1",
+        "UV_LINK_MODE": "copy",
+        "UV_PYTHON_DOWNLOADS": "never",
+        "VIRTUAL_ENV": "/app/.venv"
+      }
+    }
+  },
+  "deploy": {
+    "aptPackages": ["git", "libpq5"]
+  }
+}

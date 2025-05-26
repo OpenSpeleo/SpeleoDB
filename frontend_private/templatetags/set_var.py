@@ -1,14 +1,17 @@
+from typing import Any
+
 from django import template
 
 register = template.Library()
 
 
 class SetVarNode(template.Node):
-    def __init__(self, var_name, var_value):
+    def __init__(self, var_name: str, var_value: Any) -> None:
         self.var_name = var_name
         self.var_value = var_value
 
-    def render(self, context):
+    def render(self, context: template.Context) -> str:
+        super().render(context)
         try:
             value = template.Variable(self.var_value).resolve(context)
         except template.VariableDoesNotExist:
@@ -18,7 +21,7 @@ class SetVarNode(template.Node):
 
 
 @register.tag("set")
-def set_var(parser, token):
+def set_var(parser: template.base.Parser, token: template.base.Token) -> SetVarNode:
     """
     {% set <var_name>  = <var_value> %}
     """

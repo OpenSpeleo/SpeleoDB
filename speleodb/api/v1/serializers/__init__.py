@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# flake8: noqa
-
+from speleodb.api.v1.serializers.authtoken import AuthTokenSerializer
+from speleodb.api.v1.serializers.file import UploadSerializer
 from speleodb.api.v1.serializers.git import GitCommitListSerializer
 from speleodb.api.v1.serializers.git import GitCommitSerializer
-from speleodb.api.v1.serializers.git import GitFileSerializer
 from speleodb.api.v1.serializers.git import GitFileListSerializer
-from speleodb.api.v1.serializers.file import UploadSerializer
+from speleodb.api.v1.serializers.git import GitFileSerializer
 from speleodb.api.v1.serializers.password import PasswordChangeSerializer
 from speleodb.api.v1.serializers.permissions import TeamPermissionListSerializer
 from speleodb.api.v1.serializers.permissions import TeamPermissionSerializer
@@ -26,5 +25,28 @@ from speleodb.api.v1.serializers.team import SurveyTeamListSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamMembershipListSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamMembershipSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamSerializer
-from speleodb.api.v1.serializers.authtoken import AuthTokenSerializer
 from speleodb.api.v1.serializers.user import UserSerializer
+
+__all__ = [
+    "AuthTokenSerializer",
+    "GitCommitListSerializer",
+    "GitCommitSerializer",
+    "GitFileListSerializer",
+    "GitFileSerializer",
+    "PasswordChangeSerializer",
+    "ProjectSerializer",
+    "SurveyTeamListSerializer",
+    "SurveyTeamMembershipListSerializer",
+    "SurveyTeamMembershipSerializer",
+    "SurveyTeamSerializer",
+    "TeamPermissionListSerializer",
+    "TeamPermissionSerializer",
+    "TeamRequestSerializer",
+    "TeamRequestWithProjectLevelSerializer",
+    "UploadSerializer",
+    "UserPermissionListSerializer",
+    "UserPermissionSerializer",
+    "UserRequestSerializer",
+    "UserRequestWithTeamRoleSerializer",
+    "UserSerializer",
+]

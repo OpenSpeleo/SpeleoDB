@@ -3,14 +3,17 @@ from __future__ import annotations
 import binascii
 import contextlib
 import logging
+import os
 import pathlib
 import time
 from abc import ABCMeta
 from abc import abstractmethod
 from io import BytesIO
+from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Self
+from typing import override
 
 import git
 from django.conf import settings
@@ -29,12 +32,16 @@ from speleodb.git_engine.exceptions import GitPathNotFoundError
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from git.types import Commit_ish
+
 GIT_COMMITTER = git.Actor(
     settings.DJANGO_GIT_COMMITTER_NAME,
     settings.DJANGO_GIT_COMMITTER_EMAIL,
 )
 
 logger = logging.getLogger(__name__)
+
+type PathLike = str | os.PathLike[str]
 
 # class GitBlob(Blob):
 #     def __init__(
@@ -86,17 +93,34 @@ logger = logging.getLogger(__name__)
 
 
 class GitObjectMixin(metaclass=ABCMeta):
+    repo: GitRepo
+
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.abspath}>"
 
     @property
-    def commit(self):
+    def abspath(self) -> PathLike:
+        raise NotImplementedError
+
+    @property
+    def commit(self) -> GitCommit:
         for commit in self.repo.iter_commits(all=True, paths=self.path):
             with contextlib.suppress(KeyError):
                 item_path = str(self.path.parent).lstrip(".")
-                tree = commit.tree / item_path if item_path else commit.tree
-                if self.binsha in tree.binshas:
-                    return commit
+                file_or_tree: GitTree | GitFile = (
+                    (commit.tree / item_path) if item_path else commit.tree
+                )
+                if isinstance(file_or_tree, GitFile):
+                    if self.binsha == file_or_tree.binsha:
+                        return commit
+                elif isinstance(file_or_tree, GitTree):
+                    if self.binsha in file_or_tree.binshas:
+                        return commit
+                else:
+                    raise TypeError(
+                        f"Expected GitFile or GitTree - Received: {type(file_or_tree)=}"
+                    )
+
         raise FileNotFoundError
 
     @property
@@ -122,9 +146,8 @@ class GitFile(GitObjectMixin):
         self._repo = GitRepo.from_repo(repo) if not isinstance(repo, GitRepo) else repo
 
     @classmethod
-    def from_hexsha(cls, repo: GitRepo, hexsha: str) -> Self:
-        blob = repo.blob(hexsha)
-        return cls(repo=repo, blob=blob)
+    def from_hexsha(cls, repo: GitRepo, hexsha: str) -> GitFile:
+        return repo.find_blob(hexsha)
 
     @property
     def repo(self) -> GitRepo:
@@ -144,7 +167,7 @@ class GitFile(GitObjectMixin):
 
     @property
     def content(self) -> BytesIO:
-        data = BytesIO(self.blob.data_stream.read())
+        data = BytesIO(self.blob.data_stream.read())  # type: ignore[no-untyped-call]
         data.name = self.name
         return data
 
@@ -153,8 +176,8 @@ class GitFile(GitObjectMixin):
         return self.blob.name
 
     @property
-    def abspath(self) -> pathlib.Path:
-        return pathlib.Path(self.blob.abspath)
+    def abspath(self) -> PathLike:
+        return self.blob.abspath
 
     @property
     def path(self) -> pathlib.Path:
@@ -182,7 +205,7 @@ class GitFile(GitObjectMixin):
 
 
 class GitDir(GitObjectMixin):
-    def __init__(self, tree: Tree | GitTree, parent: Self | None = None):
+    def __init__(self, tree: Tree | GitTree, parent: Self | None = None) -> None:
         self._tree = tree if isinstance(tree, GitTree) else GitTree.from_tree(tree)
         self._parent = parent
 
@@ -206,11 +229,11 @@ class GitDir(GitObjectMixin):
     @property
     def root_files(self) -> Generator[GitFile]:
         for blob in self.tree.blobs:
-            if blob.path.parent == ".":
+            if str(Path(blob.path).parent) == ".":
                 yield GitFile(repo=self.tree.repo, blob=blob)
 
     @property
-    def subdirs(self) -> Generator[Self]:
+    def subdirs(self) -> Generator[GitDir]:
         for sub_tree in self.tree.trees:
             yield GitDir(sub_tree)
 
@@ -221,13 +244,13 @@ class GitDir(GitObjectMixin):
 
 class GitTree(Tree, GitObjectMixin):
     @classmethod
-    def from_tree(cls, tree) -> Self:
+    def from_tree(cls, tree: Tree) -> Self:
         if not isinstance(tree, Tree):
             return TypeError(f"Expected `git.Tree` type, received: {type(tree)}")
 
         return cls(repo=tree.repo, binsha=tree.binsha, mode=tree.mode, path=tree.path)
 
-    @property
+    @property  # type: ignore[override]
     def repo(self) -> GitRepo:
         if not isinstance(self._repo, GitRepo):
             return GitRepo.from_repo(self._repo)
@@ -260,7 +283,7 @@ class GitTree(Tree, GitObjectMixin):
             case _:
                 return item
 
-    def __truediv__(self, path: str | pathlib.Path) -> GitTree | GitFile | Any:
+    def __truediv__(self, path: str | pathlib.Path) -> GitTree | GitFile | Any:  # type: ignore[override]
         """
         Overload the '/' operator to support custom path traversal.
         Special handling for '/' as the root.
@@ -268,20 +291,20 @@ class GitTree(Tree, GitObjectMixin):
         path = str(path) if isinstance(path, pathlib.Path) else path
         return self._cast_to_type(super().__truediv__(path))
 
-    def _iter_convert_to_object(
-        self, iterable: list
-    ) -> Generator[GitTree, GitFile, Any]:
+    def _iter_convert_to_object(  # type: ignore[override]
+        self, iterable: list[Any]
+    ) -> Generator[GitTree | GitFile | Any]:
         """Iterable yields tuples of (binsha, mode, name), which will be converted to
         the respective object representation.
         """
         for item in super()._iter_convert_to_object(iterable=iterable):
             yield self._cast_to_type(item)
 
-    def __getitem__(self, item: Blob | Tree | Any) -> GitFile | GitTree | Any:
-        return self._cast_to_type(super().__getitem__(item=item))
+    def __getitem__(self, item: Blob | Tree | Any) -> GitFile | GitTree | Any:  # type: ignore[override]
+        return self._cast_to_type(super().__getitem__(item))  # type: ignore[index]
 
     @property
-    def root(self) -> Generator[GitDir, GitFile]:
+    def root(self) -> Generator[GitDir | GitFile]:
         """Retreive the root tree"""
         for sub_tree in self.trees:
             yield GitDir(sub_tree)
@@ -291,18 +314,30 @@ class GitTree(Tree, GitObjectMixin):
 
     def get_file(self, path: pathlib.Path) -> GitFile:
         try:
-            blob = self[path]
-            return GitFile(repo=self.repo, blob=blob)
-        except KeyError as e:
-            raise GitPathNotFoundError("Path:" + path + " not found") from e
+            match obj := self[str(path)]:
+                case GitFile():
+                    return obj
+                case Blob():
+                    return GitFile(repo=self.repo, blob=obj)
+                case _:
+                    raise TypeError(f"Unsupported type received: {type(obj)=}")
 
-    def __get_tree_files__(self, tree: GitTree, recursive=True) -> Generator[GitFile]:
+        except KeyError as e:
+            raise GitPathNotFoundError(f"Path: {path} not found") from e
+
+    def __get_tree_files__(
+        self, tree: GitTree, recursive: bool = True
+    ) -> Generator[GitFile]:
         for blob in tree.blobs:
             yield GitFile(repo=self.repo, blob=blob)
 
         if recursive:
             for subtree in tree.trees:
                 yield from self.__get_tree_files__(subtree, recursive=True)
+
+    @property
+    def trees(self) -> list[GitTree]:  # type: ignore[override]
+        return [GitTree.from_tree(tree) for tree in super().trees]
 
     @property
     def files(self) -> Generator[GitFile]:
@@ -336,11 +371,11 @@ class GitTree(Tree, GitObjectMixin):
     def binsha(self, value: bytes) -> None:
         self._binsha = value
 
-    def traverse(self, *args, **kwargs) -> Generator[GitFile]:
-        yield from super().traverse(*args, **kwargs)
+    def traverse(self, *args: Any, **kwargs: Any) -> Generator[GitFile, GitTree]:  # type: ignore[override]
+        yield from super().traverse(*args, **kwargs)  # type: ignore[misc]
 
     def scandir(self) -> Generator[GitFile, GitTree]:
-        yield from self
+        yield from self  # type: ignore[misc]
 
 
 class GitCommit(Commit):
@@ -361,17 +396,15 @@ class GitCommit(Commit):
         """
         return self.hexsha[:7]
 
-    @property
+    @property  # type: ignore[override]
     def repo(self) -> GitRepo:
-        if not isinstance(self._repo, GitRepo):
-            self._repo = GitRepo.from_repo(self._repo)
+        # if not isinstance(self._repo, GitRepo):
+        #     self._repo = GitRepo.from_repo(self._repo)
         return self._repo
 
     @repo.setter
-    def repo(self, value):
-        if not isinstance(value, GitRepo):
-            value = GitRepo.from_repo(value)
-        self._repo = value
+    def repo(self, repo: Repo | GitRepo) -> None:
+        self._repo = repo if isinstance(repo, GitRepo) else GitRepo.from_repo(repo)
 
     @property
     def changes(self) -> Generator[git.Diff]:
@@ -379,17 +412,17 @@ class GitCommit(Commit):
 
         with contextlib.suppress(IndexError):
             pc = self.repo.commit(self.parents[0])
-            return pc.diff(other=self)
+            yield from pc.diff(other=self)
 
-        for fl in self.tree.files:
+        for git_f in self.tree.files:
             yield git.Diff(
                 repo=self.repo,
                 a_rawpath=None,
-                b_rawpath=fl.blob.path,
+                b_rawpath=str(git_f.blob.path).encode(),
                 a_blob_id=None,
-                b_blob_id=fl.blob.hexsha,
+                b_blob_id=git_f.blob.hexsha,
                 a_mode=None,
-                b_mode=str(fl.blob.mode),
+                b_mode=str(git_f.blob.mode),
                 new_file=True,
                 deleted_file=False,
                 copied_file=False,
@@ -400,7 +433,7 @@ class GitCommit(Commit):
                 score=None,
             )
 
-    @property
+    @property  # type: ignore[override]
     def tree(self) -> GitTree:
         if isinstance(self._tree, GitTree):
             return self._tree
@@ -419,9 +452,9 @@ class GitCommit(Commit):
     @property
     def branches(self) -> list[str]:
         return [
-            branch.name
-            for branch in self.repo.branches
-            if branch.commit.hexsha == self.hexsha
+            branch_name
+            for branch_name, hexsha in self.repo.branches.items()
+            if hexsha == self.hexsha
         ]
 
     @property
@@ -439,7 +472,7 @@ class GitCommit(Commit):
 
 class GitHead(HEAD):
     @property
-    def commit(self) -> GitCommit:
+    def commit(self) -> GitCommit:  # type: ignore[override]
         return GitCommit(repo=self.repo, binsha=super().commit.binsha)
 
 
@@ -465,10 +498,12 @@ class GitRepo(Repo):
 
     @classmethod
     def from_repo(cls, repo: Repo) -> Self:
+        if not isinstance(repo, Repo):
+            raise TypeError(f"Expected `Repo` type - Received: {type(repo)}")
         return cls(repo.working_dir)
 
     @classmethod
-    def clone_from(cls, *args, **kwargs) -> Self:
+    def clone_from(cls, *args: Any, **kwargs: Any) -> Self:
         for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
             repo = super().clone_from(*args, **kwargs)
             break
@@ -482,7 +517,8 @@ class GitRepo(Repo):
 
         return cls.from_repo(repo)
 
-    def __eq__(self, other: GitRepo | Repo) -> bool:
+    @override
+    def __eq__(self, other: GitRepo | Repo) -> bool:  # type: ignore[override]
         if not isinstance(other, (GitRepo, Repo)):
             return False
 
@@ -496,20 +532,18 @@ class GitRepo(Repo):
         return pathlib.Path(self.working_dir)
 
     @property
-    def branches(self) -> dict[str, str]:
-        branches = {}
-        for ref in self.branches:
-            branches[ref.name] = ref.commit.hexsha
-        return branches
+    def branches(self) -> dict[str, str]:  # type: ignore[override]
+        return {ref.name: ref.commit.hexsha for ref in super().branches}
 
     @property
-    def description(self) -> str:
+    def description(self) -> str | None:  # type: ignore[override]
         try:
             return self.description
         except OSError:
             return None
 
-    def commit(self, rev=None) -> GitCommit:
+    @override
+    def commit(self, rev: Commit_ish | str | None = None) -> GitCommit:
         if rev is None:
             return self.head.commit
         """Retrieve a GitCommit object represent single commit from reporistory"""
@@ -522,7 +556,12 @@ class GitRepo(Repo):
                 yield commit
 
     def get_commits(
-        self, num=None, since=None, until=None, branch=None, path=None
+        self,
+        num: int | None = None,
+        since: str | None = None,
+        until: str | None = None,
+        branch: str | None = None,
+        path: str | Path | None = None,
     ) -> Generator[GitCommit]:
         """Retrieve the commits of repository
         Args:
@@ -532,7 +571,7 @@ class GitRepo(Repo):
         Returns:
             A list of Commit object
         """
-        params = {}
+        params: dict[str, str | int] = {}
         if since:
             params["since"] = since
 
@@ -544,12 +583,12 @@ class GitRepo(Repo):
 
         yield from self.iter_commits(rev=branch, paths=path, **params)
 
-    def iter_commits(self, *args, **kwargs) -> Generator[GitCommit]:
+    def iter_commits(self, *args: Any, **kwargs: Any) -> Generator[GitCommit]:
         for commit in super().iter_commits(*args, **kwargs):
             yield GitCommit(repo=self, binsha=commit.binsha)
 
     @property
-    def commit_count(self):
+    def commit_count(self) -> int:
         # Memoery efficient to compute the length of a generator
         return sum(
             1
@@ -558,7 +597,7 @@ class GitRepo(Repo):
         )
 
     @property
-    def tree(self) -> GitTree:
+    def tree(self) -> GitTree:  # type: ignore[override]
         return GitTree.from_tree(tree=super().tree())
 
     @property
@@ -570,10 +609,10 @@ class GitRepo(Repo):
         return GitHead(self, "HEAD")
 
     @classmethod
-    def init(cls, path: pathlib.Path) -> Self:
+    def init(cls, path: pathlib.Path) -> Self:  # type: ignore[override]
         if path.exists():
             raise FileExistsError
-        return super().init(path=path)
+        return cls.from_repo(super().init(path=path))
 
     def pull(self) -> None:
         origin = self.remotes.origin
@@ -612,7 +651,7 @@ class GitRepo(Repo):
     def checkout_default_branch(self) -> None:
         self._checkout_branch_or_commit(branch_name=settings.DJANGO_GIT_BRANCH_NAME)
 
-    def checkout_commit(self, hexsha) -> None:
+    def checkout_commit(self, hexsha: str) -> None:
         self._checkout_branch_or_commit(hexsha=hexsha)
 
     def commit_and_push_project(
@@ -653,12 +692,12 @@ class GitRepo(Repo):
 
         raise GitBlobNotFoundError(f"Git Object with id `{hexsha}` not found.")
 
-    def reset_and_remove_untracked(self):
+    def reset_and_remove_untracked(self) -> None:
         # Step 1: Get the commit object to reset to
         target_commit = self.commit("HEAD")
 
         # Step 2: Reset HEAD to the target commit
-        self.head.reference = target_commit
+        self.head.reference = target_commit  # type: ignore[assignment]
         self.head.reset(index=True, working_tree=True)
 
         # Step 3: Remove untracked files and directories manually
@@ -679,11 +718,11 @@ class GitRepo(Repo):
             with contextlib.suppress(OSError):
                 dir_path.rmdir()
 
-    def publish_first_commit(self):
+    def publish_first_commit(self) -> None:
         # Create an initial empty commit
         self.commit_and_push_project(
             settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE,
-            author_name=GIT_COMMITTER.name,
-            author_email=GIT_COMMITTER.email,
+            author_name=settings.DJANGO_GIT_COMMITTER_NAME,
+            author_email=settings.DJANGO_GIT_COMMITTER_EMAIL,
             force_empty_commit=True,
         )

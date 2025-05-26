@@ -8,6 +8,6 @@ class SurveysConfig(AppConfig):
     name = "speleodb.surveys"
     verbose_name = "Surveys"
 
-    def ready(self):
+    def ready(self) -> None:
         with contextlib.suppress(ImportError):
             import speleodb.users.signals  # type: ignore # noqa: F401, PGH003

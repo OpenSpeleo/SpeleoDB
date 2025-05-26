@@ -1,29 +1,25 @@
 from django.conf import settings
 from django.urls import reverse
-from parameterized import parameterized
+from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.utils import is_subset
-from speleodb.surveys.models import AnyPermissionLevel
 from speleodb.surveys.models import Mutex
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
+from speleodb.surveys.models import PermissionLevel
 
 
 class TestProjectInteraction(BaseAPIProjectTestCase):
     @parameterized.expand(
         [
-            UserPermission.Level.ADMIN,
-            UserPermission.Level.READ_AND_WRITE,
-            UserPermission.Level.READ_ONLY,
-            TeamPermission.Level.READ_AND_WRITE,
-            TeamPermission.Level.READ_ONLY,
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
         ]
     )
-    def test_get_user_project(self, level: AnyPermissionLevel):
+    def test_get_user_project(self, level: PermissionLevel) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
@@ -82,12 +78,11 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
     @parameterized.expand(
         [
-            UserPermission.Level.ADMIN,
-            UserPermission.Level.READ_AND_WRITE,
-            TeamPermission.Level.READ_AND_WRITE,
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
         ]
     )
-    def test_acquire_and_release_user_project(self, level: AnyPermissionLevel):
+    def test_acquire_and_release_user_project(self, level: PermissionLevel) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
@@ -156,16 +151,10 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             }
             assert response.data["data"]["active_mutex"] is None, response.data
 
-    @parameterized.expand(
-        [
-            UserPermission.Level.ADMIN,
-            UserPermission.Level.READ_AND_WRITE,
-            TeamPermission.Level.READ_AND_WRITE,
-        ]
-    )
+    @parameterized.expand([PermissionLevel.ADMIN, PermissionLevel.READ_AND_WRITE])
     def test_acquire_and_release_user_project_with_comment(
-        self, level: AnyPermissionLevel
-    ):
+        self, level: PermissionLevel
+    ) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
@@ -203,7 +192,8 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
         # =================== RELEASE PROJECT =================== #
 
-        mutex: Mutex = self.project.active_mutex
+        mutex: Mutex | None = self.project.active_mutex
+        assert mutex is not None
 
         test_comment = "hello world"
 
@@ -239,11 +229,10 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
     @parameterized.expand(
         [
-            UserPermission.Level.READ_ONLY,
-            TeamPermission.Level.READ_ONLY,
+            PermissionLevel.READ_ONLY,
         ]
     )
-    def test_fail_acquire_readonly_project(self, level: AnyPermissionLevel):
+    def test_fail_acquire_readonly_project(self, level: PermissionLevel) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
@@ -262,11 +251,10 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
     @parameterized.expand(
         [
-            UserPermission.Level.READ_ONLY,
-            TeamPermission.Level.READ_ONLY,
+            PermissionLevel.READ_ONLY,
         ]
     )
-    def test_fail_release_readonly_project(self, level: AnyPermissionLevel):
+    def test_fail_release_readonly_project(self, level: PermissionLevel) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
@@ -286,7 +274,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
 class TestProjectCreation(BaseAPITestCase):
     @parameterized.expand([True, False])
-    def test_create_project(self, use_lat_long: bool):
+    def test_create_project(self, use_lat_long: bool) -> None:
         data = {
             "name": "My Cool Project",
             "description": "A super cool project",
@@ -309,7 +297,7 @@ class TestProjectCreation(BaseAPITestCase):
         assert is_subset(data, response.data["data"]), response.data
 
     @parameterized.expand(["longitude", "latitude"])
-    def test_create_project_failure_with_only_one_geo(self, geokey: str):
+    def test_create_project_failure_with_only_one_geo(self, geokey: str) -> None:
         data = {
             "name": "My Cool Project",
             "description": "A super cool project",
@@ -332,7 +320,7 @@ class TestProjectCreation(BaseAPITestCase):
             in response.data["errors"]["non_field_errors"]
         ), response.data
 
-    def test_create_project_failure_with_non_existing_country(self):
+    def test_create_project_failure_with_non_existing_country(self) -> None:
         data = {
             "name": "My Cool Project",
             "description": "A super cool project",
@@ -354,7 +342,9 @@ class TestProjectCreation(BaseAPITestCase):
         )
 
     @parameterized.expand(["name", "description", "country"])
-    def test_create_project_failure_with_missing_data(self, missing_param_key: str):
+    def test_create_project_failure_with_missing_data(
+        self, missing_param_key: str
+    ) -> None:
         data = {
             "name": "My Cool Project",
             "description": "A super cool project",

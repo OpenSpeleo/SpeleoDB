@@ -1,15 +1,22 @@
 from collections.abc import Callable
-from typing import Any
 from typing import Generic
 from typing import TypeVar
 
 T = TypeVar("T")
-R = TypeVar("R")
+RT = TypeVar("RT")
 
 
-class classproperty(Generic[T, R]):  # noqa: N801
-    def __init__(self, func: Callable[[type[T]], R]) -> None:
-        self.func = func
+class _ClassPropertyDescriptor(Generic[T, RT]):
+    def __init__(self, fget: Callable[[type[T]], RT]) -> None:
+        self.fget = fget
 
-    def __get__(self, obj: Any, cls: type[T]) -> R:
-        return self.func(cls)
+    def __get__(self, instance: T | None, owner: type[T] | None = None, /) -> RT:
+        if owner is None:
+            if instance is None:
+                raise ValueError
+            owner = type(instance)
+        return self.fget(owner)
+
+
+def classproperty(func: Callable[[T], RT]) -> _ClassPropertyDescriptor[T, RT]:
+    return _ClassPropertyDescriptor(func)  # type: ignore[arg-type]

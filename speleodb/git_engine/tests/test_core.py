@@ -14,7 +14,7 @@ from speleodb.git_engine.core import GitRepo
 
 
 class NewRepoTest(TestCase):
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         with tempfile.TemporaryDirectory() as _dir:
             git_path = pathlib.Path(_dir) / "torch"
 
@@ -44,14 +44,14 @@ class CloneRepoTest(TestCase):
         shutil.rmtree(self.git_dir.name)
         return super().tearDown()
 
-    def test_clone(self):
+    def test_clone(self) -> None:
         assert self.repo.path == self.git_path
 
         hexsha = self.repo.head.commit.hexsha
         assert isinstance(hexsha, str)
         assert hexsha != ""
 
-    def test_read_changes(self):
+    def test_read_changes(self) -> None:
         changes = self.repo.head.commit.changes
         assert isinstance(changes, types.GeneratorType)
 

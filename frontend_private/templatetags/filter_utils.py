@@ -28,7 +28,7 @@ def datetime_of_struct_time(st: time.struct_time) -> datetime.datetime:
 def time_struct_since(time_struct: time.struct_time) -> str:
     dt = datetime_of_struct_time(time_struct)
     dt_now = timezone.now()
-    return timeago.format(dt, dt_now)
+    return timeago.format(dt, dt_now)  # type: ignore[no-any-return,no-untyped-call]
 
 
 @register.filter(name="time_struct_format")
@@ -38,13 +38,13 @@ def time_struct_format(time_struct: time.struct_time) -> str:
 
 
 @register.filter(name="format_byte_size")
-def format_byte_size(size_bytes) -> str:
+def format_byte_size(size_bytes: int) -> str:
     if size_bytes == 0:
         return "0 B"
 
     size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
 
-    i = int(math.floor(math.log(size_bytes, 1000)))
+    i = math.floor(math.log(size_bytes, 1000))
     p = math.pow(1000, i)
     s = round(size_bytes / p, 2)
 

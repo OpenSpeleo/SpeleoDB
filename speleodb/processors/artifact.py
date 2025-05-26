@@ -6,23 +6,27 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 
 from speleodb.utils.exceptions import FileRejectedError
 
+type UploadedFile = InMemoryUploadedFile | TemporaryUploadedFile
+
 
 class Artifact:
-    def __init__(self, file: InMemoryUploadedFile | TemporaryUploadedFile) -> None:
+    _file: UploadedFile
+    _path: Path | None = None
+
+    def __init__(self, file: UploadedFile) -> None:
         if not isinstance(file, (InMemoryUploadedFile, TemporaryUploadedFile)):
             raise TypeError(
                 "Expected `InMemoryUploadedFile` or `TemporaryUploadedFile`, received: "
                 f"{type(file)}"
             )
         self._file = file
-        self._path = None
 
     @property
-    def file(self) -> InMemoryUploadedFile | TemporaryUploadedFile:
+    def file(self) -> UploadedFile:
         return self._file
 
     @property
-    def name(self) -> str:
+    def name(self) -> str | None:
         return self._file.name
 
     @property
@@ -34,15 +38,15 @@ class Artifact:
         return self._path
 
     @property
-    def extension(self) -> str:
-        return Path(self.name).suffix.lower()
+    def extension(self) -> str | None:
+        return Path(self.name).suffix.lower() if self.name is not None else None
 
     @property
     def content_type(self) -> str | None:
         return self.file.content_type
 
-    def read(self) -> str:
-        return self.file.read()
+    def read(self) -> bytes:
+        return self.file.read()  # type: ignore[no-any-return]
 
     def write(self, path: Path) -> None:
         if self._path is not None:

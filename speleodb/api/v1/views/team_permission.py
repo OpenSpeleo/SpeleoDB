@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from typing import Any
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import UserHasAdminAccess
@@ -14,23 +18,26 @@ from speleodb.api.v1.serializers import TeamPermissionListSerializer
 from speleodb.api.v1.serializers import TeamPermissionSerializer
 from speleodb.api.v1.serializers import TeamRequestSerializer
 from speleodb.api.v1.serializers import TeamRequestWithProjectLevelSerializer
+from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
+from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 
-class ProjectTeamPermissionListView(GenericAPIView):
+class ProjectTeamPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     lookup_field = "id"
 
-    def get(self, request, *args, **kwargs):
-        project: Project = self.get_object()
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        project = self.get_object()
+        user = self.get_user()
         team_permissions = project.team_permissions
 
-        project_serializer = ProjectSerializer(project, context={"user": request.user})
-        permission_serializer = TeamPermissionListSerializer(team_permissions)
+        project_serializer = ProjectSerializer(project, context={"user": user})
+        permission_serializer = TeamPermissionListSerializer(team_permissions)  # type: ignore[arg-type]
 
         return SuccessResponse(
             {
@@ -40,13 +47,14 @@ class ProjectTeamPermissionListView(GenericAPIView):
         )
 
 
-class ProjectTeamPermissionView(GenericAPIView):
+class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasAdminAccess | (IsReadOnly & UserHasReadAccess)]
     lookup_field = "id"
 
-    def get(self, request, *args, **kwargs):
-        project: Project = self.get_object()
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        project = self.get_object()
+        user = self.get_user()
 
         serializer = TeamRequestSerializer(data=request.data)
 
@@ -68,8 +76,8 @@ class ProjectTeamPermissionView(GenericAPIView):
             )
 
         permission_serializer = TeamPermissionSerializer(permission)
-        project_serializer = ProjectSerializer(project, context={"user": request.user})
-        team_serializer = SurveyTeamSerializer(team, context={"user": request.user})
+        project_serializer = ProjectSerializer(project, context={"user": user})
+        team_serializer = SurveyTeamSerializer(team, context={"user": user})
 
         return SuccessResponse(
             {
@@ -80,9 +88,10 @@ class ProjectTeamPermissionView(GenericAPIView):
             status=status.HTTP_200_OK,
         )
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         serializer = TeamRequestWithProjectLevelSerializer(
-            data=request.data, context={"requesting_user": request.user}
+            data=request.data, context={"requesting_user": user}
         )
 
         if not serializer.is_valid():
@@ -91,10 +100,10 @@ class ProjectTeamPermissionView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        team = serializer.validated_data["team"]
-        access_level = serializer.validated_data["level"]
+        team: str = serializer.validated_data["team"]
+        access_level: str = serializer.validated_data["level"]
 
-        project: Project = self.get_object()
+        project = self.get_object()
         permission, created = TeamPermission.objects.get_or_create(
             project=project, target=team
         )
@@ -111,7 +120,7 @@ class ProjectTeamPermissionView(GenericAPIView):
                 )
 
             # Reactivate permission
-            permission.reactivate(level=access_level)
+            permission.reactivate(level=PermissionLevel.from_str(access_level))
             permission.save()
 
         else:
@@ -124,7 +133,7 @@ class ProjectTeamPermissionView(GenericAPIView):
         project.save()
 
         permission_serializer = TeamPermissionSerializer(permission)
-        project_serializer = ProjectSerializer(project, context={"user": request.user})
+        project_serializer = ProjectSerializer(project, context={"user": user})
 
         return SuccessResponse(
             {
@@ -134,9 +143,10 @@ class ProjectTeamPermissionView(GenericAPIView):
             status=status.HTTP_201_CREATED,
         )
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         serializer = TeamRequestWithProjectLevelSerializer(
-            data=request.data, context={"requesting_user": request.user}
+            data=request.data, context={"requesting_user": user}
         )
 
         if not serializer.is_valid():
@@ -148,7 +158,7 @@ class ProjectTeamPermissionView(GenericAPIView):
         team = serializer.validated_data["team"]
         access_level = serializer.validated_data["level"]
 
-        project: Project = self.get_object()
+        project = self.get_object()
         try:
             permission = TeamPermission.objects.get(project=project, target=team)
         except ObjectDoesNotExist:
@@ -175,7 +185,7 @@ class ProjectTeamPermissionView(GenericAPIView):
         project.save()
 
         permission_serializer = TeamPermissionSerializer(permission)
-        project_serializer = ProjectSerializer(project, context={"user": request.user})
+        project_serializer = ProjectSerializer(project, context={"user": user})
 
         return SuccessResponse(
             {
@@ -185,7 +195,8 @@ class ProjectTeamPermissionView(GenericAPIView):
             status=status.HTTP_200_OK,
         )
 
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
         serializer = TeamRequestSerializer(data=request.data)
 
         if not serializer.is_valid():
@@ -195,7 +206,7 @@ class ProjectTeamPermissionView(GenericAPIView):
             )
 
         team = serializer.validated_data["team"]
-        project: Project = self.get_object()
+        project = self.get_object()
         try:
             permission = TeamPermission.objects.get(project=project, target=team)
 
@@ -206,13 +217,13 @@ class ProjectTeamPermissionView(GenericAPIView):
             )
 
         # Deactivate the project permission
-        permission.deactivate(deactivated_by=request.user)
+        permission.deactivate(deactivated_by=user)
         permission.save()
 
         # Refresh the `modified_date` field
         project.save()
 
-        project_serializer = ProjectSerializer(project, context={"user": request.user})
+        project_serializer = ProjectSerializer(project, context={"user": user})
 
         return SuccessResponse(
             {
