@@ -3,10 +3,13 @@
 
 import contextlib
 import logging
+from typing import Any
 
 from gitdb.exc import BadName as GitRevBadName
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.serializers import GitCommitListSerializer
@@ -18,35 +21,39 @@ from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.exceptions import GitCommitNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
+from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 logger = logging.getLogger(__name__)
 
 
-class ProjectRevisionsApiView(GenericAPIView):
+class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def get(self, request, *args, **kwargs):
-        project: Project = self.get_object()
-        serializer = self.get_serializer(project, context={"user": request.user})
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
+        project = self.get_object()
+        serializer = self.get_serializer(project, context={"user": user})
 
         commits = None
+        serialized_commits: list[dict[str, Any]] = []
         with contextlib.suppress(ValueError):
             # Checkout default branch and pull repository
             try:
                 project.git_repo.checkout_default_branch()
-                commits = project.git_repo.commits
+                commits = list(project.git_repo.commits)
             except GitBaseError:
                 commits = []
 
             # Collect all the commits and sort them by date
             # Order: from most recent to oldest
             commits_serializer = GitCommitListSerializer(
-                commits, context={"project": project}
+                commits,  # type: ignore[arg-type]
+                context={"project": project},
             )
 
             serialized_commits = commits_serializer.data
@@ -64,14 +71,15 @@ class ProjectRevisionsApiView(GenericAPIView):
             )
 
 
-class ProjectGitExplorerApiView(GenericAPIView):
+class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def get(self, request, hexsha: str, *args, **kwargs):
-        project: Project = self.get_object()
+    def get(self, request: Request, hexsha: str, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
+        project = self.get_object()
         try:
             # Checkout default branch and pull repository
             try:
@@ -93,13 +101,13 @@ class ProjectGitExplorerApiView(GenericAPIView):
             )
 
             file_serializer = GitFileListSerializer(
-                [item for item in commit.tree.traverse() if isinstance(item, GitFile)],
+                [item for item in commit.tree.traverse() if isinstance(item, GitFile)],  # type: ignore[arg-type]
                 context={"project": project},
             )
 
             # Important to be done last so that the repo is actualized
             project_serializer = self.get_serializer(
-                project, context={"user": request.user, "n_commits": True}
+                project, context={"user": user, "n_commits": True}
             )
 
             return SuccessResponse(

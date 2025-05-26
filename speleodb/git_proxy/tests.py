@@ -6,7 +6,7 @@ from speleodb.api.v1.tests.factories import UserFactory
 
 class TestGitProxyServer(BaseAPITestCase):
     def _get_token_auth(self) -> str:
-        return self.header_prefix + self.token.key
+        return f"{self.header_prefix}{self.token.key}"
 
     def _get_basic_auth(self) -> str:
         return "Basic {}".format(

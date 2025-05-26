@@ -11,7 +11,7 @@ on:
     paths-ignore: ["docs/**"]
 
   push:
-    branches: ["master", "main", "dev"]
+    branches: ["master", "main", "dev", "type-checking"]
     paths-ignore: ["docs/**"]
 
 concurrency:
@@ -21,14 +21,29 @@ concurrency:
 jobs:
   linter:
     runs-on: ubuntu-latest
+    env:
+      CELERY_BROKER_URL: "redis://localhost:6379/0"
+      DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
+      # Dummy Key - Not Used
+      DJANGO_SECRET_KEY: "s&=i@9h+)6bge)6!6vhbcx@=#^6nr73&7+6ep-xpbebhi5#)+_"
+      # Dummy Key - Not Used
+      DJANGO_FIELD_ENCRYPTION_KEY: "Mi2dyK2q9uTi9_Yn2mpsmU2fFUM4P0U7XpEgxiGPtto="
+
     steps:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
+          version: "latest"
           python-version: "3.13"
+          activate-environment: true
+        env:
+          UV_VENV_SEED: 1
+
+      - name: Install Dependencies
+        run: uv sync --extra local --frozen
 
       # Consider using pre-commit.ci for open source project
       - name: Run pre-commit
@@ -59,21 +74,17 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
+          version: "latest"
           python-version: "3.13"
-          cache: pip
-          cache-dependency-path: |
-            requirements/base.txt
-            requirements/local.txt
+          activate-environment: true
 
       - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements/local.txt
+        run: uv sync --extra local --frozen
 
-      - name: Test with pytest
+      - name: Run Tests
         run: |
           python manage.py validate_templates --settings config.settings.test --ignore-app allauth
           pytest

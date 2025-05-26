@@ -5,6 +5,7 @@ from django.db import models
 from django_countries.fields import CountryField
 
 from speleodb.users.models import User
+from speleodb.utils.django_base_models import BaseIntegerChoices
 
 
 class SurveyTeam(models.Model):
@@ -12,6 +13,10 @@ class SurveyTeam(models.Model):
     Represents a survey team with multiple members.
     Each member has a role (Leader or Member) with timestamps for auditing changes.
     """
+
+    rel_team_memberships: models.QuerySet[SurveyTeamMembership]
+
+    id = models.AutoField(primary_key=True)  # Explicitly declared for typing
 
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=False, null=False)
@@ -27,7 +32,7 @@ class SurveyTeam(models.Model):
         verbose_name_plural = "Survey Teams"
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
     def get_membership(self, user: User) -> SurveyTeamMembership:
         return self.rel_team_memberships.get(user=user, is_active=True)
@@ -35,7 +40,7 @@ class SurveyTeam(models.Model):
     def get_member_count(self) -> int:
         return self.get_all_memberships().count()
 
-    def get_all_memberships(self) -> list[SurveyTeamMembership]:
+    def get_all_memberships(self) -> models.QuerySet[SurveyTeamMembership]:
         return self.rel_team_memberships.filter(is_active=True).order_by(
             "-_role", "user__email"
         )
@@ -85,12 +90,11 @@ class SurveyTeamMembership(models.Model):
         User,
         related_name="rel_deactivated_memberships",
         on_delete=models.RESTRICT,
-        blank=True,
         null=True,
         default=None,
     )
 
-    class Role(models.IntegerChoices):
+    class Role(BaseIntegerChoices):
         MEMBER = (0, "MEMBER")
         LEADER = (1, "LEADER")
 
@@ -104,18 +108,30 @@ class SurveyTeamMembership(models.Model):
         verbose_name_plural = "Team Memberships"
 
     def __str__(self) -> str:
-        return f"{self.user} => {self.team} [{self.role}]"
+        return f"{self.user} => {self.team} [{self.role_label}]"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
 
     @property
-    def role(self) -> str:
-        return self.Role(self._role).label
+    def role_label(self) -> str:
+        return self.role.label
+
+    @property
+    def role(self) -> Role:
+        return self.Role(self._role)
 
     @role.setter
-    def role(self, value) -> None:
-        self._role = value
+    def role(self, role: Role | int | str) -> None:
+        match role:
+            case str():
+                self._role = self.Role.from_str(role)
+            case int():
+                self._role = self.Role(role)
+            case self.Role():
+                self._role = role
+            case _:
+                raise TypeError
 
     def deactivate(self, deactivated_by: User) -> None:
         self.is_active = False

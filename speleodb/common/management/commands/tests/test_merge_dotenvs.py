@@ -2,20 +2,20 @@ import tempfile
 from pathlib import Path
 from unittest import TestCase
 
-from parameterized import parameterized
+from parameterized.parameterized import parameterized
 
 from speleodb.common.management.commands.merge_prod_dotenvs import Command
 
 
 class TestMergeDotEnvCommandWithTempfile(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.file1 = Path(tempfile.NamedTemporaryFile(mode="w+", delete=False).name)  # noqa: SIM115
         self.file2 = Path(tempfile.NamedTemporaryFile(mode="w+", delete=False).name)  # noqa: SIM115
         self.output_file = Path(
             tempfile.NamedTemporaryFile(mode="w+", delete=False).name  # noqa: SIM115
         )
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         # Cleanup temporary files
         for file in [self.file1, self.file2, self.output_file]:
             file.unlink()
@@ -34,7 +34,7 @@ class TestMergeDotEnvCommandWithTempfile(TestCase):
     )
     def test_merge_dot_env_files_with_tempfile(
         self, input_contents: list[str], expected_output: str
-    ):
+    ) -> None:
         assert len(input_contents) == 2  # noqa: PLR2004
 
         # Write test content to input files

@@ -1,14 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+from typing import Any
+
 from django.db import models
 
 from speleodb.surveys.models import Project
 from speleodb.utils.decorators import classproperty
+from speleodb.utils.django_base_models import BaseIntegerChoices
+
+type ListFileFormats = list["tuple[int, str] | Format.FileFormat"]
 
 
-class NoUpdateQuerySet(models.QuerySet):
-    def update(self, *args, **kwargs):
-        pass
+class NoUpdateQuerySet(models.QuerySet["Format"]):
+    def update(self, **kwargs: Any) -> int:
+        return 0
 
 
 class Format(models.Model):
@@ -20,7 +26,7 @@ class Format(models.Model):
         null=False,
     )
 
-    class FileFormat(models.IntegerChoices):
+    class FileFormat(BaseIntegerChoices):
         # NOTE: Special values that don't really represent a "file format":
         # ------------------------------------------------------------------------------
 
@@ -62,38 +68,47 @@ class Format(models.Model):
             return self.label.replace("_", " ")
 
         @classmethod
-        def filtered_choices(cls, exclude_vals=None, as_str=True):
-            exclude_vals = exclude_vals if not None else []
+        def filtered_choices(
+            cls, exclude_vals: ListFileFormats | None = None
+        ) -> list[tuple[int, str]]:
+            exclude_vals = exclude_vals if exclude_vals is not None else []
 
-            filtered_list = [f for f in cls.choices if f not in exclude_vals]
-            if as_str:
-                return [f.lower() for _, f in filtered_list]
-            return filtered_list
+            return [f for f in cls.choices if f not in exclude_vals]
+
+        @classmethod
+        def filtered_choices_as_str(
+            cls, exclude_vals: ListFileFormats | None = None
+        ) -> list[str]:
+            return [
+                f.lower() for _, f in cls.filtered_choices(exclude_vals=exclude_vals)
+            ]
 
         @classproperty
-        def download_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
-            return cls.filtered_choices(exclude_vals=cls.__excluded_download_formats__)
-
-        @classproperty
-        def upload_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
-            return cls.filtered_choices(exclude_vals=cls.__excluded_upload_formats__)
-
-        @classproperty
-        def db_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
-            return cls.filtered_choices(
-                exclude_vals=cls.__excluded_db_formats__, as_str=False
+        def download_choices(cls) -> list[str]:  # noqa: N805
+            return cls.filtered_choices_as_str(
+                exclude_vals=cls.__excluded_download_formats__
             )
 
         @classproperty
-        def __excluded_download_formats__(cls) -> list[tuple[int, str]]:  # noqa: N805
+        def upload_choices(cls) -> list[str]:  # noqa: N805
+            return cls.filtered_choices_as_str(
+                exclude_vals=cls.__excluded_upload_formats__
+            )
+
+        @classproperty
+        def db_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
+            return cls.filtered_choices(exclude_vals=cls.__excluded_db_formats__)
+
+        @classproperty
+        def __excluded_download_formats__(cls) -> ListFileFormats:  # noqa: N805
             return [cls.OTHER, cls.AUTO]
 
         @classproperty
-        def __excluded_upload_formats__(cls) -> list[tuple[int, str]]:  # noqa: N805
+        def __excluded_upload_formats__(cls) -> ListFileFormats:  # noqa: N805
             return [cls.DUMP]
 
         @classproperty
-        def __excluded_db_formats__(cls) -> list[tuple[int, str]]:  # noqa: N805
+        def __excluded_db_formats__(cls) -> ListFileFormats:  # noqa: N805
             return [cls.DUMP, cls.AUTO]
 
     _format = models.IntegerField(
@@ -106,7 +121,7 @@ class Format(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
 
     # Object Manager disabling update
-    objects = NoUpdateQuerySet.as_manager()
+    objects: models.Manager["Format"] = NoUpdateQuerySet.as_manager()
 
     class Meta:
         unique_together = (
@@ -120,13 +135,13 @@ class Format(models.Model):
     def __str__(self) -> str:
         return f"{self.project} -> {self.format}"
 
-    def save(self, *args, **kwargs) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:
         # Only allows object creation. Otherwise bypass.
         if self.pk is None:
             super().save(*args, **kwargs)
 
     @property
-    def raw_format(self) -> str:
+    def raw_format(self) -> FileFormat:
         return self.FileFormat(self._format)
 
     @property
@@ -134,5 +149,5 @@ class Format(models.Model):
         return self.raw_format.label
 
     @format.setter
-    def format(self, value) -> None:
-        self._format = value
+    def format(self, fmt: FileFormat) -> None:
+        self._format = fmt.value

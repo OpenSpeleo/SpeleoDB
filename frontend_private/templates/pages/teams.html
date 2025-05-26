@@ -87,9 +87,9 @@
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
-                                            {% if membership.role == "MEMBER" %}
+                                            {% if membership.role.label == "MEMBER" %}
                                                 bg-pastel-purple text-white">Member</div>
-                                            {% elif membership.role == "LEADER" %}
+                                            {% elif membership.role.label == "LEADER" %}
                                                 bg-pastel-orange text-white">Leader</div>
                                             {% else %}
                                                 bg-rose-500/30 text-rose-400">Unknown</div>

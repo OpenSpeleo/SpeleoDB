@@ -4,6 +4,7 @@
 {% load countries %}
 {% load set_var %}
 {% load team_access %}
+{% load str_format %}
 
 {% block right_panel %}
 
@@ -93,42 +94,18 @@
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="text-center">
-
-                                        {% if permission.team %}
-                                        {% if permission.level.label == "READ_ONLY" %}
+                                        {% if permission.level.value == 0 %}
                                         <div class="inline-flex font-medium bg-slate-700 text-slate-300 rounded-full text-center px-2.5 py-0.5">
-                                            &#60;{{ permission.team.name }}&#62; Read Only
-                                        </div>
-                                        {% elif permission.level.label == "READ_AND_WRITE" %}
+                                        {% elif permission.level.value == 1 %}
                                         <div class="inline-flex font-medium bg-indigo-500/30 text-indigo-300 rounded-full text-center px-2.5 py-1 py-0.5">
-                                            &#60;{{ permission.team.name }}&#62; Read And Write
-                                        </div>
-                                        {% else %}
-                                        <div class="inline-flex font-medium bg-rose-500/30 text-rose-400 rounded-full text-center px-2.5 py-0.5">
-                                            &#60;{{ permission.team.name }}&#62; Unknown
-                                        </div>
-                                        {% endif %}
-                                        {% else %}
-
-                                        {% if permission.level.label == "READ_ONLY" %}
-                                        <div class="inline-flex font-medium bg-slate-700 text-slate-300 rounded-full text-center px-2.5 py-0.5">
-                                            Read Only
-                                        </div>
-                                        {% elif permission.level.label == "READ_AND_WRITE" %}
-                                        <div class="inline-flex font-medium bg-indigo-500/30 text-indigo-300 rounded-full text-center px-2.5 py-1 py-0.5">
-                                            Read And Write
-                                        </div>
-                                        {% elif permission.level.label == "ADMIN" %}
+                                        {% elif permission.level.value == 2 %}
                                         <div class="inline-flex font-medium bg-amber-500 text-white rounded-full text-center px-2.5 py-0.5">
-                                            Admin
-                                        </div>
                                         {% else %}
                                         <div class="inline-flex font-medium bg-rose-500/30 text-rose-400 rounded-full text-center px-2.5 py-0.5">
-                                            Unknown
+                                        {% endif %}
+                                        {% if permission.team %}&#60;{{ permission.team.name }}&#62; {% endif %}
+                                        {{permission.level.label|normalize}}
                                         </div>
-                                        {% endif %}
-
-                                        {% endif %}
                                     </div>
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">

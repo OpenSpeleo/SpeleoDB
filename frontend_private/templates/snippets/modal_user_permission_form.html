@@ -1,4 +1,5 @@
 {% load permission_levels %}
+{% load str_format %}
 
 <!-- Modal dialog -->
 <div id="permission_modal" class="fixed inset-0 z-40 overflow-hidden flex items-center my-4 justify-center px-4 sm:px-6" style="display: none">
@@ -33,7 +34,7 @@
                             <option disabled selected value>Select an option ...</option>
                         {% get_user_permission_levels as levels %}
                         {% for level in levels %}
-                            <option value="{{ level }}">{{ level }}</option>
+                            <option value="{{ level.label }}">{{ level.label|normalize }}</option>
                         {% endfor %}
                         </select>
                     </div>

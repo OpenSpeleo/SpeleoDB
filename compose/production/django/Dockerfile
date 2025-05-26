@@ -32,9 +32,13 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # Update PIP & UV to latest version
 RUN pip install --no-cache-dir --upgrade pip uv
 
+# Use the system Python environment
+ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
+
 # Install Project Dependencies
-COPY ./requirements .
-RUN uv pip install --verbose --no-cache-dir --system -r ${BUILD_ENVIRONMENT}.txt
+COPY pyproject.toml .
+RUN --mount=type=bind,source=.uv,target=${UV_MOUNT_CACHE_DIR},readonly=false \
+  uv sync --extra ${BUILD_ENV}
 
 COPY --chown=django:django ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint

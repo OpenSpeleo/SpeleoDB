@@ -21,3 +21,19 @@ from speleodb.processors._impl.geodata import GeoDataFileProcessor
 from speleodb.processors._impl.image import ImageFileProcessor
 from speleodb.processors._impl.spreadsheet import SpreadsheetFileProcessor
 from speleodb.processors._impl.text import TextFileProcessor
+
+__all__ = [
+    "AGRFileProcessor",
+    "AutoSelector",
+    "BaseFileProcessor",
+    "DATFileProcessor",
+    "DatabaseFileProcessor",
+    "DumpProcessor",
+    "GeoDataFileProcessor",
+    "ImageFileProcessor",
+    "MAKFileProcessor",
+    "SpreadsheetFileProcessor",
+    "TMLFileProcessor",
+    "TMLUFileProcessor",
+    "TextFileProcessor",
+]

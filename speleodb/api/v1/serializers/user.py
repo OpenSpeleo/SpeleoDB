@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from typing import Any
+
 from allauth.account.models import EmailAddress
 from django.core.validators import validate_email
 from django_countries import countries
@@ -10,8 +12,8 @@ from speleodb.users.models import User
 from speleodb.utils.serializer_fields import CustomChoiceField
 
 
-class UserSerializer(serializers.ModelSerializer):
-    country = CustomChoiceField(choices=countries)
+class UserSerializer(serializers.ModelSerializer[User]):
+    country = CustomChoiceField(choices=list(countries))
 
     class Meta:
         model = User
@@ -23,12 +25,13 @@ class UserSerializer(serializers.ModelSerializer):
             "name",
         ]
 
-    def update(self, instance, validated_data) -> User:
+    def update(self, instance: User, validated_data: Any) -> User:
         request = self.context.get("request")
+        assert request is not None
 
         email = validated_data.pop("email", None)
         if email is not None and email != request.user.email:
             validate_email(email)
-            EmailAddress.objects.add_new_email(request, request.user, email)
+            EmailAddress.objects.add_new_email(request, request.user, email)  # type: ignore[no-untyped-call]
 
         return super().update(instance, validated_data)

@@ -1,12 +1,14 @@
 import hashlib
 import random
+from typing import Any
+from typing import Literal
 
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.test import TestCase
 from django.urls import reverse
-from parameterized import parameterized
-from parameterized import parameterized_class
+from parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
 from speleodb.api.v1.tests.factories import ProjectFactory
@@ -15,23 +17,22 @@ from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
+from speleodb.surveys.models import PermissionLevel
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 
 
 class BaseTestCase(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
-        self.user = UserFactory()
+        self.user = UserFactory.create()
 
     def execute_test(
         self,
         view_name: str,
-        kwargs: dict | None = None,
+        kwargs: Any | None = None,
         expected_status: int = status.HTTP_200_OK,
-    ):
+    ) -> None:
         url = reverse(f"private:{view_name}", kwargs=kwargs)
         self.client.login(
             email=self.user.email, password=UserFactory.DEFAULT_PASSWORD()
@@ -60,7 +61,7 @@ class UserViewsTest(BaseTestCase):
             "user_preferences",
         ]
     )
-    def test_view_with_no_args(self, view_name: str):
+    def test_view_with_no_args(self, view_name: str) -> None:
         self.execute_test(view_name)
 
 
@@ -68,20 +69,22 @@ class UserViewsTest(BaseTestCase):
     ("role"), [(SurveyTeamMembership.Role.LEADER,), (SurveyTeamMembership.Role.MEMBER,)]
 )
 class TeamViewsTest(BaseTestCase):
-    def setUp(self):
+    role: SurveyTeamMembership.Role
+
+    def setUp(self) -> None:
         super().setUp()
 
-        self.team: SurveyTeam = SurveyTeamFactory()
+        self.team: SurveyTeam = SurveyTeamFactory.create()
 
         # Must make the user is at least a member of the team - one of each
         _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=self.role)
 
     @parameterized.expand(["teams", "team_new"])
-    def test_view_with_no_args(self, view_name: str):
+    def test_view_with_no_args(self, view_name: str) -> None:
         self.execute_test(view_name)
 
     @parameterized.expand(["team_details", "team_memberships", "team_danger_zone"])
-    def test_view_with_team_id(self, view_name: str):
+    def test_view_with_team_id(self, view_name: str) -> None:
         expected_status = (
             status.HTTP_200_OK
             if self.role == SurveyTeamMembership.Role.LEADER
@@ -94,23 +97,26 @@ class TeamViewsTest(BaseTestCase):
 
 
 @parameterized_class(
-    ("level"),
+    ("level", "perm_type"),
     [
-        (TeamPermission.Level.READ_AND_WRITE,),
-        (TeamPermission.Level.READ_ONLY,),
-        (UserPermission.Level.ADMIN,),
-        (UserPermission.Level.READ_AND_WRITE,),
-        (UserPermission.Level.READ_ONLY,),
+        (PermissionLevel.READ_ONLY, "user"),
+        (PermissionLevel.READ_ONLY, "team"),
+        (PermissionLevel.READ_AND_WRITE, "user"),
+        (PermissionLevel.READ_AND_WRITE, "team"),
+        (PermissionLevel.ADMIN, "user"),
     ],
 )
 class ProjectViewsTest(BaseTestCase):
-    def setUp(self):
+    level: PermissionLevel
+    perm_type: Literal["user", "team"]
+
+    def setUp(self) -> None:
         super().setUp()
 
-        self.project = ProjectFactory(created_by=self.user)
+        self.project = ProjectFactory.create(created_by=self.user)
 
-        if isinstance(self.level, TeamPermission.Level):
-            team: SurveyTeam = SurveyTeamFactory()
+        if self.perm_type == "team":
+            team: SurveyTeam = SurveyTeamFactory.create()
 
             # Must make the user is at least a member of the team - random role
             _ = SurveyTeamMembershipFactory(team=team, user=self.user)
@@ -118,15 +124,17 @@ class ProjectViewsTest(BaseTestCase):
             _ = TeamPermissionFactory(
                 target=team, level=self.level, project=self.project
             )
-        elif isinstance(self.level, UserPermission.Level):
+
+        elif self.perm_type == "user":
             _ = UserPermissionFactory(
                 target=self.user, level=self.level, project=self.project
             )
+
         else:
             raise TypeError(f"Unknown type received for level: {type(self.level)}")
 
     @parameterized.expand(["projects", "project_new"])
-    def test_view_with_no_args(self, view_name: str):
+    def test_view_with_no_args(self, view_name: str) -> None:
         self.execute_test(view_name)
 
     @parameterized.expand(
@@ -140,11 +148,10 @@ class ProjectViewsTest(BaseTestCase):
             "project_danger_zone",
         ]
     )
-    def test_view_with_project_id(self, view_name: str):
+    def test_view_with_project_id(self, view_name: str) -> None:
         expected_status = (
             status.HTTP_200_OK
-            if self.level == UserPermission.Level.ADMIN
-            or view_name != "project_danger_zone"
+            if self.level == PermissionLevel.ADMIN or view_name != "project_danger_zone"
             else status.HTTP_302_FOUND
         )
 
@@ -153,18 +160,21 @@ class ProjectViewsTest(BaseTestCase):
         )
 
     @parameterized.expand([True, False, None])
-    def test_view_with_project_id_and_maybe_lock(self, project_is_locked: bool | None):
+    def test_view_with_project_id_and_maybe_lock(
+        self, project_is_locked: bool | None
+    ) -> None:
         """`project_is_locked` can take 3 values:
         - True: Yes the project is locked by the user
         - False: No the project is not locked by the user and by no-one else.
         - None: The project is locked by a different user.
         """
 
+        expected_status: int
         match project_is_locked:
             case True:
                 if self.level in [
-                    UserPermission.Level.READ_ONLY,
-                    TeamPermission.Level.READ_ONLY,
+                    PermissionLevel.READ_ONLY,
+                    PermissionLevel.READ_ONLY,
                 ]:
                     return  # this user can not acquire the lock
                 self.project.acquire_mutex(self.user)
@@ -173,10 +183,10 @@ class ProjectViewsTest(BaseTestCase):
                 expected_status = status.HTTP_302_FOUND
             case None:
                 # somebody has acquired the lock
-                user = UserFactory()
+                user = UserFactory.create()
                 _ = UserPermissionFactory(
                     target=user,
-                    level=UserPermission.Level.READ_AND_WRITE,
+                    level=PermissionLevel.READ_AND_WRITE,
                     project=self.project,
                 )
                 self.project.acquire_mutex(user)
@@ -192,7 +202,7 @@ class ProjectViewsTest(BaseTestCase):
             expected_status=expected_status,
         )
 
-    def test_view_with_project_id_and_gitsha(self):
+    def test_view_with_project_id_and_gitsha(self) -> None:
         self.execute_test(
             "project_revision_explorer",
             {

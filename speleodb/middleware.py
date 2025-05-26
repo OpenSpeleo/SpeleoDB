@@ -1,11 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from collections.abc import Callable
+from collections.abc import Sequence
+from typing import Any
+
 from django.conf import settings
+from django.http import FileResponse
+from django.http import HttpRequest
+from django.http import HttpResponse
 from django.urls import resolve
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.renderers import JSONRenderer
+from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from speleodb.utils.exceptions import NotAuthorizedError
@@ -17,25 +26,24 @@ from speleodb.utils.response import SuccessResponse
 
 
 class ViewNameMiddleware:
-    def __init__(self, get_response):
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
         self.get_response = get_response
         # One-time configuration and initialization.
 
-    def __call__(self, request):
+    def __call__(self, request: HttpRequest) -> HttpResponse:
         # Code to be executed for each request before
         # the view (and later middleware) are called.
 
         url_name = resolve(request.path).url_name
-        request.url_name = url_name
+        request.url_name = url_name  # type: ignore[attr-defined]
 
         return self.get_response(request)
 
-        # Code to be executed for each request/response after
-        # the view is called.
-
 
 class DRFWrapResponseMiddleware:
-    def __init__(self, get_response):
+    renderers: Sequence[str]
+
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
         # One-time configuration and initialization.
         from rest_framework.negotiation import DefaultContentNegotiation
 
@@ -43,10 +51,10 @@ class DRFWrapResponseMiddleware:
         self.renderers = api_settings.DEFAULT_RENDERER_CLASSES
         self.negotiator = DefaultContentNegotiation()
 
-    def select_renderer(self, request):
-        return self.negotiator.select_renderer(request, self.renderers)
+    def select_renderer(self, request: Request) -> Any:
+        return self.negotiator.select_renderer(request, self.renderers)  # type: ignore[arg-type]
 
-    def __call__(self, request):
+    def __call__(self, request: Request) -> Response | HttpResponse:  # noqa: PLR0915
         # Skip for non-API calls
         if "/api/" not in request.path:
             return self.get_response(request)
@@ -55,10 +63,14 @@ class DRFWrapResponseMiddleware:
         http_status = None
         exception = False
 
+        wrapped_response: HttpResponse | None = None
         try:
             wrapped_response = self.get_response(request)
 
             if not request.path.startswith("/api/v1"):
+                return wrapped_response
+
+            if isinstance(wrapped_response, FileResponse):
                 return wrapped_response
 
             if isinstance(wrapped_response, ErrorResponse):
@@ -72,11 +84,15 @@ class DRFWrapResponseMiddleware:
                 payload.update({"data": wrapped_response.data})
 
             else:
-                try:
-                    payload.update(wrapped_response.data)
-                    exception = True
-                except Exception:  # noqa: BLE001
-                    return wrapped_response
+                data = getattr(wrapped_response, "data", None)
+                match data:
+                    case dict():
+                        payload.update(data)
+                    case None:
+                        pass
+                    case _:
+                        payload.update({"data": data})
+                exception = True
 
             http_status = wrapped_response.status_code
 
@@ -105,14 +121,20 @@ class DRFWrapResponseMiddleware:
         response = SortedResponse(payload, status=http_status)
         response.exception = exception
 
-        try:
-            response.accepted_renderer = wrapped_response.accepted_renderer
-            response.accepted_media_type = wrapped_response.accepted_media_type
-            response.renderer_context = wrapped_response.renderer_context
-        except (NameError, AttributeError):
+        if wrapped_response is not None:
+            try:
+                response.accepted_renderer = wrapped_response.accepted_renderer  # type: ignore[attr-defined]
+                response.accepted_media_type = wrapped_response.accepted_media_type  # type: ignore[attr-defined]
+                response.renderer_context = wrapped_response.renderer_context  # type: ignore[attr-defined]
+
+            except (NameError, AttributeError):
+                response.accepted_renderer = JSONRenderer()
+                response.accepted_media_type = "application/json"
+                response.renderer_context = {}  # type: ignore[attr-defined]
+        else:
             response.accepted_renderer = JSONRenderer()
             response.accepted_media_type = "application/json"
-            response.renderer_context = {}
+            response.renderer_context = {}  # type: ignore[attr-defined]
 
         response.render()
 

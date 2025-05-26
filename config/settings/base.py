@@ -366,7 +366,7 @@ EMAIL_TIMEOUT = 5
 # Django Hijack URL.
 HIJACK_URL = "hijack/"
 # Hide notification if `None`.
-HIJACK_INSERT_BEFORE = None
+HIJACK_INSERT_BEFORE: str | None = None
 
 # ADMIN
 # ------------------------------------------------------------------------------
@@ -462,7 +462,7 @@ ACCOUNT_LOGOUT_ON_GET = True
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_SIGNUP_FIELDS = ["name*", "country*", "email*", "password1*", "password2*"]
 # https://docs.allauth.org/en/latest/account/configuration.html
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USER_MODEL_USERNAME_FIELD: str | None = None
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 # https://docs.allauth.org/en/latest/account/configuration.html
@@ -490,10 +490,10 @@ REST_FRAMEWORK = {
 
 if env.bool("DJANGO_DEBUG_DRF_AUTH", default=False):
     # Needs to be insert as the very first Auth Processor to ensure it being processed.
-    REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"].insert(
-        0,
+    REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] = [
         "speleodb.api.v1.authentication.DebugHeaderAuthentication",
-    )
+        *REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"],
+    ]
 
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
 CORS_URLS_REGEX = r"^/api/.*$"

@@ -8,7 +8,7 @@ register = template.Library()
 
 @register.simple_tag
 def get_survey_formats() -> list[str]:
-    return [name for _, name in Format.FileFormat.choices]
+    return [str(name) for _, name in Format.FileFormat.choices]
 
 
 @register.simple_tag

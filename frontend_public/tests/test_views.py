@@ -2,7 +2,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.test import TestCase
 from django.urls import reverse
-from parameterized import parameterized
+from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.tests.factories import UserFactory
@@ -31,11 +31,13 @@ class ViewFunctionalityTest(TestCase):
             ),
         ]
     )
-    def test_view_unauthenticated(self, name: str, kwargs: dict | None):
+    def test_view_unauthenticated(
+        self, name: str, kwargs: dict[str, str] | None
+    ) -> None:
         self.execute_test(name=name, kwargs=kwargs)
 
-    def test_view_logout(self):
-        user = UserFactory()
+    def test_view_logout(self) -> None:
+        user = UserFactory.create()
         self.client.login(email=user.email, password=UserFactory.DEFAULT_PASSWORD())
 
         self.execute_test(
@@ -43,8 +45,11 @@ class ViewFunctionalityTest(TestCase):
         )
 
     def execute_test(
-        self, name: str, kwargs: dict | None, expected_status: int = status.HTTP_200_OK
-    ):
+        self,
+        name: str,
+        kwargs: dict[str, str] | None,
+        expected_status: int = status.HTTP_200_OK,
+    ) -> None:
         url = reverse(name, kwargs=kwargs)
 
         response = self.client.get(url)

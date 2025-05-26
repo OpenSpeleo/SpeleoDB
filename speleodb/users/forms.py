@@ -1,25 +1,29 @@
+from typing import Any
+
 from django.contrib.auth import forms as admin_forms
 from django.forms import CharField
 from django.forms import EmailField
 from django.forms import Form
 from django.forms import TextInput
+from django.http import HttpRequest
 
 from speleodb.users.models import User
 
 
-class UserAdminChangeForm(admin_forms.UserChangeForm):
-    class Meta(admin_forms.UserChangeForm.Meta):
+class UserAdminChangeForm(admin_forms.UserChangeForm):  # type:ignore[type-arg]
+    class Meta:
         model = User
+        fields = "__all__"
         field_classes = {"email": EmailField}
 
 
-class UserAdminCreationForm(admin_forms.UserCreationForm):
+class UserAdminCreationForm(admin_forms.UserCreationForm):  # type:ignore[type-arg]
     """
     Form for User Creation in the Admin Area.
     To change user signup, see UserSignupForm.
     """
 
-    class Meta(admin_forms.UserCreationForm.Meta):
+    class Meta:
         model = User
         fields = ("email",)
         field_classes = {"email": EmailField}
@@ -28,8 +32,8 @@ class UserAdminCreationForm(admin_forms.UserCreationForm):
         }
 
 
-def mandatory_field(self):
-    for v in filter(lambda x: x.required, self.fields.values()):
+def mandatory_field(form: Form) -> None:
+    for v in filter(lambda x: x.required, form.fields.values()):
         v.label = str(v.label) + "*"
 
 
@@ -50,10 +54,10 @@ class SignupForm(Form):
         widget=TextInput(attrs={"placeholder": "Country"}),
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def signup(self, request, user):
+    def signup(self, request: HttpRequest, user: User) -> None:
         user.name = self.cleaned_data["name"]
         user.country = self.cleaned_data["country"]
         user.save()

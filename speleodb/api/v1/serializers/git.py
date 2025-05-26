@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.urls import reverse
@@ -12,7 +13,7 @@ from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 
 
-class GitCommitSerializer(serializers.Serializer):
+class GitCommitSerializer(serializers.Serializer[GitCommit]):
     """
     Serializer for Git Commit objects.
     """
@@ -43,19 +44,19 @@ class GitCommitSerializer(serializers.Serializer):
 
     # ------------------------- Read-Only Serializer ------------------------ #
 
-    def create(self, validated_data):
+    def create(self, validated_data: Any) -> Any:
         raise serializers.ValidationError("This serializer is read-only.")
 
-    def update(self, instance, validated_data):
+    def update(self, instance: Any, validated_data: Any) -> Any:
         raise serializers.ValidationError("This serializer is read-only.")
 
     # ------------------------- GitCommit Attributes ------------------------ #
 
-    def get_formats(self, obj: GitCommit) -> list[str]:
+    def get_formats(self, obj: GitCommit) -> list[dict[str, Any]]:
         """
         Returns the short version of the commit hash (7 characters by GitHub standard).
         """
-        project: Project = self.context.get("project")
+        project: Project | None = self.context.get("project")
         if project is not None:
             if not isinstance(project, Project):
                 raise ValidationError(
@@ -99,7 +100,7 @@ class GitCommitSerializer(serializers.Serializer):
         return []
 
     def get_url(self, obj: GitCommit) -> str | None:
-        project: Project = self.context.get("project")
+        project: Project | None = self.context.get("project")
         if project is not None:
             return reverse(
                 "private:project_revision_explorer",
@@ -107,10 +108,10 @@ class GitCommitSerializer(serializers.Serializer):
             )
         return None
 
-    def get_dt_since(self, obj: GitCommit) -> list[str]:
+    def get_dt_since(self, obj: GitCommit) -> str:
         return time_struct_since(obj.date)
 
-    def to_representation(self, instance: GitCommit):
+    def to_representation(self, instance: GitCommit) -> dict[str, Any]:
         """
         Custom representation logic for the commit object.
         - Includes the list of parent commit hashes.
@@ -122,23 +123,24 @@ class GitCommitSerializer(serializers.Serializer):
         return representation
 
 
-class GitCommitListSerializer(serializers.ListSerializer):
+class GitCommitListSerializer(serializers.ListSerializer[GitCommit]):
     """
     Serializer for a list of Git Commit objects.
     """
 
     child = GitCommitSerializer()
 
-    def to_representation(self, data):
+    def to_representation(self, data: list[GitCommit]) -> list[Any]:  # type: ignore[override]
         """
         Customize the list serialization.
         """
         # Sort commits by date (descending) if needed
-        data = sorted(data, key=lambda commit: commit.authored_datetime, reverse=True)
-        return super().to_representation(data)
+        return super().to_representation(
+            sorted(data, key=lambda commit: commit.authored_datetime, reverse=True)
+        )
 
 
-class GitFileSerializer(serializers.Serializer):
+class GitFileSerializer(serializers.Serializer[GitCommit]):
     """
     Serializer for GitFile objects.
     """
@@ -158,19 +160,19 @@ class GitFileSerializer(serializers.Serializer):
 
     # ------------------------- Read-Only Serializer ------------------------ #
 
-    def create(self, validated_data):
+    def create(self, validated_data: Any) -> Any:
         raise serializers.ValidationError("This serializer is read-only.")
 
-    def update(self, instance, validated_data):
+    def update(self, instance: Any, validated_data: Any) -> Any:
         raise serializers.ValidationError("This serializer is read-only.")
 
     # -------------------------- GitFile Attributes ------------------------- #
 
-    def get_size(self, obj: GitFile) -> list[str]:
+    def get_size(self, obj: GitFile) -> str:
         return format_byte_size(obj.size)
 
-    def get_download_url(self, obj: GitFile) -> list[str]:
-        project: Project = self.context.get("project")
+    def get_download_url(self, obj: GitFile) -> str | None:
+        project: Project | None = self.context.get("project")
         if project is not None:
             return reverse(
                 "api:v1:download_blob", kwargs={"id": project.id, "hexsha": obj.hexsha}
@@ -178,17 +180,16 @@ class GitFileSerializer(serializers.Serializer):
         return None
 
 
-class GitFileListSerializer(serializers.ListSerializer):
+class GitFileListSerializer(serializers.ListSerializer[GitFile]):
     """
     Serializer for a list of Git Commit objects.
     """
 
     child = GitFileSerializer()
 
-    def to_representation(self, data):
+    def to_representation(self, data: list[GitFile]) -> list[Any]:  # type: ignore[override]
         """
         Customize the list serialization.
         """
         # Sort commits by date (descending) if needed
-        data = sorted(data, key=lambda file: file.path)
-        return super().to_representation(data)
+        return super().to_representation(sorted(data, key=lambda file: file.path))

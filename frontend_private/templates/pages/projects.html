@@ -3,6 +3,7 @@
 
 {% load countries %}
 {% load set_var %}
+{% load str_format %}
 
 {% block content %}
 <main class="grow">
@@ -125,13 +126,16 @@
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
-                                            {% if permission.level == "READ_ONLY" %}
-                                                bg-pastel-blue">Read Only</div>
-                                            {% elif permission.level == "READ_AND_WRITE" %}
-                                                bg-pastel-purple">Read And Write</div>
-                                            {% elif permission.level == "ADMIN" %}
-                                                bg-pastel-orange">Admin</div>
+                                            {% if permission.level == 0 %}
+                                                bg-pastel-blue">
+                                            {% elif permission.level == 1 %}
+                                                bg-pastel-purple">
+                                            {% elif permission.level == 2 %}
+                                                bg-pastel-orange">
+                                            {% else %}
+                                                ">
                                             {% endif %}
+                                            {{ permission.level_label|normalize }}</div>
                                         </div>
 
                                     </td>
