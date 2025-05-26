@@ -4,18 +4,24 @@
 import contextlib
 import logging
 import pathlib
+import random
+import string
 import tempfile
 from collections import defaultdict
+from typing import TYPE_CHECKING
+from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
-from django.http import Http404
+from django.http import FileResponse
 from django.urls import reverse
 from git.exc import GitCommandError
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
@@ -27,6 +33,7 @@ from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors.auto_selector import AutoSelector
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
+from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import FileRejectedError
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.response import DownloadResponseFromBlob
@@ -35,14 +42,17 @@ from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 from speleodb.utils.timing_ctx import timed_section
 
+if TYPE_CHECKING:
+    from speleodb.processors.artifact import Artifact
+
 logger = logging.getLogger(__name__)
 
 
 def handle_exception(
-    exception: type,
+    exception: Exception,
     message: str,
     status_code: int,
-    format_assoc: dict[str, bool],
+    format_assoc: dict[Format, bool],
     project: Project,
 ) -> ErrorResponse:
     additional_errors = []
@@ -74,31 +84,27 @@ def handle_exception(
     return ErrorResponse({"error": error_msg}, status=status_code)
 
 
-class FileUploadView(GenericAPIView):
+class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasWriteAccess, UserOwnsProjectMutex]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
-    def put(self, request, fileformat: Format.FileFormat, *args, **kwargs):  # noqa: PLR0915
+    def put(  # noqa: PLR0915
+        self,
+        request: Request,
+        fileformat: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Response:
+        user = self.get_user()
         with timed_section("Project Upload"):
             # ~~~~~~~~~~~~~~~~~~~~~~ START of URL Validation ~~~~~~~~~~~~~~~~~~~~ #
             with timed_section("URL Validation"):
-                try:
-                    fileformat = getattr(Format.FileFormat, fileformat.upper())
-                except AttributeError:
-                    return ErrorResponse(
-                        {
-                            "error": (
-                                "The file format requested is not recognized: "
-                                f"{fileformat}"
-                            )
-                        },
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
+                fileformat_f = Format.FileFormat.from_str(fileformat.upper())
 
-                if fileformat.label.lower() not in Format.FileFormat.upload_choices:
-                    msg = f"The format: {fileformat} is not supported for upload"
+                if fileformat_f.label.lower() not in Format.FileFormat.upload_choices:
+                    msg = f"The format: {fileformat_f} is not supported for upload"
                     logger.exception(
                         f"{msg}, expected: {Format.FileFormat.upload_choices}"
                     )
@@ -190,7 +196,7 @@ class FileUploadView(GenericAPIView):
                         {
                             "error": (
                                 f"The total file size submitted: "
-                                f"[{file.size / 1024.0 / 1204.0} Mb], exceeds the "
+                                f"[{total_filesize / 1024.0 / 1204.0} Mb], exceeds the "
                                 f"limit: {settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT} Mb"
                             )
                         },
@@ -200,8 +206,8 @@ class FileUploadView(GenericAPIView):
             # ~~~~~~~~~~~~~~~~~~~~ END of Form Data Validation ~~~~~~~~~~~~~~~~~~~~ #
 
             # ~~~~~~~~~~~~~~~~~ START of writing files to project ~~~~~~~~~~~~~~~~~ #
-            format_assoc = defaultdict(lambda: False)
-            project: Project = self.get_object()
+            format_assoc: dict[Format, bool] = defaultdict(lambda: False)
+            project = self.get_object()
 
             try:
                 with timed_section("Git Project - Checkout and Pull"):
@@ -209,9 +215,7 @@ class FileUploadView(GenericAPIView):
                     project.git_repo.checkout_default_branch()
 
                 with timed_section("Project Edition - File Adding - Git Commit & Push"):
-                    project: Project = self.get_object()
-
-                    uploaded_files = []
+                    uploaded_files: list[Artifact | pathlib.Path] = []
 
                     for file in files:
                         with timed_section(f"File Adding: `{file.name}`"):
@@ -221,7 +225,7 @@ class FileUploadView(GenericAPIView):
                                 for _ in range(5):
                                     try:
                                         processor = AutoSelector.get_upload_processor(
-                                            fileformat=fileformat,
+                                            fileformat=fileformat_f,
                                             file=file,
                                             project=project,
                                         )
@@ -235,10 +239,10 @@ class FileUploadView(GenericAPIView):
                                     )
 
                             with timed_section("File Management"):
-                                if fileformat == Format.FileFormat.AUTO:
+                                if fileformat_f == Format.FileFormat.AUTO:
                                     target_fileformat = processor.ASSOC_FILEFORMAT
                                 else:
-                                    target_fileformat = fileformat
+                                    target_fileformat = fileformat_f
 
                                 # Associates the project with the format, ignore if
                                 # already done. We have to start with this in order to
@@ -250,13 +254,9 @@ class FileUploadView(GenericAPIView):
 
                                 try:
                                     with timed_section("File copy to project"):
-                                        uploaded_file = processor.add_file_to_project(
-                                            file=file
+                                        uploaded_files.extend(
+                                            processor.add_to_project(file=file)
                                         )
-                                        if isinstance(uploaded_file, (list, tuple)):
-                                            uploaded_files.extend(uploaded_file)
-                                        else:
-                                            uploaded_files.append(uploaded_file)
                                 except FileExistsError:
                                     logger.info(
                                         f"File collision detected for: `{file.name}` "
@@ -264,17 +264,17 @@ class FileUploadView(GenericAPIView):
                                     )
                                     continue
 
-                    with timed_section(f"GIT Commit and Push: `{file.name}`"):
+                    with timed_section("GIT Commit and Push"):
                         # Finally commit the project - None if project not dirty
                         hexsha: str | None = project.commit_and_push_project(
-                            message=commit_message, author=request.user
+                            message=commit_message, author=user
                         )
 
                     with timed_section("HTTP Response Construction"):
                         # Refresh the `modified_date` field
                         project.save()
 
-                        uploaded_files = [
+                        uploaded_path = [
                             f if isinstance(f, pathlib.Path) else f.path
                             for f in uploaded_files
                         ]
@@ -283,7 +283,7 @@ class FileUploadView(GenericAPIView):
                             {
                                 "files": [
                                     str(f.relative_to(project.git_repo_dir))
-                                    for f in uploaded_files
+                                    for f in uploaded_path
                                 ],
                                 "message": commit_message,
                                 "hexsha": hexsha,
@@ -299,7 +299,7 @@ class FileUploadView(GenericAPIView):
                                     else None
                                 ),
                                 "project": ProjectSerializer(
-                                    project, context={"user": request.user}
+                                    project, context={"user": user}
                                 ).data,
                             }
                         )
@@ -353,59 +353,81 @@ class FileUploadView(GenericAPIView):
                 )
 
 
-class FileDownloadView(GenericAPIView):
+class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
     lookup_field = "id"
 
-    def get(self, request, fileformat, hexsha=None, *args, **kwargs):
+    def get(
+        self,
+        request: Request,
+        fileformat: str,
+        hexsha: str | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Response | FileResponse:
         try:
-            fileformat = getattr(Format.FileFormat, fileformat.upper())
+            fileformat_f: Format.FileFormat = getattr(
+                Format.FileFormat, fileformat.upper()
+            )
         except AttributeError:
             return ErrorResponse(
                 {"error": f"The file format requested is not recognized: {fileformat}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if fileformat.label.lower() not in Format.FileFormat.download_choices:
-            msg = f"The format: {fileformat} is not supported for download"
+        if fileformat_f.label.lower() not in Format.FileFormat.download_choices:
+            msg = f"The format: {fileformat_f} is not supported for download"
             logger.exception(f"{msg}, expected: {Format.FileFormat.download_choices}")
             return ErrorResponse(
                 {"error": msg},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        project: Project = self.get_object()
+        project = self.get_object()
 
         try:
             processor = AutoSelector.get_download_processor(
-                fileformat=fileformat, project=project, hexsha=hexsha
+                fileformat=fileformat_f, project=project, hexsha=hexsha
             )
 
         except (ValidationError, FileNotFoundError) as e:
             return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        with tempfile.NamedTemporaryFile() as temp_file:
+        with tempfile.TemporaryDirectory() as tempdir:
             try:
-                temp_filepath = pathlib.Path(temp_file.name)
+                temp_filepath = (
+                    pathlib.Path(tempdir)
+                    / f"{''.join(random.choice(string.ascii_letters) for _ in range(10))}.obj"  # noqa: E501
+                )
 
                 try:
-                    filename: str = processor.get_file_for_download(
-                        target_f=temp_filepath
+                    filename = processor.get_filename_for_download(
+                        target_f=temp_filepath, hexsha=hexsha
                     )
-                except ValidationError as e:
-                    raise Http404(
-                        f"The file: `{processor.TARGET_SAVE_FILENAME}` does not exists."
-                    ) from e
+                except ValidationError:
+                    return ErrorResponse(
+                        {
+                            "error": (
+                                f"The file: `{processor.TARGET_SAVE_FILENAME}` does "
+                                "not exists."
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
                 if filename is not None and temp_filepath.is_file():
                     return DownloadResponseFromFile(
-                        filename=filename,
                         filepath=temp_filepath,
+                        filename=str(filename),
                         attachment=True,
                     )
+
+                return ErrorResponse(
+                    {"error": "File not found ..."}, status=status.HTTP_404_NOT_FOUND
+                )
 
             except ProjectNotFound as e:
                 return ErrorResponse(
@@ -413,30 +435,32 @@ class FileDownloadView(GenericAPIView):
                 )
 
             except RuntimeError as e:
-                logger.exception(
-                    f"Error - While getting the file to download @ `{hexsha}`"
-                )
                 return ErrorResponse(
                     {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
             except GitlabError:
-                logger.exception("There has been a problem accessing gitlab")
                 return ErrorResponse(
                     {"error": "There has been a problem accessing gitlab"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
 
-class BlobDownloadView(GenericAPIView):
+class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
     lookup_field = "id"
 
-    def get(self, request, hexsha: str, *args, **kwargs):
-        project: Project = self.get_object()
+    def get(
+        self,
+        request: Request,
+        hexsha: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Response | FileResponse:
+        project = self.get_object()
 
         # Using a retry-loop to prevent "pulling the repo" first.
         # If - by any chance - the blob is already known by GIT, we can reply fast

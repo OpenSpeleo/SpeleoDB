@@ -2,13 +2,16 @@
 # -*- coding: utf-8 -*-
 
 import enum
+from typing import Any
 
 from django_countries.fields import Country
 from rest_framework import serializers
 
 
 class CustomChoiceField(serializers.ChoiceField):
-    def to_representation(self, obj):
+    _kwargs: Any
+
+    def to_representation(self, obj: Any) -> str | Any:
         if obj == "" and self.allow_blank:
             return obj
 
@@ -22,7 +25,7 @@ class CustomChoiceField(serializers.ChoiceField):
 
         return val
 
-    def to_internal_value(self, data):
+    def to_internal_value(self, data: Any) -> str | Any:
         if self.field_name == "country":
             return super().to_internal_value(data)
 

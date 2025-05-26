@@ -76,6 +76,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+.dmypy.*
 
 
 ### Node template
@@ -186,7 +187,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
-
 
 ### macOS template
 # General

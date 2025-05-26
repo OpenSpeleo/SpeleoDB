@@ -7,7 +7,9 @@ import contextlib
 import decimal
 import pathlib
 import uuid
+from itertools import chain
 from typing import TYPE_CHECKING
+from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -19,11 +21,12 @@ from django.db.models import Q
 from django.utils import timezone
 from django_countries.fields import CountryField
 
-from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabManager
+from speleodb.surveys.models import PermissionLevel
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
+from speleodb.utils.django_base_models import BaseIntegerChoices
 from speleodb.utils.exceptions import ProjectNotFound
 
 if TYPE_CHECKING:
@@ -36,6 +39,12 @@ if TYPE_CHECKING:
 
 
 class Project(models.Model):
+    # type checking
+    rel_formats: models.QuerySet[Format]
+    rel_mutexes: models.QuerySet[Mutex]
+    rel_user_permissions: models.QuerySet[UserPermission]
+    rel_team_permissions: models.QuerySet[TeamPermission]
+
     # Automatic fields
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -95,16 +104,15 @@ class Project(models.Model):
         ],
     )
 
-    class Visibility(models.IntegerChoices):
+    class Visibility(BaseIntegerChoices):
         PRIVATE = (0, "PRIVATE")
         PUBLIC = (1, "PUBLIC")
 
-    _visibility = models.IntegerField(
+    visibility = models.IntegerField(
         choices=Visibility.choices,
         blank=False,
         null=False,
         default=Visibility.PRIVATE,
-        verbose_name="visibility",
     )
 
     class Meta:
@@ -128,14 +136,6 @@ class Project(models.Model):
         return self.name
 
     @property
-    def visibility(self) -> str:
-        return self.Visibility(self._visibility).label
-
-    @visibility.setter
-    def visibility(self, value) -> None:
-        self._visibility = value
-
-    @property
     def active_mutex(self) -> Mutex | None:
         try:
             return self.rel_mutexes.filter(closing_user=None)[0]
@@ -144,16 +144,14 @@ class Project(models.Model):
 
     @property
     def mutex_owner(self) -> User | None:
-        active_mutex: Mutex = self.active_mutex
-        if active_mutex is None:
+        if (active_mutex := self.active_mutex) is None:
             return None
 
         return active_mutex.user
 
     @property
     def mutex_dt(self) -> datetime.datetime | None:
-        active_mutex: Mutex = self.active_mutex
-        if active_mutex is None:
+        if (active_mutex := self.active_mutex) is None:
             return None
         return active_mutex.modified_date
 
@@ -163,7 +161,7 @@ class Project(models.Model):
 
         # if the user is already the mutex_owner, just refresh the mutex_dt
         # => re-acquire mutex
-        active_mutex: Mutex = self.active_mutex
+        active_mutex = self.active_mutex
         if active_mutex is not None:
             if active_mutex.user != user:
                 raise ValidationError(
@@ -172,13 +170,14 @@ class Project(models.Model):
                 )
             active_mutex.modified_date = timezone.localtime()
             active_mutex.save()
+
         else:
             from speleodb.surveys.models import Mutex
 
             _ = Mutex.objects.create(project=self, user=user)
 
     def release_mutex(self, user: User, comment: str = "") -> None:
-        active_mutex: Mutex = self.active_mutex
+        active_mutex = self.active_mutex
         if active_mutex is None:
             # if nobody owns the project, returns without error.
             return
@@ -190,7 +189,7 @@ class Project(models.Model):
         active_mutex.release_mutex(user=user, comment=comment)
 
     def get_best_permission(self, user: User) -> TeamPermission | UserPermission:
-        permissions = []
+        permissions: list[TeamPermission | UserPermission] = []
         with contextlib.suppress(ObjectDoesNotExist):
             permissions.append(self.get_user_permission(user))
 
@@ -198,7 +197,7 @@ class Project(models.Model):
             with contextlib.suppress(ObjectDoesNotExist):
                 permissions.append(self.get_team_permission(team))
 
-        return sorted(permissions, key=lambda perm: perm._level, reverse=True)[0]  # noqa: SLF001
+        return max(permissions, key=lambda perm: perm.level)
 
     def get_user_permission(self, user: User) -> UserPermission:
         return self.rel_user_permissions.get(target=user, is_active=True)
@@ -207,20 +206,20 @@ class Project(models.Model):
         return self.rel_team_permissions.get(target=team, is_active=True)
 
     @property
-    def user_permissions(self) -> list[UserPermission]:
+    def user_permissions(self) -> models.QuerySet[UserPermission]:
         return self.rel_user_permissions.filter(is_active=True).order_by(
-            "-_level", "target__email"
+            "-level", "target__email"
         )
 
     @property
-    def team_permissions(self) -> list[TeamPermission]:
+    def team_permissions(self) -> models.QuerySet[TeamPermission]:
         return self.rel_team_permissions.filter(is_active=True).order_by(
-            "-_level", "target__name"
+            "-level", "target__name"
         )
 
     @property
-    def permissions(self) -> list[TeamPermission, UserPermission]:
-        return self.user_permissions + self.team_permissions
+    def permissions(self) -> chain[TeamPermission | UserPermission]:
+        return chain(self.user_permissions, self.team_permissions)
 
     @property
     def user_permission_count(self) -> int:
@@ -245,41 +244,38 @@ class Project(models.Model):
         users = list(set(users))
         return len(users)
 
-    def _has_user_permission(self, user: User, permission) -> bool:
-        from speleodb.surveys.models.permission_user import UserPermission
-
-        if not isinstance(permission, UserPermission.Level):
+    def _has_user_permission(self, user: User, permission: PermissionLevel) -> bool:
+        if not isinstance(permission, PermissionLevel):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
 
         try:
-            return self.get_user_permission(user=user)._level >= permission  # noqa: SLF001
+            return self.get_user_permission(user=user).level >= permission
         except ObjectDoesNotExist:
             return False
 
-    def _has_team_permission(self, team: SurveyTeam, permission) -> bool:
-        from speleodb.surveys.models.permission_team import TeamPermission
-
-        if not isinstance(permission, TeamPermission.Level):
+    def _has_team_permission(
+        self, team: SurveyTeam, permission: PermissionLevel
+    ) -> bool:
+        if not isinstance(permission, PermissionLevel):
             raise TypeError(f"Unexpected value received for: `{permission=}`")
 
         try:
-            return self.get_team_permission(team=team)._level >= permission  # noqa: SLF001
+            return self.get_team_permission(team=team).level >= permission
         except ObjectDoesNotExist:
             return False
 
-    def _has_permission(self, target: User | SurveyTeam, permission) -> bool:
+    def _has_permission(
+        self, target: User | SurveyTeam, permission: PermissionLevel
+    ) -> bool:
         if isinstance(target, User):
             return self._has_user_permission(user=target, permission=permission)
         if isinstance(target, SurveyTeam):
-            return self._has_user_permission(team=target, permission=permission)
+            return self._has_team_permission(team=target, permission=permission)
         raise TypeError(f"Unexpected value received for: `{target=}`")
 
     def has_write_access(self, user: User) -> bool:
-        from speleodb.surveys.models.permission_team import TeamPermission
-        from speleodb.surveys.models.permission_user import UserPermission
-
         user_permission = self._has_user_permission(
-            user, permission=UserPermission.Level.READ_AND_WRITE
+            user, permission=PermissionLevel.READ_AND_WRITE
         )
 
         if user_permission:
@@ -287,20 +283,18 @@ class Project(models.Model):
 
         for team in user.teams:
             if self._has_team_permission(
-                team, permission=TeamPermission.Level.READ_AND_WRITE
+                team, permission=PermissionLevel.READ_AND_WRITE
             ):
                 return True
 
         return False
 
     def is_admin(self, user: User) -> bool:
-        from speleodb.surveys.models.permission_user import UserPermission
-
-        return self._has_user_permission(user, permission=UserPermission.Level.ADMIN)
+        return self._has_user_permission(user, permission=PermissionLevel.ADMIN)
 
     @property
-    def git_repo_dir(self):
-        return (settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)).resolve()
+    def git_repo_dir(self) -> pathlib.Path:
+        return pathlib.Path(settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)).resolve()
 
     @property
     def git_repo(self) -> GitRepo:
@@ -332,13 +326,19 @@ class Project(models.Model):
         )
 
     @property
-    def commit_history(self) -> list[GitCommit]:
+    def commit_history(self) -> list[dict[str, Any]] | None:
         try:
+            if (
+                commit_history := GitlabManager.get_commit_history(project_id=self.id)
+            ) is None:
+                return []
+
             commits = [
                 commit
-                for commit in GitlabManager.get_commit_history(project_id=self.id)
+                for commit in commit_history
                 if commit["message"] != settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
             ]
+
             if isinstance(commits, (list, tuple)):
                 return commits
 
@@ -366,7 +366,7 @@ class Project(models.Model):
             self.git_repo.checkout_commit(hexsha=hexsha)
 
     @property
-    def formats(self) -> list[Format]:
+    def formats(self) -> models.QuerySet[Format]:
         return self.rel_formats.all().order_by("_format")
 
     @property

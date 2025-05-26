@@ -1,16 +1,15 @@
 from django import template
 
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
+from speleodb.surveys.models import PermissionLevel
 
 register = template.Library()
 
 
 @register.simple_tag
-def get_user_permission_levels() -> list[str]:
-    return [name for _, name in UserPermission.Level.choices]
+def get_user_permission_levels() -> list[PermissionLevel]:
+    return PermissionLevel.members  # type: ignore[arg-type,return-value]
 
 
 @register.simple_tag
-def get_team_permission_levels() -> list[str]:
-    return [name for _, name in TeamPermission.Level.choices]
+def get_team_permission_levels() -> list[PermissionLevel]:
+    return PermissionLevel.members_no_admin

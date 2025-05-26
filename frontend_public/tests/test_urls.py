@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from django.urls import resolve
 from django.urls import reverse
@@ -32,7 +34,7 @@ from django.urls import reverse
         ),
     ],
 )
-def test_routes(name: str, path: str, kwargs: dict | None):
+def test_routes(name: str, path: str, kwargs: Any | None) -> None:
     path = f"/{path}" if kwargs is None else f"/{path.format(**kwargs)}"
 
     # Test reverse URL generation

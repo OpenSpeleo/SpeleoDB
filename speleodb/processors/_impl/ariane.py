@@ -18,7 +18,7 @@ from speleodb.utils.timing_ctx import timed_section
 def calculate_sha1(
     file_path: str | Path | None = None,
     file_obj: InMemoryUploadedFile | TemporaryUploadedFile | None = None,
-    buffer_size=65536,
+    buffer_size: int = 65536,
 ) -> str:
     """
     Calculate SHA-1 hash of a file in a memory-efficient way.
@@ -29,10 +29,10 @@ def calculate_sha1(
     :return: SHA-1 hash as a hexadecimal string
     """
 
-    if (file_path is None) is (file_obj is None):
+    if (file_path is None) ^ (file_obj is None):  # XOR Comparison
         raise ValueError(
             "`file_path` and `file_obj` are mutually exclusive. "
-            f"Only one should be not None: {file_path=} && {file_obj=}"
+            f"{file_path=} && {file_obj=}"
         )
 
     sha1 = hashlib.sha1()  # noqa: S324
@@ -49,7 +49,7 @@ def calculate_sha1(
             while chunk := f.read(buffer_size):
                 sha1.update(chunk)
 
-    else:
+    elif file_obj is not None:
         # Ensure the file pointer is at the beginning
         file_obj.seek(0)
 
@@ -59,6 +59,9 @@ def calculate_sha1(
 
         # Optionally reset the file pointer after hashing
         file_obj.seek(0)
+
+    else:
+        raise RuntimeError("This should never execute. See XOR above.")
 
     return sha1.hexdigest()
 
@@ -82,19 +85,19 @@ class DMPFileProcessor(BaseFileProcessor):
     TARGET_SAVE_FILENAME = None
     TARGET_DOWNLOAD_FILENAME = None
 
-    def _get_storage_name(self, filepath: Path) -> str:
+    def _get_storage_name(self, file: Path) -> str:  # type: ignore[override]
         # 1. Calculate the new file sha1 hash
-        filehash = calculate_sha1(file_path=filepath)
+        filehash = calculate_sha1(file_path=file)
 
         # 2. Look for a collision with pre-existing files
         # - if found raises `FileExistsError`
-        for existing_f in self.folder.rglob("*.dmp"):
+        for existing_f in self.storage_folder.rglob("*.dmp"):
             if existing_f.is_file():  # Skip directories and other non-files
                 if filehash == calculate_sha1(file_path=existing_f):
                     raise FileExistsError(
                         f"This file already exist at path: `{existing_f}`."
                     )
-        dmp_model = DMPFile.from_dmp(filepath)
+        dmp_model = DMPFile.from_dmp(file)
 
         # 3. Build the new filename and return it
         try:
@@ -105,7 +108,7 @@ class DMPFileProcessor(BaseFileProcessor):
         except IndexError:
             return f"mnemo_{localtime().strftime(self.DATETIME_FORMAT)}__{filehash[:8]}.dmp"  # noqa: E501
 
-    def _add_file_to_project(self, artifact: Artifact) -> list[Path]:
+    def _add_to_project(self, artifact: Artifact) -> list[Path]:
         with TemporaryDirectory() as tmp_dir:
             tmp_dir_path = Path(tmp_dir)
 
@@ -120,12 +123,12 @@ class DMPFileProcessor(BaseFileProcessor):
                     input_file=input_f, output_directory=out_dir_path
                 )
 
-            added_files = []
+            added_files: list[Path] = []
             with timed_section("File copy to project dir"):
                 for dmp_f in sorted(out_dir_path.glob("*.dmp")):
                     try:
-                        target_path = self.folder / self._get_storage_name(
-                            filepath=dmp_f
+                        target_path = self.storage_folder / self._get_storage_name(
+                            file=dmp_f
                         )
                     except FileExistsError:
                         continue

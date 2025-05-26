@@ -8,7 +8,7 @@ from speleodb.processors._impl.compass import DATFileProcessor
 from speleodb.processors._impl.compass import MAKFileProcessor
 from speleodb.processors._impl.dump import DumpProcessor
 
-from speleodb.processors.base import Artifact
+from speleodb.processors.artifact import Artifact
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
@@ -61,7 +61,7 @@ class AutoSelector:
         fileformat: Format.FileFormat,
         file: InMemoryUploadedFile | TemporaryUploadedFile,
         project: Project,
-    ) -> type[BaseFileProcessor]:
+    ) -> BaseFileProcessor:
         if not isinstance(file, (InMemoryUploadedFile, TemporaryUploadedFile)):
             raise TypeError(f"Unexpected object type received: {type(file)}")
 
@@ -72,17 +72,20 @@ class AutoSelector:
             )
 
         with timed_section("Get Processor - Func"):
-            file = Artifact(file)
+            artifact = Artifact(file)
             processor_cls = AutoSelector.get_processor(
-                fileformat=fileformat, f_extension=file.extension
+                fileformat=fileformat, f_extension=artifact.extension
             )
+
         with timed_section("Get Processor - Instanciation"):
             return processor_cls(project=project)
 
     @staticmethod
     def get_download_processor(
-        fileformat: Format.FileFormat, project: Project, hexsha: str
-    ) -> type[BaseFileProcessor]:
-        processor_cls = AutoSelector.get_processor(fileformat=fileformat)
+        fileformat: Format.FileFormat, project: Project, hexsha: str | None
+    ) -> BaseFileProcessor:
+        with timed_section("Get Processor - Func"):
+            processor_cls = AutoSelector.get_processor(fileformat=fileformat)
 
-        return processor_cls(project=project, hexsha=hexsha)
+        with timed_section("Get Processor - Instanciation"):
+            return processor_cls(project=project)

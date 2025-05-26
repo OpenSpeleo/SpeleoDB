@@ -1,4 +1,3 @@
-# ruff: noqa
 """
 ASGI config for SpeleoDB project.
 
@@ -30,10 +29,10 @@ django_application = get_asgi_application()
 # application = HelloWorldApplication(application)
 
 # Import websocket application here, so apps from django_application are loaded first
-from config.websocket import websocket_application
+from config.websocket import websocket_application  # noqa: E402
 
 
-async def application(scope, receive, send):
+async def application(scope, receive, send) -> None:  # type: ignore[no-untyped-def]
     if scope["type"] == "http":
         await django_application(scope, receive, send)
     elif scope["type"] == "websocket":

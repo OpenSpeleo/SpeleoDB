@@ -42,6 +42,10 @@
                     "linting.flake8Enabled": true,
                     "linting.mypyEnabled": true,
                     "linting.mypyPath": "/usr/local/bin/mypy",
+                    "linting.mypyArgs": [
+                        "--config-file",
+                        "/app/pyproject.toml"
+                    ],
                     "linting.pylintEnabled": true
                 }
             },
@@ -75,7 +79,9 @@
                 // Docker
                 "ms-azuretools.vscode-docker",
                 // Env
-                "IronGeek.vscode-env"
+                "IronGeek.vscode-env",
+                // MyPy
+                "ms-python.mypy-type-checker"
             ]
         }
     },

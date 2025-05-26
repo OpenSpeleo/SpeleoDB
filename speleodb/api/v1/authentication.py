@@ -1,7 +1,11 @@
+from typing import Any
+
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.authtoken.models import Token
+from rest_framework.request import Request
 
 
 class DebugHeaderAuthentication(BaseAuthentication):
@@ -9,7 +13,7 @@ class DebugHeaderAuthentication(BaseAuthentication):
     Custom authentication class for debugging request headers.
     """
 
-    def authenticate(self, request):
+    def authenticate(self, request: Request) -> None:
         """
         Logs the entire request headers and returns None.
         """
@@ -40,16 +44,21 @@ class GitOAuth2Authentication(BasicAuthentication):
     Specific for git `oauth2:<token>` authentication scheme.
     """
 
-    model = None
+    model: type[Token] | None = None
 
-    def get_model(self):
+    def get_model(self) -> type[Token]:
         if self.model is not None:
             return self.model
         from rest_framework.authtoken.models import Token
 
         return Token
 
-    def authenticate_credentials(self, userid, password, request=None):
+    def authenticate_credentials(  # type: ignore[override]
+        self,
+        userid: Any,
+        password: str,
+        request: Request | None = None,
+    ) -> tuple[Any, Token]:
         model = self.get_model()
         try:
             token = model.objects.select_related("user").get(key=password)

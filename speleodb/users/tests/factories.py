@@ -1,19 +1,24 @@
 from collections.abc import Sequence
 from typing import Any
 
-from factory import Faker
-from factory import post_generation
+from factory.base import StubObject
 from factory.django import DjangoModelFactory
+from factory.faker import Faker
+from factory.helpers import post_generation
 
 from speleodb.users.models import User
 
 
-class UserFactory(DjangoModelFactory):
-    email = Faker("email")
-    name = Faker("name")
+class UserFactory(DjangoModelFactory[User]):
+    email: str = Faker("email")  # type: ignore[assignment]
+    name: str = Faker("name")  # type: ignore[assignment]
+
+    class Meta:
+        model = User
+        django_get_or_create = ["email"]
 
     @post_generation
-    def password(self, create: bool, extracted: Sequence[Any], **kwargs):
+    def password(self, create: bool, extracted: Sequence[Any], **kwargs: Any) -> None:
         password = (
             extracted
             if extracted
@@ -24,17 +29,18 @@ class UserFactory(DjangoModelFactory):
                 digits=True,
                 upper_case=True,
                 lower_case=True,
-            ).evaluate(None, None, extra={"locale": None})
+            ).evaluate(None, None, extra={"locale": None})  # type: ignore[arg-type]
         )
-        self.set_password(password)
+        self.set_password(password)  # type: ignore[attr-defined]
 
     @classmethod
-    def _after_postgeneration(cls, instance, create, results=None):
+    def _after_postgeneration(
+        cls,
+        instance: User | StubObject,
+        create: bool,
+        results: dict[str, Any] | None = None,
+    ) -> None:
         """Save again the instance if creating and at least one hook ran."""
-        if create and results and not cls._meta.skip_postgeneration_save:
+        if create and results and not cls._meta.skip_postgeneration_save:  # type: ignore[attr-defined]
             # Some post-generation hooks ran, and may have modified us.
-            instance.save()
-
-    class Meta:
-        model = User
-        django_get_or_create = ["email"]
+            instance.save()  # type: ignore[union-attr]

@@ -1,4 +1,4 @@
-async def websocket_application(scope, receive, send):
+async def websocket_application(scope, receive, send) -> None:  # type: ignore[no-untyped-def]
     while True:
         event = await receive()
 

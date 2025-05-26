@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from typing import Any
+
 from django.contrib.auth import authenticate
 from rest_framework import serializers
+from rest_framework.authtoken.models import Token
 
 
-class AuthTokenSerializer(serializers.Serializer):
+class AuthTokenSerializer(serializers.Serializer[Token]):
     email = serializers.CharField(label="Email", write_only=True, required=True)
     password = serializers.CharField(
         label="Password",
@@ -15,7 +18,7 @@ class AuthTokenSerializer(serializers.Serializer):
         required=True,
     )
 
-    def validate(self, attrs):
+    def validate(self, attrs: Any) -> Any:
         email = attrs.get("email")
         password = attrs.get("password")
 

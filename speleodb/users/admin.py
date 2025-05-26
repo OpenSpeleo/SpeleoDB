@@ -1,9 +1,13 @@
+from typing import Any
+
 from allauth.account.admin import EmailAddressAdmin as _EmailAddressAdmin
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
+from django.forms.models import ModelForm
+from django.http import HttpRequest
 from dynamic_raw_id.admin import DynamicRawIDMixin
 from hijack.contrib.admin import HijackUserAdminMixin
 
@@ -16,11 +20,11 @@ from speleodb.users.models import User
 if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
     # Force the `admin` sign in process to go through the `django-allauth` workflow:
     # https://docs.allauth.org/en/latest/common/admin.html#admin
-    admin.site.login = login_required(admin.site.login)  # type: ignore[method-assign]
+    admin.site.login = login_required(admin.site.login)
 
 
 @admin.register(User)
-class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):
+class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):  # type: ignore[type-arg]
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm
     fieldsets = (
@@ -68,32 +72,34 @@ class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):
         ),
     )
 
-    def get_hijack_user(self, obj):
+    def get_hijack_user(self, obj: User) -> User:
         return obj
 
 
-class EmailAddressAdmin(DynamicRawIDMixin, _EmailAddressAdmin):
-    dynamic_raw_id_fields = ("user",)
-    raw_id_fields = ()
+admin.site.unregister(EmailAddress)
 
-    def get_form(self, request, obj=None, **kwargs):
+
+@admin.register(EmailAddress)
+class EmailAddressAdmin(DynamicRawIDMixin, _EmailAddressAdmin):
+    dynamic_raw_id_fields: tuple[str] = ("user",)  # type: ignore[assignment]
+    raw_id_fields: tuple[()] = ()  # type: ignore[assignment]
+
+    def get_form(  # type: ignore[override]
+        self, request: HttpRequest, obj: EmailAddress | None = None, **kwargs: Any
+    ) -> type[ModelForm]:  # type: ignore[type-arg]
         form = super().get_form(request, obj, **kwargs)
-        form.base_fields["user"].widget.attrs["style"] = "width: 20em;"
+        form.base_fields["user"].widget.attrs["style"] = "width: 20em;"  # pyright: ignore[reportAttributeAccessIssue]
         return form
 
 
-admin.site.unregister(EmailAddress)
-admin.site.register(EmailAddress, EmailAddressAdmin)
-
-
 @admin.register(SurveyTeam)
-class SurveyTeamAdmin(admin.ModelAdmin):
+class SurveyTeamAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = ("name", "creation_date", "modified_date")
     ordering = ("name",)
 
 
 @admin.register(SurveyTeamMembership)
-class SurveyTeamMembershipAdmin(admin.ModelAdmin):
+class SurveyTeamMembershipAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "team",
         "user",

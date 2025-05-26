@@ -5,6 +5,7 @@ import logging
 import os
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from django.core.management.base import BaseCommand
 
@@ -21,13 +22,13 @@ class Command(BaseCommand):
         merged_content = ""
         for merge_file in input_files:
             if not merge_file.exists():
-                logger.warning(f"The file `{merge_file}` does not exists... Skipping !")
+                logger.warning(f"The file `{merge_file}` does not exist ... Skipping !")
                 continue
             merged_content += merge_file.read_text()
             merged_content += os.linesep
         out_file.write_text(merged_content)
 
-    def handle(self, *args, **kwargs):
+    def handle(self, *args: Any, **kwargs: Any) -> None:
         base_project_dir = Path(__file__).parents[4].resolve()
         source_dotenv_dir = base_project_dir / ".envs" / ".production"
         input_files = [

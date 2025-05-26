@@ -10,7 +10,9 @@ from speleodb.users.models import User
 
 class UserPermission(BasePermissionModel):
     target = models.ForeignKey(
-        User, related_name="rel_permissions", on_delete=models.CASCADE
+        User,
+        related_name="rel_permissions",
+        on_delete=models.CASCADE,
     )
 
     project = models.ForeignKey(
@@ -19,21 +21,7 @@ class UserPermission(BasePermissionModel):
         on_delete=models.CASCADE,
     )
 
-    class Level(models.IntegerChoices):
-        READ_ONLY = (
-            BasePermissionModel.Level.READ_ONLY,
-            BasePermissionModel.Level.READ_ONLY.label,
-        )
-        READ_AND_WRITE = (
-            BasePermissionModel.Level.READ_AND_WRITE,
-            BasePermissionModel.Level.READ_AND_WRITE.label,
-        )
-        ADMIN = (2, "ADMIN")
-
-    _level = models.IntegerField(
-        choices=Level.choices, default=Level.READ_ONLY, verbose_name="level"
-    )
-
-    class Meta(BasePermissionModel.Meta):
+    class Meta:
         verbose_name = "User Permission"
         verbose_name_plural = "User Permissions"
+        unique_together = ("target", "project")

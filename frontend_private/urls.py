@@ -1,3 +1,5 @@
+from django.urls import URLPattern
+from django.urls import URLResolver
 from django.urls import include
 from django.urls import path
 
@@ -27,7 +29,7 @@ from frontend_private.views import TeamMembershipsView
 app_name = "private"
 
 
-project_patterns = [
+project_patterns: list[URLPattern | URLResolver] = [
     path("", ProjectDetailsView.as_view(), name="project_details"),
     path("upload/", ProjectUploadView.as_view(), name="project_upload"),
     path(
@@ -66,7 +68,7 @@ project_patterns = [
     ),
 ]
 
-team_urls = [
+team_urls: list[URLPattern] = [
     path("", TeamDetailsView.as_view(), name="team_details"),
     path(
         "memberships/",
@@ -80,7 +82,7 @@ team_urls = [
     ),
 ]
 
-urlpatterns = [
+urlpatterns: list[URLPattern | URLResolver] = [
     # User URLs
     path("", DashboardView.as_view(), name="user_dashboard"),
     path("auth-token/", AuthTokenView.as_view(), name="user_authtoken"),

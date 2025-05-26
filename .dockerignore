@@ -12,6 +12,11 @@ Procfile
 *.yml
 *.yaml
 *.toml
+!pyproject.toml
+!nickpacks.toml
+!railway.toml
+!railpack.json
+!uv.lock
 
 # Directories
 # ls -al | grep '^d' | awk '{print $9}'

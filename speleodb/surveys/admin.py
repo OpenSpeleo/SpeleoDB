@@ -2,8 +2,12 @@
 # -*- coding: utf-8 -*-
 
 # """Admin module for Django."""
+from typing import Any
+
 from django.contrib import admin
 from django.db.models import F
+from django.db.models import QuerySet
+from django.http import HttpRequest
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Mutex
@@ -13,17 +17,19 @@ from speleodb.surveys.models import UserPermission
 
 
 @admin.register(Format)
-class FormatAdmin(admin.ModelAdmin):
+class FormatAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = ("project", "format", "creation_date")
     ordering = ("-creation_date",)
     list_filter = ["project"]
 
-    def has_change_permission(self, request, obj=None) -> bool:
+    def has_change_permission(
+        self, request: HttpRequest, obj: Format | None = None
+    ) -> bool:
         return False
 
 
 @admin.register(Mutex)
-class MutexAdmin(admin.ModelAdmin):
+class MutexAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "project_name",
         "user",
@@ -35,19 +41,19 @@ class MutexAdmin(admin.ModelAdmin):
     ordering = ("-modified_date",)
     list_filter = ["closing_user", "project__name"]
 
-    def get_queryset(self, request):
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Any, Any]:
         # Annotate the queryset with project name for sorting
         qs = super().get_queryset(request)
-        return qs.annotate(project_name=F("project__name"))
+        return qs.annotate(project_name=F("project__name"))  # type: ignore[no-any-return]
 
     @admin.display(ordering="project_name")
-    def project_name(self, obj) -> str:
+    def project_name(self, obj: Mutex) -> str:
         return obj.project.name
 
 
 @admin.register(TeamPermission)
 @admin.register(UserPermission)
-class PermissionAdmin(admin.ModelAdmin):
+class PermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "project",
         "target",
@@ -61,7 +67,7 @@ class PermissionAdmin(admin.ModelAdmin):
 
 
 @admin.register(Project)
-class ProjectAdmin(admin.ModelAdmin):
+class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "name",
         "description",

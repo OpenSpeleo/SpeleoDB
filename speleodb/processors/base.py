@@ -1,6 +1,4 @@
-import contextlib
 import re
-import shutil
 import time
 from datetime import UTC
 from datetime import datetime
@@ -14,8 +12,10 @@ from django.utils.timezone import get_default_timezone
 from git.exc import GitCommandError
 
 from speleodb.git_engine.core import GitCommit
+from speleodb.git_engine.core import GitFile
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.processors.artifact import Artifact
+from speleodb.processors.artifact import UploadedFile
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.utils.timing_ctx import timed_section
@@ -24,10 +24,10 @@ from speleodb.utils.timing_ctx import timed_section
 
 
 class BaseFileProcessor:
-    ALLOWED_EXTENSIONS = ["*"]
-    ALLOWED_MIMETYPES = ["*"]
+    ALLOWED_EXTENSIONS: list[str] = ["*"]
+    ALLOWED_MIMETYPES: list[str] = ["*"]
 
-    REJECTED_EXTENSIONS = [
+    REJECTED_EXTENSIONS: list[str] = [
         # Executable files
         ".exe",  # Windows Executable File. Can execute programs and potentially harmful code.
         ".bat",  # Batch File. Used to execute commands in Windows; can automate harmful scripts.
@@ -95,17 +95,18 @@ class BaseFileProcessor:
         ".psm1",  # PowerShell Module File. Similar risk as PowerShell scripts.
     ]
 
-    ASSOC_FILEFORMAT = Format.FileFormat.OTHER
+    ASSOC_FILEFORMAT: Format.FileFormat = Format.FileFormat.OTHER
 
-    TARGET_FOLDER = "misc"
-    TARGET_SAVE_FILENAME = None
-    TARGET_DOWNLOAD_FILENAME = None
+    TARGET_FOLDER: str | None = "misc"
+    TARGET_SAVE_FILENAME: str | None = None
+    TARGET_DOWNLOAD_FILENAME: str | None = None
 
-    DATETIME_FORMAT = "%Y-%m-%d_%Hh%M"
+    DATETIME_FORMAT: str = "%Y-%m-%d_%Hh%M"
 
-    def __init__(self, project: Project, hexsha: str | None = None) -> None:
+    _project: Project
+
+    def __init__(self, project: Project) -> None:
         self.project = project
-        self.hexsha = hexsha
 
     # -------------------------- Getters & Setters -------------------------- #
 
@@ -120,23 +121,21 @@ class BaseFileProcessor:
 
         self._project = value
 
-    @property
-    def hexsha(self) -> str | None:
-        return self._hexsha
-
-    @hexsha.setter
-    def hexsha(self, value: str) -> None:
-        if value is not None and not self.validate_hexsha(value):
-            raise ValueError(f"Invalid Git SHA value: `{value}`.")
-
-        self._hexsha = value
+    # -------------------------- Getters & Setters -------------------------- #
 
     @property
-    def source_f(self) -> Path:
-        source_f = self.project.git_repo.path / self.TARGET_SAVE_FILENAME
-        if not source_f.is_file():
-            raise ValidationError(f"Impossible to find the file: `{source_f}` ...")
-        return source_f
+    def default_filepath(self) -> Path | None:
+        if self.TARGET_SAVE_FILENAME is None:
+            return None
+
+        default_filepath = self.project.git_repo.path / self.TARGET_SAVE_FILENAME
+
+        if not default_filepath.is_file():
+            raise ValidationError(
+                f"Impossible to find the file: `{default_filepath}` ..."
+            )
+
+        return default_filepath
 
     # ------------------------------ Validators ----------------------------- #
 
@@ -149,45 +148,62 @@ class BaseFileProcessor:
         git_sha_pattern = r"^[a-fA-F0-9]{4,40}$"
 
         # Return True if the hexsha matches the pattern, else False
-        return bool(re.match(git_sha_pattern, hexsha))
+        return bool(re.fullmatch(git_sha_pattern, hexsha))
 
     # ----------------------------- Public APIs ----------------------------- #
 
-    def add_file_to_project(
-        self, file: InMemoryUploadedFile | TemporaryUploadedFile
-    ) -> Artifact | Path | list[Path]:
-        artifact = Artifact(file)
+    def add_to_project(self, file: UploadedFile | Artifact) -> list[Path]:
+        if isinstance(file, (InMemoryUploadedFile, TemporaryUploadedFile)):
+            artifact = Artifact(file)
+
+        elif not isinstance(file, Artifact):
+            raise TypeError(
+                f"Expected Artifact, InMemoryUploadedFile or TemporaryUploadedFile - received: `{type(file)}`."
+            )
+
+        else:
+            artifact = file
+
         artifact.assert_valid(
             allowed_extensions=self.ALLOWED_EXTENSIONS,
             allowed_mimetypes=self.ALLOWED_MIMETYPES,
             rejected_extensions=self.REJECTED_EXTENSIONS,
         )
 
-        return self._add_file_to_project(artifact=artifact)
+        return self._add_to_project(artifact=artifact)
 
-    def get_file_for_download(self, target_f: Path) -> Path:
+    def get_filename_for_download(
+        self, target_f: Path, hexsha: str | None = None
+    ) -> str:
         if not isinstance(target_f, Path):
             target_f = Path(target_f)
 
         # 1. Fetch the commit requested by the user - pull repository if needed.
         try:
-            if self.hexsha is not None:
-                try:
-                    commit = self.project.git_repo.commit(self.hexsha)
-                except ValueError:
-                    # In case the commit doesn't exist - pull and retry
-                    self.project.git_repo.pull()
-                    commit = self.project.git_repo.commit(self.hexsha)
+            if hexsha is not None:
+                if not self.validate_hexsha(hexsha):
+                    raise ValueError(f"Invalid Git SHA value: `{hexsha}`.")
+
+                for _ in range(2):
+                    try:
+                        commit = self.project.git_repo.commit(hexsha)
+                        break
+                    except ValueError:
+                        # In case the commit doesn't exist - pull and retry
+                        self.project.git_repo.pull()
+                else:
+                    raise ValueError(f"Impossible to find commit `{hexsha}`")
+
             else:
                 # If we select the HEAD commit - no other choice than pull first
                 self.project.git_repo.pull()
                 commit = self.project.git_repo.head.commit
 
             if commit is None:
-                raise ValueError  # noqa: TRY301
+                raise ValueError("Impossible to find HEAD commit")
 
-        except (ValueError, GitBaseError, GitCommandError) as e:
-            raise RuntimeError(f"Impossible to find commit: `{self.hexsha}`") from e
+        except (GitBaseError, GitCommandError) as e:
+            raise RuntimeError(f"Impossible to find commit: `{hexsha}`") from e
 
         # 2. Generate or copy the file to be downloaded to path `target_f`:
         # What file(s) to download is determined by the `Processor` class.
@@ -195,7 +211,7 @@ class BaseFileProcessor:
             self._generate_or_copy_file_for_download(commit=commit, target_f=target_f)
 
             if not target_f.is_file():
-                raise RuntimeError(f"The file `{target_f}` does not exist.")
+                raise RuntimeError(f"@@@ The file `{target_f}` does not exist.")
 
         except PermissionError as e:
             raise RuntimeError from e
@@ -208,14 +224,13 @@ class BaseFileProcessor:
         tz_aware_datetime = naive_datetime.astimezone(tz=get_default_timezone())
 
         # 5. Generate the filename that will be seen in the browser
-        return (
-            self.TARGET_DOWNLOAD_FILENAME.format(
+        if self.TARGET_DOWNLOAD_FILENAME is not None:
+            return self.TARGET_DOWNLOAD_FILENAME.format(
                 project_name=slugify(self.project.name, allow_unicode=False).lower(),
                 timestamp=tz_aware_datetime.strftime(self.DATETIME_FORMAT),
             )
-            if self.TARGET_DOWNLOAD_FILENAME is not None
-            else target_f.name
-        )
+
+        return target_f.name
 
     # ----------------------------- Private APIs ----------------------------- #
 
@@ -224,56 +239,61 @@ class BaseFileProcessor:
     def _generate_or_copy_file_for_download(
         self, commit: GitCommit, target_f: Path
     ) -> None:
-        with contextlib.suppress(shutil.SameFileError):
-            shutil.copy(src=self.source_f, dst=target_f)
+        if self.TARGET_SAVE_FILENAME is None:
+            raise RuntimeError(
+                f"This download processor `{self.__class__.__name__}` does not support shortcut download."
+            )
+
+        gitfile: GitFile
+        for item in commit.tree.traverse():
+            if not isinstance(item, GitFile):
+                continue
+
+            if item.path.name == self.TARGET_SAVE_FILENAME:
+                gitfile = item
+                break
+
+        else:
+            raise FileNotFoundError(
+                f"Impossible to find `{self.TARGET_SAVE_FILENAME}` at commit: `{commit.hexsha}`."
+            )
+
+        with target_f.open(mode="wb") as f:
+            f.write(gitfile.content.getvalue())
 
     # ~~~~~~~~~~~~~ Upload APIs ~~~~~~~~~~~~~ #
 
     @property
-    def folder(self):
+    def storage_folder(self) -> Path:
         """If needed, the corresponding folder will be created."""
 
         folder = self.project.git_repo.path
         if self.TARGET_FOLDER is not None:
-            folder: Path = folder / self.TARGET_FOLDER
+            folder = folder / self.TARGET_FOLDER
             folder.mkdir(parents=True, exist_ok=True)
 
         return folder
 
-    def _get_storage_path(self, artifact: Artifact) -> Path:
-        """This returns the full file path where the file will be stored."""
-
-        filename = self._validate_and_get_storage_name(artifact=artifact)
-
-        return self.folder / filename
-
-    def _validate_and_get_storage_name(self, artifact: Artifact) -> str:
-        """This generates the filename to be used while stored in git.
-        This function may implement some collision avoidance logic.
-
-        This function is not designed to be subclassed - use `_get_storage_name` instead
-
-        If collision is detected - raises `FileExistsError`.
-        """
-
-        if not isinstance(artifact, Artifact):
-            raise TypeError(
-                f"The artifact `{artifact}` is of unknown type: `{type(artifact)}`."
-            )
-
-        return self._get_storage_name(artifact=artifact)
-
-    def _get_storage_name(self, artifact: Artifact) -> str:
-        return (
+    def _get_storage_name(self, file: Artifact | Path) -> str:
+        ret_value = (
             self.TARGET_SAVE_FILENAME
             if self.TARGET_SAVE_FILENAME is not None
-            else artifact.name
+            else file.name
         )
+        if ret_value is None:
+            raise ValueError(f"Artifact name is undefined: {file.name}")
 
-    def _add_file_to_project(self, artifact: Artifact) -> Artifact | Path | list[Path]:
-        target_path = self._get_storage_path(artifact=artifact)
+        return ret_value
+
+    def _add_to_project(self, artifact: Artifact) -> list[Path]:
+        if isinstance(artifact, Artifact):
+            filename = self._get_storage_name(file=artifact)
+        else:
+            raise TypeError(f"Unexpected file type received: `{type(artifact)=}`")
+
+        target_path = self.storage_folder / filename
 
         with timed_section("File copy to project dir"):
             artifact.write(path=target_path)
 
-        return artifact
+        return [target_path]
