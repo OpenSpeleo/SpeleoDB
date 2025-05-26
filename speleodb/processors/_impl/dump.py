@@ -19,9 +19,7 @@ class DumpProcessor(BaseFileProcessor):
 
         with zipfile.ZipFile(target_f, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
             commit_files: list[GitFile] = [
-                item  # type: ignore[misc]
-                for item in commit.tree.traverse()
-                if isinstance(item, GitFile)
+                item for item in commit.tree.traverse() if isinstance(item, GitFile)
             ]
 
             if not commit_files:
