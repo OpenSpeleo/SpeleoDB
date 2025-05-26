@@ -21,6 +21,14 @@ concurrency:
 jobs:
   linter:
     runs-on: ubuntu-latest
+    env:
+      CELERY_BROKER_URL: "redis://localhost:6379/0"
+      DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
+      # Dummy Key - Not Used
+      DJANGO_SECRET_KEY: "s&=i@9h+)6bge)6!6vhbcx@=#^6nr73&7+6ep-xpbebhi5#)+_"
+      # Dummy Key - Not Used
+      DJANGO_FIELD_ENCRYPTION_KEY: "Mi2dyK2q9uTi9_Yn2mpsmU2fFUM4P0U7XpEgxiGPtto="
+
     steps:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
@@ -31,6 +39,8 @@ jobs:
           version: "latest"
           python-version: "3.13"
           activate-environment: true
+        env:
+          UV_VENV_SEED: 1
 
       - name: Install Dependencies
         run: uv sync --extra local --frozen
