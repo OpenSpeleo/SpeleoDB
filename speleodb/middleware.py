@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from django.conf import settings
+from django.http import FileResponse
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.urls import resolve
@@ -67,6 +68,9 @@ class DRFWrapResponseMiddleware:
             wrapped_response = self.get_response(request)
 
             if not request.path.startswith("/api/v1"):
+                return wrapped_response
+
+            if isinstance(wrapped_response, FileResponse):
                 return wrapped_response
 
             if isinstance(wrapped_response, ErrorResponse):

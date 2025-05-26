@@ -4,6 +4,8 @@
 import contextlib
 import logging
 import pathlib
+import random
+import string
 import tempfile
 from collections import defaultdict
 from typing import TYPE_CHECKING
@@ -394,9 +396,12 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
         except (ValidationError, FileNotFoundError) as e:
             return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        with tempfile.NamedTemporaryFile() as temp_file:
+        with tempfile.TemporaryDirectory() as tempdir:
             try:
-                temp_filepath = pathlib.Path(temp_file.name)
+                temp_filepath = (
+                    pathlib.Path(tempdir)
+                    / f"{''.join(random.choice(string.ascii_letters) for _ in range(10))}.obj"  # noqa: E501
+                )
 
                 try:
                     filename = processor.get_filename_for_download(
