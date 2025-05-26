@@ -22,7 +22,7 @@ class Command(BaseCommand):
         merged_content = ""
         for merge_file in input_files:
             if not merge_file.exists():
-                logger.warning(f"The file `{merge_file}` does not exists... Skipping !")
+                logger.warning(f"The file `{merge_file}` does not exist ... Skipping !")
                 continue
             merged_content += merge_file.read_text()
             merged_content += os.linesep

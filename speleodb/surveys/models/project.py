@@ -9,6 +9,7 @@ import pathlib
 import uuid
 from itertools import chain
 from typing import TYPE_CHECKING
+from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -20,7 +21,6 @@ from django.db.models import Q
 from django.utils import timezone
 from django_countries.fields import CountryField
 
-from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import PermissionLevel
@@ -326,7 +326,7 @@ class Project(models.Model):
         )
 
     @property
-    def commit_history(self) -> list[GitCommit]:
+    def commit_history(self) -> list[dict[str, Any]] | None:
         try:
             if (
                 commit_history := GitlabManager.get_commit_history(project_id=self.id)
@@ -338,6 +338,7 @@ class Project(models.Model):
                 for commit in commit_history
                 if commit["message"] != settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
             ]
+
             if isinstance(commits, (list, tuple)):
                 return commits
 

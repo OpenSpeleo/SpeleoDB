@@ -76,6 +76,7 @@ class AutoSelector:
             processor_cls = AutoSelector.get_processor(
                 fileformat=fileformat, f_extension=artifact.extension
             )
+
         with timed_section("Get Processor - Instanciation"):
             return processor_cls(project=project)
 
@@ -83,6 +84,8 @@ class AutoSelector:
     def get_download_processor(
         fileformat: Format.FileFormat, project: Project, hexsha: str | None
     ) -> BaseFileProcessor:
-        processor_cls = AutoSelector.get_processor(fileformat=fileformat)
+        with timed_section("Get Processor - Func"):
+            processor_cls = AutoSelector.get_processor(fileformat=fileformat)
 
-        return processor_cls(project=project, hexsha=hexsha)
+        with timed_section("Get Processor - Instanciation"):
+            return processor_cls(project=project)

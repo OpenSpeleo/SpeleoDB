@@ -252,13 +252,9 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
                                 try:
                                     with timed_section("File copy to project"):
-                                        uploaded_file = processor.add_file_to_project(
-                                            file=file
+                                        uploaded_files.extend(
+                                            processor.add_to_project(file=file)
                                         )
-                                        if isinstance(uploaded_file, (list, tuple)):
-                                            uploaded_files.extend(uploaded_file)
-                                        else:
-                                            uploaded_files.append(uploaded_file)
                                 except FileExistsError:
                                     logger.info(
                                         f"File collision detected for: `{file.name}` "
@@ -404,7 +400,7 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
 
                 try:
                     filename = processor.get_filename_for_download(
-                        target_f=temp_filepath
+                        target_f=temp_filepath, hexsha=hexsha
                     )
                 except ValidationError:
                     return ErrorResponse(

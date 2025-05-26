@@ -2,8 +2,11 @@ import json
 import logging
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 from functools import wraps
+from pathlib import Path
 from typing import Any
+from typing import Self
 from typing import TypeVar
 
 import gitlab
@@ -15,7 +18,6 @@ from gitlab.v4.objects.projects import Project
 
 from speleodb.common.models import Option
 from speleodb.git_engine.core import GitRepo
-from speleodb.utils.lazy_string import LazyString
 from speleodb.utils.metaclasses import SingletonMetaClass
 
 logger = logging.getLogger(__name__)
@@ -31,7 +33,7 @@ RT = TypeVar("RT")
 def check_initialized(func: Callable[..., RT]) -> Callable[..., RT]:
     @wraps(func)
     def _impl(self: "GitlabManagerCls", *args: Any, **kwargs: Any) -> RT:
-        if not self._is_initialized:
+        if self._gl is None:
             try:
                 self._initialize()
             except Exception as e:
@@ -44,34 +46,44 @@ def check_initialized(func: Callable[..., RT]) -> Callable[..., RT]:
 
         except GitlabError:
             # Force re-auth just in case
-            self._is_initialized = False
+            self._gl = None
             raise
 
     return _impl
 
 
+@dataclass(frozen=True)
+class GitlabCredentials:
+    instance: str
+    token: str
+    group_id: str
+    group_name: str
+
+    @classmethod
+    @cached(cache=TTLCache(maxsize=1, ttl=30))  # 60 secs cache
+    def get(cls) -> Self:
+        return cls(
+            instance=Option.get_or_empty(name="GITLAB_HOST_URL"),
+            token=Option.get_or_empty(name="GITLAB_TOKEN"),
+            group_id=Option.get_or_empty(name="GITLAB_GROUP_ID"),
+            group_name=Option.get_or_empty(name="GITLAB_GROUP_NAME"),
+        )
+
+
 class GitlabManagerCls(metaclass=SingletonMetaClass):
+    _gl: gitlab.Gitlab | None = None
+
     def __init__(self) -> None:
-        self._is_initialized = False
         self._is_error = False
 
     def _initialize(self) -> None:
-        # Allow Starting SpeleoDB without GITLAB Options to be defined.
-        self._gitlab_instance = LazyString(
-            lambda: Option.get_or_empty(name="GITLAB_HOST_URL")
-        )
-        self._gitlab_token = LazyString(
-            lambda: Option.get_or_empty(name="GITLAB_TOKEN")
-        )
-        self._gitlab_group_id = LazyString(
-            lambda: Option.get_or_empty(name="GITLAB_GROUP_ID")
-        )
-        self._gitlab_group_name = LazyString(
-            lambda: Option.get_or_empty(name="GITLAB_GROUP_NAME")
-        )
+        """Allow Starting SpeleoDB without GITLAB Options to be defined."""
+
+        gitlab_creds = GitlabCredentials.get()
 
         self._gl = gitlab.Gitlab(
-            f"https://{self._gitlab_instance}/", private_token=self._gitlab_token
+            f"https://{gitlab_creds.instance}/",
+            private_token=gitlab_creds.token,
         )
 
         try:
@@ -83,21 +95,28 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             self._gl.enable_debug()
 
     @check_initialized
-    def create_project(self, project_id: uuid.UUID) -> bool:
-        # try to create the repository in Gitlab
-        return self._gl.projects.create(
-            {"name": str(project_id), "namespace_id": str(self._gitlab_group_id)}
+    def create_project(self, project_id: uuid.UUID) -> None:
+        """Trying to create the repository in Gitlab."""
+        if self._gl is None:
+            raise ValueError("Gitlab API has not been initialized")
+
+        gitlab_creds = GitlabCredentials.get()
+
+        self._gl.projects.create(
+            {"name": str(project_id), "namespace_id": str(gitlab_creds.group_id)}
         )
 
     @check_initialized
     def create_or_clone_project(self, project_id: uuid.UUID) -> GitRepo | None:
-        project_dir = settings.DJANGO_GIT_PROJECTS_DIR / str(project_id)
-        git_url = f"https://oauth2:{self._gitlab_token}@{self._gitlab_instance}/{self._gitlab_group_name}/{project_id}.git"
+        gitlab_creds = GitlabCredentials.get()
+
+        project_dir = Path(settings.DJANGO_GIT_PROJECTS_DIR / str(project_id))
+        project_dir.parent.mkdir(exist_ok=True, parents=True)
+        git_url = f"https://oauth2:{gitlab_creds.token}@{gitlab_creds.instance}/{gitlab_creds.group_name}/{project_id}.git"
 
         try:
             # try to create the repository in Gitlab
-            _ = self.create_project(project_id=project_id)
-            project_dir.parent.mkdir(exist_ok=True, parents=True)
+            self.create_project(project_id=project_id)
 
             git_repo = GitRepo.init(project_dir)
             origin = git_repo.create_remote("origin", url=git_url)
@@ -111,23 +130,24 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
 
         except gitlab.exceptions.GitlabCreateError:
             # The repository already exists in Gitlab - git clone instead
-
-            # Ensure the parent directory exists
-            project_dir.parent.mkdir(exist_ok=True, parents=True)
-            return GitRepo.clone_from(url=git_url, to_path=project_dir)  # type: ignore[arg-type]
+            return GitRepo.clone_from(url=git_url, to_path=project_dir)
 
     # cache data for no longer than ten minutes
     @cached(cache=TTLCache(maxsize=100, ttl=600))
     @check_initialized
     def _get_project(self, project_id: uuid.UUID) -> Project | None:
+        if self._gl is None:
+            raise ValueError("Gitlab API has not been initialized")
+
+        gitlab_creds = GitlabCredentials.get()
         try:
-            return self._gl.projects.get(f"{self._gitlab_group_name}/{project_id}")
+            return self._gl.projects.get(f"{gitlab_creds.group_name}/{project_id}")
         except gitlab.exceptions.GitlabHttpError:
             # Communication Problem
             return None
 
     @check_initialized
-    def get_commit_history(self, project_id: uuid.UUID) -> list | None:
+    def get_commit_history(self, project_id: uuid.UUID) -> list[dict[str, Any]] | None:
         try:
             try:
                 project = self._get_project(project_id)
@@ -162,7 +182,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             branch = project.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
 
             # Get the current hash of the branch
-            return branch.commit["id"]
+            return branch.commit["id"]  # type: ignore[no-any-return]
 
         except gitlab.exceptions.GitlabHttpError:
             return None

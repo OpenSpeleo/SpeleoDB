@@ -21,10 +21,9 @@ from speleodb.api.v1.authentication import GitOAuth2Authentication
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.common.models import Option
+from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import Project
-from speleodb.utils.lazy_string import LazyString
 
 
 class GitService(Enum):
@@ -111,17 +110,9 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
         BearerAuthentication,
     ]
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._gitlab_instance = LazyString(
-            lambda: Option.get_or_empty(name="GITLAB_HOST_URL")
-        )
-        self._gitlab_token = LazyString(
-            lambda: Option.get_or_empty(name="GITLAB_TOKEN")
-        )
-        self._gitlab_group_name = LazyString(
-            lambda: Option.get_or_empty(name="GITLAB_GROUP_NAME")
-        )
+    @property
+    def git_creds(self) -> GitlabCredentials:
+        return GitlabCredentials.get()
 
     def proxy_git_request(
         self, request: Request, path: str, query_params: dict[str, Any] | None = None
@@ -146,7 +137,7 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
             #         service_name=path,
             #     )
 
-            target_url = f"https://oauth2:{self._gitlab_token}@{self._gitlab_instance}/{self._gitlab_group_name}/{project.id}.git/{path}"
+            target_url = f"https://oauth2:{self.git_creds.token}@{self.git_creds.instance}/{self.git_creds.group_name}/{project.id}.git/{path}"
             headers = dict(request.headers.copy())
             headers.pop("Host", None)
             headers["Accept-Encoding"] = "identity"
