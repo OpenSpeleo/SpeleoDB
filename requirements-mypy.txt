@@ -65,7 +65,7 @@ gitdb==4.0.12
 gitpython==3.1.44
 gprof2dot==2025.4.14
 h11==0.16.0
-hiredis==3.1.0
+hiredis==3.2.1
 httptools==0.6.4
 humanize==4.12.3
 identify==2.6.10
