@@ -40,18 +40,18 @@ Verify
   ↳ Using provider Python from config
   ↳ Using uv
 
-  Packages  
+  Packages
   ──────────
   pipx    │  1.7.1   │  railpack default (latest)
   python  │  3.13.3  │  custom config (3.13)
-            
-  Steps     
+
+  Steps
   ──────────
   ▸ install
     $ pipx install uv
     $ uv sync --extra production --frozen
-            
-  Deploy    
+
+  Deploy
   ──────────
     $ python manage.py migrate && gunicorn backend.wsgi:application
 ```

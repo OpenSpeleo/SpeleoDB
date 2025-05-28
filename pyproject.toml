@@ -9,13 +9,13 @@ dependencies = [
   "rcssmin==1.1.2",            # https://github.com/ndparker/rcssmin
   "argon2-cffi==23.1.0",       # https://github.com/hynek/argon2-cffi
   "whitenoise==6.9.0",         # https://github.com/evansd/whitenoise
-  "redis==5.2.1",              # https://github.com/redis/redis-py
-  "hiredis==3.1.0",            # https://github.com/redis/hiredis-py
-  "celery==5.5.1",             # https://github.com/celery/celery
+  "redis==6.1.0",              # https://github.com/redis/redis-py
+  "hiredis==3.2.1",            # https://github.com/redis/hiredis-py
+  "celery==5.5.2",             # https://github.com/celery/celery
   "flower==2.0.1",             # https://github.com/mher/flower
-  "uvicorn[standard]==0.34.1", # https://github.com/encode/uvicorn
+  "uvicorn[standard]==0.34.2", # https://github.com/encode/uvicorn
   "wrapt==1.17.2",             # https://github.com/GrahamDumpleton/wrapt
-  "cachetools==5.5.2",         # https://github.com/tkem/cachetools
+  "cachetools==6.0.0",         # https://github.com/tkem/cachetools
   "timeago==1.0.16",           # https://github.com/hustcc/timeago
 
   # Git Management
@@ -25,15 +25,15 @@ dependencies = [
 
   # Django
   # ------------------------------------------------------------------------------
-  "django==5.1.8",                        # https://www.djangoproject.com/
-  "django-allauth==65.7.0",               # https://github.com/pennersr/django-allauth
-  "django-celery-beat==2.7.0",            # https://github.com/celery/django-celery-beat
+  "django==5.2.1",                        # https://www.djangoproject.com/
+  "django-allauth==65.8.1",               # https://github.com/pennersr/django-allauth
+  "django-celery-beat==2.8.1",            # https://github.com/celery/django-celery-beat
   "django-compressor==4.5.1",             # https://github.com/django-compressor/django-compressor
   "django-countries==7.6.1",              # https://github.com/SmileyChris/django-countries/
   "django-dynamic-raw-id==4.4",           # https://github.com/lincolnloop/django-dynamic-raw-id
   "django-encrypted-model-fields==0.6.5", # https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/
   "django-environ==0.12.0",               # https://github.com/joke2k/django-environ
-  "django-hijack==3.7.1",                 # https://github.com/django-hijack/django-hijack/
+  "django-hijack==3.7.2",                 # https://github.com/django-hijack/django-hijack/
   "django-model-utils==5.0.0",            # https://github.com/jazzband/django-model-utils
   "django-redis==5.4.0",                  # https://github.com/jazzband/django-redis
   # Django REST Framework
@@ -51,7 +51,7 @@ dependencies = [
 local = [
   "Werkzeug[watchdog]==3.1.3", # https://github.com/pallets/werkzeug
   "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
-  "psycopg[binary]==3.2.6",    # https://github.com/psycopg/psycopg
+  "psycopg[binary]==3.2.9",    # https://github.com/psycopg/psycopg
   "watchfiles==1.0.5",         # https://github.com/samuelcolvin/watchfiles
 
   # Testing
@@ -67,12 +67,12 @@ local = [
 
   # Typing
   # ------------------------------------------------------------------------------
-  "djangorestframework-stubs[compatible-mypy]==3.15.3", # https://github.com/typeddjango/djangorestframework-stubs
-  "django-stubs[compatible-mypy]==5.1.3",               # https://github.com/typeddjango/django-stubs
+  "djangorestframework-stubs[compatible-mypy]==3.16.0", # https://github.com/typeddjango/djangorestframework-stubs
+  "django-stubs[compatible-mypy]==5.2.0",               # https://github.com/typeddjango/django-stubs
   "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
   # "django-types==0.20.0",             # https://github.com/sbdchd/django-types
   # "djangorestframework-types==0.9.0", # https://github.com/sbdchd/djangorestframework-types
-  "types-cachetools==5.5.0.20240820", # https://github.com/python/typeshed
+  "types-cachetools==6.0.0.20250525", # https://github.com/python/typeshed
   "types-factory-boy==0.4.1",         # https://github.com/youtux/types-factory-boy
   "types-pytz==2025.2.0.20250516",    # https://github.com/python/typeshed
 
@@ -88,14 +88,14 @@ local = [
 
   # Code quality
   # ------------------------------------------------------------------------------
-  "ruff==0.11.10",     # https://github.com/astral-sh/ruff
-  "coverage==7.8.0",   # https://github.com/nedbat/coveragepy
+  "ruff==0.11.11",     # https://github.com/astral-sh/ruff
+  "coverage==7.8.2",   # https://github.com/nedbat/coveragepy
   "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
   "pre-commit==4.2.0", # https://github.com/pre-commit/pre-commit
 
   # Django
   # ------------------------------------------------------------------------------
-  "django-debug-toolbar==5.1.0", # https://github.com/jazzband/django-debug-toolbar
+  "django-debug-toolbar==5.2.0", # https://github.com/jazzband/django-debug-toolbar
   "django-extensions==4.1",      # https://github.com/django-extensions/django-extensions
   "django-schema-viewer==0.5.3", # https://github.com/pikhovkin/django-schema-viewer
   "django-silk==5.3.2",          # https://github.com/jazzband/django-silk
@@ -103,7 +103,7 @@ local = [
 
 production = [
   "gunicorn==23.0.0",  # https://github.com/benoitc/gunicorn
-  "psycopg[c]==3.2.6", # https://github.com/psycopg/psycopg
+  "psycopg[c]==3.2.9", # https://github.com/psycopg/psycopg
 
   # Django
   # ------------------------------------------------------------------------------
