@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
+from drf_spectacular.plumbing import build_bearer_security_scheme_object
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.authentication import BasicAuthentication
@@ -74,3 +76,28 @@ class GitOAuth2Authentication(BasicAuthentication):
             raise exceptions.AuthenticationFailed("User inactive or deleted.")
 
         return (token.user, token)
+
+
+class BearerScheme(OpenApiAuthenticationExtension):  # type: ignore[no-untyped-call]
+    target_class = "speleodb.api.v1.authentication.BearerAuthentication"
+    name = "bearerAuth"
+    match_subclasses = True
+    priority = -1
+
+    def get_security_definition(self, auto_schema: Any) -> dict[str, Any]:
+        return build_bearer_security_scheme_object(  # type: ignore[no-any-return, no-untyped-call]
+            header_name="Authorization",
+            token_prefix=self.target.keyword,
+        )
+
+
+class GitOAuth2Scheme(OpenApiAuthenticationExtension):  # type: ignore[no-untyped-call]
+    target_class = "speleodb.api.v1.authentication.GitOAuth2Authentication"
+    name = "gitAuth"
+    priority = -1
+
+    def get_security_definition(self, auto_schema: Any) -> dict[str, str]:
+        return {
+            "type": "http",
+            "scheme": "basic",
+        }
