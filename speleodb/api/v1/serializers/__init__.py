@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 from speleodb.api.v1.serializers.authtoken import AuthTokenSerializer
 from speleodb.api.v1.serializers.file import UploadSerializer
 from speleodb.api.v1.serializers.git import GitCommitListSerializer

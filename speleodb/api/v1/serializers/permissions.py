@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 from rest_framework import serializers
 
 from speleodb.surveys.models import PermissionLevel

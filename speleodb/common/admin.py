@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.contrib import admin
 
 from speleodb.common.models import Option

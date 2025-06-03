@@ -1,18 +1,23 @@
+from __future__ import annotations
+
 import contextlib
 from importlib import reload
+from typing import TYPE_CHECKING
 
 import pytest
 from django.contrib import admin
 from django.contrib.admin.exceptions import AlreadyRegistered
 from django.contrib.auth.models import AnonymousUser
-from django.test.client import Client
-from django.test.client import RequestFactory
 from django.urls import reverse
 from pytest_django.asserts import assertRedirects
-from pytest_django.fixtures import SettingsWrapper
 from rest_framework import status
 
 from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    from django.test.client import Client
+    from django.test.client import RequestFactory
+    from pytest_django.fixtures import SettingsWrapper
 
 
 class TestUserAdmin:

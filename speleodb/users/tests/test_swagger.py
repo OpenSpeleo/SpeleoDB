@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
-from django.test.client import Client
 from django.urls import reverse
 from rest_framework import status
+
+if TYPE_CHECKING:
+    from django.test.client import Client
 
 
 def test_swagger_accessible_by_admin(admin_client: Client) -> None:

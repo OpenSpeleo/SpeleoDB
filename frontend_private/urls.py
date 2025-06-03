@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.urls import URLPattern
 from django.urls import URLResolver
 from django.urls import include

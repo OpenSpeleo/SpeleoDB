@@ -1,7 +1,12 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from django import template
 
-from speleodb.users.models import SurveyTeam
-from speleodb.users.models import User
+if TYPE_CHECKING:
+    from speleodb.users.models import SurveyTeam
+    from speleodb.users.models import User
 
 register = template.Library()
 

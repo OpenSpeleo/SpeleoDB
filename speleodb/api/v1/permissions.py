@@ -1,16 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
-from rest_framework.request import Request
-from rest_framework.views import APIView
 
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.users.models.team import SurveyTeam
 from speleodb.users.models.team import SurveyTeamMembership
-from speleodb.utils.requests import AuthenticatedDRFRequest
+
+if TYPE_CHECKING:
+    from rest_framework.request import Request
+    from rest_framework.views import APIView
+
+    from speleodb.utils.requests import AuthenticatedDRFRequest
 
 
 class BaseProjectAccessLevel(permissions.BasePermission):
@@ -72,7 +79,7 @@ class BaseTeamAccessLevel(permissions.BasePermission):
         try:
             membership = obj.get_membership(user=request.user)
             return (
-                membership.role.value >= self.MIN_ACCESS_LEVEL and membership.is_active
+                membership.role.value >= self.MIN_ACCESS_LEVEL and membership.is_active  # type: ignore[misc]
             )
         except ObjectDoesNotExist:
             return False

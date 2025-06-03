@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import re
-from collections.abc import Generator
 from enum import Enum
+from typing import TYPE_CHECKING
 from typing import Any
 
 import requests
@@ -14,7 +16,6 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import GenericAPIView
 from rest_framework.renderers import BaseRenderer
-from rest_framework.request import Request
 
 from speleodb.api.v1.authentication import BearerAuthentication
 from speleodb.api.v1.authentication import GitOAuth2Authentication
@@ -24,6 +25,11 @@ from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import Project
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from rest_framework.request import Request
 
 
 class GitService(Enum):

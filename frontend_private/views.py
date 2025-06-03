@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import contextlib
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import override
 
@@ -7,7 +10,6 @@ from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse
 from django.http.response import HttpResponseRedirectBase
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -20,7 +22,11 @@ from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
-from speleodb.utils.requests import AuthenticatedHttpRequest
+
+if TYPE_CHECKING:
+    from django.http import HttpResponse
+
+    from speleodb.utils.requests import AuthenticatedHttpRequest
 
 
 @dataclass
@@ -333,14 +339,14 @@ class ProjectUserPermissionsView(_BaseProjectView):
         for permission in filtered_team_permissions:
             if (
                 permission.user not in permission_map
-                or permission_map[permission.user].level.value < permission.level.value
+                or permission_map[permission.user].level.value < permission.level.value  # type: ignore[misc]
             ):
                 permission_map[permission.user] = permission
 
         # Merging everything together with user permissions first to appear on top
         data["permissions"] = user_permissions + sorted(
             permission_map.values(),
-            key=lambda perm: (-perm.level.value, perm.user.email),
+            key=lambda perm: (-perm.level.value, perm.user.email),  # type: ignore[misc]
         )
 
         return super().get(request, *args, **data, **kwargs)

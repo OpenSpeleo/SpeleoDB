@@ -1,21 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 import pathlib
-from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import pytest
-from _pytest.compat import LEGACY_PATH
 from django.apps import apps
 from dotenv import load_dotenv
-from pytest_django.fixtures import SettingsWrapper
 
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
-from speleodb.surveys.models import Project
-from speleodb.users.models import SurveyTeam
-from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from _pytest.compat import LEGACY_PATH
+    from pytest_django.fixtures import SettingsWrapper
+
+    from speleodb.surveys.models import Project
+    from speleodb.users.models import SurveyTeam
+    from speleodb.users.models import User
 
 
 @pytest.fixture(scope="session", autouse=True)

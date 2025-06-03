@@ -1,15 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import argparse
+
+from __future__ import annotations
+
 import logging
 import os
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 
 import gitlab.exceptions
 from django.core.management.base import BaseCommand
 from dotenv import load_dotenv
+
+if TYPE_CHECKING:
+    import argparse
 
 logger = logging.getLogger(__name__)
 

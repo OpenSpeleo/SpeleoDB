@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Format
 

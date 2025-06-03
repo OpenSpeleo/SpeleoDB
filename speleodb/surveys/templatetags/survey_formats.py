@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django import template
 
 from speleodb.surveys.models import Format

@@ -1,11 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from collections.abc import Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 from rest_framework import permissions
-from rest_framework.generics import GenericAPIView
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from rest_framework.generics import GenericAPIView
 
 
 def method_permission_classes(

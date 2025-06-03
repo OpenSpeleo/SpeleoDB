@@ -1,4 +1,6 @@
-from django.core.files.uploadedfile import InMemoryUploadedFile  # noqa: I001
+from __future__ import annotations
+
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 
 from speleodb.processors._impl.ariane import AGRFileProcessor
@@ -7,7 +9,6 @@ from speleodb.processors._impl.ariane import TMLUFileProcessor
 from speleodb.processors._impl.compass import DATFileProcessor
 from speleodb.processors._impl.compass import MAKFileProcessor
 from speleodb.processors._impl.dump import DumpProcessor
-
 from speleodb.processors.artifact import Artifact
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Format

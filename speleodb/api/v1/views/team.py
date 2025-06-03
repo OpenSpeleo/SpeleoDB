@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from rest_framework.request import Request
-from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import IsObjectCreation
 from speleodb.api.v1.permissions import IsReadOnly
@@ -17,6 +19,10 @@ from speleodb.users.models import SurveyTeam
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
+
+if TYPE_CHECKING:
+    from rest_framework.request import Request
+    from rest_framework.response import Response
 
 
 class TeamApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):

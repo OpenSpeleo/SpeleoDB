@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 from allauth.account.admin import EmailAddressAdmin as _EmailAddressAdmin
@@ -6,8 +9,6 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
-from django.forms.models import ModelForm
-from django.http import HttpRequest
 from dynamic_raw_id.admin import DynamicRawIDMixin
 from hijack.contrib.admin import HijackUserAdminMixin
 
@@ -16,6 +17,10 @@ from speleodb.users.forms import UserAdminCreationForm
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    from django.forms.models import ModelForm
+    from django.http import HttpRequest
 
 if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
     # Force the `admin` sign in process to go through the `django-allauth` workflow:
@@ -82,7 +87,7 @@ admin.site.unregister(EmailAddress)
 @admin.register(EmailAddress)
 class EmailAddressAdmin(DynamicRawIDMixin, _EmailAddressAdmin):
     dynamic_raw_id_fields: tuple[str] = ("user",)  # type: ignore[assignment]
-    raw_id_fields: tuple[()] = ()  # type: ignore[assignment]
+    raw_id_fields: tuple[()] = ()  # type: ignore[assignment,misc]
 
     def get_form(  # type: ignore[override]
         self, request: HttpRequest, obj: EmailAddress | None = None, **kwargs: Any

@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django_countries.fields import CountryField
 
 from speleodb.users.models import User
 from speleodb.utils.django_base_models import BaseIntegerChoices
+
+if TYPE_CHECKING:
+    from django_stubs_ext import StrOrPromise
 
 
 class SurveyTeam(models.Model):
@@ -114,7 +119,7 @@ class SurveyTeamMembership(models.Model):
         return f"<{self.__class__.__name__}: {self}>"
 
     @property
-    def role_label(self) -> str:
+    def role_label(self) -> StrOrPromise:
         return self.role.label
 
     @property

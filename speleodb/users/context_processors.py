@@ -1,7 +1,12 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.conf import settings
-from django.http import HttpRequest
+
+if TYPE_CHECKING:
+    from django.http import HttpRequest
 
 
 def allauth_settings(request: HttpRequest) -> dict[str, Any]:

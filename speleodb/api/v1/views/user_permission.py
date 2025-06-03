@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from rest_framework.request import Request
-from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasAdminAccess
 from speleodb.api.v1.permissions import UserHasReadAccess
@@ -26,6 +27,10 @@ from speleodb.utils.exceptions import UserNotFoundError
 from speleodb.utils.exceptions import ValueNotFoundError
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
+
+if TYPE_CHECKING:
+    from rest_framework.request import Request
+    from rest_framework.response import Response
 
 
 class ProjectUserPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):

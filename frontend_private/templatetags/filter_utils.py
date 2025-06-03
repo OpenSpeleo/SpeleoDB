@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import datetime
 import math
-import time
+from typing import TYPE_CHECKING
 
 import pytz
 import timeago
 from django import template
 from django.conf import settings
 from django.utils import timezone
+
+if TYPE_CHECKING:
+    import time
 
 register = template.Library()
 

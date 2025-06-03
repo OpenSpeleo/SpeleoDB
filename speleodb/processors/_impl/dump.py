@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import zipfile
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitFile
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Format
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class DumpProcessor(BaseFileProcessor):

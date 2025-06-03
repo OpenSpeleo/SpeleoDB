@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 from collections import namedtuple
 from itertools import product
 from itertools import starmap

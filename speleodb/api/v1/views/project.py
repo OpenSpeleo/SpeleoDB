@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.db.utils import IntegrityError
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from rest_framework.request import Request
-from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasAdminAccess
 from speleodb.api.v1.permissions import UserHasReadAccess
@@ -21,6 +22,10 @@ from speleodb.utils.api_decorators import method_permission_classes
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
+
+if TYPE_CHECKING:
+    from rest_framework.request import Request
+    from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 

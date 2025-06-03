@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import json
 import logging
-import uuid
-from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Self
 from typing import TypeVar
@@ -14,11 +15,16 @@ import gitlab.exceptions
 from cachetools import TTLCache
 from cachetools import cached
 from django.conf import settings
-from gitlab.v4.objects.projects import Project
 
 from speleodb.common.models import Option
 from speleodb.git_engine.core import GitRepo
 from speleodb.utils.metaclasses import SingletonMetaClass
+
+if TYPE_CHECKING:
+    import uuid
+    from collections.abc import Callable
+
+    from gitlab.v4.objects.projects import Project
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +38,7 @@ RT = TypeVar("RT")
 
 def check_initialized(func: Callable[..., RT]) -> Callable[..., RT]:
     @wraps(func)
-    def _impl(self: "GitlabManagerCls", *args: Any, **kwargs: Any) -> RT:
+    def _impl(self: GitlabManagerCls, *args: Any, **kwargs: Any) -> RT:
         if self._gl is None:
             try:
                 self._initialize()

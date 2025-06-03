@@ -1,6 +1,8 @@
 # ruff: noqa: ERA001, E501
 """Base settings to build other settings files upon."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import environ
