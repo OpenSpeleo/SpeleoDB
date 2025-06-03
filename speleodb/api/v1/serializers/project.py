@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import datetime
+from __future__ import annotations
+
+import datetime  # noqa: TC003
 import decimal
 from typing import Any
 
@@ -113,7 +115,7 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
             return None
 
         try:
-            return obj.get_best_permission(user=user).level_label
+            return str(obj.get_best_permission(user=user).level_label)
         except ObjectDoesNotExist:
             return None
 

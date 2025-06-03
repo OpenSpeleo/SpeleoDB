@@ -44,6 +44,7 @@ repos:
     rev: 0.7.8
     hooks:
       - id: uv-lock
+        args: ["--upgrade"]
 
   - repo: https://github.com/Riverside-Healthcare/djLint
     rev: v1.36.4

@@ -1,11 +1,16 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.authtoken.models import Token
-from rest_framework.request import Request
+
+if TYPE_CHECKING:
+    from rest_framework.authtoken.models import Token
+    from rest_framework.request import Request
 
 
 class DebugHeaderAuthentication(BaseAuthentication):

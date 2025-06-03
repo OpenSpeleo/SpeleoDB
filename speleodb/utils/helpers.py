@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+from __future__ import annotations
+
 from collections import OrderedDict
 from typing import Any
 from typing import TypeVar

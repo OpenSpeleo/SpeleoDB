@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 from django.urls import URLResolver
 from django.urls import include
 from django.urls import path

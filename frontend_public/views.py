@@ -1,14 +1,20 @@
-from collections.abc import Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypeVar
 
 from django.conf import settings
-from django.http import HttpRequest
-from django.http.response import HttpResponse
-from django.http.response import HttpResponseRedirectBase
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.views import View
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from django.http import HttpRequest
+    from django.http.response import HttpResponse
+    from django.http.response import HttpResponseRedirectBase
 
 RT = TypeVar("RT")
 

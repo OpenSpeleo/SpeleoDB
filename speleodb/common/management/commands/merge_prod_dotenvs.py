@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 import logging
 import os
-from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.management.base import BaseCommand
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 

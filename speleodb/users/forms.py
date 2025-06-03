@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.contrib.auth import forms as admin_forms
@@ -5,9 +8,11 @@ from django.forms import CharField
 from django.forms import EmailField
 from django.forms import Form
 from django.forms import TextInput
-from django.http import HttpRequest
 
 from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    from django.http import HttpRequest
 
 
 class UserAdminChangeForm(admin_forms.UserChangeForm):  # type:ignore[type-arg]

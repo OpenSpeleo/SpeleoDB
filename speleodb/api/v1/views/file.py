@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 import contextlib
 import logging
 import pathlib
@@ -15,13 +17,10 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
-from django.http import FileResponse
 from django.urls import reverse
 from git.exc import GitCommandError
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from rest_framework.request import Request
-from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
@@ -43,6 +42,10 @@ from speleodb.utils.response import SuccessResponse
 from speleodb.utils.timing_ctx import timed_section
 
 if TYPE_CHECKING:
+    from django.http import FileResponse
+    from rest_framework.request import Request
+    from rest_framework.response import Response
+
     from speleodb.processors.artifact import Artifact
 
 logger = logging.getLogger(__name__)

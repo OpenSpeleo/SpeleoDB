@@ -1,12 +1,18 @@
-from collections.abc import Sequence
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
-from factory.base import StubObject
 from factory.django import DjangoModelFactory
 from factory.faker import Faker
 from factory.helpers import post_generation
 
 from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from factory.base import StubObject
 
 
 class UserFactory(DjangoModelFactory[User]):

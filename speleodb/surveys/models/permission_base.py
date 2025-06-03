@@ -1,10 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from django.db import models
 
 from speleodb.surveys.models.permission_lvl import PermissionLevel
 from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    from django_stubs_ext import StrOrPromise
 
 
 class BasePermissionModel(models.Model):
@@ -49,5 +56,5 @@ class BasePermissionModel(models.Model):
         self.save()
 
     @property
-    def level_label(self) -> str:
+    def level_label(self) -> StrOrPromise:
         return PermissionLevel.from_value(self.level).label

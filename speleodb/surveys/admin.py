@@ -2,18 +2,24 @@
 # -*- coding: utf-8 -*-
 
 # """Admin module for Django."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.contrib import admin
 from django.db.models import F
 from django.db.models import QuerySet
-from django.http import HttpRequest
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Mutex
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
+
+if TYPE_CHECKING:
+    from django.http import HttpRequest
 
 
 @admin.register(Format)

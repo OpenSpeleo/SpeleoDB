@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 from typing import Any
 
 from allauth.account.models import EmailAddress
@@ -32,6 +34,6 @@ class UserSerializer(serializers.ModelSerializer[User]):
         email = validated_data.pop("email", None)
         if email is not None and email != request.user.email:
             validate_email(email)
-            EmailAddress.objects.add_new_email(request, request.user, email)  # type: ignore[no-untyped-call]
+            EmailAddress.objects.add_new_email(request, request.user, email)  # pyright: ignore[reportAttributeAccessIssue]
 
         return super().update(instance, validated_data)

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from collections.abc import Callable
-from collections.abc import Sequence
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.conf import settings
@@ -13,8 +14,6 @@ from django.urls import resolve
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.renderers import JSONRenderer
-from rest_framework.request import Request
-from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from speleodb.utils.exceptions import NotAuthorizedError
@@ -23,6 +22,13 @@ from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SortedResponse
 from speleodb.utils.response import SuccessResponse
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from collections.abc import Sequence
+
+    from rest_framework.request import Request
+    from rest_framework.response import Response
 
 
 class ViewNameMiddleware:

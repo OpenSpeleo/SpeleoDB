@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.db import models
@@ -8,6 +11,9 @@ from django.db import models
 from speleodb.surveys.models import Project
 from speleodb.utils.decorators import classproperty
 from speleodb.utils.django_base_models import BaseIntegerChoices
+
+if TYPE_CHECKING:
+    from django_stubs_ext import StrOrPromise
 
 type ListFileFormats = list["tuple[int, str] | Format.FileFormat"]
 
@@ -70,10 +76,10 @@ class Format(models.Model):
         @classmethod
         def filtered_choices(
             cls, exclude_vals: ListFileFormats | None = None
-        ) -> list[tuple[int, str]]:
+        ) -> list[tuple[int, StrOrPromise]]:
             exclude_vals = exclude_vals if exclude_vals is not None else []
 
-            return [f for f in cls.choices if f not in exclude_vals]
+            return [f for f in cls.choices if f not in exclude_vals]  # type: ignore[misc]
 
         @classmethod
         def filtered_choices_as_str(
@@ -96,7 +102,7 @@ class Format(models.Model):
             )
 
         @classproperty
-        def db_choices(cls) -> list[tuple[int, str]]:  # noqa: N805
+        def db_choices(cls) -> list[tuple[int, StrOrPromise]]:  # noqa: N805
             return cls.filtered_choices(exclude_vals=cls.__excluded_db_formats__)
 
         @classproperty
@@ -121,7 +127,7 @@ class Format(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
 
     # Object Manager disabling update
-    objects: models.Manager["Format"] = NoUpdateQuerySet.as_manager()
+    objects: models.Manager[Format] = NoUpdateQuerySet.as_manager()
 
     class Meta:
         unique_together = (
@@ -145,9 +151,9 @@ class Format(models.Model):
         return self.FileFormat(self._format)
 
     @property
-    def format(self) -> str:
+    def format(self) -> StrOrPromise:
         return self.raw_format.label
 
     @format.setter
     def format(self, fmt: FileFormat) -> None:
-        self._format = fmt.value
+        self._format = fmt.value  # type: ignore[misc]

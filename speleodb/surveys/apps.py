@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 
 from django.apps import AppConfig

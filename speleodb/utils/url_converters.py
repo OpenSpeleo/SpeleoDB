@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import re
 from abc import ABC
 from abc import abstractmethod
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.urls import register_converter as _register_converter
 
 from speleodb.surveys.models import Format
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def register_converter(type_name: str) -> Callable[[type[object]], Any]:

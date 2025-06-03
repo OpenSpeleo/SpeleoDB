@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 from django.urls import path
 
 from speleodb.git_proxy.views import InfoRefsView

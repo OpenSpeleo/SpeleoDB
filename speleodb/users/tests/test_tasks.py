@@ -1,9 +1,15 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 from celery.result import EagerResult
-from pytest_django.fixtures import SettingsWrapper
 
 from speleodb.users.tasks import get_users_count
 from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from pytest_django.fixtures import SettingsWrapper
 
 pytestmark = pytest.mark.django_db
 

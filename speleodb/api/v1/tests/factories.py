@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import random
+from typing import TYPE_CHECKING
 from typing import Any
 
 import factory
 from django_countries import countries
 from factory import Faker
 from factory import post_generation
-from factory.base import StubObject
 from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
@@ -16,6 +18,9 @@ from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    from factory.base import StubObject
 
 
 class UserFactory(DjangoModelFactory[User]):

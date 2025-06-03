@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import allauth.account.views as allauth_views
 from django.urls import path
 from django.urls import re_path

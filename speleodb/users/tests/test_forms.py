@@ -1,7 +1,13 @@
 """Module for all Form Tests."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from speleodb.users.forms import UserAdminCreationForm
-from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
 
 
 class TestUserAdminCreationForm:

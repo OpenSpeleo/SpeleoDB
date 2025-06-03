@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import random
+from typing import TYPE_CHECKING
 
 from django.test import TestCase
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from speleodb.api.v1.tests.factories import ProjectFactory
@@ -16,6 +18,9 @@ from speleodb.surveys.models import Project
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    from rest_framework.authtoken.models import Token
 
 
 class BaseAPITestCase(TestCase):

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 

@@ -15,6 +15,8 @@ from django_countries.fields import CountryField
 from speleodb.users.managers import UserManager
 
 if TYPE_CHECKING:
+    from django_stubs_ext import StrOrPromise
+
     from speleodb.surveys.models import Mutex
     from speleodb.surveys.models import Project
     from speleodb.surveys.models import TeamPermission
@@ -108,7 +110,7 @@ class User(AbstractUser):
     @property
     def projects_with_level(
         self,
-    ) -> list[dict[str, Project | str]]:
+    ) -> list[dict[str, Project | StrOrPromise]]:
         return [
             {"project": perm.project, "level": perm.level_label}
             for perm in self.permissions

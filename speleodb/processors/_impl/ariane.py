@@ -1,18 +1,24 @@
+from __future__ import annotations
+
 import hashlib
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING
 
-from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.utils.timezone import localtime
 from mnemo_lib.commands.split import split_dmp_into_sections
 from mnemo_lib.models import DMPFile
 
-from speleodb.processors.artifact import Artifact
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Format
 from speleodb.utils.timing_ctx import timed_section
+
+if TYPE_CHECKING:
+    from django.core.files.uploadedfile import InMemoryUploadedFile
+    from django.core.files.uploadedfile import TemporaryUploadedFile
+
+    from speleodb.processors.artifact import Artifact
 
 
 def calculate_sha1(
