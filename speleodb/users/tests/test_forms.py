@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Module for all Form Tests."""
 
 from __future__ import annotations

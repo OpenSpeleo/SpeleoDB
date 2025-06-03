@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 WSGI config for SpeleoDB project.
 
@@ -13,6 +15,8 @@ middleware here, or combine a Django application with an application of another
 framework.
 
 """
+
+from __future__ import annotations
 
 import os
 import sys

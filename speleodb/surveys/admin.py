@@ -1,7 +1,6 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# """Admin module for Django."""
+"""Admin module for Django."""
 
 from __future__ import annotations
 

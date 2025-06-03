@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 ASGI config for SpeleoDB project.
 
@@ -7,6 +9,8 @@ For more information on this file, see
 https://docs.djangoproject.com/en/dev/howto/deployment/asgi/
 
 """
+
+from __future__ import annotations
 
 import os
 import sys
