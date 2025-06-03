@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import annotations
+
 # ruff: noqa: F401, I001
 
 # Top Level Imports are necessary to allow auto discovery using __subclasses__()

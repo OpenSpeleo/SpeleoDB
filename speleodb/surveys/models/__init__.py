@@ -1,7 +1,11 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from speleodb.surveys.models.permission_lvl import PermissionLevel  # noqa: I001
+# NOTE: We need to preserve this exact import order to prevent import loops.
+# ruff: noqa: I001
+
+from __future__ import annotations
+
+from speleodb.surveys.models.permission_lvl import PermissionLevel
 from speleodb.surveys.models.project import Project
 from speleodb.surveys.models.mutex import Mutex
 from speleodb.surveys.models.format import Format

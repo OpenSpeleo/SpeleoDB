@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # ruff: noqa: E501
 
 from __future__ import annotations

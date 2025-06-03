@@ -1,23 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import time
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pytest
-from _pytest.config import Config
-from _pytest.config.argparsing import Parser
-from _pytest.nodes import Item
+
+if TYPE_CHECKING:
+    from _pytest.config import Config
+    from _pytest.config.argparsing import Parser
+    from _pytest.nodes import Item
 
 
 # Note: This wait time is necessary because of django-countries sometimes being not
 # ready. Simple workaround to fix the issue and barely noticeable.
 def pytest_sessionstart(session: pytest.Session) -> None:
     """Hook to delay the start of the pytest session."""
-    from django_countries import countries  # noqa: F401
+    from django_countries import countries
 
-    initial_wait_time = 1  # seconds
-    print(f"Waiting for {initial_wait_time} seconds before starting pytest session...")  # noqa: T201
-    time.sleep(initial_wait_time)
+    # Force loading the countries to avoid errors.
+    # See: https://github.com/SmileyChris/django-countries/issues/472
+    _ = countries.countries
 
 
 def pytest_addoption(parser: Parser) -> None:

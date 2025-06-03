@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import annotations
+
 import tempfile
 from pathlib import Path
 from unittest import TestCase

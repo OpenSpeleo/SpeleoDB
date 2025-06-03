@@ -1,5 +1,7 @@
-# ruff: noqa: ERA001, E501
+# -*- coding: utf-8 -*-
 """Base settings to build other settings files upon."""
+
+# ruff: noqa: ERA001, E501
 
 from __future__ import annotations
 
