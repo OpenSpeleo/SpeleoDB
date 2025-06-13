@@ -108,7 +108,7 @@ class Command(BaseCommand):
                     f"`{project.name}` - {project.web_url}"
                 )
                 if accept_danger:  # Not a dummy run - Actually proceed
-                    project = gl.projects.get(project.id)  # noqa: PLW2901
+                    project = gl.projects.get(project.id)  # type: ignore[assignment]  # noqa: PLW2901
                     project.delete()
                     time.sleep(5)  # Time Throttling Mitigation
 
