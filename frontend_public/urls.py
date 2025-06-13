@@ -12,6 +12,8 @@ from frontend_public.views import PasswordResetFromKeyView
 from frontend_public.views import PasswordResetView
 from frontend_public.views import SignUpView
 
+ArianeWebView = TemplateView.as_view(template_name="webviews/ariane.html")
+
 urlpatterns = [
     # Main Pages
     path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
@@ -39,11 +41,7 @@ urlpatterns = [
         name="privacy_policy",
     ),
     # Webviews
-    path(
-        "webview/ariane/",
-        TemplateView.as_view(template_name="webviews/ariane.html"),
-        name="webview_ariane",
-    ),
+    path("webview/ariane/", ArianeWebView, name="webview_ariane"),
     # User Auth Management
     path("login/", LoginView.as_view(), name="account_login"),
     path("logout/", allauth_views.logout, name="account_logout"),
