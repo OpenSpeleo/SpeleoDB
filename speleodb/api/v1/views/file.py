@@ -395,7 +395,12 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
                 fileformat=fileformat_f, project=project, hexsha=hexsha
             )
 
-        except (ValidationError, FileNotFoundError) as e:
+        except FileNotFoundError as e:
+            return ErrorResponse(
+                {"error": str(e)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
+        except ValidationError as e:
             return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         with tempfile.TemporaryDirectory() as tempdir:
@@ -408,6 +413,10 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
                 try:
                     filename = processor.get_filename_for_download(
                         target_f=temp_filepath, hexsha=hexsha
+                    )
+                except FileNotFoundError as e:
+                    return ErrorResponse(
+                        {"error": str(e)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
                     )
                 except ValidationError:
                     return ErrorResponse(
