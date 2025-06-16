@@ -78,7 +78,7 @@ local = [
 
   # Django Testing
   # ------------------------------------------------------------------------------
-  "django-coverage-plugin==3.1.0", # https://github.com/nedbat/django_coverage_plugin
+  "django-coverage-plugin==3.1.1", # https://github.com/nedbat/django_coverage_plugin
   "pytest-django==4.11.1",         # https://github.com/pytest-dev/pytest-django
 
   # Documentation
