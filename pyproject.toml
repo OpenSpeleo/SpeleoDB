@@ -339,8 +339,19 @@ force-single-line = true
 
 [tool.pyright]
 include = ["speleodb/**", "config", "frontend_*/**", "tests/**"]
-exclude = ["**/__pycache__"]
-
+exclude = [
+  "**/*.pyc",
+  "**/node_modules",
+  "**/__pycache__",
+  ".git",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".uv",
+  ".venv",
+  ".workdir",
+]
+pythonVersion = '3.13'
 reportUnknownMemberType = "none"
 reportIncompatibleMethodOverride = "none"
 reportIncompatibleVariableOverride = "none"
