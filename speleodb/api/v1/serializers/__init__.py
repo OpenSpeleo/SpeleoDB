@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from speleodb.api.v1.serializers.announcement import PublicAnnoucementSerializer
 from speleodb.api.v1.serializers.authtoken import AuthTokenSerializer
 from speleodb.api.v1.serializers.file import UploadSerializer
 from speleodb.api.v1.serializers.git import GitCommitListSerializer
@@ -36,6 +37,7 @@ __all__ = [
     "GitFileSerializer",
     "PasswordChangeSerializer",
     "ProjectSerializer",
+    "PublicAnnoucementSerializer",
     "SurveyTeamListSerializer",
     "SurveyTeamMembershipListSerializer",
     "SurveyTeamMembershipSerializer",
