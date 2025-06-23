@@ -7,13 +7,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from django import forms
 from django.contrib import admin
+from django.db import models
 from django.db.models import F
 from django.db.models import QuerySet
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Mutex
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import PublicAnnoucement
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 
@@ -85,3 +88,28 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "created_by",
     )
     ordering = ("name",)
+
+
+@admin.register(PublicAnnoucement)
+class PublicAnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "id",
+        "title",
+        "is_active",
+        "software",
+        "_version",
+        "creation_date",
+        "modified_date",
+        "expiracy_date",
+    )
+
+    ordering = ("-creation_date",)
+    list_filter = ["is_active", "software", "_version"]
+
+    formfield_overrides = {
+        models.TextField: {
+            "widget": forms.Textarea(
+                attrs={"cols": 100, "rows": 20, "style": "font-family: monospace;"}
+            )
+        },
+    }
