@@ -18,16 +18,22 @@ class PermissionLevel(BaseIntegerChoices):
 
     @classproperty
     def choices_no_admin(cls) -> list[tuple[int, StrOrPromise]]:  # noqa: N805
-        return [member for member in PermissionLevel.choices if member[0] < cls.ADMIN]  # type: ignore[operator]
+        return [
+            member
+            for member in PermissionLevel.choices
+            if member[0] < PermissionLevel.ADMIN
+        ]
 
     @classproperty
     def values_no_admin(cls) -> list[int]:  # noqa: N805
-        return [value for value in PermissionLevel.values if value < cls.ADMIN]  # type: ignore[operator]
+        return [
+            value for value in PermissionLevel.values if value < PermissionLevel.ADMIN
+        ]
 
     @classproperty
     def members_no_admin(cls) -> list[PermissionLevel]:  # noqa: N805
         return [
             member  # type: ignore[misc]
             for member in PermissionLevel.members  # type: ignore[arg-type]
-            if member.value < cls.ADMIN  # type: ignore[misc]
+            if member.value < PermissionLevel.ADMIN.value
         ]

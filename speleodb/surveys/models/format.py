@@ -78,7 +78,7 @@ class Format(models.Model):
         ) -> list[tuple[int, StrOrPromise]]:
             exclude_vals = exclude_vals if exclude_vals is not None else []
 
-            return [f for f in cls.choices if f not in exclude_vals]  # type: ignore[misc]
+            return [f for f in cls.choices if f not in exclude_vals]
 
         @classmethod
         def filtered_choices_as_str(
@@ -155,4 +155,4 @@ class Format(models.Model):
 
     @format.setter
     def format(self, fmt: FileFormat) -> None:
-        self._format = fmt.value  # type: ignore[misc]
+        self._format = fmt.value

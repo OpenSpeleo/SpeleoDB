@@ -341,14 +341,14 @@ class ProjectUserPermissionsView(_BaseProjectView):
         for permission in filtered_team_permissions:
             if (
                 permission.user not in permission_map
-                or permission_map[permission.user].level.value < permission.level.value  # type: ignore[misc]
+                or permission_map[permission.user].level.value < permission.level.value
             ):
                 permission_map[permission.user] = permission
 
         # Merging everything together with user permissions first to appear on top
         data["permissions"] = user_permissions + sorted(
             permission_map.values(),
-            key=lambda perm: (-perm.level.value, perm.user.email),  # type: ignore[misc]
+            key=lambda perm: (-perm.level.value, perm.user.email),
         )
 
         return super().get(request, *args, **data, **kwargs)
