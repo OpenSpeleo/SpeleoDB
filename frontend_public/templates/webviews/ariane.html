@@ -35,16 +35,18 @@
         <section>
 
             <!-- Illustration -->
-            <div class="absolute inset-0 -z-10 pointer-events-none overflow-hidden" aria-hidden="true">
-                <div class="absolute left-1/2 -translate-x-1/2 bottom-0 -z-10">
-                    <img src="{% static 'media/glow-top.svg' %}" class="max-w-none" width="1404" height="658" alt="Features Illustration">
-                </div>
+            <div class="absolute inset-0 -z-10 pointer-events-none overflow-hidden h-full" aria-hidden="true">
+                    <img 
+                        src="{% static 'media/glow-top.svg' %}" 
+                        class="-z-10 pointer-events-none"
+                        style="position: fixed; bottom: 0; left: 0; width: 100%; height: auto; transform: scale(2.5);"
+                    >
             </div>
 
             <div class="pt-4 ml-4 mr-4">
 
                 <!-- Section content -->
-                <div class="flex flex-col">
+                <div class="flex flex-col text-sm">
 
                     <!-- Content -->
                     <div class="text-center mt-2 mb-2">
