@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from speleodb.surveys.models.annoucement import PublicAnnoucement
 from speleodb.surveys.models.permission_lvl import PermissionLevel
 from speleodb.surveys.models.project import Project
 from speleodb.surveys.models.mutex import Mutex
@@ -18,6 +19,7 @@ __all__ = [
     "Mutex",
     "PermissionLevel",
     "Project",
+    "PublicAnnoucement",
     "TeamPermission",
     "UserPermission",
 ]

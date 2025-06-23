@@ -24,6 +24,7 @@ def sha1_hash() -> str:
 @pytest.mark.parametrize(
     ("name", "path", "kwargs"),
     [
+        ("api:v1:public_announcements", "/api/v1/announcements/", None),
         ("api:v1:project_api", "/api/v1/projects/", None),
         (
             "api:v1:one_project_apiview",

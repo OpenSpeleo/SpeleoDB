@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import factory
+from django.utils import timezone
 from django_countries import countries
 from factory import Faker
 from factory import post_generation
@@ -15,8 +16,10 @@ from rest_framework.authtoken.models import Token
 
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import PublicAnnoucement
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
+from speleodb.surveys.models.platform_base import SurveyPlatformEnum
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
@@ -114,3 +117,27 @@ class TeamPermissionFactory(DjangoModelFactory[TeamPermission]):
 
     class Meta:
         model = TeamPermission
+
+
+class PublicAnnoucementFactory(DjangoModelFactory[PublicAnnoucement]):
+    """
+    Factory for creating PublicAnnoucement instances for testing.
+    """
+
+    class Meta:
+        model = PublicAnnoucement
+
+    # ---------- Default Values for Required Fields ----------
+
+    title = factory.Sequence(lambda n: f"Announcement {n}")
+    header: str = Faker("sentence")  # type: ignore[assignment]
+    message: str = Faker("paragraph")  # type: ignore[assignment]
+
+    software = SurveyPlatformEnum.WEB
+    version = "1.0.0"
+    is_active = True
+
+    # Timestamps — allow override in tests if necessary
+    creation_date: Any = factory.LazyFunction(timezone.now)
+    modified_date: Any = factory.LazyFunction(timezone.now)
+    expiracy_date: Any = None  # Default: no expiration
