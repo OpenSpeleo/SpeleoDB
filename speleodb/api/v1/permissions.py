@@ -78,7 +78,7 @@ class BaseTeamAccessLevel(permissions.BasePermission):
         try:
             membership = obj.get_membership(user=request.user)
             return (
-                membership.role.value >= self.MIN_ACCESS_LEVEL and membership.is_active  # type: ignore[misc]
+                membership.role.value >= self.MIN_ACCESS_LEVEL and membership.is_active
             )
         except ObjectDoesNotExist:
             return False

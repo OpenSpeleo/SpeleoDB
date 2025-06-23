@@ -7,5 +7,7 @@
     "mypy-type-checker.reportingScope": "file",
     "mypy-type-checker.importStrategy": "fromEnvironment",
     "python.analysis.autoImportCompletions": true,
-    "python.analysis.logLevel": "Trace"
+    "python.analysis.logLevel": "Trace",
+    "cursorpyright.analysis.autoImportCompletions": true,
+    "cursorpyright.analysis.logLevel": "Trace"
 }
