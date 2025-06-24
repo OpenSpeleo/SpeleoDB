@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from speleodb.surveys.models.annoucement import PublicAnnoucement
 from speleodb.surveys.models.permission_lvl import PermissionLevel
+from speleodb.surveys.models.plugin_release import PluginRelease
 from speleodb.surveys.models.project import Project
 from speleodb.surveys.models.mutex import Mutex
 from speleodb.surveys.models.format import Format
@@ -18,6 +19,7 @@ __all__ = [
     "Format",
     "Mutex",
     "PermissionLevel",
+    "PluginRelease",
     "Project",
     "PublicAnnoucement",
     "TeamPermission",

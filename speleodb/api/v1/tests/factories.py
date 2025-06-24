@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import random
 from typing import TYPE_CHECKING
 from typing import Any
@@ -15,10 +16,12 @@ from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
 from speleodb.surveys.models import PermissionLevel
+from speleodb.surveys.models import PluginRelease
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import PublicAnnoucement
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
+from speleodb.surveys.models.platform_base import OperatingSystemEnum
 from speleodb.surveys.models.platform_base import SurveyPlatformEnum
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
@@ -141,3 +144,31 @@ class PublicAnnoucementFactory(DjangoModelFactory[PublicAnnoucement]):
     creation_date: Any = factory.LazyFunction(timezone.now)
     modified_date: Any = factory.LazyFunction(timezone.now)
     expiracy_date: Any = None  # Default: no expiration
+
+
+class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
+    class Meta:
+        model = PluginRelease
+
+    # Fields
+    plugin_version = "1.0.0"  # Could make this parametric if needed
+    software = SurveyPlatformEnum.WEB  # Default enum value
+    software_version = "1.2.3"
+    operating_system = OperatingSystemEnum.ANY
+
+    changelog: str = Faker("paragraph")  # type: ignore[assignment]
+
+    # Generate a random sha256 hash (lowercase hex)
+    @factory.lazy_attribute  # type: ignore[arg-type]
+    def sha256_hash(self) -> str:
+        random_bytes = (
+            random.randbytes(32)
+            if hasattr(random, "randbytes")
+            else bytes(random.getrandbits(8) for _ in range(32))
+        )
+        return hashlib.sha256(random_bytes).hexdigest()
+
+    download_url: str = Faker("url", schemes="https")  # type: ignore[assignment]
+
+    creation_date = factory.LazyFunction(timezone.now)
+    modified_date = factory.LazyFunction(timezone.now)
