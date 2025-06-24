@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from django_countries import countries
 
 if TYPE_CHECKING:
     from _pytest.config import Config
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
 # ready. Simple workaround to fix the issue and barely noticeable.
 def pytest_sessionstart(session: pytest.Session) -> None:
     """Hook to delay the start of the pytest session."""
-    from django_countries import countries
 
     # Force loading the countries to avoid errors.
     # See: https://github.com/SmileyChris/django-countries/issues/472

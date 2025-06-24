@@ -58,7 +58,7 @@ class GitOAuth2Authentication(BasicAuthentication):
     def get_model(self) -> type[Token]:
         if self.model is not None:
             return self.model
-        from rest_framework.authtoken.models import Token
+        from rest_framework.authtoken.models import Token  # noqa: PLC0415
 
         return Token
 

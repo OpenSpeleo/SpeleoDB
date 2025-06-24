@@ -92,7 +92,7 @@ class User(AbstractUser):
 
     @property
     def teams(self) -> models.QuerySet[SurveyTeam]:
-        from speleodb.users.models import SurveyTeam
+        from speleodb.users.models import SurveyTeam  # noqa: PLC0415
 
         return SurveyTeam.objects.filter(
             rel_team_memberships__user=self,
@@ -123,8 +123,8 @@ class User(AbstractUser):
         """Returns a sorted list of `TeamPermission` or `UserPermission` by project
         name. The method finds the best permission (user or team) for each project."""
 
-        from speleodb.surveys.models import TeamPermission
-        from speleodb.users.models import SurveyTeam
+        from speleodb.surveys.models import TeamPermission  # noqa: PLC0415
+        from speleodb.users.models import SurveyTeam  # noqa: PLC0415
 
         # -------------------------- USER PERMISSIONS -------------------------- #
 

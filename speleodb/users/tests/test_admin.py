@@ -59,7 +59,7 @@ class TestUserAdmin:
     def _force_allauth(self, settings: SettingsWrapper) -> None:
         settings.DJANGO_ADMIN_FORCE_ALLAUTH = True
         # Reload the admin module to apply the setting change
-        import speleodb.users.admin as users_admin
+        import speleodb.users.admin as users_admin  # noqa: PLC0415
 
         with contextlib.suppress(AlreadyRegistered):
             reload(users_admin)

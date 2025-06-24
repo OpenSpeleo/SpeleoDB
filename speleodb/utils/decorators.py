@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Generic
 from typing import TypeVar
 
 if TYPE_CHECKING:
@@ -13,7 +12,7 @@ T = TypeVar("T")
 RT = TypeVar("RT")
 
 
-class _ClassPropertyDescriptor(Generic[T, RT]):
+class _ClassPropertyDescriptor[T, RT]:
     def __init__(self, fget: Callable[[type[T]], RT]) -> None:
         self.fget = fget
 
@@ -25,5 +24,5 @@ class _ClassPropertyDescriptor(Generic[T, RT]):
         return self.fget(owner)
 
 
-def classproperty(func: Callable[[T], RT]) -> _ClassPropertyDescriptor[T, RT]:
+def classproperty[T, RT](func: Callable[[T], RT]) -> _ClassPropertyDescriptor[T, RT]:
     return _ClassPropertyDescriptor(func)  # type: ignore[arg-type]

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 RT = TypeVar("RT")
 
 
-def redirect_authenticated_user(
+def redirect_authenticated_user[RT](
     func: Callable[..., RT],
 ) -> Callable[..., RT | HttpResponseRedirectBase]:
     def wrapper(
