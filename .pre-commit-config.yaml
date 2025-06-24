@@ -29,7 +29,7 @@ repos:
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.12
+    rev: v0.12.0
     hooks:
       # Linter
       - id: ruff
@@ -55,14 +55,7 @@ repos:
   # Use a Local Workflow to ensure that `mypy` picks up all the local up-to-date dependencies
   - repo: local
     hooks:
-      - args:
-          [
-            "run",
-            "--",
-            "--cache-fine-grained",
-            "--config-file",
-            "pyproject.toml",
-          ]
+      - args: ["run", "--", "--config-file", "pyproject.toml"]
         description: Static type checker for Python
         # https://github.com/pre-commit/mirrors-mypy/blob/main/.pre-commit-hooks.yaml
         entry: dmypy
@@ -71,13 +64,6 @@ repos:
         name: mypy
         require_serial: true
         types_or: [python, pyi]
-
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.15.0
-  #   hooks:
-  #     - id: mypy
-  #       args: ["--config-file", "pyproject.toml"]
-  #       additional_dependencies: [...]
 
   - repo: https://github.com/PyCQA/autoflake
     rev: v2.3.1 # check for the latest version

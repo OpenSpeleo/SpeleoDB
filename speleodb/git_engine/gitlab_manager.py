@@ -38,7 +38,7 @@ class GitlabError(Exception):
 RT = TypeVar("RT")
 
 
-def check_initialized(func: Callable[..., RT]) -> Callable[..., RT]:
+def check_initialized[RT](func: Callable[..., RT]) -> Callable[..., RT]:
     @wraps(func)
     def _impl(self: GitlabManagerCls, *args: Any, **kwargs: Any) -> RT:
         if self._gl is None:

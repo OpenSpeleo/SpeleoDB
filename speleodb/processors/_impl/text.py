@@ -5,8 +5,6 @@ from __future__ import annotations
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Format
 
-# ruff: noqa: E501
-
 
 class TextFileProcessor(BaseFileProcessor):
     ALLOWED_EXTENSIONS = [

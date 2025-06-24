@@ -15,7 +15,7 @@ def get_timestamp() -> str:
     return timezone.localtime().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def maybe_sort_data(data: T) -> OrderedDict[str, Any] | list[Any] | T:
+def maybe_sort_data[T](data: T) -> OrderedDict[str, Any] | list[Any] | T:
     match data:
         case dict():
             return OrderedDict(

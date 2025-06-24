@@ -483,6 +483,10 @@ class GitRepo(Repo):
         """:return: String with pythonic representation of our object"""
         return f"<{self.__class__.__name__}: {pathlib.Path(self.git_dir).parent}>"
 
+    def __hash__(self) -> int:
+        # Unique in `class`, absolute path, and git commit HEAD
+        return hash((self.__class__, str(self.path.resolve()), self.head.commit.hexsha))
+
     @classmethod
     def from_directory(cls, directory: str | pathlib.Path) -> Self:
         if not isinstance(directory, pathlib.Path):

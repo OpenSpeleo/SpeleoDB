@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# ruff: noqa: E501
-
 from __future__ import annotations
 
 from .base import *  # noqa: F403
@@ -33,7 +31,7 @@ CACHES = {
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 EMAIL_BACKEND = env(
     "DJANGO_EMAIL_BACKEND",
-    default="django.core.mail.backends.filebased.EmailBackend",
+    default="django.core.mail.backends.filebased.EmailBackend",  # pyright: ignore[reportArgumentType]
 )
 EMAIL_FILE_PATH = "./.workdir/emails"
 
@@ -60,11 +58,11 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
 INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
-if env.bool("USE_DOCKER", default=False):
+if env.bool("USE_DOCKER", default=False):  # pyright: ignore[reportArgumentType]
     import socket
 
     hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS += [".".join(ip.split(".")[:-1] + ["1"]) for ip in ips]
+    INTERNAL_IPS += [".".join([*ip.split(".")[:-1], "1"]) for ip in ips]
 
 # django-extensions
 # ------------------------------------------------------------------------------

@@ -171,7 +171,7 @@ class Project(models.Model):
             active_mutex.save()
 
         else:
-            from speleodb.surveys.models import Mutex
+            from speleodb.surveys.models import Mutex  # noqa: PLC0415
 
             _ = Mutex.objects.create(project=self, user=user)
 
@@ -370,7 +370,7 @@ class Project(models.Model):
 
     @property
     def formats_downloadable(self) -> list[Format]:
-        from speleodb.surveys.models import Format
+        from speleodb.surveys.models import Format  # noqa: PLC0415
 
         return [
             _format
