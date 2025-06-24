@@ -37,3 +37,42 @@ class VersionField(models.CharField):  # type: ignore[type-arg]
     def value_to_string(self, obj: Any) -> str:
         value = self.value_from_object(obj)
         return value if value else ""
+
+
+sha256_validator = RegexValidator(
+    regex=r"^[a-fA-F0-9]{64}$",
+    message="Enter a valid sha256 value",
+)
+
+
+class Sha256Field(models.CharField):  # type: ignore[type-arg]
+    default_error_messages = {
+        "invalid": "Enter a valid sha256 value.",
+    }
+    description = "SHA-256"
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        kwargs.setdefault("max_length", 64)
+        kwargs.setdefault("validators", [sha256_validator])
+        super().__init__(*args, **kwargs)
+
+    def to_python(self, value: Any) -> str | None:
+        if value is None:
+            return value
+        return str(value).lower()
+
+    def from_db_value(
+        self, value: Any, expression: Any, connection: Any, *args: Any
+    ) -> Any:
+        """Convert from the database format.
+        This should be the inverse of self.get_prep_value()
+        """
+        return self.to_python(value)
+
+    def get_prep_value(self, value: Any) -> Any:
+        value = super().get_prep_value(value)
+        return value.lower() if value else value
+
+    def value_to_string(self, obj: Any) -> str:
+        value = self.value_from_object(obj)
+        return value if value else ""

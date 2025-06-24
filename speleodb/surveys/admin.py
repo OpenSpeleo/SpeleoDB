@@ -18,6 +18,7 @@ from django.utils.safestring import mark_safe
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Mutex
+from speleodb.surveys.models import PluginRelease
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import PublicAnnoucement
 from speleodb.surveys.models import TeamPermission
@@ -146,3 +147,49 @@ class PublicAnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 request, "UUID has been regenerated.", level=messages.SUCCESS
             )
         super().save_model(request, obj, form, change)
+
+
+@admin.register(PluginRelease)
+class PluginReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "id",
+        "plugin_version",
+        "software",
+        "software_version",
+        "operating_system",
+        "creation_date",
+        "modified_date",
+    )
+
+    ordering = ("-creation_date",)
+    list_filter = ["software", "operating_system", "plugin_version"]
+
+    formfield_overrides = {
+        models.TextField: {
+            "widget": forms.Textarea(
+                attrs={"cols": 100, "rows": 20, "style": "font-family: monospace;"}
+            )
+        },
+    }
+
+    def get_form(  # type: ignore[override]
+        self,
+        request: HttpRequest,
+        obj: PluginRelease | None = None,
+        **kwargs: Any,
+    ) -> type[forms.ModelForm[PluginRelease]]:
+        form = super().get_form(request, obj, **kwargs)
+
+        form.base_fields["sha256_hash"].widget.attrs.update(
+            {
+                "style": "width: 36rem; font-family: monospace; font-size: 0.9rem;",
+            }
+        )
+
+        form.base_fields["download_url"].widget.attrs.update(
+            {
+                "style": "width: 80rem; font-family: monospace; font-size: 0.9rem;",
+            }
+        )
+
+        return form
