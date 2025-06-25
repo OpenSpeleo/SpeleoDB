@@ -14,7 +14,8 @@ class TestPluginReleaseModel:
         return PluginRelease(
             plugin_version="1.2.3",
             software=SurveyPlatformEnum.WEB,
-            software_version="3.4.5",
+            min_software_version="3.0.0",
+            max_software_version="4.0.0",
             operating_system=OperatingSystemEnum.LINUX,
             changelog="Initial release",
             sha256_hash="a" * 64,
@@ -29,7 +30,8 @@ class TestPluginReleaseModel:
         obj = PluginRelease.objects.create(
             plugin_version="0.1.0",
             software=SurveyPlatformEnum.ARIANE,
-            software_version="",
+            min_software_version="",
+            max_software_version="",
             operating_system=OperatingSystemEnum.ANY,
             changelog="Minimal release",
             download_url="https://example.com/download/minimal.zip",
@@ -94,10 +96,43 @@ class TestPluginReleaseModel:
     def test_str_representation(self, plugin_release: PluginRelease) -> None:
         expected = (
             f"[{SurveyPlatformEnum(plugin_release.software).label} - "
-            f"{plugin_release.software_version}] {plugin_release.plugin_version}: "
+            f">=3.0.0,<=4.0.0] {plugin_release.plugin_version}: "
             f"{plugin_release.download_url}"
         )
         assert str(plugin_release) == expected
+
+    def test_str_representation_min_only(self) -> None:
+        release = PluginRelease(
+            plugin_version="1.0.0",
+            software=SurveyPlatformEnum.WEB,
+            min_software_version="2.0.0",
+            max_software_version="",
+            download_url="https://example.com/plugin.zip",
+        )
+        expected = "[WEB - >=2.0.0] 1.0.0: https://example.com/plugin.zip"
+        assert str(release) == expected
+
+    def test_str_representation_max_only(self) -> None:
+        release = PluginRelease(
+            plugin_version="1.0.0",
+            software=SurveyPlatformEnum.WEB,
+            min_software_version="",
+            max_software_version="3.0.0",
+            download_url="https://example.com/plugin.zip",
+        )
+        expected = "[WEB - <=3.0.0] 1.0.0: https://example.com/plugin.zip"
+        assert str(release) == expected
+
+    def test_str_representation_no_version(self) -> None:
+        release = PluginRelease(
+            plugin_version="1.0.0",
+            software=SurveyPlatformEnum.WEB,
+            min_software_version="",
+            max_software_version="",
+            download_url="https://example.com/plugin.zip",
+        )
+        expected = "[WEB] 1.0.0: https://example.com/plugin.zip"
+        assert str(release) == expected
 
     def test_repr_representation(self, plugin_release: PluginRelease) -> None:
         expected = f"<PluginRelease: {plugin_release}>"
