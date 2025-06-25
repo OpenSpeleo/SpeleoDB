@@ -153,7 +153,8 @@ class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
     # Fields
     plugin_version = "1.0.0"  # Could make this parametric if needed
     software = SurveyPlatformEnum.WEB  # Default enum value
-    software_version = "1.2.3"
+    min_software_version = "1.0.0"
+    max_software_version = "2.0.0"
     operating_system = OperatingSystemEnum.ANY
 
     changelog: str = Faker("paragraph")  # type: ignore[assignment]

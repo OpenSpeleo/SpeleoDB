@@ -75,9 +75,9 @@ class TestPluginReleasesApiView(BaseAPITestCase):
 
     # Optional: test that ordering is strictly by creation_date ascending
     def test_ordering_by_creation_date(self) -> None:
-        release_old = PluginReleaseFactory()
-        release_new = PluginReleaseFactory()
-        release_mid = PluginReleaseFactory()
+        release_1 = PluginReleaseFactory()
+        release_2 = PluginReleaseFactory()
+        release_3 = PluginReleaseFactory()
 
         response = self.client.get(reverse(self.url_name))
 
@@ -91,5 +91,5 @@ class TestPluginReleasesApiView(BaseAPITestCase):
 
         # Check that the objects correspond correctly
         actual_ids = [item["id"] for item in response.data["data"]]
-        expected_order = [release_old.id, release_new.id, release_mid.id]  # type: ignore[attr-defined]
+        expected_order = [release_1.id, release_2.id, release_3.id]  # type: ignore[attr-defined]
         assert actual_ids == expected_order

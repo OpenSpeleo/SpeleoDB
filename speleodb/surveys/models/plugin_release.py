@@ -21,10 +21,16 @@ class PluginRelease(models.Model):
         blank=False,
     )
 
-    software_version = VersionField(
+    min_software_version = VersionField(
         default="",
         blank=True,
-        verbose_name="Software version",
+        verbose_name="Minimum software version",
+    )
+
+    max_software_version = VersionField(
+        default="",
+        blank=True,
+        verbose_name="Maximum software version",
     )
 
     operating_system = models.IntegerField(
@@ -49,10 +55,24 @@ class PluginRelease(models.Model):
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self) -> str:
-        return (
-            f"[{SurveyPlatformEnum(self.software).label} - {self.software_version}] "
-            f"{self.plugin_version}: {self.download_url}"
-        )
+        version_range = ""
+        if self.min_software_version and self.max_software_version:
+            version_range = (
+                f">={self.min_software_version},<={self.max_software_version}"
+            )
+        elif self.min_software_version:
+            version_range = f">={self.min_software_version}"
+        elif self.max_software_version:
+            version_range = f"<={self.max_software_version}"
+
+        if version_range:
+            software_info = (
+                f"[{SurveyPlatformEnum(self.software).label} - {version_range}]"
+            )
+        else:
+            software_info = f"[{SurveyPlatformEnum(self.software).label}]"
+
+        return f"{software_info} {self.plugin_version}: {self.download_url}"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"

@@ -9,5 +9,5 @@
     "python.analysis.autoImportCompletions": true,
     "python.analysis.logLevel": "Trace",
     "cursorpyright.analysis.autoImportCompletions": true,
-    "cursorpyright.analysis.logLevel": "Trace"
+    "cursorpyright.analysis.logLevel": "Trace",
 }
