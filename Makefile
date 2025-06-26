@@ -27,5 +27,8 @@ deploy:
 wipe_gitlab_test:
 	python manage.py wipe_test_gitlab --accept_danger --skip_user_confirmation
 
+wipe_test_user_projects:
+	python manage.py wipe_test_user_projects --user "ariane-plugin-unittest@speleodb.org"
+
 generate_enc_key:
 	python manage.py generate_field_encryption_key
