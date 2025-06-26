@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 
+import gitlab
 import gitlab.exceptions
 from django.core.management.base import BaseCommand
 from dotenv import load_dotenv
