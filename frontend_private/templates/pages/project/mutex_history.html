@@ -14,7 +14,7 @@
             <!-- Left: Title -->
             <div class="mb-4 sm:mb-0 w-fit block float-left">
                 <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
-                    Project's Lock History
+                    Project's Edition History
                 </h1>
             </div>
 
@@ -24,18 +24,44 @@
             <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2 w-fit block float-right">
 
                 <!-- New button -->
-                {% if project.mutex_owner or not has_write_access %}
-                    <button class="btn bg-slate-600 text-white" disabled>
+                {% if project.mutex_owner %}
+                    {% if project.mutex_owner == user or is_project_admin %}
+                        <button class="btn btn_unlock bg-rose-500 hover:bg-rose-600 text-white" title="Stop Project Edition">
+                    {% else %}
+                        <button class="btn bg-slate-600 text-white" disabled title="Somebody else is currently editing">
+                    {% endif %}
                 {% else %}
-                    <button id="btn_lock_project" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                    {% if has_write_access %}
+                        <button id="btn_lock_project" class="btn bg-indigo-500 hover:bg-indigo-600 text-white" title="Enable Project Edition">
+                    {% else %}
+                        <button class="btn bg-slate-600 text-white" disabled title="You cannot edit this project">
+                    {% endif %}
                 {% endif %}
-                    <svg class="w-4 h-4 stroke-current opacity-100 shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
-                        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
-                        <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
-                      </svg>
-                    <span class="hidden xs:block ml-2">Lock Project Edition</span>
+
+                <svg class="w-4 h-4 stroke-current opacity-100 shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+                    <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+                    <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+                </svg>
+
+                {% if project.mutex_owner %}
+                    {% if project.mutex_owner == user or is_project_admin %}
+                        <span class="hidden xs:block ml-2">Stop Project Edition</span>
+                    {% else %}
+                        <span class="hidden xs:block ml-2">Somebody else is currently editing</span>
+                    {% endif %}
+                {% else %}
+                    {% if has_write_access %}
+                        <span class="hidden xs:block ml-2">Enable Project Edition</span>
+                    {% else %}
+                        <span class="hidden xs:block ml-2">You cannot edit this project</span>
+                    {% endif %}
+                {% endif %}
+
+
+
+
                 </button>
 
             </div>

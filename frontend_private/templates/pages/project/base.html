@@ -127,7 +127,7 @@
                                 </a>
                             </li>
 
-                            <!-- Project Lock History -->
+                            <!-- Project Edition History -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
                                 <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'project_mutexes' %}bg-indigo-500/30{% endif %}" href="{% url 'private:project_mutexes' project_id=project.id %}">
                                     {% if request.url_name == 'project_mutexes' %}
@@ -145,7 +145,7 @@
                                     {% else %}
                                         <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
                                     {% endif %}
-                                        Lock History
+                                        Edition History
                                     </span>
                                 </a>
                             </li>
