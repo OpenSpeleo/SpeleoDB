@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import override
@@ -472,4 +473,24 @@ class MapViewerView(_BaseProjectView):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponseRedirectBase | HttpResponse:
-        return super().get(request, *args, **kwargs)
+        import json
+
+        # Get sorted projects and serialize for JavaScript
+        sorted_projects = sorted(
+            request.user.projects, key=lambda p: p.modified_date, reverse=True
+        )
+
+        # Convert projects to a JSON-serializable format
+        projects_data = [
+            {
+                "id": str(project.id),
+                "name": project.name,
+                "modified_date": project.modified_date.isoformat(),
+            }
+            for project in sorted_projects
+        ]
+
+        data = {
+            "projects": json.dumps(projects_data),
+        }
+        return super().get(request, *args, **data, **kwargs)
