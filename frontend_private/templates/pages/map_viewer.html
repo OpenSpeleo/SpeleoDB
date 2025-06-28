@@ -1,0 +1,267 @@
+{% extends "base_private.html" %}
+{% load static i18n compress%}
+
+{% block extra_css %}
+<link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css' rel='stylesheet' />
+{% endblock extra_css %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+
+        <!-- Page header -->
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+
+            <!-- Left: Title -->
+            <div class="mb-4 sm:mb-0">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
+                    Survey Viewer
+                </h1>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+
+                <!-- New button -->
+                <button class="btn bg-sky-500 hover:bg-sky-600 text-white">
+                    <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="3.5 3.51 17 16.97">
+                        <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path>
+                        <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path>
+                    </svg>
+                    {% csrf_token %}
+                    <a id="btn_release_all_locks" class="hidden xs:block ml-2">Refresh all my Projects</a>
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- Table -->
+        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+            <div id='map' style='width: 100%; min-height: 600px; display: block;'></div>
+        </div>
+
+    </div>
+</main>
+{% endblock content %}
+
+{% block extra_js %}
+<script src='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js'></script>
+{% endblock extra_js %}
+
+{% block inline_extra_js %}
+<script>
+    const geojson_urls = [
+        "{% static 'private/geojson/ponderosa.geojson' %}",
+        "{% static 'private/geojson/mayan_blue.geojson' %}"
+    ];
+
+	mapboxgl.accessToken = 'pk.eyJ1IjoiamRla2h0aWFyIiwiYSI6ImNtY2ZyNDBodjBiZ28yb29obnh6YTNrejMifQ.__NkdcDD41lhsuPStJVm4Q';
+    
+    // Simple function to set map height
+    function setMapHeight() {
+        const mapElement = document.getElementById('map');
+        const rect = mapElement.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const mapTop = rect.top;
+        const newHeight = Math.max(viewportHeight - mapTop - 20, 600);
+        mapElement.style.height = newHeight + 'px';
+    }
+    
+    if (!mapboxgl.supported()) {
+        alert('Your browser does not support Mapbox GL');
+    } else {
+        // Set initial height
+        setMapHeight();
+        
+        const map = new mapboxgl.Map({
+            container: 'map',
+            // Satellite imagery with street labels
+            style: 'mapbox://styles/mapbox/satellite-streets-v12',
+            // Start completely zoomed out showing the whole planet
+            center: [0, 0],
+            zoom: 0
+        });
+        
+        // Add resize listener
+        window.addEventListener('resize', () => {
+            setMapHeight();
+            map.resize();
+        });
+
+        // Wait for the map to load before adding sources and layers
+        map.on('load', function() {
+            console.log('Map loaded, fetching GeoJSON files:', geojson_urls);
+            
+            // Define distinct colors for different datasets
+            const colors = ['#FF6B35', '#F7931E', '#FFD23F', '#06FFA5', '#118AB2', '#073B4C', '#9D4EDD'];
+            
+            // Create promises to fetch all GeoJSON files
+            const fetchPromises = geojson_urls.map((url, index) => {
+                return fetch(url)
+                    .then(response => {
+                        console.log(`GeoJSON ${index + 1} response status:`, response.status);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error for ${url}! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log(`GeoJSON ${index + 1} data loaded:`, data);
+                        console.log(`Number of features in dataset ${index + 1}:`, data.features ? data.features.length : 'No features property');
+                        return { data, index, url };
+                    });
+            });
+
+            // Wait for all GeoJSON files to load
+            Promise.all(fetchPromises)
+                .then(results => {
+                    const firstDatasetBounds = new mapboxgl.LngLatBounds();
+                    
+                    // Function to extend bounds with coordinates
+                    function extendBounds(coords, bounds) {
+                        if (typeof coords[0] === 'number') {
+                            // This is a [lng, lat] coordinate
+                            bounds.extend(coords);
+                        } else if (Array.isArray(coords[0])) {
+                            // This is an array of coordinates
+                            coords.forEach(coord => extendBounds(coord, bounds));
+                        }
+                    }
+
+                    // Process each GeoJSON dataset
+                    results.forEach(({ data, index, url }) => {
+                        const sourceId = `geojson-source-${index}`;
+                        const color = colors[index % colors.length];
+                        
+                        console.log(`Processing dataset ${index + 1} (${url}) with color ${color}`);
+                        
+                        // Add the GeoJSON source
+                        map.addSource(sourceId, {
+                            type: 'geojson',
+                            data: data
+                        });
+                        
+                        console.log(`Added source: ${sourceId}`);
+
+                        // Determine geometry types for this dataset
+                        const geometryTypes = new Set();
+                        if (data.features) {
+                            data.features.forEach(feature => {
+                                if (feature.geometry) {
+                                    geometryTypes.add(feature.geometry.type);
+                                    // Only extend bounds for the FIRST dataset (index 0)
+                                    if (index === 0 && feature.geometry.coordinates) {
+                                        extendBounds(feature.geometry.coordinates, firstDatasetBounds);
+                                    }
+                                }
+                            });
+                        }
+                        
+                        console.log(`Dataset ${index + 1} geometry types:`, Array.from(geometryTypes));
+
+                        // Add layers based on geometry types
+                        if (geometryTypes.has('Polygon') || geometryTypes.has('MultiPolygon')) {
+                            const fillLayerId = `geojson-fill-${index}`;
+                            const strokeLayerId = `geojson-stroke-${index}`;
+                            
+                            // Add fill layer for polygons
+                            map.addLayer({
+                                id: fillLayerId,
+                                type: 'fill',
+                                source: sourceId,
+                                filter: ['in', '$type', 'Polygon'],
+                                layout: {},
+                                paint: {
+                                    'fill-color': color,
+                                    'fill-opacity': 0.6
+                                }
+                            });
+                            console.log(`Added fill layer: ${fillLayerId} with color ${color}`);
+
+                            // Add stroke for polygons
+                            map.addLayer({
+                                id: strokeLayerId,
+                                type: 'line',
+                                source: sourceId,
+                                filter: ['in', '$type', 'Polygon'],
+                                layout: {},
+                                paint: {
+                                    'line-color': '#000',
+                                    'line-width': 2
+                                }
+                            });
+                            console.log(`Added stroke layer: ${strokeLayerId}`);
+                        }
+
+                        if (geometryTypes.has('LineString') || geometryTypes.has('MultiLineString')) {
+                            const lineLayerId = `geojson-line-${index}`;
+                            
+                            // Add line layer
+                            map.addLayer({
+                                id: lineLayerId,
+                                type: 'line',
+                                source: sourceId,
+                                filter: ['in', '$type', 'LineString'],
+                                layout: {},
+                                paint: {
+                                    'line-color': color,
+                                    'line-width': 3
+                                }
+                            });
+                            console.log(`Added line layer: ${lineLayerId} with color ${color}`);
+                        }
+
+                        if (geometryTypes.has('Point') || geometryTypes.has('MultiPoint')) {
+                            const pointLayerId = `geojson-points-${index}`;
+                            
+                            // Add circle layer for points
+                            map.addLayer({
+                                id: pointLayerId,
+                                type: 'circle',
+                                source: sourceId,
+                                filter: ['in', '$type', 'Point'],
+                                layout: {},
+                                paint: {
+                                    'circle-color': color,
+                                    'circle-radius': 6,
+                                    'circle-stroke-color': '#ffffff',
+                                    'circle-stroke-width': 2
+                                }
+                            });
+                            console.log(`Added points layer: ${pointLayerId} with color ${color}`);
+                        }
+                    });
+
+                    // Summary of what was loaded
+                    console.log(`SUMMARY: Successfully loaded ${results.length} GeoJSON files:`);
+                    results.forEach(({ data, index, url }) => {
+                        const featureCount = data.features ? data.features.length : 0;
+                        console.log(`  Dataset ${index + 1}: ${url} - ${featureCount} features`);
+                    });
+
+                    // Fit the map to the FIRST dataset bounds only with smooth animation
+                    if (!firstDatasetBounds.isEmpty()) {
+                        console.log('Fitting map to first dataset bounds:', firstDatasetBounds);
+                        console.log(`Zooming to: ${results[0].url}`);
+                        map.fitBounds(firstDatasetBounds, {
+                            padding: 50,
+                            duration: 6000, // 6 second smooth animation (very cinematic)
+                            essential: true // Animation will complete even if user interacts
+                        });
+                    } else {
+                        console.log('No valid bounds found in first dataset, staying at world view');
+                        // Keep the world view if no valid data
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading GeoJSON files:', error);
+                    alert('Error loading GeoJSON data. Check the console for details.');
+                    // Fallback to a default view if GeoJSON fails to load
+                    map.setCenter([0, 0]);
+                    map.setZoom(2);
+                });
+        });
+    }
+</script>
+{% endblock inline_extra_js %}

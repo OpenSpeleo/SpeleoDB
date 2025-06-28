@@ -11,6 +11,7 @@ import speleodb.utils.url_converters  # noqa: F401  # Necessary to import the co
 from frontend_private.views import AuthTokenView
 from frontend_private.views import DashboardView
 from frontend_private.views import FeedbackView
+from frontend_private.views import MapViewerView
 from frontend_private.views import NewProjectView
 from frontend_private.views import NewTeamView
 from frontend_private.views import PassWordView
@@ -101,4 +102,6 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("projects/", ProjectListingView.as_view(), name="projects"),
     path("project/new/", NewProjectView.as_view(), name="project_new"),
     path("project/<uuid:project_id>/", include(project_patterns)),
+    # Map Viewer URLs
+    path("map_viewer/", MapViewerView.as_view(), name="map_viewer"),
 ]

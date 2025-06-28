@@ -37,12 +37,27 @@ if TYPE_CHECKING:
     from speleodb.surveys.models import UserPermission
 
 
+class ProjectManager(models.Manager["Project"]):
+    """Custom manager that defers geojson field by default for performance."""
+
+    def get_queryset(self) -> models.QuerySet["Project"]:
+        """Return queryset with geojson field deferred by default."""
+        return super().get_queryset().defer("geojson")
+
+    def with_geojson(self) -> models.QuerySet["Project"]:
+        """Return queryset with geojson field included."""
+        return super().get_queryset()
+
+
 class Project(models.Model):
     # type checking
     rel_formats: models.QuerySet[Format]
     rel_mutexes: models.QuerySet[Mutex]
     rel_user_permissions: models.QuerySet[UserPermission]
     rel_team_permissions: models.QuerySet[TeamPermission]
+
+    # Custom manager that defers geojson by default
+    objects = ProjectManager()
 
     # Automatic fields
     id = models.UUIDField(
@@ -112,6 +127,13 @@ class Project(models.Model):
         blank=False,
         null=False,
         default=Visibility.PRIVATE,
+    )
+
+    # GeoJSON data - only loaded when specifically requested
+    geojson = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="GeoJSON data for this project. Only loaded when explicitly requested.",
     )
 
     class Meta:
@@ -377,3 +399,9 @@ class Project(models.Model):
             for _format in self.formats
             if _format.raw_format not in Format.FileFormat.__excluded_download_formats__
         ]
+
+    def refresh_geojson(self) -> None:
+        """Refresh the GeoJSON data for this project."""
+        # This method will be implemented by the refresh_project_geojson task
+        # to populate the geojson field
+        pass

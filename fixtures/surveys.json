@@ -12,7 +12,8 @@
             "latitude": "20.19671000",
             "longitude": "-87.50123400",
             "_visibility": 0,
-            "active_mutex": null
+            "active_mutex": null,
+            "geojson": {}
         }
     },
     {
@@ -28,7 +29,8 @@
             "latitude": "-121.91914907",
             "longitude": "37.37635035",
             "_visibility": 0,
-            "active_mutex": null
+            "active_mutex": null,
+            "geojson": {}
         }
     },
     {
@@ -44,7 +46,8 @@
             "latitude": null,
             "longitude": null,
             "_visibility": 0,
-            "active_mutex": null
+            "active_mutex": null,
+            "geojson": {}
         }
     },
     {
