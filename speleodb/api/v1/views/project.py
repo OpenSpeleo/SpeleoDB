@@ -6,10 +6,16 @@ import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
+from django.db import models
+from django.db.models import F
+from django.db.models import TextField
+from django.db.models.functions import Cast
 from django.db.utils import IntegrityError
+from django.http import FileResponse
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
+from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasAdminAccess
 from speleodb.api.v1.permissions import UserHasReadAccess
@@ -20,11 +26,11 @@ from speleodb.surveys.models import Project
 from speleodb.utils.api_decorators import method_permission_classes
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
+from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
-    from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 
@@ -130,3 +136,28 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
                 {"error": "This query violates a project requirement"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class ProjectGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
+    """API view that returns raw GeoJSON data for a project."""
+
+    queryset = Project.objects.all()
+    permission_classes = [UserHasReadAccess]
+    lookup_field = "id"
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Return the raw GeoJSON data as JSON response."""
+        # First check permissions by getting the object normally
+        project = self.get_object()
+
+        # Now fetch the raw geojson field as string using Cast to avoid dict conversion
+        raw_json_string = (
+            Project.objects.annotate(
+                raw_json=Cast(F("geojson"), output_field=TextField())
+            )
+            .values_list("raw_json", flat=True)
+            .get(id=project.id)
+        )
+
+        # Return the raw JSON string directly as data - never parse it in Python
+        return SuccessResponse(raw_json_string or "{}")

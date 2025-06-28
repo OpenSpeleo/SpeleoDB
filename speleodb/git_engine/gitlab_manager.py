@@ -115,10 +115,19 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         )
 
     @check_initialized
-    def create_or_clone_project(self, project_id: uuid.UUID) -> GitRepo | None:
+    def create_or_clone_project(
+        self, project_id: uuid.UUID, base_dir: str | Path | None = None
+    ) -> GitRepo | None:
         gitlab_creds = GitlabCredentials.get()
 
-        project_dir = Path(settings.DJANGO_GIT_PROJECTS_DIR / str(project_id))
+        git_repo_base_dir = (
+            Path(base_dir)
+            if base_dir is not None
+            else Path(settings.DJANGO_GIT_PROJECTS_DIR)
+        )
+
+        project_dir = git_repo_base_dir / str(project_id)
+
         project_dir.parent.mkdir(exist_ok=True, parents=True)
         git_url = f"https://oauth2:{gitlab_creds.token}@{gitlab_creds.instance}/{gitlab_creds.group_name}/{project_id}.git"
 

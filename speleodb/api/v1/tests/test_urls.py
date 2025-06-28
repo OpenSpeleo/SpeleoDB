@@ -33,6 +33,11 @@ def sha1_hash() -> str:
             {"id": uuid.uuid4()},
         ),
         (
+            "api:v1:one_project_geojson_apiview",
+            "/api/v1/projects/{id}/geojson/",
+            {"id": uuid.uuid4()},
+        ),
+        (
             "api:v1:one_project_revisions_apiview",
             "/api/v1/projects/{id}/revisions/",
             {"id": uuid.uuid4()},

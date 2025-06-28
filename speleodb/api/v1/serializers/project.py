@@ -47,7 +47,7 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
 
     class Meta:
         model = Project
-        fields = "__all__"
+        exclude = ["geojson"]  # Never return geojson via API
 
     def to_internal_value(self, data: Any) -> Any:
         latitude = data.get("latitude", None)

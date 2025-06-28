@@ -461,3 +461,15 @@ class ProjectGitInstructionsView(_BaseProjectView):
         data["default_branch"] = settings.DJANGO_GIT_BRANCH_NAME
 
         return super().get(request, *args, **data, **kwargs)
+
+
+class MapViewerView(_BaseProjectView):
+    template_name = "pages/map_viewer.html"
+
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
+        return super().get(request, *args, **kwargs)

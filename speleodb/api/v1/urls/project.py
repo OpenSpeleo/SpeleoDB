@@ -14,6 +14,7 @@ from speleodb.api.v1.views.file import FileUploadView
 from speleodb.api.v1.views.mutex import ProjectAcquireApiView
 from speleodb.api.v1.views.mutex import ProjectReleaseApiView
 from speleodb.api.v1.views.project import ProjectApiView
+from speleodb.api.v1.views.project import ProjectGeoJsonApiView
 from speleodb.api.v1.views.project import ProjectSpecificApiView
 from speleodb.api.v1.views.project_explorer import ProjectGitExplorerApiView
 from speleodb.api.v1.views.project_explorer import ProjectRevisionsApiView
@@ -24,6 +25,12 @@ from speleodb.api.v1.views.user_permission import ProjectUserPermissionView
 
 project_base_urlpatterns: list[URLPattern] = [
     path("", ProjectSpecificApiView.as_view(), name="one_project_apiview"),
+    # GeoJSON API
+    path(
+        "geojson/",
+        ProjectGeoJsonApiView.as_view(),
+        name="one_project_geojson_apiview",
+    ),
     # =============================== GIT VIEW ============================== #
     path(
         "revisions/",
