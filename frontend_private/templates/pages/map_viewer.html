@@ -28,7 +28,6 @@
                         <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path>
                         <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path>
                     </svg>
-                    {% csrf_token %}
                     <a id="btn_release_all_locks" class="hidden xs:block ml-2">Refresh all my Projects</a>
                 </button>
 
@@ -51,10 +50,20 @@
 
 {% block inline_extra_js %}
 <script>
-    const geojson_urls = [
-        "{% static 'private/geojson/ponderosa.geojson' %}",
-        "{% static 'private/geojson/mayan_blue.geojson' %}"
-    ];
+    // Get project IDs from the backend context
+    const projects = {{ projects|safe }};
+    console.log('Projects loaded from backend:', projects);
+    const projectIds = projects.map(project => project.id);
+    console.log('Project IDs to fetch:', projectIds);
+    
+    // Get CSRF token from cookie
+    function getCSRFToken() {
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+        return cookieValue || '{{ csrf_token }}';
+    }
 
 	mapboxgl.accessToken = 'pk.eyJ1IjoiamRla2h0aWFyIiwiYSI6ImNtY2ZyNDBodjBiZ28yb29obnh6YTNrejMifQ.__NkdcDD41lhsuPStJVm4Q';
     
@@ -91,31 +100,136 @@
 
         // Wait for the map to load before adding sources and layers
         map.on('load', function() {
-            console.log('Map loaded, fetching GeoJSON files:', geojson_urls);
+            console.log('Map loaded, fetching GeoJSON data for projects:', projectIds);
             
-            // Define distinct colors for different datasets
-            const colors = ['#FF6B35', '#F7931E', '#FFD23F', '#06FFA5', '#118AB2', '#073B4C', '#9D4EDD'];
+            // Maximally distinguishable color palette based on perceptual color theory
+            // These 20 colors are optimized for maximum visual distinction
+            const colors = [
+                '#e41a1c', // Red
+                '#377eb8', // Blue  
+                '#4daf4a', // Green
+                '#984ea3', // Purple
+                '#ff7f00', // Orange
+                '#ffff33', // Yellow
+                '#a65628', // Brown
+                '#f781bf', // Pink
+                '#999999', // Gray
+                '#66c2a5', // Teal
+                '#fc8d62', // Salmon
+                '#8da0cb', // Lavender
+                '#e78ac3', // Rose
+                '#a6d854', // Lime
+                '#ffd92f', // Gold
+                '#e5c494', // Tan
+                '#b3b3b3', // Light Gray
+                '#1b9e77', // Dark Teal
+                '#d95f02', // Dark Orange
+                '#7570b3'  // Slate Blue
+            ];
             
-            // Create promises to fetch all GeoJSON files
-            const fetchPromises = geojson_urls.map((url, index) => {
-                return fetch(url)
+            console.log(`🎨 Color palette loaded: ${colors.length} maximally distinguishable colors`);
+            
+            // Create promises to fetch GeoJSON data from API for each project
+            const fetchPromises = projectIds.map((projectId, index) => {
+                const apiUrl = `/api/v1/projects/${projectId}/geojson/`;
+
+                console.log('Fetching GeoJSON data for project:', projectId);
+                
+                return fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken(),
+                    },
+                    credentials: 'same-origin'
+                })
                     .then(response => {
-                        console.log(`GeoJSON ${index + 1} response status:`, response.status);
+                        console.log(`Project ${projectId} GeoJSON API response status:`, response.status);
                         if (!response.ok) {
-                            throw new Error(`HTTP error for ${url}! status: ${response.status}`);
+                            console.error(`HTTP error for project ${projectId}! status: ${response.status}`);
+                            throw new Error(`HTTP error for project ${projectId}! status: ${response.status}`);
                         }
                         return response.json();
                     })
-                    .then(data => {
-                        console.log(`GeoJSON ${index + 1} data loaded:`, data);
-                        console.log(`Number of features in dataset ${index + 1}:`, data.features ? data.features.length : 'No features property');
-                        return { data, index, url };
+                    .then(apiResponse => {
+                        console.log(`Project ${projectId} API response:`, apiResponse);
+                        
+                        // Check if the response is successful and has data
+                        if (!apiResponse.success) {
+                            console.warn(`Project ${projectId} API response not successful:`, apiResponse);
+                            return null;
+                        }
+                        
+                        if (!apiResponse.data) {
+                            console.log(`Project ${projectId} has no data field, skipping`);
+                            return null;
+                        }
+                        
+                        // Parse the raw JSON string from the API response
+                        let geojsonData;
+                        try {
+                            geojsonData = JSON.parse(apiResponse.data);
+                            console.log(`Project ${projectId} parsed GeoJSON:`, geojsonData);
+                        } catch (parseError) {
+                            console.error(`Failed to parse GeoJSON for project ${projectId}:`, parseError);
+                            console.error(`Raw data was:`, apiResponse.data);
+                            return null;
+                        }
+                        
+                        // Check if the parsed GeoJSON is empty
+                        if (!geojsonData) {
+                            console.log(`Project ${projectId} has null GeoJSON, skipping`);
+                            return null;
+                        }
+                        
+                        if (!geojsonData.features) {
+                            console.log(`Project ${projectId} has no features property, skipping`);
+                            return null;
+                        }
+                        
+                        if (geojsonData.features.length === 0) {
+                            console.log(`Project ${projectId} has empty features array, skipping`);
+                            return null;
+                        }
+                        
+                        console.log(`✅ Project ${projectId} GeoJSON data loaded successfully!`);
+                        console.log(`   Features: ${geojsonData.features.length}`);
+                        console.log(`   Feature types:`, geojsonData.features.map(f => f.geometry?.type).filter(Boolean));
+                        
+                        return { 
+                            data: geojsonData, 
+                            index, 
+                            projectId,
+                            projectName: projects.find(p => p.id === projectId)?.name || `Project ${projectId}`
+                        };
+                    })
+                    .catch(error => {
+                        console.error(`Error fetching GeoJSON for project ${projectId}:`, error);
+                        return null; // Return null for failed requests
                     });
             });
 
-            // Wait for all GeoJSON files to load
+            // Wait for all project GeoJSON data to load
             Promise.all(fetchPromises)
                 .then(results => {
+                    console.log('🔍 Promise.all results:', results);
+                    console.log(`📊 Total API calls: ${results.length}`);
+                    console.log(`❌ Null results: ${results.filter(r => r === null).length}`);
+                    
+                    // Filter out null results (projects with no/invalid GeoJSON data)
+                    const validResults = results.filter(result => result !== null);
+                    console.log(`✅ Valid results: ${validResults.length}`);
+                    
+                    if (validResults.length === 0) {
+                        console.log('❌ No projects have valid GeoJSON data, staying at world view');
+                        return;
+                    }
+                    
+                    console.log('📋 Projects to be processed:');
+                    validResults.forEach((result, idx) => {
+                        console.log(`  ${idx + 1}. ${result.projectName} (${result.projectId}) - ${result.data.features.length} features`);
+                    });
+                    
                     const firstDatasetBounds = new mapboxgl.LngLatBounds();
                     
                     // Function to extend bounds with coordinates
@@ -129,12 +243,26 @@
                         }
                     }
 
-                    // Process each GeoJSON dataset
-                    results.forEach(({ data, index, url }) => {
-                        const sourceId = `geojson-source-${index}`;
-                        const color = colors[index % colors.length];
+                    // Process each project's GeoJSON data
+                    validResults.forEach(({ data, index, projectId, projectName }, resultIndex) => {
+                        const sourceId = `project-geojson-${projectId}`;
+                        const color = colors[resultIndex % colors.length];
                         
-                        console.log(`Processing dataset ${index + 1} (${url}) with color ${color}`);
+                        console.log(`🎨 Processing project ${resultIndex + 1}/${validResults.length}: "${projectName}" (${projectId}) with color ${color}`);
+                        
+                        // Calculate and log bounds for this project
+                        const projectBounds = new mapboxgl.LngLatBounds();
+                        data.features.forEach(feature => {
+                            if (feature.geometry && feature.geometry.coordinates) {
+                                extendBounds(feature.geometry.coordinates, projectBounds);
+                            }
+                        });
+                        
+                        if (!projectBounds.isEmpty()) {
+                            const sw = projectBounds.getSouthWest();
+                            const ne = projectBounds.getNorthEast();
+                            console.log(`📍 "${projectName}" bounds: SW[${sw.lng.toFixed(6)}, ${sw.lat.toFixed(6)}] to NE[${ne.lng.toFixed(6)}, ${ne.lat.toFixed(6)}]`);
+                        }
                         
                         // Add the GeoJSON source
                         map.addSource(sourceId, {
@@ -142,28 +270,30 @@
                             data: data
                         });
                         
-                        console.log(`Added source: ${sourceId}`);
+                        console.log(`✅ Added source: ${sourceId}`);
 
-                        // Determine geometry types for this dataset
+                        // Determine geometry types for this project
                         const geometryTypes = new Set();
                         if (data.features) {
                             data.features.forEach(feature => {
                                 if (feature.geometry) {
                                     geometryTypes.add(feature.geometry.type);
-                                    // Only extend bounds for the FIRST dataset (index 0)
-                                    if (index === 0 && feature.geometry.coordinates) {
+                                    // Only extend bounds for the FIRST valid project (resultIndex 0)
+                                    if (resultIndex === 0 && feature.geometry.coordinates) {
                                         extendBounds(feature.geometry.coordinates, firstDatasetBounds);
                                     }
                                 }
                             });
                         }
                         
-                        console.log(`Dataset ${index + 1} geometry types:`, Array.from(geometryTypes));
+                        console.log(`Project "${projectName}" geometry types:`, Array.from(geometryTypes));
 
+                        let layersAdded = 0;
+                        
                         // Add layers based on geometry types
                         if (geometryTypes.has('Polygon') || geometryTypes.has('MultiPolygon')) {
-                            const fillLayerId = `geojson-fill-${index}`;
-                            const strokeLayerId = `geojson-stroke-${index}`;
+                            const fillLayerId = `project-fill-${projectId}`;
+                            const strokeLayerId = `project-stroke-${projectId}`;
                             
                             // Add fill layer for polygons
                             map.addLayer({
@@ -177,7 +307,8 @@
                                     'fill-opacity': 0.6
                                 }
                             });
-                            console.log(`Added fill layer: ${fillLayerId} with color ${color}`);
+                            console.log(`Added fill layer: ${fillLayerId} for project "${projectName}" with color ${color}`);
+                            layersAdded++;
 
                             // Add stroke for polygons
                             map.addLayer({
@@ -191,13 +322,16 @@
                                     'line-width': 2
                                 }
                             });
-                            console.log(`Added stroke layer: ${strokeLayerId}`);
+                            console.log(`Added stroke layer: ${strokeLayerId} for project "${projectName}"`);
+                            layersAdded++;
                         }
 
                         if (geometryTypes.has('LineString') || geometryTypes.has('MultiLineString')) {
-                            const lineLayerId = `geojson-line-${index}`;
+                            const lineLayerId = `project-line-${projectId}`;
                             
-                            // Add line layer
+                            // Add line layer with varying width for better visibility
+                            const lineWidth = 3 + (resultIndex * 2); // First project: 3px, second: 5px, etc.
+                            
                             map.addLayer({
                                 id: lineLayerId,
                                 type: 'line',
@@ -206,14 +340,16 @@
                                 layout: {},
                                 paint: {
                                     'line-color': color,
-                                    'line-width': 3
+                                    'line-width': lineWidth,
+                                    'line-opacity': 0.8
                                 }
                             });
-                            console.log(`Added line layer: ${lineLayerId} with color ${color}`);
+                            console.log(`Added line layer: ${lineLayerId} for project "${projectName}" with color ${color} and width ${lineWidth}px`);
+                            layersAdded++;
                         }
 
                         if (geometryTypes.has('Point') || geometryTypes.has('MultiPoint')) {
-                            const pointLayerId = `geojson-points-${index}`;
+                            const pointLayerId = `project-points-${projectId}`;
                             
                             // Add circle layer for points
                             map.addLayer({
@@ -229,34 +365,38 @@
                                     'circle-stroke-width': 2
                                 }
                             });
-                            console.log(`Added points layer: ${pointLayerId} with color ${color}`);
+                            console.log(`Added points layer: ${pointLayerId} for project "${projectName}" with color ${color}`);
+                            layersAdded++;
                         }
+                        
+                        console.log(`🎯 Total layers added for "${projectName}": ${layersAdded}`);
                     });
 
                     // Summary of what was loaded
-                    console.log(`SUMMARY: Successfully loaded ${results.length} GeoJSON files:`);
-                    results.forEach(({ data, index, url }) => {
+                    console.log(`SUMMARY: Successfully loaded GeoJSON data for ${validResults.length} out of ${projectIds.length} projects:`);
+                    validResults.forEach(({ data, projectId, projectName }) => {
                         const featureCount = data.features ? data.features.length : 0;
-                        console.log(`  Dataset ${index + 1}: ${url} - ${featureCount} features`);
+                        console.log(`  Project "${projectName}" (${projectId}): ${featureCount} features`);
                     });
 
-                    // Fit the map to the FIRST dataset bounds only with smooth animation
+                    // Fit the map to the FIRST project bounds only with smooth animation
                     if (!firstDatasetBounds.isEmpty()) {
-                        console.log('Fitting map to first dataset bounds:', firstDatasetBounds);
-                        console.log(`Zooming to: ${results[0].url}`);
+                        console.log('Fitting map to first project bounds:', firstDatasetBounds);
+                        console.log(`Zooming to: ${validResults[0].projectName} (${validResults[0].projectId})`);
                         map.fitBounds(firstDatasetBounds, {
-                            padding: 50,
+                            padding: 200, // Increased padding for wider view
+                            maxZoom: 11,  // Limit zoom to show ~100km² area (zoom 11 ≈ 10km x 10km area)
                             duration: 6000, // 6 second smooth animation (very cinematic)
                             essential: true // Animation will complete even if user interacts
                         });
                     } else {
-                        console.log('No valid bounds found in first dataset, staying at world view');
+                        console.log('No valid bounds found in first project, staying at world view');
                         // Keep the world view if no valid data
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading GeoJSON files:', error);
-                    alert('Error loading GeoJSON data. Check the console for details.');
+                    console.error('Error loading project GeoJSON data:', error);
+                    alert('Error loading project GeoJSON data. Check the console for details.');
                     // Fallback to a default view if GeoJSON fails to load
                     map.setCenter([0, 0]);
                     map.setZoom(2);
