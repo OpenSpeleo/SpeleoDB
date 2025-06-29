@@ -3,6 +3,26 @@
 
 {% block extra_css %}
 <link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css' rel='stylesheet' />
+<style>
+    /* Custom scrollbar for project list */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(51, 65, 85, 0.5); /* slate-700 with opacity */
+        border-radius: 3px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.8); /* slate-400 with opacity */
+        border-radius: 3px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(203, 213, 225, 0.9); /* slate-300 with opacity */
+    }
+</style>
 {% endblock extra_css %}
 
 {% block content %}
@@ -36,8 +56,33 @@
         </div>
 
         <!-- Table -->
-        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700 relative">
             <div id='map' style='width: 100%; min-height: 600px; display: block;'></div>
+            
+            <!-- Floating Project List Panel -->
+            <div id="project-panel" class="absolute top-4 left-4 bg-slate-800/95 backdrop-blur-sm border-2 border-gray-500 rounded-lg shadow-xl p-4 max-w-xs z-10" style="display: none; min-width: 200px;">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-white font-semibold text-sm">Active Projects</h3>
+                    <button id="panel-toggle" class="text-slate-400 hover:text-white transition-colors" title="Minimize">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="project-list" class="space-y-2 overflow-y-auto custom-scrollbar" style="max-height: 180px;">
+                    <!-- Project buttons will be inserted here -->
+                </div>
+            </div>
+            
+            <!-- Minimized Project Panel -->
+            <div id="project-panel-minimized" class="absolute top-4 left-4 bg-slate-800/95 backdrop-blur-sm border-2 border-gray-500 rounded-lg shadow-xl p-3 z-10" style="display: none;">
+                <button id="panel-expand" class="text-white hover:text-sky-400 transition-colors flex items-center space-x-2" title="Expand">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                    <span class="text-sm font-medium">Projects</span>
+                </button>
+            </div>
         </div>
 
     </div>
@@ -97,10 +142,134 @@
             setMapHeight();
             map.resize();
         });
+        
+        // Add navigation controls
+        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        
+        // Add dynamic scale control with both metric and imperial units
+        map.addControl(new mapboxgl.ScaleControl({
+            maxWidth: 200,
+            unit: 'metric'
+        }), 'bottom-right');
+        
+        // Add a second scale for imperial units
+        map.addControl(new mapboxgl.ScaleControl({
+            maxWidth: 200,
+            unit: 'imperial'
+        }), 'bottom-right');
 
         // Wait for the map to load before adding sources and layers
         map.on('load', function() {
             console.log('Map loaded, fetching GeoJSON data for projects:', projectIds);
+            
+            // Hide street-level labels while keeping city/place names
+            const labelsToHide = [
+                'road-label',  // Street names
+                'road-number-shield',  // Road numbers
+                'road-exit-shield',  // Highway exit numbers
+                'poi-label',  // Points of interest
+                'airport-label',  // Airport labels
+                'rail-label',  // Rail/transit labels
+                'water-point-label',  // Water feature labels
+                'natural-point-label',  // Natural feature labels
+                'transit-label',  // Transit stop labels
+                'road-intersection',  // Intersection labels
+                'road-label-simple',  // Simple road labels
+                'road-label-large',  // Large road labels
+                'road-label-medium',  // Medium road labels
+                'road-label-small',  // Small road labels
+                'bridge-case-label',  // Bridge labels
+                'bridge-label',  // Bridge labels
+                'tunnel-label',  // Tunnel labels
+                'ferry-label',  // Ferry labels
+                'pedestrian-label',  // Pedestrian path labels
+                'aerialway-label',  // Aerial way labels
+                'building-label',  // Building labels
+                'housenum-label'  // House number labels
+            ];
+            
+            // Try to hide each label layer - some may not exist in this style
+            labelsToHide.forEach(layerId => {
+                try {
+                    if (map.getLayer(layerId)) {
+                        map.setLayoutProperty(layerId, 'visibility', 'none');
+                        console.log(`Hidden label layer: ${layerId}`);
+                    }
+                } catch (e) {
+                    // Layer might not exist in this style, which is fine
+                }
+            });
+            
+            // Keep these layers visible (city/place names)
+            const labelsToKeep = [
+                'place-label',  // General place labels
+                'place-city-label',  // City labels
+                'place-town-label',  // Town labels
+                'place-village-label',  // Village labels
+                'place-hamlet-label',  // Hamlet labels
+                'place-suburb-label',  // Suburb labels
+                'place-neighborhood-label',  // Neighborhood labels
+                'country-label',  // Country labels
+                'state-label',  // State/province labels
+                'settlement-label',  // Settlement labels
+                'settlement-major-label',  // Major settlement labels
+                'settlement-minor-label'  // Minor settlement labels
+            ];
+            
+            console.log('Street labels hidden, keeping only place/city names');
+            
+            // More comprehensive approach: inspect all layers and hide based on patterns
+            const style = map.getStyle();
+            if (style && style.layers) {
+                style.layers.forEach(layer => {
+                    if (layer.type === 'symbol' && layer.id) {
+                        // Hide layers that contain road/street/poi related terms
+                        if (layer.id.includes('road') || 
+                            layer.id.includes('street') || 
+                            layer.id.includes('highway') ||
+                            layer.id.includes('motorway') ||
+                            layer.id.includes('trunk') ||
+                            layer.id.includes('primary') ||
+                            layer.id.includes('secondary') ||
+                            layer.id.includes('tertiary') ||
+                            layer.id.includes('residential') ||
+                            layer.id.includes('service') ||
+                            layer.id.includes('link') ||
+                            layer.id.includes('pedestrian') ||
+                            layer.id.includes('poi') ||
+                            layer.id.includes('airport') && !layer.id.includes('airport-label-major') ||
+                            layer.id.includes('rail') ||
+                            layer.id.includes('transit') ||
+                            layer.id.includes('bridge') ||
+                            layer.id.includes('tunnel') ||
+                            layer.id.includes('ferry') ||
+                            layer.id.includes('path') ||
+                            layer.id.includes('track') ||
+                            layer.id.includes('steps') ||
+                            layer.id.includes('building') ||
+                            layer.id.includes('housenum') ||
+                            layer.id.includes('address')) {
+                            
+                            // Don't hide if it's a place/city/settlement layer
+                            if (!layer.id.includes('place') && 
+                                !layer.id.includes('city') && 
+                                !layer.id.includes('town') &&
+                                !layer.id.includes('village') &&
+                                !layer.id.includes('settlement') &&
+                                !layer.id.includes('country') &&
+                                !layer.id.includes('state')) {
+                                
+                                try {
+                                    map.setLayoutProperty(layer.id, 'visibility', 'none');
+                                    console.log(`Hidden layer: ${layer.id}`);
+                                } catch (e) {
+                                    console.warn(`Could not hide layer ${layer.id}:`, e);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
             
             // Maximally distinguishable color palette based on perceptual color theory
             // These 20 colors are optimized for maximum visual distinction
@@ -231,6 +400,7 @@
                     });
                     
                     const firstDatasetBounds = new mapboxgl.LngLatBounds();
+                    const projectBoundsMap = new Map(); // Store bounds for each project
                     
                     // Function to extend bounds with coordinates
                     function extendBounds(coords, bounds) {
@@ -262,6 +432,13 @@
                             const sw = projectBounds.getSouthWest();
                             const ne = projectBounds.getNorthEast();
                             console.log(`📍 "${projectName}" bounds: SW[${sw.lng.toFixed(6)}, ${sw.lat.toFixed(6)}] to NE[${ne.lng.toFixed(6)}, ${ne.lat.toFixed(6)}]`);
+                            
+                            // Store bounds for this project
+                            projectBoundsMap.set(projectId, {
+                                bounds: projectBounds,
+                                name: projectName,
+                                color: color
+                            });
                         }
                         
                         // Add the GeoJSON source
@@ -328,9 +505,10 @@
 
                         if (geometryTypes.has('LineString') || geometryTypes.has('MultiLineString')) {
                             const lineLayerId = `project-line-${projectId}`;
+                            const lineLabelLayerId = `project-line-labels-${projectId}`;
                             
-                            // Add line layer with varying width for better visibility
-                            const lineWidth = 3 + (resultIndex * 2); // First project: 3px, second: 5px, etc.
+                            // Use consistent small line width for all projects
+                            const lineWidth = 2; // Fixed small width for all lines
                             
                             map.addLayer({
                                 id: lineLayerId,
@@ -345,6 +523,34 @@
                                 }
                             });
                             console.log(`Added line layer: ${lineLayerId} for project "${projectName}" with color ${color} and width ${lineWidth}px`);
+                            layersAdded++;
+                            
+                            // Add labels for lines (only visible when zoomed in)
+                            map.addLayer({
+                                id: lineLabelLayerId,
+                                type: 'symbol',
+                                source: sourceId,
+                                filter: ['all', 
+                                    ['in', '$type', 'LineString'],
+                                    ['has', 'Name']  // Only show labels for features with a Name property
+                                ],
+                                minzoom: 13,  // Only show labels when zoomed in to level 13 or higher
+                                layout: {
+                                    'text-field': ['get', 'Name'],
+                                    'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+                                    'text-size': 12,
+                                    'symbol-placement': 'line',  // Place text along the line
+                                    'text-rotation-alignment': 'map',  // Rotate text with the map
+                                    'text-pitch-alignment': 'viewport'  // Keep text upright
+                                },
+                                paint: {
+                                    'text-color': '#ffffff',
+                                    'text-halo-color': '#000000',
+                                    'text-halo-width': 2,
+                                    'text-halo-blur': 1
+                                }
+                            });
+                            console.log(`Added line label layer: ${lineLabelLayerId} for project "${projectName}" (visible at zoom 13+)`);
                             layersAdded++;
                         }
 
@@ -378,6 +584,70 @@
                         const featureCount = data.features ? data.features.length : 0;
                         console.log(`  Project "${projectName}" (${projectId}): ${featureCount} features`);
                     });
+                    
+                    // Populate the project panel
+                    const projectListDiv = document.getElementById('project-list');
+                    const projectPanel = document.getElementById('project-panel');
+                    
+                    if (projectBoundsMap.size > 0) {
+                        projectListDiv.innerHTML = ''; // Clear existing content
+                        
+                        // Convert Map to array and sort by project name (case-insensitive)
+                        const sortedProjects = Array.from(projectBoundsMap.entries())
+                            .sort((a, b) => {
+                                const nameA = a[1].name.toLowerCase();
+                                const nameB = b[1].name.toLowerCase();
+                                return nameA.localeCompare(nameB);
+                            });
+                        
+                        // Create buttons for sorted projects
+                        sortedProjects.forEach(([projectId, projectData]) => {
+                            const button = document.createElement('button');
+                            button.className = 'w-full text-left px-3 py-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-white text-sm transition-colors duration-200 flex items-center space-x-2';
+                            
+                            // Create color indicator
+                            const colorDot = document.createElement('span');
+                            colorDot.className = 'w-3 h-3 rounded-full flex-shrink-0';
+                            colorDot.style.backgroundColor = projectData.color;
+                            
+                            // Create text span
+                            const textSpan = document.createElement('span');
+                            textSpan.className = 'truncate';
+                            textSpan.textContent = projectData.name;
+                            
+                            button.appendChild(colorDot);
+                            button.appendChild(textSpan);
+                            
+                            // Add click handler to center on project
+                            button.addEventListener('click', () => {
+                                map.fitBounds(projectData.bounds, {
+                                    padding: 100,
+                                    maxZoom: 15,
+                                    duration: 1500
+                                });
+                            });
+                            
+                            projectListDiv.appendChild(button);
+                        });
+                        
+                        // Show the panel
+                        projectPanel.style.display = 'block';
+                        
+                        // Add minimize/expand functionality
+                        const minimizedPanel = document.getElementById('project-panel-minimized');
+                        const toggleBtn = document.getElementById('panel-toggle');
+                        const expandBtn = document.getElementById('panel-expand');
+                        
+                        toggleBtn.addEventListener('click', () => {
+                            projectPanel.style.display = 'none';
+                            minimizedPanel.style.display = 'block';
+                        });
+                        
+                        expandBtn.addEventListener('click', () => {
+                            minimizedPanel.style.display = 'none';
+                            projectPanel.style.display = 'block';
+                        });
+                    }
 
                     // Fit the map to the FIRST project bounds only with smooth animation
                     if (!firstDatasetBounds.isEmpty()) {
