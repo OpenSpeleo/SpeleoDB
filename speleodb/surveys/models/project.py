@@ -40,11 +40,11 @@ if TYPE_CHECKING:
 class ProjectManager(models.Manager["Project"]):
     """Custom manager that defers geojson field by default for performance."""
 
-    def get_queryset(self) -> models.QuerySet["Project"]:
+    def get_queryset(self) -> models.QuerySet[Project]:
         """Return queryset with geojson field deferred by default."""
         return super().get_queryset().defer("geojson")
 
-    def with_geojson(self) -> models.QuerySet["Project"]:
+    def with_geojson(self) -> models.QuerySet[Project]:
         """Return queryset with geojson field included."""
         return super().get_queryset()
 
@@ -55,9 +55,6 @@ class Project(models.Model):
     rel_mutexes: models.QuerySet[Mutex]
     rel_user_permissions: models.QuerySet[UserPermission]
     rel_team_permissions: models.QuerySet[TeamPermission]
-
-    # Custom manager that defers geojson by default
-    objects = ProjectManager()
 
     # Automatic fields
     id = models.UUIDField(
@@ -133,8 +130,11 @@ class Project(models.Model):
     geojson = models.JSONField(
         default=dict,
         blank=True,
-        help_text="GeoJSON data for this project. Only loaded when explicitly requested.",
+        help_text="GeoJSON data for this project. Only load when explicitly requested.",
     )
+
+    # Custom manager that defers geojson by default
+    objects = ProjectManager()
 
     class Meta:
         constraints = [
@@ -404,4 +404,3 @@ class Project(models.Model):
         """Refresh the GeoJSON data for this project."""
         # This method will be implemented by the refresh_project_geojson task
         # to populate the geojson field
-        pass

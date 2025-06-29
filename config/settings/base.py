@@ -368,7 +368,7 @@ EMAIL_TIMEOUT = 5
 # DJANGO-HIJACK
 # ------------------------------------------------------------------------------
 # Django Hijack URL.
-HIJACK_URL = "hijack/"
+HIJACK_URL = "debug_mode/"
 # Hide notification if `None`.
 HIJACK_INSERT_BEFORE: str | None = None
 

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import contextlib
+import json
 from dataclasses import dataclass
-from datetime import datetime
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import override
@@ -473,7 +473,8 @@ class MapViewerView(_BaseProjectView):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponseRedirectBase | HttpResponse:
-        import json
+        if not request.user.is_superuser:
+            return redirect(reverse("private:projects"))
 
         # Get sorted projects and serialize for JavaScript
         sorted_projects = sorted(
