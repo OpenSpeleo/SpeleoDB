@@ -473,7 +473,7 @@ class MapViewerView(_BaseProjectView):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponseRedirectBase | HttpResponse:
-        if not request.user.is_superuser:
+        if not (request.user.is_superuser or request.user.is_staff):
             return redirect(reverse("private:projects"))
 
         # Get sorted projects and serialize for JavaScript
