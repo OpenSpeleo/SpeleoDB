@@ -210,6 +210,21 @@ class TeamDangerZoneView(_BaseTeamView):
 class ProjectListingView(_AuthenticatedTemplateView):
     template_name = "pages/projects.html"
 
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        context = self.get_context_data(**kwargs)
+        # Filter out projects where user only has WEB_VIEWER access
+        context["filtered_permissions"] = [
+            perm
+            for perm in request.user.permissions
+            if perm.level > PermissionLevel.WEB_VIEWER
+        ]
+        return self.render_to_response(context)
+
 
 class NewProjectView(_AuthenticatedTemplateView):
     template_name = "pages/project/new.html"
@@ -218,6 +233,17 @@ class NewProjectView(_AuthenticatedTemplateView):
 class _BaseProjectView(_AuthenticatedTemplateView):
     def get_project_data(self, user: User, project_id: str) -> dict[str, Any]:
         project = Project.objects.get(id=project_id)
+
+        # Check if user only has WEB_VIEWER access
+        try:
+            best_permission = project.get_best_permission(user)
+            if best_permission.level == PermissionLevel.WEB_VIEWER:
+                # User only has WEB_VIEWER access, which is not allowed for these views
+                raise PermissionError("Insufficient permissions")
+        except ObjectDoesNotExist as e:
+            # User has no permissions at all
+            raise PermissionError("No permissions") from e
+
         return {
             "project": project,
             "is_project_admin": project.is_admin(user),
@@ -244,7 +270,7 @@ class ProjectUploadView(_BaseProjectView):
                 settings.DJANGO_UPLOAD_TOTAL_FILESIZE_MB_LIMIT
             )
             data["limit_number_files"] = settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
         # Redirect users who don't own the mutex
@@ -271,7 +297,7 @@ class ProjectDangerZoneView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
         if not data["is_project_admin"]:
@@ -294,7 +320,7 @@ class ProjectDetailsView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -312,7 +338,7 @@ class ProjectUserPermissionsView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
         # Collecting all the `user` aka. direct permissions of the project
@@ -367,7 +393,7 @@ class ProjectTeamPermissionsView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
         project: Project = data["project"]
@@ -395,7 +421,7 @@ class ProjectMutexesView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
         data["mutexes"] = data["project"].rel_mutexes.all().order_by("-creation_date")
@@ -415,7 +441,7 @@ class ProjectRevisionHistoryView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -434,7 +460,7 @@ class ProjectGitExplorerView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
         data["hexsha"] = hexsha
@@ -455,7 +481,7 @@ class ProjectGitInstructionsView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
         data["auth_token"], _ = Token.objects.get_or_create(user=request.user)
@@ -464,7 +490,7 @@ class ProjectGitInstructionsView(_BaseProjectView):
         return super().get(request, *args, **data, **kwargs)
 
 
-class MapViewerView(_BaseProjectView):
+class MapViewerView(_AuthenticatedTemplateView):
     template_name = "pages/map_viewer.html"
 
     def get(  # type: ignore[override]
