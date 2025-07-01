@@ -93,18 +93,22 @@
                                     <div class="text-center">{{ permission.user.email }}</div>
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+
                                     <div class="text-center">
-                                        {% if permission.level.value == 0 %}
-                                        <div class="inline-flex font-medium bg-slate-700 text-slate-300 rounded-full text-center px-2.5 py-0.5">
-                                        {% elif permission.level.value == 1 %}
-                                        <div class="inline-flex font-medium bg-indigo-500/30 text-indigo-300 rounded-full text-center px-2.5 py-1 py-0.5">
-                                        {% elif permission.level.value == 2 %}
-                                        <div class="inline-flex font-medium bg-amber-500 text-white rounded-full text-center px-2.5 py-0.5">
+                                        {% if permission.level == 0 %}
+                                            {% set bg_color = 'bg-pastel-grey' %}
+                                        {% elif permission.level == 1 %}
+                                            {% set bg_color = 'bg-pastel-beige' %}
+                                        {% elif permission.level == 2 %}
+                                            {% set bg_color = 'bg-pastel-navy' %}
+                                        {% elif permission.level == 3 %}
+                                            {% set bg_color = 'bg-pastel-orange' %}
                                         {% else %}
-                                        <div class="inline-flex font-medium bg-rose-500/30 text-rose-400 rounded-full text-center px-2.5 py-0.5">
+                                            {% set bg_color = '' %}
                                         {% endif %}
-                                        {% if permission.team %}&#60;{{ permission.team.name }}&#62; {% endif %}
-                                        {{permission.level.label|normalize}}
+                                        <div class="inline-flex font-medium {{ bg_color }} rounded-full text-center px-2.5 py-0.5">
+                                            {% if permission.team %}&#60;{{ permission.team.name }}&#62; {% endif %}
+                                            {{permission.level.label|normalize}}
                                         </div>
                                     </div>
                                 </td>
@@ -112,56 +116,57 @@
 
                                     {% if permission.team %}
 
-                                    {% if permission.team|user_has_team_access:user %}
-                                    {% set can_edit = True %}
+                                        {% if permission.team|user_has_team_access:user %}
+                                            {% set can_edit = True %}
+                                        {% else %}
+                                            {% set can_edit = False %}
+                                        {% endif %}
+
+                                        <!-- Team Link -->
+                                        <a {% if can_edit %}class="cursor-pointer" href="{% url 'private:team_memberships' team_id=permission.team.id %}"{% endif %}>
+                                            <svg class="icon icon-tabler icon-tabler-lock-open stroke-current h-4 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline" viewBox="666.09 614.6 26.01 25.9" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z" />
+                                                <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z" />
+                                            </svg>
+                                        </span>
+
                                     {% else %}
-                                    {% set can_edit = False %}
-                                    {% endif %}
 
-                                    <!-- Team Link -->
-                                    <a {% if can_edit %}class="cursor-pointer" href="{% url 'private:team_memberships' team_id=permission.team.id %}"{% endif %}>
-                                        <svg class="icon icon-tabler icon-tabler-lock-open stroke-current h-4 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline" viewBox="666.09 614.6 26.01 25.9" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z" />
-                                            <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z" />
-                                        </svg>
-                                    </span>
+                                        {% comment %} 
+                                        A user can not edit/delete their own permission. Must be another ADMIN
+                                        {% endcomment %}
+                                        {% if permission.user != user and is_project_admin %}
+                                            {% set can_edit = True %}
+                                        {% else %}
+                                            {% set can_edit = False %}
+                                        {% endif %}
 
-                                    {% else %}
+                                        <!-- Edit Link -->
+                                        <span class="cursor-pointer {% if can_edit %}btn_open_edit_perm"
+                                            data-user="{{permission.user.email}}" data-level="{{ permission.level.label }}{% endif %}">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline"
+                                                viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                                <path d="M13.5 6.5l4 4" />
+                                            </svg>
+                                        </span>
 
-                                    {% comment %} A user can not edit/delete their own permission. Must be another ADMIN
-                                    {% endcomment %}
-                                    {% if permission.user != user and is_project_admin %}
-                                    {% set can_edit = True %}
-                                    {% else %}
-                                    {% set can_edit = False %}
-                                    {% endif %}
-
-                                    <!-- Edit Link -->
-                                    <span class="cursor-pointer {% if can_edit %}btn_open_edit_perm"
-                                        data-user="{{permission.user.email}}" data-level="{{ permission.level.label }}{% endif %}">
-                                        <svg xmlns="http://www.w3.org/2000/svg"
-                                            class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline"
-                                            viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                            <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
-                                            <path d="M13.5 6.5l4 4" />
-                                        </svg>
-                                    </span>
-
-                                    <!-- Delete Link -->
-                                    <span class="cursor-pointer {% if can_edit %}btn_delete_perm"
-                                        data-user="{{permission.user.email}}{% endif %}">
-                                        <svg xmlns="http://www.w3.org/2000/svg"
-                                            class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline"
-                                            viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                            <path d="M18 6l-12 12" />
-                                            <path d="M6 6l12 12" />
-                                        </svg>
-                                        </a>
-                                    </span>
+                                        <!-- Delete Link -->
+                                        <span class="cursor-pointer {% if can_edit %}btn_delete_perm"
+                                            data-user="{{permission.user.email}}{% endif %}">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline"
+                                                viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                <path d="M18 6l-12 12" />
+                                                <path d="M6 6l12 12" />
+                                            </svg>
+                                            </a>
+                                        </span>
                                     {% endif %}
                                 </td>
                             </tr>

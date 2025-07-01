@@ -12,9 +12,10 @@ if TYPE_CHECKING:
 
 
 class PermissionLevel(BaseIntegerChoices):
-    READ_ONLY = (0, "READ_ONLY")
-    READ_AND_WRITE = (1, "READ_AND_WRITE")
-    ADMIN = (2, "ADMIN")
+    WEB_VIEWER = (0, "WEB_VIEWER")
+    READ_ONLY = (1, "READ_ONLY")
+    READ_AND_WRITE = (2, "READ_AND_WRITE")
+    ADMIN = (3, "ADMIN")
 
     @classproperty
     def choices_no_admin(cls) -> list[tuple[int, StrOrPromise]]:  # noqa: N805

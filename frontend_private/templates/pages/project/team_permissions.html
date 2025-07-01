@@ -98,13 +98,16 @@
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="text-center">
                                         {% if permission.level == 0 %}
-                                        <div class="inline-flex font-medium bg-slate-700 text-slate-300 rounded-full text-center px-2.5 py-0.5">
+                                            {% set bg_color = 'bg-pastel-grey' %}
                                         {% elif permission.level == 1 %}
-                                        <div class="inline-flex font-medium bg-indigo-500/30 text-indigo-300 rounded-full text-center px-2.5 py-1 py-0.5">
+                                            {% set bg_color = 'bg-pastel-beige' %}
+                                        {% elif permission.level == 2 %}
+                                            {% set bg_color = 'bg-pastel-navy' %}
                                         {% else %}
-                                        <div class="inline-flex font-medium bg-rose-500/30 text-rose-400 rounded-full text-center px-2.5 py-0.5">
+                                            {% set bg_color = '' %}
                                         {% endif %}
-                                        {{ permission.level_label|normalize }}
+                                        <div class="inline-flex font-medium {{ bg_color }} rounded-full text-center px-2.5 py-0.5">
+                                            {{ permission.level_label|normalize }}
                                         </div>
                                     </div>
                                 </td>

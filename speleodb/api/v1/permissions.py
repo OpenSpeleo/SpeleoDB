@@ -63,6 +63,10 @@ class UserHasReadAccess(BaseProjectAccessLevel):
     MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
 
 
+class UserHasWebViewerAccess(BaseProjectAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.WEB_VIEWER
+
+
 class BaseTeamAccessLevel(permissions.BasePermission):
     MIN_ACCESS_LEVEL: int
 

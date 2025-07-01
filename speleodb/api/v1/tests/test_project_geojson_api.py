@@ -40,6 +40,7 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
             PermissionLevel.ADMIN,
             PermissionLevel.READ_AND_WRITE,
             PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
         ]
     )
     def test_get_project_geojson_with_permissions(self, level: PermissionLevel) -> None:

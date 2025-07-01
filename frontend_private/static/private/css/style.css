@@ -3439,6 +3439,11 @@ span.flatpickr-weekday {
   background-color: rgb(17 24 39 / var(--tw-bg-opacity))
 }
 
+.bg-zinc-700 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(63 63 70 / var(--tw-bg-opacity));
+}
+
 .bg-indigo-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(224 231 255 / var(--tw-bg-opacity));
@@ -3607,11 +3612,49 @@ span.flatpickr-weekday {
   background-color: rgb(71 94 175 / var(--tw-bg-opacity));
 }
 
+.bg-pastel-green {
+  --tw-bg-opacity: 1;
+  color: #1e1e1e;
+  background-color: rgb(177 194 158 / var(--tw-bg-opacity));
+}
+
+.bg-pastel-yellow {
+  --tw-bg-opacity: 1;
+  color: white;
+  background-color: rgb(250 218 122 / var(--tw-bg-opacity));
+}
+
+/* ------------------- Permission Level Color Code ---------------------- */
+
+/* ADMIN */
 .bg-pastel-orange {
   --tw-bg-opacity: 1;
   color: white;
-  background-color: rgb(219 155 16 / var(--tw-bg-opacity));
+  background-color: rgb(255 140 23 / var(--tw-bg-opacity));
 }
+
+/* Read and Write */
+.bg-pastel-navy {
+  --tw-bg-opacity: 1;
+  color: white;
+  background-color: rgb(62 71 114 / var(--tw-bg-opacity));
+}
+
+/* Read Only */
+.bg-pastel-beige {
+  --tw-bg-opacity: 1;
+  color: #1e1e1e;
+  background-color: rgb(241 214 162 / var(--tw-bg-opacity));
+}
+
+/* Web Viewer */
+.bg-pastel-grey {
+  --tw-bg-opacity: 1;
+  color: #1e1e1e;
+  background-color: rgb(238 238 238 / var(--tw-bg-opacity));
+}
+
+/* ---------------------------------------------- */
 
 .bg-pastel-red {
   --tw-bg-opacity: 1;
@@ -3623,6 +3666,12 @@ span.flatpickr-weekday {
   --tw-bg-opacity: 1;
   color: white;
   background-color: rgb(120 71 175 / var(--tw-bg-opacity));
+}
+
+.bg-pastel-sand {
+  --tw-bg-opacity: 1;
+  color: white;
+  background-color: rgb(83 113 136 / var(--tw-bg-opacity));
 }
 
 .bg-opacity-25 {
@@ -4386,6 +4435,11 @@ span.flatpickr-weekday {
 .text-gray-900 {
   --tw-text-opacity: 1;
   color: rgb(17 24 39 / var(--tw-text-opacity));
+}
+
+.text-zinc-300 {
+  --tw-text-opacity: 1;
+  color: rgb(212 212 216 / var(--tw-text-opacity));
 }
 
 .text-indigo-100 {

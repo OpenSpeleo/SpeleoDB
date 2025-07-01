@@ -130,7 +130,9 @@ class Project(models.Model):
     geojson = models.JSONField(
         default=dict,
         blank=True,
-        help_text="GeoJSON data for this project. Only load when explicitly requested.",
+        help_text=(
+            "GeoJSON data for this project. Only loaded when explicitly requested."
+        ),
     )
 
     # Custom manager that defers geojson by default
