@@ -16,6 +16,7 @@ from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v1.permissions import UserHasAdminAccess
 from speleodb.api.v1.permissions import UserHasReadAccess
+from speleodb.api.v1.permissions import UserHasWebViewerAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.gitlab_manager import GitlabError
@@ -139,7 +140,7 @@ class ProjectGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
     """API view that returns raw GeoJSON data for a project."""
 
     queryset = Project.objects.all()
-    permission_classes = [UserHasReadAccess]
+    permission_classes = [UserHasWebViewerAccess]
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:

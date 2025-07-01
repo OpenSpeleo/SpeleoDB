@@ -125,19 +125,21 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
                                             {% if permission.level == 0 %}
-                                                bg-pastel-blue">
+                                                {% set bg_color = 'bg-pastel-grey' %}
                                             {% elif permission.level == 1 %}
-                                                bg-pastel-purple">
+                                                {% set bg_color = 'bg-pastel-beige' %}
                                             {% elif permission.level == 2 %}
-                                                bg-pastel-orange">
+                                                {% set bg_color = 'bg-pastel-navy' %}
+                                            {% elif permission.level == 3 %}
+                                                {% set bg_color = 'bg-pastel-orange' %}
                                             {% else %}
-                                                ">
+                                                {% set bg_color = '' %}
                                             {% endif %}
-                                            {{ permission.level_label|normalize }}</div>
+                                            <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 {{ bg_color }}">
+                                                {{ permission.level_label|normalize }}
+                                            </div>
                                         </div>
-
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
