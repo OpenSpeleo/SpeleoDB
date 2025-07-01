@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from itertools import cycle
 
 from django.urls import reverse
 from rest_framework import status
@@ -14,11 +15,13 @@ from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import PermissionLevel
+from speleodb.surveys.models import TeamPermission
+from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeamMembership
 
 
 class TestProjectInteraction(BaseAPITestCase):
-    PROJECT_COUNT = 10
+    PROJECT_COUNT = 25
 
     def test_get_user_projects(self) -> None:
         """
@@ -26,15 +29,22 @@ class TestProjectInteraction(BaseAPITestCase):
         credentials passes and does not require CSRF
         """
 
+        perm_level_iter = cycle(PermissionLevel.values_no_admin)
+
+        perm_lvls: list[UserPermission | TeamPermission] = []
+
         for project_id in range(self.PROJECT_COUNT):
             # spread equally some projects with user and team access
             project = ProjectFactory.create(created_by=self.user)
             if project_id % 2 == 0:
-                _ = UserPermissionFactory(
-                    target=self.user,
-                    level=random.choice(PermissionLevel.values),
-                    project=project,
+                perm_lvls.append(
+                    UserPermissionFactory(  # type: ignore[arg-type]
+                        target=self.user,
+                        level=next(perm_level_iter),
+                        project=project,
+                    )
                 )
+
             else:
                 # Create a team for the user - assign the user to the team
                 team = SurveyTeamFactory()
@@ -44,11 +54,17 @@ class TestProjectInteraction(BaseAPITestCase):
                     role=random.choice(SurveyTeamMembership.Role.values),
                 )
 
+                perm_level = next(perm_level_iter)
+                if perm_level == PermissionLevel.ADMIN.value:
+                    perm_level = next(perm_level_iter)
+
                 # Give the newly created permission to the project
-                _ = TeamPermissionFactory(
-                    target=team,
-                    level=random.choice(PermissionLevel.values_no_admin),
-                    project=project,
+                perm_lvls.append(
+                    TeamPermissionFactory(  # type: ignore[arg-type]
+                        target=team,
+                        level=perm_level,
+                        project=project,
+                    )
                 )
 
         endpoint = reverse("api:v1:project_api")
@@ -57,7 +73,13 @@ class TestProjectInteraction(BaseAPITestCase):
         response = self.client.get(endpoint, headers={"authorization": auth})
 
         assert response.status_code == status.HTTP_200_OK, response.data
-        assert len(response.data["data"]) == self.PROJECT_COUNT
+        assert len(response.data["data"]) == len(
+            [
+                perm
+                for perm in perm_lvls
+                if perm.level > PermissionLevel.WEB_VIEWER.value
+            ]
+        )
 
         attributes = [
             "creation_date",

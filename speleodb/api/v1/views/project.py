@@ -20,6 +20,7 @@ from speleodb.api.v1.permissions import UserHasWebViewerAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.gitlab_manager import GitlabError
+from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.utils.api_decorators import method_permission_classes
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -106,9 +107,14 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
-
         serializer = self.get_serializer(
-            user.projects, many=True, context={"user": user}
+            [
+                perm.project
+                for perm in user.permissions
+                if perm.level > PermissionLevel.WEB_VIEWER
+            ],
+            many=True,
+            context={"user": user},
         )
 
         return SuccessResponse(serializer.data)
