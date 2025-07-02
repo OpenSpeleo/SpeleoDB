@@ -520,7 +520,15 @@ class MapViewerView(_AuthenticatedTemplateView):
             for project in sorted_projects
         ]
 
+        # Check if user has write access to any project
+        # For map viewer, we'll grant write access if user has write access
+        # to any project
+        has_write_access = any(
+            project.has_write_access(request.user) for project in sorted_projects
+        )
+
         data = {
             "projects": json.dumps(projects_data),
+            "has_write_access": has_write_access,
         }
         return super().get(request, *args, **data, **kwargs)

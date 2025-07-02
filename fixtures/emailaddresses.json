@@ -28,15 +28,5 @@
             "verified": true,
             "primary": true
         }
-    },
-    {
-        "model": "account.emailaddress",
-        "pk": 4,
-        "fields": {
-            "user": 2,
-            "email": "jill@heinerth.com",
-            "verified": true,
-            "primary": true
-        }
     }
 ]

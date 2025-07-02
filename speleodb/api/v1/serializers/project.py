@@ -59,8 +59,8 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
             and longitude is not None
             and longitude != ""
         ):
-            data["latitude"] = str(round(decimal.Decimal(latitude), 8))
-            data["longitude"] = str(round(decimal.Decimal(longitude), 8))
+            data["latitude"] = str(round(decimal.Decimal(latitude), 7))
+            data["longitude"] = str(round(decimal.Decimal(longitude), 7))
 
         return super().to_internal_value(data)
 

@@ -8,6 +8,5 @@
     "mypy-type-checker.importStrategy": "fromEnvironment",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.logLevel": "Trace",
-    "cursorpyright.analysis.autoImportCompletions": true,
-    "cursorpyright.analysis.logLevel": "Trace",
+    "python.analysis.typeCheckingMode": "basic"
 }

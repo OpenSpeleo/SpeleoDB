@@ -1,0 +1,6 @@
+fileignoreconfig:
+- filename: speleodb/surveys/migrations/0027_station_stationresource.py
+  checksum: f701a4d6057a4b84b16b71a8778a349fde7ffe25f7bc0479beef36f5a8ab66c9
+- filename: frontend_private/templates/pages/map_viewer.html
+  checksum: 841ba7f58e4f9f872426333a4b1c5c5aacf673961bbfdade820cf3ab4b004ece
+version: ""

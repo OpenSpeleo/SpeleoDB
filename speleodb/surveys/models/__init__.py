@@ -13,6 +13,8 @@ from speleodb.surveys.models.mutex import Mutex
 from speleodb.surveys.models.format import Format
 from speleodb.surveys.models.permission_team import TeamPermission
 from speleodb.surveys.models.permission_user import UserPermission
+from speleodb.surveys.models.station import Station, StationResource
+from speleodb.surveys.models.poi import PointOfInterest
 
 
 __all__ = [
@@ -20,8 +22,11 @@ __all__ = [
     "Mutex",
     "PermissionLevel",
     "PluginRelease",
+    "PointOfInterest",
     "Project",
     "PublicAnnoucement",
+    "Station",
+    "StationResource",
     "TeamPermission",
     "UserPermission",
 ]

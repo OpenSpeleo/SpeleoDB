@@ -94,19 +94,19 @@ class Project(models.Model):
 
     # Geo Coordinates
     latitude = models.DecimalField(
-        max_digits=11,
-        decimal_places=8,
+        max_digits=10,
+        decimal_places=7,
         null=True,
         blank=True,
         validators=[
-            MinValueValidator(decimal.Decimal("-180.0")),
-            MaxValueValidator(decimal.Decimal("180.0")),
+            MinValueValidator(decimal.Decimal("-90.0")),
+            MaxValueValidator(decimal.Decimal("90.0")),
         ],
     )
 
     longitude = models.DecimalField(
-        max_digits=11,
-        decimal_places=8,
+        max_digits=10,
+        decimal_places=7,
         null=True,
         blank=True,
         validators=[

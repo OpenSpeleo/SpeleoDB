@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+import uuid
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -23,6 +24,8 @@ from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 from speleodb.surveys.models.platform_base import OperatingSystemEnum
 from speleodb.surveys.models.platform_base import SurveyPlatformEnum
+from speleodb.surveys.models.station import Station
+from speleodb.surveys.models.station import StationResource
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
@@ -105,7 +108,7 @@ class ProjectFactory(DjangoModelFactory[Project]):
 
 
 class UserPermissionFactory(DjangoModelFactory[UserPermission]):
-    level = random.choice(PermissionLevel.values)
+    level = PermissionLevel.READ_AND_WRITE
     target: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
     project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
 
@@ -114,7 +117,7 @@ class UserPermissionFactory(DjangoModelFactory[UserPermission]):
 
 
 class TeamPermissionFactory(DjangoModelFactory[TeamPermission]):
-    level = random.choice(PermissionLevel.values)
+    level = PermissionLevel.READ_AND_WRITE
     target: SurveyTeam = factory.SubFactory(SurveyTeamFactory)  # type: ignore[assignment]
     project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
 
@@ -173,3 +176,217 @@ class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
 
     creation_date = factory.LazyFunction(timezone.now)
     modified_date = factory.LazyFunction(timezone.now)
+
+
+class StationFactory(DjangoModelFactory):
+    """Factory for creating Station instances."""
+
+    class Meta:
+        model = Station
+
+    id = factory.LazyFunction(uuid.uuid4)
+    project = factory.SubFactory(ProjectFactory)
+    name = factory.Sequence(lambda n: f"ST{n:03d}")
+    description = factory.Faker("text", max_nb_chars=200)
+    latitude = factory.Faker("latitude")
+    longitude = factory.Faker("longitude")
+    created_by = factory.SubFactory(UserFactory)
+
+    @classmethod
+    def create_with_coordinates(cls, lat: float, lng: float, **kwargs):
+        """Create a station with specific coordinates."""
+        return cls.create(latitude=lat, longitude=lng, **kwargs)
+
+    @classmethod
+    def create_demo_stations(cls, project, count: int = 3, **kwargs):
+        """Create demo stations with realistic cave survey data."""
+        demo_data = [
+            {
+                "name": "Station Alpha",
+                "description": "Main data collection point at cave entrance",
+                "latitude": 20.194500,
+                "longitude": -87.497500,
+            },
+            {
+                "name": "Equipment Station",
+                "description": "Data logger and sensor installation point",
+                "latitude": 20.196200,
+                "longitude": -87.499100,
+            },
+            {
+                "name": "Deep Chamber",
+                "description": "Large chamber with multiple passages",
+                "latitude": 20.195800,
+                "longitude": -87.498600,
+            },
+        ]
+
+        stations = []
+        for i in range(min(count, len(demo_data))):
+            data = demo_data[i]
+            station = cls.create(
+                project=project,
+                name=data["name"],
+                description=data["description"],
+                latitude=data["latitude"],
+                longitude=data["longitude"],
+                **kwargs,
+            )
+            stations.append(station)
+
+        return stations
+
+
+class StationResourceFactory(DjangoModelFactory):
+    """Factory for creating StationResource instances."""
+
+    class Meta:
+        model = StationResource
+        skip_postgeneration_save = True  # Add this to avoid deprecation warning
+
+    id = factory.LazyFunction(uuid.uuid4)
+    station = factory.SubFactory(StationFactory)
+    resource_type = factory.Faker(
+        "random_element",
+        elements=[
+            StationResource.ResourceType.PHOTO,
+            StationResource.ResourceType.VIDEO,
+            StationResource.ResourceType.NOTE,
+            StationResource.ResourceType.SKETCH,
+            StationResource.ResourceType.DOCUMENT,
+        ],
+    )
+    title = factory.Faker("sentence", nb_words=4)
+    description = factory.Faker("text", max_nb_chars=300)
+    created_by = factory.SubFactory(UserFactory)
+
+    @factory.post_generation
+    def with_content(self, create, extracted, **kwargs):
+        """Add appropriate content based on resource type."""
+        if not create:
+            return
+
+        if self.resource_type == StationResource.ResourceType.NOTE:
+            # Only set text_content if it's not already set
+            if not self.text_content:
+                # Use faker directly without instantiation
+                from faker import Faker as FakerLib
+
+                fake = FakerLib()
+                self.text_content = fake.text(max_nb_chars=1000)
+        elif self.resource_type == StationResource.ResourceType.SKETCH:
+            # Only set text_content if it's not already set
+            if not self.text_content:
+                # Simple SVG sketch
+                self.text_content = """<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="300" height="200" fill="#1e293b"/>
+                    <path d="M50 100 L250 100 M150 50 L150 150" stroke="#38bdf8" stroke-width="3" fill="none"/>
+                    <circle cx="150" cy="100" r="8" fill="#f59e0b"/>
+                    <text x="160" y="105" fill="#e2e8f0" font-size="12">Station</text>
+                </svg>"""
+
+    @classmethod
+    def create_photo(cls, station, **kwargs):
+        """Create a photo resource."""
+        return cls.create(
+            station=station,
+            resource_type=StationResource.ResourceType.PHOTO,
+            title="Station Overview Photo",
+            description="Wide angle shot of the station location",
+            **kwargs,
+        )
+
+    @classmethod
+    def create_note(cls, station, **kwargs):
+        """Create a note resource with realistic cave survey content."""
+        content = """Water depth: 1.2m
+Flow rate: ~0.5 m/s
+Temperature: 23°C
+Visibility: Excellent (>30m)
+Ceiling height: 4.5m
+
+Notes: Strong current from nearby survey line. Recommend safety line for divers.
+Station positioned at junction of main passage and side chamber.
+Good visibility in all directions."""
+
+        return cls.create(
+            station=station,
+            resource_type=StationResource.ResourceType.NOTE,
+            title="Survey Measurements",
+            description="Water flow and depth readings",
+            text_content=content,
+            **kwargs,
+        )
+
+    @classmethod
+    def create_sketch(cls, station, **kwargs):
+        """Create a sketch resource."""
+        return cls.create(
+            station=station,
+            resource_type=StationResource.ResourceType.SKETCH,
+            title="Cross-section Diagram",
+            description="Hand-drawn cross-section of the area",
+            **kwargs,
+        )
+
+    @classmethod
+    def create_video(cls, station, **kwargs):
+        """Create a video resource."""
+        return cls.create(
+            station=station,
+            resource_type=StationResource.ResourceType.VIDEO,
+            title="360° Site Survey",
+            description="Complete view of the station location",
+            **kwargs,
+        )
+
+    @classmethod
+    def create_demo_resources(cls, station):
+        """Create a complete set of demo resources for a station."""
+        resources = [
+            cls.create_photo(station),
+            cls.create_note(station),
+            cls.create_sketch(station),
+            cls.create_video(station),
+        ]
+        return resources
+
+
+class PhotoStationResourceFactory(StationResourceFactory):
+    """Factory specifically for photo station resources."""
+
+    resource_type = StationResource.ResourceType.PHOTO
+    title = factory.LazyAttribute(lambda obj: f"Photo - {obj.station.name}")
+    text_content = ""
+
+
+class VideoStationResourceFactory(StationResourceFactory):
+    """Factory specifically for video station resources."""
+
+    resource_type = StationResource.ResourceType.VIDEO
+    title = factory.LazyAttribute(lambda obj: f"Video - {obj.station.name}")
+    text_content = ""
+
+
+class SketchStationResourceFactory(StationResourceFactory):
+    """Factory specifically for sketch station resources."""
+
+    resource_type = StationResource.ResourceType.SKETCH
+    title = factory.LazyAttribute(lambda obj: f"Sketch - {obj.station.name}")
+    text_content = '<svg width="200" height="200"><circle cx="100" cy="100" r="50" fill="blue"/><text x="100" y="100" text-anchor="middle" fill="white">Cave</text></svg>'
+
+
+class NoteStationResourceFactory(StationResourceFactory):
+    """Factory specifically for note station resources."""
+
+    resource_type = StationResource.ResourceType.NOTE
+    title = factory.LazyAttribute(lambda obj: f"Notes - {obj.station.name}")
+    text_content = Faker("paragraph")  # type: ignore[assignment]
+
+
+class DocumentStationResourceFactory(StationResourceFactory):
+    """Factory specifically for document station resources."""
+
+    resource_type = StationResource.ResourceType.DOCUMENT
+    title = factory.LazyAttribute(lambda obj: f"Document - {obj.station.name}")
+    text_content = ""

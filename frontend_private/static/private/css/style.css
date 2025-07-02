@@ -3932,6 +3932,10 @@ span.flatpickr-weekday {
   padding: 1.5rem;
 }
 
+.p-8 {
+  padding: 2rem;
+}
+
 .px-0 {
   padding-left: 0px;
   padding-right: 0px;
@@ -5261,19 +5265,23 @@ span.flatpickr-weekday {
 }
 
 .bg-amber-400\/30 {
-  background-color: rgb(251 191 36 / 0.3);
+  --tw-bg-opacity: 0.30;
+  background-color: rgb(251 191 36 / var(--tw-bg-opacity));
 }
 
 .bg-blue-500\/30 {
-  background-color: rgb(59 130 246 / 0.3);
+  --tw-bg-opacity: 0.30;
+  background-color: rgb(59 130 246 / var(--tw-bg-opacity));
 }
 
 .bg-emerald-400\/30 {
-  background-color: rgb(52 211 153 / 0.3);
+  --tw-bg-opacity: 0.30;
+  background-color: rgb(52 211 153 / var(--tw-bg-opacity));
 }
 
 .bg-indigo-400\/30 {
-  background-color: rgb(129 140 248 / 0.3);
+  --tw-bg-opacity: 0.30;
+  background-color: rgb(129 140 248 / var(--tw-bg-opacity));
 }
 
 .bg-indigo-500 {
@@ -5282,7 +5290,18 @@ span.flatpickr-weekday {
 }
 
 .bg-indigo-500\/30 {
-  background-color: rgb(99 102 241 / 0.3);
+  --tw-bg-opacity: 0.30;
+  background-color: rgb(99 102 241 / var(--tw-bg-opacity));
+}
+
+.bg-orange-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(249 115 22 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-orange-600:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(234 88 12 / var(--tw-bg-opacity));
 }
 
 .bg-rose-400\/30 {
