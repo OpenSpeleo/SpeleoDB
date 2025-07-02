@@ -134,18 +134,28 @@ class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
             project=project, target=perm_data["user"]
         )
 
-        if not created and permission.is_active:
-            return ErrorResponse(
-                {
-                    "error": (
-                        f"A permission for this user: `{perm_data['user']}` "
-                        "already exist."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        perm_level = PermissionLevel.from_str(perm_data["level"])
+        if not created:
+            if permission.is_active:
+                return ErrorResponse(
+                    {
+                        "error": (
+                            f"A permission for this user: `{perm_data['user']}` "
+                            "already exist."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        permission.reactivate(level=perm_data["level"])
+            # Reactivate permission
+            permission.reactivate(level=perm_level)
+            permission.save()
+
+        else:
+            # Now assign the role. Couldn't do it during object creation because
+            # of the use of `get_or_create`
+            permission.level = perm_level.label
+            permission.save()
 
         permission_serializer = UserPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
@@ -176,8 +186,11 @@ class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
 
         try:
             permission = UserPermission.objects.get(
-                project=project, target=perm_data["user"]
+                project=project,
+                target=perm_data["user"],
+                is_active=True,
             )
+
         except ObjectDoesNotExist:
             return ErrorResponse(
                 {
@@ -187,17 +200,6 @@ class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
                     )
                 },
                 status=status.HTTP_404_NOT_FOUND,
-            )
-
-        if not permission.is_active:
-            return ErrorResponse(
-                {
-                    "error": (
-                        f"The permission for this user: `{perm_data['user']}` "
-                        "is inactive. Recreate the permission."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
             )
 
         permission.level = perm_data["level"]
@@ -234,8 +236,11 @@ class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
 
         try:
             permission = UserPermission.objects.get(
-                project=project, target=perm_data["user"]
+                project=project,
+                target=perm_data["user"],
+                is_active=True,
             )
+
         except ObjectDoesNotExist:
             return ErrorResponse(
                 {

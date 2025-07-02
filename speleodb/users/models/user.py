@@ -136,7 +136,10 @@ class User(AbstractUser):
             rel_team_memberships__user=self, rel_team_memberships__is_active=True
         )
 
-        team_permissions = TeamPermission.objects.filter(target__in=active_user_teams)
+        team_permissions = TeamPermission.objects.filter(
+            target__in=active_user_teams,
+            is_active=True,
+        )
 
         return filter_permissions_by_best([*user_permissions, *team_permissions])
 
