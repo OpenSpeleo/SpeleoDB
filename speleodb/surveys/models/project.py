@@ -220,6 +220,9 @@ class Project(models.Model):
             with contextlib.suppress(ObjectDoesNotExist):
                 permissions.append(self.get_team_permission(team))
 
+        if not permissions:
+            raise ObjectDoesNotExist("No permission found for user")
+
         return max(permissions, key=lambda perm: perm.level)
 
     def get_user_permission(self, user: User) -> UserPermission:
