@@ -399,7 +399,10 @@ class ProjectTeamPermissionsView(_BaseProjectView):
         project: Project = data["project"]
         data["permissions"] = project.team_permissions
 
-        project_teams = SurveyTeam.objects.filter(rel_permissions__project=project)
+        project_teams = SurveyTeam.objects.filter(
+            rel_permissions__project=project,
+            rel_permissions__is_active=True,
+        )
 
         data["available_teams"] = sorted(
             [team for team in request.user.teams if team not in project_teams],

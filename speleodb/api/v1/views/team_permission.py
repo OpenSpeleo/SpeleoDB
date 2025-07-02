@@ -71,7 +71,11 @@ class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
         team = serializer.validated_data["team"]
 
         try:
-            permission = TeamPermission.objects.get(project=project, target=team)
+            permission = TeamPermission.objects.get(
+                project=project,
+                target=team,
+                is_active=True,
+            )
 
         except ObjectDoesNotExist:
             return ErrorResponse(
@@ -112,6 +116,7 @@ class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
             project=project, target=team
         )
 
+        perm_level = PermissionLevel.from_str(access_level)
         if not created:
             if permission.is_active:
                 return ErrorResponse(
@@ -124,13 +129,13 @@ class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
                 )
 
             # Reactivate permission
-            permission.reactivate(level=PermissionLevel.from_str(access_level))
+            permission.reactivate(level=perm_level)
             permission.save()
 
         else:
             # Now assign the role. Couldn't do it during object creation because
             # of the use of `get_or_create`
-            permission.level = access_level
+            permission.level = perm_level.label
             permission.save()
 
         # Refresh the `modified_date` field
@@ -164,22 +169,16 @@ class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
 
         project = self.get_object()
         try:
-            permission = TeamPermission.objects.get(project=project, target=team)
+            permission = TeamPermission.objects.get(
+                project=project,
+                target=team,
+                is_active=True,
+            )
+
         except ObjectDoesNotExist:
             return ErrorResponse(
                 {"error": (f"A permission for this team: `{team}` does not exist.")},
                 status=status.HTTP_404_NOT_FOUND,
-            )
-
-        if not permission.is_active:
-            return ErrorResponse(
-                {
-                    "error": (
-                        f"The permission for this team: `{team}` "
-                        "is inactive. Recreate the permission."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
             )
 
         permission.level = access_level
@@ -212,7 +211,11 @@ class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
         team = serializer.validated_data["team"]
         project = self.get_object()
         try:
-            permission = TeamPermission.objects.get(project=project, target=team)
+            permission = TeamPermission.objects.get(
+                project=project,
+                target=team,
+                is_active=True,
+            )
 
         except ObjectDoesNotExist:
             return ErrorResponse(
