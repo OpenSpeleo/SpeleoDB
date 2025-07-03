@@ -134,7 +134,6 @@ class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
             project=project, target=perm_data["user"]
         )
 
-        perm_level = PermissionLevel.from_str(perm_data["level"])
         if not created:
             if permission.is_active:
                 return ErrorResponse(
@@ -148,14 +147,14 @@ class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
                 )
 
             # Reactivate permission
-            permission.reactivate(level=perm_level)
-            permission.save()
+            permission.reactivate(level=perm_data["level"])
 
         else:
             # Now assign the role. Couldn't do it during object creation because
             # of the use of `get_or_create`
-            permission.level = perm_level.label
-            permission.save()
+            permission.level = perm_data["level"]
+
+        permission.save()
 
         permission_serializer = UserPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
