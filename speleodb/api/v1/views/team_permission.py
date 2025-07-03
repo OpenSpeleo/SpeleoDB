@@ -18,7 +18,6 @@ from speleodb.api.v1.serializers import TeamPermissionListSerializer
 from speleodb.api.v1.serializers import TeamPermissionSerializer
 from speleodb.api.v1.serializers import TeamRequestSerializer
 from speleodb.api.v1.serializers import TeamRequestWithProjectLevelSerializer
-from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -108,35 +107,34 @@ class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        team: str = serializer.validated_data["team"]
-        access_level: str = serializer.validated_data["level"]
+        perm_data = serializer.validated_data
 
         project = self.get_object()
         permission, created = TeamPermission.objects.get_or_create(
-            project=project, target=team
+            project=project, target=perm_data["team"]
         )
 
-        perm_level = PermissionLevel.from_str(access_level)
         if not created:
             if permission.is_active:
                 return ErrorResponse(
                     {
                         "error": (
-                            f"The permission for this team: `{team}` already exists."
+                            f"The permission for this team: `{perm_data['team']}` "
+                            "already exists."
                         )
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # Reactivate permission
-            permission.reactivate(level=perm_level)
-            permission.save()
+            permission.reactivate(level=perm_data["level"])
 
         else:
             # Now assign the role. Couldn't do it during object creation because
             # of the use of `get_or_create`
-            permission.level = perm_level.label
-            permission.save()
+            permission.level = perm_data["level"]
+
+        permission.save()
 
         # Refresh the `modified_date` field
         project.save()
