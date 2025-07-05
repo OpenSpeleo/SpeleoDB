@@ -52,16 +52,8 @@
             // https://code.visualstudio.com/docs/remote/devcontainerjson-reference#_vs-code-specific-properties
             // Add the IDs of extensions you want installed when the container is created.
             "extensions": [
-                "davidanson.vscode-markdownlint",
-                "mrmlnc.vscode-duplicate",
-                "visualstudioexptteam.vscodeintellicode",
-                "visualstudioexptteam.intellicode-api-usage-examples",
-                // Github Actions
-                "github.vscode-github-actions",
                 // python
                 "ms-python.python",
-                // Python Language Support
-                "ms-python.vscode-pylance",
                 // Linting
                 "charliermarsh.ruff",
                 // django
@@ -76,6 +68,8 @@
                 "redhat.vscode-yaml",
                 // Git
                 "eamodio.gitlens",
+                // Markdown
+                "davidanson.vscode-markdownlint",
                 // Makefiles
                 "ms-vscode.makefile-tools",
                 // Docker
@@ -83,7 +77,8 @@
                 // Env
                 "IronGeek.vscode-env",
                 // MyPy
-                "ms-python.mypy-type-checker"
+                "ms-python.mypy-type-checker",
+                // Tools
             ]
         }
     },

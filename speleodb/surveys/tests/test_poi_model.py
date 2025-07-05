@@ -4,12 +4,10 @@
 from decimal import Decimal
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
 from speleodb.surveys.models import PointOfInterest
-
-User = get_user_model()
+from speleodb.users.models import User
 
 
 @pytest.mark.django_db
@@ -17,14 +15,15 @@ class TestPointOfInterestModel:
     """Test cases for PointOfInterest model."""
 
     @pytest.fixture
-    def user(self):
+    def user(self) -> User:
         """Create a test user."""
         return User.objects.create_user(
-            email="testuser@example.com", password="testpass123"
+            email="testuser@example.com",
+            password="testpass123",  # noqa: S106
         )
 
     @pytest.fixture
-    def poi(self, user):
+    def poi(self, user: User) -> PointOfInterest:
         """Create a test POI."""
         return PointOfInterest.objects.create(
             name="Test Cave Entrance",
@@ -34,7 +33,7 @@ class TestPointOfInterestModel:
             created_by=user,
         )
 
-    def test_create_poi_with_valid_data(self, user):
+    def test_create_poi_with_valid_data(self, user: User) -> None:
         """Test creating a POI with all valid data."""
         poi = PointOfInterest.objects.create(
             name="Mountain Peak Viewpoint",
@@ -53,7 +52,7 @@ class TestPointOfInterestModel:
         assert poi.creation_date is not None
         assert poi.modified_date is not None
 
-    def test_create_poi_minimal_data(self, user):
+    def test_create_poi_minimal_data(self, user: User) -> None:
         """Test creating a POI with only required fields."""
         poi = PointOfInterest.objects.create(
             name="Minimal POI",
@@ -67,14 +66,14 @@ class TestPointOfInterestModel:
         assert poi.description == ""  # Default value
         assert poi.created_by == user
 
-    def test_poi_string_representation(self, poi):
+    def test_poi_string_representation(self, poi: PointOfInterest) -> None:
         """Test the string representation of POI."""
         assert str(poi) == "POI: Test Cave Entrance"
 
-    def test_latitude_validation(self, user):
+    def test_latitude_validation(self, user: User) -> None:
         """Test latitude must be between -90 and 90."""
         # Test invalid latitude > 90
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
             poi = PointOfInterest(
                 name="Invalid Latitude High",
                 latitude=Decimal("91.0"),
@@ -86,7 +85,7 @@ class TestPointOfInterestModel:
         assert "latitude" in exc_info.value.message_dict
 
         # Test invalid latitude < -90
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
             poi = PointOfInterest(
                 name="Invalid Latitude Low",
                 latitude=Decimal("-91.0"),
@@ -114,10 +113,10 @@ class TestPointOfInterestModel:
         )
         poi_south.full_clean()  # Should not raise
 
-    def test_longitude_validation(self, user):
+    def test_longitude_validation(self, user: User) -> None:
         """Test longitude must be between -180 and 180."""
         # Test invalid longitude > 180
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
             poi = PointOfInterest(
                 name="Invalid Longitude High",
                 latitude=Decimal("0.0"),
@@ -129,7 +128,7 @@ class TestPointOfInterestModel:
         assert "longitude" in exc_info.value.message_dict
 
         # Test invalid longitude < -180
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
             poi = PointOfInterest(
                 name="Invalid Longitude Low",
                 latitude=Decimal("0.0"),
@@ -157,7 +156,7 @@ class TestPointOfInterestModel:
         )
         poi_west.full_clean()  # Should not raise
 
-    def test_coordinate_precision(self, user):
+    def test_coordinate_precision(self, user: User) -> None:
         """Test that coordinates maintain 7 decimal places."""
         poi = PointOfInterest.objects.create(
             name="Precise Location",
@@ -173,7 +172,9 @@ class TestPointOfInterestModel:
         assert str(poi.latitude) == "45.1234567"
         assert str(poi.longitude) == "-122.7654321"
 
-    def test_created_by_cascade_on_user_delete(self, poi, user):
+    def test_created_by_cascade_on_user_delete(
+        self, poi: PointOfInterest, user: User
+    ) -> None:
         """Test that POI is deleted when user is deleted (CASCADE)."""
         assert poi.created_by == user
         poi_id = poi.id
@@ -184,22 +185,22 @@ class TestPointOfInterestModel:
         # POI should be deleted due to CASCADE
         assert not PointOfInterest.objects.filter(id=poi_id).exists()
 
-    def test_ordering(self, user):
+    def test_ordering(self, user: User) -> None:
         """Test that POIs are ordered by name."""
         # Create POIs in non-alphabetical order
-        poi_c = PointOfInterest.objects.create(
+        _ = PointOfInterest.objects.create(
             name="Cave C",
             latitude=Decimal("0.0"),
             longitude=Decimal("0.0"),
             created_by=user,
         )
-        poi_a = PointOfInterest.objects.create(
+        _ = PointOfInterest.objects.create(
             name="Arch A",
             latitude=Decimal("0.0"),
             longitude=Decimal("0.0"),
             created_by=user,
         )
-        poi_b = PointOfInterest.objects.create(
+        _ = PointOfInterest.objects.create(
             name="Bridge B",
             latitude=Decimal("0.0"),
             longitude=Decimal("0.0"),
@@ -214,7 +215,7 @@ class TestPointOfInterestModel:
         assert pois[1].name == "Bridge B"
         assert pois[2].name == "Cave C"
 
-    def test_timestamps_auto_update(self, poi):
+    def test_timestamps_auto_update(self, poi: PointOfInterest) -> None:
         """Test that timestamps are automatically managed."""
         original_created = poi.creation_date
         original_modified = poi.modified_date
@@ -229,12 +230,12 @@ class TestPointOfInterestModel:
         # modified_date should be updated
         assert poi.modified_date > original_modified
 
-    def test_verbose_names(self):
+    def test_verbose_names(self) -> None:
         """Test model verbose names."""
-        assert PointOfInterest._meta.verbose_name == "Point of Interest"
-        assert PointOfInterest._meta.verbose_name_plural == "Points of Interest"
+        assert PointOfInterest._meta.verbose_name == "Point of Interest"  # noqa: SLF001
+        assert PointOfInterest._meta.verbose_name_plural == "Points of Interest"  # noqa: SLF001
 
-    def test_blank_description_allowed(self, user):
+    def test_blank_description_allowed(self, user: User) -> None:
         """Test that blank description is allowed."""
         poi = PointOfInterest.objects.create(
             name="No Description POI",

@@ -14,7 +14,7 @@ from django.contrib import messages
 from django.db import models
 from django.db.models import F
 from django.db.models import QuerySet
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Mutex
@@ -126,7 +126,7 @@ class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if obj.description:
             return (
                 obj.description[:50] + "..."
-                if len(obj.description) > 50
+                if len(obj.description) > 50  # noqa: PLR2004
                 else obj.description
             )
         return "-"
@@ -194,7 +194,7 @@ class PublicAnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "style": "width: 28rem; font-family: monospace; font-size: 0.9rem;",
             }
         )
-        form.base_fields["uuid"].help_text = mark_safe(
+        form.base_fields["uuid"].help_text = format_html(
             '<input type="submit" value="Regenerate UUID" name="_regenerate_uuid">'
         )
         return form

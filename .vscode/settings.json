@@ -8,5 +8,5 @@
     "mypy-type-checker.importStrategy": "fromEnvironment",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.logLevel": "Trace",
-    "python.analysis.typeCheckingMode": "basic"
+    "python.analysis.indexing": false
 }

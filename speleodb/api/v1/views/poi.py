@@ -76,7 +76,11 @@ class PointOfInterestViewSet(ModelViewSet, SDBAPIViewMixin):
                         {
                             "errors": {
                                 "name": [
-                                    f"A Point of Interest with the name '{request.data.get('name', '')}' already exists."
+                                    (
+                                        f"A Point of Interest with the name "
+                                        f"'{request.data.get('name', '')}' already "
+                                        "exists."
+                                    )
                                 ]
                             }
                         },
@@ -105,7 +109,10 @@ class PointOfInterestViewSet(ModelViewSet, SDBAPIViewMixin):
                 {
                     "errors": {
                         "name": [
-                            f"A Point of Interest with the name '{new_name}' already exists."
+                            (
+                                f"A Point of Interest with the name '{new_name}' "
+                                "already exists."
+                            )
                         ]
                     }
                 },

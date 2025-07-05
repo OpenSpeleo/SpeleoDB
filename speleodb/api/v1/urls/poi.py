@@ -9,12 +9,12 @@ from speleodb.api.v1.views.poi import PointOfInterestViewSet
 urlpatterns = [
     # POI CRUD
     path(
-        "pois/",
+        "",
         PointOfInterestViewSet.as_view({"get": "list", "post": "create"}),
         name="poi-list-create",
     ),
     path(
-        "pois/<uuid:id>/",
+        "<uuid:id>/",
         PointOfInterestViewSet.as_view(
             {
                 "get": "retrieve",
@@ -27,7 +27,7 @@ urlpatterns = [
     ),
     # POI map endpoint for GeoJSON data
     path(
-        "pois/map/",
+        "map/",
         PointOfInterestMapView.as_view(),
         name="pois-map",
     ),

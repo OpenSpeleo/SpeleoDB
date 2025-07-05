@@ -204,7 +204,7 @@ window.showCreatePOIModal = function (coordinates) {
         submitBtn.textContent = 'Creating...';
 
         try {
-            const response = await fetch('/api/v1/pois/', {
+            const response = await fetch('/api/v1/points_of_interest/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -336,7 +336,7 @@ window.confirmDeletePOI = async function (poiId) {
     console.log(`🗑️ Deleting POI: ${poiId}`);
 
     try {
-        const response = await fetch(`/api/v1/pois/${poiId}/`, {
+        const response = await fetch(`/api/v1/points_of_interest/${poiId}/`, {
             method: 'DELETE',
             headers: {
                 'X-CSRFToken': getCSRFToken()
@@ -461,7 +461,7 @@ window.editPOI = function (poiId) {
         submitBtn.textContent = 'Saving...';
 
         try {
-            const response = await fetch(`/api/v1/pois/${poiId}/`, {
+            const response = await fetch(`/api/v1/points_of_interest/${poiId}/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

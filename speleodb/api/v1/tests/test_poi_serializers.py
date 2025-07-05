@@ -248,7 +248,7 @@ class TestPointOfInterestListSerializer:
         serializer = PointOfInterestListSerializer(pois, many=True)
         data = serializer.data
 
-        assert len(data) == 2
+        assert len(data) == 2  # noqa: PLR2004
         assert data[0]["name"] == "POI 1"
         assert data[1]["name"] == "POI 2"
 
@@ -318,7 +318,7 @@ class TestPointOfInterestMapSerializer:
         serializer = PointOfInterestMapSerializer(pois, many=True)
         data = serializer.data
 
-        assert len(data) == 2
+        assert len(data) == 2  # noqa: PLR2004
         assert all(feature["type"] == "Feature" for feature in data)
         assert data[0]["properties"]["name"] == "POI 1"
         assert data[1]["properties"]["name"] == "POI 2"

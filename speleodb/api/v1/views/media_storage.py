@@ -8,15 +8,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 
+import boto3
+from botocore.exceptions import ClientError
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import FormParser
 from rest_framework.parsers import JSONParser
 from rest_framework.parsers import MultiPartParser
-from rest_framework.response import Response
 
 from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
@@ -28,6 +31,7 @@ from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
+    from rest_framework.response import Response
 
 
 class MediaPresignedUploadView(GenericAPIView[Any], SDBAPIViewMixin):
@@ -70,10 +74,9 @@ class MediaPresignedUploadView(GenericAPIView[Any], SDBAPIViewMixin):
             unique_filename = f"{uuid.uuid4().hex}{file_extension}"
 
             # Create storage path
-            from datetime import datetime
 
-            now = datetime.now()
-            file_path = f"stations/resources/{now.year:04d}/{now.month:02d}/{now.day:02d}/{unique_filename}"
+            now = timezone.now()
+            file_path = f"stations/resources/{now.year:04d}/{now.month:02d}/{now.day:02d}/{unique_filename}"  # noqa: E501
 
             # Save file using Django's storage system
             saved_path = default_storage.save(file_path, file)
@@ -97,7 +100,7 @@ class MediaPresignedUploadView(GenericAPIView[Any], SDBAPIViewMixin):
                 status=status.HTTP_201_CREATED,
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return ErrorResponse(
                 {"error": f"Upload failed: {e!s}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -123,15 +126,12 @@ class MediaPresignedUploadView(GenericAPIView[Any], SDBAPIViewMixin):
             )
 
         try:
-            import boto3
-            from botocore.exceptions import ClientError
-
             # Generate unique filename
             unique_filename = f"{uuid.uuid4().hex}_{filename}"
             key = f"stations/resources/{unique_filename}"
 
             # Create storage client
-            s3_client = boto3.client(
+            s3_client = boto3.client(  # type: ignore[no-untyped-call]
                 "s3",
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
@@ -146,7 +146,7 @@ class MediaPresignedUploadView(GenericAPIView[Any], SDBAPIViewMixin):
                     "Key": key,
                     "ContentType": content_type,
                     "Metadata": {
-                        "uploaded-by": str(request.user.id),
+                        "uploaded-by": str(request.user.id),  # pyright: ignore[reportAttributeAccessIssue]
                         "resource-type": resource_type,
                     },
                 },
@@ -173,7 +173,8 @@ class MediaPresignedUploadView(GenericAPIView[Any], SDBAPIViewMixin):
                 {"error": f"Failed to generate upload URL: {e!s}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        except Exception as e:
+
+        except Exception as e:  # noqa: BLE001
             return ErrorResponse(
                 {"error": f"Unexpected error: {e!s}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -206,11 +207,8 @@ class MediaSignedUrlView(GenericAPIView[Any], SDBAPIViewMixin):
             )
 
         try:
-            import boto3
-            from botocore.exceptions import ClientError
-
             # Create storage client
-            s3_client = boto3.client(
+            s3_client = boto3.client(  # type: ignore[no-untyped-call]
                 "s3",
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
@@ -240,7 +238,8 @@ class MediaSignedUrlView(GenericAPIView[Any], SDBAPIViewMixin):
                 {"error": f"Failed to generate download URL: {e!s}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        except Exception as e:
+
+        except Exception as e:  # noqa: BLE001
             return ErrorResponse(
                 {"error": f"Unexpected error: {e!s}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -250,7 +249,8 @@ class MediaSignedUrlView(GenericAPIView[Any], SDBAPIViewMixin):
 class MediaSecureAccessView(GenericAPIView[Any], SDBAPIViewMixin):
     """
     Generate secure access URLs for private files.
-    Supports both resource_id (for existing resources) and file_path+project_id (for general access).
+    Supports both resource_id (for existing resources) and file_path+project_id
+    (for general access).
     """
 
     permission_classes = [UserHasReadAccess]
@@ -282,20 +282,15 @@ class MediaSecureAccessView(GenericAPIView[Any], SDBAPIViewMixin):
             resource = get_object_or_404(StationResource, id=resource_id)
 
             # Check if user has access to this resource's project
-            project = resource.station.project
+            project: Project = resource.station.project
+
             try:
-                user_permission = project.get_user_permission(user=request.user)
-                if (
-                    user_permission.level
-                    < project.get_user_permission(user=request.user).level
-                ):
-                    return ErrorResponse(
-                        {"error": "You don't have permission to access this resource"},
-                        status=status.HTTP_403_FORBIDDEN,
-                    )
-            except Exception:
+                # Any access level is sufficient for file access
+                _ = project.get_best_permission(user=request.user)  # type: ignore[arg-type]
+
+            except ObjectDoesNotExist:
                 return ErrorResponse(
-                    {"error": "You don't have permission to access this resource"},
+                    {"error": ("You don't have permission to access this resource")},
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
@@ -332,12 +327,15 @@ class MediaSecureAccessView(GenericAPIView[Any], SDBAPIViewMixin):
 
             # Check if user has access to this project
             try:
-                user_permission = project.get_user_permission(user=request.user)
-                # Any read access is sufficient for file access
-            except Exception:
+                # Any access level is sufficient for file access
+                _ = project.get_best_permission(user=request.user)  # type: ignore[arg-type]
+
+            except ObjectDoesNotExist:
                 return ErrorResponse(
                     {
-                        "error": "You don't have permission to access files in this project"
+                        "error": (
+                            "You don't have permission to access files in this project"
+                        )
                     },
                     status=status.HTTP_403_FORBIDDEN,
                 )
@@ -362,11 +360,8 @@ class MediaSecureAccessView(GenericAPIView[Any], SDBAPIViewMixin):
     def _generate_s3_url(self, file_path: str, expires_in: int) -> Response:
         """Generate S3 presigned URL."""
         try:
-            import boto3
-            from botocore.exceptions import ClientError
-
             # Create storage client
-            s3_client = boto3.client(
+            s3_client = boto3.client(  # type: ignore[no-untyped-call]
                 "s3",
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
@@ -409,11 +404,14 @@ class MediaSecureAccessView(GenericAPIView[Any], SDBAPIViewMixin):
                     "access_url": file_url,
                     "expires_in": None,  # Local URLs don't expire
                     "file_path": file_path,
-                    "security_note": "Local file access - ensure proper server configuration for security",
+                    "security_note": (
+                        "Local file access - ensure proper server "
+                        "configuration for security"
+                    ),
                 }
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return ErrorResponse(
                 {"error": f"Failed to generate local URL: {e!s}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

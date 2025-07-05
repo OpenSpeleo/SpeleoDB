@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 Comprehensive tests for video upload functionality in Station Resources.
-Tests various scenarios including file size limits, missing files, and proper file handling.
+Tests various scenarios including file size limits, missing files, and proper file
+handling.
 """
 
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
@@ -14,7 +17,9 @@ from rest_framework import status
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models.station import Station
+
+if TYPE_CHECKING:
+    from speleodb.surveys.models.station import Station
 
 
 class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
@@ -207,7 +212,10 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
             "station_id": str(self.station.id),
             "resource_type": "video",
             "title": "Complete Video Test",
-            "description": "This video has all fields populated including a long description that provides context about what is shown in the video",
+            "description": (
+                "This video has all fields populated including a long description that "
+                "provides context about what is shown in the video"
+            ),
             "file": video_file,
         }
 
@@ -224,7 +232,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         resource_data = response.data["data"]["resource"]
         assert resource_data["title"] == "Complete Video Test"
-        assert len(resource_data["description"]) > 50
+        assert len(resource_data["description"]) > 50  # noqa: PLR2004
 
     def test_video_upload_empty_file(self) -> None:
         """Test video upload with empty file."""
@@ -247,10 +255,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
             headers={"authorization": auth},
         )
 
-        # Behavior depends on implementation - might accept or reject empty files
-        # Log the response for debugging
-        print(f"Empty file response: {response.status_code}")
-        print(f"Response data: {response.data}")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_video_upload_form_data_structure(self) -> None:
         """Test that form data is properly structured for video upload."""
@@ -270,14 +275,6 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + str(self.token.key)
 
-        # Log the request data for debugging
-        print(f"Request data keys: {list(data.keys())}")
-        print(f"File object: {data['file']}")
-        if hasattr(data["file"], "name"):
-            print(f"File name: {data['file'].name}")
-        if hasattr(data["file"], "size"):
-            print(f"File size: {data['file'].size}")
-
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
@@ -286,10 +283,6 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
             headers={"authorization": auth},
             format="multipart",  # Explicitly set format to multipart
         )
-
-        # Log response for debugging
-        print(f"Response status: {response.status_code}")
-        print(f"Response data: {response.data}")
 
         assert response.status_code == status.HTTP_201_CREATED
 

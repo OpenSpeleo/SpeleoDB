@@ -7,10 +7,12 @@ Tests all API endpoints and operations used by the frontend map viewer.
 
 import json
 from decimal import Decimal
+from typing import Any
 
 from django.test import TransactionTestCase
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.factories import ProjectFactory
@@ -20,6 +22,7 @@ from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
+from speleodb.surveys.models import UserPermission
 
 
 class TestMapViewerIntegration(BaseAPIProjectTestCase):
@@ -48,10 +51,6 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             content_type="application/json",
             headers={"authorization": self.auth},
         )
-
-        if response.status_code != status.HTTP_201_CREATED:
-            print(f"Response status: {response.status_code}")
-            print(f"Response data: {response.data}")
 
         assert response.status_code == status.HTTP_201_CREATED
         station_data_response = response.data["data"]["station"]
@@ -175,7 +174,10 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             "resource_type": "note",
             "title": "Survey Notes from Frontend",
             "description": "Notes added via the station modal",
-            "text_content": "Temperature: 12°C\nVisibility: Good\nFlow: Minimal\n\nDetailed observations from the field survey.",
+            "text_content": (
+                "Temperature: 12°C\nVisibility: Good\nFlow: Minimal\n\nDetailed "
+                "observations from the field survey."
+            ),
         }
 
         response = self.client.post(
@@ -207,7 +209,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
                 <path d="M50 100 L250 100 M150 50 L150 150" stroke="#38bdf8" stroke-width="3" fill="none"/>
                 <circle cx="150" cy="100" r="8" fill="#f59e0b"/>
                 <text x="160" y="105" fill="#e2e8f0" font-size="12">Station</text>
-            </svg>""",
+            </svg>""",  # noqa: E501
         }
 
         response = self.client.post(
@@ -227,7 +229,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
         station_data = response.data["data"]["station"]
-        assert station_data["resource_count"] == 2
+        assert station_data["resource_count"] == 2  # noqa: PLR2004
 
     def test_station_deletion_workflow(self) -> None:
         """Test deleting a station and its resources (as frontend delete would do)."""
@@ -288,7 +290,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             },
         ]
 
-        created_stations = []
+        created_stations: list[Station] = []
         for station_data in stations_data:
             station = StationFactory.create(
                 project=self.project,
@@ -300,7 +302,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
             # Add different numbers of resources to each station
             num_resources = len(created_stations) + 1  # 1, 2, 3 resources respectively
-            for j in range(num_resources):
+            for _ in range(num_resources):
                 StationResourceFactory.create_note(station)
 
             created_stations.append(station)
@@ -314,7 +316,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
         geojson_data = response.data["data"]
-        assert len(geojson_data["features"]) == 3
+        assert len(geojson_data["features"]) == 3  # noqa: PLR2004
 
         # Verify each station in the map data
         features_by_name = {
@@ -324,8 +326,8 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         for i, station_data in enumerate(stations_data):
             feature = features_by_name[station_data["name"]]
             assert feature["geometry"]["coordinates"] == [
-                float(station_data["longitude"]),
-                float(station_data["latitude"]),
+                float(station_data["longitude"]),  # type: ignore[arg-type]
+                float(station_data["latitude"]),  # type: ignore[arg-type]
             ]
             assert feature["properties"]["resource_count"] == i + 1  # 1, 2, 3 resources
 
@@ -338,7 +340,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
         stations_list = response.data["data"]["stations"]
-        assert len(stations_list) == 3
+        assert len(stations_list) == 3  # noqa: PLR2004
 
         # Verify resource counts in list format
         stations_by_name = {s["name"]: s for s in stations_list}
@@ -407,18 +409,14 @@ class TestMapViewerWithFixtures(TransactionTestCase):
         self.user = UserFactory.create()
         self.project = ProjectFactory.create(created_by=self.user)
 
-        # Create user permission
-        from speleodb.surveys.models import UserPermission
+        # Create auth token
+        self.token = Token.objects.create(user=self.user)
+        self.auth = f"Token {self.token.key}"
 
+        # Create user permission
         UserPermission.objects.create(
             target=self.user, project=self.project, level=PermissionLevel.READ_AND_WRITE
         )
-
-        # Create auth token
-        from rest_framework.authtoken.models import Token
-
-        self.token = Token.objects.create(user=self.user)
-        self.auth = f"Token {self.token.key}"
 
     def test_realistic_cave_survey_scenario(self) -> None:
         """Test a realistic cave survey scenario with demo stations and resources."""
@@ -448,7 +446,7 @@ class TestMapViewerWithFixtures(TransactionTestCase):
 
         assert response.status_code == status.HTTP_200_OK
         geojson_data = response.json()["data"]
-        assert len(geojson_data["features"]) == 3
+        assert len(geojson_data["features"]) == 3  # noqa: PLR2004
 
         # Verify coordinates match expected cave survey locations
         feature_coords = [
@@ -474,8 +472,8 @@ class TestMapViewerWithFixtures(TransactionTestCase):
         station_data = response.json()["data"]["station"]
 
         # Verify it has the expected 4 resources (photo, note, sketch, video)
-        assert station_data["resource_count"] == 4
-        assert len(station_data["resources"]) == 4
+        assert station_data["resource_count"] == 4  # noqa: PLR2004
+        assert len(station_data["resources"]) == 4  # noqa: PLR2004
 
         resource_types = {r["resource_type"] for r in station_data["resources"]}
         assert resource_types == {"photo", "note", "sketch", "video"}
@@ -492,7 +490,7 @@ class TestMapViewerWithFixtures(TransactionTestCase):
             "Equipment-Point-1",
         ]
 
-        created_stations = []
+        created_stations: list[dict[str, Any]] = []
         for name in station_names:
             response = self.client.post(
                 "/api/v1/stations/",

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import hashlib
 
+import boto3
+from botocore.exceptions import ClientError
+from botocore.exceptions import NoCredentialsError
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
@@ -22,7 +25,8 @@ from speleodb.surveys.models.station import StationResource
 
 
 class TestS3CredentialValidation(BaseAPIProjectTestCase):
-    """Test S3 credential validation - these tests should fail with improper credentials."""
+    """Test S3 credential validation - these tests should fail with improper
+    credentials."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -48,12 +52,12 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
         # With proper credentials: 200 OK
         # With improper credentials: 500 INTERNAL_SERVER_ERROR
         if response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR:
-            self.assertIn("error", response.data)
-            self.assertIn("Failed to generate upload URL", response.data["error"])
+            assert "error" in response.data
+            assert "Failed to generate upload URL" in response.data["error"]
         else:
             # If credentials are valid, should succeed
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertIn("upload_url", response.data["data"])
+            assert response.status_code == status.HTTP_200_OK
+            assert "upload_url" in response.data["data"]
 
     def test_s3_credentials_with_signed_url(self) -> None:
         """Test signed URL generation - should fail with improper S3 credentials."""
@@ -72,15 +76,16 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
 
         # This should fail if S3 credentials are invalid
         if response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR:
-            self.assertIn("error", response.data)
-            self.assertIn("Failed to generate download URL", response.data["error"])
+            assert "error" in response.data
+            assert "Failed to generate download URL" in response.data["error"]
         else:
             # If credentials are valid, should succeed
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertIn("download_url", response.data["data"])
+            assert response.status_code == status.HTTP_200_OK
+            assert "download_url" in response.data["data"]
 
     def test_s3_credentials_with_secure_access(self) -> None:
-        """Test secure access URL generation - should fail with improper S3 credentials."""
+        """Test secure access URL generation - should fail with improper S3
+        credentials."""
         if not getattr(settings, "USE_S3", False):
             self.skipTest("S3 not enabled")
 
@@ -97,27 +102,24 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
 
         # This should fail if S3 credentials are invalid or file doesn't exist
         if response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR:
-            self.assertIn("error", response.data)
-            self.assertIn("Failed to generate access URL", response.data["error"])
+            assert "error" in response.data
+            assert "Failed to generate access URL" in response.data["error"]
         elif response.status_code == status.HTTP_404_NOT_FOUND:
             # File doesn't exist, but credentials are valid
-            self.assertIn("error", response.data)
-            self.assertIn("File not found", response.data["error"])
+            assert "error" in response.data
+            assert "File not found" in response.data["error"]
         else:
             # If credentials are valid and file exists, should succeed
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertIn("access_url", response.data["data"])
+            assert response.status_code == status.HTTP_200_OK
+            assert "access_url" in response.data["data"]
 
     def test_s3_bucket_connectivity(self) -> None:
-        """Test S3 bucket connectivity - should fail with improper credentials or bucket."""
+        """Test S3 bucket connectivity - should fail with improper credentials or
+        bucket."""
         if not getattr(settings, "USE_S3", False):
             self.skipTest("S3 not enabled")
 
         try:
-            import boto3
-            from botocore.exceptions import ClientError
-            from botocore.exceptions import NoCredentialsError
-
             # Try to create S3 client and test connectivity
             s3_client = boto3.client(
                 "s3",
@@ -129,8 +131,6 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
             # Try to check if bucket exists - this should fail with improper credentials
             try:
                 s3_client.head_bucket(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
-                # If we get here, credentials are valid
-                self.assertTrue(True)  # Test passes - credentials are valid
             except (ClientError, NoCredentialsError) as e:
                 # This is expected with improper credentials
                 self.fail(f"S3 credentials are invalid: {e}")
@@ -157,12 +157,12 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
 
         # This should fail if S3 credentials are invalid
         if response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR:
-            self.assertIn("error", response.data)
-            self.assertIn("Upload failed", response.data["error"])
+            assert "error" in response.data
+            assert "Upload failed" in response.data["error"]
         else:
             # If credentials are valid, should succeed
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            self.assertIn("file_path", response.data["data"])
+            assert response.status_code == status.HTTP_201_CREATED
+            assert "file_path" in response.data["data"]
 
     def test_s3_with_explicitly_invalid_credentials(self) -> None:
         """Test S3 operations with explicitly invalid credentials - should fail."""
@@ -170,15 +170,11 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
             self.skipTest("S3 not enabled")
 
         try:
-            import boto3
-            from botocore.exceptions import ClientError
-            from botocore.exceptions import NoCredentialsError
-
             # Test direct boto3 client creation with invalid credentials
             s3_client = boto3.client(
                 "s3",
                 aws_access_key_id="INVALID_KEY_12345",
-                aws_secret_access_key="INVALID_SECRET_67890",
+                aws_secret_access_key="INVALID_SECRET_67890",  # noqa: S106
                 region_name="us-east-1",
             )
 
@@ -190,9 +186,7 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
                 failed = True
 
             # Test passed - invalid credentials properly failed
-            self.assertTrue(
-                failed, "Invalid S3 credentials should have failed but didn't"
-            )
+            assert failed, "Invalid S3 credentials should have failed but didn't"
 
         except ImportError:
             self.skipTest("boto3 not installed")
@@ -283,7 +277,7 @@ class TestMediaStorageAPIPermissions(BaseAPIProjectTestCase):
         self.set_test_project_permission(level=level)
 
         # Create a resource with a file
-        resource = StationResourceFactory.create(
+        _ = StationResourceFactory.create(
             station=self.station,
             resource_type=StationResource.ResourceType.PHOTO,
         )
@@ -577,7 +571,7 @@ class TestMediaFuzzing(BaseAPIProjectTestCase):
                 test_file = SimpleUploadedFile(
                     f"test_{i}.jpg", b"content", content_type="image/jpeg"
                 )
-                data["file"] = test_file
+                data["file"] = test_file  # type: ignore[assignment]
 
             response = self.client.post(
                 reverse("api:v1:media-upload"),

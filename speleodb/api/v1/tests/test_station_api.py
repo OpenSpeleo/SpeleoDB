@@ -15,6 +15,7 @@ from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.surveys.models import PermissionLevel
+from speleodb.surveys.models import StationResource
 from speleodb.surveys.models import UserPermission
 from speleodb.surveys.models.station import Station
 
@@ -154,8 +155,6 @@ class TestStationAPIPermissions(BaseAPIProjectTestCase):
         self.set_test_project_permission(PermissionLevel(permission_level))
         auth = self.header_prefix + self.token.key
 
-        import uuid
-
         data = {
             "name": f"ST{permission_level:03d}_{str(uuid.uuid4())[:8]}",
             "description": "Test station",
@@ -265,7 +264,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
         stations_data = response.data["data"]["stations"]
-        assert len(stations_data) == 3
+        assert len(stations_data) == 3  # noqa: PLR2004
 
         # Verify station IDs are present
         station_ids = {str(station.id) for station in stations}
@@ -374,7 +373,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
 
         # Create stations with the same name in both projects
         station1 = StationFactory.create(project=self.project, name="DuplicateName")
-        station2 = StationFactory.create(project=second_project, name="DuplicateName")
+        StationFactory.create(project=second_project, name="DuplicateName")
 
         # Try to update station1 to move it to the second project (should fail)
         data = {
@@ -416,16 +415,15 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
         )
 
         # Add some resources to the station
-        from speleodb.surveys.models import StationResource
 
-        resource1 = StationResource.objects.create(
+        StationResource.objects.create(
             station=station,
             title="Test Resource 1",
             resource_type=StationResource.ResourceType.NOTE,
             text_content="Test note content",
             created_by=self.user,
         )
-        resource2 = StationResource.objects.create(
+        StationResource.objects.create(
             station=station,
             title="Test Resource 2",
             resource_type=StationResource.ResourceType.NOTE,
@@ -459,12 +457,12 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
         assert station_data["name"] == "UpdatedName"
         assert station_data["description"] == "Updated description"
         assert station_data["project_id"] == str(second_project.id)
-        assert float(station_data["latitude"]) == 45.5
-        assert float(station_data["longitude"]) == -123.5
+        assert float(station_data["latitude"]) == 45.5  # noqa: PLR2004
+        assert float(station_data["longitude"]) == -123.5  # noqa: PLR2004
         assert "resources" in station_data
-        assert len(station_data["resources"]) == 2
+        assert len(station_data["resources"]) == 2  # noqa: PLR2004
         assert "resource_count" in station_data
-        assert station_data["resource_count"] == 2
+        assert station_data["resource_count"] == 2  # noqa: PLR2004
         assert "created_by_email" in station_data
         assert "created_by_email" in station_data  # Email may be from factory user
         assert "creation_date" in station_data
@@ -536,8 +534,8 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
         assert station.project_id == second_project.id
         assert station.name == original_name
         assert station.description == original_description
-        assert float(station.latitude) == 45.123
-        assert float(station.longitude) == -123.456
+        assert float(station.latitude) == 45.123  # noqa: PLR2004
+        assert float(station.longitude) == -123.456  # noqa: PLR2004
 
     def test_update_station_project_with_name_change(self) -> None:
         """Test changing project and name simultaneously to avoid conflicts."""
@@ -551,7 +549,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
 
         # Create stations with same name in both projects
         station1 = StationFactory.create(project=self.project, name="ConflictName")
-        station2 = StationFactory.create(project=second_project, name="ConflictName")
+        StationFactory.create(project=second_project, name="ConflictName")
 
         # Update station1 with new name AND move to second project
         data = {
@@ -589,8 +587,6 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
         )
 
         # Add resources
-        from speleodb.surveys.models import StationResource
-
         resources = []
         for i in range(3):
             resource = StationResource.objects.create(
@@ -621,7 +617,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
         assert station.project_id == second_project.id
 
         # Verify all resources still exist and are still linked
-        assert station.resources.count() == 3
+        assert station.resources.count() == 3  # noqa: PLR2004
         for i, resource in enumerate(resources):
             resource.refresh_from_db()
             assert resource.station_id == station.id
@@ -676,8 +672,8 @@ class TestStationValidation(BaseAPIProjectTestCase):
         assert "project_id" in response.data["errors"]
 
     def test_create_station_duplicate_name(self) -> None:
-        """Test station creation with duplicate name in same project returns proper error message."""
-        import uuid
+        """Test station creation with duplicate name in same project returns proper
+        error message."""
 
         unique_name = f"ST_{str(uuid.uuid4())[:8]}"
         # Create the first station
@@ -722,9 +718,8 @@ class TestStationValidation(BaseAPIProjectTestCase):
         assert "already exists in this project" in response2.data["errors"]["name"][0]
 
     def test_create_station_invalid_coordinates(self) -> None:
-        """Test station creation rejects invalid coordinates (validators are implemented)."""
-        import uuid
-
+        """Test station creation rejects invalid coordinates (validators are
+        implemented)."""
         data = {
             "name": f"ST_{str(uuid.uuid4())[:8]}",
             "description": "Test station",
@@ -814,7 +809,6 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
 
     def test_extreme_coordinate_precision(self) -> None:
         """Test handling of coordinates with extreme precision."""
-        import uuid
 
         data = {
             "name": f"ST_{str(uuid.uuid4())[:8]}",
@@ -839,7 +833,6 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
 
     def test_empty_description(self) -> None:
         """Test station creation with empty description."""
-        import uuid
 
         data = {
             "name": f"ST_{str(uuid.uuid4())[:8]}",
@@ -872,7 +865,9 @@ class TestStationCrossProjectSecurity(BaseAPIProjectTestCase):
         self.other_station = StationFactory.create(project=self.other_project)
 
     def test_cannot_access_station_from_different_project(self) -> None:
-        """Test that users cannot access stations from projects they don't have permission for."""
+        """Test that users cannot access stations from projects they don't have
+        permission for."""
+
         # User has no permissions on other_project
         response = self.client.get(
             reverse("api:v1:station-detail", kwargs={"id": self.other_station.id}),
@@ -882,7 +877,9 @@ class TestStationCrossProjectSecurity(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_cannot_update_station_from_different_project(self) -> None:
-        """Test that users cannot update stations from projects they don't have permission for."""
+        """Test that users cannot update stations from projects they don't have
+        permission for."""
+
         data = {"name": "Hacked Station"}
 
         response = self.client.patch(
@@ -895,7 +892,9 @@ class TestStationCrossProjectSecurity(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_cannot_delete_station_from_different_project(self) -> None:
-        """Test that users cannot delete stations from projects they don't have permission for."""
+        """Test that users cannot delete stations from projects they don't have
+        permission for."""
+
         response = self.client.delete(
             reverse("api:v1:station-detail", kwargs={"id": self.other_station.id}),
             headers={"authorization": self.auth},
@@ -945,7 +944,7 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
             "Station αβγ",
             "駅 🚉",
             "Станция №1",
-            "محطة ١",
+            "محطة ١",  # noqa: RUF001
             "स्टेशन १",
         ]
 
@@ -971,7 +970,6 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
 
     def test_special_characters_in_names(self) -> None:
         """Test station names with special characters."""
-        import uuid
 
         special_names = [
             "ST-001",
@@ -1009,7 +1007,6 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
 
     def test_xss_injection_attempts(self) -> None:
         """Test that potential XSS payloads are handled safely."""
-        import uuid
 
         xss_payloads = [
             '<script>alert("XSS")</script>',
@@ -1045,7 +1042,6 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
 
     def test_random_coordinate_values(self) -> None:
         """Test various random coordinate values."""
-        import uuid
 
         test_coords = [
             (0, 0),  # Null Island
@@ -1083,9 +1079,8 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
         self.auth = self.header_prefix + self.token.key
 
     def test_coordinate_rounding_on_create(self) -> None:
-        """Test that coordinates are properly rounded to 7 decimal places on creation."""
-        import uuid
-
+        """Test that coordinates are properly rounded to 7 decimal places on
+        creation."""
         data = {
             "name": f"RoundTest_{str(uuid.uuid4())[:8]}",
             "description": "Coordinate rounding test",
@@ -1110,7 +1105,6 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
 
     def test_coordinate_rounding_preserves_precision_within_limit(self) -> None:
         """Test that coordinates with <=7 decimal places are preserved exactly."""
-        import uuid
 
         data = {
             "name": f"PrecisionTest_{str(uuid.uuid4())[:8]}",
@@ -1163,7 +1157,6 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
 
     def test_extreme_coordinate_values_with_rounding(self) -> None:
         """Test rounding with extreme but valid coordinate values."""
-        import uuid
 
         extreme_coords = [
             ("89.99999999", "179.99999999"),  # Near max values
@@ -1191,8 +1184,8 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             assert response.status_code == status.HTTP_201_CREATED
 
     def test_negative_coordinates_with_many_decimals(self) -> None:
-        """Test that negative coordinates with many decimal places are handled correctly."""
-        import uuid
+        """Test that negative coordinates with many decimal places are handled
+        correctly."""
 
         data = {
             "name": f"NegativeTest_{str(uuid.uuid4())[:8]}",
@@ -1218,7 +1211,6 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
 
     def test_scientific_notation_coordinates(self) -> None:
         """Test that coordinates in scientific notation are handled."""
-        import uuid
 
         data = {
             "name": f"SciNotation_{str(uuid.uuid4())[:8]}",
@@ -1244,7 +1236,6 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
 
     def test_coordinate_rounding_boundary_cases(self) -> None:
         """Test coordinate rounding at the 7-decimal boundary."""
-        import uuid
 
         # Test cases where the 8th decimal determines rounding
         test_cases = [
@@ -1275,12 +1266,12 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             assert response.status_code == status.HTTP_201_CREATED
             station_data = response.data["data"]["station"]
             assert station_data["latitude"] == expected, (
-                f"Input {input_val} should round to {expected}, got {station_data['latitude']}"
+                f"Input {input_val} should round to {expected}, got "
+                f"{station_data['latitude']}"
             )
 
     def test_coordinate_total_digits_validation(self) -> None:
         """Test that coordinates with too many total digits (>10) are handled."""
-        import uuid
 
         data = {
             "name": f"TotalDigits_{str(uuid.uuid4())[:8]}",
@@ -1303,7 +1294,6 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
 
     def test_null_coordinates_not_affected(self) -> None:
         """Test that null/None coordinates are properly rejected."""
-        import uuid
 
         data = {
             "name": f"NullCoords_{str(uuid.uuid4())[:8]}",

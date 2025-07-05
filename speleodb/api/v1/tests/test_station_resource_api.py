@@ -13,6 +13,7 @@ from rest_framework import status
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.factories import NoteStationResourceFactory
 from speleodb.api.v1.tests.factories import PhotoStationResourceFactory
+from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SketchStationResourceFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.surveys.models import PermissionLevel
@@ -121,9 +122,9 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
 
     def test_resource_wrong_station(self) -> None:
-        """Test that users cannot create resources on stations from projects they don't have access to."""
+        """Test that users cannot create resources on stations from projects they don't
+        have access to."""
         # Create another project and station that the user doesn't have access to
-        from speleodb.api.v1.tests.factories import ProjectFactory
 
         other_project = ProjectFactory.create()  # No permissions granted to self.user
         other_station = StationFactory.create(project=other_project)
@@ -167,7 +168,10 @@ class TestStationResourceCRUD(BaseAPIProjectTestCase):
             "resource_type": "note",
             "title": "Cave Survey Notes",
             "description": "Detailed observations from the survey",
-            "text_content": "The cave entrance is approximately 2m wide and 1.5m high. Temperature is constant at around 12°C.",
+            "text_content": (
+                "The cave entrance is approximately 2m wide and 1.5m high. Temperature "
+                "is constant at around 12°C."
+            ),
         }
 
         auth = self.header_prefix + self.token.key
@@ -191,7 +195,7 @@ class TestStationResourceCRUD(BaseAPIProjectTestCase):
         svg_content = """<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
             <circle cx="100" cy="100" r="50" fill="blue" stroke="black" stroke-width="2"/>
             <text x="100" y="105" text-anchor="middle" fill="white" font-size="14">Cave</text>
-        </svg>"""
+        </svg>"""  # noqa: E501
 
         data = {
             "station_id": str(self.station.id),
@@ -268,7 +272,7 @@ class TestStationResourceCRUD(BaseAPIProjectTestCase):
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data["data"]["resources"]) == 3
+        assert len(response.data["data"]["resources"]) == 3  # noqa: PLR2004
 
         # Verify all resources are present (without depending on order)
         response_resource_ids = {r["id"] for r in response.data["data"]["resources"]}
@@ -469,7 +473,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
     def test_file_upload_with_checksum_verification(self) -> None:
         """Test file upload with SHA256 checksum verification."""
         # Create a test file with known content
-        test_content = b"This is a test file for checksum verification. It contains specific data that will produce a predictable SHA256 hash."
+        test_content = b"This is a test file for checksum verification. It contains specific data that will produce a predictable SHA256 hash."  # noqa: E501
         expected_sha256 = hashlib.sha256(test_content).hexdigest()
 
         uploaded_file = SimpleUploadedFile(
@@ -650,7 +654,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             {
                 "resource_type": "sketch",
                 "title": "SVG Test",
-                "text_content": '<svg><rect x="0" y="0" width="100" height="100"/></svg>',
+                "text_content": '<svg><rect x="0" y="0" width="100" height="100"/></svg>',  # noqa: E501
             },
             # Malformed SVG
             {

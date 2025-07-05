@@ -8,12 +8,12 @@ from speleodb.api.v1.views.resource import StationResourceViewSet
 urlpatterns = [
     # Resource CRUD
     path(
-        "resources/",
+        "",
         StationResourceViewSet.as_view({"get": "list", "post": "create"}),
         name="resource-list-create",
     ),
     path(
-        "resources/<uuid:id>/",
+        "<uuid:id>/",
         StationResourceViewSet.as_view(
             {
                 "get": "retrieve",

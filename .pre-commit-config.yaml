@@ -29,7 +29,7 @@ repos:
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.1
+    rev: v0.12.2
     hooks:
       # Linter
       - id: ruff
@@ -41,13 +41,13 @@ repos:
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
-    rev: 0.7.18
+    rev: 0.7.19
     hooks:
       - id: uv-lock
         args: ["--upgrade"]
 
   - repo: https://github.com/pycqa/bandit
-    rev: 1.8.5
+    rev: 1.8.6
     hooks:
       - id: bandit
         args: ["-iii", "-ll"]
@@ -67,13 +67,6 @@ repos:
         language: system
         types: [python] # hook only runs if a python file is staged
         pass_filenames: false
-
-  - repo: https://github.com/thoughtworks/talisman
-    rev: "v1.37.0" # Update me!
-    hooks:
-      # both pre-commit and pre-push supported
-      # -   id: talisman-push
-      - id: talisman-commit
 
   # Use a Local Workflow to ensure that `mypy` picks up all the local up-to-date dependencies
   - repo: local

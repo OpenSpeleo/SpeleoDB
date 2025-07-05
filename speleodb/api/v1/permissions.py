@@ -52,7 +52,8 @@ class BaseProjectAccessLevel(permissions.BasePermission):
 
 
 class BaseStationAccessLevel(permissions.BasePermission):
-    """Base permission class for Station objects that checks permissions on the station's project."""
+    """Base permission class for Station objects that checks permissions on the
+    station's project."""
 
     MIN_ACCESS_LEVEL: int
 

@@ -9,19 +9,19 @@ from speleodb.api.v1.views.media_storage import MediaSignedUrlView
 urlpatterns = [
     # Media File Upload
     path(
-        "media/upload/",
+        "upload/",
         MediaPresignedUploadView.as_view(),
         name="media-upload",
     ),
     # Media Signed URL Generation (deprecated - use secure-access instead)
     path(
-        "media/signed-url/",
+        "signed-url/",
         MediaSignedUrlView.as_view(),
         name="media-signed-url",
     ),
     # Media Secure File Access (recommended)
     path(
-        "media/secure-access/",
+        "secure-access/",
         MediaSecureAccessView.as_view(),
         name="media-secure-access",
     ),

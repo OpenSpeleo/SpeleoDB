@@ -14,6 +14,7 @@ from django_countries import countries
 from factory import Faker
 from factory import post_generation
 from factory.django import DjangoModelFactory
+from faker import Faker as FakerLib
 from rest_framework.authtoken.models import Token
 
 from speleodb.surveys.models import PermissionLevel
@@ -269,11 +270,9 @@ class StationResourceFactory(DjangoModelFactory):
         if self.resource_type == StationResource.ResourceType.NOTE:
             # Only set text_content if it's not already set
             if not self.text_content:
-                # Use faker directly without instantiation
-                from faker import Faker as FakerLib
-
                 fake = FakerLib()
                 self.text_content = fake.text(max_nb_chars=1000)
+
         elif self.resource_type == StationResource.ResourceType.SKETCH:
             # Only set text_content if it's not already set
             if not self.text_content:
@@ -283,7 +282,7 @@ class StationResourceFactory(DjangoModelFactory):
                     <path d="M50 100 L250 100 M150 50 L150 150" stroke="#38bdf8" stroke-width="3" fill="none"/>
                     <circle cx="150" cy="100" r="8" fill="#f59e0b"/>
                     <text x="160" y="105" fill="#e2e8f0" font-size="12">Station</text>
-                </svg>"""
+                </svg>"""  # noqa: E501
 
     @classmethod
     def create_photo(cls, station, **kwargs):
@@ -343,13 +342,12 @@ Good visibility in all directions."""
     @classmethod
     def create_demo_resources(cls, station):
         """Create a complete set of demo resources for a station."""
-        resources = [
+        return [
             cls.create_photo(station),
             cls.create_note(station),
             cls.create_sketch(station),
             cls.create_video(station),
         ]
-        return resources
 
 
 class PhotoStationResourceFactory(StationResourceFactory):
@@ -373,7 +371,10 @@ class SketchStationResourceFactory(StationResourceFactory):
 
     resource_type = StationResource.ResourceType.SKETCH
     title = factory.LazyAttribute(lambda obj: f"Sketch - {obj.station.name}")
-    text_content = '<svg width="200" height="200"><circle cx="100" cy="100" r="50" fill="blue"/><text x="100" y="100" text-anchor="middle" fill="white">Cave</text></svg>'
+    text_content = (
+        '<svg width="200" height="200"><circle cx="100" cy="100" r="50" fill="blue"/>'
+        '<text x="100" y="100" text-anchor="middle" fill="white">Cave</text></svg>'
+    )
 
 
 class NoteStationResourceFactory(StationResourceFactory):

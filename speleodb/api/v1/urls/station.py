@@ -9,12 +9,12 @@ from speleodb.api.v1.views.station import StationViewSet
 urlpatterns = [
     # Station CRUD
     path(
-        "stations/",
+        "",
         StationViewSet.as_view({"get": "list", "post": "create"}),
         name="station-list-create",
     ),
     path(
-        "stations/<uuid:id>/",
+        "<uuid:id>/",
         StationViewSet.as_view(
             {
                 "get": "retrieve",
@@ -27,7 +27,7 @@ urlpatterns = [
     ),
     # Station map endpoint with query parameter filtering
     path(
-        "stations/map/",
+        "map/",
         ProjectStationListView.as_view(),
         name="stations-map",
     ),

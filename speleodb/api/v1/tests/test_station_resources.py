@@ -19,7 +19,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         """Set up test data."""
         super().setUp()
         # Set up authentication
-        self.auth = self.header_prefix + self.token.key
+        self.auth = f"{self.header_prefix}{self.token.key}"
 
         # Give user permission to the project
         self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
@@ -67,20 +67,20 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             f"{self.resource_url}?station_id={self.station.id}",
             headers={"authorization": self.auth},
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["success"])
-        self.assertEqual(response.data["data"]["resources"], [])
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
+        assert response.data["data"]["resources"] == []
 
     def test_list_resources_with_data(self):
         """Test listing resources when they exist."""
         # Create some resources
-        resource1 = self.station.resources.create(
+        self.station.resources.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="Test Note",
             text_content="Some notes",
             created_by=self.user,
         )
-        resource2 = self.station.resources.create(
+        self.station.resources.create(
             resource_type=StationResource.ResourceType.PHOTO,
             title="Test Photo",
             file=self._create_test_image(),
@@ -91,15 +91,15 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             f"{self.resource_url}?station_id={self.station.id}",
             headers={"authorization": self.auth},
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["success"])
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
         resources = response.data["data"]["resources"]
-        self.assertEqual(len(resources), 2)
+        assert len(resources) == 2  # noqa: PLR2004
 
         # Check ordering - should be ordered by most recent modified date first
         # Since resource2 was created after resource1, it should appear first
-        self.assertEqual(resources[0]["title"], "Test Photo")
-        self.assertEqual(resources[1]["title"], "Test Note")
+        assert resources[0]["title"] == "Test Photo"
+        assert resources[1]["title"] == "Test Note"
 
     def test_create_photo_resource(self):
         """Test creating a photo resource."""
@@ -118,14 +118,14 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             format="multipart",
             headers={"authorization": self.auth},
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data["success"])
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["success"]
 
         resource = response.data["data"]["resource"]
-        self.assertEqual(resource["title"], "Cave Entrance Photo")
-        self.assertEqual(resource["resource_type"], StationResource.ResourceType.PHOTO)
-        self.assertIsNotNone(resource["file_url"])
-        self.assertEqual(resource["created_by_email"], self.user.email)
+        assert resource["title"] == "Cave Entrance Photo"
+        assert resource["resource_type"] == StationResource.ResourceType.PHOTO
+        assert resource["file_url"] is not None
+        assert resource["created_by_email"] == self.user.email
 
     def test_create_video_resource(self):
         """Test creating a video resource."""
@@ -151,11 +151,11 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             format="multipart",
             headers={"authorization": self.auth},
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data["success"])
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["success"]
 
         resource = response.data["data"]["resource"]
-        self.assertEqual(resource["resource_type"], StationResource.ResourceType.VIDEO)
+        assert resource["resource_type"] == StationResource.ResourceType.VIDEO
 
     def test_create_note_resource(self):
         """Test creating a note resource."""
@@ -170,13 +170,13 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         response = self.client.post(
             self.resource_url, data, format="json", headers={"authorization": self.auth}
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data["success"])
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["success"]
 
         resource = response.data["data"]["resource"]
-        self.assertEqual(resource["resource_type"], StationResource.ResourceType.NOTE)
-        self.assertEqual(resource["text_content"], data["text_content"])
-        self.assertIsNone(resource["file_url"])
+        assert resource["resource_type"] == StationResource.ResourceType.NOTE
+        assert resource["text_content"] == data["text_content"]
+        assert resource["file_url"] is None
 
     def test_create_sketch_resource(self):
         """Test creating a sketch resource."""
@@ -192,12 +192,12 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         response = self.client.post(
             self.resource_url, data, format="json", headers={"authorization": self.auth}
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data["success"])
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["success"]
 
         resource = response.data["data"]["resource"]
-        self.assertEqual(resource["resource_type"], StationResource.ResourceType.SKETCH)
-        self.assertEqual(resource["text_content"], svg_content)
+        assert resource["resource_type"] == StationResource.ResourceType.SKETCH
+        assert resource["text_content"] == svg_content
 
     def test_create_document_resource(self):
         """Test creating a document resource."""
@@ -216,13 +216,11 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             format="multipart",
             headers={"authorization": self.auth},
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data["success"])
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["success"]
 
         resource = response.data["data"]["resource"]
-        self.assertEqual(
-            resource["resource_type"], StationResource.ResourceType.DOCUMENT
-        )
+        assert resource["resource_type"] == StationResource.ResourceType.DOCUMENT
 
     def test_create_resource_missing_file(self):
         """Test creating a file-based resource without a file."""
@@ -236,9 +234,9 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         response = self.client.post(
             self.resource_url, data, format="json", headers={"authorization": self.auth}
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(response.data["success"])
-        self.assertIn("requires a file", str(response.data["errors"]))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not response.data["success"]
+        assert "requires a file" in str(response.data["errors"])
 
     def test_create_resource_missing_text(self):
         """Test creating a text-based resource without text content."""
@@ -252,9 +250,9 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         response = self.client.post(
             self.resource_url, data, format="json", headers={"authorization": self.auth}
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(response.data["success"])
-        self.assertIn("requires text content", str(response.data["errors"]))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not response.data["success"]
+        assert "requires text content" in str(response.data["errors"])
 
     def test_retrieve_resource(self):
         """Test retrieving a single resource."""
@@ -267,12 +265,12 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         url = f"/api/v1/resources/{resource.id}/"
         response = self.client.get(url, headers={"authorization": self.auth})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["success"])
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
 
         data = response.data["data"]["resource"]
-        self.assertEqual(data["id"], str(resource.id))
-        self.assertEqual(data["title"], "Test Note")
+        assert data["id"] == str(resource.id)
+        assert data["title"] == "Test Note"
 
     def test_update_resource(self):
         """Test updating a resource."""
@@ -293,13 +291,13 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         response = self.client.patch(
             url, update_data, format="json", headers={"authorization": self.auth}
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["success"])
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
 
         updated = response.data["data"]["resource"]
-        self.assertEqual(updated["title"], "New Title")
-        self.assertEqual(updated["description"], "Updated description")
-        self.assertEqual(updated["text_content"], "New content")
+        assert updated["title"] == "New Title"
+        assert updated["description"] == "Updated description"
+        assert updated["text_content"] == "New content"
 
     def test_update_resource_file(self):
         """Test updating a file resource with a new file."""
@@ -322,12 +320,12 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         response = self.client.patch(
             url, update_data, format="multipart", headers={"authorization": self.auth}
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["success"])
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
 
         updated = response.data["data"]["resource"]
-        self.assertEqual(updated["title"], "New Photo")
-        self.assertIn("new.jpg", updated["file_url"])
+        assert updated["title"] == "New Photo"
+        assert "new.jpg" in updated["file_url"]
 
     def test_delete_resource(self):
         """Test deleting a resource."""
@@ -340,11 +338,11 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         url = f"/api/v1/resources/{resource.id}/"
         response = self.client.delete(url, headers={"authorization": self.auth})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["success"])
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
 
         # Verify deletion
-        self.assertFalse(StationResource.objects.filter(id=resource.id).exists())
+        assert not StationResource.objects.filter(id=resource.id).exists()
 
     def test_delete_resource_with_file(self):
         """Test deleting a resource also removes the file."""
@@ -358,10 +356,10 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         url = f"/api/v1/resources/{resource.id}/"
         response = self.client.delete(url, headers={"authorization": self.auth})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert response.status_code == status.HTTP_200_OK
 
         # Verify resource is deleted
-        self.assertFalse(StationResource.objects.filter(id=resource_id).exists())
+        assert not StationResource.objects.filter(id=resource_id).exists()
 
     def test_resource_permissions_read_only(self):
         """Test read-only user cannot modify resources."""
@@ -373,7 +371,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             f"{self.resource_url}?station_id={self.station.id}",
             headers={"authorization": self.auth},
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert response.status_code == status.HTTP_200_OK
 
         # Cannot create
         data = {
@@ -385,7 +383,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         response = self.client.post(
             self.resource_url, data, format="json", headers={"authorization": self.auth}
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Create resource as admin for further tests
         resource = self.station.resources.create(
@@ -398,34 +396,34 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         # Can retrieve
         response = self.client.get(url, headers={"authorization": self.auth})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert response.status_code == status.HTTP_200_OK
 
         # Cannot update
         response = self.client.patch(
             url, {"title": "New"}, format="json", headers={"authorization": self.auth}
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Cannot delete
         response = self.client.delete(url, headers={"authorization": self.auth})
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_resource_ordering(self):
         """Test resources are returned in correct order by modified date."""
         # Create resources with different modified times
-        r3 = self.station.resources.create(
+        self.station.resources.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="Third",
             text_content="3",
             created_by=self.user,
         )
-        r1 = self.station.resources.create(
+        self.station.resources.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="First",
             text_content="1",
             created_by=self.user,
         )
-        r2 = self.station.resources.create(
+        self.station.resources.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="Second",
             text_content="2",
@@ -440,6 +438,6 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         # Resources should be ordered by most recent modified date
         # Since r2 was created last, it should be first
-        self.assertEqual(resources[0]["title"], "Second")
-        self.assertEqual(resources[1]["title"], "First")
-        self.assertEqual(resources[2]["title"], "Third")
+        assert resources[0]["title"] == "Second"
+        assert resources[1]["title"] == "First"
+        assert resources[2]["title"] == "Third"

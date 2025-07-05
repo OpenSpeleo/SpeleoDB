@@ -2,21 +2,16 @@
 
 from __future__ import annotations
 
+import uuid
+from pathlib import Path
+from typing import Any
+
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
+from storages.backends.s3boto3 import S3Boto3Storage
 
 # Only import S3 storage when USE_S3 is True
-if getattr(settings, "USE_S3", False):
-    try:
-        from storages.backends.s3boto3 import S3Boto3Storage
-
-        HAS_S3_STORAGE = True
-    except ImportError:
-        # Fall back to local storage if django-storages is not available
-        HAS_S3_STORAGE = False
-        print("Warning: django-storages not installed, falling back to local storage")
-else:
-    HAS_S3_STORAGE = False
+HAS_S3_STORAGE = getattr(settings, "USE_S3", False)
 
 
 class MediaStorage:
@@ -60,9 +55,6 @@ if HAS_S3_STORAGE:
 
         def get_available_name(self, name: str, max_length=None) -> str:
             """Generate unique filename to avoid conflicts."""
-            import uuid
-            from pathlib import Path
-
             # Generate unique filename
             path = Path(name)
             unique_name = f"{uuid.uuid4().hex}_{path.name}"
@@ -73,43 +65,42 @@ else:
     class S3MediaStorage:
         def __init__(self):
             raise ImportError(
-                "S3 storage not available - USE_S3 is False or django-storages not installed"
+                "S3 storage not available - USE_S3 is False or django-storages not "
+                "installed"
             )
 
     class PublicMediaStorage:
         def __init__(self):
             raise ImportError(
-                "S3 storage not available - USE_S3 is False or django-storages not installed"
+                "S3 storage not available - USE_S3 is False or django-storages not "
+                "installed"
             )
 
     class StationResourceStorage:
         def __init__(self):
             raise ImportError(
-                "S3 storage not available - USE_S3 is False or django-storages not installed"
+                "S3 storage not available - USE_S3 is False or django-storages not "
+                "installed"
             )
 
 
 class LocalStationResourceStorage(FileSystemStorage):
     """Local file storage for station resources during development."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         # Set location to a subdirectory for station resources
         if hasattr(settings, "MEDIA_ROOT"):
             location = f"{settings.MEDIA_ROOT}/stations/resources"
         else:
             location = "stations/resources"
 
-        super().__init__(location=location, *args, **kwargs)
+        super().__init__(*args, location=location, **kwargs)
 
         # Ensure directory exists
-        import os
+        Path(self.location).mkdir(parents=True, exist_ok=True)
 
-        os.makedirs(self.location, exist_ok=True)
-
-    def _save(self, name: str, content):
+    def _save(self, name: str, content) -> str:
         """Save file with unique name to avoid conflicts."""
-        import uuid
-        from pathlib import Path
 
         # Generate unique filename for local storage too
         path = Path(name)

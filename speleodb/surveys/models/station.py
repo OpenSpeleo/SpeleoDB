@@ -4,24 +4,30 @@ from __future__ import annotations
 
 import decimal
 import uuid
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import Self
 
+from django.conf import settings
 from django.core.validators import FileExtensionValidator
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
 
+if TYPE_CHECKING:
+    from django.core.files.storage import Storage
 
-def get_station_resource_storage():
+
+def get_station_resource_storage() -> Storage:
     """Get the appropriate storage backend for station resources."""
-    from django.conf import settings
-
     if getattr(settings, "USE_S3", False):
-        from speleodb.utils.storages import StationResourceStorage
+        from speleodb.utils.storages import StationResourceStorage  # noqa: PLC0415
 
-        return StationResourceStorage()
-    from speleodb.utils.storages import LocalStationResourceStorage
+        return StationResourceStorage()  # type: ignore[no-untyped-call]
 
-    return LocalStationResourceStorage()
+    from speleodb.utils.storages import LocalStationResourceStorage  # noqa: PLC0415
+
+    return LocalStationResourceStorage()  # type: ignore[no-untyped-call]
 
 
 class Station(models.Model):
@@ -197,16 +203,18 @@ class StationResource(models.Model):
         ordering = ["station", "-modified_date"]
 
     def __str__(self) -> str:
-        return f"{self.station.name} - {self.get_resource_type_display()}: {self.title}"
+        # https://docs.djangoproject.com/en/5.2/ref/models/instances/#django.db.models.Model.get_FOO_display
+        return f"{self.station.name} - {self.get_resource_type_display()}: {self.title}"  # pyright: ignore[reportAttributeAccessIssue]
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Override save to prevent resource_type from being changed."""
         # If this is an update (has pk) and resource_type is being changed
         if self.pk and hasattr(self, "_loaded_resource_type"):
-            if self._loaded_resource_type != self.resource_type:
+            if self._loaded_resource_type != self.resource_type:  # type: ignore[has-type]
                 raise ValueError(
-                    f"Cannot change resource type from '{self._loaded_resource_type}' to '{self.resource_type}'. "
-                    "Resource type is immutable after creation."
+                    f"Cannot change resource type from '{self._loaded_resource_type}' "  # type: ignore[has-type]
+                    f"to '{self.resource_type}'. Resource type is immutable after "
+                    "creation."
                 )
 
         super().save(*args, **kwargs)
@@ -215,11 +223,11 @@ class StationResource(models.Model):
         self._loaded_resource_type = self.resource_type
 
     @classmethod
-    def from_db(cls, db, field_names, values):
+    def from_db(cls, db: Any, field_names: Any, values: Any) -> Self:
         """Store the original resource_type when loading from database."""
         instance = super().from_db(db, field_names, values)
         # Store the loaded resource_type to check against later
-        instance._loaded_resource_type = instance.resource_type
+        instance._loaded_resource_type = instance.resource_type  # noqa: SLF001
         return instance
 
     @property
@@ -244,15 +252,14 @@ class StationResource(models.Model):
         if not self.file:
             return None
 
-        from django.conf import settings
-
         if getattr(settings, "USE_S3", False):
             # Return public URL for S3 (no signing needed)
             try:
                 # Use the storage's URL method which will return public URL
-                return self.file.url
-            except Exception:
+                return self.file.url  # type: ignore[no-any-return]
+            except AttributeError:
                 return None
+
         else:
             # Regular file URL for local storage
             return self.file.url if self.file else None

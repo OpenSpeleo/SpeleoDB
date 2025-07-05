@@ -22,6 +22,7 @@ from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
+    from rest_framework.compat import QuerySet
     from rest_framework.request import Request
     from rest_framework.response import Response
 
@@ -43,7 +44,7 @@ class StationResourceViewSet(ModelViewSet, SDBAPIViewMixin):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     lookup_field = "id"
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[StationResource, StationResource]:
         """Get all resources the user has access to."""
         # Start with all resources
         queryset = StationResource.objects.all()
@@ -52,7 +53,9 @@ class StationResourceViewSet(ModelViewSet, SDBAPIViewMixin):
         # For now, permissions are checked in the views
         return queryset.select_related("station", "station__project")
 
-    def get_permissions(self):
+    def get_permissions(  # type: ignore[override]
+        self,
+    ) -> list[StationUserHasWriteAccess] | list[StationUserHasReadAccess]:
         """Set permissions based on action."""
         if self.action in ["create", "update", "partial_update", "destroy"]:
             return [StationUserHasWriteAccess()]

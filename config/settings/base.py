@@ -342,10 +342,7 @@ else:
     LOCAL_MEDIA_ROOT = env("LOCAL_MEDIA_ROOT", default=None)
     if LOCAL_MEDIA_ROOT:
         MEDIA_ROOT = LOCAL_MEDIA_ROOT
-        # Ensure the directory exists
-        import os
-
-        os.makedirs(MEDIA_ROOT, exist_ok=True)
+        Path(MEDIA_ROOT).mkdir(parents=True, exist_ok=True)
 
 # TEMPLATES
 # ------------------------------------------------------------------------------

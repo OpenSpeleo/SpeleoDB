@@ -11,6 +11,11 @@ Test Django settings for SpeleoDB project.
 
 from __future__ import annotations
 
+import atexit
+import shutil
+import tempfile
+from pathlib import Path
+
 from .base import *  # noqa: F403
 from .base import INSTALLED_APPS
 from .base import TEMPLATES
@@ -53,9 +58,6 @@ INSTALLED_APPS += ["django_extensions"]
 # FILE STORAGE FOR TESTS
 # ------------------------------------------------------------------------------
 # Use temporary directory for tests
-import os
-import tempfile
-
 # Respect environment variable for S3 usage in tests
 USE_S3 = env.bool("USE_S3", default=False)
 
@@ -70,17 +72,15 @@ if not USE_S3:
 
 # Ensure the directory exists for local storage
 if not USE_S3:
-    os.makedirs(MEDIA_ROOT, exist_ok=True)
+    Path(MEDIA_ROOT).mkdir(parents=True, exist_ok=True)
 
 # Clean up temp directory after tests (handled by pytest fixtures)
-import atexit
 
 
 def cleanup_temp_media():
     """Clean up temporary media directory."""
-    import shutil
 
-    if os.path.exists(TEMP_MEDIA_ROOT):
+    if Path(TEMP_MEDIA_ROOT).exists():
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
 

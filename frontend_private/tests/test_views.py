@@ -209,8 +209,9 @@ class ProjectViewsTest(BaseTestCase):
             "project_revision_explorer",
             {
                 "project_id": self.project.id,
-                "hexsha": hashlib.sha1(  # noqa: S324
-                    str(random.random()).encode("utf-8")
+                "hexsha": hashlib.sha1(
+                    str(random.random()).encode("utf-8"),
+                    usedforsecurity=False,
                 ).hexdigest(),
             },
         )

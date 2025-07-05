@@ -28,6 +28,7 @@ from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
+    from rest_framework.compat import QuerySet
     from rest_framework.request import Request
     from rest_framework.response import Response
 
@@ -68,11 +69,6 @@ class StationViewSet(ModelViewSet, SDBAPIViewMixin):
         if self.action in ["create", "update", "partial_update", "destroy"]:
             return [StationUserHasWriteAccess()]
         return [StationUserHasReadAccess()]
-
-    def get_serializer_context(self) -> dict[str, Any]:
-        """Add request to serializer context."""
-        context = super().get_serializer_context()
-        return context
 
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List stations, optionally filtered by project."""
@@ -126,7 +122,11 @@ class StationViewSet(ModelViewSet, SDBAPIViewMixin):
                         {
                             "errors": {
                                 "name": [
-                                    f"A station with the name '{request.data.get('name', '')}' already exists in this project."
+                                    (
+                                        f"A station with the name "
+                                        f"'{request.data.get('name', '')}' already "
+                                        "exists in this project."
+                                    )
                                 ]
                             }
                         },
@@ -164,7 +164,10 @@ class StationViewSet(ModelViewSet, SDBAPIViewMixin):
                     {
                         "errors": {
                             "name": [
-                                f"A station with the name '{station_name}' already exists in the target project."
+                                (
+                                    f"A station with the name '{station_name}' already "
+                                    "exists in the target project."
+                                )
                             ]
                         }
                     },
@@ -211,13 +214,15 @@ class StationResourceViewSet(ModelViewSet, SDBAPIViewMixin):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     lookup_field = "id"
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[StationResource, StationResource]:
         """Get resources for the specified station."""
         station_id = self.kwargs.get("station_id")
         station = get_object_or_404(Station, id=station_id)
         return StationResource.objects.filter(station=station)
 
-    def get_permissions(self):
+    def get_permissions(
+        self,
+    ) -> list[StationUserHasWriteAccess] | list[StationUserHasReadAccess]:
         """Set permissions based on action."""
         if self.action in ["create", "update", "partial_update", "destroy"]:
             return [StationUserHasWriteAccess()]
