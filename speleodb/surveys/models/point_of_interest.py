@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import decimal
 import uuid
 
 from django.core.validators import MaxValueValidator
@@ -40,20 +39,14 @@ class PointOfInterest(models.Model):
         max_digits=10,
         decimal_places=7,
         help_text="POI latitude coordinate",
-        validators=[
-            MinValueValidator(decimal.Decimal("-90.0")),
-            MaxValueValidator(decimal.Decimal("90.0")),
-        ],
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
     )
 
     longitude = models.DecimalField(
         max_digits=10,
         decimal_places=7,
         help_text="POI longitude coordinate",
-        validators=[
-            MinValueValidator(decimal.Decimal("-180.0")),
-            MaxValueValidator(decimal.Decimal("180.0")),
-        ],
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
     )
 
     # Metadata

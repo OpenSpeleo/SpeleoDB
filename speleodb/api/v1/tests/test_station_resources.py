@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for Station Resource API endpoints."""
 
-from decimal import Decimal
-
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 
@@ -15,7 +13,7 @@ from speleodb.surveys.models import StationResource
 class TestStationResourceAPI(BaseAPIProjectTestCase):
     """Test cases for Station Resource CRUD operations."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test data."""
         super().setUp()
         # Set up authentication
@@ -28,13 +26,15 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         self.station = Station.objects.create(
             project=self.project,
             name="Test Station",
-            latitude=Decimal("45.1234567"),
-            longitude=Decimal("-122.7654321"),
+            latitude=45.1234567,
+            longitude=-122.7654321,
             created_by=self.user,
         )
         self.resource_url = "/api/v1/resources/"
 
-    def _create_test_image(self, name="test.jpg", size=(100, 100)):
+    def _create_test_image(
+        self, name: str = "test.jpg", size: tuple[int, int] = (100, 100)
+    ) -> SimpleUploadedFile:
         """Create a test image file."""
         # Create a minimal valid JPEG file (1x1 red pixel)
         jpeg_content = (
@@ -57,11 +57,13 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         )
         return SimpleUploadedFile(name, jpeg_content, content_type="image/jpeg")
 
-    def _create_test_text_file(self, name="test.txt", content="Test content"):
+    def _create_test_text_file(
+        self, name: str = "test.txt", content: str = "Test content"
+    ) -> SimpleUploadedFile:
         """Create a test text file."""
         return SimpleUploadedFile(name, content.encode(), content_type="text/plain")
 
-    def test_list_resources_empty(self):
+    def test_list_resources_empty(self) -> None:
         """Test listing resources when none exist."""
         response = self.client.get(
             f"{self.resource_url}?station_id={self.station.id}",
@@ -71,7 +73,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.data["success"]
         assert response.data["data"]["resources"] == []
 
-    def test_list_resources_with_data(self):
+    def test_list_resources_with_data(self) -> None:
         """Test listing resources when they exist."""
         # Create some resources
         self.station.resources.create(
@@ -101,7 +103,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert resources[0]["title"] == "Test Photo"
         assert resources[1]["title"] == "Test Note"
 
-    def test_create_photo_resource(self):
+    def test_create_photo_resource(self) -> None:
         """Test creating a photo resource."""
         image_file = self._create_test_image()
         data = {
@@ -127,7 +129,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert resource["file_url"] is not None
         assert resource["created_by_email"] == self.user.email
 
-    def test_create_video_resource(self):
+    def test_create_video_resource(self) -> None:
         """Test creating a video resource."""
         # Create a minimal valid MP4 file
         video_content = (
@@ -157,7 +159,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         resource = response.data["data"]["resource"]
         assert resource["resource_type"] == StationResource.ResourceType.VIDEO
 
-    def test_create_note_resource(self):
+    def test_create_note_resource(self) -> None:
         """Test creating a note resource."""
         data = {
             "station_id": str(self.station.id),
@@ -178,7 +180,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert resource["text_content"] == data["text_content"]
         assert resource["file_url"] is None
 
-    def test_create_sketch_resource(self):
+    def test_create_sketch_resource(self) -> None:
         """Test creating a sketch resource."""
         svg_content = '<svg><circle cx="50" cy="50" r="40" /></svg>'
         data = {
@@ -199,7 +201,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert resource["resource_type"] == StationResource.ResourceType.SKETCH
         assert resource["text_content"] == svg_content
 
-    def test_create_document_resource(self):
+    def test_create_document_resource(self) -> None:
         """Test creating a document resource."""
         doc_file = self._create_test_text_file("report.txt", "Cave survey report...")
         data = {
@@ -222,7 +224,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         resource = response.data["data"]["resource"]
         assert resource["resource_type"] == StationResource.ResourceType.DOCUMENT
 
-    def test_create_resource_missing_file(self):
+    def test_create_resource_missing_file(self) -> None:
         """Test creating a file-based resource without a file."""
         data = {
             "station_id": str(self.station.id),
@@ -238,7 +240,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert not response.data["success"]
         assert "requires a file" in str(response.data["errors"])
 
-    def test_create_resource_missing_text(self):
+    def test_create_resource_missing_text(self) -> None:
         """Test creating a text-based resource without text content."""
         data = {
             "station_id": str(self.station.id),
@@ -254,7 +256,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert not response.data["success"]
         assert "requires text content" in str(response.data["errors"])
 
-    def test_retrieve_resource(self):
+    def test_retrieve_resource(self) -> None:
         """Test retrieving a single resource."""
         resource = self.station.resources.create(
             resource_type=StationResource.ResourceType.NOTE,
@@ -272,7 +274,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert data["id"] == str(resource.id)
         assert data["title"] == "Test Note"
 
-    def test_update_resource(self):
+    def test_update_resource(self) -> None:
         """Test updating a resource."""
         resource = self.station.resources.create(
             resource_type=StationResource.ResourceType.NOTE,
@@ -299,7 +301,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert updated["description"] == "Updated description"
         assert updated["text_content"] == "New content"
 
-    def test_update_resource_file(self):
+    def test_update_resource_file(self) -> None:
         """Test updating a file resource with a new file."""
         # Create initial resource
         resource = self.station.resources.create(
@@ -327,7 +329,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert updated["title"] == "New Photo"
         assert "new.jpg" in updated["file_url"]
 
-    def test_delete_resource(self):
+    def test_delete_resource(self) -> None:
         """Test deleting a resource."""
         resource = self.station.resources.create(
             resource_type=StationResource.ResourceType.NOTE,
@@ -344,7 +346,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         # Verify deletion
         assert not StationResource.objects.filter(id=resource.id).exists()
 
-    def test_delete_resource_with_file(self):
+    def test_delete_resource_with_file(self) -> None:
         """Test deleting a resource also removes the file."""
         resource = self.station.resources.create(
             resource_type=StationResource.ResourceType.PHOTO,
@@ -361,7 +363,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         # Verify resource is deleted
         assert not StationResource.objects.filter(id=resource_id).exists()
 
-    def test_resource_permissions_read_only(self):
+    def test_resource_permissions_read_only(self) -> None:
         """Test read-only user cannot modify resources."""
         # Set user to read-only
         self.set_test_project_permission(PermissionLevel.READ_ONLY)
@@ -408,7 +410,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         response = self.client.delete(url, headers={"authorization": self.auth})
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_resource_ordering(self):
+    def test_resource_ordering(self) -> None:
         """Test resources are returned in correct order by modified date."""
         # Create resources with different modified times
         self.station.resources.create(

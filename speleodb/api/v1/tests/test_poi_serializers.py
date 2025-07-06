@@ -1,7 +1,6 @@
 """Tests for PointOfInterest serializers."""
-# mypy: disable-error-code="attr-defined"
 
-from decimal import Decimal
+from __future__ import annotations
 
 import pytest
 
@@ -30,8 +29,8 @@ class TestPointOfInterestSerializer:
         return PointOfInterest.objects.create(
             name="Test POI",
             description="Test description",
-            latitude=Decimal("45.123456"),
-            longitude=Decimal("-122.654321"),
+            latitude=45.123456,
+            longitude=-122.654321,
             created_by=user,
         )
 
@@ -43,8 +42,8 @@ class TestPointOfInterestSerializer:
         assert data["id"] == str(poi.id)
         assert data["name"] == "Test POI"
         assert data["description"] == "Test description"
-        assert data["latitude"] == "45.123456"
-        assert data["longitude"] == "-122.654321"
+        assert data["latitude"] == 45.123456  # noqa: PLR2004
+        assert data["longitude"] == -122.654321  # noqa: PLR2004
         assert data["created_by"] == poi.created_by.id
         assert data["created_by_email"] == "testuser@example.com"
         assert "creation_date" in data
@@ -72,8 +71,8 @@ class TestPointOfInterestSerializer:
 
         assert poi.name == "New POI"
         assert poi.description == "New description"
-        assert poi.latitude == Decimal("47.608013")
-        assert poi.longitude == Decimal("-122.335167")
+        assert poi.latitude == 47.608013  # noqa: PLR2004
+        assert poi.longitude == -122.335167  # noqa: PLR2004
         assert poi.created_by == user
 
     def test_deserialize_poi_update(self, poi: PointOfInterest) -> None:
@@ -92,8 +91,8 @@ class TestPointOfInterestSerializer:
 
         assert updated_poi.name == "Updated POI"
         assert updated_poi.description == "Updated description"
-        assert updated_poi.latitude == Decimal("48.0")
-        assert updated_poi.longitude == Decimal("-123.0")
+        assert updated_poi.latitude == 48.0  # noqa: PLR2004
+        assert updated_poi.longitude == -123.0  # noqa: PLR2004
 
     def test_validate_latitude_range(self) -> None:
         """Test latitude validation in serializer."""
@@ -200,8 +199,8 @@ class TestPointOfInterestListSerializer:
         return PointOfInterest.objects.create(
             name="List POI",
             description="This is a longer description that should not appear in view",
-            latitude=Decimal("45.123456"),
-            longitude=Decimal("-122.654321"),
+            latitude=45.123456,
+            longitude=-122.654321,
             created_by=user,
         )
 
@@ -226,21 +225,21 @@ class TestPointOfInterestListSerializer:
         # Verify values
         assert data["id"] == str(poi.id)
         assert data["name"] == "List POI"
-        assert data["latitude"] == "45.123456"
-        assert data["longitude"] == "-122.654321"
+        assert data["latitude"] == 45.123456  # noqa: PLR2004
+        assert data["longitude"] == -122.654321  # noqa: PLR2004
 
     def test_list_serializer_multiple_pois(self, user: User) -> None:
         """Test serializing multiple POIs for list view."""
         _ = PointOfInterest.objects.create(
             name="POI 1",
-            latitude=Decimal("45.0"),
-            longitude=Decimal("-122.0"),
+            latitude=45.0,
+            longitude=-122.0,
             created_by=user,
         )
         _ = PointOfInterest.objects.create(
             name="POI 2",
-            latitude=Decimal("46.0"),
-            longitude=Decimal("-123.0"),
+            latitude=46.0,
+            longitude=-123.0,
             created_by=user,
         )
 
@@ -271,8 +270,8 @@ class TestPointOfInterestMapSerializer:
         return PointOfInterest.objects.create(
             name="Map POI",
             description="POI for map display",
-            latitude=Decimal("45.123456"),
-            longitude=Decimal("-122.654321"),
+            latitude=45.123456,
+            longitude=-122.654321,
             created_by=user,
         )
 
@@ -303,14 +302,14 @@ class TestPointOfInterestMapSerializer:
         """Test serializing multiple POIs as GeoJSON FeatureCollection."""
         _ = PointOfInterest.objects.create(
             name="POI 1",
-            latitude=Decimal("45.0"),
-            longitude=Decimal("-122.0"),
+            latitude=45.0,
+            longitude=-122.0,
             created_by=user,
         )
         _ = PointOfInterest.objects.create(
             name="POI 2",
-            latitude=Decimal("46.0"),
-            longitude=Decimal("-123.0"),
+            latitude=46.0,
+            longitude=-123.0,
             created_by=user,
         )
 
@@ -337,8 +336,8 @@ class TestPointOfInterestMapSerializer:
         poi = PointOfInterest.objects.create(
             name="No Description POI",
             description="",
-            latitude=Decimal("45.0"),
-            longitude=Decimal("-122.0"),
+            latitude=45.0,
+            longitude=-122.0,
             created_by=user,
         )
 
@@ -351,8 +350,8 @@ class TestPointOfInterestMapSerializer:
         """Test map serializer when creator user is deleted."""
         poi = PointOfInterest.objects.create(
             name="Orphaned POI",
-            latitude=Decimal("45.0"),
-            longitude=Decimal("-122.0"),
+            latitude=45.0,
+            longitude=-122.0,
             created_by=user,
         )
 

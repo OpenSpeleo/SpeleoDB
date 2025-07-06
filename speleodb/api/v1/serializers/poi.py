@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
+import contextlib
 from decimal import InvalidOperation
 from typing import Any
 
@@ -11,18 +11,9 @@ from rest_framework import serializers
 from speleodb.surveys.models import PointOfInterest
 
 
-def format_coordinate(value: Any) -> str | None:
-    """Format a coordinate value without trailing zeros."""
-    if value is None:
-        return None
-    # Convert to Decimal and format without trailing zeros
-    decimal_value = Decimal(str(value))
-    # Round to 7 decimal places
-    rounded_value = round(decimal_value, 7)
-    # Convert to string and remove trailing zeros
-    # The normalize() method removes trailing zeros from Decimal
-    normalized = rounded_value.normalize()
-    return str(normalized)
+def format_coordinate(value: Any) -> float:
+    """Format a coordinate value to 7 decimal places"""
+    return round(float(value), 7)
 
 
 class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
@@ -40,46 +31,36 @@ class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
             "created_by",
         ]
 
-    def create(self, validated_data):
+    def create(self, validated_data: Any) -> PointOfInterest:
         """Create a new POI and set created_by from request user."""
         request = self.context.get("request")
         if request and hasattr(request, "user") and request.user.is_authenticated:
             validated_data["created_by"] = request.user
         return super().create(validated_data)
 
-    def to_internal_value(self, data):
+    def to_internal_value(self, data: Any) -> Any:
         """Override to round coordinates before validation."""
-        # Create a mutable copy of the data
-        mutable_data = dict(data)
 
         # Round coordinates if they exist in the data
-        if "latitude" in mutable_data and mutable_data["latitude"] is not None:
-            try:
-                lat_value = Decimal(str(mutable_data["latitude"]))
-                mutable_data["latitude"] = str(round(lat_value, 7))
-            except (ValueError, TypeError, InvalidOperation):
-                pass  # Let the field validation handle the error
+        if "latitude" in data and data["latitude"] is not None:
+            with contextlib.suppress(ValueError, TypeError, InvalidOperation):
+                # Let the field validation handle the error
+                data["latitude"] = round(float(data["latitude"]), 7)
 
-        if "longitude" in mutable_data and mutable_data["longitude"] is not None:
-            try:
-                lng_value = Decimal(str(mutable_data["longitude"]))
-                mutable_data["longitude"] = str(round(lng_value, 7))
-            except (ValueError, TypeError, InvalidOperation):
-                pass  # Let the field validation handle the error
+        if "longitude" in data and data["longitude"] is not None:
+            with contextlib.suppress(ValueError, TypeError, InvalidOperation):
+                # Let the field validation handle the error
+                data["longitude"] = round(float(data["longitude"]), 7)
 
-        return super().to_internal_value(mutable_data)
+        return super().to_internal_value(data)
 
-    def validate_latitude(self, value):
+    def validate_latitude(self, value: str | float) -> float:
         """Ensure latitude is rounded to 7 decimal places."""
-        if value is not None:
-            return round(Decimal(str(value)), 7)
-        return value
+        return format_coordinate(value)
 
-    def validate_longitude(self, value):
+    def validate_longitude(self, value: str | float) -> float:
         """Ensure longitude is rounded to 7 decimal places."""
-        if value is not None:
-            return round(Decimal(str(value)), 7)
-        return value
+        return format_coordinate(value)
 
     def to_representation(self, instance: PointOfInterest) -> dict[str, Any]:
         """Ensure coordinates are rounded to 7 decimal places."""

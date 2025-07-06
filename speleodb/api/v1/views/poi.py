@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from rest_framework.response import Response
 
 
-class PointOfInterestViewSet(ModelViewSet, SDBAPIViewMixin):
+class PointOfInterestViewSet(ModelViewSet[PointOfInterest], SDBAPIViewMixin):
     """
     ViewSet for managing Points of Interest.
 
@@ -139,7 +139,7 @@ class PointOfInterestViewSet(ModelViewSet, SDBAPIViewMixin):
         )
 
 
-class PointOfInterestMapView(GenericAPIView, SDBAPIViewMixin):
+class PointOfInterestMapView(GenericAPIView[PointOfInterest], SDBAPIViewMixin):
     """
     View to get all POIs as GeoJSON-compatible data.
     Used by the map viewer to display POI markers.

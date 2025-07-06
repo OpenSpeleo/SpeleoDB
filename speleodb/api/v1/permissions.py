@@ -9,6 +9,8 @@ from rest_framework import permissions
 
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import Station
+from speleodb.surveys.models import StationResource
 from speleodb.users.models.team import SurveyTeam
 from speleodb.users.models.team import SurveyTeamMembership
 
@@ -64,44 +66,36 @@ class BaseStationAccessLevel(permissions.BasePermission):
         self,
         request: AuthenticatedDRFRequest,  # type: ignore[override]
         view: APIView,
-        obj,  # Station object or any object with a project attribute
+        obj: Project | Station | StationResource,
     ) -> bool:
         # Get the project from the object
-        try:
-            # First try direct project attribute (Station, Project)
-            project = obj.project
-        except AttributeError:
-            try:
+        project: Project
+        match obj:
+            case Project():
                 # Try station.project for StationResource objects
+                project = obj
+
+            case Station():
+                # Try station.project for StationResource objects
+                project = obj.project
+
+            case StationResource():
                 project = obj.station.project
-            except AttributeError:
-                # If obj doesn't have a project attribute, it might be a Project itself
-                if hasattr(obj, "get_user_permission"):
-                    project = obj
-                else:
-                    return False
+
+            case _:
+                raise TypeError(
+                    f"Unknown `type` received: {type(obj)}. "
+                    "Expected: Station | StationResource"
+                )
 
         try:
-            user_access = (
-                project.get_user_permission(user=request.user).level
+            return (
+                project.get_best_permission(user=request.user).level
                 >= self.MIN_ACCESS_LEVEL
             )
+
         except ObjectDoesNotExist:
-            user_access = False
-
-        if user_access or self.MIN_ACCESS_LEVEL is None:
-            return user_access
-
-        for team in request.user.teams:
-            try:
-                if (
-                    project.get_team_permission(team=team).level
-                    >= self.MIN_ACCESS_LEVEL
-                ):
-                    return True
-            except ObjectDoesNotExist:
-                continue
-        return False
+            return False
 
 
 class UserHasAdminAccess(BaseProjectAccessLevel):

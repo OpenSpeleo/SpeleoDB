@@ -179,27 +179,29 @@ class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
     modified_date = factory.LazyFunction(timezone.now)
 
 
-class StationFactory(DjangoModelFactory):
+class StationFactory(DjangoModelFactory[Station]):
     """Factory for creating Station instances."""
 
     class Meta:
         model = Station
 
     id = factory.LazyFunction(uuid.uuid4)
-    project = factory.SubFactory(ProjectFactory)
+    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
     name = factory.Sequence(lambda n: f"ST{n:03d}")
-    description = factory.Faker("text", max_nb_chars=200)
-    latitude = factory.Faker("latitude")
-    longitude = factory.Faker("longitude")
-    created_by = factory.SubFactory(UserFactory)
+    description: str = factory.Faker("text", max_nb_chars=200)  # type: ignore[assignment]
+    latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
+    longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
+    created_by: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
 
     @classmethod
-    def create_with_coordinates(cls, lat: float, lng: float, **kwargs):
+    def create_with_coordinates(cls, lat: float, lng: float, **kwargs: Any) -> Station:
         """Create a station with specific coordinates."""
         return cls.create(latitude=lat, longitude=lng, **kwargs)
 
     @classmethod
-    def create_demo_stations(cls, project, count: int = 3, **kwargs):
+    def create_demo_stations(
+        cls, project: Project, count: int = 3, **kwargs: Any
+    ) -> list[Station]:
         """Create demo stations with realistic cave survey data."""
         demo_data = [
             {
@@ -238,7 +240,7 @@ class StationFactory(DjangoModelFactory):
         return stations
 
 
-class StationResourceFactory(DjangoModelFactory):
+class StationResourceFactory(DjangoModelFactory[StationResource]):
     """Factory for creating StationResource instances."""
 
     class Meta:
@@ -246,8 +248,8 @@ class StationResourceFactory(DjangoModelFactory):
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)
-    station = factory.SubFactory(StationFactory)
-    resource_type = factory.Faker(
+    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    resource_type: StationResource.ResourceType = factory.Faker(
         "random_element",
         elements=[
             StationResource.ResourceType.PHOTO,
@@ -256,13 +258,15 @@ class StationResourceFactory(DjangoModelFactory):
             StationResource.ResourceType.SKETCH,
             StationResource.ResourceType.DOCUMENT,
         ],
-    )
-    title = factory.Faker("sentence", nb_words=4)
-    description = factory.Faker("text", max_nb_chars=300)
-    created_by = factory.SubFactory(UserFactory)
+    )  # type: ignore[assignment]
+    title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
+    description: str = factory.Faker("text", max_nb_chars=300)  # type: ignore[assignment]
+    created_by: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
+
+    text_content: str = ""
 
     @factory.post_generation
-    def with_content(self, create, extracted, **kwargs):
+    def with_content(self, create: bool, extracted: Any, **kwargs: Any) -> None:
         """Add appropriate content based on resource type."""
         if not create:
             return
@@ -285,7 +289,7 @@ class StationResourceFactory(DjangoModelFactory):
                 </svg>"""  # noqa: E501
 
     @classmethod
-    def create_photo(cls, station, **kwargs):
+    def create_photo(cls, station: Station, **kwargs: Any) -> StationResource:
         """Create a photo resource."""
         return cls.create(
             station=station,
@@ -296,7 +300,7 @@ class StationResourceFactory(DjangoModelFactory):
         )
 
     @classmethod
-    def create_note(cls, station, **kwargs):
+    def create_note(cls, station: Station, **kwargs: Any) -> StationResource:
         """Create a note resource with realistic cave survey content."""
         content = """Water depth: 1.2m
 Flow rate: ~0.5 m/s
@@ -318,7 +322,7 @@ Good visibility in all directions."""
         )
 
     @classmethod
-    def create_sketch(cls, station, **kwargs):
+    def create_sketch(cls, station: Station, **kwargs: Any) -> StationResource:
         """Create a sketch resource."""
         return cls.create(
             station=station,
@@ -329,7 +333,7 @@ Good visibility in all directions."""
         )
 
     @classmethod
-    def create_video(cls, station, **kwargs):
+    def create_video(cls, station: Station, **kwargs: Any) -> StationResource:
         """Create a video resource."""
         return cls.create(
             station=station,
@@ -340,7 +344,7 @@ Good visibility in all directions."""
         )
 
     @classmethod
-    def create_demo_resources(cls, station):
+    def create_demo_resources(cls, station: Station) -> list[StationResource]:
         """Create a complete set of demo resources for a station."""
         return [
             cls.create_photo(station),
@@ -354,23 +358,21 @@ class PhotoStationResourceFactory(StationResourceFactory):
     """Factory specifically for photo station resources."""
 
     resource_type = StationResource.ResourceType.PHOTO
-    title = factory.LazyAttribute(lambda obj: f"Photo - {obj.station.name}")
-    text_content = ""
+    title: str = factory.LazyAttribute(lambda obj: f"Photo - {obj.station.name}")  # type: ignore[assignment]
 
 
 class VideoStationResourceFactory(StationResourceFactory):
     """Factory specifically for video station resources."""
 
     resource_type = StationResource.ResourceType.VIDEO
-    title = factory.LazyAttribute(lambda obj: f"Video - {obj.station.name}")
-    text_content = ""
+    title: str = factory.LazyAttribute(lambda obj: f"Video - {obj.station.name}")  # type: ignore[assignment]
 
 
 class SketchStationResourceFactory(StationResourceFactory):
     """Factory specifically for sketch station resources."""
 
     resource_type = StationResource.ResourceType.SKETCH
-    title = factory.LazyAttribute(lambda obj: f"Sketch - {obj.station.name}")
+    title: str = factory.LazyAttribute(lambda obj: f"Sketch - {obj.station.name}")  # type: ignore[assignment]
     text_content = (
         '<svg width="200" height="200"><circle cx="100" cy="100" r="50" fill="blue"/>'
         '<text x="100" y="100" text-anchor="middle" fill="white">Cave</text></svg>'
@@ -381,13 +383,12 @@ class NoteStationResourceFactory(StationResourceFactory):
     """Factory specifically for note station resources."""
 
     resource_type = StationResource.ResourceType.NOTE
-    title = factory.LazyAttribute(lambda obj: f"Notes - {obj.station.name}")
-    text_content = Faker("paragraph")  # type: ignore[assignment]
+    title: str = factory.LazyAttribute(lambda obj: f"Notes - {obj.station.name}")  # type: ignore[assignment]
+    text_content: str = Faker("paragraph")  # type: ignore[assignment]
 
 
 class DocumentStationResourceFactory(StationResourceFactory):
     """Factory specifically for document station resources."""
 
     resource_type = StationResource.ResourceType.DOCUMENT
-    title = factory.LazyAttribute(lambda obj: f"Document - {obj.station.name}")
-    text_content = ""
+    title: str = factory.LazyAttribute(lambda obj: f"Document - {obj.station.name}")  # type: ignore[assignment]

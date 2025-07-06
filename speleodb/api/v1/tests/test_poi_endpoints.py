@@ -1,7 +1,6 @@
 """Tests for PointOfInterest API endpoints."""
-# mypy: disable-error-code="attr-defined"
 
-from decimal import Decimal
+from __future__ import annotations
 
 import pytest
 from django.urls import reverse
@@ -43,8 +42,8 @@ class TestPointOfInterestEndpoints:
         return PointOfInterest.objects.create(
             name="Test POI",
             description="Test description",
-            latitude=Decimal("45.123456"),
-            longitude=Decimal("-122.654321"),
+            latitude=45.123456,
+            longitude=-122.654321,
             created_by=user,
         )
 
@@ -91,8 +90,8 @@ class TestPointOfInterestEndpoints:
         for i in range(3):
             PointOfInterest.objects.create(
                 name=f"POI {i}",
-                latitude=Decimal(f"{45 + i}.0"),
-                longitude=Decimal(f"{-122 - i}.0"),
+                latitude=45.0 + i,
+                longitude=-122.0 + i,
                 created_by=user,
             )
 
@@ -295,8 +294,8 @@ class TestPointOfInterestEndpoints:
 
         assert response.status_code == status.HTTP_200_OK
         poi.refresh_from_db()
-        assert poi.latitude == Decimal("48.0")
-        assert poi.longitude == Decimal("-123.0")
+        assert poi.latitude == 48.0  # noqa: PLR2004
+        assert poi.longitude == -123.0  # noqa: PLR2004
 
     def test_update_poi_invalid_data(
         self, api_client: APIClient, user: User, poi: PointOfInterest
@@ -310,13 +309,15 @@ class TestPointOfInterestEndpoints:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_update_poi_duplicate_name(self, api_client, user, poi) -> None:
+    def test_update_poi_duplicate_name(
+        self, api_client: APIClient, user: User, poi: PointOfInterest
+    ) -> None:
         """Test updating POI to a duplicate name."""
         # Create another POI
         PointOfInterest.objects.create(
             name="Other POI",
-            latitude=Decimal("0.0"),
-            longitude=Decimal("0.0"),
+            latitude=0.0,
+            longitude=0.0,
             created_by=user,
         )
 
@@ -331,14 +332,18 @@ class TestPointOfInterestEndpoints:
         assert "name" in response_data["errors"]
 
     # Delete endpoint tests
-    def test_delete_poi_unauthenticated(self, api_client, poi):
+    def test_delete_poi_unauthenticated(
+        self, api_client: APIClient, poi: PointOfInterest
+    ) -> None:
         """Test deleting a POI without authentication (should fail)."""
         url = reverse("api:v1:poi-detail", kwargs={"id": poi.id})
         response = api_client.delete(url)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_delete_poi_as_creator(self, api_client, user, poi):
+    def test_delete_poi_as_creator(
+        self, api_client: APIClient, user: User, poi: PointOfInterest
+    ) -> None:
         """Test deleting a POI as the creator."""
         api_client.force_authenticate(user=user)
         url = reverse("api:v1:poi-detail", kwargs={"id": poi.id})
@@ -349,7 +354,9 @@ class TestPointOfInterestEndpoints:
         # Verify POI was deleted
         assert not PointOfInterest.objects.filter(id=poi.id).exists()
 
-    def test_delete_poi_as_other_user(self, api_client, other_user, poi):
+    def test_delete_poi_as_other_user(
+        self, api_client: APIClient, other_user: User, poi: PointOfInterest
+    ) -> None:
         """Test deleting a POI as a different user (should succeed - any authenticated
         user can delete)."""
         api_client.force_authenticate(user=other_user)
@@ -359,7 +366,7 @@ class TestPointOfInterestEndpoints:
         assert response.status_code == status.HTTP_200_OK
         assert not PointOfInterest.objects.filter(id=poi.id).exists()
 
-    def test_delete_poi_not_found(self, api_client, user):
+    def test_delete_poi_not_found(self, api_client: APIClient, user: User) -> None:
         """Test deleting a non-existent POI."""
         api_client.force_authenticate(user=user)
         fake_uuid = "00000000-0000-0000-0000-000000000000"
@@ -369,20 +376,22 @@ class TestPointOfInterestEndpoints:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     # Map endpoint tests
-    def test_map_endpoint_unauthenticated(self, api_client, user):
+    def test_map_endpoint_unauthenticated(
+        self, api_client: APIClient, user: User
+    ) -> None:
         """Test map endpoint without authentication (should work)."""
         # Create POIs with different properties
         PointOfInterest.objects.create(
             name="POI 1",
             description="Description 1",
-            latitude=Decimal("45.0"),
-            longitude=Decimal("-122.0"),
+            latitude=45.0,
+            longitude=-122.0,
             created_by=user,
         )
         PointOfInterest.objects.create(
             name="POI 2",
-            latitude=Decimal("46.0"),
-            longitude=Decimal("-123.0"),
+            latitude=46.0,
+            longitude=-123.0,
             created_by=user,  # Using the same user
         )
 
@@ -406,7 +415,7 @@ class TestPointOfInterestEndpoints:
         feature2 = data["data"]["features"][1]
         assert feature2["properties"]["created_by_email"] == "testuser@example.com"
 
-    def test_map_endpoint_empty(self, api_client):
+    def test_map_endpoint_empty(self, api_client: APIClient) -> None:
         """Test map endpoint with no POIs."""
         url = reverse("api:v1:pois-map")
         response = api_client.get(url)
@@ -416,7 +425,9 @@ class TestPointOfInterestEndpoints:
         assert data["data"]["type"] == "FeatureCollection"
         assert len(data["data"]["features"]) == 0
 
-    def test_map_endpoint_coordinate_format(self, api_client, poi: PointOfInterest):
+    def test_map_endpoint_coordinate_format(
+        self, api_client: APIClient, poi: PointOfInterest
+    ) -> None:
         """Test that map endpoint returns coordinates in correct GeoJSON format."""
         url = reverse("api:v1:pois-map")
         response = api_client.get(url)
@@ -458,5 +469,5 @@ class TestPointOfInterestEndpoints:
 
         # Check response maintains 7 decimal places
         poi_data = response.json()["data"]["poi"]
-        assert poi_data["latitude"] == "45.1234567"
-        assert poi_data["longitude"] == "-122.7654321"
+        assert poi_data["latitude"] == 45.1234567  # noqa: PLR2004
+        assert poi_data["longitude"] == -122.7654321  # noqa: PLR2004

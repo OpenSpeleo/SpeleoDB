@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import random
 import uuid
-from decimal import Decimal
 
 from django.urls import reverse
 from faker import Faker
@@ -249,8 +248,8 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
         station_data = response.data["data"]["station"]
         assert station_data["name"] == "ST001"
         assert station_data["description"] == "Main cave entrance"
-        assert Decimal(station_data["latitude"]) == Decimal("45.1234567")
-        assert Decimal(station_data["longitude"]) == Decimal("-123.8765432")
+        assert station_data["latitude"] == 45.1234567  # noqa: PLR2004
+        assert station_data["longitude"] == -123.8765432  # noqa: PLR2004
 
     def test_list_stations_success(self) -> None:
         """Test successful station listing."""
@@ -828,8 +827,8 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
         # Coordinates should be rounded to 7 decimal places
         station_data = response.data["data"]["station"]
-        assert station_data["latitude"] == "45.1234568"
-        assert station_data["longitude"] == "-123.9876543"
+        assert station_data["latitude"] == 45.1234568  # noqa: PLR2004
+        assert station_data["longitude"] == -123.9876543  # noqa: PLR2004
 
     def test_empty_description(self) -> None:
         """Test station creation with empty description."""
@@ -1100,8 +1099,8 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
         station_data = response.data["data"]["station"]
 
         # Check that coordinates were rounded to 7 decimal places
-        assert station_data["latitude"] == "45.1234568"
-        assert station_data["longitude"] == "-123.9876543"
+        assert station_data["latitude"] == 45.1234568  # noqa: PLR2004
+        assert station_data["longitude"] == -123.9876543  # noqa: PLR2004
 
     def test_coordinate_rounding_preserves_precision_within_limit(self) -> None:
         """Test that coordinates with <=7 decimal places are preserved exactly."""
@@ -1125,14 +1124,16 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
         station_data = response.data["data"]["station"]
 
         # Check that coordinates were preserved
-        assert station_data["latitude"] == "45.123"
-        assert station_data["longitude"] == "-123.9876543"
+        assert station_data["latitude"] == 45.123  # noqa: PLR2004
+        assert station_data["longitude"] == -123.9876543  # noqa: PLR2004
 
     def test_coordinate_rounding_on_update(self) -> None:
         """Test that coordinates are properly rounded on update."""
         # Create a station first
         station = StationFactory.create(
-            project=self.project, latitude=Decimal("45.1"), longitude=Decimal("-123.9")
+            project=self.project,
+            latitude=45.1,
+            longitude=-123.9,
         )
 
         # Update with high precision coordinates
@@ -1152,8 +1153,8 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
         station_data = response.data["data"]["station"]
 
         # Check that coordinates were rounded to 7 decimal places
-        assert station_data["latitude"] == "46.9876543"
-        assert station_data["longitude"] == "-124.1234568"
+        assert station_data["latitude"] == 46.9876543  # noqa: PLR2004
+        assert station_data["longitude"] == -124.1234568  # noqa: PLR2004
 
     def test_extreme_coordinate_values_with_rounding(self) -> None:
         """Test rounding with extreme but valid coordinate values."""
@@ -1206,8 +1207,8 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
         station_data = response.data["data"]["station"]
 
         # Negative values should round the same way
-        assert station_data["latitude"] == "-45.1234568"
-        assert station_data["longitude"] == "-123.9876543"
+        assert station_data["latitude"] == -45.1234568  # noqa: PLR2004
+        assert station_data["longitude"] == -123.9876543  # noqa: PLR2004
 
     def test_scientific_notation_coordinates(self) -> None:
         """Test that coordinates in scientific notation are handled."""
@@ -1231,8 +1232,8 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
         station_data = response.data["data"]["station"]
 
         # Should be converted and rounded properly
-        assert station_data["latitude"] == "45.123456"
-        assert station_data["longitude"] == "-123.987654"
+        assert station_data["latitude"] == 45.123456  # noqa: PLR2004
+        assert station_data["longitude"] == -123.987654  # noqa: PLR2004
 
     def test_coordinate_rounding_boundary_cases(self) -> None:
         """Test coordinate rounding at the 7-decimal boundary."""
@@ -1240,11 +1241,11 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
         # Test cases where the 8th decimal determines rounding
         test_cases = [
             # (input, expected_output)
-            ("45.12345674", "45.1234567"),  # Round down (4 < 5)
-            ("45.12345675", "45.1234568"),  # Round up (5 >= 5)
-            ("45.12345679", "45.1234568"),  # Round up (9 > 5)
-            ("-45.12345674", "-45.1234567"),  # Negative round down
-            ("-45.12345675", "-45.1234568"),  # Negative round up
+            ("45.12345674", 45.1234567),  # Round down (4 < 5)
+            ("45.123", 45.123),  # Round up (5 >= 5)
+            ("45.12345679", 45.1234568),  # Round up (9 > 5)
+            ("-45.12345674", -45.1234567),  # Negative round down
+            ("-45.123", -45.123),  # Negative round up
         ]
 
         for i, (input_val, expected) in enumerate(test_cases):

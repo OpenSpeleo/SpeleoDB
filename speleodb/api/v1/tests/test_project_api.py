@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from django.conf import settings
 from django.urls import reverse
 from parameterized.parameterized import parameterized
@@ -76,9 +78,6 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
                 assert (
                     commit_data["committer_name"] == settings.DJANGO_GIT_COMMITTER_NAME
                 ), commit_data["committer_name"]
-        else:
-            # error fetching project from gitlab. TODO
-            pass
 
     @parameterized.expand(
         [
@@ -279,14 +278,14 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 class TestProjectCreation(BaseAPITestCase):
     @parameterized.expand([True, False])
     def test_create_project(self, use_lat_long: bool) -> None:
-        data = {
+        data: dict[str, Any] = {
             "name": "My Cool Project",
             "description": "A super cool project",
             "country": "US",
         }
 
         if use_lat_long:
-            data.update({"longitude": "100.423897", "latitude": "-45.367573"})
+            data.update({"longitude": 100.423897, "latitude": -45.367573})
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -306,7 +305,7 @@ class TestProjectCreation(BaseAPITestCase):
             "name": "My Cool Project",
             "description": "A super cool project",
             "country": "US",
-            geokey: "45.423897",  # Valid coordinate value
+            geokey: 45.423897,  # Valid coordinate value
         }
 
         auth = self.header_prefix + self.token.key

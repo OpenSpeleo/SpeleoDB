@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import decimal
 import pathlib
 import uuid
 from itertools import chain
@@ -98,10 +97,7 @@ class Project(models.Model):
         decimal_places=7,
         null=True,
         blank=True,
-        validators=[
-            MinValueValidator(decimal.Decimal("-90.0")),
-            MaxValueValidator(decimal.Decimal("90.0")),
-        ],
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
     )
 
     longitude = models.DecimalField(
@@ -109,10 +105,7 @@ class Project(models.Model):
         decimal_places=7,
         null=True,
         blank=True,
-        validators=[
-            MinValueValidator(decimal.Decimal("-180.0")),
-            MaxValueValidator(decimal.Decimal("180.0")),
-        ],
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
     )
 
     class Visibility(BaseIntegerChoices):

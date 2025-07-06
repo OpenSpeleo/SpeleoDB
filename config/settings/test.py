@@ -77,7 +77,7 @@ if not USE_S3:
 # Clean up temp directory after tests (handled by pytest fixtures)
 
 
-def cleanup_temp_media():
+def cleanup_temp_media() -> None:
     """Clean up temporary media directory."""
 
     if Path(TEMP_MEDIA_ROOT).exists():

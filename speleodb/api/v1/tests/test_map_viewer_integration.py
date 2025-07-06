@@ -5,8 +5,9 @@ Integration tests for the map viewer functionality.
 Tests all API endpoints and operations used by the frontend map viewer.
 """
 
+from __future__ import annotations
+
 import json
-from decimal import Decimal
 from typing import Any
 
 from django.test import TransactionTestCase
@@ -58,12 +59,8 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         # Verify station data matches frontend expectations
         assert station_data_response["name"] == station_data["name"]
         assert station_data_response["description"] == station_data["description"]
-        assert Decimal(station_data_response["latitude"]) == Decimal(
-            station_data["latitude"]
-        )
-        assert Decimal(station_data_response["longitude"]) == Decimal(
-            station_data["longitude"]
-        )
+        assert station_data_response["latitude"] == float(station_data["latitude"])
+        assert station_data_response["longitude"] == float(station_data["longitude"])
         assert station_data_response["resource_count"] == 0
         assert "id" in station_data_response
         assert "created_by_email" in station_data_response
@@ -101,13 +98,13 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         # Create a station
         station = StationFactory.create(
             project=self.project,
-            latitude=Decimal("20.194500"),
-            longitude=Decimal("-87.497500"),
+            latitude=20.194500,
+            longitude=-87.497500,
         )
 
         # New position after drag & drop
-        new_latitude = "20.195000"
-        new_longitude = "-87.498000"
+        new_latitude = 20.195000
+        new_longitude = -87.498000
 
         # Update position (as frontend does on drag end) - MUST use JSON
         response = self.client.patch(
@@ -121,13 +118,13 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         updated_station = response.data["data"]["station"]
 
         # Verify updated coordinates
-        assert Decimal(updated_station["latitude"]) == Decimal(new_latitude)
-        assert Decimal(updated_station["longitude"]) == Decimal(new_longitude)
+        assert updated_station["latitude"] == new_latitude
+        assert updated_station["longitude"] == new_longitude
 
         # Verify database was updated
         station.refresh_from_db()
-        assert station.latitude == Decimal(new_latitude)
-        assert station.longitude == Decimal(new_longitude)
+        assert float(station.latitude) == new_latitude
+        assert float(station.longitude) == new_longitude
 
     def test_station_with_resources_workflow(self) -> None:
         """Test the complete workflow of a station with multiple resources."""
@@ -273,20 +270,20 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             {
                 "name": "Cave Entrance",
                 "description": "Main entrance to the cave system",
-                "latitude": Decimal("20.194500"),
-                "longitude": Decimal("-87.497500"),
+                "latitude": 20.194500,
+                "longitude": -87.497500,
             },
             {
                 "name": "Station Alpha",
                 "description": "Major station with three passages",
-                "latitude": Decimal("20.196200"),
-                "longitude": Decimal("-87.499100"),
+                "latitude": 20.196200,
+                "longitude": -87.499100,
             },
             {
                 "name": "Deep Chamber",
                 "description": "Large chamber at depth",
-                "latitude": Decimal("20.195800"),
-                "longitude": Decimal("-87.498600"),
+                "latitude": 20.195800,
+                "longitude": -87.498600,
             },
         ]
 
@@ -345,8 +342,8 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         # Verify resource counts in list format
         stations_by_name = {s["name"]: s for s in stations_list}
         for i, station_data in enumerate(stations_data):
-            station = stations_by_name[station_data["name"]]
-            assert station["resource_count"] == i + 1
+            _station = stations_by_name[station_data["name"]]
+            assert _station["resource_count"] == i + 1
 
     def test_station_permissions_workflow(self) -> None:
         """Test station operations with different permission levels."""

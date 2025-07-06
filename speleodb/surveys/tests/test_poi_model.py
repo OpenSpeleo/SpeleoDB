@@ -1,7 +1,6 @@
 """Tests for PointOfInterest model."""
-# mypy: disable-error-code="attr-defined"
 
-from decimal import Decimal
+from __future__ import annotations
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -28,8 +27,8 @@ class TestPointOfInterestModel:
         return PointOfInterest.objects.create(
             name="Test Cave Entrance",
             description="A beautiful cave entrance with stalactites",
-            latitude=Decimal("45.123456"),
-            longitude=Decimal("-122.654321"),
+            latitude=45.123456,
+            longitude=-122.654321,
             created_by=user,
         )
 
@@ -38,16 +37,16 @@ class TestPointOfInterestModel:
         poi = PointOfInterest.objects.create(
             name="Mountain Peak Viewpoint",
             description="Stunning panoramic views",
-            latitude=Decimal("47.608013"),
-            longitude=Decimal("-122.335167"),
+            latitude=47.608013,
+            longitude=-122.335167,
             created_by=user,
         )
 
         assert poi.id is not None
         assert poi.name == "Mountain Peak Viewpoint"
         assert poi.description == "Stunning panoramic views"
-        assert poi.latitude == Decimal("47.608013")
-        assert poi.longitude == Decimal("-122.335167")
+        assert poi.latitude == 47.608013  # noqa: PLR2004
+        assert poi.longitude == -122.335167  # noqa: PLR2004
         assert poi.created_by == user
         assert poi.creation_date is not None
         assert poi.modified_date is not None
@@ -56,8 +55,8 @@ class TestPointOfInterestModel:
         """Test creating a POI with only required fields."""
         poi = PointOfInterest.objects.create(
             name="Minimal POI",
-            latitude=Decimal("0.0"),
-            longitude=Decimal("0.0"),
+            latitude=0.0,
+            longitude=0.0,
             created_by=user,
         )
 
@@ -76,8 +75,8 @@ class TestPointOfInterestModel:
         with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
             poi = PointOfInterest(
                 name="Invalid Latitude High",
-                latitude=Decimal("91.0"),
-                longitude=Decimal("0.0"),
+                latitude=91.0,
+                longitude=0.0,
                 created_by=user,
             )
             poi.full_clean()
@@ -88,8 +87,8 @@ class TestPointOfInterestModel:
         with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
             poi = PointOfInterest(
                 name="Invalid Latitude Low",
-                latitude=Decimal("-91.0"),
-                longitude=Decimal("0.0"),
+                latitude=-91.0,
+                longitude=0.0,
                 created_by=user,
             )
             poi.full_clean()
@@ -99,16 +98,16 @@ class TestPointOfInterestModel:
         # Test boundary values are valid
         poi_north = PointOfInterest(
             name="North Pole",
-            latitude=Decimal("90.0"),
-            longitude=Decimal("0.0"),
+            latitude=90.0,
+            longitude=0.0,
             created_by=user,
         )
         poi_north.full_clean()  # Should not raise
 
         poi_south = PointOfInterest(
             name="South Pole",
-            latitude=Decimal("-90.0"),
-            longitude=Decimal("0.0"),
+            latitude=-90.0,
+            longitude=0.0,
             created_by=user,
         )
         poi_south.full_clean()  # Should not raise
@@ -119,8 +118,8 @@ class TestPointOfInterestModel:
         with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
             poi = PointOfInterest(
                 name="Invalid Longitude High",
-                latitude=Decimal("0.0"),
-                longitude=Decimal("181.0"),
+                latitude=0.0,
+                longitude=181.0,
                 created_by=user,
             )
             poi.full_clean()
@@ -131,8 +130,8 @@ class TestPointOfInterestModel:
         with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
             poi = PointOfInterest(
                 name="Invalid Longitude Low",
-                latitude=Decimal("0.0"),
-                longitude=Decimal("-181.0"),
+                latitude=0.0,
+                longitude=-181.0,
                 created_by=user,
             )
             poi.full_clean()
@@ -142,16 +141,16 @@ class TestPointOfInterestModel:
         # Test boundary values are valid
         poi_east = PointOfInterest(
             name="International Date Line East",
-            latitude=Decimal("0.0"),
-            longitude=Decimal("180.0"),
+            latitude=0.0,
+            longitude=180.0,
             created_by=user,
         )
         poi_east.full_clean()  # Should not raise
 
         poi_west = PointOfInterest(
             name="International Date Line West",
-            latitude=Decimal("0.0"),
-            longitude=Decimal("-180.0"),
+            latitude=0.0,
+            longitude=-180.0,
             created_by=user,
         )
         poi_west.full_clean()  # Should not raise
@@ -160,8 +159,8 @@ class TestPointOfInterestModel:
         """Test that coordinates maintain 7 decimal places."""
         poi = PointOfInterest.objects.create(
             name="Precise Location",
-            latitude=Decimal("45.1234567"),
-            longitude=Decimal("-122.7654321"),
+            latitude=45.1234567,
+            longitude=-122.7654321,
             created_by=user,
         )
 
@@ -190,20 +189,20 @@ class TestPointOfInterestModel:
         # Create POIs in non-alphabetical order
         _ = PointOfInterest.objects.create(
             name="Cave C",
-            latitude=Decimal("0.0"),
-            longitude=Decimal("0.0"),
+            latitude=0.0,
+            longitude=0.0,
             created_by=user,
         )
         _ = PointOfInterest.objects.create(
             name="Arch A",
-            latitude=Decimal("0.0"),
-            longitude=Decimal("0.0"),
+            latitude=0.0,
+            longitude=0.0,
             created_by=user,
         )
         _ = PointOfInterest.objects.create(
             name="Bridge B",
-            latitude=Decimal("0.0"),
-            longitude=Decimal("0.0"),
+            latitude=0.0,
+            longitude=0.0,
             created_by=user,
         )
 
@@ -239,8 +238,8 @@ class TestPointOfInterestModel:
         """Test that blank description is allowed."""
         poi = PointOfInterest.objects.create(
             name="No Description POI",
-            latitude=Decimal("10.0"),
-            longitude=Decimal("20.0"),
+            latitude=10.0,
+            longitude=20.0,
             created_by=user,
             description="",
         )

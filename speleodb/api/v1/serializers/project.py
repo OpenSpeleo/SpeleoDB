@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import datetime  # noqa: TC003
-import decimal
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -15,6 +13,11 @@ from speleodb.surveys.models import Project
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import User
 from speleodb.utils.serializer_fields import CustomChoiceField
+
+
+def format_coordinate(value: Any) -> float:
+    """Format a coordinate value to 7 decimal places"""
+    return round(float(value), 7)
 
 
 class UserField(serializers.RelatedField[User, User, str]):
@@ -59,10 +62,19 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
             and longitude is not None
             and longitude != ""
         ):
-            data["latitude"] = str(round(decimal.Decimal(latitude), 7))
-            data["longitude"] = str(round(decimal.Decimal(longitude), 7))
+            data["latitude"] = format_coordinate(latitude)
+            data["longitude"] = format_coordinate(longitude)
 
         return super().to_internal_value(data)
+
+    def to_representation(self, instance: Project) -> dict[str, Any]:
+        """Ensure coordinates are rounded to 7 decimal places."""
+        data = super().to_representation(instance)
+        if data.get("latitude") is not None:
+            data["latitude"] = format_coordinate(data["latitude"])
+        if data.get("longitude") is not None:
+            data["longitude"] = format_coordinate(data["longitude"])
+        return data
 
     def validate(self, attrs: Any) -> Any:
         latitude = attrs.get("latitude", None)
@@ -118,9 +130,7 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
         except ObjectDoesNotExist:
             return None
 
-    def get_active_mutex(
-        self, obj: Project
-    ) -> dict[str, str | datetime.datetime] | None:
+    def get_active_mutex(self, obj: Project) -> dict[str, Any] | None:
         if isinstance(obj, dict):
             # Unsaved object
             return None

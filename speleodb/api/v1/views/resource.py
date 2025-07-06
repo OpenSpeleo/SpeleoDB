@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from rest_framework.response import Response
 
 
-class StationResourceViewSet(ModelViewSet, SDBAPIViewMixin):
+class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
     """
     ViewSet for managing station resources.
 

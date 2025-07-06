@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.db import IntegrityError
+from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
     from rest_framework.response import Response
 
 
-class StationViewSet(ModelViewSet, SDBAPIViewMixin):
+class StationViewSet(ModelViewSet[Station], SDBAPIViewMixin):
     """
     ViewSet for managing stations.
 
@@ -45,7 +46,7 @@ class StationViewSet(ModelViewSet, SDBAPIViewMixin):
     permission_classes = [StationUserHasReadAccess]
     lookup_field = "id"
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Station, Station]:
         """Get stations, optionally filtered by project."""
         queryset = Station.objects.all()
 
@@ -64,7 +65,9 @@ class StationViewSet(ModelViewSet, SDBAPIViewMixin):
             return StationCreateSerializer
         return StationSerializer
 
-    def get_permissions(self):
+    def get_permissions(  # type: ignore[override]
+        self,
+    ) -> list[StationUserHasWriteAccess] | list[StationUserHasReadAccess]:
         """Set permissions based on action."""
         if self.action in ["create", "update", "partial_update", "destroy"]:
             return [StationUserHasWriteAccess()]
@@ -201,7 +204,7 @@ class StationViewSet(ModelViewSet, SDBAPIViewMixin):
         )
 
 
-class StationResourceViewSet(ModelViewSet, SDBAPIViewMixin):
+class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
     """
     ViewSet for managing station resources.
 
@@ -220,7 +223,7 @@ class StationResourceViewSet(ModelViewSet, SDBAPIViewMixin):
         station = get_object_or_404(Station, id=station_id)
         return StationResource.objects.filter(station=station)
 
-    def get_permissions(
+    def get_permissions(  # type: ignore[override]
         self,
     ) -> list[StationUserHasWriteAccess] | list[StationUserHasReadAccess]:
         """Set permissions based on action."""
@@ -315,7 +318,7 @@ class StationResourceViewSet(ModelViewSet, SDBAPIViewMixin):
         )
 
 
-class ProjectStationListView(GenericAPIView, SDBAPIViewMixin):
+class ProjectStationListView(GenericAPIView[Station], SDBAPIViewMixin):
     """
     Simple view to get all stations for a project as GeoJSON-compatible data.
     Used by the map viewer to display station markers.
