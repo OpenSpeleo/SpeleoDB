@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
     from speleodb.surveys.models import Mutex
     from speleodb.surveys.models import Project
+    from speleodb.surveys.models import Station
+    from speleodb.surveys.models import StationResource
     from speleodb.surveys.models import TeamPermission
     from speleodb.surveys.models import UserPermission
     from speleodb.users.models import SurveyTeamMembership
@@ -63,6 +65,8 @@ class User(AbstractUser):
     rel_mutexes: models.QuerySet[Mutex]
     rel_permissions: models.QuerySet[UserPermission]
     rel_team_memberships: models.QuerySet[SurveyTeamMembership]
+    rel_stations_created: models.QuerySet[Station]
+    rel_station_resources_created: models.QuerySet[StationResource]
 
     id = models.AutoField(primary_key=True)  # Explicitly declared for typing
 

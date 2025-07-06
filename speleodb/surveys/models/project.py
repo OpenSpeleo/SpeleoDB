@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import decimal
 import pathlib
 import uuid
 from itertools import chain
@@ -33,6 +32,7 @@ if TYPE_CHECKING:
 
     from speleodb.surveys.models import Format
     from speleodb.surveys.models import Mutex
+    from speleodb.surveys.models import Station
     from speleodb.surveys.models import TeamPermission
     from speleodb.surveys.models import UserPermission
 
@@ -55,6 +55,7 @@ class Project(models.Model):
     rel_mutexes: models.QuerySet[Mutex]
     rel_user_permissions: models.QuerySet[UserPermission]
     rel_team_permissions: models.QuerySet[TeamPermission]
+    rel_stations: models.QuerySet[Station]
 
     # Automatic fields
     id = models.UUIDField(
@@ -94,25 +95,19 @@ class Project(models.Model):
 
     # Geo Coordinates
     latitude = models.DecimalField(
-        max_digits=11,
-        decimal_places=8,
+        max_digits=10,
+        decimal_places=7,
         null=True,
         blank=True,
-        validators=[
-            MinValueValidator(decimal.Decimal("-180.0")),
-            MaxValueValidator(decimal.Decimal("180.0")),
-        ],
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
     )
 
     longitude = models.DecimalField(
-        max_digits=11,
-        decimal_places=8,
+        max_digits=10,
+        decimal_places=7,
         null=True,
         blank=True,
-        validators=[
-            MinValueValidator(decimal.Decimal("-180.0")),
-            MaxValueValidator(decimal.Decimal("180.0")),
-        ],
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
     )
 
     class Visibility(BaseIntegerChoices):

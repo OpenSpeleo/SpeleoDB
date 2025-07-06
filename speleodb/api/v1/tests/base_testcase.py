@@ -14,9 +14,9 @@ from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserFactory
-from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
@@ -49,8 +49,9 @@ class BaseAPIProjectTestCase(BaseAPITestCase):
 
     def set_test_project_permission(self, level: PermissionLevel) -> None:
         if isinstance(level, PermissionLevel):
-            _ = UserPermissionFactory.create(
-                target=self.user, level=level, project=self.project
+            # Update or create permission to avoid duplicates
+            UserPermission.objects.update_or_create(
+                target=self.user, project=self.project, defaults={"level": level}
             )
 
         elif isinstance(level, PermissionLevel):

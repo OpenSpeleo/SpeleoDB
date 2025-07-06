@@ -7,7 +7,11 @@ from django.urls import URLResolver
 from django.urls import include
 from django.urls import path
 
+from speleodb.api.v1.urls.media import urlpatterns as media_urlpatterns
+from speleodb.api.v1.urls.poi import urlpatterns as poi_urlpatterns
 from speleodb.api.v1.urls.project import urlpatterns as project_urlpatterns
+from speleodb.api.v1.urls.resource import urlpatterns as resource_urlpatterns
+from speleodb.api.v1.urls.station import urlpatterns as station_urlpatterns
 from speleodb.api.v1.urls.team import urlpatterns as team_urlpatterns
 from speleodb.api.v1.urls.user import urlpatterns as user_urlpatterns
 from speleodb.api.v1.views.announcement import PublicAnnouncementApiView
@@ -27,6 +31,10 @@ urlpatterns: list[URLResolver | URLPattern] = [
         name="plugin_releases",
     ),
     path("projects/", include(project_urlpatterns)),
+    path("stations/", include(station_urlpatterns)),
+    path("points_of_interest/", include(poi_urlpatterns)),
+    path("resources/", include(resource_urlpatterns)),
+    path("media/", include(media_urlpatterns)),
     path("teams/", include(team_urlpatterns)),
     path("user/", include(user_urlpatterns)),
 ]

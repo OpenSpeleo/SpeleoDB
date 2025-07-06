@@ -36,11 +36,20 @@ dependencies = [
   "django-hijack==3.7.2",                 # https://github.com/django-hijack/django-hijack/
   "django-model-utils==5.0.0",            # https://github.com/jazzband/django-model-utils
   "django-redis==6.0.0",                  # https://github.com/jazzband/django-redis
+  "django-storages==1.14.6",              # https://github.com/jschneier/django-storages
   # Django REST Framework
   "djangorestframework==3.16.0", # https://github.com/encode/django-rest-framework
   "django-cors-headers==4.7.0",  # https://github.com/adamchainz/django-cors-headers
   # DRF-spectacular for api documentation
   "drf-spectacular==0.28.0", # https://github.com/tfranzel/drf-spectacular
+
+  # AWS
+  # ------------------------------------------------------------------------------
+  "boto3==1.39.1", # https://github.com/boto/boto3
+
+  # GIS & Spatial Analysis
+  # ------------------------------------------------------------------------------
+  "shapely==2.1.1", # https://github.com/shapely/shapely
 
   # Speleo Packages
   # ------------------------------------------------------------------------------
@@ -108,7 +117,6 @@ production = [
   # Django
   # ------------------------------------------------------------------------------
   "django-anymail[mailersend]==13.0", # https://github.com/anymail/django-anymail
-  "django-storages==1.14.6",          # https://github.com/jschneier/django-storages
 ]
 
 # Django
@@ -121,6 +129,8 @@ minversion = "6.0"
 addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
 # addopts = "--ds=config.settings.test -vvv --capture=no --reuse-db --import-mode=importlib"
 python_files = ["tests.py", "test_*.py"]
+env_files = [".envs/test.env"]
+filterwarnings = ['ignore:datetime.datetime.utcnow.*:DeprecationWarning']
 
 # ==== Coverage ====
 [tool.coverage.run]
@@ -131,15 +141,27 @@ plugins = ["django_coverage_plugin"]
 # ==== mypy ====
 [tool.mypy]
 exclude = [
+  "**/*.pyc",
+  "**/node_modules",
+  "**/__pycache__",
+  ".devcontainer",
+  ".envs",
+  ".git",
+  ".github",
   ".ipython",
+  ".mypy_cache",
   ".pytest_cache",
   ".ruff_cache",
   ".uv",
+  ".venv",
+  ".vscode",
   ".workdir",
+  "~/.cache",
+  "bin",
+  "docs",
   "fixtures",
   "mediafiles",
   "staticfiles",
-  "~/.cache",
 ]
 check_untyped_defs = true
 # ignore_missing_imports = true
@@ -339,18 +361,28 @@ force-single-line = true
 
 
 [tool.pyright]
-include = ["speleodb/**", "config", "frontend_*/**", "tests/**"]
+# ignore = ["*"]
+# typeCheckingMode = "off"
 exclude = [
   "**/*.pyc",
   "**/node_modules",
   "**/__pycache__",
+  ".devcontainer",
+  ".envs",
   ".git",
+  ".github",
+  ".ipython",
   ".mypy_cache",
   ".pytest_cache",
   ".ruff_cache",
   ".uv",
   ".venv",
+  ".vscode",
   ".workdir",
+  "bin",
+  "docs",
+  "fixtures",
+  "mediafiles",
 ]
 pythonVersion = '3.13'
 reportUnknownMemberType = "none"

@@ -18,7 +18,7 @@ from speleodb.surveys.models import Project
 
 def sha1_hash() -> str:
     rand_str = "".join(random.sample(string.ascii_lowercase, 8))
-    return sha1(rand_str.encode("utf-8")).hexdigest()  # noqa: S324
+    return sha1(rand_str.encode("utf-8"), usedforsecurity=False).hexdigest()
 
 
 @pytest.mark.parametrize(

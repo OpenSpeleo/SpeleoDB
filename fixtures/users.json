@@ -4,7 +4,7 @@
         "pk": 1,
         "fields": {
             "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$TG1zNzA2WU1seTdXV01QbGFiQUp0ZA$Xp8Qx2POCC/lgVUHqPpPeY93wO6autE2EhdhEFoZ0T8",
-            "last_login": "2024-06-20T00:47:08.463Z",
+            "last_login": "2025-07-02T14:16:03.689Z",
             "is_superuser": true,
             "is_staff": true,
             "is_active": true,
@@ -22,27 +22,8 @@
         "model": "users.user",
         "pk": 2,
         "fields": {
-            "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$MWdrYWU0S3lwVW1jYUM3VDRQWDgwWQ$vLoA4AcNms4VgaI+IVhtmZNlMT9Jeu5NGMjT2qkeUMo",
-            "last_login": null,
-            "is_superuser": false,
-            "is_staff": false,
-            "is_active": true,
-            "date_joined": "2024-05-28T07:04:22.915Z",
-            "name": "Jill Heinerth",
-            "email": "jill@heinerth.com",
-            "country": "NZ",
-            "email_on_speleodb_updates": true,
-            "email_on_projects_updates": false,
-            "groups": [],
-            "user_permissions": []
-        }
-    },
-    {
-        "model": "users.user",
-        "pk": 3,
-        "fields": {
             "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$Nm91SUhnTk1TTkcwc2NrVG5UcWVqVg$G9YVLN5hQLNXRAWp6n2fwFbWRqEIXmXNl06Xxvc+bl4",
-            "last_login": "2024-06-05T19:18:55.593Z",
+            "last_login": "2025-06-28T01:37:34.830Z",
             "is_superuser": false,
             "is_staff": false,
             "is_active": true,
@@ -58,10 +39,10 @@
     },
     {
         "model": "users.user",
-        "pk": 4,
+        "pk": 3,
         "fields": {
             "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$d0NLZU83a243dmlXT2NSaW5KZkRMSw$uHjK7G8p9uLCY1vuFYBlHecfFInaa2H1UFWbdOEaxzQ",
-            "last_login": "2024-06-05T19:19:22.549Z",
+            "last_login": "2025-07-01T18:11:17.090Z",
             "is_superuser": false,
             "is_staff": true,
             "is_active": true,
@@ -73,6 +54,62 @@
             "email_on_projects_updates": false,
             "groups": [],
             "user_permissions": []
+        }
+    },
+    {
+        "model": "users.user",
+        "pk": 4,
+        "fields": {
+            "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$SmJ0dTFncjd5QzJqWkw3c2xtYnJFMg$mlZ1CPsI9TpYd6XsjdYmlP0ocAaJpq9vVESUZ4KUuaU",
+            "last_login": "2025-06-26T22:46:44.077Z",
+            "is_superuser": false,
+            "is_staff": false,
+            "is_active": true,
+            "date_joined": "2025-06-26T21:46:04Z",
+            "name": "Ariane SDB Plugin Test",
+            "email": "ariane-plugin-unittest@speleodb.org",
+            "country": "US",
+            "email_on_speleodb_updates": true,
+            "email_on_projects_updates": false,
+            "groups": [],
+            "user_permissions": []
+        }
+    },
+    {
+        "model": "users.surveyteam",
+        "pk": 1,
+        "fields": {
+            "name": "TestTeam",
+            "description": "das",
+            "country": "US",
+            "creation_date": "2025-01-07T02:03:44.779Z",
+            "modified_date": "2025-05-24T05:01:44.039Z"
+        }
+    },
+    {
+        "model": "users.surveyteammembership",
+        "pk": 1,
+        "fields": {
+            "team": 1,
+            "user": 1,
+            "is_active": true,
+            "creation_date": "2025-01-07T02:03:44.781Z",
+            "modified_date": "2025-01-07T02:03:44.781Z",
+            "deactivated_by": null,
+            "_role": 1
+        }
+    },
+    {
+        "model": "users.surveyteammembership",
+        "pk": 2,
+        "fields": {
+            "team": 1,
+            "user": 3,
+            "is_active": true,
+            "creation_date": "2025-05-24T05:01:23.193Z",
+            "modified_date": "2025-05-24T05:01:44.038Z",
+            "deactivated_by": null,
+            "_role": 0
         }
     }
 ]

@@ -43,7 +43,7 @@ def calculate_sha1(
             f"{file_path=} && {file_obj=}"
         )
 
-    sha1 = hashlib.sha1()  # noqa: S324
+    sha1 = hashlib.sha1(usedforsecurity=False)
 
     if file_path is not None:
         if not isinstance(file_path, Path):
@@ -125,7 +125,7 @@ class DMPFileProcessor(BaseFileProcessor):
                 artifact.write(input_f)
 
                 out_dir_path = tmp_dir_path / "splitted"
-                out_dir_path.mkdir()
+                out_dir_path.mkdir(parents=True, exist_ok=True)
 
                 split_dmp_into_sections(
                     input_file=input_f, output_directory=out_dir_path

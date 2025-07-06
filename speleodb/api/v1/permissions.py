@@ -9,6 +9,8 @@ from rest_framework import permissions
 
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import Station
+from speleodb.surveys.models import StationResource
 from speleodb.users.models.team import SurveyTeam
 from speleodb.users.models.team import SurveyTeamMembership
 
@@ -51,6 +53,51 @@ class BaseProjectAccessLevel(permissions.BasePermission):
         return False
 
 
+class BaseStationAccessLevel(permissions.BasePermission):
+    """Base permission class for Station objects that checks permissions on the
+    station's project."""
+
+    MIN_ACCESS_LEVEL: int
+
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return bool(request.user and request.user.is_authenticated)
+
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: Project | Station | StationResource,
+    ) -> bool:
+        # Get the project from the object
+        project: Project
+        match obj:
+            case Project():
+                # Try station.project for StationResource objects
+                project = obj
+
+            case Station():
+                # Try station.project for StationResource objects
+                project = obj.project
+
+            case StationResource():
+                project = obj.station.project
+
+            case _:
+                raise TypeError(
+                    f"Unknown `type` received: {type(obj)}. "
+                    "Expected: Station | StationResource"
+                )
+
+        try:
+            return (
+                project.get_best_permission(user=request.user).level
+                >= self.MIN_ACCESS_LEVEL
+            )
+
+        except ObjectDoesNotExist:
+            return False
+
+
 class UserHasAdminAccess(BaseProjectAccessLevel):
     MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
 
@@ -64,6 +111,23 @@ class UserHasReadAccess(BaseProjectAccessLevel):
 
 
 class UserHasWebViewerAccess(BaseProjectAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.WEB_VIEWER
+
+
+# Station-specific permission classes
+class StationUserHasAdminAccess(BaseStationAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
+
+
+class StationUserHasWriteAccess(BaseStationAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
+
+
+class StationUserHasReadAccess(BaseStationAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
+
+
+class StationUserHasWebViewerAccess(BaseStationAccessLevel):
     MIN_ACCESS_LEVEL = PermissionLevel.WEB_VIEWER
 
 
