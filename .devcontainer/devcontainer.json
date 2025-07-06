@@ -5,18 +5,6 @@
         "../local.yml"
     ],
     "init": true,
-    "mounts": [
-        {
-            "source": "./.devcontainer/bash_history",
-            "target": "/home/dev-user/.bash_history",
-            "type": "bind"
-        },
-        {
-            "source": "~/.ssh",
-            "target": "/home/dev-user/.ssh",
-            "type": "bind"
-        }
-    ],
     // Tells devcontainer.json supporting services / tools whether they should run
     // /bin/sh -c "while sleep 1000; do :; done" when starting the container instead of the container’s default command
     "overrideCommand": false,
@@ -52,38 +40,26 @@
             // https://code.visualstudio.com/docs/remote/devcontainerjson-reference#_vs-code-specific-properties
             // Add the IDs of extensions you want installed when the container is created.
             "extensions": [
-                "davidanson.vscode-markdownlint",
-                "mrmlnc.vscode-duplicate",
-                "visualstudioexptteam.vscodeintellicode",
-                "visualstudioexptteam.intellicode-api-usage-examples",
-                // Github Actions
-                "github.vscode-github-actions",
                 // python
                 "ms-python.python",
-                // Python Language Support
+                // Language Server
                 "ms-python.vscode-pylance",
                 // Linting
                 "charliermarsh.ruff",
-                // django
-                "batisteo.vscode-django",
                 // HTML Linting
                 // "monosans.djlint",
-                // Postman
-                "Postman.postman-for-vscode",
                 // TOML
                 "tamasfe.even-better-toml",
                 // YAML
                 "redhat.vscode-yaml",
-                // Git
-                "eamodio.gitlens",
+                // Markdown
+                "davidanson.vscode-markdownlint",
                 // Makefiles
                 "ms-vscode.makefile-tools",
                 // Docker
                 "ms-azuretools.vscode-docker",
                 // Env
-                "IronGeek.vscode-env",
-                // MyPy
-                "ms-python.mypy-type-checker"
+                "IronGeek.vscode-env"
             ]
         }
     },
