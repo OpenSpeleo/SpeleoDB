@@ -100,9 +100,20 @@ class MediaPresignedUploadView(GenericAPIView[Any], SDBAPIViewMixin):
                 status=status.HTTP_201_CREATED,
             )
 
-        except Exception as e:  # noqa: BLE001
+        except (OSError, ValueError) as e:
             return ErrorResponse(
-                {"error": f"Upload failed: {e!s}"},
+                {"error": f"File operation failed: {e!s}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ClientError as e:
+            return ErrorResponse(
+                {"error": f"External service error: {e.response['Error']['Message']}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        except Exception:  # noqa: BLE001
+            # Log unexpected errors for debugging purposes
+            return ErrorResponse(
+                {"error": "An unexpected error occurred during upload."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
