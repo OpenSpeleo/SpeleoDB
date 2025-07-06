@@ -141,15 +141,27 @@ plugins = ["django_coverage_plugin"]
 # ==== mypy ====
 [tool.mypy]
 exclude = [
+  "**/*.pyc",
+  "**/node_modules",
+  "**/__pycache__",
+  ".devcontainer",
+  ".envs",
+  ".git",
+  ".github",
   ".ipython",
+  ".mypy_cache",
   ".pytest_cache",
   ".ruff_cache",
   ".uv",
+  ".venv",
+  ".vscode",
   ".workdir",
+  "~/.cache",
+  "bin",
+  "docs",
   "fixtures",
   "mediafiles",
   "staticfiles",
-  "~/.cache",
 ]
 check_untyped_defs = true
 # ignore_missing_imports = true
@@ -349,33 +361,31 @@ force-single-line = true
 
 
 [tool.pyright]
-typeCheckingMode = "off"
-ignore = ["*"]
+# ignore = ["*"]
 # typeCheckingMode = "off"
-# exclude = [
-#   "**/*.pyc",
-#   "**/*.py",
-#   "**/node_modules",
-#   "**/__pycache__",
-#   ".devcontainer",
-#   ".envs",
-#   ".git",
-#   ".github",
-#   ".ipython",
-#   ".mypy_cache",
-#   ".pytest_cache",
-#   ".ruff_cache",
-#   ".uv",
-#   ".venv",
-#   ".vscode",
-#   ".workdir",
-#   "bin",
-#   "docs",
-#   "fixtures",
-#   "mediafiles",
-# ]
-# pythonVersion = '3.13'
-# reportUnknownMemberType = "none"
-# reportIncompatibleMethodOverride = "none"
-# reportIncompatibleVariableOverride = "none"
-# reportUnknownVariableType = "none"
+exclude = [
+  "**/*.pyc",
+  "**/node_modules",
+  "**/__pycache__",
+  ".devcontainer",
+  ".envs",
+  ".git",
+  ".github",
+  ".ipython",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".uv",
+  ".venv",
+  ".vscode",
+  ".workdir",
+  "bin",
+  "docs",
+  "fixtures",
+  "mediafiles",
+]
+pythonVersion = '3.13'
+reportUnknownMemberType = "none"
+reportIncompatibleMethodOverride = "none"
+reportIncompatibleVariableOverride = "none"
+reportUnknownVariableType = "none"
