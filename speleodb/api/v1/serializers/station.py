@@ -129,7 +129,8 @@ class StationSerializer(serializers.ModelSerializer[Station]):
 
     def get_resource_count(self, obj: Station) -> int:
         """Get the total number of resources for this station."""
-        return obj.resources.count()
+        # Anottated queryset
+        return obj.rel_resources.count()
 
     def to_internal_value(self, data: Any) -> Any:
         """Override to round coordinates before validation and handle project_id."""

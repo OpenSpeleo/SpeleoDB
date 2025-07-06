@@ -76,17 +76,19 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_list_resources_with_data(self) -> None:
         """Test listing resources when they exist."""
         # Create some resources
-        self.station.resources.create(
+        StationResource.objects.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="Test Note",
             text_content="Some notes",
             created_by=self.user,
+            station=self.station,
         )
-        self.station.resources.create(
+        StationResource.objects.create(
             resource_type=StationResource.ResourceType.PHOTO,
             title="Test Photo",
             file=self._create_test_image(),
             created_by=self.user,
+            station=self.station,
         )
 
         response = self.client.get(
@@ -258,11 +260,12 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
     def test_retrieve_resource(self) -> None:
         """Test retrieving a single resource."""
-        resource = self.station.resources.create(
+        resource = StationResource.objects.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="Test Note",
             text_content="Content",
             created_by=self.user,
+            station=self.station,
         )
 
         url = f"/api/v1/resources/{resource.id}/"
@@ -276,11 +279,12 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
     def test_update_resource(self) -> None:
         """Test updating a resource."""
-        resource = self.station.resources.create(
+        resource = StationResource.objects.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="Old Title",
             text_content="Old content",
             created_by=self.user,
+            station=self.station,
         )
 
         url = f"/api/v1/resources/{resource.id}/"
@@ -304,11 +308,12 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_update_resource_file(self) -> None:
         """Test updating a file resource with a new file."""
         # Create initial resource
-        resource = self.station.resources.create(
+        resource = StationResource.objects.create(
             resource_type=StationResource.ResourceType.PHOTO,
             title="Old Photo",
             file=self._create_test_image("old.jpg"),
             created_by=self.user,
+            station=self.station,
         )
 
         # Update with new file
@@ -331,11 +336,12 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
     def test_delete_resource(self) -> None:
         """Test deleting a resource."""
-        resource = self.station.resources.create(
+        resource = StationResource.objects.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="To Delete",
             text_content="Content",
             created_by=self.user,
+            station=self.station,
         )
 
         url = f"/api/v1/resources/{resource.id}/"
@@ -348,11 +354,12 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
     def test_delete_resource_with_file(self) -> None:
         """Test deleting a resource also removes the file."""
-        resource = self.station.resources.create(
+        resource = StationResource.objects.create(
             resource_type=StationResource.ResourceType.PHOTO,
             title="Photo to Delete",
             file=self._create_test_image(),
             created_by=self.user,
+            station=self.station,
         )
         resource_id = resource.id
 
@@ -388,11 +395,12 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Create resource as admin for further tests
-        resource = self.station.resources.create(
+        resource = StationResource.objects.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="Test",
             text_content="Content",
             created_by=self.user,
+            station=self.station,
         )
         url = f"/api/v1/resources/{resource.id}/"
 
@@ -413,23 +421,26 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_resource_ordering(self) -> None:
         """Test resources are returned in correct order by modified date."""
         # Create resources with different modified times
-        self.station.resources.create(
+        StationResource.objects.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="Third",
             text_content="3",
             created_by=self.user,
+            station=self.station,
         )
-        self.station.resources.create(
+        StationResource.objects.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="First",
             text_content="1",
             created_by=self.user,
+            station=self.station,
         )
-        self.station.resources.create(
+        StationResource.objects.create(
             resource_type=StationResource.ResourceType.NOTE,
             title="Second",
             text_content="2",
             created_by=self.user,
+            station=self.station,
         )
 
         response = self.client.get(

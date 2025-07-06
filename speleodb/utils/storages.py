@@ -89,10 +89,10 @@ class LocalStationResourceStorage(FileSystemStorage):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         # Set location to a subdirectory for station resources
-        if hasattr(settings, "MEDIA_ROOT"):
-            location = f"{settings.MEDIA_ROOT}/stations/resources"
-        else:
-            location = "stations/resources"
+        if not hasattr(settings, "MEDIA_ROOT"):
+            raise ValueError("`MEDIA_ROOT` is not defined")
+
+        location = Path(settings.MEDIA_ROOT) / "stations" / "resources"
 
         super().__init__(*args, location=location, **kwargs)  # type: ignore[misc]
 

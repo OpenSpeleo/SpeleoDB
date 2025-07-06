@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
     from speleodb.surveys.models import Format
     from speleodb.surveys.models import Mutex
+    from speleodb.surveys.models import Station
     from speleodb.surveys.models import TeamPermission
     from speleodb.surveys.models import UserPermission
 
@@ -54,6 +55,7 @@ class Project(models.Model):
     rel_mutexes: models.QuerySet[Mutex]
     rel_user_permissions: models.QuerySet[UserPermission]
     rel_team_permissions: models.QuerySet[TeamPermission]
+    rel_stations: models.QuerySet[Station]
 
     # Automatic fields
     id = models.UUIDField(

@@ -55,7 +55,7 @@ class StationViewSet(ModelViewSet[Station], SDBAPIViewMixin):
         if project_id:
             queryset = queryset.filter(project_id=project_id)
 
-        return queryset.prefetch_related("resources")
+        return queryset
 
     def get_serializer_class(self) -> type[Any]:
         """Return appropriate serializer based on action."""

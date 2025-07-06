@@ -61,7 +61,7 @@ class MediaPresignedUploadView(GenericAPIView[Any], SDBAPIViewMixin):
             )
 
         # Validate resource type
-        valid_types = ["photo", "video", "document", "sketch", "note"]
+        valid_types = StationResource.ResourceType.values
         if resource_type not in valid_types:
             return ErrorResponse(
                 {"error": f"invalid resource_type. Must be one of: {valid_types}"},

@@ -90,7 +90,7 @@ class TestStationResourceModelReadOnly:
     def test_create_with_resource_type_works(self) -> None:
         """Test that creating new resources with resource_type works."""
         # Create new resource with resource_type
-        resource = StationResource(
+        resource = StationResource.objects.create(
             station=self.station,  # type:ignore[misc]
             resource_type="photo",
             title="New Photo",

@@ -35,6 +35,9 @@ class Station(models.Model):
     Stations are positioned using latitude/longitude coordinates.
     """
 
+    # type checking
+    rel_resources: models.QuerySet[StationResource]
+
     id = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -45,7 +48,7 @@ class Station(models.Model):
     # Project relationship
     project = models.ForeignKey(
         "surveys.Project",
-        related_name="stations",
+        related_name="rel_stations",
         on_delete=models.CASCADE,
     )
 
@@ -76,7 +79,7 @@ class Station(models.Model):
     # Metadata
     created_by = models.ForeignKey(
         "users.User",
-        related_name="stations_created",
+        related_name="rel_stations_created",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -100,6 +103,10 @@ class Station(models.Model):
         if self.latitude is not None and self.longitude is not None:
             return (float(self.longitude), float(self.latitude))
         return None
+
+    @property
+    def resources(self) -> models.QuerySet[StationResource]:
+        return self.rel_resources.all()
 
 
 class StationResource(models.Model):
@@ -125,7 +132,7 @@ class StationResource(models.Model):
     # Station relationship
     station = models.ForeignKey(
         Station,
-        related_name="resources",
+        related_name="rel_resources",
         on_delete=models.CASCADE,
     )
 
@@ -181,7 +188,7 @@ class StationResource(models.Model):
     # Metadata
     created_by = models.ForeignKey(
         "users.User",
-        related_name="station_resources_created",
+        related_name="rel_station_resources_created",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
