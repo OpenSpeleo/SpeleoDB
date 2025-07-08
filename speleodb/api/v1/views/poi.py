@@ -5,12 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.viewsets import ModelViewSet
 
+from speleodb.api.v1.permissions import POIOwnershipPermission
 from speleodb.api.v1.serializers.poi import PointOfInterestListSerializer
 from speleodb.api.v1.serializers.poi import PointOfInterestMapSerializer
 from speleodb.api.v1.serializers.poi import PointOfInterestSerializer
@@ -29,17 +28,21 @@ class PointOfInterestViewSet(ModelViewSet[PointOfInterest], SDBAPIViewMixin):
     """
     ViewSet for managing Points of Interest.
 
-    - List/Retrieve: Public access (no authentication required)
-    - Create/Update/Delete: Requires authentication
+    POIs are personal/private - users can only see and modify their own POIs.
+    - List/Retrieve: Shows only POIs created by the authenticated user
+    - Create/Update/Delete: Requires authentication and ownership
     """
 
     serializer_class = PointOfInterestSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [POIOwnershipPermission]
     lookup_field = "id"
 
     def get_queryset(self) -> QuerySet[PointOfInterest]:
-        """Get all POIs, ordered by name."""
-        return PointOfInterest.objects.all().select_related("created_by")
+        """Get only POIs created by the authenticated user."""
+        user = self.get_user()
+        return PointOfInterest.objects.filter(created_by=user).select_related(
+            "created_by"
+        )
 
     def get_serializer_class(self) -> type[Any]:
         """Return appropriate serializer based on action."""
@@ -48,76 +51,34 @@ class PointOfInterestViewSet(ModelViewSet[PointOfInterest], SDBAPIViewMixin):
         return PointOfInterestSerializer
 
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """List all POIs."""
+        """List POIs created by the authenticated user."""
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return SuccessResponse({"pois": serializer.data})
 
     def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Get detailed POI information."""
+        """Get detailed POI information (only if owned by user)."""
         poi = self.get_object()
         serializer = self.get_serializer(poi)
         return SuccessResponse({"poi": serializer.data})
 
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Create a new POI."""
+        """Create a new POI for the authenticated user."""
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            try:
-                poi = serializer.save(created_by=request.user)
-                return SuccessResponse(
-                    {"poi": self.get_serializer(poi).data},
-                    status=status.HTTP_201_CREATED,
-                )
-            except IntegrityError as e:
-                # Check if it's a duplicate name error
-                if "unique constraint" in str(e).lower() and "name" in str(e).lower():
-                    return ErrorResponse(
-                        {
-                            "errors": {
-                                "name": [
-                                    (
-                                        f"A Point of Interest with the name "
-                                        f"'{request.data.get('name', '')}' already "
-                                        "exists."
-                                    )
-                                ]
-                            }
-                        },
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                # Re-raise if it's a different integrity error
-                raise
+            poi = serializer.save(created_by=request.user)
+            return SuccessResponse(
+                {"poi": self.get_serializer(poi).data},
+                status=status.HTTP_201_CREATED,
+            )
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
     def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Update a POI."""
+        """Update a POI (only if owned by user)."""
         partial = kwargs.pop("partial", False)
         poi = self.get_object()
-
-        # Check if name is being changed and would cause a duplicate
-        new_name = request.data.get("name", poi.name)
-        if (
-            new_name != poi.name
-            and PointOfInterest.objects.filter(name=new_name)
-            .exclude(id=poi.id)
-            .exists()
-        ):
-            return ErrorResponse(
-                {
-                    "errors": {
-                        "name": [
-                            (
-                                f"A Point of Interest with the name '{new_name}' "
-                                "already exists."
-                            )
-                        ]
-                    }
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         serializer = self.get_serializer(poi, data=request.data, partial=partial)
         if serializer.is_valid():
@@ -130,7 +91,7 @@ class PointOfInterestViewSet(ModelViewSet[PointOfInterest], SDBAPIViewMixin):
         )
 
     def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Delete a POI."""
+        """Delete a POI (only if owned by user)."""
         poi = self.get_object()
         poi_id = poi.id
         poi.delete()
@@ -141,16 +102,20 @@ class PointOfInterestViewSet(ModelViewSet[PointOfInterest], SDBAPIViewMixin):
 
 class PointOfInterestMapView(GenericAPIView[PointOfInterest], SDBAPIViewMixin):
     """
-    View to get all POIs as GeoJSON-compatible data.
+    View to get user's POIs as GeoJSON-compatible data.
     Used by the map viewer to display POI markers.
+    Only shows POIs created by the authenticated user.
     """
 
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [POIOwnershipPermission]
     serializer_class = PointOfInterestMapSerializer
 
     def get(self, request: Request) -> Response:
-        """Get all POIs in a map-friendly format."""
-        pois = PointOfInterest.objects.all().select_related("created_by")
+        """Get user's POIs in a map-friendly format."""
+        user = self.get_user()
+        pois = PointOfInterest.objects.filter(created_by=user).select_related(
+            "created_by"
+        )
 
         # Use the map serializer to convert to GeoJSON format
         serializer = self.get_serializer(pois, many=True)
