@@ -55,11 +55,7 @@ class TestPointOfInterestEndpoints:
         url = reverse("api:v1:poi-list-create")
         response = api_client.get(url)
 
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["success"] is True
-        assert len(data["data"]["pois"]) == 1
-        assert data["data"]["pois"][0]["name"] == "Test POI"
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_list_pois_authenticated(
         self, api_client: APIClient, user: User, poi: PointOfInterest
@@ -74,8 +70,9 @@ class TestPointOfInterestEndpoints:
         assert data["success"] is True
         assert len(data["data"]["pois"]) == 1
 
-    def test_list_pois_empty(self, api_client: APIClient) -> None:
+    def test_list_pois_empty(self, api_client: APIClient, user: User) -> None:
         """Test listing POIs when none exist."""
+        api_client.force_authenticate(user=user)
         url = reverse("api:v1:poi-list-create")
         response = api_client.get(url)
 
@@ -95,6 +92,7 @@ class TestPointOfInterestEndpoints:
                 created_by=user,
             )
 
+        api_client.force_authenticate(user=user)
         url = reverse("api:v1:poi-list-create")
         response = api_client.get(url)
 
@@ -110,11 +108,7 @@ class TestPointOfInterestEndpoints:
         url = reverse("api:v1:poi-detail", kwargs={"id": poi.id})
         response = api_client.get(url)
 
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["success"] is True
-        assert data["data"]["poi"]["name"] == "Test POI"
-        assert data["data"]["poi"]["description"] == "Test description"
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_retrieve_poi_authenticated(
         self, api_client: APIClient, user: User, poi: PointOfInterest
@@ -128,9 +122,10 @@ class TestPointOfInterestEndpoints:
         data = response.json()
         assert data["data"]["poi"]["created_by_email"] == "testuser@example.com"
 
-    def test_retrieve_poi_not_found(self, api_client: APIClient) -> None:
+    def test_retrieve_poi_not_found(self, api_client: APIClient, user: User) -> None:
         """Test retrieving a non-existent POI."""
         fake_uuid = "00000000-0000-0000-0000-000000000000"
+        api_client.force_authenticate(user=user)
         url = reverse("api:v1:poi-detail", kwargs={"id": fake_uuid})
         response = api_client.get(url)
 
@@ -269,15 +264,17 @@ class TestPointOfInterestEndpoints:
         """Test updating a POI as a different user (should succeed - any authenticated
         user can update)."""
 
+        test_new_description = "Updated by another user"
+
         api_client.force_authenticate(user=other_user)
         url = reverse("api:v1:poi-detail", kwargs={"id": poi.id})
-        data = {"description": "Updated by another user"}
+        data = {"description": test_new_description}
 
         response = api_client.patch(url, data, format="json")
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_404_NOT_FOUND
         poi.refresh_from_db()
-        assert poi.description == "Updated by another user"
+        assert poi.description != test_new_description
 
     def test_update_poi_coordinates(
         self, api_client: APIClient, user: User, poi: PointOfInterest
@@ -308,28 +305,6 @@ class TestPointOfInterestEndpoints:
         response = api_client.patch(url, data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_update_poi_duplicate_name(
-        self, api_client: APIClient, user: User, poi: PointOfInterest
-    ) -> None:
-        """Test updating POI to a duplicate name."""
-        # Create another POI
-        PointOfInterest.objects.create(
-            name="Other POI",
-            latitude=0.0,
-            longitude=0.0,
-            created_by=user,
-        )
-
-        api_client.force_authenticate(user=user)
-        url = reverse("api:v1:poi-detail", kwargs={"id": poi.id})
-        data = {"name": "Other POI"}  # Try to use existing name
-
-        response = api_client.patch(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        response_data = response.json()
-        assert "name" in response_data["errors"]
 
     # Delete endpoint tests
     def test_delete_poi_unauthenticated(
@@ -363,8 +338,7 @@ class TestPointOfInterestEndpoints:
         url = reverse("api:v1:poi-detail", kwargs={"id": poi.id})
         response = api_client.delete(url)
 
-        assert response.status_code == status.HTTP_200_OK
-        assert not PointOfInterest.objects.filter(id=poi.id).exists()
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_poi_not_found(self, api_client: APIClient, user: User) -> None:
         """Test deleting a non-existent POI."""
@@ -398,25 +372,11 @@ class TestPointOfInterestEndpoints:
         url = reverse("api:v1:pois-map")
         response = api_client.get(url)
 
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["success"] is True
-        assert data["data"]["type"] == "FeatureCollection"
-        assert len(data["data"]["features"]) == 2  # noqa: PLR2004
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
-        # Check first feature
-        feature1 = data["data"]["features"][0]
-        assert feature1["type"] == "Feature"
-        assert feature1["geometry"]["type"] == "Point"
-        assert feature1["properties"]["name"] == "POI 1"
-        assert feature1["properties"]["created_by_email"] == "testuser@example.com"
-
-        # Check second feature (same creator)
-        feature2 = data["data"]["features"][1]
-        assert feature2["properties"]["created_by_email"] == "testuser@example.com"
-
-    def test_map_endpoint_empty(self, api_client: APIClient) -> None:
+    def test_map_endpoint_empty(self, api_client: APIClient, user: User) -> None:
         """Test map endpoint with no POIs."""
+        api_client.force_authenticate(user=user)
         url = reverse("api:v1:pois-map")
         response = api_client.get(url)
 
@@ -426,9 +386,10 @@ class TestPointOfInterestEndpoints:
         assert len(data["data"]["features"]) == 0
 
     def test_map_endpoint_coordinate_format(
-        self, api_client: APIClient, poi: PointOfInterest
+        self, api_client: APIClient, poi: PointOfInterest, user: User
     ) -> None:
         """Test that map endpoint returns coordinates in correct GeoJSON format."""
+        api_client.force_authenticate(user=user)
         url = reverse("api:v1:pois-map")
         response = api_client.get(url)
 

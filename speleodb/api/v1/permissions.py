@@ -11,6 +11,7 @@ from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
+from speleodb.surveys.models.point_of_interest import PointOfInterest
 from speleodb.users.models.team import SurveyTeam
 from speleodb.users.models.team import SurveyTeamMembership
 
@@ -186,3 +187,27 @@ class UserOwnsProjectMutex(permissions.BasePermission):
             return False
 
         return mutex.user == request.user
+
+
+class POIOwnershipPermission(permissions.BasePermission):
+    """
+    Permission class specifically for POI ownership.
+    - Users can only see/modify their own POIs
+    - No sharing or public access to POIs
+    """
+
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        """Only authenticated users can access POI endpoints."""
+        return bool(request.user and request.user.is_authenticated)
+
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: PointOfInterest,
+    ) -> bool:
+        """Users can only access POIs they created."""
+        # Check if the object has a created_by field and if it matches the user
+        if not isinstance(obj, PointOfInterest):
+            raise TypeError(f"Expected a `PointOfInterest` object, got {type(obj)}")
+        return obj.created_by == request.user

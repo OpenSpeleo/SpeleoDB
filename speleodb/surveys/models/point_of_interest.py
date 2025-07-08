@@ -25,7 +25,7 @@ class PointOfInterest(models.Model):
     # POI identification
     name = models.CharField(
         max_length=100,
-        help_text="Point of Interest name (must be unique)",
+        help_text="Point of Interest name",
     )
 
     description = models.TextField(
@@ -65,6 +65,7 @@ class PointOfInterest(models.Model):
             models.Index(fields=["latitude", "longitude"]),  # For spatial queries
             models.Index(fields=["name"]),  # For name lookups
             models.Index(fields=["creation_date"]),  # For recent POIs
+            models.Index(fields=["created_by"]),  # For user's POIs
         ]
 
     def __str__(self) -> str:
