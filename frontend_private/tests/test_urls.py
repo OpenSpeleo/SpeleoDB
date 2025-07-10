@@ -22,9 +22,17 @@ from django.urls import reverse
         # Teams routes
         ("private:teams", "teams/", None),
         ("private:team_new", "team/new/", None),
-        ("private:team_details", "team/{team_id}/", {"team_id": 1}),
-        ("private:team_memberships", "team/{team_id}/memberships/", {"team_id": 1}),
-        ("private:team_danger_zone", "team/{team_id}/danger_zone/", {"team_id": 1}),
+        ("private:team_details", "team/{team_id}/", {"team_id": uuid.uuid4()}),
+        (
+            "private:team_memberships",
+            "team/{team_id}/memberships/",
+            {"team_id": uuid.uuid4()},
+        ),
+        (
+            "private:team_danger_zone",
+            "team/{team_id}/danger_zone/",
+            {"team_id": uuid.uuid4()},
+        ),
         # Projects routes
         ("private:projects", "projects/", None),
         ("private:project_new", "project/new/", None),

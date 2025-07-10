@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
@@ -9,6 +11,9 @@ from speleodb.surveys.models import PermissionLevel
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    import uuid
 
 
 class UserRequestSerializer(serializers.Serializer[User]):
@@ -48,9 +53,9 @@ class UserRequestWithTeamRoleSerializer(UserRequestSerializer):
 
 
 class TeamRequestSerializer(serializers.Serializer[SurveyTeam]):
-    team = serializers.IntegerField()
+    team = serializers.UUIDField()
 
-    def validate_team(self, value: int) -> SurveyTeam:
+    def validate_team(self, value: uuid.UUID) -> SurveyTeam:
         try:
             team = SurveyTeam.objects.get(id=value)
 

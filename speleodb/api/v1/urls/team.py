@@ -29,5 +29,5 @@ team_url_patterns: list[URLPattern] = [
 
 urlpatterns: list[URLPattern | URLResolver] = [
     path("", TeamApiView.as_view(), name="team_api"),
-    path("<int:id>/", include(team_url_patterns)),
+    path("<uuid:id>/", include(team_url_patterns)),
 ]

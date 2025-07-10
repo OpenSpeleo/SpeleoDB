@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import uuid
 
 from django.urls import reverse
 from parameterized.parameterized import parameterized
@@ -305,8 +306,10 @@ class TestGetTeam(BaseAPITestCase):
 
     def test_get_non_existing_team(self) -> None:
         auth = self.header_prefix + self.token.key
+        # Use a random UUID that doesn't exist
+        non_existing_id = uuid.uuid4()
         response = self.client.get(
-            reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id + 1}),
+            reverse("api:v1:one_team_apiview", kwargs={"id": non_existing_id}),
             headers={"authorization": auth},
         )
 

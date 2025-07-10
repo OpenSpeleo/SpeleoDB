@@ -27,6 +27,8 @@ from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from django.http import HttpResponse
 
     from speleodb.utils.requests import AuthenticatedHttpRequest
@@ -132,7 +134,7 @@ class _BaseTeamView(_AuthenticatedTemplateView):
     def get_data_or_redirect(
         self,
         request: AuthenticatedHttpRequest,
-        team_id: int,
+        team_id: UUID,
     ) -> HttpResponseRedirectBase | dict[str, SurveyTeam | bool]:
         try:
             team = SurveyTeam.objects.get(id=team_id)
@@ -153,7 +155,7 @@ class TeamDetailsView(_BaseTeamView):
     def get(  # type: ignore[override]
         self,
         request: AuthenticatedHttpRequest,
-        team_id: int,
+        team_id: UUID,
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponseRedirectBase | HttpResponse | dict[str, SurveyTeam | bool]:
@@ -171,7 +173,7 @@ class TeamMembershipsView(_BaseTeamView):
     def get(  # type: ignore[override]
         self,
         request: AuthenticatedHttpRequest,
-        team_id: int,
+        team_id: UUID,
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponseRedirectBase | HttpResponse:
@@ -190,7 +192,7 @@ class TeamDangerZoneView(_BaseTeamView):
     def get(  # type: ignore[override]
         self,
         request: AuthenticatedHttpRequest,
-        team_id: int,
+        team_id: UUID,
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponseRedirectBase | HttpResponse:

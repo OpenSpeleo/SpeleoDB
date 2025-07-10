@@ -42,7 +42,6 @@ class Station(models.Model):
         default=uuid.uuid4,
         editable=False,
         primary_key=True,
-        unique=True,
     )
 
     # Project relationship
@@ -50,6 +49,8 @@ class Station(models.Model):
         "surveys.Project",
         related_name="rel_stations",
         on_delete=models.CASCADE,
+        blank=False,
+        null=False,
     )
 
     # Station identification
@@ -80,9 +81,9 @@ class Station(models.Model):
     created_by = models.ForeignKey(
         "users.User",
         related_name="rel_stations_created",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.RESTRICT,
+        blank=False,
+        null=False,
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)
@@ -126,7 +127,6 @@ class StationResource(models.Model):
         default=uuid.uuid4,
         editable=False,
         primary_key=True,
-        unique=True,
     )
 
     # Station relationship
@@ -134,6 +134,8 @@ class StationResource(models.Model):
         Station,
         related_name="rel_resources",
         on_delete=models.CASCADE,
+        blank=False,
+        null=False,
     )
 
     # Resource details
@@ -189,9 +191,9 @@ class StationResource(models.Model):
     created_by = models.ForeignKey(
         "users.User",
         related_name="rel_station_resources_created",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.RESTRICT,
+        blank=False,
+        null=False,
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)

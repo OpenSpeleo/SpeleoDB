@@ -19,7 +19,6 @@ class PointOfInterest(models.Model):
         default=uuid.uuid4,
         editable=False,
         primary_key=True,
-        unique=True,
     )
 
     # POI identification
@@ -51,7 +50,11 @@ class PointOfInterest(models.Model):
 
     # Metadata
     created_by = models.ForeignKey(
-        "users.User", related_name="pois_created", on_delete=models.CASCADE
+        "users.User",
+        related_name="pois_created",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)

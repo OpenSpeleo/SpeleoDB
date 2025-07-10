@@ -97,7 +97,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
     # Teams URLs
     path("teams/", TeamListingView.as_view(), name="teams"),
     path("team/new/", NewTeamView.as_view(), name="team_new"),
-    path("team/<int:team_id>/", include(team_urls)),
+    path("team/<uuid:team_id>/", include(team_urls)),
     # Project URLs
     path("projects/", ProjectListingView.as_view(), name="projects"),
     path("project/new/", NewProjectView.as_view(), name="project_new"),

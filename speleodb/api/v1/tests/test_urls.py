@@ -167,17 +167,17 @@ def test_user_api_urls(name: str, path: str) -> None:
         (
             "api:v1:one_team_apiview",
             "/api/v1/teams/{id}/",
-            {"id": random.randint(1, 100)},
+            {"id": uuid.uuid4()},
         ),
         (
             "api:v1:team_membership",
             "/api/v1/teams/{id}/membership/",
-            {"id": random.randint(1, 100)},
+            {"id": uuid.uuid4()},
         ),
         (
             "api:v1:team_list_membership",
             "/api/v1/teams/{id}/memberships/",
-            {"id": random.randint(1, 100)},
+            {"id": uuid.uuid4()},
         ),
     ],
 )
