@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -23,7 +24,11 @@ class SurveyTeam(models.Model):
 
     rel_team_memberships: models.QuerySet[SurveyTeamMembership]
 
-    id = models.AutoField(primary_key=True)  # Explicitly declared for typing
+    id = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        primary_key=True,
+    )
 
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=False, null=False)
@@ -80,12 +85,16 @@ class SurveyTeamMembership(models.Model):
         SurveyTeam,
         on_delete=models.CASCADE,
         related_name="rel_team_memberships",
+        blank=False,
+        null=False,
     )
 
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name="rel_team_memberships",
+        blank=False,
+        null=False,
     )
 
     is_active = models.BooleanField(default=True)
@@ -98,6 +107,7 @@ class SurveyTeamMembership(models.Model):
         related_name="rel_deactivated_memberships",
         on_delete=models.RESTRICT,
         null=True,
+        blank=True,
         default=None,
     )
 

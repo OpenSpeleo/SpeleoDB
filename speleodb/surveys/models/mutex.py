@@ -13,9 +13,17 @@ class Mutex(models.Model):
         Project,
         related_name="rel_mutexes",
         on_delete=models.CASCADE,
+        blank=False,
+        null=False,
     )
 
-    user = models.ForeignKey(User, related_name="rel_mutexes", on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User,
+        related_name="rel_mutexes",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
 
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)

@@ -106,7 +106,7 @@ class TeamSpecificApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         team = self.get_object()
-        team_id: int = team.id
+        team_id = team.id
         team.delete()
 
         return SuccessResponse({"id": str(team_id)}, status=status.HTTP_204_NO_CONTENT)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import uuid
 
 import pytest
 from django.core.exceptions import ObjectDoesNotExist
@@ -381,8 +382,10 @@ class TestGetTeamMembership(BaseAPITestCase):
 
     def test_get_membership_non_existing_team(self) -> None:
         auth = self.header_prefix + self.token.key
+        # Use a random UUID that doesn't exist
+        non_existing_id = uuid.uuid4()
         response = self.client.get(
-            reverse("api:v1:team_membership", kwargs={"id": self.team.id + 1}),
+            reverse("api:v1:team_membership", kwargs={"id": non_existing_id}),
             headers={"authorization": auth},
         )
 
@@ -431,8 +434,10 @@ class TestGetTeamMembership(BaseAPITestCase):
 
     def test_get_all_memberships_non_existing_team(self) -> None:
         auth = self.header_prefix + self.token.key
+        # Use a random UUID that doesn't exist
+        non_existing_id = uuid.uuid4()
         response = self.client.get(
-            reverse("api:v1:team_list_membership", kwargs={"id": self.team.id + 1}),
+            reverse("api:v1:team_list_membership", kwargs={"id": non_existing_id}),
             headers={"authorization": auth},
         )
 

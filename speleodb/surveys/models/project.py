@@ -61,9 +61,6 @@ class Project(models.Model):
     id = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
-        blank=False,
-        null=False,
-        unique=True,
         primary_key=True,
     )
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
@@ -87,10 +84,9 @@ class Project(models.Model):
     created_by = models.ForeignKey(
         User,
         related_name="rel_projects_created",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        default=None,
+        on_delete=models.RESTRICT,
+        blank=False,
+        null=False,
     )
 
     # Geo Coordinates

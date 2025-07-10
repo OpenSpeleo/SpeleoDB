@@ -14,12 +14,16 @@ class UserPermission(BasePermissionModel):
         User,
         related_name="rel_permissions",
         on_delete=models.CASCADE,
+        blank=False,
+        null=False,
     )
 
     project = models.ForeignKey(
         Project,
         related_name="rel_user_permissions",
         on_delete=models.CASCADE,
+        blank=False,
+        null=False,
     )
 
     class Meta:
