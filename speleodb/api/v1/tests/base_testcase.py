@@ -13,13 +13,13 @@ from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import TokenFactory
-from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
     from rest_framework.authtoken.models import Token

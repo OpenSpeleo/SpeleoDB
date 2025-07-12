@@ -10,9 +10,9 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 
 from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import PermissionLevel
+from speleodb.users.tests.factories import UserFactory
 
 
 class TestWebViewerRestrictions(TestCase):
@@ -48,9 +48,7 @@ class TestWebViewerRestrictions(TestCase):
             target=self.user, project=self.project_admin, level=PermissionLevel.ADMIN
         )
 
-        self.client.login(
-            email=self.user.email, password=UserFactory.DEFAULT_PASSWORD()
-        )
+        self.client.force_login(self.user)
 
     def test_project_listing_excludes_webviewer(self) -> None:
         """Test that projects with only WEBVIEWER access are not shown in listing."""

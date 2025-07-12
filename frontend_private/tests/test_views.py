@@ -17,11 +17,11 @@ from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.factories import TeamPermissionFactory
-from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.tests.factories import UserFactory
 
 
 class BaseTestCase(TestCase):
@@ -36,9 +36,8 @@ class BaseTestCase(TestCase):
         expected_status: int = status.HTTP_200_OK,
     ) -> None:
         url = reverse(f"private:{view_name}", kwargs=kwargs)
-        self.client.login(
-            email=self.user.email, password=UserFactory.DEFAULT_PASSWORD()
-        )
+
+        self.client.force_login(self.user)
         response = self.client.get(url)
 
         if expected_status != status.HTTP_302_FOUND:

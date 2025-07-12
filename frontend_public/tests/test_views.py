@@ -9,7 +9,7 @@ from django.urls import reverse
 from parameterized.parameterized import parameterized
 from rest_framework import status
 
-from speleodb.api.v1.tests.factories import UserFactory
+from speleodb.users.tests.factories import UserFactory
 
 
 class ViewFunctionalityTest(TestCase):
@@ -42,7 +42,7 @@ class ViewFunctionalityTest(TestCase):
 
     def test_view_logout(self) -> None:
         user = UserFactory.create()
-        self.client.login(email=user.email, password=UserFactory.DEFAULT_PASSWORD())
+        self.client.force_login(user)
 
         self.execute_test(
             name="account_logout", kwargs=None, expected_status=status.HTTP_302_FOUND

@@ -7,10 +7,10 @@ from rest_framework.test import APIClient
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
-from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import StationResource
+from speleodb.users.tests.factories import UserFactory
 
 
 @pytest.mark.django_db

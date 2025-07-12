@@ -19,11 +19,11 @@ from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
-from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models import UserPermission
+from speleodb.users.tests.factories import UserFactory
 
 
 class TestMapViewerIntegration(BaseAPIProjectTestCase):

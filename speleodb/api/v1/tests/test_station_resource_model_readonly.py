@@ -5,8 +5,8 @@ import pytest
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
-from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.surveys.models.station import StationResource
+from speleodb.users.tests.factories import UserFactory
 
 
 @pytest.mark.django_db

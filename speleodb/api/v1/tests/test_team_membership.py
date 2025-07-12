@@ -16,11 +16,11 @@ from speleodb.api.v1.serializers import SurveyTeamSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
-from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
 
 
 class TestTeamMembershipCreation(BaseAPITestCase):

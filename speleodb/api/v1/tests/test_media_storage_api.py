@@ -19,9 +19,9 @@ from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
 from speleodb.api.v1.tests.factories import TokenFactory
-from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models.station import StationResource
+from speleodb.users.tests.factories import UserFactory
 
 
 class TestS3CredentialValidation(BaseAPIProjectTestCase):
