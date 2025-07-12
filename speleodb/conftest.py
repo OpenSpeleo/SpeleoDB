@@ -42,6 +42,17 @@ def user(db: None) -> User:
 
 
 @pytest.fixture
+def admin_user(db: None) -> User:
+    user = UserFactory.create(
+        email="admin@example.com",
+        is_staff=True,
+        is_superuser=True,
+    )
+    assert user.is_superuser
+    return user
+
+
+@pytest.fixture
 def project(db: None) -> Project:
     return ProjectFactory.create(created_by=UserFactory())
 

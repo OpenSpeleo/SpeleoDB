@@ -26,6 +26,7 @@ from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
+from speleodb.utils.admin_filters import ProjectCountryFilter
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -143,7 +144,7 @@ class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "name",
-        "description",
+        "short_description",
         "creation_date",
         "modified_date",
         "country",
@@ -153,6 +154,18 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "created_by",
     )
     ordering = ("name",)
+
+    list_filter = ["created_by", ProjectCountryFilter]
+
+    @admin.display(description="Description")
+    def short_description(self, obj: Project) -> str:
+        # Truncate the text, e.g., to 50 characters
+        if desc := obj.description:
+            if len(desc) > 50:  # noqa: PLR2004
+                return f"{desc[:50]} ..."
+            return desc
+
+        return ""
 
 
 @admin.register(PublicAnnoucement)

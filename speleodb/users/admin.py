@@ -19,6 +19,8 @@ from speleodb.users.forms import UserAdminCreationForm
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
+from speleodb.utils.admin_filters import SurveyTeamCountryFilter
+from speleodb.utils.admin_filters import UserCountryFilter
 
 if TYPE_CHECKING:
     from django.forms.models import ModelForm
@@ -69,6 +71,7 @@ class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):  # type: ignore[typ
     ]
     search_fields = ["name", "email"]
     ordering = ["email"]
+    list_filter = ("is_staff", "is_superuser", "is_active", "groups", UserCountryFilter)
     add_fieldsets = (
         (
             None,
@@ -101,8 +104,9 @@ class EmailAddressAdmin(DynamicRawIDMixin, _EmailAddressAdmin):
 
 @admin.register(SurveyTeam)
 class SurveyTeamAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = ("name", "creation_date", "modified_date")
+    list_display = ("id", "name", "country", "creation_date", "modified_date")
     ordering = ("name",)
+    list_filter = ["creation_date", SurveyTeamCountryFilter]
 
 
 @admin.register(SurveyTeamMembership)
