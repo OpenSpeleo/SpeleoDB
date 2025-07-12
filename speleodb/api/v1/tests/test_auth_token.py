@@ -8,16 +8,22 @@ from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
-from speleodb.api.v1.tests.factories import UserFactory
 from speleodb.utils.test_utils import named_product
+
+USER_TEST_PASSWORD = "YeeOfLittleFaith"  # noqa: S105
 
 
 class TestTokenAuth(BaseAPITestCase):
     def test_token_retrieval_works(self) -> None:
         endpoint = reverse("api:v1:auth_token")
+
+        # Reset the user password since the factory sets a random one.
+        self.user.set_password(USER_TEST_PASSWORD)
+        self.user.save()
+
         response = self.client.post(
             endpoint,
-            {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD()},
+            {"email": self.user.email, "password": USER_TEST_PASSWORD},
         )
         assert response.status_code == status.HTTP_200_OK, response.data
 
@@ -45,10 +51,12 @@ class TestTokenAuth(BaseAPITestCase):
         if method not in ["POST", "PUT", "PATCH"]:
             raise ValueError(f"Method `{method}` is not allowed.")
 
+        # Reset the user password since the factory sets a random one.
+        self.user.set_password(USER_TEST_PASSWORD)
+        self.user.save()
+
         if is_authenticated:
-            self.client.login(
-                username=self.user.email, password=UserFactory.DEFAULT_PASSWORD()
-            )
+            self.client.force_login(self.user)
             assert get_user(self.client).is_authenticated
 
         method_fn = getattr(self.client, method.lower())
@@ -56,7 +64,7 @@ class TestTokenAuth(BaseAPITestCase):
         endpoint = reverse("api:v1:auth_token")
         response = method_fn(
             endpoint,
-            {"email": self.user.email, "password": UserFactory.DEFAULT_PASSWORD()}
+            {"email": self.user.email, "password": USER_TEST_PASSWORD}
             if not is_authenticated
             else None,
         )
@@ -97,7 +105,7 @@ class TestTokenAuth(BaseAPITestCase):
     def test_not_existing_email(self) -> None:
         response = self.client.post(
             reverse("api:v1:auth_token"),
-            {"email": "chuck@norris.com", "password": UserFactory.DEFAULT_PASSWORD()},
+            {"email": "chuck@norris.com", "password": "YeeOfLittleFaith"},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
@@ -122,7 +130,7 @@ class TestTokenAuth(BaseAPITestCase):
     def test_missing_email(self) -> None:
         response = self.client.post(
             reverse("api:v1:auth_token"),
-            {"password": UserFactory.DEFAULT_PASSWORD()},
+            {"password": "YeeOfLittleFaith"},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 

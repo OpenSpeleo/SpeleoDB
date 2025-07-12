@@ -5,7 +5,8 @@ from __future__ import annotations
 import base64
 
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
-from speleodb.api.v1.tests.factories import UserFactory
+
+USER_TEST_PASSWORD = "YeeOfLittleFaith"  # noqa: S105
 
 
 class TestGitProxyServer(BaseAPITestCase):
@@ -13,10 +14,14 @@ class TestGitProxyServer(BaseAPITestCase):
         return f"{self.header_prefix}{self.token.key}"
 
     def _get_basic_auth(self) -> str:
+        # Reset the user password since the factory sets a random one.
+        self.user.set_password(USER_TEST_PASSWORD)
+        self.user.save()
+
         return "Basic {}".format(
-            base64.b64encode(
-                f"{self.user.email}:{UserFactory.DEFAULT_PASSWORD()}".encode()
-            ).decode("utf-8")
+            base64.b64encode(f"{self.user.email}:{USER_TEST_PASSWORD}".encode()).decode(
+                "utf-8"
+            )
         )
 
     # def test_invalid_token(self):

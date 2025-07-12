@@ -5,14 +5,12 @@ from __future__ import annotations
 import hashlib
 import random
 import uuid
-from typing import TYPE_CHECKING
 from typing import Any
 
 import factory
 from django.utils import timezone
 from django_countries import countries
 from factory import Faker
-from factory import post_generation
 from factory.django import DjangoModelFactory
 from faker import Faker as FakerLib
 from rest_framework.authtoken.models import Token
@@ -30,38 +28,7 @@ from speleodb.surveys.models.station import StationResource
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
-
-if TYPE_CHECKING:
-    from factory.base import StubObject
-
-
-class UserFactory(DjangoModelFactory[User]):
-    email: str = Faker("email")  # type: ignore[assignment]
-    name: str = Faker("name")  # type: ignore[assignment]
-    country: str = random.choice(countries).code  # pyright: ignore[reportAttributeAccessIssue]
-
-    class Meta:
-        model = User
-
-    @post_generation
-    def password(self, *args: Any, **kwargs: Any) -> None:
-        self.set_password(UserFactory.DEFAULT_PASSWORD())  # type: ignore[attr-defined]
-
-    @classmethod
-    def _after_postgeneration(
-        cls,
-        instance: User | StubObject,
-        create: bool,
-        results: dict[str, Any] | None = None,
-    ) -> None:
-        """Save again the instance if creating and at least one hook ran."""
-        if create and results and not cls._meta.skip_postgeneration_save:  # type: ignore[attr-defined]
-            # Some post-generation hooks ran, and may have modified us.
-            instance.save()  # type: ignore[union-attr]
-
-    @classmethod
-    def DEFAULT_PASSWORD(cls) -> str:  # noqa: N802
-        return "password"
+from speleodb.users.tests.factories import UserFactory
 
 
 class SurveyTeamFactory(DjangoModelFactory[SurveyTeam]):
