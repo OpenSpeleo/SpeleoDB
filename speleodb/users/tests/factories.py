@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 from typing import Any
 
+from django_countries import countries
 from factory.django import DjangoModelFactory
 from factory.faker import Faker
 from factory.helpers import post_generation
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
 class UserFactory(DjangoModelFactory[User]):
     email: str = Faker("email")  # type: ignore[assignment]
     name: str = Faker("name")  # type: ignore[assignment]
+    country: str = random.choice(countries).code  # pyright: ignore[reportAttributeAccessIssue]
 
     class Meta:
         model = User

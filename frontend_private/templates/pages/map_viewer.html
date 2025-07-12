@@ -6229,21 +6229,29 @@
             // Check if it's the new format with operations history
             try {
                 const data = JSON.parse(existingData);
+                console.log('Loading sketch data:', data);
                 if (data.type === 'sketch_with_history' && data.operations) {
+                    console.log('Operations data:', data.operations);
                     editSketchOps.fromJSON(data.operations);
                     updateEditUndoRedoButtons();
-                    return;
+                } else {
+                    // Invalid format - start fresh
+                    editSketchOps.clearCanvas();
+                    updateEditUndoRedoButtons();
                 }
             } catch (e) {
+                console.log('Failed to parse sketch data:', e);
                 // Invalid format - start fresh
+                editSketchOps.clearCanvas();
+                updateEditUndoRedoButtons();
             }
+        } else {
+            // No existing data, start fresh
+            editSketchOps.clearCanvas();
+            updateEditUndoRedoButtons();
         }
 
-        // No existing data or invalid format, start fresh
-        editSketchOps.clearCanvas();
-        updateEditUndoRedoButtons();
-
-        // Mouse events
+        // Mouse events - always attach these
         editSketchCanvas.addEventListener('mousedown', startEditDrawing);
         editSketchCanvas.addEventListener('mousemove', editDraw);
         editSketchCanvas.addEventListener('mouseup', stopEditDrawing);
@@ -6863,8 +6871,10 @@
         }
 
         fromJSON(data) {
+            console.log('fromJSON called with:', data);
             this.operations = data.operations || [];
             this.currentIndex = data.currentIndex ?? this.operations.length - 1;
+            console.log('Loaded operations:', this.operations.length, 'currentIndex:', this.currentIndex);
             this.redrawCanvas();
         }
 
@@ -6970,9 +6980,15 @@
         const title = formData.get('title');
         
         // Handle sketch data
-        if (resourceType === 'sketch' && sketchCanvas) {
-            const sketchData = sketchCanvas.toDataURL();
-            formData.set('text_content', sketchData);
+        if (resourceType === 'sketch' && sketchCanvas && sketchOps) {
+            // Create a wrapper object with both operations and preview
+            const sketchData = {
+                type: 'sketch_with_history',
+                version: 1,
+                operations: sketchOps.toJSON(),
+                preview: sketchOps.toDataURL()
+            };
+            formData.set('text_content', JSON.stringify(sketchData));
         }
         
         // Production mode - save to database

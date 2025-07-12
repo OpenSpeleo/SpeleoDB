@@ -8,5 +8,9 @@
     "mypy-type-checker.importStrategy": "fromEnvironment",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.logLevel": "Trace",
-    "python.analysis.indexing": false
+    "python.analysis.indexing": false,
+    "[html]": {
+        "editor.formatOnSave": false,
+        "editor.defaultFormatter": null
+    }
 }
