@@ -12,13 +12,13 @@ from speleodb.surveys.models import Project
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models.point_of_interest import PointOfInterest
-from speleodb.users.models.team import SurveyTeam
-from speleodb.users.models.team import SurveyTeamMembership
+from speleodb.users.models import SurveyTeamMembershipRole
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
     from rest_framework.views import APIView
 
+    from speleodb.users.models.team import SurveyTeam
     from speleodb.utils.requests import AuthenticatedDRFRequest
 
 
@@ -146,19 +146,17 @@ class BaseTeamAccessLevel(permissions.BasePermission):
     ) -> bool:
         try:
             membership = obj.get_membership(user=request.user)
-            return (
-                membership.role.value >= self.MIN_ACCESS_LEVEL and membership.is_active
-            )
+            return membership.role >= self.MIN_ACCESS_LEVEL and membership.is_active
         except ObjectDoesNotExist:
             return False
 
 
 class UserHasLeaderAccess(BaseTeamAccessLevel):
-    MIN_ACCESS_LEVEL = SurveyTeamMembership.Role.LEADER
+    MIN_ACCESS_LEVEL = SurveyTeamMembershipRole.LEADER
 
 
 class UserHasMemberAccess(BaseTeamAccessLevel):
-    MIN_ACCESS_LEVEL = SurveyTeamMembership.Role.MEMBER
+    MIN_ACCESS_LEVEL = SurveyTeamMembershipRole.MEMBER
 
 
 class IsReadOnly(permissions.BasePermission):

@@ -9,7 +9,7 @@ from rest_framework import serializers
 
 from speleodb.surveys.models import PermissionLevel
 from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -45,11 +45,11 @@ class UserRequestSerializer(serializers.Serializer[User]):
 
 class UserRequestWithTeamRoleSerializer(UserRequestSerializer):
     role = serializers.ChoiceField(
-        choices=[name for _, name in SurveyTeamMembership.Role.choices]
+        choices=[name for _, name in SurveyTeamMembershipRole.choices]
     )
 
-    def validate_role(self, value: str) -> SurveyTeamMembership.Role:
-        return SurveyTeamMembership.Role.from_str(value.upper())
+    def validate_role(self, value: str) -> SurveyTeamMembershipRole:
+        return SurveyTeamMembershipRole.from_str(value.upper())
 
 
 class TeamRequestSerializer(serializers.Serializer[SurveyTeam]):

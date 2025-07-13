@@ -17,7 +17,7 @@ from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory
 
@@ -61,7 +61,7 @@ class BaseAPIProjectTestCase(BaseAPITestCase):
             _ = SurveyTeamMembershipFactory.create(
                 user=self.user,
                 team=team,
-                role=random.choice(SurveyTeamMembership.Role.values),
+                role=random.choice(SurveyTeamMembershipRole.values),
             )
 
             # Give the newly created permission to the project

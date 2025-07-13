@@ -20,7 +20,7 @@ from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.tests.factories import UserFactory
 
 
@@ -67,10 +67,10 @@ class UserViewsTest(BaseTestCase):
 
 
 @parameterized_class(
-    ("role"), [(SurveyTeamMembership.Role.LEADER,), (SurveyTeamMembership.Role.MEMBER,)]
+    ("role"), [(SurveyTeamMembershipRole.LEADER,), (SurveyTeamMembershipRole.MEMBER,)]
 )
 class TeamViewsTest(BaseTestCase):
-    role: SurveyTeamMembership.Role
+    role: SurveyTeamMembershipRole
 
     def setUp(self) -> None:
         super().setUp()
@@ -88,7 +88,7 @@ class TeamViewsTest(BaseTestCase):
     def test_view_with_team_id(self, view_name: str) -> None:
         expected_status = (
             status.HTTP_200_OK
-            if self.role == SurveyTeamMembership.Role.LEADER
+            if self.role == SurveyTeamMembershipRole.LEADER
             or view_name != "team_danger_zone"
             else status.HTTP_302_FOUND
         )

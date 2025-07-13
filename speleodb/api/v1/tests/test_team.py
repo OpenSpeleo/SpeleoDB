@@ -15,7 +15,7 @@ from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.models import SurveyTeamMembershipRole
 
 
 class TestTeamCreation(BaseAPITestCase):
@@ -119,7 +119,7 @@ class TestTeamUpdate(BaseAPITestCase):
 
         # Must make the user a team leader to modify the team
         _ = SurveyTeamMembershipFactory(
-            team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
+            team=self.team, user=self.user, role=SurveyTeamMembershipRole.LEADER
         )
 
     def test_full_update_team(self) -> None:
@@ -214,7 +214,7 @@ class TestTeamUpdateErrors(BaseAPITestCase):
     @parameterized.expand(["PATCH", "PUT"])
     def test_update_as_a_member(self, method_type: str) -> None:
         _ = SurveyTeamMembershipFactory(
-            team=self.team, user=self.user, role=SurveyTeamMembership.Role.MEMBER
+            team=self.team, user=self.user, role=SurveyTeamMembershipRole.MEMBER
         )
 
         self.base_test(method_type=method_type)
@@ -246,7 +246,7 @@ class TestTeamDelete(BaseAPITestCase):
     def test_delete(self) -> None:
         # Must make the user a team leader to modify the team
         _ = SurveyTeamMembershipFactory(
-            team=self.team, user=self.user, role=SurveyTeamMembership.Role.LEADER
+            team=self.team, user=self.user, role=SurveyTeamMembershipRole.LEADER
         )
 
         auth = self.header_prefix + self.token.key
@@ -257,8 +257,8 @@ class TestTeamDelete(BaseAPITestCase):
 
         assert response.status_code == status.HTTP_204_NO_CONTENT, response.data
 
-    @parameterized.expand([SurveyTeamMembership.Role.MEMBER, None])
-    def test_delete_error(self, role: SurveyTeamMembership.Role | None) -> None:
+    @parameterized.expand([SurveyTeamMembershipRole.MEMBER, None])
+    def test_delete_error(self, role: SurveyTeamMembershipRole | None) -> None:
         if role is not None:
             _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
 
@@ -279,9 +279,9 @@ class TestGetTeam(BaseAPITestCase):
         self.team = SurveyTeamFactory.create()
 
     @parameterized.expand(
-        [SurveyTeamMembership.Role.LEADER, SurveyTeamMembership.Role.MEMBER, None]
+        [SurveyTeamMembershipRole.LEADER, SurveyTeamMembershipRole.MEMBER, None]
     )
-    def test_get_team(self, role: SurveyTeamMembership.Role | None) -> None:
+    def test_get_team(self, role: SurveyTeamMembershipRole | None) -> None:
         if role is not None:
             _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
 
@@ -316,9 +316,9 @@ class TestGetTeam(BaseAPITestCase):
         assert response.status_code == status.HTTP_404_NOT_FOUND, response.status_code
 
     @parameterized.expand(
-        [SurveyTeamMembership.Role.LEADER, SurveyTeamMembership.Role.MEMBER, None]
+        [SurveyTeamMembershipRole.LEADER, SurveyTeamMembershipRole.MEMBER, None]
     )
-    def test_get_all_user_team(self, role: SurveyTeamMembership.Role | None) -> None:
+    def test_get_all_user_team(self, role: SurveyTeamMembershipRole | None) -> None:
         if role is not None:
             _ = SurveyTeamMembershipFactory(team=self.team, user=self.user, role=role)
 

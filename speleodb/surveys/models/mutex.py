@@ -25,6 +25,11 @@ class Mutex(models.Model):
         null=False,
     )
 
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Is Active",
+    )
+
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
@@ -36,6 +41,7 @@ class Mutex(models.Model):
         null=True,
         default=None,
     )
+
     closing_comment = models.TextField(blank=True, default="")
 
     class Meta:
@@ -48,10 +54,7 @@ class Mutex(models.Model):
         return f"<{self.__class__.__name__}: {self}>"
 
     def release_mutex(self, user: User, comment: str) -> None:
+        self.is_active = False
         self.closing_user = user
         self.closing_comment = comment
         self.save()
-
-    @property
-    def is_active(self) -> bool:
-        return self.closing_user is None

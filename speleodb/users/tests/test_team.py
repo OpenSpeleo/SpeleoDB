@@ -9,6 +9,7 @@ from django.db.utils import IntegrityError
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory
 
@@ -20,7 +21,7 @@ def leader_membership(db: None, team: SurveyTeam) -> SurveyTeamMembership:
     """
     user = UserFactory.create()
     return SurveyTeamMembershipFactory.create(
-        team=team, user=user, role=SurveyTeamMembership.Role.LEADER
+        team=team, user=user, role=SurveyTeamMembershipRole.LEADER
     )
 
 
@@ -31,7 +32,7 @@ def member_membership(db: None, team: SurveyTeam) -> SurveyTeamMembership:
     """
     user = UserFactory.create()
     return SurveyTeamMembershipFactory.create(
-        team=team, user=user, role=SurveyTeamMembership.Role.MEMBER
+        team=team, user=user, role=SurveyTeamMembershipRole.MEMBER
     )
 
 
@@ -120,9 +121,9 @@ class TestSurveyTeamMembership:
         self, member_membership: SurveyTeamMembership
     ) -> None:
         """Test the role property setter."""
-        member_membership.role = SurveyTeamMembership.Role.LEADER
+        member_membership.role = SurveyTeamMembershipRole.LEADER
         member_membership.save()
-        assert member_membership._role == SurveyTeamMembership.Role.LEADER  # noqa: SLF001
+        assert member_membership.role == SurveyTeamMembershipRole.LEADER
 
     def test_deactivate(
         self, member_membership: SurveyTeamMembership, user: User
@@ -137,7 +138,7 @@ class TestSurveyTeamMembership:
     ) -> None:
         """Test reactivate resets is_active and role."""
         member_membership.deactivate(deactivated_by=user)
-        member_membership.reactivate(SurveyTeamMembership.Role.LEADER)
+        member_membership.reactivate(SurveyTeamMembershipRole.LEADER)
         assert member_membership.is_active
         assert member_membership.deactivated_by is None
         assert member_membership.role_label == "LEADER"
@@ -146,11 +147,11 @@ class TestSurveyTeamMembership:
     def test_unique_together_constraint(self, team: SurveyTeam, user: User) -> None:
         """Test unique_together prevents duplicate memberships."""
         SurveyTeamMembershipFactory(
-            team=team, user=user, role=SurveyTeamMembership.Role.MEMBER
+            team=team, user=user, role=SurveyTeamMembershipRole.MEMBER
         )
         with pytest.raises(IntegrityError):
             SurveyTeamMembershipFactory(
-                team=team, user=user, role=SurveyTeamMembership.Role.MEMBER
+                team=team, user=user, role=SurveyTeamMembershipRole.MEMBER
             )
 
     def test_inactive_membership_not_included(

@@ -27,6 +27,7 @@ from speleodb.surveys.models import StationResource
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
 from speleodb.utils.admin_filters import ProjectCountryFilter
+from speleodb.utils.admin_filters import StationProjectFilter
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -47,24 +48,24 @@ class FormatAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 @admin.register(Mutex)
 class MutexAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
-        "project_name",
+        "project",
         "user",
+        "is_active",
         "creation_date",
         "modified_date",
         "closing_user",
         "closing_comment",
     )
-    ordering = ("-modified_date",)
-    list_filter = ["closing_user", "project__name"]
+    ordering = (
+        "-is_active",
+        "-modified_date",
+    )
+    list_filter = ["is_active"]
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Any, Any]:
         # Annotate the queryset with project name for sorting
         qs = super().get_queryset(request)
         return qs.annotate(project_name=F("project__name"))  # type: ignore[no-any-return]
-
-    @admin.display(ordering="project_name")
-    def project_name(self, obj: Mutex) -> str:
-        return obj.project.name
 
 
 @admin.register(TeamPermission)
@@ -79,7 +80,7 @@ class PermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "is_active",
     )
     ordering = ("project",)
-    list_filter = ["is_active"]
+    list_filter = ["is_active", "level"]
 
 
 @admin.register(PointOfInterest)
@@ -94,7 +95,7 @@ class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "modified_date",
     )
     ordering = ("name",)
-    list_filter = ["created_by", "creation_date"]
+    list_filter = ["creation_date", "modified_date"]
     search_fields = ["name", "description"]
     readonly_fields = ("id", "creation_date", "modified_date", "coordinates")
 
@@ -155,7 +156,7 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
     ordering = ("name",)
 
-    list_filter = ["created_by", ProjectCountryFilter]
+    list_filter = [ProjectCountryFilter]
 
     @admin.display(description="Description")
     def short_description(self, obj: Project) -> str:
@@ -213,6 +214,53 @@ class PublicAnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return form
 
 
+@admin.register(PluginRelease)
+class PluginReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "id",
+        "plugin_version",
+        "software",
+        "min_software_version",
+        "max_software_version",
+        "operating_system",
+        "creation_date",
+        "modified_date",
+    )
+
+    ordering = ("-creation_date",)
+    list_filter = ["software", "operating_system", "plugin_version"]
+
+    formfield_overrides = {
+        models.TextField: {
+            "widget": forms.Textarea(
+                attrs={"cols": 100, "rows": 20, "style": "font-family: monospace;"}
+            )
+        },
+    }
+
+    def get_form(  # type: ignore[override]
+        self,
+        request: HttpRequest,
+        obj: PluginRelease | None = None,
+        **kwargs: Any,
+    ) -> type[forms.ModelForm[PluginRelease]]:
+        form = super().get_form(request, obj, **kwargs)
+
+        form.base_fields["sha256_hash"].widget.attrs.update(
+            {
+                "style": "width: 36rem; font-family: monospace; font-size: 0.9rem;",
+            }
+        )
+
+        form.base_fields["download_url"].widget.attrs.update(
+            {
+                "style": "width: 80rem; font-family: monospace; font-size: 0.9rem;",
+            }
+        )
+
+        return form
+
+
 class StationResourceInline(admin.TabularInline):  # type: ignore[type-arg]
     """Inline admin for StationResource to be displayed within Station admin."""
 
@@ -243,7 +291,7 @@ class StationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "resource_count",
     )
     ordering = ("project", "name")
-    list_filter = ["project", "created_by", "creation_date"]
+    list_filter = [StationProjectFilter, "creation_date"]
     search_fields = ["name", "description", "project__name"]
     readonly_fields = ("id", "creation_date", "modified_date", "resource_count")
     inlines = [StationResourceInline]
@@ -290,7 +338,7 @@ class StationResourceAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "has_text_content",
     )
     ordering = ("station", "-modified_date")
-    list_filter = ["resource_type", "station__project", "created_by", "creation_date"]
+    list_filter = ["resource_type", "creation_date", "modified_date"]
     search_fields = ["title", "description", "station__name", "text_content"]
     readonly_fields = (
         "id",
@@ -346,50 +394,3 @@ class StationResourceAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 request, "UUID has been regenerated.", level=messages.SUCCESS
             )
         super().save_model(request, obj, form, change)
-
-
-@admin.register(PluginRelease)
-class PluginReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "id",
-        "plugin_version",
-        "software",
-        "min_software_version",
-        "max_software_version",
-        "operating_system",
-        "creation_date",
-        "modified_date",
-    )
-
-    ordering = ("-creation_date",)
-    list_filter = ["software", "operating_system", "plugin_version"]
-
-    formfield_overrides = {
-        models.TextField: {
-            "widget": forms.Textarea(
-                attrs={"cols": 100, "rows": 20, "style": "font-family: monospace;"}
-            )
-        },
-    }
-
-    def get_form(  # type: ignore[override]
-        self,
-        request: HttpRequest,
-        obj: PluginRelease | None = None,
-        **kwargs: Any,
-    ) -> type[forms.ModelForm[PluginRelease]]:
-        form = super().get_form(request, obj, **kwargs)
-
-        form.base_fields["sha256_hash"].widget.attrs.update(
-            {
-                "style": "width: 36rem; font-family: monospace; font-size: 0.9rem;",
-            }
-        )
-
-        form.base_fields["download_url"].widget.attrs.update(
-            {
-                "style": "width: 80rem; font-family: monospace; font-size: 0.9rem;",
-            }
-        )
-
-        return form

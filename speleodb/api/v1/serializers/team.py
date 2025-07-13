@@ -10,6 +10,7 @@ from rest_framework import serializers
 
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.utils.serializer_fields import CustomChoiceField
 
 
@@ -28,15 +29,15 @@ class SurveyTeamSerializer(serializers.ModelSerializer[SurveyTeam]):
             raise ValueError
 
         # assign current user as project admin
-        SurveyTeamMembership.objects.create(  # type: ignore[misc]
+        SurveyTeamMembership.objects.create(
             team=team,
             user=user,
-            role=SurveyTeamMembership.Role.LEADER,
+            role=SurveyTeamMembershipRole.LEADER,
         )
 
         return team
 
-    def get_role(self, obj: SurveyTeam) -> None | SurveyTeamMembership.Role:
+    def get_role(self, obj: SurveyTeam) -> None | SurveyTeamMembershipRole:
         if isinstance(obj, dict):
             # Unsaved object
             return None
@@ -47,7 +48,7 @@ class SurveyTeamSerializer(serializers.ModelSerializer[SurveyTeam]):
             return None
 
         try:
-            return obj.get_membership(user=user).role
+            return SurveyTeamMembershipRole(obj.get_membership(user=user).role)
         except ObjectDoesNotExist:
             return None
 
@@ -58,7 +59,7 @@ class SurveyTeamListSerializer(serializers.ListSerializer[SurveyTeamSerializer])
 
 class SurveyTeamMembershipSerializer(serializers.ModelSerializer[SurveyTeamMembership]):
     user = serializers.StringRelatedField()  # type: ignore[var-annotated]
-    role = CustomChoiceField(choices=SurveyTeamMembership.Role, source="_role")  # type: ignore[arg-type]
+    role = CustomChoiceField(choices=SurveyTeamMembershipRole)  # type: ignore[arg-type]
 
     class Meta:
         fields = ("user", "team", "role", "creation_date", "modified_date")

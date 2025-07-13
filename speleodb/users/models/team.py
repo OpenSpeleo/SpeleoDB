@@ -54,7 +54,7 @@ class SurveyTeam(models.Model):
 
     def get_all_memberships(self) -> models.QuerySet[SurveyTeamMembership]:
         return self.rel_team_memberships.filter(is_active=True).order_by(
-            "-_role", "user__email"
+            "-role", "user__email"
         )
 
     def is_member(self, user: User) -> bool:
@@ -67,11 +67,16 @@ class SurveyTeam(models.Model):
     def is_leader(self, user: User) -> bool:
         try:
             return (
-                self.rel_team_memberships.get(user=user, is_active=True)._role  # noqa: SLF001
-                == SurveyTeamMembership.Role.LEADER
+                self.rel_team_memberships.get(user=user, is_active=True).role
+                == SurveyTeamMembershipRole.LEADER
             )
         except ObjectDoesNotExist:
             return False
+
+
+class SurveyTeamMembershipRole(BaseIntegerChoices):
+    MEMBER = (0, "MEMBER")
+    LEADER = (1, "LEADER")
 
 
 class SurveyTeamMembership(models.Model):
@@ -111,12 +116,12 @@ class SurveyTeamMembership(models.Model):
         default=None,
     )
 
-    class Role(BaseIntegerChoices):
-        MEMBER = (0, "MEMBER")
-        LEADER = (1, "LEADER")
-
-    _role = models.IntegerField(
-        choices=Role.choices, default=Role.MEMBER, verbose_name="role"
+    role = models.IntegerField(
+        choices=SurveyTeamMembershipRole.choices,
+        default=SurveyTeamMembershipRole.MEMBER,
+        verbose_name="role",
+        null=False,
+        blank=False,
     )
 
     class Meta:
@@ -132,30 +137,14 @@ class SurveyTeamMembership(models.Model):
 
     @property
     def role_label(self) -> StrOrPromise:
-        return self.role.label
-
-    @property
-    def role(self) -> Role:
-        return self.Role(self._role)
-
-    @role.setter
-    def role(self, role: Role | int | str) -> None:
-        match role:
-            case str():
-                self._role = self.Role.from_str(role)
-            case int():
-                self._role = self.Role(role)
-            case self.Role():
-                self._role = role
-            case _:
-                raise TypeError
+        return SurveyTeamMembershipRole.from_value(self.role).label
 
     def deactivate(self, deactivated_by: User) -> None:
         self.is_active = False
         self.deactivated_by = deactivated_by
         self.save()
 
-    def reactivate(self, role: Role) -> None:
+    def reactivate(self, role: SurveyTeamMembershipRole) -> None:
         self.is_active = True
         self.deactivated_by = None
         self.role = role
