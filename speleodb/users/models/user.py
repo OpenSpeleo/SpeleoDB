@@ -149,4 +149,4 @@ class User(AbstractUser):
 
     @property
     def active_mutexes(self) -> models.QuerySet[Mutex]:
-        return self.rel_mutexes.filter(closing_user=None)
+        return self.rel_mutexes.filter(is_active=True)

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from django import template
 
-from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.models import SurveyTeamMembershipRole
 
 register = template.Library()
 
 
 @register.simple_tag
 def get_membership_roles() -> list[str]:
-    return [str(name) for _, name in SurveyTeamMembership.Role.choices]
+    return [str(name) for _, name in SurveyTeamMembershipRole.choices]

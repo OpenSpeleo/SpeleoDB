@@ -193,10 +193,12 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             self.user.email,
         )
 
-        # =================== RELEASE PROJECT =================== #
-
         mutex: Mutex | None = self.project.active_mutex
         assert mutex is not None
+
+        assert mutex.is_active
+
+        # =================== RELEASE PROJECT =================== #
 
         test_comment = "hello world"
 
@@ -229,6 +231,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
         ]
         assert mutex.closing_comment == test_comment, (mutex, test_comment)
         assert mutex.closing_user == self.user, (mutex, self.user)
+        assert not mutex.is_active
 
     @parameterized.expand(
         [

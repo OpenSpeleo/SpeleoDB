@@ -152,7 +152,7 @@ class Project(models.Model):
     @property
     def active_mutex(self) -> Mutex | None:
         try:
-            return self.rel_mutexes.filter(closing_user=None)[0]
+            return self.rel_mutexes.filter(is_active=True)[0]
         except IndexError:
             return None
 

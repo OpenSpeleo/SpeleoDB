@@ -96,7 +96,7 @@
             "creation_date": "2025-01-07T02:03:44.781Z",
             "modified_date": "2025-01-07T02:03:44.781Z",
             "deactivated_by": null,
-            "_role": 1
+            "role": 1
         }
     },
     {
@@ -109,7 +109,7 @@
             "creation_date": "2025-05-24T05:01:23.193Z",
             "modified_date": "2025-05-24T05:01:44.038Z",
             "deactivated_by": null,
-            "_role": 0
+            "role": 0
         }
     }
 ]

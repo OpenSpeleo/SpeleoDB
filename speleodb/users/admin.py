@@ -120,4 +120,4 @@ class SurveyTeamMembershipAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "is_active",
     )
     ordering = ("team",)
-    list_filter = ["is_active"]
+    list_filter = ["is_active", "role"]

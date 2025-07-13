@@ -15,6 +15,7 @@ from django.db.models import Model
 from django_countries import countries
 
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import Station
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 T = TypeVar("T", bound=Model)
 
 
-class CountryFilter(Generic[T], admin.SimpleListFilter, ABC):  # noqa: UP046
+class BaseCountryFilter(Generic[T], admin.SimpleListFilter, ABC):  # noqa: UP046
     """Custom filter that shows only countries actually used by objects."""
 
     title = "Country"
@@ -58,7 +59,7 @@ class CountryFilter(Generic[T], admin.SimpleListFilter, ABC):  # noqa: UP046
         return queryset
 
 
-class ProjectCountryFilter(CountryFilter[Project]):
+class ProjectCountryFilter(BaseCountryFilter[Project]):
     """Custom filter that shows only countries actually used by projects."""
 
     def get_used_countries(self) -> list[str]:
@@ -71,7 +72,7 @@ class ProjectCountryFilter(CountryFilter[Project]):
         )
 
 
-class SurveyTeamCountryFilter(CountryFilter[SurveyTeam]):
+class SurveyTeamCountryFilter(BaseCountryFilter[SurveyTeam]):
     """Custom filter that shows only countries actually used by users."""
 
     def get_used_countries(self) -> list[str]:
@@ -84,7 +85,7 @@ class SurveyTeamCountryFilter(CountryFilter[SurveyTeam]):
         )
 
 
-class UserCountryFilter(CountryFilter[User]):
+class UserCountryFilter(BaseCountryFilter[User]):
     """Custom filter that shows only countries actually used by users."""
 
     def get_used_countries(self) -> list[str]:
@@ -95,3 +96,40 @@ class UserCountryFilter(CountryFilter[User]):
             .distinct()
             .order_by("country")
         )
+
+
+class BaseProjectFilter(Generic[T], admin.SimpleListFilter, ABC):  # noqa: UP046
+    """Custom filter that shows only countries actually used by objects."""
+
+    title = "Project"
+    parameter_name = "project"
+
+    @abstractmethod
+    def get_used_projects(self) -> list[Project]:
+        """Get the projects actually used by the objects."""
+        raise NotImplementedError
+
+    def lookups(
+        self, request: HttpRequest, model_admin: admin.ModelAdmin[T]
+    ) -> list[tuple[str, str]]:
+        """Return only countries that are actually used by projects."""
+        # Get distinct countries from projects, ordered alphabetically
+        used_projects = self.get_used_projects()
+
+        # Convert Projects to (id, name) tuples
+        return [(str(project.id), project.name) for project in used_projects]
+
+    def queryset(self, request: HttpRequest, queryset: QuerySet[T]) -> QuerySet[T]:
+        """Filter queryset based on selected country."""
+        if self.value():
+            return queryset.filter(project=self.value())
+        return queryset
+
+
+class StationProjectFilter(BaseProjectFilter[Station]):
+    """Custom filter that shows only countries actually used by users."""
+
+    def get_used_projects(self) -> list[Project]:
+        """Return only countries that are actually used by projects."""
+        # Get distinct countries from projects, ordered alphabetically
+        return list(Project.objects.filter(rel_stations__isnull=False).order_by("name"))

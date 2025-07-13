@@ -17,7 +17,7 @@ from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
-from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.models import SurveyTeamMembershipRole
 
 
 class TestProjectInteraction(BaseAPITestCase):
@@ -51,7 +51,7 @@ class TestProjectInteraction(BaseAPITestCase):
                 _ = SurveyTeamMembershipFactory(
                     user=self.user,
                     team=team,
-                    role=random.choice(SurveyTeamMembership.Role.values),
+                    role=random.choice(SurveyTeamMembershipRole.values),
                 )
 
                 perm_level = next(perm_level_iter)

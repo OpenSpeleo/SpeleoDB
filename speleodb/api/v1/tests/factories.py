@@ -27,6 +27,7 @@ from speleodb.surveys.models.station import Station
 from speleodb.surveys.models.station import StationResource
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory
 
@@ -45,7 +46,7 @@ class SurveyTeamFactory(DjangoModelFactory[SurveyTeam]):
 class SurveyTeamMembershipFactory(DjangoModelFactory[SurveyTeamMembership]):
     user: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
     team: SurveyTeam = factory.SubFactory(SurveyTeamFactory)  # type: ignore[assignment]
-    role = random.choice(SurveyTeamMembership.Role.values)
+    role = random.choice(SurveyTeamMembershipRole.values)
 
     class Meta:
         model = SurveyTeamMembership
