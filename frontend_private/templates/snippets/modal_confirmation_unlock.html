@@ -1,0 +1,20 @@
+{% extends "snippets/modal_base_confirmation.html" %}
+
+{% block confirmation_modal_id %}modal_confirmation_unlock{% endblock %}
+
+{% block modal_header %}
+Unlocking the project ?
+{% endblock %}
+
+{% block modal_content %}
+This action will unlock the project.<br>
+This will allow other users to modify the project.<br>
+Any unsaved modification might be potentially lost. 
+{% endblock %}
+
+{% block confirm_button_txt %}
+Yes, Unlock it!
+{% endblock %}
+
+
+{% block btn_submit_id %}btn_confirmed_unlock{% endblock %}

@@ -1,5 +1,5 @@
 <!-- Modal dialog -->
-<div id="modal_confirmation" class="fixed inset-0 z-40 overflow-hidden flex items-center my-4 justify-center px-4 sm:px-6" style="display: none;">
+<div id="{% block confirmation_modal_id %}modal_confirmation{% endblock %}" class="fixed inset-0 z-40 overflow-hidden flex items-center my-4 justify-center px-4 sm:px-6" style="display: none;">
     <div class="bg-slate-800 rounded shadow-lg overflow-auto max-w-lg w-full max-h-full border-thin border-white/45">
         <div class="p-5 flex">
             <!-- Icon -->
@@ -13,37 +13,20 @@
                 <!-- Modal header -->
                 <div class="mb-2">
                     <div class="text-lg font-semibold text-slate-100 text-center">
-                        {% if request.url_name == 'projects' %}
-                        Unlocking all your projects ?
-                        {% else %}
-                        Are you absolutely certain ?
-                        {% endif %}
+                        {% block modal_header %}{% endblock %}
                     </div>
                 </div>
                 <!-- Modal content -->
                 <div class="text-sm mb-10">
                     <div class="space-y-2">
-                        <p id="modal_error_txt">
-                            {% if request.url_name == 'projects' %}
-                            This action will unlock all your projects.<br>
-                            This will allow other users to modify your currently locked project.<br>
-                            Any unsaved modification might be potentially lost. 
-                            {% else %}
-                            This action is definitive and can't be reversed.<br>
-                            Are you absolutely certain you wish to proceed ?
-                            {% endif %}
-                        </p>
+                        <p>{% block modal_content %}{% endblock %}</p>
                     </div>
                 </div>
                 <!-- Modal footer -->
                 <div class="flex flex-wrap justify-center space-x-2">
                     <button class="btn-sm bg-emerald-500 hover:bg-emerald-600 text-white w-32 mr-4">Cancel</button>
-                    <button id="btn_confirmed_submit" class="btn-sm bg-rose-500 hover:bg-rose-600 text-white w-32 ml-4">
-                        {% if request.url_name == 'projects' %}
-                        Yes, Unlock All
-                        {% else %}
-                        Yes, Delete it
-                        {% endif %}
+                    <button id="{% block btn_submit_id %}{% endblock %}" class="btn-sm bg-rose-500 hover:bg-rose-600 text-white w-32 ml-4">
+                        {% block confirm_button_txt %}{% endblock %}
                     </button>
                 </div>
             </div>
