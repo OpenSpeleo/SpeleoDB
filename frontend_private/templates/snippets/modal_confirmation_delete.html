@@ -1,0 +1,17 @@
+{% extends "snippets/modal_base_confirmation.html" %}
+
+{% block modal_header %}
+Are you absolutely certain ?
+{% endblock %}
+
+{% block modal_content %}
+This action is definitive and can't be reversed.<br>
+Are you absolutely certain you wish to proceed ?
+{% endblock %}
+
+{% block confirm_button_txt %}
+Yes, Delete it
+{% endblock %}
+
+
+{% block btn_submit_id %}btn_confirmed_delete{% endblock %}

@@ -31,7 +31,7 @@
 
 {% include 'snippets/modal_success.html' %}
 {% include 'snippets/modal_error.html' %}
-{% include 'snippets/modal_confirmation.html' %}
+{% include 'snippets/modal_confirmation_delete.html' %}
 
 {% endblock right_panel %}
 
@@ -57,7 +57,7 @@
             return false; // prevent default
         });
 
-        $('#btn_confirmed_submit').click(function () {
+        $('#btn_confirmed_delete').click(function () {
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
 
             $("#error_div").hide();

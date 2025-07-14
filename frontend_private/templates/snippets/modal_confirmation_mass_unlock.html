@@ -1,0 +1,19 @@
+{% extends "snippets/modal_base_confirmation.html" %}
+
+{% block confirmation_modal_id %}modal_confirmation_mass_unlock{% endblock %}
+
+{% block modal_header %}
+Unlocking all your projects ?
+{% endblock %}
+
+{% block modal_content %}
+This action will unlock all your projects.<br>
+This will allow other users to modify your currently locked project.<br>
+Any unsaved modification might be potentially lost. 
+{% endblock %}
+
+{% block confirm_button_txt %}
+Yes, Unlock All
+{% endblock %}
+
+{% block btn_submit_id %}btn_confirmed_mass_unlock{% endblock %}

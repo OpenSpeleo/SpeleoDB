@@ -178,9 +178,18 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="flex items-center text-slate-800">
-                                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3">
+                                            {% set margin_left = '52' %} <!-- 40 + 12 -->
+                                            {% if permission.project.active_mutex %}
+                                            {% if permission.project.mutex_owner == user or permission.level == 3 %}
+                                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3 cursor-pointer">
+                                                <img class="btn-unlock" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ permission.project.id }}" width="35" height="35" alt="Icon Unlock">
+                                            </div>
+                                            {% set margin_left = '0' %}
+                                            {% endif %}
+                                            {% endif %}
+                                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3" style="margin-left: {{ margin_left }}px;">
                                                 <a href="{% url 'private:project_details' project_id=permission.project.id %}">
-                                                    <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="Icon 01">
+                                                    <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="Icon Open">
                                                 </a>
                                             </div>
                                         </div>
@@ -200,7 +209,8 @@
 
 {% include 'snippets/modal_success.html' %}
 {% include 'snippets/modal_error.html' %}
-{% include 'snippets/modal_confirmation.html' %}
+{% include 'snippets/modal_confirmation_mass_unlock.html' %}
+{% include 'snippets/modal_confirmation_unlock.html' %}
 
 {% endblock content %}
 
@@ -215,22 +225,25 @@ $( document ).ready(function() {
         if ($("#modal_error").is(":visible")) {
             $("#modal_error").hide();
         }
-        if ($("#modal_confirmation").is(":visible")) {
-            $("#modal_confirmation").hide();
+        if ($("#modal_confirmation_unlock").is(":visible")) {
+            $("#modal_confirmation_unlock").hide();
+        }
+        if ($("#modal_confirmation_mass_unlock").is(":visible")) {
+            $("#modal_confirmation_mass_unlock").hide();
         }
     });
 
     $('#btn_release_all_locks').click(function (e) {
-        $("#modal_confirmation").css('display', 'flex');
+        $("#modal_confirmation_mass_unlock").css('display', 'flex');
         return false; // prevent default
     });
 
-    $('#btn_confirmed_submit').click(function () {
+    $('#btn_confirmed_mass_unlock').click(function () {
         var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
 
         $("#error_div").hide();
         $("#success_div").hide();
-        $("#modal_confirmation").hide();
+        $("#modal_confirmation_mass_unlock").hide();
 
         $.ajax({
             url: "{% url 'api:v1:release_all_locks' %}",
@@ -248,6 +261,50 @@ $( document ).ready(function() {
                 window.setTimeout(function(){
                     // Redirect to project listing
                     window.location.href = "{% url 'private:projects' %}";
+                }, 2000);
+            },
+            error: function (data) {
+                {% include 'snippets/ajax_error_modal_management.js' %}
+            }
+        });
+        return false; // prevent default
+    });
+
+    $('.btn-unlock').click(function (e) {
+        console.log("Unlocking project: " + $(this).data('project_id'));
+        $('#btn_confirmed_unlock').data('project_id', $(this).data('project_id'));
+        $("#modal_confirmation_unlock").css('display', 'flex');
+        return false; // prevent default
+    });
+
+    const nilUUID = '00000000-0000-0000-0000-000000000000';
+
+    $('#btn_confirmed_unlock').click(function () {
+        var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+        $("#error_div").hide();
+        $("#success_div").hide();
+        $("#modal_confirmation_unlock").hide();
+
+        var api_url = "{% url 'api:v1:release_project' id='00000000-0000-0000-0000-000000000000' %}";
+
+        $.ajax({
+            url: api_url.replace(nilUUID, $(this).data('project_id')),
+            method: "POST",
+            contentType: "application/json; charset=utf-8",
+            cache: false,
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                return true;
+
+            },
+            success: function (data) {
+                $("#modal_success_txt").html("The project has been unlocked for edition.");
+                $("#modal_success").css('display', 'flex');
+
+                window.setTimeout(function(){
+                    // Refresh the page
+                    window.location.reload();
                 }, 2000);
             },
             error: function (data) {
