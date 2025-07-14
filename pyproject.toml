@@ -33,7 +33,7 @@ dependencies = [
   "django-dynamic-raw-id==4.4",           # https://github.com/lincolnloop/django-dynamic-raw-id
   "django-encrypted-model-fields==0.6.5", # https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/
   "django-environ==0.12.0",               # https://github.com/joke2k/django-environ
-  "django-hijack==3.7.2",                 # https://github.com/django-hijack/django-hijack/
+  "django-hijack==3.7.3",                 # https://github.com/django-hijack/django-hijack/
   "django-model-utils==5.0.0",            # https://github.com/jazzband/django-model-utils
   "django-redis==6.0.0",                  # https://github.com/jazzband/django-redis
   "django-storages==1.14.6",              # https://github.com/jschneier/django-storages
