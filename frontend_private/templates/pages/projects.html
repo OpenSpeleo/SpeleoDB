@@ -125,13 +125,13 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% if permission.level == 0 %}
+                                            {% if permission.level_label == "WEB_VIEWER" %}
                                                 {% set bg_color = 'bg-pastel-grey' %}
-                                            {% elif permission.level == 1 %}
+                                            {% elif permission.level_label == "READ_ONLY" %}
                                                 {% set bg_color = 'bg-pastel-beige' %}
-                                            {% elif permission.level == 2 %}
+                                            {% elif permission.level_label == "READ_AND_WRITE" %}
                                                 {% set bg_color = 'bg-pastel-navy' %}
-                                            {% elif permission.level == 3 %}
+                                            {% elif permission.level_label == "ADMIN" %}
                                                 {% set bg_color = 'bg-pastel-orange' %}
                                             {% else %}
                                                 {% set bg_color = '' %}
@@ -180,7 +180,7 @@
                                         <div class="flex items-center text-slate-800">
                                             {% set margin_left = '52' %} <!-- 40 + 12 -->
                                             {% if permission.project.active_mutex %}
-                                            {% if permission.project.mutex_owner == user or permission.level == 3 %}
+                                            {% if permission.project.mutex_owner == user or permission.level_label == "ADMIN" %}
                                             <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3 cursor-pointer">
                                                 <img class="btn-unlock" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ permission.project.id }}" width="35" height="35" alt="Icon Unlock">
                                             </div>

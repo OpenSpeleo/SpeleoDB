@@ -95,20 +95,20 @@
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
 
                                     <div class="text-center">
-                                        {% if permission.level == 0 %}
+                                        {% if permission.level_label == "WEB_VIEWER" %}
                                             {% set bg_color = 'bg-pastel-grey' %}
-                                        {% elif permission.level == 1 %}
+                                        {% elif permission.level_label == "READ_ONLY" %}
                                             {% set bg_color = 'bg-pastel-beige' %}
-                                        {% elif permission.level == 2 %}
+                                        {% elif permission.level_label == "READ_AND_WRITE" %}
                                             {% set bg_color = 'bg-pastel-navy' %}
-                                        {% elif permission.level == 3 %}
+                                        {% elif permission.level_label == "ADMIN" %}
                                             {% set bg_color = 'bg-pastel-orange' %}
                                         {% else %}
                                             {% set bg_color = '' %}
                                         {% endif %}
                                         <div class="inline-flex font-medium {{ bg_color }} rounded-full text-center px-2.5 py-0.5">
                                             {% if permission.team %}&#60;{{ permission.team.name }}&#62; {% endif %}
-                                            {{permission.level.label|normalize}}
+                                            {{permission.level_label|normalize}}
                                         </div>
                                     </div>
                                 </td>
@@ -143,7 +143,7 @@
 
                                         <!-- Edit Link -->
                                         <span class="cursor-pointer {% if can_edit %}btn_open_edit_perm"
-                                            data-user="{{permission.user.email}}" data-level="{{ permission.level.label }}{% endif %}">
+                                            data-user="{{permission.user.email}}" data-level="{{ permission.level_label }}{% endif %}">
                                             <svg xmlns="http://www.w3.org/2000/svg"
                                                 class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline"
                                                 viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"

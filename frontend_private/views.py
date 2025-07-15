@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from django.http import HttpResponse
+    from django_stubs_ext import StrOrPromise
 
     from speleodb.utils.requests import AuthenticatedHttpRequest
 
@@ -59,6 +60,13 @@ class UserAccessLevel:
             raise TypeError(
                 f"`team` must be of type SurveyTeam | None: `{type(self.team)}`"
             )
+
+    @property
+    def level_label(self) -> StrOrPromise:
+        """
+        Returns the label of the permission level.
+        """
+        return self.level.label
 
 
 class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
