@@ -97,11 +97,11 @@
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="text-center">
-                                        {% if permission.level == 0 %}
+                                        {% if permission.level_label == "WEB_VIEWER" %}
                                             {% set bg_color = 'bg-pastel-grey' %}
-                                        {% elif permission.level == 1 %}
+                                        {% elif permission.level_label == "READ_ONLY" %}
                                             {% set bg_color = 'bg-pastel-beige' %}
-                                        {% elif permission.level == 2 %}
+                                        {% elif permission.level_label == "READ_AND_WRITE" %}
                                             {% set bg_color = 'bg-pastel-navy' %}
                                         {% else %}
                                             {% set bg_color = '' %}
