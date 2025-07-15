@@ -12,5 +12,7 @@
     "[html]": {
         "editor.formatOnSave": false,
         "editor.defaultFormatter": null
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
 }
