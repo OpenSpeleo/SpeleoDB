@@ -77,7 +77,7 @@ local = [
   # Typing
   # ------------------------------------------------------------------------------
   "djangorestframework-stubs[compatible-mypy]==3.16.0", # https://github.com/typeddjango/djangorestframework-stubs
-  "django-stubs[compatible-mypy]==5.2.1",               # https://github.com/typeddjango/django-stubs
+  "django-stubs[compatible-mypy]==5.2.2",               # https://github.com/typeddjango/django-stubs
   "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
   # "django-types==0.20.0",             # https://github.com/sbdchd/django-types
   # "djangorestframework-types==0.9.0", # https://github.com/sbdchd/djangorestframework-types
