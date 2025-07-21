@@ -81,7 +81,7 @@ local = [
   "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
   # "django-types==0.20.0",             # https://github.com/sbdchd/django-types
   # "djangorestframework-types==0.9.0", # https://github.com/sbdchd/djangorestframework-types
-  "types-cachetools==6.0.0.20250525", # https://github.com/python/typeshed
+  "types-cachetools==6.1.0.20250717", # https://github.com/python/typeshed
   "types-factory-boy==0.4.1",         # https://github.com/youtux/types-factory-boy
   "types-pytz==2025.2.0.20250516",    # https://github.com/python/typeshed
 
