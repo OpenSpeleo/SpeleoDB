@@ -10,6 +10,7 @@ from django.views.generic import TemplateView
 from frontend_public.views import LoginView
 from frontend_public.views import PasswordResetFromKeyView
 from frontend_public.views import PasswordResetView
+from frontend_public.views import PeoplePageView
 from frontend_public.views import SignUpView
 
 ArianeWebView = TemplateView.as_view(template_name="webviews/ariane.html")
@@ -19,6 +20,11 @@ urlpatterns = [
     path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
     path(
         "about/", TemplateView.as_view(template_name="pages/about.html"), name="about"
+    ),
+    path(
+        "people/",
+        PeoplePageView.as_view(),
+        name="people",
     ),
     path(
         "roadmap/",

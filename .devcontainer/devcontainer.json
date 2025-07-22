@@ -44,6 +44,8 @@
                 "ms-python.python",
                 // Language Server
                 "ms-python.vscode-pylance",
+                // Type Checker
+                // "ms-python.mypy-type-checker",  // Very slow, only use when debugging type issues
                 // Linting
                 "charliermarsh.ruff",
                 // HTML Linting

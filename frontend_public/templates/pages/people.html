@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% load static i18n compress people_tags %}
+
+{% block content %}
+
+    <!-- Hero -->
+    <section class="relative">
+
+        <!-- Radial gradient -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none -z-10 w-[1200px] h-[1200px]" aria-hidden="true">
+            <div class="absolute inset-0 translate-z-0 bg-purple-500/40 rounded-full blur-3xl"></div>
+            <div class="absolute inset-[20%] translate-z-0 bg-purple-400/50 rounded-full blur-2xl"></div>
+        </div>
+
+        <!-- Particles animation -->
+        <div class="absolute inset-0 h-96 -z-10" aria-hidden="true">
+            <canvas data-particle-animation data-particle-quantity="15"></canvas>
+        </div>
+
+        <!-- Illustration -->
+        <div class="md:block absolute left-1/2 -translate-x-1/2 -mt-16 blur-2xl opacity-90 pointer-events-none -z-10" aria-hidden="true">
+            <img src="{% static 'media/page-illustration.svg' %}" class="max-w-none" width="1440" height="427" alt="Page Illustration">
+        </div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="pt-32 pb-10 md:pt-40">
+
+                <!-- Hero content -->
+                <div class="text-center">
+                    <div class="inline-flex font-medium text-2xl bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-purple-50 pb-3">
+                        Meet Our Community
+                    </div>
+                    <h1 class="h1 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-6">
+                        The people driving SpeleoDB forward
+                    </h1>
+                    <p class="text-lg text-slate-400 max-w-3xl mx-auto">
+                        Our organization brings together passionate individuals from diverse backgrounds, united by a shared vision to revolutionize cave survey and exploration data management.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+    </section>
+
+    {% if board_members %}
+    <!-- Board of Directors -->
+    <section class="relative overflow-visible">
+
+        <!-- Multiple gradient backgrounds for visual interest -->
+        <div class="absolute inset-0 pointer-events-none -z-10" aria-hidden="true">
+            <!-- Centered purple gradient -->
+            <div class="absolute -top-48 left-1/2 -translate-x-1/2 w-[1400px] h-[1000px]">
+                <div class="absolute inset-0 translate-z-0 bg-gradient-to-b from-purple-500/40 via-purple-500/25 to-purple-600/15 rounded-full blur-3xl"></div>
+            </div>
+            <!-- Accent glow -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]">
+                <div class="absolute inset-0 translate-z-0 bg-purple-600/30 rounded-full blur-2xl"></div>
+            </div>
+        </div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="py-12 md:py-20">
+
+                <!-- Section header -->
+                <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
+                    <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Board of Directors</h2>
+                    <p class="text-lg text-slate-400">
+                        Our Board provides strategic guidance and ensures the organization stays true<br>
+                        to its mission of advancing cave exploration and data management.
+                    </p>
+                </div>
+
+                <!-- Team members grid with dynamic layout -->
+                <div class="grid {{ board_members|length|get_grid_class }} gap-6 lg:gap-8 max-w-5xl mx-auto">
+                    
+                    {% for person in board_members %}
+                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
+                        <div class="flex flex-col items-center text-center">
+                            {% if person.photo %}
+                            <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
+                                 src="{{ person.get_photo_url }}" 
+                                 alt="{{ person.full_name }}" />
+                            {% else %}
+                            <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
+                                <span class="text-slate-400 text-2xl font-bold">{{ person.full_name|first }}</span>
+                            </div>
+                            {% endif %}
+                            <h3 class="text-xl font-bold text-slate-100 mb-1">{{ person.full_name }}</h3>
+                            <p class="text-purple-400 text-sm font-medium mb-3">{{ person.title }}</p>
+                            <p class="text-slate-400 text-sm mb-4 text-justify">
+                                {{ person.description|linebreaksbr }}
+                            </p>
+                            {% if person.has_link %}
+                            <div class="flex items-center space-x-1 text-sm">
+                                <span class="text-slate-500">{{ person.link_name }}</span>
+                                <a href="{{ person.link_target }}" target="_blank" rel="noopener" class="text-purple-400 hover:text-purple-300 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if technical_members %}
+    <!-- Technical Steering Committee -->
+    <section class="relative overflow-visible">
+
+        <!-- Dynamic gradient backgrounds extending beyond boundaries -->
+        <div class="absolute inset-0 pointer-events-none -z-10" aria-hidden="true">
+            <!-- Centered gradient -->
+            <div class="absolute -top-48 left-1/2 -translate-x-1/2 w-[1400px] h-[1100px]">
+                <div class="absolute inset-0 translate-z-0 bg-gradient-to-b from-indigo-500/40 via-purple-500/30 to-purple-600/20 rounded-full blur-3xl"></div>
+            </div>
+            <!-- Purple overlay -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px]">
+                <div class="absolute inset-0 translate-z-0 bg-purple-500/30 rounded-full blur-2xl"></div>
+            </div>
+        </div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="pt-32 pb-12 md:pt-40 md:pb-20">
+
+                <!-- Section header -->
+                <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
+                    <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Technical Steering Committee</h2>
+                    <p class="text-lg text-slate-400">The technical minds behind SpeleoDB's architecture, ensuring our platform remains cutting-edge, secure, and community-driven.</p>
+                </div>
+
+                <!-- Team members grid with dynamic layout -->
+                <div class="grid {{ technical_members|length|get_grid_class }} gap-6 lg:gap-8">
+                    
+                    {% for person in technical_members %}
+                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:technical_members %}{{ technical_members|last_row_offset_class }}{% endif %}">
+                        <div class="flex flex-col items-center text-center">
+                            {% if person.photo %}
+                            <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
+                                 src="{{ person.get_photo_url }}" 
+                                 alt="{{ person.full_name }}" />
+                            {% else %}
+                            <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
+                                <span class="text-slate-400 text-2xl font-bold">{{ person.full_name|first }}</span>
+                            </div>
+                            {% endif %}
+                            <h3 class="text-xl font-bold text-slate-100 mb-1">{{ person.full_name }}</h3>
+                            <p class="text-purple-400 text-sm font-medium mb-3">{{ person.title }}</p>
+                            <p class="text-slate-400 text-sm mb-4 text-justify">
+                                {{ person.description|linebreaksbr }}
+                            </p>
+                            {% if person.has_link %}
+                            <div class="flex items-center space-x-1 text-sm">
+                                <span class="text-slate-500">{{ person.link_name }}</span>
+                                <a href="{{ person.link_target }}" target="_blank" rel="noopener" class="text-purple-400 hover:text-purple-300 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if explorer_members %}
+    <!-- Explorer Advisory Board -->
+    <section class="relative overflow-visible">
+
+        <!-- Dynamic gradient backgrounds extending beyond boundaries -->
+        <div class="absolute inset-0 pointer-events-none -z-10" aria-hidden="true">
+            <!-- Centered gradient -->
+            <div class="absolute -top-48 left-1/2 -translate-x-1/2 w-[1400px] h-[1100px]">
+                <div class="absolute inset-0 translate-z-0 bg-gradient-to-b from-indigo-500/40 via-purple-500/30 to-purple-600/20 rounded-full blur-3xl"></div>
+            </div>
+            <!-- Purple overlay -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px]">
+                <div class="absolute inset-0 translate-z-0 bg-purple-500/30 rounded-full blur-2xl"></div>
+            </div>
+        </div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="py-12 md:py-20">
+
+                <!-- Section header -->
+                <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
+                    <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Explorer Advisory Board</h2>
+                    <p class="text-lg text-slate-400">Experienced cave explorers and surveyors who provide real-world insights to ensure our platform meets the community's needs.</p>
+                </div>
+
+                <!-- Team members grid with dynamic layout -->
+                <div class="grid {{ explorer_members|length|get_grid_class }} gap-6 lg:gap-8">
+                    
+                    {% for person in explorer_members %}
+                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:explorer_members %}{{ explorer_members|last_row_offset_class }}{% endif %}">
+                        <div class="flex flex-col items-center text-center">
+                            {% if person.photo %}
+                            <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
+                                 src="{{ person.get_photo_url }}" 
+                                 alt="{{ person.full_name }}" />
+                            {% else %}
+                            <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
+                                <span class="text-slate-400 text-2xl font-bold">{{ person.full_name|first }}</span>
+                            </div>
+                            {% endif %}
+                            <h3 class="text-xl font-bold text-slate-100 mb-1">{{ person.full_name }}</h3>
+                            <p class="text-purple-400 text-sm font-medium mb-3">{{ person.title }}</p>
+                            <p class="text-slate-400 text-sm mb-4 text-justify">
+                                {{ person.description|linebreaksbr }}
+                            </p>
+                            {% if person.has_link %}
+                            <div class="flex items-center space-x-1 text-sm">
+                                <span class="text-slate-500">{{ person.link_name }}</span>
+                                <a href="{{ person.link_target }}" target="_blank" rel="noopener" class="text-purple-400 hover:text-purple-300 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% include "pages/call_to_action.html" %}
+
+{% endblock %} 

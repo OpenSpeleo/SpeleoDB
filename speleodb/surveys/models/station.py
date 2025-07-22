@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import Self
 
@@ -13,20 +12,7 @@ from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
 
-if TYPE_CHECKING:
-    from django.core.files.storage import Storage
-
-
-def get_station_resource_storage() -> Storage:
-    """Get the appropriate storage backend for station resources."""
-    if getattr(settings, "USE_S3", False):
-        from speleodb.utils.storages import StationResourceStorage  # noqa: PLC0415
-
-        return StationResourceStorage()  # type: ignore[no-untyped-call]
-
-    from speleodb.utils.storages import LocalStationResourceStorage  # noqa: PLC0415
-
-    return LocalStationResourceStorage()
+from speleodb.utils.storages import get_station_resource_storage
 
 
 class Station(models.Model):

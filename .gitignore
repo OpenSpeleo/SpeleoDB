@@ -295,3 +295,5 @@ git_projects/
 
 # UV Cache
 .uv/
+
+*.db
