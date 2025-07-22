@@ -5542,3 +5542,415 @@ input[type="search"]::-webkit-search-results-decoration {
 .\[\&_div\:nth-child\(n\+10\)\:not\(\:nth-child\(n\+11\)\)\]\:\!order-2 div:nth-child(n+10):not(:nth-child(n+11)) {
   order: 2 !important;
 }
+
+/* Additional blur utilities */
+.blur-sm {
+  filter: blur(4px);
+}
+
+.blur-lg {
+  filter: blur(16px);
+}
+
+.blur-xl {
+  filter: blur(24px);
+}
+
+.blur-3xl {
+  filter: blur(64px);
+}
+
+/* Opacity utilities with color values */
+.bg-purple-500\/10 {
+  background-color: rgb(168 85 247 / 0.1);
+}
+
+.bg-purple-500\/20 {
+  background-color: rgb(168 85 247 / 0.2);
+}
+
+.bg-purple-500\/30 {
+  background-color: rgb(168 85 247 / 0.3);
+}
+
+.bg-purple-500\/40 {
+  background-color: rgb(168 85 247 / 0.4);
+}
+
+.bg-purple-500\/50 {
+  background-color: rgb(168 85 247 / 0.5);
+}
+
+.bg-purple-500\/60 {
+  background-color: rgb(168 85 247 / 0.6);
+}
+
+.bg-purple-500\/70 {
+  background-color: rgb(168 85 247 / 0.7);
+}
+
+.bg-purple-500\/80 {
+  background-color: rgb(168 85 247 / 0.8);
+}
+
+.bg-purple-500\/90 {
+  background-color: rgb(168 85 247 / 0.9);
+}
+
+.bg-purple-400\/20 {
+  background-color: rgb(192 132 252 / 0.2);
+}
+
+.bg-purple-400\/30 {
+  background-color: rgb(192 132 252 / 0.3);
+}
+
+.bg-purple-400\/40 {
+  background-color: rgb(192 132 252 / 0.4);
+}
+
+.bg-purple-400\/70 {
+  background-color: rgb(192 132 252 / 0.7);
+}
+
+.bg-purple-400\/80 {
+  background-color: rgb(192 132 252 / 0.8);
+}
+
+.bg-purple-600\/10 {
+  background-color: rgb(147 51 234 / 0.1);
+}
+
+.bg-purple-600\/20 {
+  background-color: rgb(147 51 234 / 0.2);
+}
+
+.bg-purple-600\/50 {
+  background-color: rgb(147 51 234 / 0.5);
+}
+
+.bg-purple-600\/60 {
+  background-color: rgb(147 51 234 / 0.6);
+}
+
+.bg-indigo-400\/70 {
+  background-color: rgb(129 140 248 / 0.7);
+}
+
+.bg-indigo-400\/90 {
+  background-color: rgb(129 140 248 / 0.9);
+}
+
+.bg-indigo-500\/20 {
+  background-color: rgb(99 102 241 / 0.2);
+}
+
+.bg-indigo-500\/40 {
+  background-color: rgb(99 102 241 / 0.4);
+}
+
+.bg-indigo-500\/50 {
+  background-color: rgb(99 102 241 / 0.5);
+}
+
+.bg-indigo-500\/60 {
+  background-color: rgb(99 102 241 / 0.6);
+}
+
+.bg-indigo-600\/20 {
+  background-color: rgb(79 70 229 / 0.2);
+}
+
+.bg-indigo-600\/50 {
+  background-color: rgb(79 70 229 / 0.5);
+}
+
+/* Gradient directions */
+.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+
+.bg-gradient-to-bl {
+  background-image: linear-gradient(to bottom left, var(--tw-gradient-stops));
+}
+
+.bg-gradient-to-tr {
+  background-image: linear-gradient(to top right, var(--tw-gradient-stops));
+}
+
+.bg-gradient-to-tl {
+  background-image: linear-gradient(to top left, var(--tw-gradient-stops));
+}
+
+/* Gradient color stops with opacity */
+.from-purple-500\/60 {
+  --tw-gradient-from: rgb(168 85 247 / 0.6) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(168 85 247 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.from-purple-500\/70 {
+  --tw-gradient-from: rgb(168 85 247 / 0.7) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(168 85 247 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.from-purple-600\/60 {
+  --tw-gradient-from: rgb(147 51 234 / 0.6) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(147 51 234 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.from-indigo-500\/50 {
+  --tw-gradient-from: rgb(99 102 241 / 0.5) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(99 102 241 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.from-indigo-500\/60 {
+  --tw-gradient-from: rgb(99 102 241 / 0.6) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(99 102 241 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.via-purple-400\/40 {
+  --tw-gradient-to: rgb(192 132 252 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), rgb(192 132 252 / 0.4) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.via-purple-500\/10 {
+  --tw-gradient-to: rgb(168 85 247 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), rgb(168 85 247 / 0.1) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.via-purple-500\/30 {
+  --tw-gradient-to: rgb(168 85 247 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), rgb(168 85 247 / 0.3) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.via-purple-500\/40 {
+  --tw-gradient-to: rgb(168 85 247 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), rgb(168 85 247 / 0.4) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.via-indigo-500\/10 {
+  --tw-gradient-to: rgb(99 102 241 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), rgb(99 102 241 / 0.1) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.via-indigo-500\/40 {
+  --tw-gradient-to: rgb(99 102 241 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), rgb(99 102 241 / 0.4) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.to-purple-500\/10 {
+  --tw-gradient-to: rgb(168 85 247 / 0.1) var(--tw-gradient-to-position);
+}
+
+.to-purple-500\/20 {
+  --tw-gradient-to: rgb(168 85 247 / 0.2) var(--tw-gradient-to-position);
+}
+
+.to-purple-600\/10 {
+  --tw-gradient-to: rgb(147 51 234 / 0.1) var(--tw-gradient-to-position);
+}
+
+.to-purple-600\/20 {
+  --tw-gradient-to: rgb(147 51 234 / 0.2) var(--tw-gradient-to-position);
+}
+
+.to-indigo-500\/20 {
+  --tw-gradient-to: rgb(99 102 241 / 0.2) var(--tw-gradient-to-position);
+}
+
+.to-indigo-600\/20 {
+  --tw-gradient-to: rgb(79 70 229 / 0.2) var(--tw-gradient-to-position);
+}
+
+/* Animation classes */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animation-delay-1000 {
+  animation-delay: 1000ms;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2000ms;
+}
+
+/* Additional translate utilities */
+.translate-x-1\/4 {
+  transform: translateX(25%);
+}
+
+.-translate-x-1\/4 {
+  transform: translateX(-25%);
+}
+
+.translate-y-1\/4 {
+  transform: translateY(25%);
+}
+
+.-translate-y-3\/4 {
+  transform: translateY(-75%);
+}
+
+/* Position utilities */
+.top-1\/3 {
+  top: 33.333333%;
+}
+
+.top-1\/4 {
+  top: 25%;
+}
+
+.right-1\/3 {
+  right: 33.333333%;
+}
+
+.right-1\/4 {
+  right: 25%;
+}
+
+.left-1\/3 {
+  left: 33.333333%;
+}
+
+.left-1\/4 {
+  left: 25%;
+}
+
+.bottom-1\/3 {
+  bottom: 33.333333%;
+}
+
+/* Viewport-based dimensions */
+.w-\[100vw\] {
+  width: 100vw;
+}
+
+.w-\[150vw\] {
+  width: 150vw;
+}
+
+.w-\[160vw\] {
+  width: 160vw;
+}
+
+.w-\[180vw\] {
+  width: 180vw;
+}
+
+.w-\[200vw\] {
+  width: 200vw;
+}
+
+.h-\[100vh\] {
+  height: 100vh;
+}
+
+.h-\[120vh\] {
+  height: 120vh;
+}
+
+.h-\[150vh\] {
+  height: 150vh;
+}
+
+.h-\[180vh\] {
+  height: 180vh;
+}
+
+.h-\[200vh\] {
+  height: 200vh;
+}
+
+/* Additional positioning utilities */
+.-top-\[40vh\] {
+  top: -40vh;
+}
+
+.-top-\[50vh\] {
+  top: -50vh;
+}
+
+.rounded-\[50\%\] {
+  border-radius: 50%;
+}
+
+/* Additional inset utilities */
+.inset-\[20\%\] {
+  top: 20%;
+  right: 20%;
+  bottom: 20%;
+  left: 20%;
+}
+
+/* Additional width classes */
+.w-\[900px\] {
+  width: 900px;
+}
+
+.w-\[1000px\] {
+  width: 1000px;
+}
+
+.w-\[1200px\] {
+  width: 1200px;
+}
+
+.w-\[1400px\] {
+  width: 1400px;
+}
+
+.w-\[1600px\] {
+  width: 1600px;
+}
+
+/* Additional height classes */
+.h-\[700px\] {
+  height: 700px;
+}
+
+.h-\[800px\] {
+  height: 800px;
+}
+
+.h-\[1000px\] {
+  height: 1000px;
+}
+
+.h-\[1100px\] {
+  height: 1100px;
+}
+
+.h-\[1200px\] {
+  height: 1200px;
+}
+
+/* Negative top positions */
+.-top-48 {
+  top: -12rem;
+}
+
+.-top-64 {
+  top: -16rem;
+}
+
+.-top-96 {
+  top: -24rem;
+}

@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from storages.backends.s3boto3 import S3Boto3Storage  # type: ignore[attr-defined]
+
+if TYPE_CHECKING:
+    from django.core.files.storage import Storage
 
 # Only import S3 storage when USE_S3 is True
 HAS_S3_STORAGE = getattr(settings, "USE_S3", False)
@@ -18,9 +22,17 @@ class MediaStorage:
     """Factory for media storage - returns S3 or local storage based on settings."""
 
     def __new__(cls) -> S3MediaStorage | FileSystemStorage:  # type: ignore[misc]
-        if getattr(settings, "USE_S3", False) and HAS_S3_STORAGE:
+        if HAS_S3_STORAGE:
             return S3MediaStorage()  # type: ignore[no-untyped-call]
         return FileSystemStorage()
+
+
+def get_station_resource_storage() -> Storage:
+    """Get the appropriate storage backend for station resources."""
+    if HAS_S3_STORAGE:
+        return StationResourceStorage()  # type: ignore[no-untyped-call]
+
+    return LocalStationResourceStorage()
 
 
 # Only define S3 classes if S3 is enabled and available

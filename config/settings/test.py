@@ -16,18 +16,35 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from .base import *  # noqa: F403
-from .base import INSTALLED_APPS
-from .base import TEMPLATES
-from .base import env
+from dotenv import load_dotenv
+
+
+def load_env_files_from_pyproject() -> None:
+    for env_file in [".envs/test.env"]:
+        env_path = Path(env_file)
+        if env_path.exists():
+            load_dotenv(env_path, override=True)
+        else:
+            print(f"Warning: env file not found: `{env_path.resolve()}`")  # noqa: T201
+
+
+# Ensures the .env files are loaded before anything else
+load_env_files_from_pyproject()
+
+
+from .base import *  # noqa: E402, F403
+from .base import INSTALLED_APPS  # noqa: E402
+from .base import TEMPLATES  # noqa: E402
+from .base import env  # noqa: E402
 
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env(
     "DJANGO_SECRET_KEY",
-    default="LV2g9377n6a0Ihq09xPQYuiRT8ti5PHoDoh7d23s0xSlom1snTLhTuYXfAZnWOoI",
+    default="LV2g9377n6a0Ihq09xPQYuiRT8ti5PHoDoh7d23s0xSlom1snTLhTuYXfAZnWOoI",  # pyright: ignore[reportArgumentType]
 )
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#test-runner
 TEST_RUNNER = "django.test.runner.DiscoverRunner"
 
@@ -59,11 +76,12 @@ INSTALLED_APPS += ["django_extensions"]
 # ------------------------------------------------------------------------------
 # Use temporary directory for tests
 # Respect environment variable for S3 usage in tests
-USE_S3 = env.bool("USE_S3", default=False)
+USE_S3 = env.bool("USE_S3", default=False)  # pyright: ignore[reportArgumentType]
 
 # Create a temporary directory for test media files (only used when USE_S3=False)
 TEMP_MEDIA_ROOT = env(
-    "LOCAL_MEDIA_ROOT", default=tempfile.mkdtemp(prefix="speleodb_test_")
+    "LOCAL_MEDIA_ROOT",
+    default=tempfile.mkdtemp(prefix="speleodb_test_"),  # pyright: ignore[reportArgumentType]
 )
 
 # Only set MEDIA_ROOT for local storage
@@ -72,7 +90,7 @@ if not USE_S3:
 
 # Ensure the directory exists for local storage
 if not USE_S3:
-    Path(MEDIA_ROOT).mkdir(parents=True, exist_ok=True)
+    Path(MEDIA_ROOT).mkdir(parents=True, exist_ok=True)  # pyright: ignore[reportArgumentType]
 
 # Clean up temp directory after tests (handled by pytest fixtures)
 
@@ -80,8 +98,8 @@ if not USE_S3:
 def cleanup_temp_media() -> None:
     """Clean up temporary media directory."""
 
-    if Path(TEMP_MEDIA_ROOT).exists():
-        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
+    if Path(TEMP_MEDIA_ROOT).exists():  # pyright: ignore[reportArgumentType]
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)  # pyright: ignore[reportArgumentType]
 
 
 atexit.register(cleanup_temp_media)

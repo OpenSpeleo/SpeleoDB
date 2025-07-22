@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from django_countries import countries
 
 if TYPE_CHECKING:
     from _pytest.config import Config
@@ -14,10 +13,9 @@ if TYPE_CHECKING:
     from _pytest.nodes import Item
 
 
-# Note: This wait time is necessary because of django-countries sometimes being not
-# ready. Simple workaround to fix the issue and barely noticeable.
-def pytest_sessionstart(session: pytest.Session) -> None:
-    """Hook to delay the start of the pytest session."""
+@pytest.hookimpl(trylast=True)
+def pytest_collection_modifyitems(items: list[Item]) -> None:
+    from django_countries import countries  # noqa: PLC0415
 
     # Force loading the countries to avoid errors.
     # See: https://github.com/SmileyChris/django-countries/issues/472

@@ -18,6 +18,7 @@ class ViewFunctionalityTest(TestCase):
             # General routes
             ("home", None),
             ("about", None),
+            ("people", None),
             ("roadmap", None),
             ("changelog", None),
             ("terms_and_conditions", None),
