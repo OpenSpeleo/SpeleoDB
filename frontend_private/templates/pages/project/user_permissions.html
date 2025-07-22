@@ -214,9 +214,9 @@
         /* ------------------------------------------------------------------------- */
 
         $("#btn_open_add_user").click(function () {
-            var form = document.getElementById("permission_form");
-            form.reset();
-            form.method = "POST"
+            var form = $("#permission_form");
+            form[0].reset();
+            form.data("method", "POST");
             $("#permission_modal_title").text("Add a collaborator to the project");
             $("#permission_modal_header").text("Who would you like to add 🙌 ?");
             $("#permission_modal").css('display', 'flex');
@@ -228,8 +228,9 @@
         /* ------------------------------------------------------------------------- */
 
         $(".btn_open_edit_perm").click(function () {
-            var form = document.getElementById("permission_form");
-            form.method = "PUT"
+            var form = $("#permission_form");
+            form[0].reset();
+            form.data("method", "PUT");
             $("#permission_modal_title").text("How shall we modify this user's access ?");
             $("#permission_modal_header").text("");
             $("#permission_modal").css('display', 'flex');
@@ -248,15 +249,15 @@
 
         $('#btn_submit_add').click(function () {
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let permission_form = document.getElementById('permission_form');
-            var formData = new FormData(permission_form);
+            let permission_form = $("#permission_form");
+            var formData = new FormData(permission_form[0]);
 
             $("#error_div").hide();
             $("#success_div").hide();
 
             $.ajax({
                 url: "{% url 'api:v1:project_user_permission' id=project.id %}",
-                method: $("#permission_form").attr('method'),
+                method: $("#permission_form").data("method"),
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
                 cache: false,
@@ -298,10 +299,20 @@
         /* ------------------------------------------------------------------------- */
 
         $(".btn_delete_perm").click(function () {
+            var $this = $(this);
+
+            // Check if the icon is already disabled
+            if ($this.hasClass('disabled')) {
+                return false;
+            }
+            
+            // Disable the button to prevent double-clicks
+            $this.addClass('disabled');
+
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
 
             var formData = new FormData();
-            formData.append("user", $(this).data("user"));
+            formData.append("user", $this.data("user"));
 
             $("#error_div").hide();
             $("#success_div").hide();
@@ -328,6 +339,9 @@
                 },
                 error: function (data) {
                     {% include 'snippets/ajax_error_modal_management.js' %}
+                    
+                    // Re-enable the button in case of error
+                    $this.removeClass('disabled');
                 }
             });
             return false; // prevent default
