@@ -21,7 +21,7 @@ class TestUserManager:
         assert not user.is_staff
         assert not user.is_superuser
         assert user.check_password("something-r@nd0m!")
-        assert user.username is None  # type: ignore[has-type]
+        assert user.username is None
 
     def test_create_superuser(self) -> None:
         user = User.objects.create_superuser(
@@ -31,14 +31,14 @@ class TestUserManager:
         assert user.email == "admin@example.com"
         assert user.is_staff
         assert user.is_superuser
-        assert user.username is None  # type: ignore[has-type]
+        assert user.username is None
 
     def test_create_superuser_username_ignored(self) -> None:
         user = User.objects.create_superuser(
             email="test@example.com",
             password="something-r@nd0m!",  # noqa: S106
         )
-        assert user.username is None  # type: ignore[has-type]
+        assert user.username is None
 
 
 @pytest.mark.django_db

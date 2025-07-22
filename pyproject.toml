@@ -26,7 +26,7 @@ dependencies = [
   # Django
   # ------------------------------------------------------------------------------
   "django==5.2.4",                        # https://www.djangoproject.com/
-  "django-allauth==65.10.0",               # https://github.com/pennersr/django-allauth
+  "django-allauth==65.10.0",              # https://github.com/pennersr/django-allauth
   "django-celery-beat==2.8.1",            # https://github.com/celery/django-celery-beat
   "django-compressor==4.5.1",             # https://github.com/django-compressor/django-compressor
   "django-countries==7.6.1",              # https://github.com/SmileyChris/django-countries/
@@ -45,7 +45,7 @@ dependencies = [
 
   # AWS
   # ------------------------------------------------------------------------------
-  "boto3==1.39.4", # https://github.com/boto/boto3
+  "boto3==1.39.10", # https://github.com/boto/boto3
 
   # GIS & Spatial Analysis
   # ------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ local = [
   # ------------------------------------------------------------------------------
   "deepdiff>=7.0,<9.0",   # https://github.com/seperman/deepdiff
   "factory-boy==3.3.3",   # https://github.com/FactoryBoy/factory_boy
-  "mypy==1.15.0",         # https://github.com/python/mypy
+  "mypy==1.16.1",         # https://github.com/python/mypy
   "parameterized==0.9.0", # https://github.com/wolever/parameterized
   "pytest-dotenv==0.5.2", # https://github.com/quiqua/pytest-dotenv
   "pytest-env==1.1.5",    # https://github.com/pytest-dev/pytest-env
@@ -76,12 +76,12 @@ local = [
 
   # Typing
   # ------------------------------------------------------------------------------
-  "djangorestframework-stubs[compatible-mypy]==3.16.0", # https://github.com/typeddjango/djangorestframework-stubs
-  "django-stubs[compatible-mypy]==5.2.1",               # https://github.com/typeddjango/django-stubs
+  "djangorestframework-stubs[compatible-mypy]==3.16.1", # https://github.com/typeddjango/djangorestframework-stubs
+  "django-stubs[compatible-mypy]==5.2.2",               # https://github.com/typeddjango/django-stubs
   "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
   # "django-types==0.20.0",             # https://github.com/sbdchd/django-types
   # "djangorestframework-types==0.9.0", # https://github.com/sbdchd/djangorestframework-types
-  "types-cachetools==6.0.0.20250525", # https://github.com/python/typeshed
+  "types-cachetools==6.1.0.20250717", # https://github.com/python/typeshed
   "types-factory-boy==0.4.1",         # https://github.com/youtux/types-factory-boy
   "types-pytz==2025.2.0.20250516",    # https://github.com/python/typeshed
 
@@ -97,7 +97,7 @@ local = [
 
   # Code quality
   # ------------------------------------------------------------------------------
-  "ruff==0.12.3",      # https://github.com/astral-sh/ruff
+  "ruff==0.12.4",      # https://github.com/astral-sh/ruff
   "coverage==7.9.2",   # https://github.com/nedbat/coveragepy
   "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
   "pre-commit==4.2.0", # https://github.com/pre-commit/pre-commit

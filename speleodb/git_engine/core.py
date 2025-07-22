@@ -252,7 +252,7 @@ class GitTree(Tree, GitObjectMixin):
 
         return cls(repo=tree.repo, binsha=tree.binsha, mode=tree.mode, path=tree.path)
 
-    @property  # type: ignore[override]
+    @property
     def repo(self) -> GitRepo:
         if not isinstance(self._repo, GitRepo):
             return GitRepo.from_repo(self._repo)
@@ -269,7 +269,7 @@ class GitTree(Tree, GitObjectMixin):
         return self._path
 
     @path.setter
-    def path(self, value: str | pathlib.Path) -> None:
+    def path(self, value: PathLike) -> None:
         self._path = pathlib.Path(value)
 
     def _cast_to_type(self, item: Any) -> GitTree | GitFile | Any:
@@ -398,7 +398,7 @@ class GitCommit(Commit):
         """
         return self.hexsha[:7]
 
-    @property  # type: ignore[override]
+    @property
     def repo(self) -> GitRepo:
         # if not isinstance(self._repo, GitRepo):
         #     self._repo = GitRepo.from_repo(self._repo)
@@ -435,7 +435,7 @@ class GitCommit(Commit):
                 score=None,
             )
 
-    @property  # type: ignore[override]
+    @property
     def tree(self) -> GitTree:
         if isinstance(self._tree, GitTree):
             return self._tree
@@ -542,7 +542,7 @@ class GitRepo(Repo):
         return {ref.name: ref.commit.hexsha for ref in super().branches}
 
     @property
-    def description(self) -> str | None:  # type: ignore[override]
+    def description(self) -> str | None:
         try:
             return self.description
         except OSError:
