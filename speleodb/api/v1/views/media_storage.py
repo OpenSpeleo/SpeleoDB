@@ -119,11 +119,6 @@ class MediaPresignedUploadView(GenericAPIView[Any], SDBAPIViewMixin):
 
     def _handle_presigned_url(self, request: Request) -> Response:
         """Generate presigned URL for S3 upload."""
-        if not getattr(settings, "USE_S3", False):
-            return ErrorResponse(
-                {"error": "Presigned URLs require S3 storage to be enabled"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         # Get request parameters
         filename = request.data.get("filename")
@@ -201,11 +196,6 @@ class MediaSignedUrlView(GenericAPIView[Any], SDBAPIViewMixin):
 
     def post(self, request: Request) -> Response:
         """Generate a signed URL for file download."""
-        if not getattr(settings, "USE_S3", False):
-            return ErrorResponse(
-                {"error": "Signed URLs require S3 storage to be enabled"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         # Get request parameters
         file_key = request.data.get("file_key")
@@ -312,9 +302,7 @@ class MediaSecureAccessView(GenericAPIView[Any], SDBAPIViewMixin):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            if getattr(settings, "USE_S3", False):
-                return self._generate_s3_url(resource.file.name, expires_in)
-            return self._generate_local_url(resource.file.name)
+            return self._generate_s3_url(resource.file.name, expires_in)
 
         except StationResource.DoesNotExist:
             return ErrorResponse(
@@ -358,9 +346,7 @@ class MediaSecureAccessView(GenericAPIView[Any], SDBAPIViewMixin):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            if getattr(settings, "USE_S3", False):
-                return self._generate_s3_url(file_path, expires_in)
-            return self._generate_local_url(file_path)
+            return self._generate_s3_url(file_path, expires_in)
 
         except Project.DoesNotExist:
             return ErrorResponse(
@@ -401,29 +387,5 @@ class MediaSecureAccessView(GenericAPIView[Any], SDBAPIViewMixin):
         except ClientError as e:
             return ErrorResponse(
                 {"error": f"Failed to generate access URL: {e!s}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-    def _generate_local_url(self, file_path: str) -> Response:
-        """Generate local file URL."""
-        try:
-            # For local storage, return the file URL directly
-            file_url = default_storage.url(file_path)
-
-            return SuccessResponse(
-                {
-                    "access_url": file_url,
-                    "expires_in": None,  # Local URLs don't expire
-                    "file_path": file_path,
-                    "security_note": (
-                        "Local file access - ensure proper server "
-                        "configuration for security"
-                    ),
-                }
-            )
-
-        except Exception as e:  # noqa: BLE001
-            return ErrorResponse(
-                {"error": f"Failed to generate local URL: {e!s}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

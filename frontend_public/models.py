@@ -13,7 +13,7 @@ from django.db import models
 from django.db.models import F
 from PIL import Image
 
-from frontend_public.storages import get_person_photo_storage
+from frontend_public.storages import PersonPhotoStorage
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -60,7 +60,7 @@ class PersonBase(models.Model):
     # Photo field with S3 storage
     photo = models.ImageField(
         upload_to="people/photos/",
-        storage=get_person_photo_storage(),
+        storage=PersonPhotoStorage(),  # type: ignore[no-untyped-call]
         validators=[
             FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "webp"])
         ],
