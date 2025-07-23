@@ -34,8 +34,6 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
 
     def test_s3_credentials_with_presigned_url(self) -> None:
         """Test presigned URL generation - should fail with improper S3 credentials."""
-        if not getattr(settings, "USE_S3", False):
-            self.skipTest("S3 not enabled")
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -61,8 +59,6 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
 
     def test_s3_credentials_with_signed_url(self) -> None:
         """Test signed URL generation - should fail with improper S3 credentials."""
-        if not getattr(settings, "USE_S3", False):
-            self.skipTest("S3 not enabled")
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -86,8 +82,6 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
     def test_s3_credentials_with_secure_access(self) -> None:
         """Test secure access URL generation - should fail with improper S3
         credentials."""
-        if not getattr(settings, "USE_S3", False):
-            self.skipTest("S3 not enabled")
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -116,8 +110,6 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
     def test_s3_bucket_connectivity(self) -> None:
         """Test S3 bucket connectivity - should fail with improper credentials or
         bucket."""
-        if not getattr(settings, "USE_S3", False):
-            self.skipTest("S3 not enabled")
 
         try:
             # Try to create S3 client and test connectivity
@@ -140,8 +132,6 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
 
     def test_direct_s3_upload_with_invalid_credentials(self) -> None:
         """Test direct S3 upload - should fail with improper credentials."""
-        if not getattr(settings, "USE_S3", False):
-            self.skipTest("S3 not enabled")
 
         # Create a small test file
         test_file = SimpleUploadedFile(
@@ -166,8 +156,6 @@ class TestS3CredentialValidation(BaseAPIProjectTestCase):
 
     def test_s3_with_explicitly_invalid_credentials(self) -> None:
         """Test S3 operations with explicitly invalid credentials - should fail."""
-        if not getattr(settings, "USE_S3", False):
-            self.skipTest("S3 not enabled")
 
         try:
             # Test direct boto3 client creation with invalid credentials

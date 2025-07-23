@@ -28,6 +28,10 @@ jobs:
       DJANGO_SECRET_KEY: "s&=i@9h+)6bge)6!6vhbcx@=#^6nr73&7+6ep-xpbebhi5#)+_"
       # Dummy Key - Not Used
       DJANGO_FIELD_ENCRYPTION_KEY: "Mi2dyK2q9uTi9_Yn2mpsmU2fFUM4P0U7XpEgxiGPtto="
+      AWS_ACCESS_KEY_ID: "whatever"
+      AWS_SECRET_ACCESS_KEY: "whatever"
+      AWS_S3_REGION_NAME: "whatever"
+      AWS_STORAGE_BUCKET_NAME: "whatever"
 
     steps:
       - name: Checkout Code Repository
@@ -98,4 +102,3 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_S3_REGION_NAME: ${{ secrets.AWS_S3_REGION_NAME }}
           AWS_STORAGE_BUCKET_NAME: ${{ secrets.AWS_STORAGE_BUCKET_NAME }}
-          USE_S3: True

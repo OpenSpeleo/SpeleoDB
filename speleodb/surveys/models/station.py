@@ -6,13 +6,12 @@ import uuid
 from typing import Any
 from typing import Self
 
-from django.conf import settings
 from django.core.validators import FileExtensionValidator
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from speleodb.utils.storages import get_station_resource_storage
+from speleodb.utils.storages import StationResourceStorage
 
 
 class Station(models.Model):
@@ -141,7 +140,7 @@ class StationResource(models.Model):
         upload_to="stations/resources/%Y/%m/%d/",
         blank=True,
         null=True,
-        storage=get_station_resource_storage(),
+        storage=StationResourceStorage(),  # type: ignore[no-untyped-call]
         validators=[
             FileExtensionValidator(
                 allowed_extensions=[
@@ -240,14 +239,9 @@ class StationResource(models.Model):
         if not self.file:
             return None
 
-        if getattr(settings, "USE_S3", False):
-            # Return public URL for S3 (no signing needed)
-            try:
-                # Use the storage's URL method which will return public URL
-                return self.file.url  # type: ignore[no-any-return]
-            except AttributeError:
-                return None
-
-        else:
-            # Regular file URL for local storage
-            return self.file.url if self.file else None
+        # Return public URL for S3 (no signing needed)
+        try:
+            # Use the storage's URL method which will return public URL
+            return self.file.url  # type: ignore[no-any-return]
+        except AttributeError:
+            return None
