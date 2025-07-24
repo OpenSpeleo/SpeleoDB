@@ -3642,6 +3642,16 @@ input[type="search"]::-webkit-search-results-decoration {
   color: rgb(20 184 166 / var(--tw-text-opacity));
 }
 
+.text-sky-300 {
+  --tw-text-opacity: 1;
+  color: rgb(125 211 252 / var(--tw-text-opacity));
+}
+
+.text-sky-500 {
+  --tw-text-opacity: 1;
+  color: rgb(14 165 233 / var(--tw-text-opacity));
+}
+
 .text-transparent {
   color: transparent;
 }

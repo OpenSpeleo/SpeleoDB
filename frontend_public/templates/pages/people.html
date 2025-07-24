@@ -65,7 +65,7 @@
                 <!-- Section header -->
                 <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
                     <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Board of Directors</h2>
-                    <p class="text-lg text-slate-400">
+                    <p class="text-lg text-slate-200">
                         Our Board provides strategic guidance and ensures the organization stays true<br>
                         to its mission of advancing cave exploration and data management.
                     </p>
@@ -76,25 +76,25 @@
                     
                     {% for person in board_members %}
                     <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
-                        <div class="flex flex-col items-center text-center">
+                        <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
                             <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
                                  src="{{ person.get_photo_url }}" 
                                  alt="{{ person.full_name }}" />
                             {% else %}
                             <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
-                                <span class="text-slate-400 text-2xl font-bold">{{ person.full_name|first }}</span>
+                                <span class="text-2xl font-bold">{{ person.full_name|first }}</span>
                             </div>
                             {% endif %}
                             <h3 class="text-xl font-bold text-slate-100 mb-1">{{ person.full_name }}</h3>
-                            <p class="text-purple-400 text-sm font-medium mb-3">{{ person.title }}</p>
-                            <p class="text-slate-400 text-sm mb-4 text-justify">
+                            <p class="text-sm font-medium mb-3">{{ person.title }}</p>
+                            <p class="text-sm mb-4 text-justify">
                                 {{ person.description|linebreaksbr }}
                             </p>
                             {% if person.has_link %}
-                            <div class="flex items-center space-x-1 text-sm">
-                                <span class="text-slate-500">{{ person.link_name }}</span>
-                                <a href="{{ person.link_target }}" target="_blank" rel="noopener" class="text-purple-400 hover:text-purple-300 transition-colors">
+                            <div class="flex items-center space-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
+                                <span class="underline">{{ person.link_name }}</span>
+                                <a href="{{ person.link_target }}" target="_blank" rel="noopener">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                                     </svg>
@@ -133,33 +133,35 @@
                 <!-- Section header -->
                 <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
                     <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Technical Steering Committee</h2>
-                    <p class="text-lg text-slate-400">The technical minds behind SpeleoDB's architecture, ensuring our platform remains cutting-edge, secure, and community-driven.</p>
+                    <p class="text-lg text-slate-200">
+                        The technical minds behind SpeleoDB's architecture, ensuring our platform remains cutting-edge, secure, and community-driven.
+                    </p>
                 </div>
 
                 <!-- Team members grid with dynamic layout -->
                 <div class="grid {{ technical_members|length|get_grid_class }} gap-6 lg:gap-8">
                     
                     {% for person in technical_members %}
-                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:technical_members %}{{ technical_members|last_row_offset_class }}{% endif %}">
-                        <div class="flex flex-col items-center text-center">
+                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
+                        <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
                             <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
                                  src="{{ person.get_photo_url }}" 
                                  alt="{{ person.full_name }}" />
                             {% else %}
                             <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
-                                <span class="text-slate-400 text-2xl font-bold">{{ person.full_name|first }}</span>
+                                <span class="text-2xl font-bold">{{ person.full_name|first }}</span>
                             </div>
                             {% endif %}
                             <h3 class="text-xl font-bold text-slate-100 mb-1">{{ person.full_name }}</h3>
-                            <p class="text-purple-400 text-sm font-medium mb-3">{{ person.title }}</p>
-                            <p class="text-slate-400 text-sm mb-4 text-justify">
+                            <p class="text-sm font-medium mb-3">{{ person.title }}</p>
+                            <p class="text-sm mb-4 text-justify">
                                 {{ person.description|linebreaksbr }}
                             </p>
                             {% if person.has_link %}
-                            <div class="flex items-center space-x-1 text-sm">
-                                <span class="text-slate-500">{{ person.link_name }}</span>
-                                <a href="{{ person.link_target }}" target="_blank" rel="noopener" class="text-purple-400 hover:text-purple-300 transition-colors">
+                            <div class="flex items-center space-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
+                                <span class="underline">{{ person.link_name }}</span>
+                                <a href="{{ person.link_target }}" target="_blank" rel="noopener">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                                     </svg>
@@ -198,33 +200,35 @@
                 <!-- Section header -->
                 <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
                     <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Explorer Advisory Board</h2>
-                    <p class="text-lg text-slate-400">Experienced cave explorers and surveyors who provide real-world insights to ensure our platform meets the community's needs.</p>
+                    <p class="text-lg text-slate-200">
+                        Experienced cave explorers and surveyors who provide real-world insights to ensure our platform meets the community's needs.
+                    </p>
                 </div>
 
                 <!-- Team members grid with dynamic layout -->
                 <div class="grid {{ explorer_members|length|get_grid_class }} gap-6 lg:gap-8">
                     
                     {% for person in explorer_members %}
-                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:explorer_members %}{{ explorer_members|last_row_offset_class }}{% endif %}">
-                        <div class="flex flex-col items-center text-center">
+                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
+                        <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
                             <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
                                  src="{{ person.get_photo_url }}" 
                                  alt="{{ person.full_name }}" />
                             {% else %}
                             <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
-                                <span class="text-slate-400 text-2xl font-bold">{{ person.full_name|first }}</span>
+                                <span class="text-2xl font-bold">{{ person.full_name|first }}</span>
                             </div>
                             {% endif %}
                             <h3 class="text-xl font-bold text-slate-100 mb-1">{{ person.full_name }}</h3>
-                            <p class="text-purple-400 text-sm font-medium mb-3">{{ person.title }}</p>
-                            <p class="text-slate-400 text-sm mb-4 text-justify">
+                            <p class="text-sm font-medium mb-3">{{ person.title }}</p>
+                            <p class="text-sm mb-4 text-justify">
                                 {{ person.description|linebreaksbr }}
                             </p>
                             {% if person.has_link %}
-                            <div class="flex items-center space-x-1 text-sm">
-                                <span class="text-slate-500">{{ person.link_name }}</span>
-                                <a href="{{ person.link_target }}" target="_blank" rel="noopener" class="text-purple-400 hover:text-purple-300 transition-colors">
+                            <div class="flex items-center space-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
+                                <span class="underline">{{ person.link_name }}</span>
+                                <a href="{{ person.link_target }}" target="_blank" rel="noopener">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                                     </svg>
