@@ -8,12 +8,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from django.core.files.base import ContentFile
-from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.db.models import F
 from PIL import Image
 
-from frontend_public.storages import PersonPhotoStorage
+from speleodb.utils.image_processing import ImageProcessor  # Import ImageProcessor
+from speleodb.utils.storages import PersonPhotoStorage
+from speleodb.utils.validators import ImageWithHeicSupportValidator
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -62,7 +63,9 @@ class PersonBase(models.Model):
         upload_to="people/photos/",
         storage=PersonPhotoStorage(),  # type: ignore[no-untyped-call]
         validators=[
-            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "webp"])
+            ImageWithHeicSupportValidator(
+                allowed_extensions=["jpg", "jpeg", "png", "webp"]
+            )
         ],
         help_text="Photo of the person (JPEG, PNG, or WebP format)",
     )
@@ -130,33 +133,22 @@ class PersonBase(models.Model):
             return None
 
     def _process_photo(self) -> None:
-        """Process the uploaded photo to create a 200x200 thumbnail."""
-        if not self.photo or not self.photo.file:
-            return
+        """Process the uploaded photo to create a square 200x200 thumbnail."""
+        # Check if the uploaded file is HEIC/HEIF
+        original_extension = Path(
+            self.photo.name or self.photo.file.name
+        ).suffix.lower()
+        is_heic = original_extension in {".heic", ".heif"}
 
-        # Reset file pointer to beginning
-        self.photo.file.seek(0)
-
-        # Open the image
-        img = Image.open(self.photo.file)
-
-        # Convert RGBA to RGB if necessary
-        if img.mode in ("RGBA", "LA"):
-            # Create a white background
-            background = Image.new("RGB", img.size, (255, 255, 255))
-
-            if img.mode == "RGBA":
-                background.paste(img, mask=img.split()[3])  # Use alpha channel as mask
-            else:
-                background.paste(img, mask=img.split()[1])  # LA mode
-
-            img = background  # type: ignore[assignment]
-
-        elif img.mode not in ("RGB", "L"):
-            img = img.convert("RGB")  # type: ignore[assignment]
+        # Open the image and process it for web (handles EXIF orientation)
+        img = ImageProcessor.process_image_for_web(self.photo.file)
 
         # Get the original filename
         original_filename = Path(self.photo.name or self.photo.file.name).name
+
+        # If it's HEIC, change the extension to .jpg
+        if is_heic:
+            original_filename = Path(original_filename).stem + ".jpg"
 
         # Create thumbnail (200x200)
         # Calculate dimensions for center crop

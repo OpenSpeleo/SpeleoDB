@@ -23,6 +23,7 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
 
     created_by_email = serializers.CharField(source="created_by.email", read_only=True)
     file_url = serializers.SerializerMethodField()
+    miniature_url = serializers.SerializerMethodField()
     station_id = serializers.UUIDField(write_only=True, required=False)
 
     class Meta:
@@ -34,6 +35,7 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
             "description",
             "file",
             "file_url",
+            "miniature_url",
             "text_content",
             "created_by",
             "created_by_email",
@@ -47,12 +49,17 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
         """Get the full URL for the file if it exists."""
         return obj.get_file_url()
 
+    def get_miniature_url(self, obj: StationResource) -> str | None:
+        """Get miniature URL if available (for PHOTO, VIDEO, DOCUMENT resources)."""
+        return obj.get_miniature_url()
+
     def validate_resource_type(self, value: str) -> str:
         """Prevent resource_type from being changed during updates."""
         if self.instance and self.instance.resource_type != value:  # type: ignore[union-attr]
             raise serializers.ValidationError(
                 "Resource type cannot be changed once created."
             )
+
         return value
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
@@ -72,31 +79,32 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
             "document",
         ]:
             # For updates, only validate if file is being changed
-            if not self.instance and not file_field:
+            if self.instance and not file_field:
+                return attrs
+
+            if not file_field:
                 raise serializers.ValidationError(
                     f"Resource type '{resource_type}' requires a file."
                 )
 
-            # Validate file size (max 5MB for videos)
-            if file_field and resource_type == "video":
+            # Validate file size (max 5MBs)
+            if file_field:
                 max_size = 5 * 1024 * 1024  # 5MB in bytes
                 if file_field.size > max_size:
                     raise serializers.ValidationError(
-                        {"file": "Video file size cannot exceed 5MB."}
+                        {"file": "File size cannot exceed 5MB."}
                     )
+
         elif resource_type in [
             "note",
             "sketch",
         ]:
-            # For updates, check if text_content is being cleared
-            if self.instance:
-                # If text_content is in attrs and is empty, that's an error
-                if "text_content" in attrs and not text_content:
-                    raise serializers.ValidationError(
-                        f"Resource type '{resource_type}' requires text content."
-                    )
+            # For updates, check if text_content is being updated
+            if self.instance and "text_content" not in attrs:
+                return attrs
+
             # For new resources, text_content is required
-            elif not text_content:
+            if not text_content:
                 raise serializers.ValidationError(
                     f"Resource type '{resource_type}' requires text content."
                 )
