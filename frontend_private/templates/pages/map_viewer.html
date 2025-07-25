@@ -501,6 +501,27 @@
         border-radius: 6px;
     }
 
+    .video-preview {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .video-preview .play-overlay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: rgba(255, 255, 255, 0.9);
+        pointer-events: none;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    }
+
+    .video-preview:hover .play-overlay {
+        color: rgba(255, 255, 255, 1);
+        transform: translate(-50%, -50%) scale(1.1);
+        transition: all 0.2s ease;
+    }
+
     /* Photo lightbox */
     .photo-lightbox {
         position: fixed;
@@ -4804,19 +4825,34 @@
             case 'photo':
                 return resource.file_url ?
                     `<div class="resource-preview">
-                        <img src="${resource.file_url}" alt="${resource.title}" 
+                        <img src="${resource.miniature_url || resource.file_url}" alt="${resource.title}" 
                              onclick="openPhotoLightbox('${resource.file_url}', '${resource.title}')"
-                             title="Click to view full size">
+                             title="Click to view full size"
+                             loading="lazy">
                     </div>` :
                     '<div class="text-slate-400 text-sm">No image available</div>';
             case 'video':
                 return resource.file_url ?
-                    `<div class="resource-preview">
-                        <video controls class="w-full">
-                            <source src="${resource.file_url}" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
-                    </div>` :
+                    resource.miniature_url ?
+                        `<div class="resource-preview video-preview" onclick="openVideoModal('${resource.file_url}', '${resource.title}')">
+                            <img src="${resource.miniature_url}" alt="${resource.title}" 
+                                 title="Click to play video"
+                                 loading="lazy">
+                            <div class="play-overlay">
+                                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>` :
+                        `<div class="resource-preview">
+                            <video controls class="w-full">
+                                <source src="${resource.file_url}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>` :
                     '<div class="text-slate-400 text-sm">No video available</div>';
             case 'sketch':
                 if (!resource.text_content) {
@@ -4862,7 +4898,13 @@
                     '<div class="text-slate-400 text-sm">No content</div>';
             case 'document':
                 return resource.file_url ?
-                    `<div class="text-sm"><a href="${resource.file_url}" target="_blank" class="text-sky-400 hover:text-sky-300 underline">📄 View Document</a></div>` :
+                    resource.miniature_url ?
+                        `<div class="resource-preview document-preview">
+                            <a href="${resource.file_url}" target="_blank" title="Click to download document">
+                                <img src="${resource.miniature_url}" alt="${resource.title}" loading="lazy">
+                            </a>
+                        </div>` :
+                        `<div class="text-sm"><a href="${resource.file_url}" target="_blank" class="text-sky-400 hover:text-sky-300 underline">📄 View Document</a></div>` :
                     '<div class="text-slate-400 text-sm">No document available</div>';
             default:
                 return '<div class="text-slate-400 text-sm">Unknown resource type</div>';
@@ -5173,6 +5215,68 @@
 
         // Prevent body scroll when lightbox is open
         document.body.style.overflow = 'hidden';
+    }
+
+    // Video Modal Functions
+    function openVideoModal(url, title) {
+        // Create modal elements
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90';
+        modal.onclick = (e) => {
+            if (e.target === modal) closeVideoModal();
+        };
+
+        const container = document.createElement('div');
+        container.className = 'relative w-full max-w-4xl bg-slate-800 rounded-lg overflow-hidden';
+
+        const header = document.createElement('div');
+        header.className = 'flex justify-between items-center p-4 border-b border-slate-700';
+        header.innerHTML = `
+            <h3 class="text-lg font-medium text-white">${title || 'Video'}</h3>
+            <button onclick="closeVideoModal()" class="text-slate-400 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+
+        const videoContainer = document.createElement('div');
+        videoContainer.className = 'relative bg-black';
+        videoContainer.innerHTML = `
+            <video controls autoplay class="w-full max-h-[70vh]">
+                <source src="${url}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        `;
+
+        container.appendChild(header);
+        container.appendChild(videoContainer);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+
+        // Store reference for cleanup
+        window.currentVideoModal = modal;
+    }
+
+    function closeVideoModal() {
+        if (window.currentVideoModal) {
+            // Stop video playback
+            const video = window.currentVideoModal.querySelector('video');
+            if (video) {
+                video.pause();
+                video.currentTime = 0;
+            }
+
+            // Remove modal
+            window.currentVideoModal.remove();
+            window.currentVideoModal = null;
+
+            // Restore body scroll
+            document.body.style.overflow = '';
+        }
     }
 
     function closePhotoLightbox(event) {
@@ -7032,7 +7136,31 @@
                     showNotification('error', 'Failed to save resource. Please try again.');
                 }
             } else {
-                showNotification('error', 'Failed to save resource. Please try again.');
+                // Try to parse error response
+                let errorMessage = 'Failed to save resource.';
+                try {
+                    const errorData = await response.json();
+                    if (errorData.errors) {
+                        // Handle validation errors
+                        const errorMessages = [];
+                        for (const [field, errors] of Object.entries(errorData.errors)) {
+                            if (Array.isArray(errors)) {
+                                errorMessages.push(...errors);
+                            } else {
+                                errorMessages.push(errors);
+                            }
+                        }
+                        errorMessage = errorMessages.join(' ');
+                    } else if (errorData.error) {
+                        errorMessage = errorData.error;
+                    } else if (errorData.message) {
+                        errorMessage = errorData.message;
+                    }
+                } catch (e) {
+                    // If JSON parsing fails, use status text
+                    errorMessage = `Failed to save resource: ${response.statusText}`;
+                }
+                showNotification('error', errorMessage);
             }
         } catch (error) {
             console.error('Error saving resource:', error);

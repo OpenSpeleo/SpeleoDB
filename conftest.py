@@ -19,7 +19,9 @@ def pytest_collection_modifyitems(items: list[Item]) -> None:
 
     # Force loading the countries to avoid errors.
     # See: https://github.com/SmileyChris/django-countries/issues/472
-    _ = countries.countries
+    from django_countries.data import COUNTRIES  # noqa: F401, PLC0415
+
+    assert len(countries.countries) > 0
 
 
 def pytest_addoption(parser: Parser) -> None:

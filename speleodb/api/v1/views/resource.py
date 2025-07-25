@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.parsers import FormParser
@@ -22,6 +23,8 @@ from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from rest_framework.compat import QuerySet
     from rest_framework.request import Request
     from rest_framework.response import Response
@@ -103,12 +106,32 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
 
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            # Save with the station and created_by
-            resource = serializer.save(station=station, created_by=request.user)
-            return SuccessResponse(
-                {"resource": self.get_serializer(resource).data},
-                status=status.HTTP_201_CREATED,
-            )
+            try:
+                # Save with the station and created_by
+                resource = serializer.save(station=station, created_by=request.user)
+                return SuccessResponse(
+                    {"resource": self.get_serializer(resource).data},
+                    status=status.HTTP_201_CREATED,
+                )
+
+            except ValidationError as e:
+                # Convert model validation errors to API format
+                errors: Mapping[str, Any] = {}
+                if hasattr(e, "error_dict"):
+                    errors = e.error_dict
+                elif hasattr(e, "error_list"):
+                    errors = {"non_field_errors": e.error_list}
+                else:
+                    errors = {"non_field_errors": [str(e)]}
+
+                # Convert ErrorList to list of strings
+                for field, error_list in errors.items():
+                    errors[field] = [str(error) for error in error_list]  # type: ignore[misc]
+
+                return ErrorResponse(
+                    {"errors": errors}, status=status.HTTP_400_BAD_REQUEST
+                )
+
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )

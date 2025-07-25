@@ -242,9 +242,6 @@ class TestBoardMemberAdmin(PersonAdminTestMixin):
     model_class = BoardMember
     admin_class = BoardMemberAdmin
 
-    @pytest.mark.filterwarnings(
-        "ignore:.*FORMS_URLFIELD_ASSUME_HTTPS.*:django.utils.deprecation.RemovedInDjango60Warning"
-    )
     def test_admin_registration(
         self, client: Client, admin_user: User, db: None
     ) -> None:
@@ -262,9 +259,6 @@ class TestTechnicalMemberAdmin(PersonAdminTestMixin):
     model_class = TechnicalMember
     admin_class = TechnicalMemberAdmin
 
-    @pytest.mark.filterwarnings(
-        "ignore:.*FORMS_URLFIELD_ASSUME_HTTPS.*:django.utils.deprecation.RemovedInDjango60Warning"
-    )
     def test_admin_registration(
         self, client: Client, admin_user: User, db: None
     ) -> None:
@@ -282,9 +276,6 @@ class TestExplorerMemberAdmin(PersonAdminTestMixin):
     model_class = ExplorerMember
     admin_class = ExplorerMemberAdmin
 
-    @pytest.mark.filterwarnings(
-        "ignore::django.utils.deprecation.RemovedInDjango60Warning"
-    )
     def test_admin_registration(
         self, client: Client, admin_user: User, db: None
     ) -> None:

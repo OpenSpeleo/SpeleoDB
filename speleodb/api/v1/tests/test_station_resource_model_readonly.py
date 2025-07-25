@@ -89,11 +89,13 @@ class TestStationResourceModelReadOnly:
 
     def test_create_with_resource_type_works(self) -> None:
         """Test that creating new resources with resource_type works."""
-        # Create new resource with resource_type
+        # Create new resource with resource_type - using NOTE type which doesn't require
+        #  a file
         resource = StationResource.objects.create(
             station=self.station,  # type:ignore[misc]
-            resource_type="photo",
-            title="New Photo",
+            resource_type="note",
+            title="New Note",
+            text_content="This is a note",
             created_by=self.user,
         )
 
@@ -102,7 +104,7 @@ class TestStationResourceModelReadOnly:
 
         # Verify it was created
         assert resource.pk is not None
-        assert resource.resource_type == "photo"
+        assert resource.resource_type == "note"
 
         # And the protection is now active
         resource.resource_type = "video"
