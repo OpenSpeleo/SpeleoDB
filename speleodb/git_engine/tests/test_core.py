@@ -22,7 +22,8 @@ class NewRepoTest(TestCase):
 
             repo = GitRepo.init(path=git_path)
 
-            assert repo.path == git_path
+            # Resolve both paths to handle macOS /var -> /private/var symlink
+            assert repo.path.resolve() == git_path.resolve()
 
             with pytest.raises(ValueError):  # noqa: PT011
                 _ = repo.head.commit

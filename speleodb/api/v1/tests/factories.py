@@ -5,14 +5,15 @@ from __future__ import annotations
 import hashlib
 import random
 import uuid
+from pathlib import Path
 from typing import Any
 
 import factory
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from django_countries import countries
 from factory import Faker
 from factory.django import DjangoModelFactory
-from faker import Faker as FakerLib
 from rest_framework.authtoken.models import Token
 
 from speleodb.surveys.models import PermissionLevel
@@ -240,13 +241,9 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
             return
 
         if self.resource_type == StationResource.ResourceType.NOTE:
-            # Only set text_content if it's not already set
             if not self.text_content:
-                fake = FakerLib()
-                self.text_content = fake.text(max_nb_chars=1000)
-
+                self.text_content = f"Note content for {self.title}"
         elif self.resource_type == StationResource.ResourceType.SKETCH:
-            # Only set text_content if it's not already set
             if not self.text_content:
                 # Simple SVG sketch
                 self.text_content = """<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
@@ -255,6 +252,48 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
                     <circle cx="150" cy="100" r="8" fill="#f59e0b"/>
                     <text x="160" y="105" fill="#e2e8f0" font-size="12">Station</text>
                 </svg>"""  # noqa: E501
+
+    @classmethod
+    def _create(
+        cls, model_class: type[StationResource], *args: Any, **kwargs: Any
+    ) -> StationResource:
+        """Override create to handle file-based resources properly."""
+        # For file-based resources without a file, provide a test file
+        resource_type = kwargs.get(
+            "resource_type", cls._meta.declarations.get("resource_type")
+        )
+        if hasattr(resource_type, "fget"):
+            # It's still a factory declaration, get a value
+            resource_type = resource_type.fget()  # type: ignore[union-attr]
+
+        if resource_type in [
+            StationResource.ResourceType.PHOTO,
+            StationResource.ResourceType.VIDEO,
+            StationResource.ResourceType.DOCUMENT,
+        ]:
+            if "file" not in kwargs or not kwargs.get("file"):
+                # Provide appropriate test file
+                artifacts_dir = Path(__file__).parent / "artifacts"
+
+                if resource_type == StationResource.ResourceType.PHOTO:
+                    with (artifacts_dir / "image.jpg").open(mode="rb") as f:
+                        kwargs["file"] = SimpleUploadedFile(
+                            "test_image.jpg", f.read(), content_type="image/jpeg"
+                        )
+                elif resource_type == StationResource.ResourceType.VIDEO:
+                    with (artifacts_dir / "video.mp4").open(mode="rb") as f:
+                        kwargs["file"] = SimpleUploadedFile(
+                            "test_video.mp4", f.read(), content_type="video/mp4"
+                        )
+                elif resource_type == StationResource.ResourceType.DOCUMENT:
+                    with (artifacts_dir / "document.pdf").open(mode="rb") as f:
+                        kwargs["file"] = SimpleUploadedFile(
+                            "test_document.pdf",
+                            f.read(),
+                            content_type="application/pdf",
+                        )
+
+        return super()._create(model_class, *args, **kwargs)
 
     @classmethod
     def create_photo(cls, station: Station, **kwargs: Any) -> StationResource:

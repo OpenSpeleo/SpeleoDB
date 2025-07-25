@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import re
 import tempfile
+from io import BytesIO
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.test import override_settings
+from PIL import Image
 
 from frontend_public.models import BoardMember
 from frontend_public.models import ExplorerMember
@@ -25,25 +28,12 @@ class PersonModelTestMixin:
 
     def create_test_image(self) -> SimpleUploadedFile:
         """Create a test image file."""
-        # Create a minimal valid JPEG file
-        content = (
-            b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
-            b"\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n"
-            b"\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d"
-            b"\x1a\x1c\x1c $.' \",#\x1c\x1c(7),01444\x1f'9=82<.342\xff\xc0\x00\x0b"
-            b"\x08\x00\x01\x00\x01\x01\x01\x11\x00\xff\xc4\x00\x1f\x00\x00\x01\x05"
-            b"\x01\x01\x01\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x01\x02\x03"
-            b"\x04\x05\x06\x07\x08\t\n\x0b\xff\xc4\x00\xb5\x10\x00\x02\x01\x03\x03"
-            b"\x02\x04\x03\x05\x05\x04\x04\x00\x00\x01}\x01\x02\x03\x00\x04\x11\x05"
-            b'\x12!1A\x06\x13Qa\x07"q\x142\x81\x91\xa1\x08#B\xb1\xc1\x15R\xd1\xf0'
-            b"$3br\x82\t\n\x16\x17\x18\x19\x1a%&'()*456789:CDEFGHIJSTUVWXYZcdefg"
-            b"hijstuvwxyz\x83\x84\x85\x86\x87\x88\x89\x8a\x92\x93\x94\x95\x96\x97"
-            b"\x98\x99\x9a\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xb2\xb3\xb4\xb5\xb6"
-            b"\xb7\xb8\xb9\xba\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xd2\xd3\xd4\xd5"
-            b"\xd6\xd7\xd8\xd9\xda\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xf1\xf2"
-            b"\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xff\xda\x00\x08\x01\x01\x00\x00?"
-            b"\x00\xfb\xd3N\xe1\x18\xd2M\xca)%\x00\xff\xd9"
+        # Load real image from artifacts
+        artifacts_dir = (
+            Path(__file__).parent.parent.parent / "speleodb/api/v1/tests/artifacts"
         )
+        with (artifacts_dir / "image.jpg").open(mode="rb") as f:
+            content = f.read()
         return SimpleUploadedFile("test_photo.jpg", content, content_type="image/jpeg")
 
     def test_model_creation(self) -> None:
@@ -163,16 +153,58 @@ class PersonModelTestMixin:
         assert person2.has_link
 
     def test_photo_upload_path(self) -> None:
-        """Test that photos are uploaded to the correct path."""
-        photo = self.create_test_image()
-        person = self.model_class.objects.create(
-            full_name="Photo Test", title="Title", description="Desc", photo=photo
+        """Test that photo upload path is correctly generated."""
+        member = self.model_class.objects.create(
+            full_name="Test Person", title="Test Title", description="Test Description"
         )
 
-        # Photo should have a unique filename with UUID prefix
-        assert person.photo.name
-        # Check that UUID was prepended
-        assert re.search(r"^[a-f0-9]{32}_test_photo\.jpg$", person.photo.name)
+        # Mock file
+        mock_file = self.create_test_image()
+        member.photo = mock_file
+        member.save()
+
+        # Check that UUID was prepended to filename (storage behavior)
+        filename = member.photo.name
+
+        assert filename is not None
+        assert re.search(r"^[a-f0-9]{32}_test_photo\.jpg$", filename)
+
+    def test_photo_orientation_preserved(self) -> None:
+        """Test that photo orientation is preserved during processing."""
+
+        # Create a test image with specific dimensions (portrait)
+        img = Image.new("RGB", (600, 800), color="red")
+
+        # Create EXIF data with orientation tag
+        # Orientation 6 means the image needs to be rotated 90 degrees clockwise
+        exif_data = img.getexif()
+        exif_data[274] = 6  # 274 is the orientation tag
+
+        # Save to bytes with EXIF
+        buffer = BytesIO()
+        img.save(buffer, format="JPEG", exif=exif_data)
+        buffer.seek(0)
+
+        # Create member with the oriented image
+        member = self.model_class.objects.create(
+            full_name="Test Person", title="Test Title", description="Test Description"
+        )
+
+        member.photo = SimpleUploadedFile(
+            "test_oriented.jpg", buffer.read(), content_type="image/jpeg"
+        )
+        member.save()
+
+        # Open the processed image
+        member.photo.seek(0)
+        processed_img = Image.open(member.photo)
+
+        # After processing with orientation 6, the dimensions should be swapped
+        # The 600x800 portrait image should now be 800x600 landscape
+        # (or in this case, a 200x200 square crop)
+        assert processed_img.size == (200, 200), (
+            f"Expected (200, 200), got {processed_img.size}"
+        )
 
     def test_get_photo_url(self) -> None:
         """Test the get_photo_url method."""

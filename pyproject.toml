@@ -6,116 +6,124 @@ authors = [{ name = "Jonathan Dekhtiar", email = "jonathan@dekhtiar.com" }]
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "rcssmin==1.1.2",            # https://github.com/ndparker/rcssmin
-  "argon2-cffi==25.1.0",       # https://github.com/hynek/argon2-cffi
-  "whitenoise==6.9.0",         # https://github.com/evansd/whitenoise
-  "redis==6.2.0",              # https://github.com/redis/redis-py
-  "hiredis==3.2.1",            # https://github.com/redis/hiredis-py
-  "celery==5.5.3",             # https://github.com/celery/celery
-  "flower==2.0.1",             # https://github.com/mher/flower
-  "uvicorn[standard]==0.35.0", # https://github.com/encode/uvicorn
-  "wrapt==1.17.2",             # https://github.com/GrahamDumpleton/wrapt
-  "cachetools==6.1.0",         # https://github.com/tkem/cachetools
-  "timeago==1.0.16",           # https://github.com/hustcc/timeago
-  "Pillow==11.3.0",            # https://github.com/python-pillow/Pillow
+    "rcssmin==1.1.2",            # https://github.com/ndparker/rcssmin
+    "argon2-cffi==25.1.0",       # https://github.com/hynek/argon2-cffi
+    "whitenoise==6.9.0",         # https://github.com/evansd/whitenoise
+    "redis==6.2.0",              # https://github.com/redis/redis-py
+    "hiredis==3.2.1",            # https://github.com/redis/hiredis-py
+    "celery==5.5.3",             # https://github.com/celery/celery
+    "flower==2.0.1",             # https://github.com/mher/flower
+    "uvicorn[standard]==0.35.0", # https://github.com/encode/uvicorn
+    "wrapt==1.17.2",             # https://github.com/GrahamDumpleton/wrapt
+    "cachetools==6.1.0",         # https://github.com/tkem/cachetools
+    "timeago==1.0.16",           # https://github.com/hustcc/timeago
 
-  # Git Management
-  # ------------------------------------------------------------------------------
-  "python-gitlab==6.1.0", # https://python-gitlab.readthedocs.io/en/stable/
-  "GitPython==3.1.44",    # https://github.com/gitpython-developers/GitPython
+    # Media Processing
+    # ------------------------------------------------------------------------------
+    "Pillow==11.3.0",        # https://github.com/python-pillow/Pillow
+    "pillow-heif==1.0.0",    # https://github.com/bigcat88/pillow_heif
+    "imageio==2.37.0",       # https://github.com/imageio/imageio
+    "imageio-ffmpeg==0.6.0", # https://github.com/imageio/imageio-ffmpeg
+    "av==15.0.0",            # https://github.com/PyAV-Org/PyAV
+    "PyMuPDF==1.26.3",       # https://github.com/pymupdf/PyMuPDF
 
-  # Django
-  # ------------------------------------------------------------------------------
-  "django==5.2.4",                        # https://www.djangoproject.com/
-  "django-allauth==65.10.0",              # https://github.com/pennersr/django-allauth
-  "django-celery-beat==2.8.1",            # https://github.com/celery/django-celery-beat
-  "django-compressor==4.5.1",             # https://github.com/django-compressor/django-compressor
-  "django-countries==7.6.1",              # https://github.com/SmileyChris/django-countries/
-  "django-dynamic-raw-id==4.4",           # https://github.com/lincolnloop/django-dynamic-raw-id
-  "django-encrypted-model-fields==0.6.5", # https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/
-  "django-environ==0.12.0",               # https://github.com/joke2k/django-environ
-  "django-hijack==3.7.3",                 # https://github.com/django-hijack/django-hijack/
-  "django-model-utils==5.0.0",            # https://github.com/jazzband/django-model-utils
-  "django-redis==6.0.0",                  # https://github.com/jazzband/django-redis
-  "django-storages==1.14.6",              # https://github.com/jschneier/django-storages
-  # Django REST Framework
-  "djangorestframework==3.16.0", # https://github.com/encode/django-rest-framework
-  "django-cors-headers==4.7.0",  # https://github.com/adamchainz/django-cors-headers
-  # DRF-spectacular for api documentation
-  "drf-spectacular==0.28.0", # https://github.com/tfranzel/drf-spectacular
+    # Git Management
+    # ------------------------------------------------------------------------------
+    "python-gitlab==6.1.0", # https://python-gitlab.readthedocs.io/en/stable/
+    "GitPython==3.1.44",    # https://github.com/gitpython-developers/GitPython
 
-  # AWS
-  # ------------------------------------------------------------------------------
-  "boto3==1.39.10", # https://github.com/boto/boto3
+    # Django
+    # ------------------------------------------------------------------------------
+    "django==5.2.4",                        # https://www.djangoproject.com/
+    "django-allauth==65.10.0",              # https://github.com/pennersr/django-allauth
+    "django-celery-beat==2.8.1",            # https://github.com/celery/django-celery-beat
+    "django-compressor==4.5.1",             # https://github.com/django-compressor/django-compressor
+    "django-countries==7.6.1",              # https://github.com/SmileyChris/django-countries/
+    "django-dynamic-raw-id==4.4",           # https://github.com/lincolnloop/django-dynamic-raw-id
+    "django-encrypted-model-fields==0.6.5", # https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/
+    "django-environ==0.12.0",               # https://github.com/joke2k/django-environ
+    "django-hijack==3.7.3",                 # https://github.com/django-hijack/django-hijack/
+    "django-model-utils==5.0.0",            # https://github.com/jazzband/django-model-utils
+    "django-redis==6.0.0",                  # https://github.com/jazzband/django-redis
+    "django-storages==1.14.6",              # https://github.com/jschneier/django-storages
+    # Django REST Framework
+    "djangorestframework==3.16.0", # https://github.com/encode/django-rest-framework
+    "django-cors-headers==4.7.0",  # https://github.com/adamchainz/django-cors-headers
+    # DRF-spectacular for api documentation
+    "drf-spectacular==0.28.0", # https://github.com/tfranzel/drf-spectacular
 
-  # GIS & Spatial Analysis
-  # ------------------------------------------------------------------------------
-  "shapely==2.1.1", # https://github.com/shapely/shapely
+    # AWS
+    # ------------------------------------------------------------------------------
+    "boto3==1.39.10", # https://github.com/boto/boto3
 
-  # Speleo Packages
-  # ------------------------------------------------------------------------------
-  "mnemo-lib==0.0.3", # https://github.com/OpenSpeleo/pytool_mnemo_lib
+    # GIS & Spatial Analysis
+    # ------------------------------------------------------------------------------
+    "shapely==2.1.1", # https://github.com/shapely/shapely
+
+    # Speleo Packages
+    # ------------------------------------------------------------------------------
+    "mnemo-lib==0.0.3", # https://github.com/OpenSpeleo/pytool_mnemo_lib
 ]
 
 [project.optional-dependencies]
 local = [
-  "Werkzeug[watchdog]==3.1.3", # https://github.com/pallets/werkzeug
-  "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
-  "psycopg[binary]==3.2.9",    # https://github.com/psycopg/psycopg
-  "watchfiles==1.1.0",         # https://github.com/samuelcolvin/watchfiles
+    "Werkzeug[watchdog]==3.1.3", # https://github.com/pallets/werkzeug
+    "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
+    "psycopg[binary]==3.2.9",    # https://github.com/psycopg/psycopg
+    "watchfiles==1.1.0",         # https://github.com/samuelcolvin/watchfiles
 
-  # Testing
-  # ------------------------------------------------------------------------------
-  "deepdiff>=7.0,<9.0",   # https://github.com/seperman/deepdiff
-  "factory-boy==3.3.3",   # https://github.com/FactoryBoy/factory_boy
-  "mypy==1.16.1",         # https://github.com/python/mypy
-  "parameterized==0.9.0", # https://github.com/wolever/parameterized
-  "pytest-sugar==1.0.0",  # https://github.com/Frozenball/pytest-sugar
-  "pytest==8.4.1",        # https://github.com/pytest-dev/pytest
+    # Testing
+    # ------------------------------------------------------------------------------
+    "deepdiff>=7.0,<9.0",   # https://github.com/seperman/deepdiff
+    "factory-boy==3.3.3",   # https://github.com/FactoryBoy/factory_boy
+    "mypy==1.16.1",         # https://github.com/python/mypy
+    "parameterized==0.9.0", # https://github.com/wolever/parameterized
+    "pytest-sugar==1.0.0",  # https://github.com/Frozenball/pytest-sugar
+    "pytest==8.4.1",        # https://github.com/pytest-dev/pytest
 
-  # Typing
-  # ------------------------------------------------------------------------------
-  "djangorestframework-stubs[compatible-mypy]==3.16.1", # https://github.com/typeddjango/djangorestframework-stubs
-  "django-stubs[compatible-mypy]==5.2.2",               # https://github.com/typeddjango/django-stubs
-  "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
-  # "django-types==0.20.0",             # https://github.com/sbdchd/django-types
-  # "djangorestframework-types==0.9.0", # https://github.com/sbdchd/djangorestframework-types
-  "types-cachetools==6.1.0.20250717", # https://github.com/python/typeshed
-  "types-factory-boy==0.4.1",         # https://github.com/youtux/types-factory-boy
-  "types-pytz==2025.2.0.20250516",    # https://github.com/python/typeshed
+    # Typing
+    # ------------------------------------------------------------------------------
+    "djangorestframework-stubs[compatible-mypy]==3.16.1", # https://github.com/typeddjango/djangorestframework-stubs
+    "django-stubs[compatible-mypy]==5.2.2",               # https://github.com/typeddjango/django-stubs
+    "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
+    # "django-types==0.20.0",             # https://github.com/sbdchd/django-types
+    # "djangorestframework-types==0.9.0", # https://github.com/sbdchd/djangorestframework-types
+    "types-cachetools==6.1.0.20250717", # https://github.com/python/typeshed
+    "types-factory-boy==0.4.1",         # https://github.com/youtux/types-factory-boy
+    "types-pytz==2025.2.0.20250516",    # https://github.com/python/typeshed
 
-  # Django Testing
-  # ------------------------------------------------------------------------------
-  "django-coverage-plugin==3.1.1", # https://github.com/nedbat/django_coverage_plugin
-  "pytest-django==4.11.1",         # https://github.com/pytest-dev/pytest-django
+    # Django Testing
+    # ------------------------------------------------------------------------------
+    "django-coverage-plugin==3.1.1", # https://github.com/nedbat/django_coverage_plugin
+    "pytest-django==4.11.1",         # https://github.com/pytest-dev/pytest-django
 
-  # Documentation
-  # ------------------------------------------------------------------------------
-  "sphinx==8.2.3",               # https://github.com/sphinx-doc/sphinx
-  "sphinx-autobuild==2024.10.3", # https://github.com/GaretJax/sphinx-autobuild
+    # Documentation
+    # ------------------------------------------------------------------------------
+    "sphinx==8.2.3",               # https://github.com/sphinx-doc/sphinx
+    "sphinx-autobuild==2024.10.3", # https://github.com/GaretJax/sphinx-autobuild
 
-  # Code quality
-  # ------------------------------------------------------------------------------
-  "ruff==0.12.4",      # https://github.com/astral-sh/ruff
-  "coverage==7.9.2",   # https://github.com/nedbat/coveragepy
-  "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
-  "pre-commit==4.2.0", # https://github.com/pre-commit/pre-commit
+    # Code quality
+    # ------------------------------------------------------------------------------
+    "ruff==0.12.4",      # https://github.com/astral-sh/ruff
+    "coverage==7.9.2",   # https://github.com/nedbat/coveragepy
+    "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
+    "pre-commit==4.2.0", # https://github.com/pre-commit/pre-commit
 
-  # Django
-  # ------------------------------------------------------------------------------
-  "django-debug-toolbar==5.2.0", # https://github.com/jazzband/django-debug-toolbar
-  "django-extensions==4.1",      # https://github.com/django-extensions/django-extensions
-  "django-schema-viewer==0.5.3", # https://github.com/pikhovkin/django-schema-viewer
-  "django-silk==5.4.0",          # https://github.com/jazzband/django-silk
+    # Django
+    # ------------------------------------------------------------------------------
+    "django-debug-toolbar==5.2.0", # https://github.com/jazzband/django-debug-toolbar
+    "django-extensions==4.1",      # https://github.com/django-extensions/django-extensions
+    "django-schema-viewer==0.5.3", # https://github.com/pikhovkin/django-schema-viewer
+    "django-silk==5.4.0",          # https://github.com/jazzband/django-silk
 ]
 
 production = [
-  "gunicorn==23.0.0",  # https://github.com/benoitc/gunicorn
-  "psycopg[c]==3.2.9", # https://github.com/psycopg/psycopg
+    "gunicorn==23.0.0",  # https://github.com/benoitc/gunicorn
+    "psycopg[c]==3.2.9", # https://github.com/psycopg/psycopg
 
-  # Django
-  # ------------------------------------------------------------------------------
-  "django-anymail[mailersend]==13.0", # https://github.com/anymail/django-anymail
+    # Django
+    # ------------------------------------------------------------------------------
+    "django-anymail[mailersend]==13.0", # https://github.com/anymail/django-anymail
 ]
 
 # Django
@@ -128,7 +136,15 @@ minversion = "6.0"
 addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
 # addopts = "--ds=config.settings.test -vvv --capture=no --reuse-db --import-mode=importlib"
 python_files = ["tests.py", "test_*.py"]
-filterwarnings = ['ignore:datetime.datetime.utcnow.*:DeprecationWarning']
+filterwarnings = [
+    "ignore:datetime.datetime.utcnow.*:DeprecationWarning",
+    "ignore:.*builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
+    "ignore:.*builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
+    "ignore:.*builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
+    "ignore:.*FORMS_URLFIELD_ASSUME_HTTPS.*:django.utils.deprecation.RemovedInDjango60Warning",
+    "ignore::django.utils.deprecation.RemovedInDjango60Warning",
+    "ignore:.*FORMS_URLFIELD_ASSUME_HTTPS.*:django.utils.deprecation.RemovedInDjango60Warning",
+]
 
 # ==== Coverage ====
 [tool.coverage.run]
@@ -139,27 +155,27 @@ plugins = ["django_coverage_plugin"]
 # ==== mypy ====
 [tool.mypy]
 exclude = [
-  "**/*.pyc",
-  "**/node_modules",
-  "**/__pycache__",
-  ".devcontainer",
-  ".envs",
-  ".git",
-  ".github",
-  ".ipython",
-  ".mypy_cache",
-  ".pytest_cache",
-  ".ruff_cache",
-  ".uv",
-  ".venv",
-  ".vscode",
-  ".workdir",
-  "~/.cache",
-  "bin",
-  "docs",
-  "fixtures",
-  "mediafiles",
-  "staticfiles",
+    "**/*.pyc",
+    "**/node_modules",
+    "**/__pycache__",
+    ".devcontainer",
+    ".envs",
+    ".git",
+    ".github",
+    ".ipython",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".uv",
+    ".venv",
+    ".vscode",
+    ".workdir",
+    "~/.cache",
+    "bin",
+    "docs",
+    "fixtures",
+    "mediafiles",
+    "staticfiles",
 ]
 check_untyped_defs = true
 # ignore_missing_imports = true
@@ -221,30 +237,30 @@ indent_size = 2
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [
-  ".bzr",
-  ".direnv",
-  ".eggs",
-  ".git",
-  ".git-rewrite",
-  ".hg",
-  ".mypy_cache",
-  ".nox",
-  ".pants.d",
-  ".pytype",
-  ".ruff_cache",
-  ".svn",
-  ".tox",
-  ".venv",
-  "__pypackages__",
-  "_build",
-  "buck-out",
-  "build",
-  "dist",
-  "node_modules",
-  "venv",
-  "*/migrations/*.py",
-  "staticfiles/*",
-  "main.py",
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "*/migrations/*.py",
+    "staticfiles/*",
+    "main.py",
 ]
 # Same as Django: https://github.com/cookiecutter/cookiecutter-django/issues/4792.
 line-length = 88
@@ -253,89 +269,89 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = [
-  "F",
-  "E",
-  "W",
-  "C90",
-  "I",
-  "N",
-  "UP",
-  "YTT",
-  # "ANN", # flake8-annotations: we should support this in the future but 100+ errors atm
-  "ASYNC",
-  "S",
-  "BLE",
-  "FBT",
-  "B",
-  "A",
-  "COM",
-  "C4",
-  "DTZ",
-  "T10",
-  "DJ",
-  "EM",
-  "EXE",
-  "FA",
-  "ICN",
-  "G",
-  'INP',
-  'PIE',
-  "T20",
-  'PYI',
-  'PT',
-  "Q",
-  "RSE",
-  "RET",
-  "SLF",
-  "SLOT",
-  "SIM",
-  "TID",
-  "TCH",
-  "INT",
-  # "ARG", # Unused function argument
-  "PTH",
-  "ERA",
-  "PD",
-  "PGH",
-  "PL",
-  "TRY",
-  "FLY",
-  # "NPY",
-  # "AIR",
-  "PERF",
-  # "FURB",
-  # "LOG",
-  "RUF",
+    "F",
+    "E",
+    "W",
+    "C90",
+    "I",
+    "N",
+    "UP",
+    "YTT",
+    # "ANN", # flake8-annotations: we should support this in the future but 100+ errors atm
+    "ASYNC",
+    "S",
+    "BLE",
+    "FBT",
+    "B",
+    "A",
+    "COM",
+    "C4",
+    "DTZ",
+    "T10",
+    "DJ",
+    "EM",
+    "EXE",
+    "FA",
+    "ICN",
+    "G",
+    'INP',
+    'PIE',
+    "T20",
+    'PYI',
+    'PT',
+    "Q",
+    "RSE",
+    "RET",
+    "SLF",
+    "SLOT",
+    "SIM",
+    "TID",
+    "TCH",
+    "INT",
+    # "ARG", # Unused function argument
+    "PTH",
+    "ERA",
+    "PD",
+    "PGH",
+    "PL",
+    "TRY",
+    "FLY",
+    # "NPY",
+    # "AIR",
+    "PERF",
+    # "FURB",
+    # "LOG",
+    "RUF",
 ]
 ignore = [
-  "S101",   # Use of assert detected https://docs.astral.sh/ruff/rules/assert/
-  "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
-  "SIM102", # sometimes it's better to nest
-  "UP038",  # Checks for uses of isinstance/issubclass that take a tuple
-  # of types for comparison.
-  # Deactivated because it can make the code slow:
-  # https://github.com/astral-sh/ruff/issues/7871
-  "EM101",  # Checks for the use of string literals in exception constructors.
-  "EM102",  # Checks for the use of f-strings in exception constructors.
-  "TRY003", # Checks for long exception messages that are not defined in the
-  # exception class itself.
-  "COM812", # Checks for the absence of trailing commas.
-  "UP009",  # Checks for unnecessary UTF-8 encoding declarations.
-  "EXE001", # Checks for a shebang directive in a file that is not executable.
-  "FBT002", # Checks for the use of boolean positional arguments in function
-  # definitions, as determined by the presence of a boolean default value.
-  "PLR0913", # Checks for function definitions that include too many arguments.
-  "S311",    # Checks for uses of cryptographically weak pseudo-random number generators.
-  "ERA001",  # Checks for commented-out Python code.
-  "C901",    # Checks for functions with a high McCabe complexity.
-  "PLR0911", # Functions or methods with many return statements are harder to understand
-  # and maintain, and often indicative of complex logic.
-  "PLR0912", # Functions or methods with many branches are harder to understand and
-  # maintain than functions or methods with fewer branches.
-  "G004",   # Checks for uses of f-strings to format logging messages.
-  "TRY300", # Checks for return statements in try blocks.
-  "FBT001", # Checks for the use of boolean positional arguments in function definitions,
-  # as determined by the presence of a bool type hint.
+    "S101",   # Use of assert detected https://docs.astral.sh/ruff/rules/assert/
+    "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+    "SIM102", # sometimes it's better to nest
+    "UP038",  # Checks for uses of isinstance/issubclass that take a tuple
+    # of types for comparison.
+    # Deactivated because it can make the code slow:
+    # https://github.com/astral-sh/ruff/issues/7871
+    "EM101",  # Checks for the use of string literals in exception constructors.
+    "EM102",  # Checks for the use of f-strings in exception constructors.
+    "TRY003", # Checks for long exception messages that are not defined in the
+    # exception class itself.
+    "COM812", # Checks for the absence of trailing commas.
+    "UP009",  # Checks for unnecessary UTF-8 encoding declarations.
+    "EXE001", # Checks for a shebang directive in a file that is not executable.
+    "FBT002", # Checks for the use of boolean positional arguments in function
+    # definitions, as determined by the presence of a boolean default value.
+    "PLR0913", # Checks for function definitions that include too many arguments.
+    "S311",    # Checks for uses of cryptographically weak pseudo-random number generators.
+    "ERA001",  # Checks for commented-out Python code.
+    "C901",    # Checks for functions with a high McCabe complexity.
+    "PLR0911", # Functions or methods with many return statements are harder to understand
+    # and maintain, and often indicative of complex logic.
+    "PLR0912", # Functions or methods with many branches are harder to understand and
+    # maintain than functions or methods with fewer branches.
+    "G004",   # Checks for uses of f-strings to format logging messages.
+    "TRY300", # Checks for return statements in try blocks.
+    "FBT001", # Checks for the use of boolean positional arguments in function definitions,
+    # as determined by the presence of a bool type hint.
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
@@ -359,25 +375,25 @@ force-single-line = true
 # ignore = ["*"]
 # typeCheckingMode = "off"
 exclude = [
-  "**/*.pyc",
-  "**/node_modules",
-  "**/__pycache__",
-  ".devcontainer",
-  ".envs",
-  ".git",
-  ".github",
-  ".ipython",
-  ".mypy_cache",
-  ".pytest_cache",
-  ".ruff_cache",
-  ".uv",
-  ".venv",
-  ".vscode",
-  ".workdir",
-  "bin",
-  "docs",
-  "fixtures",
-  "mediafiles",
+    "**/*.pyc",
+    "**/node_modules",
+    "**/__pycache__",
+    ".devcontainer",
+    ".envs",
+    ".git",
+    ".github",
+    ".ipython",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".uv",
+    ".venv",
+    ".vscode",
+    ".workdir",
+    "bin",
+    "docs",
+    "fixtures",
+    "mediafiles",
 ]
 pythonVersion = '3.13'
 reportUnknownMemberType = "none"
