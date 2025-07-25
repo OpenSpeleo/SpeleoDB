@@ -6,7 +6,7 @@ authors = [{ name = "Jonathan Dekhtiar", email = "jonathan@dekhtiar.com" }]
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "rcssmin==1.1.2",            # https://github.com/ndparker/rcssmin
+  "rcssmin==1.2.1",            # https://github.com/ndparker/rcssmin
   "argon2-cffi==25.1.0",       # https://github.com/hynek/argon2-cffi
   "whitenoise==6.9.0",         # https://github.com/evansd/whitenoise
   "redis==6.2.0",              # https://github.com/redis/redis-py
