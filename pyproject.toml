@@ -30,7 +30,7 @@ dependencies = [
     # Git Management
     # ------------------------------------------------------------------------------
     "python-gitlab==6.1.0", # https://python-gitlab.readthedocs.io/en/stable/
-    "GitPython==3.1.44",    # https://github.com/gitpython-developers/GitPython
+    "GitPython==3.1.45",    # https://github.com/gitpython-developers/GitPython
 
     # Django
     # ------------------------------------------------------------------------------
