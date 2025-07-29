@@ -473,7 +473,7 @@ class GitCommit(Commit):
 
 
 class GitHead(HEAD):
-    @property
+    @property  # type: ignore[misc]
     def commit(self) -> GitCommit:  # type: ignore[override]
         return GitCommit(repo=self.repo, binsha=super().commit.binsha)
 
@@ -541,8 +541,8 @@ class GitRepo(Repo):
     def branches(self) -> dict[str, str]:  # type: ignore[override]
         return {ref.name: ref.commit.hexsha for ref in super().branches}
 
-    @property
-    def description(self) -> str | None:
+    @property  # type: ignore[misc]
+    def description(self) -> str | None:  # type: ignore[override]
         try:
             return self.description
         except OSError:
@@ -703,7 +703,7 @@ class GitRepo(Repo):
         target_commit = self.commit("HEAD")
 
         # Step 2: Reset HEAD to the target commit
-        self.head.reference = target_commit  # type: ignore[assignment]
+        self.head.reference = target_commit
         self.head.reset(index=True, working_tree=True)
 
         # Step 3: Remove untracked files and directories manually
