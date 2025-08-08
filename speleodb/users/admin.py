@@ -53,6 +53,7 @@ class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):  # type: ignore[typ
                     "is_active",
                     "is_staff",
                     "is_superuser",
+                    "is_beta_tester",
                     "groups",
                     "user_permissions",
                 ),
@@ -66,12 +67,20 @@ class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):  # type: ignore[typ
         "country",
         "is_superuser",
         "is_staff",
+        "is_beta_tester",
         "date_joined",
         "last_login",
     ]
     search_fields = ["name", "email"]
     ordering = ["email"]
-    list_filter = ("is_staff", "is_superuser", "is_active", "groups", UserCountryFilter)
+    list_filter = (
+        "is_staff",
+        "is_superuser",
+        "is_beta_tester",
+        "is_active",
+        "groups",
+        UserCountryFilter,
+    )
     add_fieldsets = (
         (
             None,

@@ -512,7 +512,7 @@ class MapViewerView(_AuthenticatedTemplateView):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponseRedirectBase | HttpResponse:
-        if not (request.user.is_superuser or request.user.is_staff):
+        if not (request.user.has_beta_access()):
             return redirect(reverse("private:projects"))
 
         # Get sorted projects and serialize for JavaScript

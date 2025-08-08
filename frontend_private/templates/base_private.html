@@ -200,7 +200,7 @@
                             </li>
 
                             <!-- My Survey Map -->
-                            {% if  user.is_staff or user.is_superuser %}
+                            {% if  user.has_beta_access %}
                                 {% if request.url_name == 'map_viewer' %}
                                 {% set stroke_color = 'indigo' %}
                                 <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">

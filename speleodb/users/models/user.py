@@ -83,6 +83,15 @@ class User(AbstractUser):
     email_on_projects_updates = BooleanField(default=False)
     # ------------------------------------------------------------ #
 
+    # # ===================== User Privileges ===================== #
+    is_beta_tester = BooleanField(
+        default=False,
+        help_text=(
+            "Designates that this user has access to beta features before other users."
+        ),
+    )
+    # # ------------------------------------------------------------ #
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["name"]
 
@@ -150,3 +159,6 @@ class User(AbstractUser):
     @property
     def active_mutexes(self) -> models.QuerySet[Mutex]:
         return self.rel_mutexes.filter(is_active=True)
+
+    def has_beta_access(self) -> bool:
+        return self.is_beta_tester or self.is_superuser or self.is_staff
