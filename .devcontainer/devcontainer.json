@@ -19,6 +19,8 @@
                 "editor.formatOnSave": true,
                 "[python]": {
                     "analysis.autoImportCompletions": true,
+                    // https://github.com/microsoft/pylance-release/wiki/Pylance-Configuration-Tips
+                    "analysis.languageServerMode": "light",
                     "analysis.typeCheckingMode": "basic",
                     "defaultInterpreterPath": "/usr/local/bin/python",
                     "editor.codeActionsOnSave": {
