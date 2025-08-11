@@ -47,7 +47,7 @@ dependencies = [
     "django-redis==6.0.0",                  # https://github.com/jazzband/django-redis
     "django-storages==1.14.6",              # https://github.com/jschneier/django-storages
     # Django REST Framework
-    "djangorestframework==3.16.0", # https://github.com/encode/django-rest-framework
+    "djangorestframework==3.16.1", # https://github.com/encode/django-rest-framework
     "django-cors-headers==4.7.0",  # https://github.com/adamchainz/django-cors-headers
     # DRF-spectacular for api documentation
     "drf-spectacular==0.28.0", # https://github.com/tfranzel/drf-spectacular
