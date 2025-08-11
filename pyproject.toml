@@ -9,7 +9,7 @@ dependencies = [
     "rcssmin==1.1.2",            # https://github.com/ndparker/rcssmin
     "argon2-cffi==25.1.0",       # https://github.com/hynek/argon2-cffi
     "whitenoise==6.9.0",         # https://github.com/evansd/whitenoise
-    "redis==6.2.0",              # https://github.com/redis/redis-py
+    "redis==6.4.0",              # https://github.com/redis/redis-py
     "hiredis==3.2.1",            # https://github.com/redis/hiredis-py
     "celery==5.5.3",             # https://github.com/celery/celery
     "flower==2.0.1",             # https://github.com/mher/flower
@@ -34,7 +34,7 @@ dependencies = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django==5.2.4",                        # https://www.djangoproject.com/
+    "django==5.2.5",                        # https://www.djangoproject.com/
     "django-allauth==65.10.0",              # https://github.com/pennersr/django-allauth
     "django-celery-beat==2.8.1",            # https://github.com/celery/django-celery-beat
     "django-compressor==4.5.1",             # https://github.com/django-compressor/django-compressor
@@ -42,12 +42,12 @@ dependencies = [
     "django-dynamic-raw-id==4.4",           # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-encrypted-model-fields==0.6.5", # https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/
     "django-environ==0.12.0",               # https://github.com/joke2k/django-environ
-    "django-hijack==3.7.3",                 # https://github.com/django-hijack/django-hijack/
+    "django-hijack==3.7.4",                 # https://github.com/django-hijack/django-hijack/
     "django-model-utils==5.0.0",            # https://github.com/jazzband/django-model-utils
     "django-redis==6.0.0",                  # https://github.com/jazzband/django-redis
     "django-storages==1.14.6",              # https://github.com/jschneier/django-storages
     # Django REST Framework
-    "djangorestframework==3.16.0", # https://github.com/encode/django-rest-framework
+    "djangorestframework==3.16.1", # https://github.com/encode/django-rest-framework
     "django-cors-headers==4.7.0",  # https://github.com/adamchainz/django-cors-headers
     # DRF-spectacular for api documentation
     "drf-spectacular==0.28.0", # https://github.com/tfranzel/drf-spectacular
@@ -90,7 +90,7 @@ local = [
     # "djangorestframework-types==0.9.0", # https://github.com/sbdchd/djangorestframework-types
     "types-cachetools==6.1.0.20250717", # https://github.com/python/typeshed
     "types-factory-boy==0.4.1",         # https://github.com/youtux/types-factory-boy
-    "types-pytz==2025.2.0.20250516",    # https://github.com/python/typeshed
+    "types-pytz==2025.2.0.20250809",    # https://github.com/python/typeshed
 
     # Django Testing
     # ------------------------------------------------------------------------------
@@ -105,9 +105,9 @@ local = [
     # Code quality
     # ------------------------------------------------------------------------------
     "ruff==0.12.8",      # https://github.com/astral-sh/ruff
-    "coverage==7.10.2",   # https://github.com/nedbat/coveragepy
+    "coverage==7.10.3",   # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
-    "pre-commit==4.2.0", # https://github.com/pre-commit/pre-commit
+    "pre-commit==4.3.0", # https://github.com/pre-commit/pre-commit
 
     # Django
     # ------------------------------------------------------------------------------
