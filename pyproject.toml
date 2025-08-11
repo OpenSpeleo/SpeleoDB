@@ -34,7 +34,7 @@ dependencies = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django==5.2.4",                        # https://www.djangoproject.com/
+    "django==5.2.5",                        # https://www.djangoproject.com/
     "django-allauth==65.10.0",              # https://github.com/pennersr/django-allauth
     "django-celery-beat==2.8.1",            # https://github.com/celery/django-celery-beat
     "django-compressor==4.5.1",             # https://github.com/django-compressor/django-compressor
