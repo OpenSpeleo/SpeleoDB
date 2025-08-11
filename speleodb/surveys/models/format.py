@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from speleodb.surveys.models import Project
 from speleodb.utils.decorators import classproperty
@@ -123,7 +125,7 @@ class Format(models.Model):
         null=False,
     )
 
-    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
+    creation_date = models.DateTimeField()
 
     # Object Manager disabling update
     objects: models.Manager[Format] = NoUpdateQuerySet.as_manager()
@@ -141,9 +143,21 @@ class Format(models.Model):
         return f"{self.project} -> {self.format}"
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        # Only allows object creation. Otherwise bypass.
-        if self.pk is None:
-            super().save(*args, **kwargs)
+        # `_from_admin=True` will only be passed by the admin form
+        if self.pk is not None:
+            if not kwargs.pop("_from_admin", False):
+                before_obj = Format.objects.only("creation_date").get(pk=self.pk)
+                if before_obj.creation_date != self.creation_date:
+                    raise ValidationError("Creation date cannot be changed.")
+
+            if self.creation_date > timezone.now():
+                raise ValidationError("Creation date cannot be in the future.")
+
+        # If saving outside admin and the instance is new, force creation_date to now
+        else:
+            self.creation_date = timezone.now()
+
+        super().save(*args, **kwargs)
 
     @property
     def raw_format(self) -> FileFormat:

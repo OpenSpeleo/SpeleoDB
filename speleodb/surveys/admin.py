@@ -42,7 +42,16 @@ class FormatAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def has_change_permission(
         self, request: HttpRequest, obj: Format | None = None
     ) -> bool:
-        return False
+        return True
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: Format,
+        form: forms.ModelForm[Format],
+        change: bool,
+    ) -> None:
+        obj.save(_from_admin=True)
 
 
 @admin.register(Mutex)
