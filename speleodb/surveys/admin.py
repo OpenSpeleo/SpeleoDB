@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 class FormatAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = ("project", "format", "creation_date")
     ordering = ("-creation_date",)
-    list_filter = ["project"]
+    list_filter = ["_format"]
 
     def has_change_permission(
         self, request: HttpRequest, obj: Format | None = None
