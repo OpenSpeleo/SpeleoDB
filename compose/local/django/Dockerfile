@@ -40,20 +40,21 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
 
-# Update PIP & UV to latest version
-# RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-RUN pip install --no-cache-dir --upgrade pip uv
+# Install uv.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # UV settings
 ENV UV_MOUNT_CACHE_DIR=/tmp/.cache
 ENV UV_CACHE_DIR=${UV_MOUNT_CACHE_DIR}/cache
 # Use the system Python environment
 ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
+ENV UV_LINK_MODE=copy
 
 # Install Project Dependencies
 COPY pyproject.toml .
+COPY uv.lock .
 RUN --mount=type=bind,source=.uv,target=${UV_MOUNT_CACHE_DIR},readonly=false \
-    uv sync --extra ${BUILD_ENV}
+    uv sync --frozen --extra ${BUILD_ENV}
 
 COPY ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
