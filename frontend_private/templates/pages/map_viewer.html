@@ -8385,7 +8385,6 @@
                                     window.depthMin = Infinity;
                                     window.depthMax = -Infinity;
                                 }
-                                window.depthMin = Math.min(window.depthMin, avg);
                                 window.depthMax = Math.max(window.depthMax, avg);
                                 window.depthAvailable = true;
                             }
@@ -8402,11 +8401,9 @@
                                     typeof d === 'number' &&
                                     isFinite(d)
                                 ) {
-                                    if (typeof window.depthMin === 'undefined') {
-                                        window.depthMin = d;
+                                    if (typeof window.depthMax === 'undefined') {
                                         window.depthMax = d;
                                     } else {
-                                        window.depthMin = Math.min(window.depthMin, d);
                                         window.depthMax = Math.max(window.depthMax, d);
                                     }
                                     window.depthAvailable = true;
@@ -8416,9 +8413,8 @@
 
                         // Embed normalized depth into line features as a property for styling
                         if (window.depthAvailable === true && processedData && Array.isArray(processedData.features)) {
-                            const minVal = Number.isFinite(window.depthMin) ? window.depthMin : 0;
-                            const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : minVal;
-                            const range = Math.max(1e-9, (maxVal - minVal));
+                            const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : 9999;
+                            const range = Math.max(1e-9, maxVal);
                             processedData.features.forEach((feature) => {
                                 if (
                                     feature &&
@@ -8433,9 +8429,8 @@
                                         ? lineDepth
                                         : (typeof sectionDepth === 'number' && isFinite(sectionDepth) ? sectionDepth : undefined);
                                     if (typeof depthValue === 'number') {
-                                        const norm = (depthValue - minVal) / range;
+                                        const norm = depthValue / range;
                                         feature.properties.depth_norm = Math.min(Math.max(norm, 0), 1);
-                                        feature.properties.depth_m = depthValue;
                                     }
                                 }
                             });
@@ -8857,18 +8852,15 @@
                             container.style.padding = '8px 10px';
                             outer_counter.appendChild(container);
                         }
-                        const minVal = Number.isFinite(window.depthMin) ? window.depthMin : 0;
-                        const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : minVal;
-                        const low = Math.min(minVal, maxVal);
-                        const high = Math.max(minVal, maxVal);
+                        const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : 9999;
                         container.innerHTML = `
                         <div style="display:flex; align-items:center; gap:10px;">
                             <span style="color:#94a3b8; font-size:12px;">Depth</span>
                             <div style="width:160px; height:10px; background: linear-gradient(90deg, #4575b4 0%, #e6f598 50%, #d73027 100%); border-radius: 4px;"></div>
                         </div>
                         <div style="display:flex; justify-content:space-between; color:#94a3b8; font-size:11px; margin-top:4px;">
-                            <span>${low.toFixed(1)} m</span>
-                            <span>${high.toFixed(1)} m</span>
+                            <span>0 ft</span>
+                            <span>${Math.ceil(maxVal)} ft</span>
                         </div>`;
                     } catch (e) {
                         console.warn('Unable to render/update depth scale:', e);
