@@ -38,7 +38,8 @@ class SurveyTeamFactory(DjangoModelFactory[SurveyTeam]):
     description: str = factory.LazyAttribute(
         lambda obj: f"Team description for `{obj.name}`"
     )  # type: ignore[assignment]
-    country = random.choice(countries)[0]
+    # Use lazy generation to avoid accessing django_countries at import time
+    country = factory.Faker("country_code")  # type: ignore[assignment]
 
     class Meta:
         model = SurveyTeam
@@ -69,7 +70,8 @@ class ProjectFactory(DjangoModelFactory[Project]):
     longitude: float = Faker("longitude")  # type: ignore[assignment]
     latitude: float = Faker("latitude")  # type: ignore[assignment]
 
-    country = random.choice(countries).code  # pyright: ignore[reportAttributeAccessIssue]
+    # Defer to Faker for a valid ISO country code; avoids empty-iterator races
+    country = factory.Faker("country_code")  # type: ignore[assignment]
 
     created_by: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
 
