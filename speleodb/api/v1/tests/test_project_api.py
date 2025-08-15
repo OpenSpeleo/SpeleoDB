@@ -122,10 +122,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
                 headers={"authorization": auth},
             )
 
-            if self.level not in [
-                PermissionLevel.ADMIN,
-                PermissionLevel.READ_AND_WRITE,
-            ]:
+            if self.level < PermissionLevel.READ_AND_WRITE:
                 assert response.status_code == status.HTTP_403_FORBIDDEN
                 return
 
@@ -194,10 +191,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             headers={"authorization": auth},
         )
 
-        if self.level not in [
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-        ]:
+        if self.level < PermissionLevel.READ_AND_WRITE:
             assert response.status_code == status.HTTP_403_FORBIDDEN
             return
 

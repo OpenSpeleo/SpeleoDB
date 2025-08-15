@@ -11,7 +11,6 @@ from typing import Any
 import factory
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
-from django_countries import countries
 from factory import Faker
 from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
@@ -39,7 +38,7 @@ class SurveyTeamFactory(DjangoModelFactory[SurveyTeam]):
         lambda obj: f"Team description for `{obj.name}`"
     )  # type: ignore[assignment]
     # Use lazy generation to avoid accessing django_countries at import time
-    country = factory.Faker("country_code")  # type: ignore[assignment]
+    country: str = factory.Faker("country_code")  # type: ignore[assignment]
 
     class Meta:
         model = SurveyTeam
@@ -71,7 +70,7 @@ class ProjectFactory(DjangoModelFactory[Project]):
     latitude: float = Faker("latitude")  # type: ignore[assignment]
 
     # Defer to Faker for a valid ISO country code; avoids empty-iterator races
-    country = factory.Faker("country_code")  # type: ignore[assignment]
+    country: str = factory.Faker("country_code")  # type: ignore[assignment]
 
     created_by: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
 

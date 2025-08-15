@@ -659,7 +659,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         # Create a fake image file
         image_file = SimpleUploadedFile(
             "test_photo.jpg",
-            Path("/app/speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
+            Path("speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
             content_type="image/jpeg",
         )
 
@@ -897,7 +897,7 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
                 ).read_bytes()
             case StationResource.ResourceType.VIDEO:
                 file_content = Path(
-                    "/app/speleodb/api/v1/tests/artifacts/video.mp4"
+                    "speleodb/api/v1/tests/artifacts/video.mp4"
                 ).read_bytes()
             case StationResource.ResourceType.DOCUMENT:
                 file_content = Path(
@@ -1231,7 +1231,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             (
                 StationResource.ResourceType.PHOTO,
                 "test.jpg",
-                Path("/app/speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
+                Path("speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
                 "image/jpeg",
                 status.HTTP_201_CREATED,
             ),
@@ -1239,7 +1239,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             (
                 StationResource.ResourceType.VIDEO,
                 "test.mp4",
-                Path("/app/speleodb/api/v1/tests/artifacts/video.mp4").read_bytes(),
+                Path("speleodb/api/v1/tests/artifacts/video.mp4").read_bytes(),
                 "video/mp4",
                 status.HTTP_201_CREATED,
             ),
@@ -1247,7 +1247,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             (
                 StationResource.ResourceType.PHOTO,
                 "test.jpoog",
-                Path("/app/speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
+                Path("speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
                 "image/jpeg",
                 status.HTTP_400_BAD_REQUEST,
             ),

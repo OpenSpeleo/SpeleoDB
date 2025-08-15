@@ -58,7 +58,7 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
         # For now, permissions are checked in the views
         return queryset.select_related("station", "station__project")
 
-    def get_permissions(  # type: ignore[override]
+    def get_permissions(
         self,
     ) -> list[permissions.BasePermission]:
         """Set permissions based on action."""

@@ -79,10 +79,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        if self.level not in [
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-        ]:
+        if self.level < PermissionLevel.READ_AND_WRITE:
             # Read-only and web viewer users cannot create stations
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
                 self.level,
@@ -156,10 +153,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        if self.level not in [
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-        ]:
+        if self.level < PermissionLevel.READ_AND_WRITE:
             # Read-only and web viewer users cannot create stations
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
                 self.level,
@@ -261,10 +255,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        if self.level not in [
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-        ]:
+        if self.level < PermissionLevel.READ_AND_WRITE:
             # Read-only and web viewer users cannot create resources
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
                 self.level,
@@ -320,10 +311,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        if self.level not in [
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-        ]:
+        if self.level < PermissionLevel.READ_AND_WRITE:
             # Read-only and web viewer users cannot create resources
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
                 self.level,
@@ -362,10 +350,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        if self.level not in [
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-        ]:
+        if self.level < PermissionLevel.ADMIN:
             # Read-only and web viewer users cannot create resources
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
                 self.level,
@@ -532,12 +517,6 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
     def test_station_permissions_post(self) -> None:
         """Test station operations with different permission levels."""
-        expected_status = (
-            status.HTTP_201_CREATED
-            if self.level not in [PermissionLevel.WEB_VIEWER, PermissionLevel.READ_ONLY]
-            else status.HTTP_403_FORBIDDEN
-        )
-
         # Write operations should fail - MUST use JSON
         response = self.client.post(
             reverse("api:v1:station-list-create"),
@@ -553,18 +532,17 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == expected_status, (
+        assert response.status_code == (
+            status.HTTP_403_FORBIDDEN
+            if self.level < PermissionLevel.READ_AND_WRITE
+            else status.HTTP_201_CREATED
+        ), (
             self.level,
             self.permission_type,
         )
 
     def test_station_permissions_patch(self) -> None:
         """Test station operations with different permission levels."""
-        expected_status = (
-            status.HTTP_200_OK
-            if self.level not in [PermissionLevel.WEB_VIEWER, PermissionLevel.READ_ONLY]
-            else status.HTTP_403_FORBIDDEN
-        )
 
         station = StationFactory.create(project=self.project)
 
@@ -575,7 +553,11 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == expected_status, (
+        assert response.status_code == (
+            status.HTTP_403_FORBIDDEN
+            if self.level < PermissionLevel.READ_AND_WRITE
+            else status.HTTP_200_OK
+        ), (
             self.level,
             self.permission_type,
         )
