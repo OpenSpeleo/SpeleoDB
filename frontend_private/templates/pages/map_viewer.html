@@ -8357,6 +8357,99 @@
                         // Process GeoJSON to force altitude zero (optimized - reduced logging)
                         const processedData = processGeoJSONForAltitudeZero(data);
 
+                        // Depth mapping: compute average depth per section_name from Point features
+                        const sectionDepthAccumulator = new Map();
+                        if (processedData && Array.isArray(processedData.features)) {
+                            processedData.features.forEach(feature => {
+                                if (
+                                    feature &&
+                                    feature.geometry &&
+                                    feature.geometry.type === 'Point' &&
+                                    feature.properties &&
+                                    typeof feature.properties.depth === 'number' &&
+                                    feature.properties.section_name
+                                ) {
+                                    const key = feature.properties.section_name;
+                                    const arr = sectionDepthAccumulator.get(key) || [];
+                                    arr.push(feature.properties.depth);
+                                    sectionDepthAccumulator.set(key, arr);
+                                }
+                            });
+                        }
+                        const sectionDepthAvgMap = new Map();
+                        sectionDepthAccumulator.forEach((arr, key) => {
+                            if (arr.length > 0) {
+                                const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+                                sectionDepthAvgMap.set(key, avg);
+                                if (typeof window.depthMin === 'undefined') {
+                                    window.depthMin = Infinity;
+                                    window.depthMax = -Infinity;
+                                }
+                                window.depthMin = Math.min(window.depthMin, avg);
+                                window.depthMax = Math.max(window.depthMax, avg);
+                                window.depthAvailable = true;
+                            }
+                        });
+
+                        // Also include depths specified directly on LineString features
+                        if (processedData && Array.isArray(processedData.features)) {
+                            processedData.features.forEach(feature => {
+                                const d = feature?.properties?.depth;
+                                if (
+                                    feature &&
+                                    feature.geometry &&
+                                    feature.geometry.type === 'LineString' &&
+                                    typeof d === 'number' &&
+                                    isFinite(d)
+                                ) {
+                                    if (typeof window.depthMin === 'undefined') {
+                                        window.depthMin = d;
+                                        window.depthMax = d;
+                                    } else {
+                                        window.depthMin = Math.min(window.depthMin, d);
+                                        window.depthMax = Math.max(window.depthMax, d);
+                                    }
+                                    window.depthAvailable = true;
+                                }
+                            });
+                        }
+
+                        // Embed normalized depth into line features as a property for styling
+                        if (window.depthAvailable === true && processedData && Array.isArray(processedData.features)) {
+                            const minVal = Number.isFinite(window.depthMin) ? window.depthMin : 0;
+                            const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : minVal;
+                            const range = Math.max(1e-9, (maxVal - minVal));
+                            processedData.features.forEach((feature) => {
+                                if (
+                                    feature &&
+                                    feature.geometry &&
+                                    feature.geometry.type === 'LineString' &&
+                                    feature.properties &&
+                                    feature.properties.section_name
+                                ) {
+                                    const lineDepth = feature.properties.depth;
+                                    const sectionDepth = sectionDepthAvgMap.get(feature.properties.section_name);
+                                    const depthValue = (typeof lineDepth === 'number' && isFinite(lineDepth))
+                                        ? lineDepth
+                                        : (typeof sectionDepth === 'number' && isFinite(sectionDepth) ? sectionDepth : undefined);
+                                    if (typeof depthValue === 'number') {
+                                        const norm = (depthValue - minVal) / range;
+                                        feature.properties.depth_norm = Math.min(Math.max(norm, 0), 1);
+                                        feature.properties.depth_m = depthValue;
+                                    }
+                                }
+                            });
+                        }
+                        // If source already exists, refresh its data to include new properties
+                        try {
+                            const src = map.getSource && map.getSource(sourceId);
+                            if (src && src.setData) {
+                                src.setData(processedData);
+                            }
+                        } catch (e) {
+                            // ignore if source not yet added; it will be created below
+                        }
+
                         // Initialize layer tracking for this project
                         const projectLayers = [];
                         projectLayerStates.set(projectId, true); // Default to visible
@@ -8385,7 +8478,11 @@
                         // Add the GeoJSON source with processed coordinates (altitude zero)
                         map.addSource(sourceId, {
                             type: 'geojson',
-                            data: processedData
+                            data: processedData,
+                            // Reduce simplification to avoid line dropouts at low zoom
+                            tolerance: 0,
+                            // Generate feature ids (useful if needed later)
+                            generateId: true
                         });
 
                         // Determine geometry types for this project
@@ -8497,18 +8594,49 @@
                             // Use thicker lines for better clickability
                             const lineWidth = 4; // Thicker for easier clicking
 
-                            map.addLayer({
-                                id: lineLayerId,
-                                type: 'line',
-                                source: sourceId,
-                                filter: ['in', '$type', 'LineString'],
-                                layout: {},
-                                paint: {
-                                    'line-color': color,
-                                    'line-width': lineWidth,
-                                    'line-opacity': 0.8
-                                }
-                            });
+                            // If depth data is available, colorize by depth per section_name
+                            if (window.depthAvailable === true) {
+                                map.addLayer({
+                                    id: lineLayerId,
+                                    type: 'line',
+                                    source: sourceId,
+                                    filter: ['all', ['in', '$type', 'LineString'], ['has', 'section_name']],
+                                    layout: {
+                                        'line-join': 'round',
+                                        'line-cap': 'round'
+                                    },
+                                    paint: {
+                                        'line-color': [
+                                            'case',
+                                            ['has', 'depth_norm'],
+                                            ['interpolate', ['linear'], ['get', 'depth_norm'],
+                                                0, '#4575b4',
+                                                0.5, '#e6f598',
+                                                1, '#d73027'
+                                            ],
+                                            color
+                                        ],
+                                        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.3, 6, 0.8, 10, 1.6, 14, 3.2, 18, 6],
+                                        'line-opacity': 1
+                                    }
+                                });
+                            } else {
+                                map.addLayer({
+                                    id: lineLayerId,
+                                    type: 'line',
+                                    source: sourceId,
+                                    filter: ['in', '$type', 'LineString'],
+                                    layout: {
+                                        'line-join': 'round',
+                                        'line-cap': 'round'
+                                    },
+                                    paint: {
+                                        'line-color': color,
+                                        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.3, 6, 0.8, 10, 1.6, 14, 3.2, 18, 6],
+                                        'line-opacity': 1
+                                    }
+                                });
+                            }
                             projectLayers.push(lineLayerId);
 
                             // Store layer info for later event attachment
@@ -8571,18 +8699,25 @@
                         if (geometryTypes.has('Point') || geometryTypes.has('MultiPoint')) {
                             const pointLayerId = `project-points-${projectId}`;
 
-                            // Add circle layer for points
+                            // Add symbol layer for points (orange star)
                             map.addLayer({
                                 id: pointLayerId,
-                                type: 'circle',
+                                type: 'symbol',
                                 source: sourceId,
                                 filter: ['in', '$type', 'Point'],
-                                layout: {},
+                                minzoom: 11,
+                                layout: {
+                                    'text-field': '★',
+                                    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                                    'text-size': ['interpolate', ['linear'], ['zoom'], 8, 18, 14, 24],
+                                    'text-allow-overlap': true,
+                                    'text-ignore-placement': true
+                                },
                                 paint: {
-                                    'circle-color': color,
-                                    'circle-radius': 6,
-                                    'circle-stroke-color': '#ffffff',
-                                    'circle-stroke-width': 2
+                                    'text-color': '#F5E027',
+                                    'text-halo-color': '#000000',
+                                    'text-halo-width': 1.5,
+                                    'text-halo-blur': 0.5
                                 }
                             });
                             projectLayers.push(pointLayerId);
@@ -8702,6 +8837,42 @@
                         console.log('📍 Loading all POIs...');
                         loadAllPOIs();
                     }, 1000);
+                    
+
+                    // Permanent depth scale above distance scale
+                    try {
+                        const outer_counter = document.getElementById('map');
+                        const existing = document.getElementById('depth-scale-fixed');
+                        let container = existing;
+                        if (!container) {
+                            container = document.createElement('div');
+                            container.id = 'depth-scale-fixed';
+                            container.style.position = 'absolute';
+                            container.style.left = '5px';
+                            container.style.bottom = '5px';
+                            container.style.zIndex = '999999';
+                            container.style.backgroundColor = '#0f172a';
+                            container.style.border = '2px solid #475569';
+                            container.style.borderRadius = '8px';
+                            container.style.padding = '8px 10px';
+                            outer_counter.appendChild(container);
+                        }
+                        const minVal = Number.isFinite(window.depthMin) ? window.depthMin : 0;
+                        const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : minVal;
+                        const low = Math.min(minVal, maxVal);
+                        const high = Math.max(minVal, maxVal);
+                        container.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="color:#94a3b8; font-size:12px;">Depth</span>
+                            <div style="width:160px; height:10px; background: linear-gradient(90deg, #4575b4 0%, #e6f598 50%, #d73027 100%); border-radius: 4px;"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; color:#94a3b8; font-size:11px; margin-top:4px;">
+                            <span>${low.toFixed(1)} m</span>
+                            <span>${high.toFixed(1)} m</span>
+                        </div>`;
+                    } catch (e) {
+                        console.warn('Unable to render/update depth scale:', e);
+                    }
 
                     // Hide loading overlay now that everything is ready
                     setTimeout(() => {
