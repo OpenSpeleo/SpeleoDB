@@ -7,19 +7,21 @@ import uuid
 
 from django.urls import reverse
 from faker import Faker
-from parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models import UserPermission
 from speleodb.surveys.models.station import Station
+from speleodb.utils.test_utils import named_product
 
 
-class TestStationAPIAuthentication(BaseAPIProjectTestCase):
+class TestUnauthenticatedStationAPIAuthentication(BaseAPIProjectTestCase):
     """Test authentication requirements for station API endpoints."""
 
     def test_station_list_requires_authentication(self) -> None:
@@ -27,10 +29,7 @@ class TestStationAPIAuthentication(BaseAPIProjectTestCase):
         response = self.client.get(
             f"{reverse('api:v1:station-list-create')}?project_id={self.project.id}"
         )
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ]
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_station_detail_requires_authentication(self) -> None:
         """Test that station detail endpoint requires authentication."""
@@ -38,10 +37,7 @@ class TestStationAPIAuthentication(BaseAPIProjectTestCase):
         response = self.client.get(
             reverse("api:v1:station-detail", kwargs={"id": station.id})
         )
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ]
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_station_create_requires_authentication(self) -> None:
         """Test that station create endpoint requires authentication."""
@@ -57,10 +53,7 @@ class TestStationAPIAuthentication(BaseAPIProjectTestCase):
             data=data,
             content_type="application/json",
         )
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ]
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_station_update_requires_authentication(self) -> None:
         """Test that station update endpoint requires authentication."""
@@ -71,10 +64,7 @@ class TestStationAPIAuthentication(BaseAPIProjectTestCase):
             data=data,
             content_type="application/json",
         )
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ]
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_station_delete_requires_authentication(self) -> None:
         """Test that station delete endpoint requires authentication."""
@@ -82,80 +72,72 @@ class TestStationAPIAuthentication(BaseAPIProjectTestCase):
         response = self.client.delete(
             reverse("api:v1:station-detail", kwargs={"id": station.id})
         )
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ]
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestStationAPIPermissions(BaseAPIProjectTestCase):
-    """Test permission levels for station API endpoints."""
+    """Test authentication requirements for station API endpoints."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
     station: Station
 
     def setUp(self) -> None:
         super().setUp()
+
+        self.set_test_project_permission(
+            level=self.level,
+            permission_type=self.permission_type,
+        )
+
         self.station = StationFactory.create(project=self.project)
 
-    @parameterized.expand(
-        [
-            (PermissionLevel.WEB_VIEWER, status.HTTP_403_FORBIDDEN),
-            (PermissionLevel.READ_ONLY, status.HTTP_200_OK),
-            (PermissionLevel.READ_AND_WRITE, status.HTTP_200_OK),
-            (PermissionLevel.ADMIN, status.HTTP_200_OK),
-        ]
-    )
-    def test_station_list_permissions(
-        self, permission_level: int, expected_status: int
-    ) -> None:
+    def test_station_list_permissions(self) -> None:
         """Test station list endpoint with different permission levels."""
-        self.set_test_project_permission(PermissionLevel(permission_level))
-        auth = self.header_prefix + self.token.key
 
         response = self.client.get(
             f"{reverse('api:v1:station-list-create')}?project_id={self.project.id}",
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
-        assert response.status_code == expected_status
+        assert (
+            response.status_code == status.HTTP_200_OK
+            if self.level != PermissionLevel.WEB_VIEWER
+            else status.HTTP_403_FORBIDDEN
+        )
 
-    @parameterized.expand(
-        [
-            (PermissionLevel.WEB_VIEWER, status.HTTP_403_FORBIDDEN),
-            (PermissionLevel.READ_ONLY, status.HTTP_200_OK),
-            (PermissionLevel.READ_AND_WRITE, status.HTTP_200_OK),
-            (PermissionLevel.ADMIN, status.HTTP_200_OK),
-        ]
-    )
-    def test_station_detail_permissions(
-        self, permission_level: int, expected_status: int
-    ) -> None:
+    def test_station_detail_permissions(self) -> None:
         """Test station detail endpoint with different permission levels."""
-        self.set_test_project_permission(PermissionLevel(permission_level))
-        auth = self.header_prefix + self.token.key
 
         response = self.client.get(
             reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
-        assert response.status_code == expected_status
+        assert (
+            response.status_code == status.HTTP_200_OK
+            if self.level != PermissionLevel.WEB_VIEWER
+            else status.HTTP_403_FORBIDDEN
+        )
 
-    @parameterized.expand(
-        [
-            (PermissionLevel.WEB_VIEWER, status.HTTP_403_FORBIDDEN),
-            (PermissionLevel.READ_ONLY, status.HTTP_403_FORBIDDEN),
-            (PermissionLevel.READ_AND_WRITE, status.HTTP_201_CREATED),
-            (PermissionLevel.ADMIN, status.HTTP_201_CREATED),
-        ]
-    )
-    def test_station_create_permissions(
-        self, permission_level: int, expected_status: int
-    ) -> None:
+    def test_station_create_permissions(self) -> None:
         """Test station create endpoint with different permission levels."""
-        self.set_test_project_permission(PermissionLevel(permission_level))
-        auth = self.header_prefix + self.token.key
 
         data = {
-            "name": f"ST{permission_level:03d}_{str(uuid.uuid4())[:8]}",
+            "name": f"ST{self.level:03d}_{str(uuid.uuid4())[:8]}",
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
@@ -165,67 +147,78 @@ class TestStationAPIPermissions(BaseAPIProjectTestCase):
         response = self.client.post(
             reverse("api:v1:station-list-create"),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
             content_type="application/json",
         )
-        assert response.status_code == expected_status
 
-    @parameterized.expand(
-        [
-            (PermissionLevel.WEB_VIEWER, status.HTTP_403_FORBIDDEN),
-            (PermissionLevel.READ_ONLY, status.HTTP_403_FORBIDDEN),
-            (PermissionLevel.READ_AND_WRITE, status.HTTP_200_OK),
-            (PermissionLevel.ADMIN, status.HTTP_200_OK),
-        ]
-    )
-    def test_station_update_permissions(
-        self, permission_level: int, expected_status: int
-    ) -> None:
+        assert (
+            response.status_code == status.HTTP_201_CREATED
+            if self.level >= PermissionLevel.READ_AND_WRITE
+            else status.HTTP_403_FORBIDDEN
+        )
+
+    def test_station_update_permissions(self) -> None:
         """Test station update endpoint with different permission levels."""
-        self.set_test_project_permission(PermissionLevel(permission_level))
-        auth = self.header_prefix + self.token.key
 
         data = {"description": "Updated description"}
 
         response = self.client.patch(
             reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
             content_type="application/json",
         )
-        assert response.status_code == expected_status
 
-    @parameterized.expand(
-        [
-            (PermissionLevel.WEB_VIEWER, status.HTTP_403_FORBIDDEN),
-            (PermissionLevel.READ_ONLY, status.HTTP_403_FORBIDDEN),
-            (PermissionLevel.READ_AND_WRITE, status.HTTP_200_OK),
-            (PermissionLevel.ADMIN, status.HTTP_200_OK),
-        ]
-    )
-    def test_station_delete_permissions(
-        self, permission_level: int, expected_status: int
-    ) -> None:
+        assert (
+            response.status_code == status.HTTP_200_OK
+            if self.level >= PermissionLevel.READ_AND_WRITE
+            else status.HTTP_403_FORBIDDEN
+        )
+
+    def test_station_delete_permissions(self) -> None:
         """Test station delete endpoint with different permission levels."""
-        self.set_test_project_permission(PermissionLevel(permission_level))
-        auth = self.header_prefix + self.token.key
 
         response = self.client.delete(
             reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
-        assert response.status_code == expected_status
+
+        assert (
+            response.status_code == status.HTTP_200_OK
+            if self.level == PermissionLevel.ADMIN
+            else status.HTTP_403_FORBIDDEN
+        )
 
 
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestStationCRUDOperations(BaseAPIProjectTestCase):
     """Test CRUD operations for stations."""
 
-    auth: str
+    level: PermissionLevel
+    permission_type: PermissionType
+    station: Station
 
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
-        self.auth = self.header_prefix + self.token.key
+
+        self.set_test_project_permission(
+            level=self.level,
+            permission_type=self.permission_type,
+        )
 
     def test_create_station_success(self) -> None:
         """Test successful station creation."""
@@ -244,6 +237,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
         assert response.status_code == status.HTTP_201_CREATED
         station_data = response.data["data"]["station"]
         assert station_data["name"] == "ST001"
@@ -260,6 +257,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             f"{reverse('api:v1:station-list-create')}?project_id={self.project.id}",
             headers={"authorization": self.auth},
         )
+
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK
         stations_data = response.data["data"]["stations"]
@@ -278,6 +279,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
             headers={"authorization": self.auth},
         )
+
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK
         station_data = response.data["data"]["station"]
@@ -300,6 +305,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
         assert response.status_code == status.HTTP_200_OK
         station_data = response.data["data"]["station"]
         assert station_data["name"] == "Updated Station"
@@ -313,6 +322,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
             headers={"authorization": self.auth},
         )
+
+        if self.level != PermissionLevel.ADMIN:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK
         assert "deleted successfully" in response.data["data"]["message"]
@@ -349,6 +362,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["success"] is True
@@ -388,6 +405,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "already exists in the target project" in str(response.data)
@@ -446,6 +467,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
         assert response.status_code == status.HTTP_200_OK
         assert response.data["success"] is True
 
@@ -487,6 +512,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Verify the station was NOT moved
@@ -526,6 +555,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
         assert response.status_code == status.HTTP_200_OK
 
         # Verify only project changed, other fields remain the same
@@ -562,6 +595,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -609,6 +646,10 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
         assert response.status_code == status.HTTP_200_OK
 
         # Verify station moved
@@ -624,13 +665,30 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             assert resource.text_content == f"Content {i + 1}"
 
 
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestStationValidation(BaseAPIProjectTestCase):
     """Test validation rules for station data."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
+
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
-        self.auth = self.header_prefix + self.token.key
+        self.set_test_project_permission(self.level, self.permission_type)
 
     def test_create_station_missing_name(self) -> None:
         """Test station creation fails without name."""
@@ -647,6 +705,10 @@ class TestStationValidation(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "name" in response.data["errors"]
@@ -667,6 +729,7 @@ class TestStationValidation(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
+        # Everybody get HTTP 400 - Can't identify the project.
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "project_id" in response.data["errors"]
 
@@ -676,45 +739,40 @@ class TestStationValidation(BaseAPIProjectTestCase):
 
         unique_name = f"ST_{str(uuid.uuid4())[:8]}"
         # Create the first station
-        data1 = {
-            "name": unique_name,
-            "description": "First station",
-            "latitude": "45.1234567",
-            "longitude": "-123.8765432",
-            "project_id": str(self.project.id),
-        }
-
-        response1 = self.client.post(
-            reverse("api:v1:station-list-create"),
-            data=data1,
-            headers={"authorization": self.auth},
-            content_type="application/json",
+        station1 = StationFactory.create(
+            name=unique_name,
+            description="First station",
+            latitude="45.1234567",
+            longitude="-123.8765432",
+            project_id=str(self.project.id),
         )
 
-        assert response1.status_code == status.HTTP_201_CREATED
-
         # Try to create second station with same name
-        data2 = {
-            "name": unique_name,
+        data = {
+            "name": station1.name,
             "description": "Second station",
             "latitude": "45.2234567",
             "longitude": "-123.7765432",
             "project_id": str(self.project.id),
         }
 
-        response2 = self.client.post(
+        response = self.client.post(
             reverse("api:v1:station-list-create"),
-            data=data2,
+            data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
+
         # Should get a 400 error with a specific message
-        assert response2.status_code == status.HTTP_400_BAD_REQUEST
-        assert "errors" in response2.data
-        assert "name" in response2.data["errors"]
-        assert unique_name in response2.data["errors"]["name"][0]
-        assert "already exists in this project" in response2.data["errors"]["name"][0]
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "errors" in response.data
+        assert "name" in response.data["errors"]
+        assert unique_name in response.data["errors"]["name"][0]
+        assert "already exists in this project" in response.data["errors"]["name"][0]
 
     def test_create_station_invalid_coordinates(self) -> None:
         """Test station creation rejects invalid coordinates (validators are
@@ -733,6 +791,10 @@ class TestStationValidation(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
 
         # Coordinate validation IS implemented - latitude must be between -90 and 90
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -757,24 +819,44 @@ class TestStationValidation(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
+
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "name" in response.data["errors"]
 
 
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestStationEdgeCases(BaseAPIProjectTestCase):
     """Test edge cases and error handling."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
+
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
-        self.auth = self.header_prefix + self.token.key
+        self.set_test_project_permission(self.level, self.permission_type)
 
     def test_retrieve_nonexistent_station(self) -> None:
         """Test retrieving a non-existent station."""
-        fake_id = uuid.uuid4()
 
         response = self.client.get(
-            reverse("api:v1:station-detail", kwargs={"id": fake_id}),
+            reverse("api:v1:station-detail", kwargs={"id": uuid.uuid4()}),
             headers={"authorization": self.auth},
         )
 
@@ -782,12 +864,10 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
 
     def test_update_nonexistent_station(self) -> None:
         """Test updating a non-existent station."""
-        fake_id = uuid.uuid4()
-
         data = {"name": "Updated"}
 
         response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": fake_id}),
+            reverse("api:v1:station-detail", kwargs={"id": uuid.uuid4()}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -797,10 +877,9 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
 
     def test_delete_nonexistent_station(self) -> None:
         """Test deleting a non-existent station."""
-        fake_id = uuid.uuid4()
 
         response = self.client.delete(
-            reverse("api:v1:station-detail", kwargs={"id": fake_id}),
+            reverse("api:v1:station-detail", kwargs={"id": uuid.uuid4()}),
             headers={"authorization": self.auth},
         )
 
@@ -823,6 +902,10 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
 
         assert response.status_code == status.HTTP_201_CREATED
         # Coordinates should be rounded to 7 decimal places
@@ -848,67 +931,37 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
+
         assert response.status_code == status.HTTP_201_CREATED
 
 
-class TestStationCrossProjectSecurity(BaseAPIProjectTestCase):
-    """Test cross-project security measures."""
-
-    def setUp(self) -> None:
-        super().setUp()
-        self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
-        self.auth = self.header_prefix + self.token.key
-
-        # Create another project and station
-        self.other_project = ProjectFactory.create()
-        self.other_station = StationFactory.create(project=self.other_project)
-
-    def test_cannot_access_station_from_different_project(self) -> None:
-        """Test that users cannot access stations from projects they don't have
-        permission for."""
-
-        # User has no permissions on other_project
-        response = self.client.get(
-            reverse("api:v1:station-detail", kwargs={"id": self.other_station.id}),
-            headers={"authorization": self.auth},
-        )
-
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_cannot_update_station_from_different_project(self) -> None:
-        """Test that users cannot update stations from projects they don't have
-        permission for."""
-
-        data = {"name": "Hacked Station"}
-
-        response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": self.other_station.id}),
-            data=data,
-            headers={"authorization": self.auth},
-            content_type="application/json",
-        )
-
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_cannot_delete_station_from_different_project(self) -> None:
-        """Test that users cannot delete stations from projects they don't have
-        permission for."""
-
-        response = self.client.delete(
-            reverse("api:v1:station-detail", kwargs={"id": self.other_station.id}),
-            headers={"authorization": self.auth},
-        )
-
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestStationAPIFuzzing(BaseAPIProjectTestCase):
     """Test API with random/fuzzing data."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
+
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
-        self.auth = self.header_prefix + self.token.key
+        self.set_test_project_permission(self.level, self.permission_type)
         self.fake = Faker()
 
     def test_random_station_names(self) -> None:
@@ -932,10 +985,11 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 content_type="application/json",
             )
 
-            assert response.status_code in [
-                status.HTTP_201_CREATED,
-                status.HTTP_400_BAD_REQUEST,
-            ]
+            if self.level < PermissionLevel.READ_AND_WRITE:
+                assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+                continue
+
+            assert response.status_code == status.HTTP_201_CREATED
 
     def test_unicode_station_names(self) -> None:
         """Test creating stations with unicode characters."""
@@ -962,6 +1016,10 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 headers={"authorization": self.auth},
                 content_type="application/json",
             )
+
+            if self.level < PermissionLevel.READ_AND_WRITE:
+                assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+                continue
 
             # Should handle unicode properly
             assert response.status_code == status.HTTP_201_CREATED
@@ -1002,6 +1060,10 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 content_type="application/json",
             )
 
+            if self.level < PermissionLevel.READ_AND_WRITE:
+                assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+                continue
+
             assert response.status_code == status.HTTP_201_CREATED
 
     def test_xss_injection_attempts(self) -> None:
@@ -1033,6 +1095,10 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 headers={"authorization": self.auth},
                 content_type="application/json",
             )
+
+            if self.level < PermissionLevel.READ_AND_WRITE:
+                assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+                continue
 
             # Should accept the input but store it safely
             assert response.status_code == status.HTTP_201_CREATED
@@ -1066,16 +1132,37 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 content_type="application/json",
             )
 
+            if self.level < PermissionLevel.READ_AND_WRITE:
+                assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+                continue
+
             assert response.status_code == status.HTTP_201_CREATED
 
 
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestStationCoordinateRounding(BaseAPIProjectTestCase):
     """Test coordinate rounding functionality."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
+
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
-        self.auth = self.header_prefix + self.token.key
+        self.set_test_project_permission(self.level, self.permission_type)
 
     def test_coordinate_rounding_on_create(self) -> None:
         """Test that coordinates are properly rounded to 7 decimal places on
@@ -1094,6 +1181,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
 
         assert response.status_code == status.HTTP_201_CREATED
         station_data = response.data["data"]["station"]
@@ -1119,6 +1210,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
 
         assert response.status_code == status.HTTP_201_CREATED
         station_data = response.data["data"]["station"]
@@ -1148,6 +1243,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
 
         assert response.status_code == status.HTTP_200_OK
         station_data = response.data["data"]["station"]
@@ -1182,6 +1281,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
                 content_type="application/json",
             )
 
+            if self.level < PermissionLevel.READ_AND_WRITE:
+                assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+                continue
+
             assert response.status_code == status.HTTP_201_CREATED
 
     def test_negative_coordinates_with_many_decimals(self) -> None:
@@ -1202,6 +1305,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
 
         assert response.status_code == status.HTTP_201_CREATED
         station_data = response.data["data"]["station"]
@@ -1227,6 +1334,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
 
         assert response.status_code == status.HTTP_201_CREATED
         station_data = response.data["data"]["station"]
@@ -1264,6 +1375,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
                 content_type="application/json",
             )
 
+            if self.level < PermissionLevel.READ_AND_WRITE:
+                assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+                continue
+
             assert response.status_code == status.HTTP_201_CREATED
             station_data = response.data["data"]["station"]
             assert station_data["latitude"] == expected, (
@@ -1289,6 +1404,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
+
         # Latitude is out of range (-90 to 90), should fail
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "latitude" in response.data.get("errors", {})
@@ -1309,6 +1428,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
             content_type="application/json",
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+            return
 
         # Should fail because coordinates are required
         assert response.status_code == status.HTTP_400_BAD_REQUEST

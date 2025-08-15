@@ -7,12 +7,14 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
+from rest_framework import permissions
 from rest_framework import status
 from rest_framework.parsers import FormParser
 from rest_framework.parsers import JSONParser
 from rest_framework.parsers import MultiPartParser
 from rest_framework.viewsets import ModelViewSet
 
+from speleodb.api.v1.permissions import StationUserHasAdminAccess
 from speleodb.api.v1.permissions import StationUserHasReadAccess
 from speleodb.api.v1.permissions import StationUserHasWriteAccess
 from speleodb.api.v1.serializers.station import StationResourceSerializer
@@ -43,7 +45,7 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
     """
 
     serializer_class = StationResourceSerializer
-    permission_classes = [StationUserHasReadAccess]
+    permission_classes = [permissions.IsAuthenticated, StationUserHasReadAccess]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     lookup_field = "id"
 
@@ -58,11 +60,17 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
 
     def get_permissions(  # type: ignore[override]
         self,
-    ) -> list[StationUserHasWriteAccess] | list[StationUserHasReadAccess]:
+    ) -> list[permissions.BasePermission]:
         """Set permissions based on action."""
-        if self.action in ["create", "update", "partial_update", "destroy"]:
-            return [StationUserHasWriteAccess()]
-        return [StationUserHasReadAccess()]
+        match self.action:
+            case "create" | "update" | "partial_update":
+                return [permissions.IsAuthenticated(), StationUserHasWriteAccess()]
+
+            case "destroy":
+                return [permissions.IsAuthenticated(), StationUserHasAdminAccess()]
+
+            case _:
+                return [permissions.IsAuthenticated(), StationUserHasReadAccess()]
 
     def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get detailed resource information."""

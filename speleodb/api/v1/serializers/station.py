@@ -74,9 +74,9 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
 
         # Only validate file requirement for new resources or when file is being updated
         if resource_type in [
-            "photo",
-            "video",
-            "document",
+            StationResource.ResourceType.PHOTO,
+            StationResource.ResourceType.VIDEO,
+            StationResource.ResourceType.DOCUMENT,
         ]:
             # For updates, only validate if file is being changed
             if self.instance and not file_field:
@@ -96,8 +96,8 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
                     )
 
         elif resource_type in [
-            "note",
-            "sketch",
+            StationResource.ResourceType.NOTE,
+            StationResource.ResourceType.SKETCH,
         ]:
             # For updates, check if text_content is being updated
             if self.instance and "text_content" not in attrs:

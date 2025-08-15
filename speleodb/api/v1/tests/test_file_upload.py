@@ -11,6 +11,7 @@ from rest_framework import status
 
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.api.v1.tests.utils import is_valid_git_sha
 from speleodb.surveys.models import Format
@@ -33,21 +34,26 @@ class FileViewTests(BaseAPIProjectTestCase):
             level=[
                 PermissionLevel.ADMIN,
                 PermissionLevel.READ_AND_WRITE,
-                PermissionLevel.READ_AND_WRITE,
             ],
+            permission_type=[PermissionType.USER, PermissionType.TEAM],
         )
     )
     def test_upload_valid_file(
         self,
         testfile: pathlib.Path,
         uploader_access_level: PermissionLevel,
+        permission_type: PermissionType,
     ) -> None:
         """
         Test file uploads with valid formats.
         """
+
         assert testfile.exists()
 
-        self.set_test_project_permission(level=uploader_access_level)
+        self.set_test_project_permission(
+            level=uploader_access_level,
+            permission_type=permission_type,
+        )
 
         self.project.acquire_mutex(self.user)
 
@@ -107,19 +113,25 @@ class FileViewTests(BaseAPIProjectTestCase):
             level=[
                 PermissionLevel.ADMIN,
                 PermissionLevel.READ_AND_WRITE,
-                PermissionLevel.READ_AND_WRITE,
             ],
+            permission_type=[PermissionType.USER, PermissionType.TEAM],
         )
     )
     def test_upload_file_error_without_mutex(
-        self, testfile: pathlib.Path, uploader_access_level: PermissionLevel
+        self,
+        testfile: pathlib.Path,
+        uploader_access_level: PermissionLevel,
+        permission_type: PermissionType,
     ) -> None:
         """
         Test file uploads with valid formats.
         """
         assert testfile.exists()
 
-        self.set_test_project_permission(level=uploader_access_level)
+        self.set_test_project_permission(
+            level=uploader_access_level,
+            permission_type=permission_type,
+        )
 
         fileformat = None
         match testfile.suffix.lstrip(".").upper():
@@ -156,19 +168,25 @@ class FileViewTests(BaseAPIProjectTestCase):
             testfile=TEST_FILES,
             level=[
                 PermissionLevel.READ_ONLY,
-                PermissionLevel.READ_ONLY,
             ],
+            permission_type=[PermissionType.USER, PermissionType.TEAM],
         )
     )
     def test_upload_error_in_readonly(
-        self, testfile: pathlib.Path, uploader_access_level: PermissionLevel
+        self,
+        testfile: pathlib.Path,
+        uploader_access_level: PermissionLevel,
+        permission_type: PermissionType,
     ) -> None:
         """
         Test file uploads with valid formats.
         """
         assert testfile.exists()
 
-        self.set_test_project_permission(level=uploader_access_level)
+        self.set_test_project_permission(
+            level=uploader_access_level,
+            permission_type=permission_type,
+        )
 
         with pytest.raises(PermissionError):
             self.project.acquire_mutex(self.user)

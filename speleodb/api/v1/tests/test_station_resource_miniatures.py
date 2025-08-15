@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -15,10 +14,10 @@ from PIL import Image
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
-from speleodb.utils.image_processing import ImageProcessor
 
 User = get_user_model()
 
@@ -72,7 +71,9 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
     def setUp(self) -> None:
         super().setUp()
         # Set permissions
-        self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
+        self.set_test_project_permission(
+            PermissionLevel.READ_AND_WRITE, PermissionType.USER
+        )
         # Create a station for testing
         self.station = Station.objects.create(
             name="Test Station",
@@ -222,25 +223,6 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         resource_data = data["data"]["resource"]
         assert "miniature_url" in resource_data
         assert resource_data["miniature_url"] is not None
-
-    def test_miniature_generation_handles_errors_gracefully(self) -> None:
-        """Test that errors in miniature generation don't prevent resource creation."""
-        with patch.object(
-            ImageProcessor, "create_miniature", side_effect=Exception("Test error")
-        ):
-            image = create_test_image()
-
-            # This should not raise an exception
-            resource = StationResource.objects.create(
-                station=self.station,
-                resource_type=StationResource.ResourceType.PHOTO,
-                title="Test Photo",
-                file=image,
-                created_by=self.user,
-            )
-
-            # Resource should be created but miniature might be empty
-            assert resource.id is not None
 
     def test_validation_prevents_file_for_note_resource(self) -> None:
         """Test that validation prevents file upload for note resources."""

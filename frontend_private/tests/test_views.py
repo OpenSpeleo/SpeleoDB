@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import random
 from typing import Any
-from typing import Literal
 
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
@@ -13,10 +12,11 @@ from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
-from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.api.v1.tests.base_testcase import BaseProjectTestCaseMixin
+from speleodb.api.v1.tests.base_testcase import BaseUserTestCaseMixin
+from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
-from speleodb.api.v1.tests.factories import TeamPermissionFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.users.models import SurveyTeam
@@ -24,10 +24,9 @@ from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.tests.factories import UserFactory
 
 
-class BaseTestCase(TestCase):
+class BaseTestCase(BaseUserTestCaseMixin, TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.user = UserFactory.create()
 
     def execute_test(
         self,
@@ -98,41 +97,26 @@ class TeamViewsTest(BaseTestCase):
 
 
 @parameterized_class(
-    ("level", "perm_type"),
+    ("level", "permission_type"),
     [
-        (PermissionLevel.READ_ONLY, "user"),
-        (PermissionLevel.READ_ONLY, "team"),
-        (PermissionLevel.READ_AND_WRITE, "user"),
-        (PermissionLevel.READ_AND_WRITE, "team"),
-        (PermissionLevel.ADMIN, "user"),
+        (PermissionLevel.READ_ONLY, PermissionType.USER),
+        (PermissionLevel.READ_ONLY, PermissionType.TEAM),
+        (PermissionLevel.READ_AND_WRITE, PermissionType.USER),
+        (PermissionLevel.READ_AND_WRITE, PermissionType.TEAM),
+        (PermissionLevel.ADMIN, PermissionType.USER),
     ],
 )
-class ProjectViewsTest(BaseTestCase):
+class ProjectViewsTest(BaseProjectTestCaseMixin, BaseTestCase):
     level: PermissionLevel
-    perm_type: Literal["user", "team"]
+    permission_type: PermissionType
 
     def setUp(self) -> None:
         super().setUp()
 
-        self.project = ProjectFactory.create(created_by=self.user)
-
-        if self.perm_type == "team":
-            team: SurveyTeam = SurveyTeamFactory.create()
-
-            # Must make the user is at least a member of the team - random role
-            _ = SurveyTeamMembershipFactory(team=team, user=self.user)
-
-            _ = TeamPermissionFactory(
-                target=team, level=self.level, project=self.project
-            )
-
-        elif self.perm_type == "user":
-            _ = UserPermissionFactory(
-                target=self.user, level=self.level, project=self.project
-            )
-
-        else:
-            raise TypeError(f"Unknown type received for level: {type(self.level)}")
+        self.set_test_project_permission(
+            level=self.level,
+            permission_type=self.permission_type,
+        )
 
     @parameterized.expand(["projects", "project_new"])
     def test_view_with_no_args(self, view_name: str) -> None:

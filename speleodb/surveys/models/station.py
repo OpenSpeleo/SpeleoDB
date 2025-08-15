@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import uuid
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Self
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from speleodb.users.models import User
 from speleodb.utils.document_processing import DocumentProcessor
 from speleodb.utils.image_processing import ImageProcessor
 from speleodb.utils.storages import StationResourceStorage
@@ -174,7 +174,7 @@ class StationResource(models.Model):
 
     # Metadata
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         related_name="created_station_resources",
         on_delete=models.SET_NULL,
         null=True,
@@ -197,13 +197,16 @@ class StationResource(models.Model):
         """Override save to prevent resource_type from being changed and generate
         miniatures."""
         # If this is an update (has pk) and resource_type is being changed
-        if self.pk and hasattr(self, "_loaded_resource_type"):
-            if self._loaded_resource_type != self.resource_type:  # type: ignore[has-type]
-                raise ValueError(
-                    f"Cannot change resource type from '{self._loaded_resource_type}' "  # type: ignore[has-type]
-                    f"to '{self.resource_type}'. Resource type is immutable after "
-                    "creation."
-                )
+        if self.pk:
+            with contextlib.suppress(self.__class__.DoesNotExist):
+                old_instance = self.__class__.objects.get(pk=self.pk)
+
+                if old_instance.resource_type != self.resource_type:
+                    raise ValueError(
+                        "Cannot change resource type from "
+                        f"'{old_instance.resource_type}' to '{self.resource_type}'. "
+                        "Resource type is immutable after creation."
+                    )
 
         # Clean the model
         self.full_clean()
@@ -233,9 +236,6 @@ class StationResource(models.Model):
             else:
                 should_generate_miniature = True
 
-        # Save the model first
-        super().save(*args, **kwargs)
-
         # Generate miniature after save
         if should_generate_miniature:
             try:
@@ -251,14 +251,12 @@ class StationResource(models.Model):
                 elif self.resource_type == self.ResourceType.DOCUMENT:
                     self._generate_document_miniature()
 
-                # Save the miniature field
-                super().save(update_fields=["miniature"])
+            except Exception as e:
+                raise ValidationError(
+                    "Error in the miniature generation process"
+                ) from e
 
-            except Exception:
-                logger.exception(f"Failed to generate miniature for resource {self.id}")
-
-        # Store the current resource_type for future checks
-        self._loaded_resource_type = self.resource_type
+        super().save()
 
     if TYPE_CHECKING:
         # Type hints for Django's auto-generated methods
@@ -362,102 +360,79 @@ class StationResource(models.Model):
         if not self.file:
             return
 
-        try:
-            # Check if the uploaded file is HEIC/HEIF
-            original_extension = Path(self.file.name).suffix.lower()
-            is_heic = original_extension in {".heic", ".heif"}
+        # Check if the uploaded file is HEIC/HEIF
+        original_extension = Path(self.file.name).suffix.lower()
+        is_heic = original_extension in {".heic", ".heif"}
 
+        self.file.open("rb")
+
+        # If it's HEIC, we need to convert the main file to JPEG too
+        if is_heic:
+            # Convert HEIC to JPEG for the main file
+            img = ImageProcessor.process_image_for_web(self.file)
+
+            # Save as JPEG
+            main_buffer = BytesIO()
+            img.save(main_buffer, format="JPEG", quality=90)
+            main_buffer.seek(0)
+
+            # Update the filename to .jpg
+            original_name = Path(self.file.name).stem
+            new_filename = f"{original_name}.jpg"
+
+            # Replace the file with the converted version
+            self.file.delete(save=False)
+            self.file.save(new_filename, ContentFile(main_buffer.read()), save=False)
+
+            # Re-open for miniature generation
             self.file.open("rb")
 
-            # If it's HEIC, we need to convert the main file to JPEG too
-            if is_heic:
-                # Convert HEIC to JPEG for the main file
-                img = ImageProcessor.process_image_for_web(self.file)
+        # Generate miniature
+        miniature_content = ImageProcessor.create_miniature(self.file)
 
-                # Save as JPEG
-                main_buffer = BytesIO()
-                img.save(main_buffer, format="JPEG", quality=90)
-                main_buffer.seek(0)
+        # Generate filename for miniature
+        original_name = Path(self.file.name).stem
+        miniature_name = f"{original_name}_thumb.jpg"
 
-                # Update the filename to .jpg
-                original_name = Path(self.file.name).stem
-                new_filename = f"{original_name}.jpg"
-
-                # Replace the file with the converted version
-                self.file.delete(save=False)
-                self.file.save(
-                    new_filename, ContentFile(main_buffer.read()), save=False
-                )
-
-                # Re-open for miniature generation
-                self.file.open("rb")
-
-            # Generate miniature
-            miniature_content = ImageProcessor.create_miniature(self.file)
-
-            # Generate filename for miniature
-            original_name = Path(self.file.name).stem
-            miniature_name = f"{original_name}_thumb.jpg"
-
-            # Save miniature
-            self.miniature.save(miniature_name, miniature_content, save=False)
-            logger.info(f"Generated photo miniature for resource {self.id}")
-
-        except Exception:
-            logger.exception(
-                f"Failed to generate photo miniature for resource {self.id}"
-            )
-            raise
+        # Save miniature
+        self.miniature.save(miniature_name, miniature_content, save=False)
+        logger.info(f"Generated photo miniature for resource {self.id}")
 
     def _generate_video_miniature(self) -> None:
         """Generate miniature for video resources."""
         if not self.file:
             return
 
-        try:
-            self.file.open("rb")
-            # Extract thumbnail from video
-            miniature_content = VideoProcessor.extract_thumbnail(self.file)
+        self.file.open("rb")
+        # Extract thumbnail from video
+        miniature_content = VideoProcessor.extract_thumbnail(self.file)
 
-            # Generate filename for miniature
-            original_name = Path(self.file.name).stem
-            miniature_name = f"{original_name}_thumb.jpg"
+        # Generate filename for miniature
+        original_name = Path(self.file.name).stem
+        miniature_name = f"{original_name}_thumb.jpg"
 
-            # Save miniature
-            self.miniature.save(miniature_name, miniature_content, save=False)
-            logger.info(f"Generated video miniature for resource {self.id}")
-
-        except Exception:
-            logger.exception(
-                f"Failed to generate video miniature for resource {self.id}"
-            )
-            raise
+        # Save miniature
+        self.miniature.save(miniature_name, miniature_content, save=False)
+        logger.info(f"Generated video miniature for resource {self.id}")
 
     def _generate_document_miniature(self) -> None:
         """Generate miniature for document resources."""
-        if not self.file:
+        if not self.file or Path(self.file.name).suffix.lower() != ".pdf":
             return
 
-        try:
-            self.file.open("rb")
-            # Generate preview based on document type
-            miniature_content = DocumentProcessor.generate_preview(
-                self.file, filename=self.file.name
-            )
+        self.file.open("rb")
+        # Generate preview based on document type
+        miniature_content = DocumentProcessor.generate_preview(
+            self.file, filename=self.file.name
+        )
 
-            # Generate filename for miniature
-            original_name = Path(self.file.name).stem
-            miniature_name = f"{original_name}_thumb.jpg"
+        # Generate filename for miniature
+        original_name = Path(self.file.name).stem
+        miniature_name = f"{original_name}_thumb.jpg"
 
-            # Save miniature
-            self.miniature.save(miniature_name, miniature_content, save=False)
-            logger.info(f"Generated document miniature for resource {self.id}")
-
-        except Exception:
-            logger.exception(
-                f"Failed to generate document miniature for resource {self.id}"
-            )
-            raise
+        # Save miniature
+        self.miniature.save(miniature_name, miniature_content, save=False)
+        logger.info(f"Generated document miniature for resource {self.id}")
 
     def get_file_url(self) -> str | None:
         """Get the file URL (public URL for S3, regular URL for local)."""
@@ -478,14 +453,6 @@ class StationResource(models.Model):
             return self.miniature.url  # type: ignore[no-any-return]
         except AttributeError:
             return None
-
-    @classmethod
-    def from_db(cls, db: Any, field_names: Any, values: Any) -> Self:
-        """Store the original resource_type when loading from database."""
-        instance = super().from_db(db, field_names, values)
-        # Store the loaded resource_type to check against later
-        instance._loaded_resource_type = instance.resource_type  # noqa: SLF001
-        return instance
 
     @property
     def is_file_based(self) -> bool:

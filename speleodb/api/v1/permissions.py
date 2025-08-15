@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
+from rest_framework.exceptions import NotAuthenticated
 
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
@@ -26,7 +27,10 @@ class BaseProjectAccessLevel(permissions.BasePermission):
     MIN_ACCESS_LEVEL: int
 
     def has_permission(self, request: Request, view: APIView) -> bool:
-        return bool(request.user and request.user.is_authenticated)
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
 
     def has_object_permission(
         self,
@@ -61,7 +65,10 @@ class BaseStationAccessLevel(permissions.BasePermission):
     MIN_ACCESS_LEVEL: int
 
     def has_permission(self, request: Request, view: APIView) -> bool:
-        return bool(request.user and request.user.is_authenticated)
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
 
     def has_object_permission(
         self,
@@ -136,7 +143,10 @@ class BaseTeamAccessLevel(permissions.BasePermission):
     MIN_ACCESS_LEVEL: int
 
     def has_permission(self, request: Request, view: APIView) -> bool:
-        return bool(request.user and request.user.is_authenticated)
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
 
     def has_object_permission(
         self,
@@ -161,17 +171,26 @@ class UserHasMemberAccess(BaseTeamAccessLevel):
 
 class IsReadOnly(permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
-        return request.method in permissions.SAFE_METHODS
+        if request.user and request.user.is_authenticated:
+            return request.method in permissions.SAFE_METHODS
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
 
 
 class IsObjectCreation(permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
-        return request.method == "POST"
+        if request.user and request.user.is_authenticated:
+            return request.method == "POST"
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
 
 
 class UserOwnsProjectMutex(permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
-        return bool(request.user and request.user.is_authenticated)
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
 
     def has_object_permission(
         self,
@@ -195,8 +214,10 @@ class POIOwnershipPermission(permissions.BasePermission):
     """
 
     def has_permission(self, request: Request, view: APIView) -> bool:
-        """Only authenticated users can access POI endpoints."""
-        return bool(request.user and request.user.is_authenticated)
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
 
     def has_object_permission(
         self,

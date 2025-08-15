@@ -34,6 +34,9 @@ from .base import INSTALLED_APPS  # noqa: E402
 from .base import TEMPLATES  # noqa: E402
 from .base import env  # noqa: E402
 
+# Have to overwrite because of `USE_DOCKER` in base.py
+DATABASES = {"default": env.db("DATABASE_URL")}
+
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key

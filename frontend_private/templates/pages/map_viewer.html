@@ -787,7 +787,6 @@
         z-index: 10000;
         display: none;
     }
-
     /* Drag Confirmation Modal */
     .drag-confirm-modal {
         position: fixed;
@@ -1101,7 +1100,6 @@
             </div>
 
         </div>
-
         <!-- Table -->
         <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700 relative">
             <div id='map' style='width: 100%; min-height: 600px; display: block;'></div>
@@ -1731,7 +1729,6 @@
     </div>
 </main>
 {% endblock content %}
-
 {% block extra_js %}
 <script src='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js'></script>
 {% endblock extra_js %}
@@ -2044,7 +2041,7 @@
     function findProjectForFeature(feature) {
         // Try to match the feature to a project by checking line cache
         for (const [projectId, lines] of lineFeatureCache.entries()) {
-            if (lines.has(feature.properties.Name)) {
+            if (lines.has(feature.properties.section_name)) {
                 return projectId;
             }
         }
@@ -2251,7 +2248,7 @@
 
         // Query features at this point
         const features = map.queryRenderedFeatures(point);
-        const lineFeatures = features.filter(f => f.geometry.type === 'LineString' && f.properties.Name);
+        const lineFeatures = features.filter(f => f.geometry.type === 'LineString' && f.properties.section_name);
 
         // Only log basic info
         if (clickedStation) {
@@ -2533,7 +2530,6 @@
             }
         }, 0);
     }
-
     function deleteStationFromContextMenu() {
         console.log('🗑️ deleteStationFromContextMenu called');
 
@@ -3320,7 +3316,6 @@
             return false;
         }
     }
-
     function attachAllLineHandlers() {
         if (!window.lineLayerHandlers) {
             console.log('No line handlers to attach');
@@ -4115,7 +4110,6 @@
         // Show modal
         modal.style.display = 'flex';
     }
-
     window.confirmPOIMove = async function () {
         if (!pendingPOIDrag) return;
 
@@ -4910,7 +4904,6 @@
                 return '<div class="text-slate-400 text-sm">Unknown resource type</div>';
         }
     }
-
     // Enhanced Resources Tab
     function loadStationResources(stationId, projectId, isNewlyCreated = false) {
         // Get the latest station data from allStations map
@@ -5691,7 +5684,6 @@
             cancelStationEdit(window.currentEditingStation);
         }
     }
-
     function cancelStationEdit(stationId) {
         console.log(`❌ Checking for unsaved changes before cancelling edit for station ${stationId}`);
 
@@ -6484,7 +6476,6 @@
             hideStationLoadingOverlay(loadingOverlay);
         }
     }
-
     async function createStation(projectId, form) {
         const formData = new FormData(form);
         const stationData = {
@@ -7284,7 +7275,6 @@
         document.getElementById('resource-delete-confirm-modal').style.display = 'none';
         pendingResourceDelete = null;
     }
-    
     async function confirmDeleteResource() {
         if (!pendingResourceDelete) return;
 
@@ -7906,7 +7896,6 @@
         const newHeight = Math.max(viewportHeight - mapTop - 20, 600);
         mapElement.style.height = newHeight + 'px';
     }
-
     if (!mapboxgl.supported()) {
         showNotification('error', 'Your browser does not support Mapbox GL. Please use a modern browser.', 10000);
         throw new Error("Mapbox GL not supported by browser!");
@@ -8170,7 +8159,7 @@
 
             // Create promises to fetch GeoJSON data from API for each project
             const fetchPromises = projectIds.map((projectId, index) => {
-                const apiUrl = `/api/v1/projects/${projectId}/geojson/`;
+                const apiUrl = `/api/v1/projects/${projectId}/geojson/?limit=1`;
 
                 console.log('Fetching GeoJSON data for project:', projectId);
 
@@ -8193,61 +8182,87 @@
                     .then(apiResponse => {
                         console.log(`Project ${projectId} API response:`, apiResponse);
 
-                        // Check if the response is successful and has data
-                        if (!apiResponse.success) {
-                            console.warn(`Project ${projectId} API response not successful:`, apiResponse);
+                        // Validate API envelope
+                        if (!apiResponse || !apiResponse.success || !apiResponse.data) {
+                            console.warn(`Project ${projectId} API response not successful or missing data`, apiResponse);
                             return null;
                         }
 
-                        if (!apiResponse.data) {
-                            console.log(`Project ${projectId} has no data field, skipping`);
+                        const files = apiResponse.data.geojson_files || [];
+                        if (!Array.isArray(files) || files.length === 0) {
+                            console.log(`Project ${projectId} has no geojson_files, skipping`);
                             return null;
                         }
 
-                        // Parse the raw JSON string from the API response
-                        let geojsonData;
-                        try {
-                            geojsonData = JSON.parse(apiResponse.data);
-                            console.log(`Project ${projectId} parsed GeoJSON:`, geojsonData);
-                        } catch (parseError) {
-                            console.error(`Failed to parse GeoJSON for project ${projectId}:`, parseError);
-                            console.error(`Raw data was:`, apiResponse.data);
-                            return null;
-                        }
-
-                        // Check if the parsed GeoJSON is empty
-                        if (!geojsonData) {
-                            console.log(`Project ${projectId} has null GeoJSON, skipping`);
-                            return null;
-                        }
-
-                        if (!geojsonData.features) {
-                            console.log(`Project ${projectId} has no features property, skipping`);
-                            return null;
-                        }
-
-                        if (geojsonData.features.length === 0) {
-                            console.log(`Project ${projectId} has empty features array, skipping`);
-                            return null;
-                        }
-
-                        console.log(`✅ Project ${projectId} GeoJSON data loaded successfully!`);
-                        console.log(`   Features: ${geojsonData.features.length}`);
-                        console.log(`   Feature types:`, geojsonData.features.map(f => f.geometry?.type).filter(Boolean));
-
-                        return {
-                            data: geojsonData,
-                            index,
-                            projectId,
-                            projectName: projects.find(p => p.id === projectId)?.name || `Project ${projectId}`
+                        const attemptFetch = (fileList) => {
+                            const latest = fileList[0]; // already sorted by -creation_date on backend
+                            if (!latest || !latest.url) {
+                                console.log(`Project ${projectId} latest file missing URL, skipping`);
+                                return Promise.resolve(null);
+                            }
+                            return fetch(latest.url, { method: 'GET', mode: 'cors' })
+                                .then(resp => {
+                                    if (!resp.ok) {
+                                        throw new Error(`S3 GET failed: ${resp.status}`);
+                                    }
+                                    return resp.json();
+                                });
                         };
+
+                        // Try S3 fetch; on failure, refresh signed URL list once and retry
+                        return attemptFetch(files)
+                            .catch(err => {
+                                console.warn(`S3 fetch failed for project ${projectId}, refreshing signed URL and retrying once...`, err);
+                                return fetch(`/api/v1/projects/${projectId}/geojson/?limit=1`, {
+                                    method: 'GET',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': getCSRFToken()
+                                    },
+                                    credentials: 'same-origin'
+                                })
+                                    .then(r => r.json())
+                                    .then(refreshResp => {
+                                        const refreshedFiles = refreshResp?.data?.geojson_files || [];
+                                        if (!Array.isArray(refreshedFiles) || refreshedFiles.length === 0) {
+                                            console.log(`Project ${projectId} still has no geojson_files after refresh, skipping`);
+                                            return null;
+                                        }
+                                        return attemptFetch(refreshedFiles);
+                                    });
+                            })
+                            .then(geojsonData => {
+                                if (!geojsonData) {
+                                    return null;
+                                }
+
+                                // Validate parsed GeoJSON
+                                if (!geojsonData.features) {
+                                    console.log(`Project ${projectId} has no features property, skipping`);
+                                    return null;
+                                }
+                                if (geojsonData.features.length === 0) {
+                                    console.log(`Project ${projectId} has empty features array, skipping`);
+                                    return null;
+                                }
+
+                                console.log(`✅ Project ${projectId} GeoJSON data loaded successfully!`);
+                                console.log(`   Features: ${geojsonData.features.length}`);
+                                console.log(`   Feature types:`, geojsonData.features.map(f => f.geometry?.type).filter(Boolean));
+
+                                return {
+                                    data: geojsonData,
+                                    index,
+                                    projectId,
+                                    projectName: projects.find(p => p.id === projectId)?.name || `Project ${projectId}`
+                                };
+                            });
                     })
                     .catch(error => {
                         console.error(`Error fetching GeoJSON for project ${projectId}:`, error);
                         return null; // Return null for failed requests
                     });
             });
-
             // Wait for all project GeoJSON data to load
             Promise.all(fetchPromises)
                 .then(results => {
@@ -8433,9 +8448,9 @@
                             const projectSnapPoints = [];
 
                             processedData.features.forEach(feature => {
-                                if (feature.geometry.type === 'LineString' && feature.properties.Name) {
+                                if (feature.geometry.type === 'LineString' && feature.properties.section_name) {
                                     const coords = feature.geometry.coordinates;
-                                    const lineName = feature.properties.Name;
+                                    const lineName = feature.properties.section_name;
 
                                     // Store full line data
                                     projectLines.set(lineName, {
@@ -8531,11 +8546,11 @@
                                 source: sourceId,
                                 filter: ['all',
                                     ['in', '$type', 'LineString'],
-                                    ['has', 'Name']  // Only show labels for features with a Name property
+                                    ['has', 'section_name']  // Require lowercase 'section_name'
                                 ],
                                 minzoom: 13,  // Only show labels when zoomed in to level 13 or higher
                                 layout: {
-                                    'text-field': ['get', 'Name'],
+                                    'text-field': ['get', 'section_name'],
                                     'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
                                     'text-size': 12,
                                     'symbol-placement': 'line',  // Place text along the line

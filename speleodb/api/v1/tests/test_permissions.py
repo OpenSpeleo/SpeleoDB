@@ -3,18 +3,25 @@
 from __future__ import annotations
 
 from django.urls import reverse
+from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.surveys.models import PermissionLevel
 
 
 class TestPermissionsApiView(BaseAPIProjectTestCase):
     """Test suite to verify the permission level of API endpoints."""
 
-    def test_webviewer_cannot_access_other_endpoints(self) -> None:
+    @parameterized.expand([PermissionType.USER, PermissionType.TEAM])
+    def test_webviewer_cannot_access_other_endpoints(
+        self, permission_type: PermissionType
+    ) -> None:
         """Test that WEB_VIEWER permission only grants access to GeoJSON endpoint."""
-        self.set_test_project_permission(level=PermissionLevel.WEB_VIEWER)
+        self.set_test_project_permission(
+            level=PermissionLevel.WEB_VIEWER, permission_type=permission_type
+        )
 
         auth = self.header_prefix + self.token.key
 

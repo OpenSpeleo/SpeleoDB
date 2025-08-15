@@ -60,3 +60,27 @@ class StationResourceStorage(BaseS3Storage):
     default_acl = "private"  # Keep files private for security
     # Use signed URLs for private files
     custom_domain = False  # type: ignore[assignment]
+
+
+class GeoJSONStorage(S3Boto3Storage):
+    """Private S3 storage for GeoJSON uploads.
+
+    Files are stored under the "geojson/" prefix; the model's upload_to callable
+    should place them into project- and commit-specific subfolders.
+    """
+
+    # NOTE: This class can **not** inherit from BaseS3Storage because it uses a
+    # different `get_available_name()` that generates a path based on the project ID
+    # and commit SHA.
+
+    bucket_name = BaseS3Storage.bucket_name
+    file_overwrite = BaseS3Storage.file_overwrite
+
+    # Cache control for performance
+    object_parameters = BaseS3Storage.object_parameters
+
+    location = "geojson"
+    default_acl = "private"
+
+    # Use signed URLs for private files
+    custom_domain = False

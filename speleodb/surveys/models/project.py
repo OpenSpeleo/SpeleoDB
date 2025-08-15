@@ -31,27 +31,17 @@ if TYPE_CHECKING:
     import datetime
 
     from speleodb.surveys.models import Format
+    from speleodb.surveys.models import GeoJSON
     from speleodb.surveys.models import Mutex
     from speleodb.surveys.models import Station
     from speleodb.surveys.models import TeamPermission
     from speleodb.surveys.models import UserPermission
 
 
-class ProjectManager(models.Manager["Project"]):
-    """Custom manager that defers geojson field by default for performance."""
-
-    def get_queryset(self) -> models.QuerySet[Project]:
-        """Return queryset with geojson field deferred by default."""
-        return super().get_queryset().defer("geojson")
-
-    def with_geojson(self) -> models.QuerySet[Project]:
-        """Return queryset with geojson field included."""
-        return super().get_queryset()
-
-
 class Project(models.Model):
     # type checking
     rel_formats: models.QuerySet[Format]
+    rel_geojson: models.QuerySet[GeoJSON]
     rel_mutexes: models.QuerySet[Mutex]
     rel_user_permissions: models.QuerySet[UserPermission]
     rel_team_permissions: models.QuerySet[TeamPermission]
@@ -116,18 +106,6 @@ class Project(models.Model):
         null=False,
         default=Visibility.PRIVATE,
     )
-
-    # GeoJSON data - only loaded when specifically requested
-    geojson = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text=(
-            "GeoJSON data for this project. Only loaded when explicitly requested."
-        ),
-    )
-
-    # Custom manager that defers geojson by default
-    objects = ProjectManager()
 
     class Meta:
         constraints = [

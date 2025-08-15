@@ -3,27 +3,504 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from faker import Faker
 from parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import NoteStationResourceFactory
 from speleodb.api.v1.tests.factories import PhotoStationResourceFactory
-from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SketchStationResourceFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models.station import Station
-from speleodb.surveys.models.station import StationResource
+from speleodb.surveys.models import Station
+from speleodb.surveys.models import StationResource
+from speleodb.utils.test_utils import named_product
 
 
-class TestStationResourceAPIAuthentication(BaseAPIProjectTestCase):
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
+class TestStationResourceAPI(BaseAPIProjectTestCase):
+    """Test cases for Station Resource CRUD operations."""
+
+    level: PermissionLevel
+    permission_type: PermissionType
+    station: Station
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.set_test_project_permission(
+            level=self.level, permission_type=self.permission_type
+        )
+        self.station = Station.objects.create(
+            project=self.project,
+            name="Test Station",
+            latitude=45.1234567,
+            longitude=-122.7654321,
+            created_by=self.user,
+        )
+
+        # Create a station for testing
+        self.resource_url = reverse("api:v1:resource-list-create")
+
+    def _create_test_image(
+        self, name: str = "test.jpg", size: tuple[int, int] = (100, 100)
+    ) -> SimpleUploadedFile:
+        """Create a test image file."""
+        # Load real image from artifacts
+        artifacts_dir = Path(__file__).parent / "artifacts"
+        with (artifacts_dir / "image.jpg").open(mode="rb") as f:
+            jpeg_content = f.read()
+        return SimpleUploadedFile(name, jpeg_content, content_type="image/jpeg")
+
+    def _create_test_text_file(
+        self, name: str = "test.txt", content: str = "Test content"
+    ) -> SimpleUploadedFile:
+        """Create a test text file."""
+        return SimpleUploadedFile(name, content.encode(), content_type="text/plain")
+
+    def test_list_resources_empty(self) -> None:
+        """Test listing resources when none exist."""
+        response = self.client.get(
+            f"{self.resource_url}?station_id={self.station.id}",
+            headers={"authorization": self.auth},
+        )
+
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
+        assert response.data["data"]["resources"] == []
+
+    def test_list_resources_with_data(self) -> None:
+        """Test listing resources when they exist."""
+        # Create some resources
+        StationResource.objects.create(
+            resource_type=StationResource.ResourceType.NOTE,
+            title="Test Note",
+            text_content="Some notes",
+            created_by=self.user,
+            station=self.station,
+        )
+        StationResource.objects.create(
+            resource_type=StationResource.ResourceType.PHOTO,
+            title="Test Photo",
+            file=self._create_test_image(),
+            created_by=self.user,
+            station=self.station,
+        )
+
+        response = self.client.get(
+            f"{self.resource_url}?station_id={self.station.id}",
+            headers={"authorization": self.auth},
+        )
+
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
+        resources = response.data["data"]["resources"]
+        assert len(resources) == 2  # noqa: PLR2004
+
+        # Check ordering - should be ordered by most recent modified date first
+        # Since resource2 was created after resource1, it should appear first
+        assert resources[0]["title"] == "Test Photo"
+        assert resources[1]["title"] == "Test Note"
+
+    def test_create_photo_resource(self) -> None:
+        """Test creating a photo resource."""
+        image_file = self._create_test_image()
+        data = {
+            "station_id": str(self.station.id),
+            "resource_type": StationResource.ResourceType.PHOTO,
+            "title": "Cave Entrance Photo",
+            "description": "Main entrance view",
+            "file": image_file,
+        }
+
+        response = self.client.post(
+            self.resource_url,
+            data,
+            format="multipart",
+            headers={"authorization": self.auth},
+        )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["success"]
+
+        resource = response.data["data"]["resource"]
+        assert resource["title"] == "Cave Entrance Photo"
+        assert resource["resource_type"] == StationResource.ResourceType.PHOTO
+        assert resource["file_url"] is not None
+        assert resource["created_by_email"] == self.user.email
+
+    def test_create_video_resource(self) -> None:
+        with Path("speleodb/api/v1/tests/artifacts/video.mp4").open(mode="rb") as f:
+            video_file = SimpleUploadedFile(
+                "video.mp4", f.read(), content_type="video/mp4"
+            )
+
+        data = {
+            "station_id": str(self.station.id),
+            "resource_type": StationResource.ResourceType.VIDEO,
+            "title": "Cave Tour Video",
+            "description": "Walkthrough video",
+            "file": video_file,
+        }
+
+        response = self.client.post(
+            self.resource_url,
+            data,
+            format="multipart",
+            headers={"authorization": self.auth},
+        )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["success"]
+
+        resource = response.data["data"]["resource"]
+        assert resource["resource_type"] == StationResource.ResourceType.VIDEO
+
+    def test_create_note_resource(self) -> None:
+        """Test creating a note resource."""
+        data = {
+            "station_id": str(self.station.id),
+            "resource_type": StationResource.ResourceType.NOTE,
+            "title": "Field Notes",
+            "description": "Important observations",
+            "text_content": "The cave entrance is partially blocked by debris...",
+        }
+
+        response = self.client.post(
+            self.resource_url, data, format="json", headers={"authorization": self.auth}
+        )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["success"]
+
+        resource = response.data["data"]["resource"]
+        assert resource["resource_type"] == StationResource.ResourceType.NOTE
+        assert resource["text_content"] == data["text_content"]
+        assert resource["file_url"] is None
+
+    def test_create_sketch_resource(self) -> None:
+        """Test creating a sketch resource."""
+        svg_content = '<svg><circle cx="50" cy="50" r="40" /></svg>'
+        data = {
+            "station_id": str(self.station.id),
+            "resource_type": StationResource.ResourceType.SKETCH,
+            "title": "Cave Map Sketch",
+            "description": "Rough layout",
+            "text_content": svg_content,
+        }
+
+        response = self.client.post(
+            self.resource_url, data, format="json", headers={"authorization": self.auth}
+        )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["success"]
+
+        resource = response.data["data"]["resource"]
+        assert resource["resource_type"] == StationResource.ResourceType.SKETCH
+        assert resource["text_content"] == svg_content
+
+    def test_create_document_resource(self) -> None:
+        """Test creating a document resource."""
+        doc_file = self._create_test_text_file("report.txt", "Cave survey report...")
+        data = {
+            "station_id": str(self.station.id),
+            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "title": "Survey Report",
+            "description": "Detailed findings",
+            "file": doc_file,
+        }
+
+        response = self.client.post(
+            self.resource_url,
+            data,
+            format="multipart",
+            headers={"authorization": self.auth},
+        )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["success"]
+
+        resource = response.data["data"]["resource"]
+        assert resource["resource_type"] == StationResource.ResourceType.DOCUMENT
+
+    def test_create_resource_missing_file(self) -> None:
+        """Test creating a file-based resource without a file."""
+        data = {
+            "station_id": str(self.station.id),
+            "resource_type": StationResource.ResourceType.PHOTO,
+            "title": "Missing Photo",
+            "description": "This should fail",
+        }
+
+        response = self.client.post(
+            self.resource_url, data, format="json", headers={"authorization": self.auth}
+        )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not response.data["success"]
+        assert "requires a file" in str(response.data["errors"])
+
+    def test_create_resource_missing_text(self) -> None:
+        """Test creating a text-based resource without text content."""
+        data = {
+            "station_id": str(self.station.id),
+            "resource_type": StationResource.ResourceType.NOTE,
+            "title": "Empty Note",
+            "description": "This should fail",
+        }
+
+        response = self.client.post(
+            self.resource_url, data, format="json", headers={"authorization": self.auth}
+        )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not response.data["success"]
+        assert "requires text content" in str(response.data["errors"])
+
+    def test_retrieve_resource(self) -> None:
+        """Test retrieving a single resource."""
+        resource = StationResource.objects.create(
+            resource_type=StationResource.ResourceType.NOTE,
+            title="Test Note",
+            text_content="Content",
+            created_by=self.user,
+            station=self.station,
+        )
+
+        url = f"/api/v1/resources/{resource.id}/"
+        response = self.client.get(url, headers={"authorization": self.auth})
+
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
+
+        data = response.data["data"]["resource"]
+        assert data["id"] == str(resource.id)
+        assert data["title"] == "Test Note"
+
+    def test_update_resource(self) -> None:
+        """Test updating a resource."""
+        resource = StationResource.objects.create(
+            resource_type=StationResource.ResourceType.NOTE,
+            title="Old Title",
+            text_content="Old content",
+            created_by=self.user,
+            station=self.station,
+        )
+
+        url = f"/api/v1/resources/{resource.id}/"
+        update_data = {
+            "title": "New Title",
+            "description": "Updated description",
+            "text_content": "New content",
+        }
+
+        response = self.client.patch(
+            url, update_data, format="json", headers={"authorization": self.auth}
+        )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
+
+        updated = response.data["data"]["resource"]
+        assert updated["title"] == "New Title"
+        assert updated["description"] == "Updated description"
+        assert updated["text_content"] == "New content"
+
+    def test_update_resource_file(self) -> None:
+        """Test updating a file resource with a new file."""
+        # Create initial resource
+        resource = StationResource.objects.create(
+            resource_type=StationResource.ResourceType.PHOTO,
+            title="Old Photo",
+            file=self._create_test_image("old.jpg"),
+            created_by=self.user,
+            station=self.station,
+        )
+
+        # Update with new file
+        new_image = self._create_test_image("new.jpg", size=(200, 200))
+        url = f"/api/v1/resources/{resource.id}/"
+        update_data = {
+            "title": "New Photo",
+            "file": new_image,
+        }
+
+        response = self.client.patch(
+            url, update_data, format="multipart", headers={"authorization": self.auth}
+        )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
+
+        updated = response.data["data"]["resource"]
+        assert updated["title"] == "New Photo"
+        assert "new.jpg" in updated["file_url"]
+
+    def test_delete_resource(self) -> None:
+        """Test deleting a resource."""
+        resource = StationResource.objects.create(
+            resource_type=StationResource.ResourceType.NOTE,
+            title="To Delete",
+            text_content="Content",
+            created_by=self.user,
+            station=self.station,
+        )
+
+        url = f"/api/v1/resources/{resource.id}/"
+        response = self.client.delete(url, headers={"authorization": self.auth})
+
+        if self.level < PermissionLevel.ADMIN:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"]
+
+        # Verify deletion
+        assert not StationResource.objects.filter(id=resource.id).exists()
+
+    def test_delete_resource_with_file(self) -> None:
+        """Test deleting a resource also removes the file."""
+        resource = StationResource.objects.create(
+            resource_type=StationResource.ResourceType.PHOTO,
+            title="Photo to Delete",
+            file=self._create_test_image(),
+            created_by=self.user,
+            station=self.station,
+        )
+        resource_id = resource.id
+
+        url = f"/api/v1/resources/{resource.id}/"
+        response = self.client.delete(url, headers={"authorization": self.auth})
+
+        if self.level < PermissionLevel.ADMIN:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_200_OK
+
+        # Verify resource is deleted
+        assert not StationResource.objects.filter(id=resource_id).exists()
+
+    def test_resource_ordering(self) -> None:
+        """Test resources are returned in correct order by modified date."""
+        # Create resources with different modified times
+        StationResource.objects.create(
+            resource_type=StationResource.ResourceType.NOTE,
+            title="Third",
+            text_content="3",
+            created_by=self.user,
+            station=self.station,
+        )
+        StationResource.objects.create(
+            resource_type=StationResource.ResourceType.NOTE,
+            title="First",
+            text_content="1",
+            created_by=self.user,
+            station=self.station,
+        )
+        StationResource.objects.create(
+            resource_type=StationResource.ResourceType.NOTE,
+            title="Second",
+            text_content="2",
+            created_by=self.user,
+            station=self.station,
+        )
+
+        response = self.client.get(
+            f"{self.resource_url}?station_id={self.station.id}",
+            headers={"authorization": self.auth},
+        )
+
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_200_OK
+
+        resources = response.data["data"]["resources"]
+
+        # Resources should be ordered by most recent modified date
+        # Since r2 was created last, it should be first
+        assert resources[0]["title"] == "Second"
+        assert resources[1]["title"] == "First"
+        assert resources[2]["title"] == "Third"
+
+
+class TestUnauthenticatedStationResourceAPIAuthentication(BaseAPIProjectTestCase):
     """Test authentication requirements for station resource API endpoints."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
     station: Station
 
     def setUp(self) -> None:
@@ -37,16 +514,14 @@ class TestStationResourceAPIAuthentication(BaseAPIProjectTestCase):
                 "api:v1:resource-list-create",
             )
         )
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ]
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_resource_create_requires_authentication(self) -> None:
         """Test that resource create endpoint requires authentication."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "note",
+            "resource_type": StationResource.ResourceType.NOTE,
             "title": "Test Note",
             "text_content": "This is a test note",
         }
@@ -56,116 +531,68 @@ class TestStationResourceAPIAuthentication(BaseAPIProjectTestCase):
             ),
             data=data,
         )
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ]
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
-    station: Station
-
     """Test permission requirements for station resource API endpoints."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
+    station: Station
+
     def setUp(self) -> None:
         super().setUp()
+        self.set_test_project_permission(
+            level=self.level, permission_type=self.permission_type
+        )
         self.station = StationFactory.create(project=self.project)
 
-    @parameterized.expand([PermissionLevel.WEB_VIEWER, PermissionLevel.READ_ONLY])
-    def test_resource_create_forbidden_for_readonly_permissions(
-        self, level: PermissionLevel
-    ) -> None:
+    def test_resource_create_permissions(self) -> None:
         """Test that readonly permissions cannot create resources."""
-        self.set_test_project_permission(level=level)
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "note",
+            "resource_type": StationResource.ResourceType.NOTE,
             "title": "Test Note",
             "text_content": "This is a test note",
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    @parameterized.expand([PermissionLevel.READ_AND_WRITE, PermissionLevel.ADMIN])
-    def test_resource_create_allowed_for_write_permissions(
-        self, level: PermissionLevel
-    ) -> None:
-        """Test that write permissions can create resources."""
-        self.set_test_project_permission(level=level)
-
-        data = {
-            "station_id": str(self.station.id),
-            "resource_type": "note",
-            "title": "Test Note",
-            "text_content": "This is a test note",
-        }
-
-        auth = self.header_prefix + self.token.key
-        response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
-            data=data,
-            headers={"authorization": auth},
+        assert (
+            response.status_code == status.HTTP_403_FORBIDDEN
+            if self.level < PermissionLevel.READ_AND_WRITE
+            else status.HTTP_201_CREATED
         )
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-    def test_resource_wrong_station(self) -> None:
-        """Test that users cannot create resources on stations from projects they don't
-        have access to."""
-        # Create another project and station that the user doesn't have access to
-
-        other_project = ProjectFactory.create()  # No permissions granted to self.user
-        other_station = StationFactory.create(project=other_project)
-
-        # Try to create a resource on the other station
-        data = {
-            "station_id": str(other_station.id),
-            "resource_type": "note",
-            "title": "Unauthorized Resource",
-            "text_content": "This should not be allowed",
-        }
-
-        auth = self.header_prefix + self.token.key
-        response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
-            data=data,
-            headers={"authorization": auth},
-        )
-
-        # Should be forbidden since user has no permissions on the other project
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-        # Verify no resource was created
-        assert not StationResource.objects.filter(station=other_station).exists()
-
-
-class TestStationResourceCRUD(BaseAPIProjectTestCase):
-    """Test CRUD operations for station resources."""
-
-    def setUp(self) -> None:
-        super().setUp()
-        self.set_test_project_permission(level=PermissionLevel.ADMIN)
-        self.station = StationFactory.create(project=self.project)
 
     def test_create_note_resource(self) -> None:
         """Test creating a note resource."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "note",
+            "resource_type": StationResource.ResourceType.NOTE,
             "title": "Cave Survey Notes",
             "description": "Detailed observations from the survey",
             "text_content": (
@@ -174,19 +601,22 @@ class TestStationResourceCRUD(BaseAPIProjectTestCase):
             ),
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_201_CREATED
 
         resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == "note"
+        assert resource_data["resource_type"] == StationResource.ResourceType.NOTE
         assert resource_data["title"] == "Cave Survey Notes"
         assert resource_data["text_content"] == data["text_content"]
 
@@ -199,57 +629,64 @@ class TestStationResourceCRUD(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "sketch",
+            "resource_type": StationResource.ResourceType.SKETCH,
             "title": "Cave Entrance Sketch",
             "description": "Hand-drawn sketch of the cave entrance",
             "text_content": svg_content,
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_201_CREATED
 
         resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == "sketch"
+        assert resource_data["resource_type"] == StationResource.ResourceType.SKETCH
         assert resource_data["title"] == "Cave Entrance Sketch"
         assert svg_content in resource_data["text_content"]
 
     def test_create_photo_resource_with_file(self) -> None:
         """Test creating a photo resource with file upload."""
         # Create a fake image file
-        image_content = b"fake_image_content_for_testing"
         image_file = SimpleUploadedFile(
-            "test_photo.jpg", image_content, content_type="image/jpeg"
+            "test_photo.jpg",
+            Path("/app/speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
+            content_type="image/jpeg",
         )
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "photo",
+            "resource_type": StationResource.ResourceType.PHOTO,
             "title": "Cave Entrance Photo",
             "description": "Photo taken at the main entrance",
             "file": image_file,
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_201_CREATED
 
         resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == "photo"
+        assert resource_data["resource_type"] == StationResource.ResourceType.PHOTO
         assert resource_data["title"] == "Cave Entrance Photo"
         assert resource_data["file"] is not None
 
@@ -262,14 +699,17 @@ class TestStationResourceCRUD(BaseAPIProjectTestCase):
             PhotoStationResourceFactory.create(station=self.station),
         ]
 
-        auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse(
                 "api:v1:resource-list-create",
             )
             + f"?station_id={self.station.id}",
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["data"]["resources"]) == 3  # noqa: PLR2004
@@ -287,14 +727,17 @@ class TestStationResourceCRUD(BaseAPIProjectTestCase):
             text_content="This is a detailed note about the cave survey.",
         )
 
-        auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse(
                 "api:v1:resource-detail",
                 kwargs={"id": resource.id},
             ),
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -313,15 +756,18 @@ class TestStationResourceCRUD(BaseAPIProjectTestCase):
             "text_content": "Updated note content with more details.",
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.patch(
             reverse(
                 "api:v1:resource-detail",
                 kwargs={"id": resource.id},
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -337,14 +783,17 @@ class TestStationResourceCRUD(BaseAPIProjectTestCase):
         resource = NoteStationResourceFactory.create(station=self.station)
         resource_id = resource.id
 
-        auth = self.header_prefix + self.token.key
         response = self.client.delete(
             reverse(
                 "api:v1:resource-detail",
                 kwargs={"id": resource.id},
             ),
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.ADMIN:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK
         assert "message" in response.data["data"]
@@ -354,30 +803,54 @@ class TestStationResourceCRUD(BaseAPIProjectTestCase):
         assert not StationResource.objects.filter(id=resource_id).exists()
 
 
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestStationResourceValidation(BaseAPIProjectTestCase):
     """Test validation for station resource data."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
+    station: Station
+
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(level=PermissionLevel.ADMIN)
+        self.set_test_project_permission(
+            level=self.level, permission_type=self.permission_type
+        )
         self.station = StationFactory.create(project=self.project)
 
     def test_create_resource_missing_title(self) -> None:
         """Test creating a resource without a title."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "note",
+            "resource_type": StationResource.ResourceType.NOTE,
             "text_content": "Note without title",
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "title" in response.data["errors"]
@@ -391,30 +864,48 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
             "text_content": "This has an invalid type",
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "resource_type" in response.data["errors"]
 
     @parameterized.expand(
         [
-            ("photo", "test.jpg", "image/jpeg"),
-            ("video", "test.mp4", "video/mp4"),
-            ("document", "test.pdf", "application/pdf"),
+            (StationResource.ResourceType.PHOTO, "test.jpg", "image/jpeg"),
+            (StationResource.ResourceType.VIDEO, "test.mp4", "video/mp4"),
+            (StationResource.ResourceType.DOCUMENT, "test.pdf", "application/pdf"),
         ]
     )
     def test_create_file_based_resources(
         self, resource_type: str, filename: str, content_type: str
     ) -> None:
         """Test creating file-based resources."""
-        file_content = b"fake_file_content_for_testing"
+        match resource_type:
+            case StationResource.ResourceType.PHOTO:
+                file_content = Path(
+                    "speleodb/api/v1/tests/artifacts/image.jpg"
+                ).read_bytes()
+            case StationResource.ResourceType.VIDEO:
+                file_content = Path(
+                    "/app/speleodb/api/v1/tests/artifacts/video.mp4"
+                ).read_bytes()
+            case StationResource.ResourceType.DOCUMENT:
+                file_content = Path(
+                    "speleodb/api/v1/tests/artifacts/document.pdf"
+                ).read_bytes()
+            case _:
+                raise ValueError(f"Unexpected value received: {resource_type}")
+
         uploaded_file = SimpleUploadedFile(filename, file_content, content_type)
 
         data = {
@@ -425,14 +916,17 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
             "file": uploaded_file,
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -445,29 +939,53 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
         long_title = "A" * 201  # Exceeds max length of 200
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "note",
+            "resource_type": StationResource.ResourceType.NOTE,
             "title": long_title,
             "text_content": "Note with very long title",
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestStationResourceFileHandling(BaseAPIProjectTestCase):
     """Test file handling for station resources."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
+    station: Station
+
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(level=PermissionLevel.ADMIN)
+        self.set_test_project_permission(
+            level=self.level, permission_type=self.permission_type
+        )
         self.station = StationFactory.create(project=self.project)
 
     def test_file_upload_with_checksum_verification(self) -> None:
@@ -482,20 +1000,23 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "document",
+            "resource_type": StationResource.ResourceType.DOCUMENT,
             "title": "Checksum Test Document",
             "description": "Document for testing file integrity",
             "file": uploaded_file,
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -523,27 +1044,26 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "document",
+            "resource_type": StationResource.ResourceType.DOCUMENT,
             "title": "Large Test File",
             "description": "Testing large file upload",
             "file": uploaded_file,
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
 
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
         # Should either succeed or fail gracefully
-        assert response.status_code in [
-            status.HTTP_201_CREATED,
-            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            status.HTTP_400_BAD_REQUEST,
-        ]
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_invalid_file_extension(self) -> None:
         """Test uploading file with invalid extension."""
@@ -556,20 +1076,23 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "document",
+            "resource_type": StationResource.ResourceType.DOCUMENT,
             "title": "Invalid File Type",
             "description": "Testing invalid file extension",
             "file": uploaded_file,
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
+
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -583,130 +1106,192 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": "document",
+            "resource_type": StationResource.ResourceType.DOCUMENT,
             "title": "Empty File",
             "description": "Testing empty file upload",
             "file": uploaded_file,
         }
 
-        auth = self.header_prefix + self.token.key
         response = self.client.post(
             reverse(
                 "api:v1:resource-list-create",
             ),
             data=data,
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
 
-        # Should handle empty files gracefully
-        assert response.status_code in [
-            status.HTTP_201_CREATED,
-            status.HTTP_400_BAD_REQUEST,
-        ]
+        if self.level < PermissionLevel.READ_AND_WRITE:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestStationResourceFuzzing(BaseAPIProjectTestCase):
     """Fuzzy testing for station resource API endpoints."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
+    station: Station
+
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(level=PermissionLevel.ADMIN)
+        self.set_test_project_permission(
+            level=self.level, permission_type=self.permission_type
+        )
         self.station = StationFactory.create(project=self.project)
         self.faker = Faker()
 
     def test_fuzz_resource_data(self) -> None:
         """Test resource creation with various data types."""
-        auth = self.header_prefix + self.token.key
 
         # Test with various data combinations
         fuzz_data_sets = [
             # Valid note data
             {
-                "resource_type": "note",
+                "resource_type": StationResource.ResourceType.NOTE,
                 "title": self.faker.sentence(),
                 "text_content": self.faker.paragraph(),
             },
             # Edge case titles
             {
-                "resource_type": "note",
+                "resource_type": StationResource.ResourceType.NOTE,
                 "title": "A" * 200,  # Max length
                 "text_content": "Test",
             },
             # Special characters in text
             {
-                "resource_type": "note",
+                "resource_type": StationResource.ResourceType.NOTE,
                 "title": "Special Characters: !@#$%^&*()",
                 "text_content": "<script>alert('xss')</script>",
             },
             # Unicode content
             {
-                "resource_type": "note",
+                "resource_type": StationResource.ResourceType.NOTE,
                 "title": "Unicode Test: 中文测试 🎉",
                 "text_content": "Unicode content: αβγδε",
             },
             # Very long text content
             {
-                "resource_type": "note",
+                "resource_type": StationResource.ResourceType.NOTE,
                 "title": "Long Content Test",
                 "text_content": self.faker.text(max_nb_chars=10000),
             },
             # SVG sketch content
             {
-                "resource_type": "sketch",
+                "resource_type": StationResource.ResourceType.SKETCH,
                 "title": "SVG Test",
                 "text_content": '<svg><rect x="0" y="0" width="100" height="100"/></svg>',  # noqa: E501
             },
             # Malformed SVG
             {
-                "resource_type": "sketch",
+                "resource_type": StationResource.ResourceType.SKETCH,
                 "title": "Malformed SVG",
                 "text_content": '<svg><rect x="0" y="0" width="100"',  # Incomplete
             },
         ]
 
-        for i, data in enumerate(fuzz_data_sets):
+        for idx, data in enumerate(fuzz_data_sets):
+            data.update({"station_id": str(self.station.id)})
             response = self.client.post(
                 reverse(
                     "api:v1:resource-list-create",
                 ),
                 data=data,
-                headers={"authorization": auth},
+                headers={"authorization": self.auth},
             )
 
-            # Should either succeed or fail gracefully
-            assert response.status_code in [
-                status.HTTP_201_CREATED,
-                status.HTTP_400_BAD_REQUEST,
-            ], f"Failed on dataset {i}: {data}"
+            if self.level < PermissionLevel.READ_AND_WRITE:
+                assert response.status_code == status.HTTP_403_FORBIDDEN
+                continue
 
-    def test_fuzz_file_uploads(self) -> None:
+            assert response.status_code == status.HTTP_201_CREATED, idx
+
+    def test_fuzz_file_uploads_errors(self) -> None:
         """Test file uploads with various file types and content."""
-        auth = self.header_prefix + self.token.key
 
         # Test various file scenarios
         file_tests = [
             # Valid image file
-            ("photo", "test.jpg", b"fake_jpeg_content", "image/jpeg"),
+            (
+                StationResource.ResourceType.PHOTO,
+                "test.jpg",
+                Path("/app/speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
+                "image/jpeg",
+                status.HTTP_201_CREATED,
+            ),
             # Valid video file
-            ("video", "test.mp4", b"fake_mp4_content", "video/mp4"),
-            # Valid document
-            ("document", "test.pdf", b"fake_pdf_content", "application/pdf"),
-            # File with wrong extension for content type
-            ("photo", "test.jpg", b"not_really_an_image", "text/plain"),
-            # Very long filename
-            ("document", "a" * 200 + ".txt", b"content", "text/plain"),
+            (
+                StationResource.ResourceType.VIDEO,
+                "test.mp4",
+                Path("/app/speleodb/api/v1/tests/artifacts/video.mp4").read_bytes(),
+                "video/mp4",
+                status.HTTP_201_CREATED,
+            ),
+            # Invalid file extension
+            (
+                StationResource.ResourceType.PHOTO,
+                "test.jpoog",
+                Path("/app/speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
+                "image/jpeg",
+                status.HTTP_400_BAD_REQUEST,
+            ),
+            # Invalid file extension
+            (
+                StationResource.ResourceType.PHOTO,
+                "test.jpg",
+                b"image",
+                "image/jpeg",
+                status.HTTP_400_BAD_REQUEST,
+            ),
+            # Filename too long
+            (
+                StationResource.ResourceType.DOCUMENT,
+                "a" * 200 + ".pdf",
+                Path("speleodb/api/v1/tests/artifacts/document.pdf").read_bytes(),
+                "application/pdf",
+                status.HTTP_400_BAD_REQUEST,
+            ),
             # Special characters in filename
             (
-                "document",
-                "test file with spaces & symbols!.txt",
-                b"content",
-                "text/plain",
+                StationResource.ResourceType.DOCUMENT,
+                "test file with spaces & symbols!.pdf",
+                Path("speleodb/api/v1/tests/artifacts/document.pdf").read_bytes(),
+                "application/pdf",
+                status.HTTP_201_CREATED,
             ),
             # Unicode filename
-            ("document", "测试文件.txt", b"content", "text/plain"),
+            (
+                StationResource.ResourceType.DOCUMENT,
+                "测试文件.pdf",
+                Path("speleodb/api/v1/tests/artifacts/document.pdf").read_bytes(),
+                "application/pdf",
+                status.HTTP_201_CREATED,
+            ),
         ]
 
-        for resource_type, filename, content, content_type in file_tests:
+        for idx, (
+            resource_type,
+            filename,
+            content,
+            content_type,
+            expected_status,
+        ) in enumerate(file_tests):
             uploaded_file = SimpleUploadedFile(filename, content, content_type)
 
             data = {
@@ -721,11 +1306,11 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
                     "api:v1:resource-list-create",
                 ),
                 data=data,
-                headers={"authorization": auth},
+                headers={"authorization": self.auth},
             )
 
-            # Should handle all file types gracefully
-            assert response.status_code in [
-                status.HTTP_201_CREATED,
-                status.HTTP_400_BAD_REQUEST,
-            ]
+            if self.level < PermissionLevel.READ_AND_WRITE:
+                assert response.status_code == status.HTTP_403_FORBIDDEN
+                continue
+
+            assert response.status_code == expected_status, idx

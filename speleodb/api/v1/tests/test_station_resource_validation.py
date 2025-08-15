@@ -10,6 +10,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models.permission_lvl import PermissionLevel
@@ -21,7 +22,9 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
     def setUp(self) -> None:
         """Set up test data."""
         super().setUp()
-        self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
+        self.set_test_project_permission(
+            PermissionLevel.READ_AND_WRITE, PermissionType.USER
+        )
         self.station = Station.objects.create(
             project=self.project,
             name="Test Station",
@@ -196,7 +199,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
             "/api/v1/resources/",
             {
                 "station_id": str(self.station.id),
-                "resource_type": "photo",
+                "resource_type": StationResource.ResourceType.PHOTO,
                 "title": "Test Photo",
                 "file": self.create_test_file("test.mp4"),
             },
@@ -220,7 +223,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 "/api/v1/resources/",
                 {
                     "station_id": str(self.station.id),
-                    "resource_type": "photo",
+                    "resource_type": StationResource.ResourceType.PHOTO,
                     "title": "Test Photo",
                     "file": SimpleUploadedFile(
                         "photo.jpg", f.read(), content_type="image/jpeg"
@@ -237,7 +240,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 "/api/v1/resources/",
                 {
                     "station_id": str(self.station.id),
-                    "resource_type": "photo",
+                    "resource_type": StationResource.ResourceType.PHOTO,
                     "title": "Test Photo",
                     "file": SimpleUploadedFile(
                         "video.mp4", f.read(), content_type="video/mp4"

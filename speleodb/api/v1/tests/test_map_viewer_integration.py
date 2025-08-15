@@ -10,12 +10,15 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import pytest
 from django.test import TransactionTestCase
 from django.urls import reverse
+from parameterized.parameterized import parameterized_class
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
@@ -24,14 +27,37 @@ from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models import UserPermission
 from speleodb.users.tests.factories import UserFactory
+from speleodb.utils.test_utils import named_product
 
 
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
 class TestMapViewerIntegration(BaseAPIProjectTestCase):
     """Test all functionality used by the map viewer frontend."""
 
+    level: PermissionLevel
+    permission_type: PermissionType
+
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
+
+        self.set_test_project_permission(
+            level=self.level,
+            permission_type=self.permission_type,
+        )
         self.auth = self.header_prefix + self.token.key
 
     def test_station_creation_workflow(self) -> None:
@@ -53,7 +79,23 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == status.HTTP_201_CREATED
+        if self.level not in [
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+        ]:
+            # Read-only and web viewer users cannot create stations
+            assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                self.level,
+                self.permission_type,
+            )
+            return
+
+        # Admin and write users can create stations
+        assert response.status_code == status.HTTP_201_CREATED, (
+            self.level,
+            self.permission_type,
+        )
+
         station_data_response = response.data["data"]["station"]
 
         # Verify station data matches frontend expectations
@@ -114,7 +156,21 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        if self.level not in [
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+        ]:
+            # Read-only and web viewer users cannot create stations
+            assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                self.level,
+                self.permission_type,
+            )
+            return
+
+        assert response.status_code == status.HTTP_200_OK, (
+            self.level,
+            self.permission_type,
+        )
         updated_station = response.data["data"]["station"]
 
         # Verify updated coordinates
@@ -126,6 +182,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         assert float(station.latitude) == new_latitude
         assert float(station.longitude) == new_longitude
 
+    @pytest.mark.skip_if_lighttest
     def test_station_with_resources_workflow(self) -> None:
         """Test the complete workflow of a station with multiple resources."""
         # Create station with demo resources (as fixtures would create)
@@ -138,17 +195,27 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
-        station_data = response.data["data"]["station"]
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                self.level,
+                self.permission_type,
+            )
 
-        # Verify station includes all resources
-        assert station_data["resource_count"] == len(resources)
-        assert len(station_data["resources"]) == len(resources)
+        else:
+            assert response.status_code == status.HTTP_200_OK, (
+                self.level,
+                self.permission_type,
+            )
+            station_data = response.data["data"]["station"]
 
-        # Test each resource type
-        resource_types = {r["resource_type"] for r in station_data["resources"]}
-        expected_types = {"photo", "note", "sketch", "video"}
-        assert resource_types == expected_types
+            # Verify station includes all resources
+            assert station_data["resource_count"] == len(resources)
+            assert len(station_data["resources"]) == len(resources)
+
+            # Test each resource type
+            resource_types = {r["resource_type"] for r in station_data["resources"]}
+            expected_types = {r.resource_type for r in resources}
+            assert resource_types == expected_types
 
         # Test map display includes resource count
         response = self.client.get(
@@ -157,18 +224,28 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
-        feature = response.data["data"]["features"][0]
-        assert feature["properties"]["resource_count"] == len(resources)
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                self.level,
+                self.permission_type,
+            )
 
-    def test_station_resource_creation_workflow(self) -> None:
+        else:
+            assert response.status_code == status.HTTP_200_OK, (
+                self.level,
+                self.permission_type,
+            )
+            feature = response.data["data"]["features"][0]
+            assert feature["properties"]["resource_count"] == len(resources)
+
+    def test_station_resource_creation_workflow_note(self) -> None:
         """Test creating new resources for a station (as frontend upload would do)."""
         station = StationFactory.create(project=self.project)
 
         # Test creating a note resource - MUST use JSON
         note_data = {
             "station_id": str(station.id),
-            "resource_type": "note",
+            "resource_type": StationResource.ResourceType.NOTE,
             "title": "Survey Notes from Frontend",
             "description": "Notes added via the station modal",
             "text_content": (
@@ -184,7 +261,21 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == status.HTTP_201_CREATED
+        if self.level not in [
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+        ]:
+            # Read-only and web viewer users cannot create resources
+            assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                self.level,
+                self.permission_type,
+            )
+            return
+
+        assert response.status_code == status.HTTP_201_CREATED, (
+            self.level,
+            self.permission_type,
+        )
         resource_data = response.data["data"]["resource"]
 
         # Verify resource data
@@ -195,10 +286,23 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         assert "id" in resource_data
         assert "created_by_email" in resource_data
 
+        # Verify station now has 1 resource
+        assert (
+            StationResource.objects.filter(
+                station=station,
+                resource_type=StationResource.ResourceType.NOTE,
+            ).count()
+            == 1
+        )
+
+    def test_station_resource_creation_workflow_sketch(self) -> None:
+        """Test creating new resources for a station (as frontend upload would do)."""
+        station = StationFactory.create(project=self.project)
+
         # Test creating a sketch resource - MUST use JSON
         sketch_data = {
             "station_id": str(station.id),
-            "resource_type": "sketch",
+            "resource_type": StationResource.ResourceType.SKETCH,
             "title": "Cave Cross-Section",
             "description": "Hand-drawn diagram of the passage",
             "text_content": """<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
@@ -216,41 +320,68 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == status.HTTP_201_CREATED
+        if self.level not in [
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+        ]:
+            # Read-only and web viewer users cannot create resources
+            assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                self.level,
+                self.permission_type,
+            )
+            return
 
-        # Verify station now has 2 resources
-        response = self.client.get(
-            reverse("api:v1:station-detail", kwargs={"id": station.id}),
-            headers={"authorization": self.auth},
+        assert response.status_code == status.HTTP_201_CREATED, (
+            self.level,
+            self.permission_type,
         )
 
-        assert response.status_code == status.HTTP_200_OK
-        station_data = response.data["data"]["station"]
-        assert station_data["resource_count"] == 2  # noqa: PLR2004
+        # Verify station now has 1 resource
+        assert (
+            StationResource.objects.filter(
+                station=station,
+                resource_type=StationResource.ResourceType.SKETCH,
+            ).count()
+            == 1
+        )
 
+    @pytest.mark.skip_if_lighttest
     def test_station_deletion_workflow(self) -> None:
         """Test deleting a station and its resources (as frontend delete would do)."""
         # Create station with resources
         station = StationFactory.create(project=self.project)
         resources = StationResourceFactory.create_demo_resources(station)
-        station_id = station.id
 
         # Verify station exists with resources
-        assert Station.objects.filter(id=station_id).exists()
+        assert Station.objects.filter(id=station.id).exists()
         assert StationResource.objects.filter(station=station).count() == len(resources)
 
         # Delete station via API
         response = self.client.delete(
-            reverse("api:v1:station-detail", kwargs={"id": station_id}),
+            reverse("api:v1:station-detail", kwargs={"id": station.id}),
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        if self.level not in [
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+        ]:
+            # Read-only and web viewer users cannot create resources
+            assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                self.level,
+                self.permission_type,
+            )
+            return
+
+        assert response.status_code == status.HTTP_200_OK, (
+            self.level,
+            self.permission_type,
+        )
         assert "deleted successfully" in response.data["data"]["message"]
 
         # Verify station and all resources are deleted
-        assert not Station.objects.filter(id=station_id).exists()
-        assert StationResource.objects.filter(station_id=station_id).count() == 0
+        assert not Station.objects.filter(id=station.id).exists()
+        assert StationResource.objects.filter(station_id=station.id).count() == 0
 
         # Verify station no longer appears in map data
         response = self.client.get(
@@ -311,22 +442,34 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
-        geojson_data = response.data["data"]
-        assert len(geojson_data["features"]) == 3  # noqa: PLR2004
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                self.level,
+                self.permission_type,
+            )
 
-        # Verify each station in the map data
-        features_by_name = {
-            f["properties"]["name"]: f for f in geojson_data["features"]
-        }
+        else:
+            assert response.status_code == status.HTTP_200_OK, (
+                self.level,
+                self.permission_type,
+            )
+            geojson_data = response.data["data"]
+            assert len(geojson_data["features"]) == 3  # noqa: PLR2004
 
-        for i, station_data in enumerate(stations_data):
-            feature = features_by_name[station_data["name"]]
-            assert feature["geometry"]["coordinates"] == [
-                float(station_data["longitude"]),  # type: ignore[arg-type]
-                float(station_data["latitude"]),  # type: ignore[arg-type]
-            ]
-            assert feature["properties"]["resource_count"] == i + 1  # 1, 2, 3 resources
+            # Verify each station in the map data
+            features_by_name = {
+                f["properties"]["name"]: f for f in geojson_data["features"]
+            }
+
+            for i, station_data in enumerate(stations_data):
+                feature = features_by_name[station_data["name"]]
+                assert feature["geometry"]["coordinates"] == [
+                    float(station_data["longitude"]),  # type: ignore[arg-type]
+                    float(station_data["latitude"]),  # type: ignore[arg-type]
+                ]
+                assert (
+                    feature["properties"]["resource_count"] == i + 1
+                )  # 1, 2, 3 resources
 
         # Test station list API
         response = self.client.get(
@@ -335,7 +478,17 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert response.status_code == status.HTTP_200_OK
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                self.level,
+                self.permission_type,
+            )
+            return
+
+        assert response.status_code == status.HTTP_200_OK, (
+            self.level,
+            self.permission_type,
+        )
         stations_list = response.data["data"]["stations"]
         assert len(stations_list) == 3  # noqa: PLR2004
 
@@ -345,27 +498,45 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             _station = stations_by_name[station_data["name"]]
             assert _station["resource_count"] == i + 1
 
-    def test_station_permissions_workflow(self) -> None:
+    def test_station_permissions_read(self) -> None:
         """Test station operations with different permission levels."""
         station = StationFactory.create(project=self.project)
 
-        # Test with READ_ONLY permissions
-        self.set_test_project_permission(PermissionLevel.READ_ONLY)
-        readonly_auth = self.header_prefix + self.token.key
+        expected_status = (
+            status.HTTP_200_OK
+            if self.level != PermissionLevel.WEB_VIEWER
+            else status.HTTP_403_FORBIDDEN
+        )
 
         # Read operations should work
         response = self.client.get(
             reverse("api:v1:stations-map"),
             {"project_id": str(self.project.id)},
-            headers={"authorization": readonly_auth},
+            headers={"authorization": self.auth},
         )
-        assert response.status_code == status.HTTP_200_OK
+
+        assert response.status_code == expected_status, (
+            self.level,
+            self.permission_type,
+        )
 
         response = self.client.get(
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
-            headers={"authorization": readonly_auth},
+            headers={"authorization": self.auth},
         )
-        assert response.status_code == status.HTTP_200_OK
+
+        assert response.status_code == expected_status, (
+            self.level,
+            self.permission_type,
+        )
+
+    def test_station_permissions_post(self) -> None:
+        """Test station operations with different permission levels."""
+        expected_status = (
+            status.HTTP_201_CREATED
+            if self.level not in [PermissionLevel.WEB_VIEWER, PermissionLevel.READ_ONLY]
+            else status.HTTP_403_FORBIDDEN
+        )
 
         # Write operations should fail - MUST use JSON
         response = self.client.post(
@@ -379,23 +550,54 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
                 }
             ),
             content_type="application/json",
-            headers={"authorization": readonly_auth},
+            headers={"authorization": self.auth},
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+        assert response.status_code == expected_status, (
+            self.level,
+            self.permission_type,
+        )
+
+    def test_station_permissions_patch(self) -> None:
+        """Test station operations with different permission levels."""
+        expected_status = (
+            status.HTTP_200_OK
+            if self.level not in [PermissionLevel.WEB_VIEWER, PermissionLevel.READ_ONLY]
+            else status.HTTP_403_FORBIDDEN
+        )
+
+        station = StationFactory.create(project=self.project)
 
         response = self.client.patch(
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
             data=json.dumps({"latitude": "2.0"}),
             content_type="application/json",
-            headers={"authorization": readonly_auth},
+            headers={"authorization": self.auth},
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+        assert response.status_code == expected_status, (
+            self.level,
+            self.permission_type,
+        )
+
+    def test_station_permissions_delete(self) -> None:
+        """Test station operations with different permission levels."""
+
+        station = StationFactory.create(project=self.project)
 
         response = self.client.delete(
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
-            headers={"authorization": readonly_auth},
+            headers={"authorization": self.auth},
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+        assert response.status_code == (
+            status.HTTP_200_OK
+            if self.level == PermissionLevel.ADMIN
+            else status.HTTP_403_FORBIDDEN
+        ), (
+            self.level,
+            self.permission_type,
+        )
 
 
 class TestMapViewerWithFixtures(TransactionTestCase):
@@ -415,6 +617,7 @@ class TestMapViewerWithFixtures(TransactionTestCase):
             target=self.user, project=self.project, level=PermissionLevel.READ_AND_WRITE
         )
 
+    @pytest.mark.skip_if_lighttest
     def test_realistic_cave_survey_scenario(self) -> None:
         """Test a realistic cave survey scenario with demo stations and resources."""
         # Create demo stations as they would appear in a real cave survey
@@ -473,7 +676,12 @@ class TestMapViewerWithFixtures(TransactionTestCase):
         assert len(station_data["resources"]) == 4  # noqa: PLR2004
 
         resource_types = {r["resource_type"] for r in station_data["resources"]}
-        assert resource_types == {"photo", "note", "sketch", "video"}
+        assert resource_types == {
+            StationResource.ResourceType.PHOTO,
+            StationResource.ResourceType.NOTE,
+            StationResource.ResourceType.SKETCH,
+            StationResource.ResourceType.VIDEO,
+        }
 
     def test_station_creation_with_realistic_names(self) -> None:
         """Test creating stations with realistic cave survey names."""

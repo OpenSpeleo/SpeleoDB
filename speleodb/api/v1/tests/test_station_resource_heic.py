@@ -9,6 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models.permission_lvl import PermissionLevel
@@ -20,7 +21,9 @@ class TestHEICSupport(BaseAPIProjectTestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(PermissionLevel.READ_AND_WRITE)
+        self.set_test_project_permission(
+            PermissionLevel.READ_AND_WRITE, PermissionType.USER
+        )
 
         # Create test station
         self.station = Station.objects.create(

@@ -17,6 +17,7 @@ from django.db.models import QuerySet
 from django.utils.html import format_html
 
 from speleodb.surveys.models import Format
+from speleodb.surveys.models import GeoJSON
 from speleodb.surveys.models import Mutex
 from speleodb.surveys.models import PluginRelease
 from speleodb.surveys.models import PointOfInterest
@@ -403,3 +404,32 @@ class StationResourceAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 request, "UUID has been regenerated.", level=messages.SUCCESS
             )
         super().save_model(request, obj, form, change)
+
+
+@admin.register(GeoJSON)
+class GeoJSONAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "project",
+        "commit_sha",
+        "creation_date",
+    )
+    readonly_fields = (
+        "creation_date",
+        "modified_date",
+    )
+    fields = (
+        "project",
+        "commit_sha",
+        "file",
+        "creation_date",
+        "modified_date",
+    )
+    # form = GeoJSONAdminForm
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: GeoJSON | None = None
+    ) -> bool:
+        # Immutable: no edits after creation
+        if obj is not None:
+            return False
+        return super().has_change_permission(request, obj)

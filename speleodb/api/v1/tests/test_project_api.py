@@ -4,40 +4,67 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
 from django.conf import settings
 from django.urls import reverse
 from parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
+from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.surveys.models import Mutex
 from speleodb.surveys.models import PermissionLevel
+from speleodb.utils.test_utils import named_product
 
 
-class TestProjectInteraction(BaseAPIProjectTestCase):
-    @parameterized.expand(
-        [
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
             PermissionLevel.ADMIN,
             PermissionLevel.READ_AND_WRITE,
             PermissionLevel.READ_ONLY,
-        ]
-    )
-    def test_get_user_project(self, level: PermissionLevel) -> None:
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
+class TestProjectInteraction(BaseAPIProjectTestCase):
+    level: PermissionLevel
+    permission_type: PermissionType
+
+    test_geojson: dict[str, Any] = {}
+
+    def setUp(self) -> None:
+        super().setUp()
+
+        self.set_test_project_permission(
+            level=self.level,
+            permission_type=self.permission_type,
+        )
+
+    def test_get_user_project(self) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
-
-        self.set_test_project_permission(level=level)
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse("api:v1:one_project_apiview", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
+
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK, response.data
 
@@ -79,19 +106,11 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
                     commit_data["committer_name"] == settings.DJANGO_GIT_COMMITTER_NAME
                 ), commit_data["committer_name"]
 
-    @parameterized.expand(
-        [
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-        ]
-    )
-    def test_acquire_and_release_user_project(self, level: PermissionLevel) -> None:
+    def test_acquire_and_release_user_project(self) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
-
-        self.set_test_project_permission(level=level)
 
         # =================== ACQUIRE PROJECT =================== #
 
@@ -102,6 +121,13 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
                 reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
                 headers={"authorization": auth},
             )
+
+            if self.level not in [
+                PermissionLevel.ADMIN,
+                PermissionLevel.READ_AND_WRITE,
+            ]:
+                assert response.status_code == status.HTTP_403_FORBIDDEN
+                return
 
             assert response.status_code == status.HTTP_200_OK, response.data
 
@@ -154,16 +180,11 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             }
             assert response.data["data"]["active_mutex"] is None, response.data
 
-    @parameterized.expand([PermissionLevel.ADMIN, PermissionLevel.READ_AND_WRITE])
-    def test_acquire_and_release_user_project_with_comment(
-        self, level: PermissionLevel
-    ) -> None:
+    def test_acquire_and_release_user_project_with_comment(self) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
-
-        self.set_test_project_permission(level=level)
 
         # =================== ACQUIRE PROJECT =================== #
 
@@ -172,6 +193,13 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
+
+        if self.level not in [
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+        ]:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            return
 
         assert response.status_code == status.HTTP_200_OK, response.data
 
@@ -233,18 +261,16 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
         assert mutex.closing_user == self.user, (mutex, self.user)
         assert not mutex.is_active
 
-    @parameterized.expand(
-        [
-            PermissionLevel.READ_ONLY,
-        ]
-    )
-    def test_fail_acquire_readonly_project(self, level: PermissionLevel) -> None:
+    def test_fail_acquire_readonly_project(self) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
 
-        self.set_test_project_permission(level=level)
+        if self.level > PermissionLevel.READ_ONLY:
+            pytest.skip(
+                "This test is only for READ_ONLY or WEB_VIEWER permission level."
+            )
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -255,18 +281,16 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
         assert not response.data["success"], response.data
 
-    @parameterized.expand(
-        [
-            PermissionLevel.READ_ONLY,
-        ]
-    )
-    def test_fail_release_readonly_project(self, level: PermissionLevel) -> None:
+    def test_fail_release_readonly_project(self) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
 
-        self.set_test_project_permission(level=level)
+        if self.level > PermissionLevel.READ_ONLY:
+            pytest.skip(
+                "This test is only for READ_ONLY or WEB_VIEWER permission level."
+            )
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(

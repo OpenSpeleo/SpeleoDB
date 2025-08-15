@@ -6,9 +6,6 @@ import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
-from django.db.models import F
-from django.db.models import TextField
-from django.db.models.functions import Cast
 from django.db.utils import IntegrityError
 from rest_framework import permissions
 from rest_framework import status
@@ -154,14 +151,27 @@ class ProjectGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
         # First check permissions by getting the object normally
         project = self.get_object()
 
-        # Now fetch the raw geojson field as string using Cast to avoid dict conversion
-        raw_json_string = (
-            Project.objects.annotate(
-                raw_json=Cast(F("geojson"), output_field=TextField())
-            )
-            .values_list("raw_json", flat=True)
-            .get(id=project.id)
-        )
+        # Build ordered queryset and apply optional limit
+        ordered_geojson_qs = project.rel_geojson.order_by("-creation_date")
+        limit_param = request.query_params.get("limit")
+        if limit_param is not None:
+            try:
+                limit_val = int(limit_param)
+                if limit_val > 0:
+                    ordered_geojson_qs = ordered_geojson_qs[:limit_val]
+            except (TypeError, ValueError):
+                # Ignore invalid limit values and return full list
+                pass
 
-        # Return the raw JSON string directly as data - never parse it in Python
-        return SuccessResponse(raw_json_string or "{}")
+        data = {
+            "geojson_files": [
+                {
+                    "commit_sha": geojson.commit_sha,
+                    "url": geojson.get_signed_download_url(),
+                    "date": geojson.creation_date.isoformat(),
+                }
+                for geojson in ordered_geojson_qs
+            ]
+        }
+
+        return SuccessResponse(data)

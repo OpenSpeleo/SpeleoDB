@@ -16,6 +16,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework.parsers import MultiPartParser
 from rest_framework.viewsets import ModelViewSet
 
+from speleodb.api.v1.permissions import StationUserHasAdminAccess
 from speleodb.api.v1.permissions import StationUserHasReadAccess
 from speleodb.api.v1.permissions import StationUserHasWriteAccess
 from speleodb.api.v1.serializers.station import StationCreateSerializer
@@ -62,19 +63,33 @@ class StationViewSet(ModelViewSet[Station], SDBAPIViewMixin):
 
     def get_serializer_class(self) -> type[Any]:
         """Return appropriate serializer based on action."""
-        if self.action == "list":
-            return StationListSerializer
-        if self.action == "create":
-            return StationCreateSerializer
-        return StationSerializer
+        match self.action:
+            case "list":
+                return StationListSerializer
+
+            case "create":
+                return StationCreateSerializer
+
+            case _:
+                return StationSerializer
 
     def get_permissions(  # type: ignore[override]
         self,
-    ) -> list[StationUserHasWriteAccess] | list[StationUserHasReadAccess]:
+    ) -> (
+        list[StationUserHasAdminAccess]
+        | list[StationUserHasWriteAccess]
+        | list[StationUserHasReadAccess]
+    ):
         """Set permissions based on action."""
-        if self.action in ["create", "update", "partial_update", "destroy"]:
-            return [StationUserHasWriteAccess()]
-        return [StationUserHasReadAccess()]
+        match self.action:
+            case "create" | "update" | "partial_update":
+                return [StationUserHasWriteAccess()]
+
+            case "destroy":
+                return [StationUserHasAdminAccess()]
+
+            case _:
+                return [StationUserHasReadAccess()]
 
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List stations, optionally filtered by project."""
