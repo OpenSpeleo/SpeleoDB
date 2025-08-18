@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import operator
 from abc import ABC
 from abc import abstractmethod
 from typing import TYPE_CHECKING
@@ -44,13 +45,17 @@ class BaseCountryFilter(Generic[T], admin.SimpleListFilter, ABC):  # noqa: UP046
         # Get distinct countries from projects, ordered alphabetically
         used_countries = self.get_used_countries()
 
-        # Convert country codes to (code, name) tuples
-        country_choices: list[tuple[str, str]] = []
-        for country_code in used_countries:
-            country_name = dict(countries)[country_code]
-            country_choices.append((country_code, country_name))
+        countries_dict = dict(countries)
 
-        return country_choices
+        # Convert country codes to (code, name) tuples
+        return sorted(
+            [
+                (country_code, country_name)
+                for country_code, country_name in countries_dict.items()
+                if country_code in used_countries
+            ],
+            key=operator.itemgetter(0),
+        )
 
     def queryset(self, request: HttpRequest, queryset: QuerySet[T]) -> QuerySet[T]:
         """Filter queryset based on selected country."""
