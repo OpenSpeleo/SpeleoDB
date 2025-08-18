@@ -14,7 +14,7 @@ dependencies = [
     "celery==5.5.3",             # https://github.com/celery/celery
     "flower==2.0.1",             # https://github.com/mher/flower
     "uvicorn[standard]==0.35.0", # https://github.com/encode/uvicorn
-    "wrapt==1.17.2",             # https://github.com/GrahamDumpleton/wrapt
+    "wrapt==1.17.3",             # https://github.com/GrahamDumpleton/wrapt
     "cachetools==6.1.0",         # https://github.com/tkem/cachetools
     "timeago==1.0.16",           # https://github.com/hustcc/timeago
 
@@ -40,7 +40,7 @@ dependencies = [
     # Django
     # ------------------------------------------------------------------------------
     "django==5.2.5",                        # https://www.djangoproject.com/
-    "django-allauth==65.10.0",              # https://github.com/pennersr/django-allauth
+    "django-allauth==65.11.0",              # https://github.com/pennersr/django-allauth
     "django-celery-beat==2.8.1",            # https://github.com/celery/django-celery-beat
     "django-compressor==4.5.1",             # https://github.com/django-compressor/django-compressor
     "django-countries==7.6.1",              # https://github.com/SmileyChris/django-countries/
@@ -59,7 +59,7 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "boto3==1.40.6", # https://github.com/boto/boto3
+    "boto3==1.40.11", # https://github.com/boto/boto3
 
     # GIS & Spatial Analysis
     # ------------------------------------------------------------------------------
@@ -81,14 +81,14 @@ local = [
     # ------------------------------------------------------------------------------
     "deepdiff>=7.0,<9.0",   # https://github.com/seperman/deepdiff
     "factory-boy==3.3.3",   # https://github.com/FactoryBoy/factory_boy
-    "mypy==1.16.1",         # https://github.com/python/mypy
+    "mypy==1.17.1",         # https://github.com/python/mypy
     "parameterized==0.9.0", # https://github.com/wolever/parameterized
-    "pytest-sugar==1.0.0",  # https://github.com/Frozenball/pytest-sugar
+    "pytest-sugar==1.1.0",  # https://github.com/Frozenball/pytest-sugar
     "pytest==8.4.1",        # https://github.com/pytest-dev/pytest
 
     # Typing
     # ------------------------------------------------------------------------------
-    "djangorestframework-stubs[compatible-mypy]==3.16.1", # https://github.com/typeddjango/djangorestframework-stubs
+    "djangorestframework-stubs[compatible-mypy]==3.16.2", # https://github.com/typeddjango/djangorestframework-stubs
     "django-stubs[compatible-mypy]==5.2.2",               # https://github.com/typeddjango/django-stubs
     "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
     # "django-types==0.20.0",             # https://github.com/sbdchd/django-types
@@ -109,8 +109,8 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.12.8",      # https://github.com/astral-sh/ruff
-    "coverage==7.10.3",  # https://github.com/nedbat/coveragepy
+    "ruff==0.12.9",      # https://github.com/astral-sh/ruff
+    "coverage==7.10.4",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
     "pre-commit==4.3.0", # https://github.com/pre-commit/pre-commit
 
@@ -119,7 +119,7 @@ local = [
     "django-debug-toolbar==6.0.0", # https://github.com/jazzband/django-debug-toolbar
     "django-extensions==4.1",      # https://github.com/django-extensions/django-extensions
     "django-schema-viewer==0.5.3", # https://github.com/pikhovkin/django-schema-viewer
-    "django-silk==5.4.0",          # https://github.com/jazzband/django-silk
+    "django-silk==5.4.1",          # https://github.com/jazzband/django-silk
 ]
 
 production = [
