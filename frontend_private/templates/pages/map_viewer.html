@@ -2568,13 +2568,66 @@
         }
     }
 
-    function createStationHere() {
-        const coordinates = [contextMenuData.lngLat.lng, contextMenuData.lngLat.lat];
-        // Find the first available project for stations
-        const projectId = Array.from(lineFeatureCache.keys())[0] || window.projects[0]?.id;
+    // Compute nearest project to a clicked location using snap points first, then bounds center
+    function getNearestProjectIdForLocation(lngLat) {
+        try {
+            const target = [lngLat.lng, lngLat.lat];
+            let bestProjectId = null;
+            let bestDistance = Infinity;
 
-        // Show the creation modal
-        showCreateStationModal(coordinates, projectId);
+            // 1) Prefer proximity to existing survey snap points (more accurate)
+            if (snapPointsCache && snapPointsCache.size > 0) {
+                snapPointsCache.forEach((points, projectId) => {
+                    if (!Array.isArray(points) || points.length === 0) return;
+                    let localBest = Infinity;
+                    for (let i = 0; i < points.length; i++) {
+                        const d = calculateDistanceInMeters(target, points[i].coordinates);
+                        if (d < localBest) localBest = d;
+                        if (localBest === 0) break;
+                    }
+                    if (localBest < bestDistance) {
+                        bestDistance = localBest;
+                        bestProjectId = projectId;
+                    }
+                });
+            }
+
+            // 2) Fall back to nearest project bounds center if no snap points
+            if ((!bestProjectId || !isFinite(bestDistance)) && window.projectBoundsMap && window.projectBoundsMap.size > 0) {
+                for (const [projectId, data] of window.projectBoundsMap.entries()) {
+                    const b = data.bounds;
+                    try {
+                        const sw = b.getSouthWest();
+                        const ne = b.getNorthEast();
+                        const center = [(sw.lng + ne.lng) / 2, (sw.lat + ne.lat) / 2];
+                        const d = calculateDistanceInMeters(target, center);
+                        if (d < bestDistance) {
+                            bestDistance = d;
+                            bestProjectId = projectId;
+                        }
+                    } catch (e) {
+                        // ignore invalid bounds
+                    }
+                }
+            }
+
+            // 3) Final fallback: first known project
+            if (!bestProjectId) {
+                bestProjectId = Array.from(lineFeatureCache.keys())[0] || window.projects?.[0]?.id || null;
+            }
+            return bestProjectId;
+        } catch (e) {
+            return Array.from(lineFeatureCache.keys())[0] || window.projects?.[0]?.id || null;
+        }
+    }
+
+    function createStationHere() {
+        if (!contextMenuData || !contextMenuData.lngLat) return;
+        const coordinates = [contextMenuData.lngLat.lng, contextMenuData.lngLat.lat];
+        const nearestProjectId = getNearestProjectIdForLocation(contextMenuData.lngLat);
+
+        // Show the creation modal with nearest project preselected
+        showCreateStationModal(coordinates, nearestProjectId);
         hideContextMenu();
     }
 
