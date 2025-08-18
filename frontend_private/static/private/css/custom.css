@@ -206,3 +206,19 @@
     width: 100%;
     height: auto;
 }
+
+/* Web Viewer */
+
+#color-mode-button {
+    width: 12rem;
+    align-items: left;
+    justify-content: left;
+    /* padding: 8px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; */
+}
+
+#station-manager-button {
+    width: 10rem;
+}

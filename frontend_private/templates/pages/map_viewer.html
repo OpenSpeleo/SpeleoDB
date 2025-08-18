@@ -1055,8 +1055,17 @@
             <!-- Right: Actions -->
             <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
 
+                <!-- Color Mode Toggle: button-sized, explicit label -->
+                <button id="color-mode-button" class="btn bg-violet-500 hover:bg-violet-400 text-white flex items-center gap-2" type="button">
+                    <label class="toggle-switch m-0">
+                        <input id="color-mode-toggle" type="checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span id="color-mode-label" class="hidden xs:block ml-1">Color: By Depth</span>
+                </button>
+
                 <!-- Station Management button -->
-                <button onclick="openStationManager()" class="btn bg-orange-500 hover:bg-orange-600 text-white">
+                <button id="station-manager-button" onclick="openStationManager()" class="btn bg-orange-500 hover:bg-orange-600 text-white">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                         <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -8155,7 +8164,139 @@
                 '#7570b3'  // Slate Blue
             ];
 
+            // Global color mode state (default: depth). Persist across sessions.
+            window.colorMode = (function() {
+                try {
+                    return localStorage.getItem('map_color_mode') || 'depth';
+                } catch (e) {
+                    return 'depth';
+                }
+            })();
+
+            // Compute the paint value for line color based on the active color mode
+            // - 'depth': interpolate by feature.properties.depth_norm if available, else fallback to project color
+            // - 'project': always use the project's categorical color
+            function computeLineColorPaint(projectColor) {
+                if (window.colorMode === 'project') {
+                    return projectColor;
+                }
+                if (window.depthAvailable === true) {
+                    return [
+                        'case',
+                        ['has', 'depth_norm'],
+                        ['interpolate', ['linear'], ['get', 'depth_norm'],
+                            0, '#4575b4',
+                            0.5, '#e6f598',
+                            1, '#d73027'
+                        ],
+                        projectColor
+                    ];
+                }
+                return projectColor;
+            }
+
+            // Robust depth parser: supports numbers and numeric prefixes like "123 ft"
+            function parseDepthValue(raw) {
+                if (raw == null) return undefined;
+                const num = Number(raw);
+                if (Number.isFinite(num)) return num;
+                if (typeof raw === 'string') {
+                    const m = raw.match(/-?\d+(?:\.\d+)?/);
+                    if (m) {
+                        const v = Number(m[0]);
+                        if (Number.isFinite(v)) return v;
+                    }
+                }
+                return undefined;
+            }
+
+            // Try multiple property candidates for section name
+            function getFeatureSectionName(props) {
+                if (!props) return undefined;
+                const candidates = ['section_name', 'SECTION_NAME', 'section', 'Section', 'name', 'Name'];
+                for (const key of candidates) {
+                    if (props[key] != null && String(props[key]).trim() !== '') return props[key];
+                }
+                return undefined;
+            }
+
+            // Try multiple property candidates for depth
+            function getFeatureDepthValue(props) {
+                if (!props) return undefined;
+                const candidates = ['depth', 'Depth', 'depth_m', 'depth_ft', 'DEPTH'];
+                for (const key of candidates) {
+                    const v = parseDepthValue(props[key]);
+                    if (v != null) return v;
+                }
+                return undefined;
+            }
+
+            // Update legend visibility based on active mode
+            function updateDepthLegendVisibility() {
+                try {
+                    const legend = document.getElementById('depth-scale-fixed');
+                    if (!legend) return;
+                    const shouldShow = (window.colorMode === 'depth' && window.depthAvailable === true);
+                    legend.style.display = shouldShow ? 'block' : 'none';
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            // Apply color mode to all existing project line layers
+            function applyColorModeToAllLines() {
+                if (!window.projectBoundsMap || !map) return;
+                try {
+                    for (const [projectId, projectData] of window.projectBoundsMap.entries()) {
+                        const lineLayerId = `project-line-${projectId}`;
+                        const projectColor = projectData.color;
+                        const paint = computeLineColorPaint(projectColor);
+                        try {
+                            map.setPaintProperty(lineLayerId, 'line-color', paint);
+                        } catch (e) {
+                            // layer might not be present (different geometry), ignore
+                        }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            // Switch color mode helper
+            function setColorMode(mode) {
+                if (mode !== 'depth' && mode !== 'project') return;
+                window.colorMode = mode;
+                try { localStorage.setItem('map_color_mode', mode); } catch (e) {}
+                applyColorModeToAllLines();
+                updateDepthLegendVisibility();
+                // Update UI state if present
+                try {
+                    const depthBtn = document.getElementById('btn-color-depth');
+                    const catBtn = document.getElementById('btn-color-project');
+                    if (depthBtn && catBtn) {
+                        if (mode === 'depth') {
+                            depthBtn.classList.add('active');
+                            catBtn.classList.remove('active');
+                        } else {
+                            catBtn.classList.add('active');
+                            depthBtn.classList.remove('active');
+                        }
+                    }
+                } catch (e) {}
+            }
+
             console.log(`🎨 Color palette loaded: ${colors.length} maximally distinguishable colors`);
+
+            // Persistent per-project color assignment to avoid reusing first color
+            window.projectColorMap = window.projectColorMap || new Map();
+            function getProjectColor(projectId, fallbackIndex) {
+                if (window.projectColorMap.has(projectId)) {
+                    return window.projectColorMap.get(projectId);
+                }
+                const color = colors[fallbackIndex % colors.length];
+                window.projectColorMap.set(projectId, color);
+                return color;
+            }
 
             // Create promises to fetch GeoJSON data from API for each project
             const fetchPromises = projectIds.map((projectId, index) => {
@@ -8349,7 +8490,7 @@
                     // Process each project's GeoJSON data
                     validResults.forEach(({ data, index, projectId, projectName }, resultIndex) => {
                         const sourceId = `project-geojson-${projectId}`;
-                        const color = colors[resultIndex % colors.length];
+                        const color = getProjectColor(projectId, resultIndex);
 
                         // Update loading progress
                         updateLoadingText('Processing Survey Data', `Loading project ${resultIndex + 1}/${validResults.length}: ${projectName}`);
@@ -8361,17 +8502,19 @@
                         const sectionDepthAccumulator = new Map();
                         if (processedData && Array.isArray(processedData.features)) {
                             processedData.features.forEach(feature => {
+                                const props = feature?.properties;
+                                const sectionName = getFeatureSectionName(props);
+                                const pointDepth = getFeatureDepthValue(props);
                                 if (
                                     feature &&
                                     feature.geometry &&
                                     feature.geometry.type === 'Point' &&
-                                    feature.properties &&
-                                    typeof feature.properties.depth === 'number' &&
-                                    feature.properties.section_name
+                                    sectionName != null &&
+                                    typeof pointDepth === 'number' && isFinite(pointDepth)
                                 ) {
-                                    const key = feature.properties.section_name;
+                                    const key = sectionName;
                                     const arr = sectionDepthAccumulator.get(key) || [];
-                                    arr.push(feature.properties.depth);
+                                    arr.push(pointDepth);
                                     sectionDepthAccumulator.set(key, arr);
                                 }
                             });
@@ -8393,7 +8536,7 @@
                         // Also include depths specified directly on LineString features
                         if (processedData && Array.isArray(processedData.features)) {
                             processedData.features.forEach(feature => {
-                                const d = feature?.properties?.depth;
+                                const d = getFeatureDepthValue(feature?.properties);
                                 if (
                                     feature &&
                                     feature.geometry &&
@@ -8420,11 +8563,11 @@
                                     feature &&
                                     feature.geometry &&
                                     feature.geometry.type === 'LineString' &&
-                                    feature.properties &&
-                                    feature.properties.section_name
+                                    feature.properties
                                 ) {
-                                    const lineDepth = feature.properties.depth;
-                                    const sectionDepth = sectionDepthAvgMap.get(feature.properties.section_name);
+                                    const lineDepth = getFeatureDepthValue(feature.properties);
+                                    const sectionKey = getFeatureSectionName(feature.properties);
+                                    const sectionDepth = sectionKey ? sectionDepthAvgMap.get(sectionKey) : undefined;
                                     const depthValue = (typeof lineDepth === 'number' && isFinite(lineDepth))
                                         ? lineDepth
                                         : (typeof sectionDepth === 'number' && isFinite(sectionDepth) ? sectionDepth : undefined);
@@ -8595,22 +8738,13 @@
                                     id: lineLayerId,
                                     type: 'line',
                                     source: sourceId,
-                                    filter: ['all', ['in', '$type', 'LineString'], ['has', 'section_name']],
+                                    filter: ['in', '$type', 'LineString'],
                                     layout: {
                                         'line-join': 'round',
                                         'line-cap': 'round'
                                     },
                                     paint: {
-                                        'line-color': [
-                                            'case',
-                                            ['has', 'depth_norm'],
-                                            ['interpolate', ['linear'], ['get', 'depth_norm'],
-                                                0, '#4575b4',
-                                                0.5, '#e6f598',
-                                                1, '#d73027'
-                                            ],
-                                            color
-                                        ],
+                                        'line-color': computeLineColorPaint(color),
                                         'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.3, 6, 0.8, 10, 1.6, 14, 3.2, 18, 6],
                                         'line-opacity': 1
                                     }
@@ -8626,7 +8760,7 @@
                                         'line-cap': 'round'
                                     },
                                     paint: {
-                                        'line-color': color,
+                                        'line-color': computeLineColorPaint(color),
                                         'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.3, 6, 0.8, 10, 1.6, 14, 3.2, 18, 6],
                                         'line-opacity': 1
                                     }
@@ -8808,7 +8942,8 @@
                             projectListDiv.appendChild(buttonContainer);
                         });
 
-                        // Show the panel
+                        // Expose project map globally for color updates and show the panel
+                        window.projectBoundsMap = projectBoundsMap;
                         projectPanel.style.display = 'block';
 
                         // Add minimize/expand functionality
@@ -8825,7 +8960,51 @@
                             minimizedPanel.style.display = 'none';
                             projectPanel.style.display = 'block';
                         });
+
+                        // Initialize color mode toggle UI and state
+                        try {
+                            const depthBtn = document.getElementById('btn-color-depth');
+                            const catBtn = document.getElementById('btn-color-project');
+                            if (depthBtn && catBtn) {
+                                depthBtn.addEventListener('click', (e) => { e.stopPropagation(); setColorMode('depth'); });
+                                catBtn.addEventListener('click', (e) => { e.stopPropagation(); setColorMode('project'); });
+                                // Set initial visual state and repaint lines
+                                setColorMode(window.colorMode);
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
                     }
+
+                    // Initialize color mode toggle UI and state (header toggle)
+                    try {
+                        const toggle = document.getElementById('color-mode-toggle');
+                        const label = document.getElementById('color-mode-label');
+                        const button = document.getElementById('color-mode-button');
+                        if (toggle && label) {
+                            // ON means By Survey
+                            const syncUI = () => {
+                                toggle.checked = (window.colorMode === 'project');
+                                if (window.colorMode === 'project') {
+                                    label.textContent = 'Color: By Survey';
+                                } else {
+                                    label.textContent = 'Color: By Depth';
+                                }
+                            };
+                            toggle.addEventListener('change', () => {
+                                setColorMode(toggle.checked ? 'project' : 'depth');
+                                syncUI();
+                            });
+                            if (button) {
+                                button.addEventListener('click', () => {
+                                    toggle.checked = !toggle.checked;
+                                    setColorMode(toggle.checked ? 'project' : 'depth');
+                                    syncUI();
+                                });
+                            }
+                            syncUI();
+                        }
+                    } catch (e) {}
 
                     // Load POIs after all projects are loaded
                     setTimeout(() => {
@@ -8862,6 +9041,8 @@
                             <span>0 ft</span>
                             <span>${Math.ceil(maxVal)} ft</span>
                         </div>`;
+                        // Respect initial color mode for legend visibility
+                        updateDepthLegendVisibility();
                     } catch (e) {
                         console.warn('Unable to render/update depth scale:', e);
                     }
