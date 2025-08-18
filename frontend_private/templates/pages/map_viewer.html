@@ -1056,7 +1056,7 @@
             <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
 
                 <!-- Color Mode Toggle: button-sized, explicit label -->
-                <button id="color-mode-button" class="btn bg-violet-500 hover:bg-violet-400 text-white flex items-center gap-2" type="button">
+                <button id="color-mode-button" class="btn bg-slate-700 hover:bg-slate-600 text-white flex items-center gap-2" type="button">
                     <label class="toggle-switch m-0">
                         <input id="color-mode-toggle" type="checkbox">
                         <span class="toggle-slider"></span>
@@ -8291,6 +8291,13 @@
                     if (!legend) return;
                     const shouldShow = (window.colorMode === 'depth' && window.depthAvailable === true);
                     legend.style.display = shouldShow ? 'block' : 'none';
+                    // Also hide depth cursor indicator when legend hidden
+                    if (!shouldShow) {
+                        const cursor = document.getElementById('depth-cursor-indicator');
+                        const label = document.getElementById('depth-cursor-label');
+                        if (cursor) cursor.style.display = 'none';
+                        if (label) label.style.display = 'none';
+                    }
                 } catch (e) {
                     // ignore
                 }
@@ -8820,6 +8827,9 @@
                                 });
                             }
                             projectLayers.push(lineLayerId);
+                            // Track line layers globally for hover queries
+                            window.projectLineLayerIds = window.projectLineLayerIds || new Set();
+                            window.projectLineLayerIds.add(lineLayerId);
 
                             // Store layer info for later event attachment
                             window.lineLayerHandlers = window.lineLayerHandlers || [];
@@ -9088,7 +9098,10 @@
                         container.innerHTML = `
                         <div style="display:flex; align-items:center; gap:10px;">
                             <span style="color:#94a3b8; font-size:12px;">Depth</span>
-                            <div style="width:160px; height:10px; background: linear-gradient(90deg, #4575b4 0%, #e6f598 50%, #d73027 100%); border-radius: 4px;"></div>
+                            <div id="depth-scale-gradient" style="position:relative; width:160px; height:10px; background: linear-gradient(90deg, #4575b4 0%, #e6f598 50%, #d73027 100%); border-radius: 4px;">
+                                <div id="depth-cursor-indicator" style="position:absolute; top:-3px; left:0; width:2px; height:16px; background:#ffffff; box-shadow:0 0 4px rgba(0,0,0,0.6); display:none; transition:left 0.15s ease-out;"></div>
+                                <div id="depth-cursor-label" style="position:absolute; top:-27px; left:0; transform:translateX(-50%); color:#e5e7eb; font-size:13px; background: rgba(2, 6, 23, 0.9); border: 1px solid #334155; padding: 2px 6px; border-radius: 3px; display:none; pointer-events:none; white-space:nowrap; transition:left 0.15s ease-out;"></div>
+                            </div>
                         </div>
                         <div style="display:flex; justify-content:space-between; color:#94a3b8; font-size:11px; margin-top:4px;">
                             <span>0 ft</span>
@@ -9122,6 +9135,80 @@
                     } else {
                         console.log('No valid bounds found in first project, staying at world view');
                         // Keep the world view if no valid data
+                    }
+
+                    // Hover depth indicator: show cursor on depth scale when hovering near lines
+                    try {
+                        const gradientEl = document.getElementById('depth-scale-gradient');
+                        const cursorEl = document.getElementById('depth-cursor-indicator');
+                        const labelEl = document.getElementById('depth-cursor-label');
+                        if (map && gradientEl && cursorEl && labelEl) {
+                            const queryPaddingPx = 12; // increased tolerance around the mouse for picking lines
+                            map.on('mousemove', (e) => {
+                                if (window.colorMode !== 'depth' || window.depthAvailable !== true) {
+                                    cursorEl.style.display = 'none';
+                                    labelEl.style.display = 'none';
+                                    return;
+                                }
+                                if (!window.projectLineLayerIds || window.projectLineLayerIds.size === 0) {
+                                    cursorEl.style.display = 'none';
+                                    labelEl.style.display = 'none';
+                                    return;
+                                }
+                                const layers = Array.from(window.projectLineLayerIds);
+                                const queryBox = [
+                                    [e.point.x - queryPaddingPx, e.point.y - queryPaddingPx],
+                                    [e.point.x + queryPaddingPx, e.point.y + queryPaddingPx]
+                                ];
+                                let features = [];
+                                try {
+                                    features = map.queryRenderedFeatures(queryBox, { layers });
+                                } catch (err) {
+                                    // ignore query errors
+                                }
+                                if (!features || features.length === 0) {
+                                    cursorEl.style.display = 'none';
+                                    labelEl.style.display = 'none';
+                                    return;
+                                }
+                                // Take the top-most feature with a usable depth
+                                const props = features[0].properties || {};
+                                const depthVal = getFeatureDepthValue(props);
+                                if (!(typeof depthVal === 'number' && isFinite(depthVal))) {
+                                    // fallback to normalized if present (scaled to max)
+                                    const norm = Number(props.depth_norm);
+                                    if (!(typeof norm === 'number' && isFinite(norm))) {
+                                        cursorEl.style.display = 'none';
+                                        labelEl.style.display = 'none';
+                                        return;
+                                    }
+                                    const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : 9999;
+                                    const clamped = Math.min(Math.max(norm, 0), 1);
+                                    const depth = clamped * maxVal;
+                                    const pct = clamped * 100;
+                                    cursorEl.style.left = `calc(${pct}% - 1px)`;
+                                    cursorEl.style.display = 'block';
+                                    labelEl.textContent = `${depth.toFixed(1)} ft`;
+                                    labelEl.style.left = `calc(${pct}% - 0px)`;
+                                    labelEl.style.display = 'block';
+                                    return;
+                                }
+                                const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : 9999;
+                                const clampedDepth = Math.min(Math.max(depthVal, 0), maxVal);
+                                const pct = (maxVal > 0) ? (clampedDepth / maxVal) * 100 : 0;
+                                cursorEl.style.left = `calc(${pct}% - 1px)`;
+                                cursorEl.style.display = 'block';
+                                labelEl.textContent = `${clampedDepth.toFixed(1)} ft`;
+                                labelEl.style.left = `calc(${pct}% - 0px)`;
+                                labelEl.style.display = 'block';
+                            });
+                            map.on('mouseleave', () => {
+                                cursorEl.style.display = 'none';
+                                labelEl.style.display = 'none';
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('Unable to enable hover depth indicator:', e);
                     }
                 })
                 .catch(error => {
