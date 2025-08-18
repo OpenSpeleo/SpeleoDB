@@ -27,6 +27,7 @@ from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models import TeamPermission
 from speleodb.surveys.models import UserPermission
+from speleodb.utils.admin_filters import GeoJSONProjectFilter
 from speleodb.utils.admin_filters import ProjectCountryFilter
 from speleodb.utils.admin_filters import StationProjectFilter
 
@@ -411,20 +412,26 @@ class GeoJSONAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "project",
         "commit_sha",
-        "creation_date",
-    )
-    readonly_fields = (
+        "commit_date",
         "creation_date",
         "modified_date",
     )
+
+    readonly_fields = (
+        "commit_date",
+        "creation_date",
+        "modified_date",
+    )
+
     fields = (
         "project",
         "commit_sha",
+        "commit_date",
         "file",
         "creation_date",
         "modified_date",
     )
-    # form = GeoJSONAdminForm
+    list_filter = [GeoJSONProjectFilter, "commit_date"]
 
     def has_change_permission(
         self, request: HttpRequest, obj: GeoJSON | None = None

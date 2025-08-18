@@ -152,7 +152,7 @@ class ProjectGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
         project = self.get_object()
 
         # Build ordered queryset and apply optional limit
-        ordered_geojson_qs = project.rel_geojson.order_by("-creation_date")
+        ordered_geojson_qs = project.rel_geojsons.order_by("-commit_date")
         limit_param = request.query_params.get("limit")
         if limit_param is not None:
             try:

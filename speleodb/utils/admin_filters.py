@@ -15,6 +15,7 @@ from django.contrib import admin
 from django.db.models import Model
 from django_countries import countries
 
+from speleodb.surveys.models import GeoJSON
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import Station
 from speleodb.users.models import SurveyTeam
@@ -127,7 +128,7 @@ class BaseProjectFilter(Generic[T], admin.SimpleListFilter, ABC):  # noqa: UP046
     def queryset(self, request: HttpRequest, queryset: QuerySet[T]) -> QuerySet[T]:
         """Filter queryset based on selected country."""
         if self.value():
-            return queryset.filter(project=self.value())
+            return queryset.filter(project=self.value()).distinct()
         return queryset
 
 
@@ -137,4 +138,21 @@ class StationProjectFilter(BaseProjectFilter[Station]):
     def get_used_projects(self) -> list[Project]:
         """Return only countries that are actually used by projects."""
         # Get distinct countries from projects, ordered alphabetically
-        return list(Project.objects.filter(rel_stations__isnull=False).order_by("name"))
+        return list(
+            Project.objects.filter(rel_stations__isnull=False)
+            .distinct()
+            .order_by("name")
+        )
+
+
+class GeoJSONProjectFilter(BaseProjectFilter[GeoJSON]):
+    """Custom filter that shows only countries actually used by users."""
+
+    def get_used_projects(self) -> list[Project]:
+        """Return only countries that are actually used by projects."""
+        # Get distinct countries from projects, ordered alphabetically
+        return list(
+            Project.objects.filter(rel_geojsons__isnull=False)
+            .distinct()
+            .order_by("name")
+        )

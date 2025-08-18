@@ -26,7 +26,7 @@ class GeoJSON(models.Model):
 
     project = models.ForeignKey(
         Project,
-        related_name="rel_geojson",
+        related_name="rel_geojsons",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -51,6 +51,8 @@ class GeoJSON(models.Model):
             RegexValidator(regex=r"^[0-9a-f]{40}$", message="Enter a valid sha1 value")
         ],
     )
+
+    commit_date = models.DateTimeField(null=False, blank=False)
 
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
