@@ -418,7 +418,6 @@ class GeoJSONAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
 
     readonly_fields = (
-        "commit_date",
         "creation_date",
         "modified_date",
     )

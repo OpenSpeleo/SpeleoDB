@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 class Project(models.Model):
     # type checking
     rel_formats: models.QuerySet[Format]
-    rel_geojson: models.QuerySet[GeoJSON]
+    rel_geojsons: models.QuerySet[GeoJSON]
     rel_mutexes: models.QuerySet[Mutex]
     rel_user_permissions: models.QuerySet[UserPermission]
     rel_team_permissions: models.QuerySet[TeamPermission]

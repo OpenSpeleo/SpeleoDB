@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import TYPE_CHECKING
 from typing import Any
@@ -155,20 +156,18 @@ class ProjectGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
         ordered_geojson_qs = project.rel_geojsons.order_by("-commit_date")
         limit_param = request.query_params.get("limit")
         if limit_param is not None:
-            try:
+            # Ignore invalid limit values and return full list
+            with contextlib.suppress(TypeError, ValueError):
                 limit_val = int(limit_param)
                 if limit_val > 0:
                     ordered_geojson_qs = ordered_geojson_qs[:limit_val]
-            except (TypeError, ValueError):
-                # Ignore invalid limit values and return full list
-                pass
 
         data = {
             "geojson_files": [
                 {
                     "commit_sha": geojson.commit_sha,
+                    "date": geojson.commit_date.isoformat(),
                     "url": geojson.get_signed_download_url(),
-                    "date": geojson.creation_date.isoformat(),
                 }
                 for geojson in ordered_geojson_qs
             ]

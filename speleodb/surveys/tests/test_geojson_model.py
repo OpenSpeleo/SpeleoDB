@@ -7,7 +7,9 @@ import boto3
 import pytest
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 
+from speleodb.api.v1.tests.test_project_geojson_api import sha1_hash
 from speleodb.surveys.models import GeoJSON
 from speleodb.surveys.models import Project
 
@@ -26,32 +28,47 @@ class TestGeoJSONModel:
         payload = {"type": "FeatureCollection", "features": []}
         upload = make_uploaded("map.geojson", payload)
 
-        obj = GeoJSON(project=project, commit_sha="a" * 40, file=upload)
-        obj.full_clean()
+        commit_sha1 = sha1_hash()
+
+        obj = GeoJSON(
+            project=project,
+            commit_sha=commit_sha1,
+            commit_date=timezone.now(),
+            file=upload,
+        )
         obj.save()
 
-        assert obj.file.name == f"{project.id}/{'a' * 40}.json"
+        assert obj.file.name == f"{project.id}/{commit_sha1}.json"
 
     def test_invalid_geojson_rejected(self, project: Project) -> None:
         payload = {"type": "NotFeatureCollection"}
         upload = make_uploaded("map.geojson", payload)
 
-        obj = GeoJSON(project=project, commit_sha="b" * 40, file=upload)
+        obj = GeoJSON(
+            project=project,
+            commit_sha=sha1_hash(),
+            commit_date=timezone.now(),
+            file=upload,
+        )
+
         with pytest.raises(
             ValidationError,
             match="The file uploaded does not appear to be a valid GeoJSON",
         ):
-            obj.full_clean()
+            obj.save()
 
     def test_immutable_after_create(self, project: Project) -> None:
         payload = {"type": "FeatureCollection", "features": []}
         upload = make_uploaded("map.geojson", payload)
 
-        obj = GeoJSON(project=project, commit_sha="c" * 40, file=upload)
-        obj.full_clean()
+        obj = GeoJSON(
+            project=project,
+            commit_sha=sha1_hash(),
+            commit_date=timezone.now(),
+            file=upload,
+        )
         obj.save()
 
-        obj.commit_sha = "d" * 40
         with pytest.raises(ValidationError):
             obj.save()
 
@@ -61,8 +78,12 @@ class TestGeoJSONModel:
         payload = {"type": "FeatureCollection", "features": []}
         upload = make_uploaded("map.geojson", payload)
 
-        obj = GeoJSON(project=project, commit_sha="e" * 40, file=upload)
-        obj.full_clean()
+        obj = GeoJSON(
+            project=project,
+            commit_sha=sha1_hash(),
+            commit_date=timezone.now(),
+            file=upload,
+        )
         obj.save()
 
         # Stub boto3 client

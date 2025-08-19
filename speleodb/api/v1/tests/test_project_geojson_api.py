@@ -7,11 +7,16 @@ import string
 import tempfile
 import uuid
 from hashlib import sha1
+from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import orjson
+import pytest
+from django.core.files import File
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
-from unittest.mock import patch
+from django.utils import timezone
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
@@ -21,6 +26,30 @@ from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.surveys.models import GeoJSON
 from speleodb.surveys.models import PermissionLevel
 from speleodb.utils.test_utils import named_product
+
+
+def temp_geojson_file() -> SimpleUploadedFile:
+    """Fixture to create a temporary GeoJSON file."""
+
+    return SimpleUploadedFile(
+        "test.geojson",  # filename
+        orjson.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [-87.501234, 20.196710],
+                        },
+                        "properties": {"name": "Test Cave Entrance"},
+                    }
+                ],
+            }
+        ),
+        content_type="application/geo+json",
+    )
 
 
 def sha1_hash() -> str:
@@ -59,41 +88,22 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
             permission_type=self.permission_type,
         )
 
-        # Set up some test GeoJSON data
-        self.test_geojson = {
-            "type": "FeatureCollection",
-            "features": [
-                {
-                    "type": "Feature",
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [-87.501234, 20.196710],
-                    },
-                    "properties": {"name": "Test Cave Entrance"},
-                }
-            ],
-        }
-
     def test_geojson_endpoint_performance_uses_with_geojson_manager(self) -> None:
         """Test that the endpoint properly loads geojson field."""
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=".geojson", delete=False
-        ) as temp_file:
-            temp_file.write(orjson.dumps(self.test_geojson))
+        commit_sha = sha1_hash()
+        # Set some test GeoJSON data
+        GeoJSON.objects.create(
+            project=self.project,
+            commit_sha=commit_sha,
+            commit_date=timezone.now(),
+            file=temp_geojson_file(),
+        )
 
-            # Set some test GeoJSON data
-            GeoJSON.objects.create(
-                project=self.project,
-                commit_sha=sha1_hash(),
-                file=temp_file.name,
-            )
-
-        auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse(
                 "api:v1:one_project_geojson_apiview", kwargs={"id": self.project.id}
             ),
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -108,26 +118,25 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
             assert "url" in geojson
             assert "date" in geojson
 
-
     def test_geojson_endpoint_limit_returns_only_latest(self) -> None:
         """Endpoint should respect ?limit= and return the latest by creation_date."""
         # Create two GeoJSON entries; second one will be the latest due to auto_now_add
         for _ in range(2):
-            sha = sha1_hash()
+            commit_sha = sha1_hash()
             # Avoid touching S3 storage; set the expected upload name directly
             GeoJSON.objects.create(
                 project=self.project,
-                commit_sha=sha,
-                file=f"{self.project.id}/{sha}.json",
+                commit_sha=commit_sha,
+                commit_date=timezone.now(),
+                file=temp_geojson_file(),
             )
 
-        auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse(
                 "api:v1:one_project_geojson_apiview", kwargs={"id": self.project.id}
             )
             + "?limit=1",
-            headers={"authorization": auth},
+            headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -138,40 +147,36 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         assert len(files) == 1
 
     def test_presigned_url_uses_geojson_prefix_and_bucket(self) -> None:
-        """Presigned URL should target geojson/<project>/<sha>.json within the configured bucket."""
+        """Presigned URL should target geojson/<project>/<sha>.json within the
+        configured bucket."""
         # Prepare one stored file using the storage + upload_to
-        sha = sha1_hash()
-        # Avoid touching S3 storage; set the expected upload name directly
+        commit_sha = sha1_hash()
+
         GeoJSON.objects.create(
-            project=self.project, commit_sha=sha, file=f"{self.project.id}/{sha}.json"
+            project=self.project,
+            commit_sha=commit_sha,
+            commit_date=timezone.now(),
+            file=temp_geojson_file(),
         )
 
-        captured_params: list[dict[str, str]] = []
-
-        class _FakeS3Client:
-            def generate_presigned_url(self, ClientMethod, Params, ExpiresIn):  # type: ignore[no-untyped-def]
-                captured_params.append(Params)
-                return "https://example.test/signed"
-
-        with patch("speleodb.surveys.models.geojson.boto3.client", return_value=_FakeS3Client()):
-            auth = self.header_prefix + self.token.key
-            response = self.client.get(
-                reverse(
-                    "api:v1:one_project_geojson_apiview",
-                    kwargs={"id": self.project.id},
-                )
-                + "?limit=1",
-                headers={"authorization": auth},
+        response = self.client.get(
+            reverse(
+                "api:v1:one_project_geojson_apiview",
+                kwargs={"id": self.project.id},
             )
+            + "?limit=1",
+            headers={"authorization": self.auth},
+        )
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(captured_params) == 1
-        params = captured_params[0]
-        assert "Bucket" in params and isinstance(params["Bucket"], str)
-        # Expect the key to include the geojson/ prefix and project id + sha
-        expected_prefix = "geojson/" + str(self.project.id) + "/"
-        assert params["Key"].startswith(expected_prefix)
-        assert params["Key"].endswith(sha + ".json")
+        assert "data" in response.data
+        assert "geojson_files" in response.data["data"]
+        assert len(response.data["data"]["geojson_files"]) == 1
+        assert "url" in response.data["data"]["geojson_files"][0]
+        assert (
+            "s3.amazonaws.com/geojson/"
+            in response.data["data"]["geojson_files"][0]["url"]
+        )
 
 
 class NoPermissionTestProjectGeoJsonApiView(BaseAPIProjectTestCase):
@@ -184,7 +189,8 @@ class NoPermissionTestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse(
-                "api:v1:one_project_geojson_apiview", kwargs={"id": self.project.id}
+                "api:v1:one_project_geojson_apiview",
+                kwargs={"id": self.project.id},
             ),
             headers={"authorization": auth},
         )
@@ -195,7 +201,8 @@ class NoPermissionTestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         """Test that unauthenticated users cannot access GeoJSON data."""
         response = self.client.get(
             reverse(
-                "api:v1:one_project_geojson_apiview", kwargs={"id": self.project.id}
+                "api:v1:one_project_geojson_apiview",
+                kwargs={"id": self.project.id},
             ),
         )
 
@@ -207,7 +214,8 @@ class NoPermissionTestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse(
-                "api:v1:one_project_geojson_apiview", kwargs={"id": fake_project_id}
+                "api:v1:one_project_geojson_apiview",
+                kwargs={"id": fake_project_id},
             ),
             headers={"authorization": auth},
         )

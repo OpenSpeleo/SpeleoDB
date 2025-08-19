@@ -66,6 +66,7 @@ class GeoJSON(models.Model):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Enforce immutability: once created, cannot be updated."""
+        self.full_clean()
         if self.pk:
             raise ValidationError("GeoJSON objects are immutable once created.")
         return super().save(*args, **kwargs)
