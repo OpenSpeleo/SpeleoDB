@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import binascii
 import contextlib
+import datetime
 import logging
 import os
 import pathlib
@@ -19,6 +20,7 @@ from typing import override
 
 import git
 from django.conf import settings
+from django.utils import timezone
 from git import HEAD
 from git import Blob
 from git import Commit
@@ -112,16 +114,19 @@ class GitObjectMixin(metaclass=ABCMeta):
                 file_or_tree: GitTree | GitFile = (
                     (commit.tree / item_path) if item_path else commit.tree
                 )
-                if isinstance(file_or_tree, GitFile):
-                    if self.binsha == file_or_tree.binsha:
-                        return commit
-                elif isinstance(file_or_tree, GitTree):
-                    if self.binsha in file_or_tree.binshas:
-                        return commit
-                else:
-                    raise TypeError(
-                        f"Expected GitFile or GitTree - Received: {type(file_or_tree)=}"
-                    )
+
+                match file_or_tree:
+                    case GitFile():
+                        if self.binsha == file_or_tree.binsha:
+                            return commit
+                    case GitTree():
+                        if self.binsha in file_or_tree.binshas:
+                            return commit
+                    case _:
+                        raise TypeError(
+                            "Expected GitFile or GitTree - Received: "
+                            f"{type(file_or_tree)=}"
+                        )
 
         raise FileNotFoundError
 
@@ -143,8 +148,7 @@ class GitObjectMixin(metaclass=ABCMeta):
 
 class GitFile(GitObjectMixin):
     def __init__(self, blob: Blob, repo: GitRepo) -> None:
-        self._blob = blob
-        self._repo = repo
+        self._blob = blob.blob if isinstance(blob, GitFile) else blob
         self._repo = GitRepo.from_repo(repo) if not isinstance(repo, GitRepo) else repo
 
     @classmethod
@@ -390,6 +394,13 @@ class GitCommit(Commit):
     @property
     def date(self) -> time.struct_time:
         return time.gmtime(self.committed_date)
+
+    @property
+    def date_dt(self) -> datetime.datetime:
+        epoch_seconds = time.mktime(self.date)
+        return datetime.datetime.fromtimestamp(
+            epoch_seconds, tz=timezone.get_current_timezone()
+        )
 
     @property
     def hexsha_short(self) -> str:

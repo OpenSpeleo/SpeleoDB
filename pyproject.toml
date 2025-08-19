@@ -32,6 +32,10 @@ dependencies = [
     "jsonschema-rs==0.32.1", # https://github.com/Stranger6667/jsonschema
     "orjson==3.11.2",        # https://github.com/ijl/orjson
 
+    # Speleo Libraries
+    # ------------------------------------------------------------------------------
+    "openspeleo-lib==0.0.3",
+
     # Git Management
     # ------------------------------------------------------------------------------
     "python-gitlab==6.2.0", # https://python-gitlab.readthedocs.io/en/stable/
