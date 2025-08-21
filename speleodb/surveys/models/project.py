@@ -61,6 +61,13 @@ class Project(models.Model):
 
     country = CountryField(null=False, blank=False)
 
+    exclude_geojson = models.BooleanField(
+        default=False,
+        help_text="Exclude GeoJSON from the project",
+        blank=False,
+        null=False,
+    )
+
     # Optional Field
     fork_from = models.ForeignKey(
         "self",

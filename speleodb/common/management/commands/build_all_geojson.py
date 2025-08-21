@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
-import time
-from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
@@ -14,6 +13,7 @@ import orjson
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import ArianeInterface
 
@@ -33,12 +33,28 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args: Any, **kwargs: Any) -> None:
-        for project in Project.objects.all():
+        for project in Project.objects.filter(exclude_geojson=False):
+            logger.info("")
+            logger.info("-" * 60)
             logger.info(f"Processing Project: {project.id}")
             try:
                 git_repo = project.git_repo  # load the git project
 
                 for commit in git_repo.commits:
+                    # Download all the geojson files for each commit
+                    if GeoJSON.objects.filter(
+                        project=project, commit_sha=commit.hexsha
+                    ).exists():
+                        logger.info(
+                            f"GeoJSON for commit {commit.hexsha} already exists for "
+                            f"project {project.id}. Skipping ..."
+                        )
+                        continue
+
+                    logger.info(
+                        f"Processing commit: {commit.hexsha} - {commit.date_dt}"
+                    )
+
                     for file in commit.files:
                         try:
                             if Path(file.path).suffix != ".tml":
@@ -54,21 +70,22 @@ class Command(BaseCommand):
                                 tmp_file.write_bytes(file.content.getvalue())
                                 logger.info(f"Saved {file.path} to {tmp_file}")
 
-                                survey: Survey = ArianeInterface.from_file(tmp_file)
-                                geojson_data = survey_to_geojson(survey)
+                                with contextlib.suppress(NoKnownAnchorError):
+                                    survey: Survey = ArianeInterface.from_file(tmp_file)
+                                    geojson_data = survey_to_geojson(survey)
 
-                                geojson_f = SimpleUploadedFile(
-                                    "test.geojson",  # filename
-                                    orjson.dumps(geojson_data),
-                                    content_type="application/geo+json",
-                                )
+                                    geojson_f = SimpleUploadedFile(
+                                        "test.geojson",  # filename
+                                        orjson.dumps(geojson_data),
+                                        content_type="application/geo+json",
+                                    )
 
-                                GeoJSON.objects.create(
-                                    project=project,
-                                    commit_sha=commit.hexsha,
-                                    commit_date=commit.date_dt,
-                                    file=geojson_f,
-                                )
+                                    GeoJSON.objects.create(
+                                        project=project,
+                                        commit_sha=commit.hexsha,
+                                        commit_date=commit.date_dt,
+                                        file=geojson_f,
+                                    )
 
                         except Exception:
                             logger.exception(
@@ -76,11 +93,6 @@ class Command(BaseCommand):
                                 f"{commit.hexsha}"
                             )
                             continue
-
-                    # Download all the geojson files for each commit
-                    logger.info(
-                        f"Processing commit: {commit.hexsha} - {commit.date_dt}"
-                    )
 
             except Exception:
                 logger.exception(f"An error occured with project: {project.id}")

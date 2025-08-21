@@ -12,12 +12,18 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 from typing import Any
 
+import orjson
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 from git.exc import GitCommandError
+from openspeleo_lib.geojson import NoKnownAnchorError
+from openspeleo_lib.geojson import survey_to_geojson
+from openspeleo_lib.interfaces import ArianeInterface
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
@@ -30,6 +36,7 @@ from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors.auto_selector import AutoSelector
 from speleodb.surveys.models import Format
+from speleodb.surveys.models import GeoJSON
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import FileRejectedError
@@ -42,10 +49,10 @@ from speleodb.utils.timing_ctx import timed_section
 
 if TYPE_CHECKING:
     from django.http import FileResponse
+    from openspeleo_lib.models import Survey
     from rest_framework.request import Request
     from rest_framework.response import Response
 
-    from speleodb.processors.artifact import Artifact
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +224,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     project.git_repo.checkout_default_branch()
 
                 with timed_section("Project Edition - File Adding - Git Commit & Push"):
-                    uploaded_files: list[Artifact | pathlib.Path] = []
+                    uploaded_files: list[pathlib.Path] = []
 
                     for file in files:
                         with timed_section(f"File Adding: `{file.name}`"):
@@ -259,6 +266,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                         uploaded_files.extend(
                                             processor.add_to_project(file=file)
                                         )
+
                                 except FileExistsError:
                                     logger.info(
                                         f"File collision detected for: `{file.name}` "
@@ -271,6 +279,38 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                         hexsha: str | None = project.commit_and_push_project(
                             message=commit_message, author=user
                         )
+
+                    if hexsha is not None:
+                        with timed_section("Conversion to GeoJSON"):
+                            for file in uploaded_files:
+                                if (
+                                    file.name == "project.tml"
+                                    and not project.exclude_geojson
+                                ):
+                                    try:
+                                        with contextlib.suppress(NoKnownAnchorError):
+                                            survey: Survey = ArianeInterface.from_file(
+                                                file
+                                            )
+                                            geojson_data = survey_to_geojson(survey)
+
+                                            geojson_f = SimpleUploadedFile(
+                                                "test.geojson",  # filename
+                                                orjson.dumps(geojson_data),
+                                                content_type="application/geo+json",
+                                            )
+
+                                            GeoJSON.objects.create(
+                                                project=project,
+                                                commit_sha=hexsha,
+                                                commit_date=timezone.now(),
+                                                file=geojson_f,
+                                            )
+                                    except Exception:
+                                        logger.exception("Error converting to GeoJSON")
+                                        continue
+
+                                    break
 
                     with timed_section("HTTP Response Construction"):
                         # Refresh the `modified_date` field
