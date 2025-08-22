@@ -515,10 +515,9 @@ class MapViewerView(_AuthenticatedTemplateView):
         if not (request.user.has_beta_access()):
             return redirect(reverse("private:projects"))
 
-        # Get sorted projects and serialize for JavaScript
-        sorted_projects = sorted(
-            request.user.projects, key=lambda p: p.modified_date, reverse=True
-        )
+        survey_projects = [
+            project for project in request.user.projects if not project.exclude_geojson
+        ]
 
         # Convert projects to a JSON-serializable format
         projects_data = [
@@ -526,15 +525,16 @@ class MapViewerView(_AuthenticatedTemplateView):
                 "id": str(project.id),
                 "name": project.name,
                 "modified_date": project.modified_date.isoformat(),
+                "permissions": project.get_best_permission(request.user).level_label,
             }
-            for project in sorted_projects
+            for project in survey_projects
         ]
 
         # Check if user has write access to any project
         # For map viewer, we'll grant write access if user has write access
         # to any project
         has_write_access = any(
-            project.has_write_access(request.user) for project in sorted_projects
+            project.has_write_access(request.user) for project in survey_projects
         )
 
         data = {

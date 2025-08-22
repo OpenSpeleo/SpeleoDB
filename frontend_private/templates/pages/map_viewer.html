@@ -3403,6 +3403,23 @@
 
     // Station Management Functions
     async function loadStationsForProject(projectId) {
+        // Skip loading stations if user only has WEB_VIEWER access on this project
+        try {
+            const proj = (typeof projects !== 'undefined' && Array.isArray(projects))
+                ? projects.find(p => p.id === String(projectId))
+                : null;
+            if (proj && proj.permissions === 'WEB_VIEWER') {
+                console.log('⏭️ Skipping station load for WEB_VIEWER project', projectId);
+                // Ensure map stays consistent by clearing any station layer for this project
+                displayStationsOnMap(projectId, {
+                    type: 'FeatureCollection',
+                    features: []
+                });
+                return;
+            }
+        } catch (e) {
+            console.warn('Permission check failed while deciding to load stations:', e);
+        }
         try {
             console.log(`📍 Loading stations for project ${projectId}...`);
 
@@ -4711,6 +4728,18 @@
     }
 
     async function loadStationDetails(stationId, projectId) {
+        // Skip fetching details if user only has WEB_VIEWER access on this project
+        try {
+            const proj = (typeof projects !== 'undefined' && Array.isArray(projects))
+                ? projects.find(p => p.id === String(projectId))
+                : null;
+            if (proj && proj.permissions === 'WEB_VIEWER') {
+                console.log('⏭️ Skipping station details fetch for WEB_VIEWER project', projectId);
+                return;
+            }
+        } catch (e) {
+            console.warn('Permission check failed while deciding to load station details:', e);
+        }
         try {
             // Always fetch the full station details from the API to ensure we have all data including resources
             const response = await fetch(`/api/v1/stations/${stationId}/`, {
