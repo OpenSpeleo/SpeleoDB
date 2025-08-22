@@ -512,9 +512,6 @@ class MapViewerView(_AuthenticatedTemplateView):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponseRedirectBase | HttpResponse:
-        if not (request.user.has_beta_access()):
-            return redirect(reverse("private:projects"))
-
         survey_projects = [
             project for project in request.user.projects if not project.exclude_geojson
         ]
