@@ -147,7 +147,10 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
 
         except gitlab.exceptions.GitlabCreateError:
             # The repository already exists in Gitlab - git clone instead
-            return GitRepo.clone_from(url=git_url, to_path=project_dir)
+            repo = GitRepo.clone_from(url=git_url, to_path=project_dir)
+            if not repo.head.is_valid():
+                repo.publish_first_commit()
+            return repo
 
     # cache data for no longer than ten minutes
     @cached(cache=TTLCache(maxsize=100, ttl=600))

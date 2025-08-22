@@ -667,7 +667,10 @@ class GitRepo(Repo):
                 raise
 
     def checkout_default_branch(self) -> None:
-        self._checkout_branch_or_commit(branch_name=settings.DJANGO_GIT_BRANCH_NAME)
+        try:
+            self._checkout_branch_or_commit(branch_name=settings.DJANGO_GIT_BRANCH_NAME)
+        except GitBaseError:
+            self.git.checkout("-b", settings.DJANGO_GIT_BRANCH_NAME)
 
     def checkout_commit(self, hexsha: str) -> None:
         self._checkout_branch_or_commit(hexsha=hexsha)
@@ -738,6 +741,7 @@ class GitRepo(Repo):
 
     def publish_first_commit(self) -> None:
         # Create an initial empty commit
+        self.checkout_default_branch()
         self.commit_and_push_project(
             settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE,
             author_name=settings.DJANGO_GIT_COMMITTER_NAME,
