@@ -44,7 +44,7 @@ repos:
     rev: 0.8.13
     hooks:
       - id: uv-lock
-        args: ["--upgrade"]
+        args: ["--check"]
 
   - repo: https://github.com/pycqa/bandit
     rev: 1.8.6
