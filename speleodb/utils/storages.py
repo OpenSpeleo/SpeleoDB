@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from django.conf import settings
-from storages.backends.s3boto3 import S3Boto3Storage  # type: ignore[attr-defined]
+from storages.backends.s3 import S3Storage
 
 
-class BaseS3Storage(S3Boto3Storage):
+class BaseS3Storage(S3Storage):
     """Base class for S3 storage configurations."""
 
     bucket_name = settings.AWS_STORAGE_BUCKET_NAME
@@ -62,7 +62,7 @@ class StationResourceStorage(BaseS3Storage):
     custom_domain = False  # type: ignore[assignment]
 
 
-class GeoJSONStorage(S3Boto3Storage):
+class GeoJSONStorage(S3Storage):
     """Private S3 storage for GeoJSON uploads.
 
     Files are stored under the "geojson/" prefix; the model's upload_to callable
@@ -84,3 +84,15 @@ class GeoJSONStorage(S3Boto3Storage):
 
     # Use signed URLs for private files
     custom_domain = False
+
+
+class S3StaticStorage(S3Storage):
+    """Public S3 storage for static files with long cache and URL timestamp."""
+
+    querystring_auth = False
+
+    # Prefix for all static assets in the bucket
+    location = "staticfiles"
+
+    # 2min caching for static assets
+    object_parameters = {"CacheControl": "public, max-age=120"}

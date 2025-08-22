@@ -1,7 +1,6 @@
-{% load static i18n compress%}
-{% get_current_language as LANGUAGE_CODE %}
+{% load static %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}">
+<html lang="en-us">
 
 <head>
     <meta charset="utf-8">
@@ -14,9 +13,7 @@
     <meta name="description" content="SpeleoDB Collaboration and Survey Data Exchange Server" />
     <meta name="author" content="Jonathan Dekhtiar" />
 
-    {% compress css %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    {% endcompress %}
 
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">

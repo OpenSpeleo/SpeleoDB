@@ -1,7 +1,6 @@
-{% load static i18n compress%}
-{% get_current_language as LANGUAGE_CODE %}
+{% load static %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}" class="scroll-smooth">
+<html lang="en-us" class="scroll-smooth">
 
 <head>
     <meta charset="utf-8">
@@ -35,10 +34,8 @@
     /> {% endcomment %}
     {% endif %}
 
-    {% compress css %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
-    {% endcompress %}
 
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
@@ -215,9 +212,7 @@
     </script> {% endcomment %}
     {% endif %}
 
-    {% compress js %}
     <script src="{% static 'js/main.js' %}"></script>
-    {% endcompress %}
 
     {% block inline_extra_js %}{% endblock inline_extra_js %}
 

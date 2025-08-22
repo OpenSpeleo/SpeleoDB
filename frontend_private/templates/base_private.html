@@ -1,11 +1,10 @@
-{% load static i18n compress%}
-{% get_current_language as LANGUAGE_CODE %}
+{% load static %}
 
 {% load is_in_list %}
 {% load set_var %}
 
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}" class="scroll-smooth">
+<html lang="en-us" class="scroll-smooth">
 
 <head>
     <meta charset="utf-8">
@@ -30,10 +29,8 @@
     />
     {% endif %} {% endcomment %}
 
-    {% compress css %}
     <link href="{% static 'private/css/style.css' %}" rel="stylesheet">
     <link href="{% static 'private/css/custom.css' %}" rel="stylesheet">
-    {% endcompress %}
 
     {% block extra_css %}{% endblock extra_css %}
 
@@ -706,10 +703,8 @@
     {% endif %}
 
     {% comment %}
-    {% compress js %}
     <script src="{% static 'private/js/dashboard-charts.js' %}"></script>
     <script src="{% static 'private/js/flatpickr-init.js' %}"></script>
-    {% endcompress %}
     {% endcomment %}
 
     {% block extra_js %}{% endblock extra_js %}
