@@ -1107,7 +1107,6 @@
                 </button>
 
             </div>
-
         </div>
         <!-- Table -->
         <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700 relative">
@@ -1678,7 +1677,7 @@
         </div>
 
         <!-- Map Legend Panel (outside map container) -->
-        <div id="map-legend" style="position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: none; max-width: 320px !important; z-index: 999999 !important;">
+        <div id="map-legend" style="position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: none; max-width: 320px !important; z-index: 5 !important;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h3 style="color: white; font-weight: 600; font-size: 14px; margin: 0;">Map Legend</h3>
                 <button onclick="document.getElementById('map-legend').style.display='none';" style="color: #94a3b8; background: none; border: none; cursor: pointer; padding: 4px;" title="Close">
@@ -1741,7 +1740,6 @@
 {% block extra_js %}
 <script src='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js'></script>
 {% endblock extra_js %}
-
 {% block inline_extra_js %}
 <script src="{% static 'private/js/poi_functions.js' %}"></script>
 <script>
@@ -1750,6 +1748,27 @@
     
     // Get project IDs from the backend context
     const projects = {{ projects|safe }};
+    // Helper: does the user have write access on a specific project?
+    function hasProjectWriteAccess(projectId) {
+        try {
+            const proj = projects.find(p => p.id === String(projectId));
+            if (!proj) return false;
+            // Treat READ_AND_WRITE and ADMIN as write access
+            return proj.permissions === 'READ_AND_WRITE' || proj.permissions === 'ADMIN';
+        } catch (e) {
+            return false;
+        }
+    }
+    // Helper: does the user have admin access on a specific project?
+    function hasProjectAdminAccess(projectId) {
+        try {
+            const proj = projects.find(p => p.id === String(projectId));
+            if (!proj) return false;
+            return proj.permissions === 'ADMIN';
+        } catch (e) {
+            return false;
+        }
+    }
     const projectIds = projects.map(project => project.id);
     
     // Global variables for layer management
@@ -1767,7 +1786,7 @@
         const el = document.getElementById('map-legend');
         if (el) {
             // Force all styles to ensure visibility
-            el.style.cssText = 'position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: block !important; max-width: 320px !important; z-index: 999999 !important; opacity: 1 !important; visibility: visible !important;';
+            el.style.cssText = 'position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: block !important; max-width: 320px !important; z-index: 5 !important; opacity: 1 !important; visibility: visible !important;';
             console.log('Legend forced visible with all styles');
             console.log('Element:', el);
             console.log('Computed styles:', window.getComputedStyle(el));
@@ -1788,7 +1807,7 @@
             }
 
             // Force visible
-            el.style.cssText = 'position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: block !important; max-width: 320px !important; z-index: 999999 !important; opacity: 1 !important; visibility: visible !important;';
+            el.style.cssText = 'position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: block !important; max-width: 320px !important; z-index: 5 !important; opacity: 1 !important; visibility: visible !important;';
             console.log('Legend fixed and visible');
         }
     }
@@ -1870,7 +1889,7 @@
 
                     // Toggle visibility
                     if (el.style.display === 'none' || el.style.display === '') {
-                        el.style.cssText = 'position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: block !important; max-width: 320px !important; z-index: 999999 !important; opacity: 1 !important; visibility: visible !important;';
+                        el.style.cssText = 'position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: block !important; max-width: 320px !important; z-index: 5 !important; opacity: 1 !important; visibility: visible !important;';
                         console.log('Legend shown');
                     } else {
                         el.style.display = 'none';
@@ -2201,7 +2220,6 @@
     // Context Menu System
     function showContextMenu(point, lngLat, clickedElement = null) {
         const menu = document.getElementById('context-menu');
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
 
         console.log('🖱️ showContextMenu called');
         console.log('   clickedElement:', clickedElement);
@@ -2321,7 +2339,8 @@
                             </div>
                         `;
 
-            if (hasWriteAccess) {
+            const canDelete = clickedStation.projectId ? hasProjectAdminAccess(clickedStation.projectId) : false;
+            if (canDelete) {
                 menuHTML += `
                                 <div class="context-menu-item" onclick="deleteStationFromContextMenu()">
                                     <div class="context-menu-icon">🗑️</div>
@@ -2335,7 +2354,9 @@
         } else {
             // Only show create options when NOT clicking on a station or POI
             // Station creation requires write access (project-specific permissions)
-            if (hasWriteAccess) {
+            const nearestProjectId = getNearestProjectIdForLocation(lngLat);
+            const canCreate = nearestProjectId && hasProjectWriteAccess(nearestProjectId);
+            if (canCreate) {
                 menuHTML += `
                                 <div class="context-menu-item" onclick="createStationHere()">
                                     <div class="context-menu-icon">📌</div>
@@ -2428,7 +2449,6 @@
     // Simplified context menu for stations
     function showContextMenuForStation(x, y, stationData) {
         const menu = document.getElementById('context-menu');
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
 
         console.log(`🖱️ showContextMenuForStation: ${stationData.name}`);
 
@@ -2447,7 +2467,8 @@
                         </div>
                     `;
 
-        if (hasWriteAccess) {
+        const canDelete = stationData && stationData.projectId ? hasProjectAdminAccess(stationData.projectId) : false;
+        if (canDelete) {
             menuHTML += `
                             <div class="context-menu-item" onclick="deleteStationFromContextMenu()">
                                 <div class="context-menu-icon">🗑️</div>
@@ -2480,7 +2501,6 @@
             }
         }, 0);
     }
-
     // Simplified context menu for POIs
     function showContextMenuForPOI(x, y, poiData) {
         const menu = document.getElementById('context-menu');
@@ -2625,6 +2645,11 @@
         if (!contextMenuData || !contextMenuData.lngLat) return;
         const coordinates = [contextMenuData.lngLat.lng, contextMenuData.lngLat.lat];
         const nearestProjectId = getNearestProjectIdForLocation(contextMenuData.lngLat);
+        if (!nearestProjectId || !hasProjectWriteAccess(nearestProjectId)) {
+            showNotification('warning', 'You have read access and cannot create stations.');
+            hideContextMenu();
+            return;
+        }
 
         // Show the creation modal with nearest project preselected
         showCreateStationModal(coordinates, nearestProjectId);
@@ -3265,7 +3290,6 @@
         console.log('✅ Station visibility refreshed');
         window.debugStationVisibility();
     };
-
     function copyCoordinates() {
         if (!contextMenuData) return;
 
@@ -3645,7 +3669,7 @@
         }
 
         const markers = [];
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
+        const hasWriteAccess = hasProjectWriteAccess(projectId);
 
         const currentZoom = map.getZoom();
 
@@ -3684,9 +3708,7 @@
                 // Station is created hidden - no visible class added
 
                 // Add drag cursor if user has write access
-                if (hasWriteAccess) {
-                    markerElement.style.cursor = 'grab';
-                }
+                markerElement.style.cursor = hasWriteAccess ? 'grab' : 'pointer';
 
                 const marker = new mapboxgl.Marker({
                     element: markerElement,
@@ -4064,7 +4086,6 @@
         modal.classList.add('hidden');
         pendingStationData = null;
     }
-
     // Apply suggestion to the name field
     window.applySuggestion = function (suggestionNumber) {
         const nameInput = document.getElementById('station-name');
@@ -4436,6 +4457,12 @@
         });
 
         // Load tab content
+        // If trying to open Add Resource tab without write access, show warning and stay on resources
+        if (tabName === 'add-resource' && currentProjectId && !hasProjectWriteAccess(currentProjectId)) {
+            showNotification('warning', 'You have read access and cannot modify.');
+            tabName = 'resources';
+        }
+
         switch (tabName) {
             case 'details':
                 if (currentStationId) {
@@ -4793,7 +4820,6 @@
                 '<div class="tab-content active"><div class="flex items-center justify-center h-full min-h-[300px]"><div class="text-center text-red-400">Error loading station details</div></div></div>';
         }
     }
-
     function displayStationDetails(station, projectId) {
         const modalTitle = document.getElementById('station-modal-title');
         const modalContent = document.getElementById('station-modal-content');
@@ -4807,7 +4833,7 @@
         const isDemoStation = station.is_demo || (station.id && station.id.startsWith('demo-'));
         modalTitle.innerHTML = `Station: ${station.name}${isDemoStation ? ' <span class="demo-badge">DEMO</span>' : ''}`;
 
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
+        const hasWriteAccess = hasProjectWriteAccess(projectId);
 
         // Get project name
         const project = projects.find(p => p.id === projectId);
@@ -4822,9 +4848,7 @@
                         <div>Snapped to: <span class="font-mono text-emerald-300">${snapResult.lineName}</span> (${snapResult.distance.toFixed(1)}m away)</div>
                         <div>GPS Location: <span class="font-mono text-emerald-300">${Number(station.latitude).toFixed(7)}, ${Number(station.longitude).toFixed(7)}</span></div>
                     </div>
-                    <div class="text-xs text-emerald-200 mt-2">
-                        📍 Fixed GPS coordinates - drag to move or right-click map to create new stations
-                    </div>
+                    ${hasWriteAccess ? `<div class="text-xs text-emerald-200 mt-2">📍 Fixed GPS coordinates - drag to move or right-click map to create new stations</div>` : `<div class="text-xs text-amber-200 mt-2">🔒 Read-only access - moving stations is disabled</div>`}
                 </div>
             ` : `
                 <div class="mt-3 bg-slate-700/50 p-3 rounded-lg border border-slate-500/30">
@@ -4832,9 +4856,7 @@
                     <div class="text-sm text-slate-200 mt-1">
                         <div>GPS Location: <span class="font-mono text-slate-300">${Number(station.latitude).toFixed(7)}, ${Number(station.longitude).toFixed(7)}</span></div>
                     </div>
-                    <div class="text-xs text-slate-400 mt-2">
-                        🖱️ Drag this station to move it or use magnetic snap to nearby survey lines
-                    </div>
+                    ${hasWriteAccess ? `<div class="text-xs text-slate-400 mt-2">🖱️ Drag this station to move it or use magnetic snap to nearby survey lines</div>` : `<div class="text-xs text-amber-300 mt-2">🔒 Read-only access - moving stations is disabled</div>`}
                 </div>
             `;
 
@@ -4846,12 +4868,10 @@
                                 <div class="flex-1">
                                     <h3 class="text-2xl font-bold text-white">${station.name}</h3>
                                 </div>
-                                ${hasWriteAccess ? `
-                                    <div class="flex space-x-3 ml-6">
-                                        <button onclick="editStation('${station.id}')" class="btn-secondary text-sm">✏️ Edit</button>
-                                        <button onclick="deleteStation('${station.id}', '${projectId}')" class="btn-danger text-sm">🗑️ Delete</button>
-                                    </div>
-                                ` : ''}
+                                <div class="flex space-x-3 ml-6">
+                                    <button ${hasWriteAccess ? `onclick="editStation('${station.id}')"` : ''} class="btn-secondary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'}>✏️ Edit</button>
+                                    ${hasProjectAdminAccess(projectId) ? `<button onclick="deleteStation('${station.id}', '${projectId}')" class="btn-danger text-sm">🗑️ Delete</button>` : `<button class="btn-danger text-sm opacity-50 cursor-not-allowed" disabled>🗑️ Delete</button>`}
+                                </div>
                             </div>
                             
                             <div class="p-8 space-y-6">
@@ -4886,15 +4906,14 @@
                             
                             <div class="bg-slate-700/40 p-8">
                                 <h4 class="text-lg font-semibold text-white mb-4">Quick Actions</h4>
-                                ${hasWriteAccess ? `
-                                    <div class="flex" style="gap: 12px;">
-                                        <button onclick="quickAddResource('note')" class="btn-primary text-sm" style="flex: 0 0 calc((100% - 48px) / 5);">📝 Note</button>
-                                        <button onclick="quickAddResource('document')" class="btn-primary text-sm" style="flex: 0 0 calc((100% - 48px) / 5);">📄 Document</button>
-                                        <button onclick="quickAddResource('sketch')" class="btn-primary text-sm" style="flex: 0 0 calc((100% - 48px) / 5);">✏️ Sketch</button>
-                                        <button onclick="quickAddResource('photo')" class="btn-primary text-sm" style="flex: 0 0 calc((100% - 48px) / 5);">📷 Photo</button>
-                                        <button onclick="quickAddResource('video')" class="btn-primary text-sm" style="flex: 0 0 calc((100% - 48px) / 5);">🎥 Video</button>
-                                    </div>
-                                ` : '<p class="text-slate-400 text-sm">Click the Resources tab to view all resources for this station.</p>'}
+                                <div class="flex" style="gap: 12px;">
+                                    <button ${hasWriteAccess ? `onclick="quickAddResource('note')"` : ''} class="btn-primary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'} style="flex: 0 0 calc((100% - 48px) / 5);">📝 Note</button>
+                                    <button ${hasWriteAccess ? `onclick="quickAddResource('document')"` : ''} class="btn-primary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'} style="flex: 0 0 calc((100% - 48px) / 5);">📄 Document</button>
+                                    <button ${hasWriteAccess ? `onclick="quickAddResource('sketch')"` : ''} class="btn-primary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'} style="flex: 0 0 calc((100% - 48px) / 5);">✏️ Sketch</button>
+                                    <button ${hasWriteAccess ? `onclick="quickAddResource('photo')"` : ''} class="btn-primary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'} style="flex: 0 0 calc((100% - 48px) / 5);">📷 Photo</button>
+                                    <button ${hasWriteAccess ? `onclick="quickAddResource('video')"` : ''} class="btn-primary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'} style="flex: 0 0 calc((100% - 48px) / 5);">🎥 Video</button>
+                                </div>
+                                ${hasWriteAccess ? '' : '<p class="text-amber-300 text-sm mt-3">You have read access and cannot modify this station.</p>'}
                             </div>
                         </div>
                     </div>
@@ -5148,7 +5167,7 @@
                                 </div>
                                 
                                 <div id="text-input-container" class="hidden">
-                                    <label class="block text-slate-300 text-sm font-medium mb-2">Content</label>
+                                    <label class="block text-slate-300 text-sm font-medium mb-2">Content <span class="text-red-400">*</span></label>
                                     <div id="sketch-area" class="hidden">
                                         <canvas id="sketch-canvas" width="1600" height="800" class="sketch-canvas w-full" style="max-height: 400px;"></canvas>
                                         <div class="flex justify-between items-center mt-2">
@@ -5531,6 +5550,10 @@
     // Station Management Functions
     function quickAddResource(resourceType) {
         if (!currentStationId) return;
+        if (!currentProjectId || !hasProjectWriteAccess(currentProjectId)) {
+            showNotification('warning', 'You have read access and cannot modify.');
+            return;
+        }
 
         // Switch to add resource tab with preselected type
         switchTab('add-resource');
@@ -5545,6 +5568,10 @@
 
     function editStation(stationId) {
         console.log(`📝 Opening edit form for station ${stationId}`);
+        if (!currentProjectId || !hasProjectWriteAccess(currentProjectId)) {
+            showNotification('warning', 'You have read access and cannot modify.');
+            return;
+        }
 
         // Get station data
         let station = allStations.get(stationId);
@@ -5557,7 +5584,6 @@
         // Switch to a new edit tab/view
         showStationEditForm(station, currentProjectId);
     }
-
     function showStationEditForm(station, projectId) {
         const modalContent = document.getElementById('station-modal-content');
         const isDemoStation = station.is_demo || (station.id && station.id.startsWith('demo-'));
@@ -5939,6 +5965,10 @@
     }
 
     async function saveStationEdits(stationId, originalProjectId, form) {
+        if (!originalProjectId || !hasProjectWriteAccess(originalProjectId)) {
+            showNotification('warning', 'You have read access and cannot modify.');
+            return;
+        }
         const formData = new FormData(form);
         const newProjectId = formData.get('project_id');
         const updateData = {
@@ -6061,6 +6091,10 @@
 
     async function deleteStation(stationId, projectId) {
         console.log(`🗑️ Preparing to delete station ${stationId} in project ${projectId}`);
+        if (!projectId || !hasProjectWriteAccess(projectId)) {
+            showNotification('warning', 'You have read access and cannot modify.');
+            return;
+        }
 
         const station = allStations.get(stationId);
         const stationName = station?.name || 'Station';
@@ -6127,6 +6161,10 @@
         if (!window.pendingDeleteStation) return;
 
         const { stationId, projectId, stationName } = window.pendingDeleteStation;
+        if (!projectId || !hasProjectAdminAccess(projectId)) {
+            showNotification('warning', 'Only admins can delete stations.');
+            return;
+        }
 
         console.log(`🗑️ Starting delete for station ${stationId} in project ${projectId}`);
         console.log(`🗑️ Station found: ${stationName}`);
@@ -6341,7 +6379,6 @@
         };
         return labels[type] || type;
     }
-
     function getFileAccept(type) {
         const accepts = {
             'photo': 'image/*',
@@ -6568,6 +6605,10 @@
         }
     }
     async function createStation(projectId, form) {
+        if (!projectId || !hasProjectWriteAccess(projectId)) {
+            showNotification('warning', 'You have read access and cannot create stations.');
+            return;
+        }
         const formData = new FormData(form);
         const stationData = {
             name: formData.get('name'),
@@ -7138,7 +7179,6 @@
             updateUndoRedoButtons();
         }
     }
-
     function redoSketch() {
         if (sketchOps && sketchOps.redo()) {
             updateUndoRedoButtons();
@@ -7370,6 +7410,10 @@
         if (!pendingResourceDelete) return;
 
         const { resourceId, stationId, projectId } = pendingResourceDelete;
+        if (!projectId || !hasProjectWriteAccess(projectId)) {
+            showNotification('warning', 'You have read access and cannot modify.');
+            return;
+        }
 
         // Hide the modal
         document.getElementById('resource-delete-confirm-modal').style.display = 'none';
@@ -7929,7 +7973,6 @@
             currentZoom: map ? map.getZoom() : null
         };
     };
-
     // Add helpful commands info to the console
     setTimeout(() => {
         console.log('\n📍 HELPFUL COMMANDS:');
@@ -9116,7 +9159,7 @@
                             container.style.position = 'absolute';
                             container.style.left = '5px';
                             container.style.bottom = '5px';
-                            container.style.zIndex = '999999';
+                            container.style.zIndex = '5';
                             container.style.backgroundColor = '#0f172a';
                             container.style.border = '2px solid #475569';
                             container.style.borderRadius = '8px';
