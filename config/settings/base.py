@@ -281,10 +281,13 @@ MIDDLEWARE = [
 if DEBUG:
     MIDDLEWARE += ["silk.middleware.SilkyMiddleware"]
 
+# MAPBOX CONFIGURATION
+# ------------------------------------------------------------------------------
+MAPBOX_API_TOKEN = env("MAPBOX_API_TOKEN")
+
+
 # AWS S3 CONFIGURATION
 # ------------------------------------------------------------------------------
-
-# AWS Settings
 AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")

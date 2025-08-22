@@ -537,5 +537,6 @@ class MapViewerView(_AuthenticatedTemplateView):
         data = {
             "projects": json.dumps(projects_data),
             "has_write_access": has_write_access,
+            "mapbox_api_token": settings.MAPBOX_API_TOKEN,
         }
         return super().get(request, *args, **data, **kwargs)
