@@ -3,13 +3,10 @@
 import { setMap, getMap, emit } from './state.js';
 import * as ui from './ui.js';
 import { hasProjectWriteAccess, hasProjectAdminAccess } from './utils.js';
+import { getCSRFToken as apiGetCSRFToken, apiFetch } from './api.js';
 // Ensure modules are loaded
-import * as API from './api.js';
-import * as GEO from './geojsonLayer.js';
-import * as STATIONS from './stations.js';
-import * as POIS from './pois.js';
-import * as STATE from './state.js';
-import * as UTILS from './utils.js';
+// Avoid importing entire modules just to expose everything globally
+// We'll keep globals lean and only expose what HTML calls directly
 // Import resources helpers explicitly
 import {
     initializeSketchCanvas,
@@ -38,33 +35,13 @@ import {
 // Minimal bootstrap for modular refactor; inert until features are migrated
 console.debug('[map_viewer] module index loaded');
 
-// Expose a tiny namespaced helper for debugging during migration
+// Reduce global leakage: expose only the UI functions needed
 window.__mv = window.__mv || {};
 window.__mv.ui = ui;
 
-// Generic exposure of all exported functions from modules
-function exposeAllFunctions(mod) {
-    try {
-        Object.keys(mod || {}).forEach((key) => {
-            const val = mod[key];
-            if (typeof val === 'function') {
-                try { window[key] = val; } catch (_) { }
-            }
-        });
-    } catch (_) { }
-}
-
-exposeAllFunctions(API);
-exposeAllFunctions(GEO);
-exposeAllFunctions(STATIONS);
-exposeAllFunctions(POIS);
-exposeAllFunctions(STATE);
-exposeAllFunctions(UTILS);
-exposeAllFunctions(ui);
-
-// Explicit aliases for HTML references that may not match export names
-window.applySuggestion = ui.applySuggestion || STATIONS.applySuggestion || POIS.applySuggestion;
-window.returnToStationManager = ui.returnToStationManager || STATIONS.returnToStationManager;
+// Explicit aliases only if present in UI module
+if (ui.applySuggestion && !window.applySuggestion) window.applySuggestion = ui.applySuggestion;
+if (ui.returnToStationManager && !window.returnToStationManager) window.returnToStationManager = ui.returnToStationManager;
 
 // Expose UI functions globally for HTML inline handlers
 window.showNotification = ui.showNotification;
@@ -78,6 +55,10 @@ window.openNoteViewer = ui.openNoteViewer;
 window.formatNoteContent = ui.formatNoteContent;
 window.closeNoteViewer = ui.closeNoteViewer;
 window.copyNoteToClipboard = ui.copyNoteToClipboard;
+
+// Expose API helpers for HTML inline code to consume centralized CSRF handling
+if (!window.getCSRFToken) window.getCSRFToken = apiGetCSRFToken;
+if (!window.apiFetch) window.apiFetch = apiFetch;
 
 // Expose sketch/resource functions directly
 window.initializeSketchCanvas = initializeSketchCanvas;
@@ -142,27 +123,7 @@ async function isReady({ requireMapStyle = false, timeout = 8000 } = {}) {
 // Expose globally so inline HTML can gate its logic
 try { window.isReady = isReady; } catch (_) { }
 
-// Expose sketch functions globally for HTML inline handlers
-try {
-    const r = await (async () => ui)();
-    const res = await import('./resources.js');
-    window.initializeSketchCanvas = res.initializeSketchCanvas;
-    window.startDrawing = res.startDrawing;
-    window.draw = res.draw;
-    window.stopDrawing = res.stopDrawing;
-    window.clearSketch = res.clearSketch;
-    window.undoSketch = res.undoSketch;
-    window.redoSketch = res.redoSketch;
-    window.updateUndoRedoButtons = res.updateUndoRedoButtons;
-    window.initializeEditSketchCanvas = res.initializeEditSketchCanvas;
-    window.startEditDrawing = res.startEditDrawing;
-    window.editDraw = res.editDraw;
-    window.stopEditDrawing = res.stopEditDrawing;
-    window.clearEditSketch = res.clearEditSketch;
-    window.undoEditSketch = res.undoEditSketch;
-    window.redoEditSketch = res.redoEditSketch;
-    window.updateEditUndoRedoButtons = res.updateEditUndoRedoButtons;
-} catch (_) { }
+// Removed late dynamic rebind of sketch functions to minimize globals
 
 // Bind commonly used helpers early so inline code can use them
 try {

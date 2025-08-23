@@ -17,7 +17,7 @@ export function clamp(value, min, max) {
 export function hasProjectWriteAccess(projectId) {
     try {
         const arr = window.projects || [];
-        const proj = arr.find(p => p.id === String(projectId));
+        const proj = arr.find(p => String(p.id) === String(projectId));
         if (!proj) return false;
         return proj.permissions === 'READ_AND_WRITE' || proj.permissions === 'ADMIN';
     } catch (_) {
@@ -28,7 +28,7 @@ export function hasProjectWriteAccess(projectId) {
 export function hasProjectAdminAccess(projectId) {
     try {
         const arr = window.projects || [];
-        const proj = arr.find(p => p.id === String(projectId));
+        const proj = arr.find(p => String(p.id) === String(projectId));
         if (!proj) return false;
         return proj.permissions === 'ADMIN';
     } catch (_) {

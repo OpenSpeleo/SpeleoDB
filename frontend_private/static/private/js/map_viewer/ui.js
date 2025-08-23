@@ -99,7 +99,7 @@ export function openPhotoInNewTab() {
 
 export function openVideoModal(url, title) {
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 mv-video-modal';
     modal.onclick = (e) => { if (e.target === modal) closeVideoModal(); };
     const container = document.createElement('div');
     container.className = 'relative w-full max-w-4xl bg-slate-800 rounded-lg overflow-hidden';
@@ -122,7 +122,7 @@ export function openVideoModal(url, title) {
 }
 
 export function closeVideoModal() {
-    const modals = document.querySelectorAll('.fixed.inset-0.z-50');
+    const modals = document.querySelectorAll('.mv-video-modal');
     modals.forEach(m => m.remove());
 }
 
