@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -148,8 +149,9 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
         """Update a resource."""
         partial = kwargs.pop("partial", False)
         data = request.data.dict() # pyright: ignore[reportAttributeAccessIssue]
-        if partial and not data["file"]:
-            del data["file"]
+        with contextlib.suppress(KeyError):
+            if partial and not data["file"]:
+                del data["file"]
         resource = self.get_object()
 
         # Check permissions against the resource's station's project

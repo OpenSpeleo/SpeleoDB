@@ -445,7 +445,7 @@
                     <div id="create-station-progress" class="absolute top-0 left-0 right-0 h-1 bg-slate-700 rounded-t-xl overflow-hidden opacity-0 transition-opacity">
                         <div class="h-full bg-gradient-to-r from-sky-500 to-emerald-500 animate-progress"></div>
                     </div>
-                    <form id="create-station-form">
+                    <form id="create-station-form" onsubmit="event.preventDefault(); createStation(this.querySelector('#station-project') ? this.querySelector('#station-project').value : currentProjectId, this); return false;">
                         <!-- Modal Header -->
                         <div class="flex items-center justify-between p-6 border-b border-slate-600">
                             <h2 class="text-xl font-semibold text-white">Create New Station</h2>
@@ -1063,6 +1063,7 @@
     // Current modal state
     let currentStationId = null;
     let activeTab = 'details';
+    try { window.activeTab = activeTab; } catch (_) {}
 
     // Context Menu Help Functions
     window.showContextMenuHelp = function () {
@@ -3447,6 +3448,7 @@
             effectiveTab = 'resources';
         }
         activeTab = effectiveTab;
+        try { window.activeTab = activeTab; } catch (_) {}
 
         // Update tab buttons
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -5125,6 +5127,11 @@
 
         // Show edit form
         showEditResourceForm(resourceId, resource, currentStationId, currentProjectId);
+        // Scroll into view
+        try {
+            const formContainer = document.getElementById('add-resource-form');
+            if (formContainer) formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (_) {}
     }
 
     function showEditResourceForm(resourceId, resource, stationId, projectId) {
@@ -5275,6 +5282,14 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             await updateStationResource(resourceId, stationId, projectId, form);
+            // After successful updateStationResource, reload resources tab and scroll to top
+            try {
+                if (typeof loadStationResources === 'function') {
+                    loadStationResources(stationId, projectId);
+                    const modalContent = document.getElementById('station-modal-content');
+                    if (modalContent) modalContent.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (_) {}
         });
     }
     // Edit sketch functionality
@@ -5496,11 +5511,12 @@
             // Refresh stations on map
             loadStationsForProject(projectId);
 
-            // Close modal and open the new station
-            document.getElementById('station-modal').classList.add('hidden');
-            setTimeout(() => {
-                openStationModal(newStation.id, projectId);
-            }, 300);
+            // Close the create-station modal and open the new station
+            try { hideCreateStationModal(); } catch (_) {
+                const m = document.getElementById('create-station-modal');
+                if (m) m.classList.add('hidden');
+            }
+            setTimeout(() => { openStationModal(newStation.id, projectId); }, 300);
         } catch (error) {
             console.error('Error creating station:', error);
             showNotification('error', `Failed to create station: ${error.message}`);
@@ -6179,8 +6195,6 @@
                 'poi-label',  // Points of interest
                 'airport-label',  // Airport labels
                 'rail-label',  // Rail/transit labels
-                'water-point-label',  // Water feature labels
-                'natural-point-label',  // Natural feature labels
                 'transit-label',  // Transit stop labels
                 'road-crossing',  // Crossing labels
                 'road-label-simple',  // Simple road labels
@@ -6202,7 +6216,6 @@
                 try {
                     if (map.getLayer(layerId)) {
                         map.setLayoutProperty(layerId, 'visibility', 'none');
-                        console.log(`Hidden label layer: ${layerId}`);
                     }
                 } catch (e) {
                     // Layer might not exist in this style, which is fine
@@ -6270,7 +6283,6 @@
 
                                 try {
                                     map.setLayoutProperty(layer.id, 'visibility', 'none');
-                                    console.log(`Hidden layer: ${layer.id}`);
                                 } catch (e) {
                                     console.warn(`Could not hide layer ${layer.id}:`, e);
                                 }
@@ -6535,9 +6547,7 @@
                                 }
 
                                 console.log(`✅ Project ${projectId} GeoJSON data loaded successfully!`);
-                                console.log(`   Features: ${geojsonData.features.length}`);
-                                console.log(`   Feature types:`, geojsonData.features.map(f => f.geometry?.type).filter(Boolean));
-
+                             
                                 return {
                                     data: geojsonData,
                                     index,
