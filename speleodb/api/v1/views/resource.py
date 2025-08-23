@@ -147,12 +147,15 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
     def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Update a resource."""
         partial = kwargs.pop("partial", False)
+        data = request.data.dict() # pyright: ignore[reportAttributeAccessIssue]
+        if partial and not data["file"]:
+            del data["file"]
         resource = self.get_object()
 
         # Check permissions against the resource's station's project
         self.check_object_permissions(request, resource.station.project)
 
-        serializer = self.get_serializer(resource, data=request.data, partial=partial)
+        serializer = self.get_serializer(resource, data=data, partial=partial)
         if serializer.is_valid():
             serializer.save()
             return SuccessResponse({"resource": serializer.data})
