@@ -735,33 +735,37 @@
 <script type="module" src="{% static 'private/js/map_viewer/index.js' %}"></script>
 {% endblock extra_js %}
 {% block inline_extra_js %}
-<script src="{% static 'private/js/poi_functions.js' %}"></script>
+<script src="{% static 'private/js/map_viewer/poi_functions.js' %}"></script>
+<script src="{% static 'private/js/map_viewer/nuevo/main.js' %}"></script>
+<script src="{% static 'private/js/map_viewer/nuevo/station.js' %}"></script>
+<script src="{% static 'private/js/map_viewer/nuevo/map_viewer.js' %}"></script>
 <script>
-    // // Fallback aliases to avoid race if module globals not ready yet
-    // if (typeof openPhotoLightbox === 'undefined') {
-    //     function openPhotoLightbox(url, title) {
-    //         if (window.openPhotoLightbox) return window.openPhotoLightbox(url, title);
-    //         try {
-    //             const lightbox = document.getElementById('photo-lightbox');
-    //             const img = document.getElementById('lightbox-image');
-    //             if (lightbox && img) {
-    //                 img.src = url;
-    //                 img.alt = title || 'Photo';
-    //                 lightbox.style.display = 'flex';
-    //             }
-    //         } catch (_) {}
-    //     }
-    // }
-    // if (typeof openVideoModal === 'undefined') {
-    //     function openVideoModal(url, title) {
-    //         if (window.openVideoModal) return window.openVideoModal(url, title);
-    //     }
-    // }
+
+    mapboxgl.accessToken = "{{ mapbox_api_token }}";
+
+    if (!mapboxgl.supported()) {
+        UX.showNotification('error', 'Your browser does not support Mapbox GL. Please use a modern browser.', 10000);
+        throw new Error("Mapbox GL not supported by browser!");
+    }
+
+    class ApplicationState {
+        static map = new mapboxgl.Map({
+            container: 'map',
+            // Satellite imagery with street labels
+            style: 'mapbox://styles/mapbox/satellite-streets-v12',
+            // Start completely zoomed out showing the whole planet
+            center: [0, 0],
+            zoom: 0
+        }); 
+        static hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
+        static projects = {{ projects|safe }};
+    }
+
     // Set write access for POI functions
-    window.hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
+    window.hasWriteAccess = ApplicationState.hasWriteAccess;
     
     // Get project IDs from the backend context
-    const projects = {{ projects|safe }};
+    const projects = ApplicationState.projects;
     // Make projects globally available and stable (do not overwrite later)
     window.projects = projects;
     window.allProjects = projects;
@@ -769,7 +773,6 @@
     const projectIds = projects.map(project => project.id);
     
     // Global variables for layer management
-    let map;
     let projectLayerStates = new Map(); // Track visibility state for each project
     let allProjectLayers = new Map(); // Track all layer IDs for each project
     let stationMarkers = new Map(); // Track station markers for each project
@@ -778,70 +781,7 @@
     let poiMarkers = []; // Track POI markers
     let allPOIs = new Map(); // Track all POIs by ID for easy access
 
-    // Test function to force legend visible
-    window.testLegend = function () {
-        const el = document.getElementById('map-legend');
-        if (el) {
-            // Force all styles to ensure visibility
-            el.style.cssText = 'position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: block !important; max-width: 320px !important; z-index: 5 !important; opacity: 1 !important; visibility: visible !important;';
-            console.log('Legend forced visible with all styles');
-            console.log('Element:', el);
-            console.log('Computed styles:', window.getComputedStyle(el));
-            console.log('Bounding rect:', el.getBoundingClientRect());
-        } else {
-            console.error('Legend element not found!');
-        }
-    }
-
-    // Function to move legend to body and ensure visibility
-    window.fixLegend = function () {
-        const el = document.getElementById('map-legend');
-        if (el) {
-            // Move to body if not already there
-            if (el.parentElement !== document.body) {
-                document.body.appendChild(el);
-                console.log('Moved legend to body');
-            }
-
-            // Force visible
-            el.style.cssText = 'position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: block !important; max-width: 320px !important; z-index: 5 !important; opacity: 1 !important; visibility: visible !important;';
-            console.log('Legend fixed and visible');
-        }
-    }
-
-    // Function to fly to a station on the map
-    window.goToStation = function (stationId, latitude, longitude) {
-        console.log(`🚁 Flying to station ${stationId} at ${latitude}, ${longitude}`);
-
-        // Close the station manager modal
-        const stationManagerModal = document.getElementById('station-manager-modal');
-        if (stationManagerModal) {
-            stationManagerModal.classList.add('hidden');
-        }
-
-        // Find the station's project ID
-        let stationProjectId = null;
-        const station = allStations.get(stationId);
-        if (station) {
-            stationProjectId = station.projectId || station.project || station.project_id;
-        }
-
-        // If the project is hidden, toggle it to visible
-        if (stationProjectId && projectLayerStates.get(stationProjectId) === false) {
-            toggleProjectVisibility(stationProjectId, true);
-        }
-
-        // Fly to the location
-        map.flyTo({
-            center: [longitude, latitude],
-            zoom: 18, // Max zoom to focus on the station
-            duration: 2000, // 2 second animation
-            essential: true, // This animation is essential with respect to prefers-reduced-motion
-            pitch: 0,
-            bearing: 0
-        });
-    }
-
+    
     // Function to fly to a POI on the map
     window.goToPOI = function (poiId, latitude, longitude) {
         console.log(`🚁 Flying to POI ${poiId} at ${latitude}, ${longitude}`);
@@ -853,7 +793,7 @@
         }
 
         // Fly to the location
-        map.flyTo({
+        ApplicationState.map.flyTo({
             center: [longitude, latitude],
             zoom: 18, // Max zoom to focus on the POI
             duration: 2000, // 2 second animation
@@ -952,8 +892,8 @@
 
             layerIds.forEach(layerId => {
                 try {
-                    if (map.getLayer(layerId)) {
-                        map.setLayoutProperty(layerId, 'visibility', visibility);
+                    if (ApplicationState.map.getLayer(layerId)) {
+                        ApplicationState.map.setLayoutProperty(layerId, 'visibility', visibility);
                         console.log(`Set ${layerId} visibility to ${visibility}`);
                     }
                 } catch (error) {
@@ -965,14 +905,14 @@
         // Toggle station markers
         if (stationMarkers.has(projectId)) {
             const markers = stationMarkers.get(projectId);
-            const currentZoom = map.getZoom();
+            const currentZoom = ApplicationState.map.getZoom();
             const shouldShowStations = currentZoom >= 14; // Respect zoom threshold
 
             markers.forEach(marker => {
                 if (isVisible && shouldShowStations) {
                     // Show marker if project is visible AND we're zoomed in enough
                     if (!marker.addedToMap) {
-                        marker.addTo(map);
+                        marker.addTo(ApplicationState.map);
                         marker.addedToMap = true;
                     }
                 } else {
@@ -991,25 +931,7 @@
         projectLayerStates.set(projectId, isVisible);
     }
 
-    // Function to hide loading overlay with smooth transition
-    function hideLoadingOverlay() {
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) {
-            overlay.classList.add('hide');
-            // Remove from DOM after transition completes
-            setTimeout(() => {
-                overlay.style.display = 'none';
-            }, 500);
-        }
-    }
 
-    // Function to update loading text
-    function updateLoadingText(text, subtext = '') {
-        const textElement = document.querySelector('.loading-text');
-        const subtextElement = document.querySelector('.loading-subtext');
-        if (textElement) textElement.textContent = text;
-        if (subtextElement) subtextElement.textContent = subtext;
-    }
 
     // Enhanced station positioning system with magnetic snap
     let lineFeatureCache = new Map(); // Cache line geometries by project
@@ -1233,7 +1155,7 @@
 
         snapIndicator = new mapboxgl.Marker(element)
             .setLngLat(coordinates)
-            .addTo(map);
+            .addTo(ApplicationState.map);
     }
 
     function hideSnapIndicator() {
@@ -1299,7 +1221,7 @@
         }
 
         // Query features at this point
-        const features = map.queryRenderedFeatures(point);
+        const features = ApplicationState.map.queryRenderedFeatures(point);
         const lineFeatures = features.filter(f => f.geometry.type === 'LineString' && f.properties.section_name);
 
         // Only log basic info
@@ -1433,7 +1355,7 @@
         let x, y;
         if (point.x !== undefined && point.y !== undefined) {
             // Standard map click
-            const rect = map.getContainer().getBoundingClientRect();
+            const rect = ApplicationState.map.getContainer().getBoundingClientRect();
             x = rect.left + point.x;
             y = rect.top + point.y;
         } else if (point.clientX !== undefined && point.clientY !== undefined) {
@@ -1837,83 +1759,6 @@
         return data;
     }
 
-    // showNotification migrated to module ui.js and rebound in module index
-
-    // Enhanced loading overlay for station operations
-    function showStationLoadingOverlay(title, message) {
-        const overlay = document.createElement('div');
-        overlay.className = 'custom-loading-overlay';
-        overlay.innerHTML = `
-            <div class="loading-card">
-                <div class="loading-spinner"></div>
-                <div class="loading-title">${title}</div>
-                <div class="loading-message">${message}</div>
-            </div>
-        `;
-
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            animation: fadeIn 0.2s ease-out;
-        `;
-
-        const card = overlay.querySelector('.loading-card');
-        card.style.cssText = `
-            background: rgba(51, 65, 85, 0.98);
-            padding: 32px;
-            border-radius: 16px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(148, 163, 184, 0.3);
-            min-width: 280px;
-        `;
-
-        const spinner = overlay.querySelector('.loading-spinner');
-        spinner.style.cssText = `
-            width: 48px;
-            height: 48px;
-            border: 3px solid rgba(56, 189, 248, 0.2);
-            border-left: 3px solid #38bdf8;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        `;
-
-        const titleEl = overlay.querySelector('.loading-title');
-        titleEl.style.cssText = `
-            color: #f1f5f9;
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        `;
-
-        const messageEl = overlay.querySelector('.loading-message');
-        messageEl.style.cssText = `
-            color: #94a3b8;
-            font-size: 14px;
-        `;
-
-        document.body.appendChild(overlay);
-
-        return overlay;
-    }
-
-    function hideStationLoadingOverlay(overlay) {
-        if (overlay) {
-            overlay.style.animation = 'fadeOut 0.2s ease-out';
-            setTimeout(() => overlay.remove(), 200);
-        }
-    }
-
     // Force reload stations for all projects
     window.reloadStations = async function (projectId) {
         if (projectId) {
@@ -1986,7 +1831,7 @@
         // Clear old POIs from global map
         allPOIs.clear();
 
-        const currentZoom = map.getZoom();
+        const currentZoom = ApplicationState.map.getZoom();
 
         if (poiData.features && poiData.features.length > 0) {
             poiData.features.forEach(feature => {
@@ -2027,7 +1872,7 @@
                 // Only add to map if zoomed in enough
                 marker.addedToMap = false;
                 if (currentZoom >= 14) {
-                    marker.addTo(map);
+                    marker.addTo(ApplicationState.map);
                     marker.addedToMap = true;
                 }
 
@@ -2100,12 +1945,12 @@
 
     // Update POI visibility based on zoom
     window.updatePOIVisibility = function () {
-        const currentZoom = map.getZoom();
+        const currentZoom = ApplicationState.map.getZoom();
         const shouldShowPOIs = currentZoom >= 14;
 
         poiMarkers.forEach(marker => {
             if (shouldShowPOIs && !marker.addedToMap) {
-                marker.addTo(map);
+                marker.addTo(ApplicationState.map);
                 marker.addedToMap = true;
             } else if (!shouldShowPOIs && marker.addedToMap) {
                 marker.remove();
@@ -2116,9 +1961,9 @@
 
     // Check current zoom and station visibility
     window.checkZoom = function () {
-        const currentZoom = map.getZoom();
-        const center = map.getCenter();
-        const bounds = map.getBounds();
+        const currentZoom = ApplicationState.map.getZoom();
+        const center = ApplicationState.map.getCenter();
+        const bounds = ApplicationState.map.getBounds();
 
         // Calculate approximate area
         const ne = bounds.getNorthEast();
@@ -2186,18 +2031,18 @@
 
             console.log(`  Project ${projectId}: ${markers.length} markers total, ${projectVisibleCount} on map`);
             console.log(`    - Project state: ${projectVisible ? 'VISIBLE' : 'HIDDEN'}`);
-            console.log(`    - Expected on map: ${projectVisible && map.getZoom() >= 14 ? markers.length : 0}`);
+            console.log(`    - Expected on map: ${projectVisible && ApplicationState.map.getZoom() >= 14 ? markers.length : 0}`);
 
             // Check for inconsistencies
             if (!projectVisible && projectVisibleCount > 0) {
                 console.error(`    ⚠️ INCONSISTENCY: Project is hidden but ${projectVisibleCount} markers are visible!`);
-            } else if (projectVisible && map.getZoom() >= 14 && projectVisibleCount < markers.length) {
+            } else if (projectVisible && ApplicationState.map.getZoom() >= 14 && projectVisibleCount < markers.length) {
                 console.warn(`    ⚠️ MISSING: ${markers.length - projectVisibleCount} markers should be visible but aren't`);
             }
         });
 
         console.log(`\n📊 Summary: ${visibleMarkers}/${totalMarkers} markers visible`);
-        console.log(`🔍 Current zoom: ${map.getZoom().toFixed(1)}`);
+        console.log(`🔍 Current zoom: ${ApplicationState.map.getZoom().toFixed(1)}`);
 
         return { totalMarkers, visibleMarkers };
     };
@@ -2205,7 +2050,7 @@
     window.refreshStationVisibility = function () {
         console.log('🔄 Forcing station visibility refresh...');
 
-        const currentZoom = map.getZoom();
+        const currentZoom = ApplicationState.map.getZoom();
         const shouldShowStations = currentZoom >= 14;
 
         stationMarkers.forEach((markers, projectId) => {
@@ -2216,7 +2061,7 @@
                 const shouldBeVisible = shouldShowStations && projectIsVisible;
 
                 if (shouldBeVisible && !marker.addedToMap) {
-                    marker.addTo(map);
+                    marker.addTo(ApplicationState.map);
                     marker.addedToMap = true;
                 } else if (!shouldBeVisible && marker.addedToMap) {
                     marker.remove();
@@ -2303,12 +2148,12 @@
     });
 
     function attachLineClickHandler(layerId, projectId) {
-        if (!map || !map.loaded()) {
+        if (!ApplicationState.map || !ApplicationState.map.loaded()) {
             console.log(`⏳ Map not ready for ${layerId}, will retry`);
             return false;
         }
 
-        const layer = map.getLayer(layerId);
+        const layer = ApplicationState.map.getLayer(layerId);
         if (!layer) {
             console.log(`❌ Layer ${layerId} not found on map`);
             return false;
@@ -2316,9 +2161,9 @@
 
         try {
             // Remove existing handlers first
-            map.off('click', layerId);
-            map.off('mouseenter', layerId);
-            map.off('mouseleave', layerId);
+            ApplicationState.map.off('click', layerId);
+            ApplicationState.map.off('mouseenter', layerId);
+            ApplicationState.map.off('mouseleave', layerId);
 
             // Legacy line click handlers removed - use right-click context menu instead
             console.log(`ℹ️ Line layer ${layerId} available for right-click station creation`);
@@ -2609,7 +2454,7 @@
         const markers = [];
         const hasWriteAccess = hasProjectWriteAccess(projectId);
 
-        const currentZoom = map.getZoom();
+        const currentZoom = ApplicationState.map.getZoom();
 
         if (stationData.features && stationData.features.length > 0) {
             stationData.features.forEach(feature => {
@@ -2667,7 +2512,7 @@
                 marker.addedToMap = false;
                 const projectIsVisible = projectLayerStates.get(projectId) !== false;
                 if (currentZoom >= 14 && projectIsVisible) {
-                    marker.addTo(map);
+                    marker.addTo(ApplicationState.map);
                     marker.addedToMap = true;
                 }
 
@@ -3455,58 +3300,28 @@
             btn.classList.toggle('active', btn.dataset.tab === effectiveTab);
         });
 
+        if (!currentStationId) {
+            console.log(`❌ Station not defined!`);
+            return
+        }
+
         // Load tab content
         switch (effectiveTab) {
             case 'details':
-                if (currentStationId) {
-                    console.log(`📑 Loading details for station: ${currentStationId}`);
-                    loadStationDetails(currentStationId, currentProjectId);
-                } else {
-                    console.log(`📑 Showing empty station details`);
-                    showStationDetailsEmpty();
-                }
+                console.log(`📑 Loading details for station: ${currentStationId}`);
+                loadStationDetails(currentStationId, currentProjectId);
                 break;
             case 'resources':
-                if (currentStationId) {
-                    console.log(`📑 Loading resources for station: ${currentStationId}`);
-                    loadStationResources(currentStationId, currentProjectId);
-                } else {
-                    console.log(`📑 Showing empty resources`);
-                    showResourcesEmpty();
-                }
+                console.log(`📑 Loading resources for station: ${currentStationId}`);
+                loadStationResources(currentStationId, currentProjectId);
                 break;
             case 'add-resource':
-                if (currentStationId) {
-                    console.log(`📑 Loading add resource form for station: ${currentStationId}`);
-                    loadAddResourceTab(currentStationId, currentProjectId);
-                } else {
-                    console.log(`📑 Showing empty add resource`);
-                    showAddResourceEmpty();
-                }
+                console.log(`📑 Loading add resource form for station: ${currentStationId}`);
+                loadAddResourceTab(currentStationId, currentProjectId);
                 break;
             default:
                 console.error(`❌ Unknown tab: ${tabName}`);
         }
-    }
-
-    // Tab Content Functions
-    function showStationDetailsEmpty() {
-        const content = document.getElementById('station-modal-content');
-        content.innerHTML = `
-            <div class="tab-content active">
-                <div class="flex items-center justify-center h-full min-h-[300px]">
-                    <div class="text-center">
-                        <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                        <h3 class="text-white text-lg font-medium mb-2">No Station Selected</h3>
-                        <p class="text-slate-400 mb-4">Select a station from the map or create a new one.</p>
-
-                    </div>
-                </div>
-            </div>
-        `;
     }
     // Load Station Manager Content
     function loadStationManagerContent() {
@@ -3516,8 +3331,10 @@
             return;
         }
 
-        const hasWriteAccess = (typeof hasProjectWriteAccess === 'function') ? hasProjectWriteAccess(projectId) : {{ has_write_access|yesno:"true,false" }};
-        const hasAdminAccess = (typeof hasProjectAdminAccess === 'function') ? hasProjectAdminAccess(projectId) : false;
+        // const hasWriteAccess = (typeof hasProjectWriteAccess === 'function') ? hasProjectWriteAccess(projectId) : {{ has_write_access|yesno:"true,false" }};
+        // const hasAdminAccess = (typeof hasProjectAdminAccess === 'function') ? hasProjectAdminAccess(projectId) : false;
+        const hasWriteAccess = false;
+        const hasAdminAccess = false;
 
         // Gather all stations organized by project
         const stationsByProject = new Map();
@@ -3611,7 +3428,7 @@
                                         <div class="text-sm mr-2">
                                             ${resourceText}
                                         </div>
-                                        <button onclick="event.stopPropagation(); goToStation('${station.id}', ${Number(station.latitude)}, ${Number(station.longitude)})" 
+                                        <button onclick="event.stopPropagation(); MapViewer.goToStation('${station.id}', ${Number(station.latitude)}, ${Number(station.longitude)})" 
                                                 class="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded transition-all" 
                                                 title="Go to station on map">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3729,23 +3546,6 @@
 
         html += '</div>';
         content.innerHTML = html;
-    }
-
-    function showResourcesEmpty() {
-        const content = document.getElementById('station-modal-content');
-        content.innerHTML = `
-            <div class="tab-content active">
-                <div class="flex items-center justify-center h-full min-h-[300px]">
-                    <div class="text-center">
-                        <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                        </svg>
-                        <h3 class="text-white text-lg font-medium mb-2">No Resources</h3>
-                        <p class="text-slate-400">Select a station to view and manage its resources.</p>
-                    </div>
-                </div>
-            </div>
-        `;
     }
 
     async function loadStationDetails(stationId, projectId) {
@@ -4017,7 +3817,7 @@
 
         if (!station) {
             console.error(`Station ${stationId} not found for resources tab`);
-            showResourcesEmpty();
+            // TODO: Add an error modal with error message
             return;
         }
 
@@ -4135,7 +3935,7 @@
         const station = allStations.get(stationId);
         if (!station) {
             console.error(`Station ${stationId} not found for add resource tab`);
-            showAddResourceEmpty();
+            // TODO: Add error modal with error message
             return;
         }
 
@@ -4238,22 +4038,6 @@
         try { initializeTabs(); } catch (_e) {}
     }
 
-    function showAddResourceEmpty() {
-        const content = document.getElementById('station-modal-content');
-        content.innerHTML = `
-            <div class="tab-content active">
-                <div class="flex items-center justify-center h-full min-h-[300px]">
-                    <div class="text-center">
-                        <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                        <h3 class="text-white text-lg font-medium mb-2">Add Resource</h3>
-                        <p class="text-slate-400">Select a station first to add resources.</p>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
     function setupAddResourceTabHandlers(stationId, projectId, preselectedType) {
         const resourceTypeSelect = document.querySelector('select[name="resource_type"]');
         const fileContainer = document.getElementById('file-input-container');
@@ -4729,7 +4513,7 @@
         document.body.appendChild(instructionOverlay);
 
         // Change cursor
-        map.getCanvas().style.cursor = 'crosshair';
+        ApplicationState.map.getCanvas().style.cursor = 'crosshair';
 
         // Add one-time click handler
         function handleLocationPick(e) {
@@ -4767,19 +4551,19 @@
         }
 
         function cleanupLocationPicker() {
-            map.off('click', handleLocationPick);
+            ApplicationState.map.off('click', handleLocationPick);
             document.removeEventListener('keydown', handleEscape);
-            map.getCanvas().style.cursor = '';
+            ApplicationState.map.getCanvas().style.cursor = '';
             instructionOverlay.remove();
             hideSnapIndicator();
         }
 
         // Add handlers
-        map.once('click', handleLocationPick);
+        ApplicationState.map.once('click', handleLocationPick);
         document.addEventListener('keydown', handleEscape);
 
         // Show snap preview on mouse move
-        map.on('mousemove', function onMouseMove(e) {
+        ApplicationState.map.on('mousemove', function onMouseMove(e) {
             const snapResult = findMagneticSnapPoint([e.lngLat.lng, e.lngLat.lat], null);
             if (snapResult.snapped) {
                 showSnapIndicator(snapResult.coordinates, true);
@@ -4789,7 +4573,7 @@
 
             // Remove this handler when done
             if (!document.getElementById('location-picker-overlay')) {
-                map.off('mousemove', onMouseMove);
+                ApplicationState.map.off('mousemove', onMouseMove);
             }
         });
     }
@@ -6002,6 +5786,7 @@
             stationModal.onclick = null;
         }
     }
+    
     // Function to setup station modal event handlers
     function setupStationModalHandlers() {
         const stationModal = document.getElementById('station-modal');
@@ -6051,75 +5836,57 @@
     window.hideCreateStationModal = hideCreateStationModal;
     window.returnToStationManager = returnToStationManager;
 
-    mapboxgl.accessToken = "{{ mapbox_api_token }}";
 
-    // Simple function to set map height
-    function setMapHeight() {
-        const mapElement = document.getElementById('map');
-        const rect = mapElement.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const mapTop = rect.top;
-        const newHeight = Math.max(viewportHeight - mapTop - 20, 600);
-        mapElement.style.height = newHeight + 'px';
-    }
     if (!mapboxgl.supported()) {
         showNotification('error', 'Your browser does not support Mapbox GL. Please use a modern browser.', 10000);
         throw new Error("Mapbox GL not supported by browser!");
     } else {
         // Set initial height
-        setMapHeight();
+        MapViewer.setMapHeight();
+        ApplicationState.map.resize();
 
         // Show loading overlay
-        updateLoadingText('Initializing Map', 'Setting up the survey viewer...');
-
-        map = new mapboxgl.Map({
-            container: 'map',
-            // Satellite imagery with street labels
-            style: 'mapbox://styles/mapbox/satellite-streets-v12',
-            // Start completely zoomed out showing the whole planet
-            center: [0, 0],
-            zoom: 0
-        });
+        UX.updateLoadingText('Initializing Map', 'Setting up the survey viewer...');
 
         // Add resize listener
         window.addEventListener('resize', () => {
-            setMapHeight();
-            map.resize();
+            MapViewer.setMapHeight();
+            ApplicationState.map.resize();
         });
 
         // Add navigation controls
-        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        ApplicationState.map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
         // Add dynamic scale control with both metric and imperial units
-        map.addControl(new mapboxgl.ScaleControl({
+        ApplicationState.map.addControl(new mapboxgl.ScaleControl({
             maxWidth: 200,
             unit: 'metric'
         }), 'bottom-right');
 
         // Add a second scale for imperial units
-        map.addControl(new mapboxgl.ScaleControl({
+        ApplicationState.map.addControl(new mapboxgl.ScaleControl({
             maxWidth: 200,
             unit: 'imperial'
         }), 'bottom-right');
 
         // Wait for the map to load before adding sources and layers
-        map.on('load', function () {
+        ApplicationState.map.on('load', function () {
             const loadStartTime = performance.now();
 
             // Demo mode indicator removed for production
 
             // Add right-click context menu for station/POI creation
-            map.on('contextmenu', function (e) {
+            ApplicationState.map.on('contextmenu', function (e) {
                 e.preventDefault(); // Prevent browser context menu
                 showContextMenu(e.point, e.lngLat, null);
             });
 
             // Hide context menu on left click or map interaction
-            map.on('click', function (e) {
+            ApplicationState.map.on('click', function (e) {
                 hideContextMenu();
             });
 
-            map.on('dragstart', function (e) {
+            ApplicationState.map.on('dragstart', function (e) {
                 hideContextMenu();
             });
 
@@ -6127,7 +5894,7 @@
             const STATION_MIN_ZOOM = 14; // Show stations at zoom 14+ (roughly 2-3 km²)
 
             window.updateStationVisibility = function () {
-                const currentZoom = map.getZoom();
+                const currentZoom = ApplicationState.map.getZoom();
                 const shouldShowStations = currentZoom >= STATION_MIN_ZOOM;
 
                 // Add or remove markers from map based on zoom AND project visibility
@@ -6138,7 +5905,7 @@
                     markers.forEach(marker => {
                         if (shouldShowStations && projectIsVisible && !marker.addedToMap) {
                             // Show marker if zoomed in AND project is visible
-                            marker.addTo(map);
+                            marker.addTo(ApplicationState.map);
                             marker.addedToMap = true;
                         } else if ((!shouldShowStations || !projectIsVisible) && marker.addedToMap) {
                             // Hide marker if zoomed out OR project is hidden
@@ -6166,16 +5933,16 @@
             };
 
             // Listen for zoom changes
-            map.on('zoom', window.updateStationVisibility);
+            ApplicationState.map.on('zoom', window.updateStationVisibility);
 
             // Also update on move end (catches programmatic zoom/moves)
-            map.on('moveend', window.updateStationVisibility);
+            ApplicationState.map.on('moveend', window.updateStationVisibility);
 
             // Set initial visibility state
             window.updateStationVisibility();
 
             console.log('✅ Basic click handler attached to map');
-            console.log(`🔍 Initial zoom: ${map.getZoom().toFixed(1)} - Stations will appear at zoom 14+`);
+            console.log(`🔍 Initial zoom: ${ApplicationState.map.getZoom().toFixed(1)} - Stations will appear at zoom 14+`);
 
             // Expose useful functions globally
             window.findMagneticSnapPoint = findMagneticSnapPoint;
@@ -6185,137 +5952,9 @@
             loadAllPOIs();
 
             // Update loading status
-            updateLoadingText('Loading Survey Data', `Downloading GeoJSON for ${projectIds.length} projects...`);
+            UX.updateLoadingText('Loading Survey Data', `Downloading GeoJSON for ${projectIds.length} projects...`);
 
-            // Hide street-level labels while keeping city/place names
-            const labelsToHide = [
-                'road-label',  // Street names
-                'road-number-shield',  // Road numbers
-                'road-exit-shield',  // Highway exit numbers
-                'poi-label',  // Points of interest
-                'airport-label',  // Airport labels
-                'rail-label',  // Rail/transit labels
-                'transit-label',  // Transit stop labels
-                'road-crossing',  // Crossing labels
-                'road-label-simple',  // Simple road labels
-                'road-label-large',  // Large road labels
-                'road-label-medium',  // Medium road labels
-                'road-label-small',  // Small road labels
-                'bridge-case-label',  // Bridge labels
-                'bridge-label',  // Bridge labels
-                'tunnel-label',  // Tunnel labels
-                'ferry-label',  // Ferry labels
-                'pedestrian-label',  // Pedestrian path labels
-                'aerialway-label',  // Aerial way labels
-                'building-label',  // Building labels
-                'housenum-label'  // House number labels
-            ];
-
-            // Try to hide each label layer - some may not exist in this style
-            labelsToHide.forEach(layerId => {
-                try {
-                    if (map.getLayer(layerId)) {
-                        map.setLayoutProperty(layerId, 'visibility', 'none');
-                    }
-                } catch (e) {
-                    // Layer might not exist in this style, which is fine
-                }
-            });
-
-            // Keep these layers visible (city/place names)
-            const labelsToKeep = [
-                'place-label',  // General place labels
-                'place-city-label',  // City labels
-                'place-town-label',  // Town labels
-                'place-village-label',  // Village labels
-                'place-hamlet-label',  // Hamlet labels
-                'place-suburb-label',  // Suburb labels
-                'place-neighborhood-label',  // Neighborhood labels
-                'country-label',  // Country labels
-                'state-label',  // State/province labels
-                'settlement-label',  // Settlement labels
-                'settlement-major-label',  // Major settlement labels
-                'settlement-minor-label'  // Minor settlement labels
-            ];
-
-            console.log('Street labels hidden, keeping only place/city names');
-
-            // More comprehensive approach: inspect all layers and hide based on patterns
-            const style = map.getStyle();
-            if (style && style.layers) {
-                style.layers.forEach(layer => {
-                    if (layer.type === 'symbol' && layer.id) {
-                        // Hide layers that contain road/street/poi related terms
-                        if (layer.id.includes('road') ||
-                            layer.id.includes('street') ||
-                            layer.id.includes('highway') ||
-                            layer.id.includes('motorway') ||
-                            layer.id.includes('trunk') ||
-                            layer.id.includes('primary') ||
-                            layer.id.includes('secondary') ||
-                            layer.id.includes('tertiary') ||
-                            layer.id.includes('residential') ||
-                            layer.id.includes('service') ||
-                            layer.id.includes('link') ||
-                            layer.id.includes('pedestrian') ||
-                            layer.id.includes('poi') ||
-                            layer.id.includes('airport') && !layer.id.includes('airport-label-major') ||
-                            layer.id.includes('rail') ||
-                            layer.id.includes('transit') ||
-                            layer.id.includes('bridge') ||
-                            layer.id.includes('tunnel') ||
-                            layer.id.includes('ferry') ||
-                            layer.id.includes('path') ||
-                            layer.id.includes('track') ||
-                            layer.id.includes('steps') ||
-                            layer.id.includes('building') ||
-                            layer.id.includes('housenum') ||
-                            layer.id.includes('address')) {
-
-                            // Don't hide if it's a place/city/settlement layer
-                            if (!layer.id.includes('place') &&
-                                !layer.id.includes('city') &&
-                                !layer.id.includes('town') &&
-                                !layer.id.includes('village') &&
-                                !layer.id.includes('settlement') &&
-                                !layer.id.includes('country') &&
-                                !layer.id.includes('state')) {
-
-                                try {
-                                    map.setLayoutProperty(layer.id, 'visibility', 'none');
-                                } catch (e) {
-                                    console.warn(`Could not hide layer ${layer.id}:`, e);
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Maximally distinguishable color palette based on perceptual color theory
-            // These 20 colors are optimized for maximum visual distinction
-            const colors = [
-                '#e41a1c', // Red
-                '#377eb8', // Blue  
-                '#4daf4a', // Green
-                '#984ea3', // Purple
-                '#ff7f00', // Orange
-                '#ffff33', // Yellow
-                '#a65628', // Brown
-                '#f781bf', // Pink
-                '#999999', // Gray
-                '#66c2a5', // Teal
-                '#fc8d62', // Salmon
-                '#8da0cb', // Lavender
-                '#e78ac3', // Rose
-                '#a6d854', // Lime
-                '#ffd92f', // Gold
-                '#e5c494', // Tan
-                '#b3b3b3', // Light Gray
-                '#1b9e77', // Dark Teal
-                '#d95f02', // Dark Orange
-                '#7570b3'  // Slate Blue
-            ];
+            MapViewer.customize_map(ApplicationState.map);
 
             // Global color mode state (default: depth). Persist across sessions.
             window.colorMode = (function() {
@@ -6325,28 +5964,6 @@
                     return 'depth';
                 }
             })();
-
-            // Compute the paint value for line color based on the active color mode
-            // - 'depth': interpolate by feature.properties.depth_norm if available, else fallback to project color
-            // - 'project': always use the project's categorical color
-            function computeLineColorPaint(projectColor) {
-                if (window.colorMode === 'project') {
-                    return projectColor;
-                }
-                if (window.depthAvailable === true) {
-                    return [
-                        'case',
-                        ['has', 'depth_norm'],
-                        ['interpolate', ['linear'], ['get', 'depth_norm'],
-                            0, '#4575b4',
-                            0.5, '#e6f598',
-                            1, '#d73027'
-                        ],
-                        projectColor
-                    ];
-                }
-                return projectColor;
-            }
 
             // Robust depth parser: supports numbers and numeric prefixes like "123 ft"
             function parseDepthValue(raw) {
@@ -6384,68 +6001,7 @@
                 return undefined;
             }
 
-            // Update legend visibility based on active mode
-            function updateDepthLegendVisibility() {
-                try {
-                    const legend = document.getElementById('depth-scale-fixed');
-                    if (!legend) return;
-                    const shouldShow = (window.colorMode === 'depth' && window.depthAvailable === true);
-                    legend.style.display = shouldShow ? 'block' : 'none';
-                    // Also hide depth cursor indicator when legend hidden
-                    if (!shouldShow) {
-                        const cursor = document.getElementById('depth-cursor-indicator');
-                        const label = document.getElementById('depth-cursor-label');
-                        if (cursor) cursor.style.display = 'none';
-                        if (label) label.style.display = 'none';
-                    }
-                } catch (e) {
-                    // ignore
-                }
-            }
-
-            // Apply color mode to all existing project line layers
-            function applyColorModeToAllLines() {
-                if (!window.projectBoundsMap || !map) return;
-                try {
-                    for (const [projectId, projectData] of window.projectBoundsMap.entries()) {
-                        const lineLayerId = `project-line-${projectId}`;
-                        const projectColor = projectData.color;
-                        const paint = computeLineColorPaint(projectColor);
-                        try {
-                            map.setPaintProperty(lineLayerId, 'line-color', paint);
-                        } catch (e) {
-                            // layer might not be present (different geometry), ignore
-                        }
-                    }
-                } catch (e) {
-                    // ignore
-                }
-            }
-
-            // Switch color mode helper
-            function setColorMode(mode) {
-                if (mode !== 'depth' && mode !== 'project') return;
-                window.colorMode = mode;
-                try { localStorage.setItem('map_color_mode', mode); } catch (e) {}
-                applyColorModeToAllLines();
-                updateDepthLegendVisibility();
-                // Update UI state if present
-                try {
-                    const depthBtn = document.getElementById('btn-color-depth');
-                    const catBtn = document.getElementById('btn-color-project');
-                    if (depthBtn && catBtn) {
-                        if (mode === 'depth') {
-                            depthBtn.classList.add('active');
-                            catBtn.classList.remove('active');
-                        } else {
-                            catBtn.classList.add('active');
-                            depthBtn.classList.remove('active');
-                        }
-                    }
-                } catch (e) {}
-            }
-
-            console.log(`🎨 Color palette loaded: ${colors.length} maximally distinguishable colors`);
+            console.log(`🎨 Color palette loaded: ${MapViewer.colors.length} maximally distinguishable colors`);
 
             // Persistent per-project color assignment to avoid reusing first color
             window.projectColorMap = window.projectColorMap || new Map();
@@ -6453,7 +6009,7 @@
                 if (window.projectColorMap.has(projectId)) {
                     return window.projectColorMap.get(projectId);
                 }
-                const color = colors[fallbackIndex % colors.length];
+                const color = MapViewer.colors[fallbackIndex % MapViewer.colors.length];
                 window.projectColorMap.set(projectId, color);
                 return color;
             }
@@ -6580,9 +6136,9 @@
 
                     if (validResults.length === 0) {
                         console.log('❌ No projects have valid GeoJSON data, staying at world view');
-                        updateLoadingText('No Survey Data', 'No valid GeoJSON data found in any projects.');
+                        UX.updateLoadingText('No Survey Data', 'No valid GeoJSON data found in any projects.');
                         setTimeout(() => {
-                            hideLoadingOverlay();
+                            UX.hideLoadingOverlay();
                         }, 2000);
                         return;
                     }
@@ -6607,7 +6163,7 @@
                     }
 
                     // Update loading progress
-                    updateLoadingText('Processing Survey Data', `Processing ${validResults.length} projects with valid data...`);
+                    UX.updateLoadingText('Processing Survey Data', `Processing ${validResults.length} projects with valid data...`);
 
                     // Function to force all coordinates to altitude zero
                     function forceAltitudeZero(coordinates) {
@@ -6649,7 +6205,7 @@
                         const color = getProjectColor(projectId, resultIndex);
 
                         // Update loading progress
-                        updateLoadingText('Processing Survey Data', `Loading project ${resultIndex + 1}/${validResults.length}: ${projectName}`);
+                        UX.updateLoadingText('Processing Survey Data', `Loading project ${resultIndex + 1}/${validResults.length}: ${projectName}`);
 
                         // Process GeoJSON to force altitude zero (optimized - reduced logging)
                         const processedData = processGeoJSONForAltitudeZero(data);
@@ -6736,7 +6292,7 @@
                         }
                         // If source already exists, refresh its data to include new properties
                         try {
-                            const src = map.getSource && map.getSource(sourceId);
+                            const src = ApplicationState.map.getSource && ApplicationState.map.getSource(sourceId);
                             if (src && src.setData) {
                                 src.setData(processedData);
                             }
@@ -6770,7 +6326,7 @@
                         }
 
                         // Add the GeoJSON source with processed coordinates (altitude zero)
-                        map.addSource(sourceId, {
+                        ApplicationState.map.addSource(sourceId, {
                             type: 'geojson',
                             data: processedData,
                             // Reduce simplification to avoid line dropouts at low zoom
@@ -6801,7 +6357,7 @@
                             const strokeLayerId = `project-stroke-${projectId}`;
 
                             // Add fill layer for polygons
-                            map.addLayer({
+                            ApplicationState.map.addLayer({
                                 id: fillLayerId,
                                 type: 'fill',
                                 source: sourceId,
@@ -6816,7 +6372,7 @@
                             layersAdded++;
 
                             // Add stroke for polygons
-                            map.addLayer({
+                            ApplicationState.map.addLayer({
                                 id: strokeLayerId,
                                 type: 'line',
                                 source: sourceId,
@@ -6889,7 +6445,7 @@
 
                             // If depth data is available, colorize by depth per section_name
                             if (window.depthAvailable === true) {
-                                map.addLayer({
+                                ApplicationState.map.addLayer({
                                     id: lineLayerId,
                                     type: 'line',
                                     source: sourceId,
@@ -6899,13 +6455,13 @@
                                         'line-cap': 'round'
                                     },
                                     paint: {
-                                        'line-color': computeLineColorPaint(color),
+                                        'line-color': MapViewer.computeLineColorPaint(color),
                                         'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.3, 6, 0.8, 10, 1.6, 14, 3.2, 18, 6],
                                         'line-opacity': 1
                                     }
                                 });
                             } else {
-                                map.addLayer({
+                                ApplicationState.map.addLayer({
                                     id: lineLayerId,
                                     type: 'line',
                                     source: sourceId,
@@ -6915,7 +6471,7 @@
                                         'line-cap': 'round'
                                     },
                                     paint: {
-                                        'line-color': computeLineColorPaint(color),
+                                        'line-color': MapViewer.computeLineColorPaint(color),
                                         'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.3, 6, 0.8, 10, 1.6, 14, 3.2, 18, 6],
                                         'line-opacity': 1
                                     }
@@ -6955,7 +6511,7 @@
                             }, 500 + (resultIndex * 100)); // Stagger station loading
 
                             // Add labels for lines (only visible when zoomed in)
-                            map.addLayer({
+                            ApplicationState.map.addLayer({
                                 id: lineLabelLayerId,
                                 type: 'symbol',
                                 source: sourceId,
@@ -6987,7 +6543,7 @@
                             const pointLayerId = `project-points-${projectId}`;
 
                             // Add symbol layer for points (orange star)
-                            map.addLayer({
+                            ApplicationState.map.addLayer({
                                 id: pointLayerId,
                                 type: 'symbol',
                                 source: sourceId,
@@ -7021,7 +6577,7 @@
                     console.log(`🚀 Loading optimized! ${loadTime}s - ${validResults.length} projects, ${totalSnapPoints} snap points`);
 
                     // Update final loading status
-                    updateLoadingText('Loading Complete', `Loaded ${validResults.length} projects in ${loadTime}s`);
+                    UX.updateLoadingText('Loading Complete', `Loaded ${validResults.length} projects in ${loadTime}s`);
 
                     // Populate the project panel
                     const projectListDiv = document.getElementById('project-list');
@@ -7065,7 +6621,7 @@
 
                             // Add click handler to the entire card to center on project
                             buttonContainer.addEventListener('click', () => {
-                                map.fitBounds(projectData.bounds, {
+                                ApplicationState.map.fitBounds(projectData.bounds, {
                                     padding: 100,
                                     maxZoom: 15,
                                     duration: 1500
@@ -7127,45 +6683,17 @@
                             const depthBtn = document.getElementById('btn-color-depth');
                             const catBtn = document.getElementById('btn-color-project');
                             if (depthBtn && catBtn) {
-                                depthBtn.addEventListener('click', (e) => { e.stopPropagation(); setColorMode('depth'); });
-                                catBtn.addEventListener('click', (e) => { e.stopPropagation(); setColorMode('project'); });
+                                depthBtn.addEventListener('click', (e) => { e.stopPropagation(); MapViewer.setColorMode(ApplicationState.map, 'depth'); });
+                                catBtn.addEventListener('click', (e) => { e.stopPropagation(); MapViewer.setColorMode(ApplicationState.map, 'project'); });
                                 // Set initial visual state and repaint lines
-                                setColorMode(window.colorMode);
+                                MapViewer.setColorMode(ApplicationState.map, window.colorMode);
                             }
                         } catch (e) {
                             // ignore
                         }
                     }
 
-                    // Initialize color mode toggle UI and state (header toggle)
-                    try {
-                        const toggle = document.getElementById('color-mode-toggle');
-                        const label = document.getElementById('color-mode-label');
-                        const button = document.getElementById('color-mode-button');
-                        if (toggle && label) {
-                            // ON means By Survey
-                            const syncUI = () => {
-                                toggle.checked = (window.colorMode === 'project');
-                                if (window.colorMode === 'project') {
-                                    label.textContent = 'Color: By Survey';
-                                } else {
-                                    label.textContent = 'Color: By Depth';
-                                }
-                            };
-                            toggle.addEventListener('change', () => {
-                                setColorMode(toggle.checked ? 'project' : 'depth');
-                                syncUI();
-                            });
-                            if (button) {
-                                button.addEventListener('click', () => {
-                                    toggle.checked = !toggle.checked;
-                                    setColorMode(toggle.checked ? 'project' : 'depth');
-                                    syncUI();
-                                });
-                            }
-                            syncUI();
-                        }
-                    } catch (e) {}
+                    MapViewer.initialize_color_mode(ApplicationState.map);
 
                     // Load POIs after all projects are loaded
                     setTimeout(() => {
@@ -7206,13 +6734,14 @@
                             <span>${Math.ceil(maxVal)} ft</span>
                         </div>`;
                         // Respect initial color mode for legend visibility
-                        updateDepthLegendVisibility();
+                        MapViewer.updateDepthLegendVisibility();
                     } catch (e) {
                         console.warn('Unable to render/update depth scale:', e);
+                        throw e
                     }
                     // Hide loading overlay now that everything is ready
                     setTimeout(() => {
-                        hideLoadingOverlay();
+                        UX.hideLoadingOverlay();
                     }, 100); // Faster loading overlay hide
 
                     // Fit the map to the FIRST project bounds only with smooth animation
@@ -7222,7 +6751,7 @@
 
                         // Wait for loading overlay to start hiding before starting zoom
                         setTimeout(() => {
-                            map.fitBounds(firstDatasetBounds, {
+                            ApplicationState.map.fitBounds(firstDatasetBounds, {
                                 padding: 200, // Increased padding for wider view
                                 maxZoom: 11,  // Limit zoom to show ~100km² area (zoom 11 ≈ 10km x 10km area)
                                 duration: 6000, // 6 second smooth animation (very cinematic)
@@ -7239,9 +6768,9 @@
                         const gradientEl = document.getElementById('depth-scale-gradient');
                         const cursorEl = document.getElementById('depth-cursor-indicator');
                         const labelEl = document.getElementById('depth-cursor-label');
-                        if (map && gradientEl && cursorEl && labelEl) {
+                        if (ApplicationState.map && gradientEl && cursorEl && labelEl) {
                             const queryPaddingPx = 12; // increased tolerance around the mouse for picking lines
-                            map.on('mousemove', (e) => {
+                            ApplicationState.map.on('mousemove', (e) => {
                                 if (window.colorMode !== 'depth' || window.depthAvailable !== true) {
                                     cursorEl.style.display = 'none';
                                     labelEl.style.display = 'none';
@@ -7259,7 +6788,7 @@
                                 ];
                                 let features = [];
                                 try {
-                                    features = map.queryRenderedFeatures(queryBox, { layers });
+                                    features = ApplicationState.map.queryRenderedFeatures(queryBox, { layers });
                                 } catch (err) {
                                     // ignore query errors
                                 }
@@ -7299,7 +6828,7 @@
                                 labelEl.style.left = `calc(${pct}% - 0px)`;
                                 labelEl.style.display = 'block';
                             });
-                            map.on('mouseleave', () => {
+                            ApplicationState.map.on('mouseleave', () => {
                                 cursorEl.style.display = 'none';
                                 labelEl.style.display = 'none';
                             });
@@ -7310,14 +6839,14 @@
                 })
                 .catch(error => {
                     console.error('Error loading project GeoJSON data:', error);
-                    updateLoadingText('Error Loading Data', 'Failed to load survey data. Check console for details.');
+                    UX.updateLoadingText('Error Loading Data', 'Failed to load survey data. Check console for details.');
                     setTimeout(() => {
-                        hideLoadingOverlay();
+                        UX.hideLoadingOverlay();
                         showNotification('error', 'Error loading project GeoJSON data. Check the console for details.', 10000);
                     }, 2000);
                     // Fallback to a default view if GeoJSON fails to load
-                    map.setCenter([0, 0]);
-                    map.setZoom(2);
+                    ApplicationState.map.setCenter([0, 0]);
+                    ApplicationState.map.setZoom(2);
                 });
         });
     }
