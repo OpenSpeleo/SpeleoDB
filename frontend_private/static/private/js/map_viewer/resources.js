@@ -2,9 +2,6 @@
 import { hasProjectAdminAccess } from './utils.js';
 import { showNotification } from './ui.js';
 
-// Placeholder module for station resources; real logic to be migrated
-export function initResources() { /* no-op */ }
-
 function getResourceTypeLabel(type) {
     const labels = {
         'photo': '📷 Photo',
@@ -49,6 +46,7 @@ export function updateUndoRedoButtons() { /* no-op placeholder */ }
 
 // Edit sketch
 let editSketchState = null;
+
 export function initializeEditSketchCanvas(existingData) {
     const canvas = document.getElementById('edit-sketch-canvas');
     if (!canvas) return;
@@ -116,6 +114,7 @@ export function updateFileDisplay(fileContainer, file) {
     textDiv.insertBefore(svg, fileInput); textDiv.insertBefore(statusP, fileInput); textDiv.insertBefore(nameP, fileInput); textDiv.insertBefore(sizeP, fileInput); textDiv.appendChild(changeP);
     fileContainer.classList.add('border-green-500'); fileContainer.classList.remove('border-slate-600', 'border-red-500');
 }
+
 export function resetFileDisplay(fileContainer) {
     const textDiv = fileContainer.querySelector('.text-center');
     if (!textDiv) return;
@@ -131,9 +130,15 @@ export function resetFileDisplay(fileContainer) {
     const fileInput = fileContainer.querySelector('input[type="file"]'); if (fileInput) fileInput.value = '';
 }
 
+function getStationsMap() {
+    try { if (typeof window !== 'undefined' && window.allStations instanceof Map) return window.allStations; } catch (_) { }
+    try { if (typeof allStations !== 'undefined' && allStations instanceof Map) return allStations; } catch (_) { }
+    return new Map();
+}
 
 export async function deleteResource(resourceId, stationId, projectId) {
-    const station = allStations.get(stationId);
+    const stationMap = getStationsMap();
+    const station = stationMap.get(stationId);
     let resourceDetails = null;
     if (station && station.resources) {
         resourceDetails = station.resources.find(r => r.id === resourceId);
@@ -149,6 +154,13 @@ export async function deleteResource(resourceId, stationId, projectId) {
 
     const detailsDiv = document.getElementById('resource-delete-confirm-details');
     if (detailsDiv && resourceDetails) {
+        const createdRaw = resourceDetails.creation_date || resourceDetails.created_at || resourceDetails.createdAt || resourceDetails.created;
+        const createdHtml = createdRaw ? `
+            <div class="drag-confirm-detail-row">
+                <span class="drag-confirm-label">Created:</span>
+                <span class="drag-confirm-value">${new Date(createdRaw).toLocaleDateString()}</span>
+            </div>
+        ` : '';
         detailsDiv.innerHTML = `
             <div class="drag-confirm-detail-row">
                 <span class="drag-confirm-label">Resource Type:</span>
@@ -158,12 +170,7 @@ export async function deleteResource(resourceId, stationId, projectId) {
                 <span class="drag-confirm-label">Title:</span>
                 <span class="drag-confirm-value">${resourceDetails.title || 'Untitled'}</span>
             </div>
-            ${resourceDetails.created_at ? `
-            <div class="drag-confirm-detail-row">
-                <span class="drag-confirm-label">Created:</span>
-                <span class="drag-confirm-value">${new Date(resourceDetails.created_at).toLocaleDateString()}</span>
-            </div>
-            ` : ''}
+            ${createdHtml}
         `;
     }
 
@@ -194,30 +201,48 @@ export async function confirmDeleteResource() {
     const modal = document.getElementById('resource-delete-confirm-modal');
     if (modal) modal.style.display = 'none';
 
-    const loadingOverlay = showStationLoadingOverlay('Deleting Resource', 'Removing resource from server...');
+    const loadingOverlay = (typeof window !== 'undefined' && typeof window.showStationLoadingOverlay === 'function')
+        ? window.showStationLoadingOverlay('Deleting Resource', 'Removing resource from server...')
+        : null;
     try {
         const resp = await fetch(`/api/v1/resources/${resourceId}/`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': window.CSRF_TOKEN || getCSRFToken(),
-                'X-CSRF-Token': window.CSRF_TOKEN || getCSRFToken(),
+                'X-CSRFToken': (typeof window !== 'undefined' && window.CSRF_TOKEN) || (typeof window !== 'undefined' && typeof window.getCSRFToken === 'function' ? window.getCSRFToken() : ''),
+                'X-CSRF-Token': (typeof window !== 'undefined' && window.CSRF_TOKEN) || (typeof window !== 'undefined' && typeof window.getCSRFToken === 'function' ? window.getCSRFToken() : ''),
                 'X-Requested-With': 'XMLHttpRequest'
             },
             credentials: 'same-origin'
         });
         if (resp.ok) {
             showNotification('success', 'Resource deleted successfully');
-            const station = allStations.get(stationId);
-            if (station && station.resources) {
-                station.resources = station.resources.filter(r => r.id !== resourceId);
-                station.resource_count = station.resources.length;
+            const sMap = getStationsMap();
+            const st = sMap.get(stationId);
+            if (st && st.resources) {
+                st.resources = st.resources.filter(r => r.id !== resourceId);
+                st.resource_count = st.resources.length;
+                sMap.set(stationId, st);
             }
-            if (activeTab === 'resources') {
-                loadStationResources(stationId, projectId);
+            const currentTab = (typeof window !== 'undefined' && window.activeTab) ? window.activeTab : 'resources';
+            if (currentTab === 'resources') {
+                if (typeof window !== 'undefined' && typeof window.loadStationResources === 'function') {
+                    window.loadStationResources(stationId, projectId);
+                }
             } else {
-                loadStationDetails(stationId, projectId);
+                if (typeof window !== 'undefined' && typeof window.loadStationDetails === 'function') {
+                    window.loadStationDetails(stationId, projectId);
+                }
             }
+            // As a fallback, remove the card from DOM to reflect deletion instantly
+            try {
+                const grid = document.querySelector('.resource-grid');
+                if (grid) {
+                    const cards = Array.from(grid.querySelectorAll('.resource-card'));
+                    const match = cards.find(c => c.innerHTML.includes(resourceId));
+                    if (match) match.remove();
+                }
+            } catch (_) { }
         } else {
             showNotification('error', 'Failed to delete resource. Please try again.');
         }
@@ -225,7 +250,9 @@ export async function confirmDeleteResource() {
         console.error('Error deleting resource:', error);
         showNotification('error', 'Error deleting resource. Please try again.');
     } finally {
-        hideStationLoadingOverlay(loadingOverlay);
+        if (typeof window !== 'undefined' && typeof window.hideStationLoadingOverlay === 'function') {
+            window.hideStationLoadingOverlay(loadingOverlay);
+        }
         // Clear hidden inputs
         try { if (idInput) idInput.value = ''; if (stInput) stInput.value = ''; if (prInput) prInput.value = ''; } catch (_) { }
     }
