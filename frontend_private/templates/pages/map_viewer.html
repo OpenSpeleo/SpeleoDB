@@ -2,1044 +2,23 @@
 {% load static %}
 
 {% block extra_css %}
+<meta name="csrf-token" content="{{ csrf_token }}">
 <link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css' rel='stylesheet' />
-<style>
-    /* Hide number input spinners */
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-    input[type="number"] {
-        -moz-appearance: textfield; /* Firefox */
-    }
-
-    /* Custom scrollbar for project list */
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: rgba(51, 65, 85, 0.5); /* slate-700 with opacity */
-        border-radius: 3px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(148, 163, 184, 0.8); /* slate-400 with opacity */
-        border-radius: 3px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(203, 213, 225, 0.9); /* slate-300 with opacity */
-    }
-
-    /* Loading spinner overlay */
-    .loading-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(15, 23, 42, 0.9); /* slate-900 with opacity */
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        backdrop-filter: blur(4px);
-        transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
-    }
-
-    .loading-overlay.hide {
-        opacity: 0;
-        visibility: hidden;
-    }
-
-    /* Material Design spinner */
-    .loading-spinner {
-        width: 56px;
-        height: 56px;
-        border: 4px solid rgba(56, 189, 248, 0.2); /* sky-400 with opacity */
-        border-left: 4px solid #38bdf8; /* sky-400 */
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 24px;
-    }
-
-    @keyframes spin {
-        0% {
-            transform: rotate(0deg);
-        }
-
-        100% {
-            transform: rotate(360deg);
-        }
-    }
-    
-    .loading-text {
-        color: #f1f5f9; /* slate-100 */
-        font-size: 16px;
-        font-weight: 500;
-        margin-bottom: 8px;
-    }
-    
-    .loading-subtext {
-        color: #94a3b8; /* slate-400 */
-        font-size: 14px;
-        text-align: center;
-        max-width: 300px;
-        line-height: 1.4;
-    }
-
-    /* Material Design Toggle Switch */
-    .toggle-switch {
-        position: relative;
-        display: inline-block;
-        width: 44px;
-        height: 24px;
-        margin-left: auto;
-        flex-shrink: 0;
-    }
-
-    .toggle-switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-
-    .toggle-slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(100, 116, 139, 0.5); /* slate-500 with opacity */
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 12px;
-        box-shadow: inset 0 0 0 2px transparent;
-    }
-
-    .toggle-slider:before {
-        position: absolute;
-        content: "";
-        height: 20px;
-        width: 20px;
-        left: 2px;
-        bottom: 2px;
-        background-color: white;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .toggle-switch input:checked + .toggle-slider {
-        background-color: #38bdf8; /* sky-400 */
-        box-shadow: inset 0 0 0 2px #0284c7; /* sky-600 */
-    }
-
-    .toggle-switch input:checked + .toggle-slider:before {
-        transform: translateX(20px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-    
-    .toggle-switch input:focus + .toggle-slider {
-        box-shadow: inset 0 0 0 2px #0284c7, 0 0 0 3px rgba(56, 189, 248, 0.2); /* sky-600 and sky-400 with opacity */
-    }
-    
-    /* Enhanced project button styling */
-    .project-button {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 100%;
-        text-left: left;
-        padding: 12px;
-        border-radius: 8px;
-        background: rgba(51, 65, 85, 0.8); /* slate-700 with opacity */
-        border: 1px solid rgba(100, 116, 139, 0.3); /* slate-500 with opacity */
-        color: white;
-        font-size: 14px;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        backdrop-filter: blur(8px);
-        cursor: pointer;
-    }
-    
-    .project-button:hover {
-        background: rgba(71, 85, 105, 0.9); /* slate-600 with opacity */
-        border-color: rgba(148, 163, 184, 0.5); /* slate-400 with opacity */
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .project-button-content {
-        display: flex;
-        align-items: center;
-        min-width: 0;
-        flex: 1;
-        margin-right: 12px;
-    }
-
-    .project-color-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        flex-shrink: 0;
-        margin-right: 8px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .project-name {
-        font-weight: 500;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        line-height: 1.2;
-    }
-
-    /* Station Modal Styles */
-    .station-modal-overlay {
-        transition: opacity 0.3s ease-out;
-    }
-
-    .station-modal-content {
-        transform: scale(0.95);
-        transition: transform 0.3s ease-out;
-    }
-
-    .station-modal-overlay:not(.hidden) .station-modal-content {
-        transform: scale(1);
-    }
-
-    /* Station Resource Cards */
-    .resource-card {
-        background: rgba(51, 65, 85, 0.8);
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        border-radius: 8px;
-        padding: 20px;
-        transition: all 0.2s ease;
-        min-height: 200px;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .resource-card:hover {
-        background: rgba(71, 85, 105, 0.9);
-        border-color: rgba(148, 163, 184, 0.5);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    }
-
-    /* Station Marker Styles */
-    .station-marker {
-        width: 12px;
-        height: 12px;
-        background: #fb923c; /* More vibrant orange */
-        border: 2px solid #ffffff;
-        border-radius: 50%;
-        cursor: pointer;
-        transition: all 0.15s ease-out; /* Faster, snappier transitions */
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-    }
-    
-    .station-marker[data-demo="true"] {
-        opacity: 0.85;
-    }
-    
-    .station-marker:hover {
-        transform: scale(1.3); /* Bigger scale for smaller dots */
-        background: #f97316; /* Darker vibrant orange on hover */
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-    }
-
-    .station-marker.has-resources {
-        background: #10b981;
-    }
-
-    .station-marker.has-resources:hover {
-        background: #059669;
-    }
-
-    /* POI Marker Styles */
-    .poi-marker {
-        width: 12px;
-        height: 12px;
-        background: #00D8FF; /* Blue */
-        border: 2px solid #ffffff;
-        border-radius: 50%;
-        cursor: pointer;
-        transition: all 0.15s ease-out;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-    }
-    
-    .poi-marker:hover {
-        transform: scale(1.3);
-        background: #2563eb; /* Darker blue on hover */
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-    }
-
-    /* Form Styles */
-    .form-input {
-        background: rgba(51, 65, 85, 0.9);
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        color: white;
-        padding: 14px 16px;
-        border-radius: 8px;
-        width: 100%;
-        transition: all 0.2s ease;
-        font-size: 14px;
-        line-height: 1.4;
-    }
-
-    .form-input:focus {
-        outline: none;
-        border-color: #38bdf8;
-        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
-        background: rgba(51, 65, 85, 1);
-        transform: translateY(-1px);
-    }
-
-    /* Ring utilities for change detection */
-    .ring-2 {
-        box-shadow: 0 0 0 2px currentColor;
-    }
-
-    .ring-amber-500 {
-        --tw-ring-color: #f59e0b;
-        box-shadow: 0 0 0 2px var(--tw-ring-color);
-    }
-
-    .form-input::placeholder {
-        color: rgba(148, 163, 184, 0.6);
-    }
-
-    .form-textarea {
-        min-height: 120px;
-        resize: vertical;
-        font-family: inherit;
-    }
-
-    .form-label {
-        display: block;
-        color: #e2e8f0;
-        font-size: 14px;
-        font-weight: 500;
-        margin-bottom: 8px;
-    }
-
-    .btn-primary {
-        background: #38bdf8;
-        color: white;
-        padding: 12px 24px;
-        border-radius: 6px;
-        border: none;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 44px;
-    }
-
-    .btn-primary:hover {
-        background: #0284c7;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
-    }
-
-    .btn-secondary {
-        background: rgba(100, 116, 139, 0.8);
-        color: white;
-        padding: 12px 24px;
-        border-radius: 6px;
-        border: none;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 44px;
-    }
-
-    .btn-secondary:hover {
-        background: rgba(71, 85, 105, 0.9);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .btn-danger {
-        background: #ef4444;
-        color: white;
-        padding: 12px 24px;
-        border-radius: 6px;
-        border: none;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 44px;
-    }
-
-    .btn-danger:hover {
-        background: #dc2626;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-    }
-
-    /* Tab Styling */
-    .tab-btn {
-        padding: 8px 16px;
-        border-radius: 6px;
-        color: #94a3b8;
-        font-size: 14px;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        cursor: pointer;
-        border: none;
-        background: transparent;
-    }
-
-    .tab-btn:hover {
-        color: #e2e8f0;
-        background: rgba(100, 116, 139, 0.3);
-    }
-
-    .tab-btn.active {
-        color: #ffffff;
-        background: #38bdf8;
-    }
-
-    .tab-content {
-        display: none;
-        padding: 24px;
-        min-height: 400px;
-        overflow-y: auto;
-        max-height: calc(90vh - 120px);
-    }
-
-    .tab-content.active {
-        display: block;
-    }
-
-    /* Ensure modal scales properly on smaller screens */
-    @media (max-height: 700px) {
-        .tab-content {
-            max-height: calc(100vh - 180px);
-            padding: 16px;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .tab-content {
-            padding: 16px;
-        }
-    }
-
-    /* Enhanced Resource Cards */
-    .resource-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 16px;
-        margin-top: 16px;
-        padding-bottom: 20px;
-    }
-
-    .resource-card {
-        background: rgba(71, 85, 105, 0.5);
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 8px;
-        padding: 20px;
-        transition: all 0.2s ease;
-    }
-
-    .resource-card:hover {
-        background: rgba(71, 85, 105, 0.7);
-        border-color: rgba(56, 189, 248, 0.3);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    @media (max-width: 768px) {
-        .resource-grid {
-            grid-template-columns: 1fr;
-            gap: 12px;
-        }
-    }
-
-    .resource-preview {
-        max-height: 200px;
-        overflow: hidden;
-        border-radius: 6px;
-        margin-bottom: 12px;
-        position: relative;
-    }
-
-    .resource-preview img {
-        width: 100%;
-        height: 160px;
-        object-fit: contain; /* Changed from cover to contain to prevent clipping */
-        background: #0f172a;
-        border-radius: 6px;
-        cursor: zoom-in;
-        transition: transform 0.2s ease;
-    }
-
-    .resource-preview img:hover {
-        transform: scale(1.02);
-    }
-
-    .resource-preview video {
-        width: 100%;
-        height: 160px;
-        border-radius: 6px;
-    }
-
-    .video-preview {
-        position: relative;
-        cursor: pointer;
-    }
-
-    .video-preview .play-overlay {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: rgba(255, 255, 255, 0.9);
-        pointer-events: none;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-    }
-
-    .video-preview:hover .play-overlay {
-        color: rgba(255, 255, 255, 1);
-        transform: translate(-50%, -50%) scale(1.1);
-        transition: all 0.2s ease;
-    }
-
-    /* Photo lightbox */
-    .photo-lightbox {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.95);
-        backdrop-filter: blur(8px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 10002;
-        cursor: zoom-out;
-        padding: 20px;
-    }
-
-    .photo-lightbox img {
-        max-width: 90%;
-        max-height: 90vh;
-        object-fit: contain;
-        border-radius: 8px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    }
-
-    .photo-lightbox-controls {
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 12px;
-        background: rgba(51, 65, 85, 0.95);
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px solid rgba(148, 163, 184, 0.3);
-    }
-
-    .photo-lightbox-btn {
-        padding: 8px 16px;
-        background: rgba(71, 85, 105, 0.8);
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-    }
-
-    .photo-lightbox-btn:hover {
-        background: rgba(56, 189, 248, 0.3);
-        transform: translateY(-1px);
-    }
-
-    .photo-lightbox-close {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: rgba(239, 68, 68, 0.8);
-        color: white;
-        border: none;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-    }
-
-    .photo-lightbox-close:hover {
-        background: rgba(220, 38, 38, 0.9);
-        transform: scale(1.1);
-    }
-
-    /* Note Viewer Styles */
-    .note-preview {
-        position: relative;
-        overflow: hidden;
-    }
-
-    .note-preview::after {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 40px;
-        background: linear-gradient(to bottom, transparent, rgba(15, 23, 42, 0.9));
-        pointer-events: none;
-    }
-
-    .note-preview:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-
-    #note-viewer-modal .overflow-y-auto {
-        scroll-behavior: smooth;
-        scrollbar-width: thin;
-        scrollbar-color: #475569 #1e293b;
-    }
-
-    #note-viewer-modal .overflow-y-auto::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    #note-viewer-modal .overflow-y-auto::-webkit-scrollbar-track {
-        background: #1e293b;
-        border-radius: 4px;
-    }
-
-    #note-viewer-modal .overflow-y-auto::-webkit-scrollbar-thumb {
-        background: #475569;
-        border-radius: 4px;
-    }
-
-    #note-viewer-modal .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-        background: #64748b;
-    }
-
-    #note-viewer-content {
-        font-size: 16px;
-        line-height: 1.75;
-        color: #cbd5e1;
-    }
-
-    #note-viewer-content p {
-        margin-bottom: 1rem;
-    }
-
-    #note-viewer-content p:last-child {
-        margin-bottom: 0;
-    }
-
-    /* Prose styling for note content */
-    .prose {
-        max-width: none;
-    }
-
-    .prose-invert {
-        color: #cbd5e1;
-    }
-
-    .sketch-canvas {
-        border: 2px dashed #475569;
-        border-radius: 6px;
-        background: #1e293b;
-        cursor: crosshair;
-    }
-
-    /* File Upload Area */
-    .file-upload-area {
-        border: 2px dashed #475569;
-        border-radius: 8px;
-        padding: 32px;
-        text-align: center;
-        background: rgba(51, 65, 85, 0.3);
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-
-    .file-upload-area:hover {
-        border-color: #38bdf8;
-        background: rgba(56, 189, 248, 0.1);
-    }
-
-    .file-upload-area.dragover {
-        border-color: #10b981;
-        background: rgba(16, 185, 129, 0.1);
-    }
-
-    /* Demo indicators for hardcoded examples */
-    .demo-badge {
-        display: inline-block;
-        background: #fb923c; /* Match vibrant orange */
-        color: #1f2937;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        margin-left: 8px;
-    }
-
-    /* Ensure all header buttons have same size */
-    .btn {
-        min-width: 150px;
-        width: 150px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 8px 12px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* On small screens, buttons are icon-only and smaller */
-    @media (max-width: 475px) {
-        .btn {
-            min-width: 44px;
-            width: 44px;
-            padding: 10px;
-        }
-    }
-
-    /* Enhanced dropdown styles for better visibility */
-    select.form-input {
-        background-image: none !important;
-        cursor: pointer;
-    }
-
-    select.form-input:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
-    }
-
-    select.form-input:focus {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 16px rgba(56, 189, 248, 0.4);
-    }
-
-    /* Highlight project dropdowns specifically */
-    #station-project,
-    #edit-station-project {
-        background-color: #475569 !important;
-        border-width: 2px !important;
-    }
-
-    #station-project:hover,
-    #edit-station-project:hover {
-        background-color: #64748b !important;
-    }
-
-    /* Make option text more readable */
-    #station-project option,
-    #edit-station-project option {
-        background-color: #334155;
-        color: white;
-        padding: 8px;
-    }
-
-    #station-project option:hover,
-    #edit-station-project option:hover {
-        background-color: #475569;
-    }
-
-    /* Context Menu Styles */
-    .context-menu {
-        position: fixed;
-        background: rgba(51, 65, 85, 0.95);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        border-radius: 8px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        padding: 8px 0;
-        min-width: 200px;
-        z-index: 10000;
-        display: none;
-    }
-    /* Drag Confirmation Modal */
-    .drag-confirm-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(4px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 10001;
-        animation: fadeIn 0.2s ease-out;
-    }
-
-    .drag-confirm-content {
-        background: rgba(51, 65, 85, 0.98);
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        padding: 32px;
-        max-width: 480px;
-        width: 90%;
-        max-height: 90vh;
-        transform: scale(0.9);
-        animation: scaleIn 0.3s ease-out forwards;
-    }
-
-    .drag-confirm-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 24px;
-    }
-
-    .drag-confirm-icon {
-        width: 48px;
-        height: 48px;
-        background: linear-gradient(135deg, #10b981, #059669);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        margin-right: 16px;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    }
-
-    .drag-confirm-title {
-        color: #f1f5f9;
-        font-size: 20px;
-        font-weight: 600;
-        margin: 0;
-    }
-
-    .drag-confirm-body {
-        margin-bottom: 32px;
-    }
-
-    .drag-confirm-message {
-        color: #cbd5e1;
-        font-size: 16px;
-        line-height: 1.5;
-        margin-bottom: 20px;
-    }
-
-    .drag-confirm-details {
-        background: rgba(71, 85, 105, 0.5);
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 8px;
-        padding: 16px;
-    }
-
-    .drag-confirm-detail-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-        font-size: 14px;
-    }
-
-    .drag-confirm-detail-row:last-child {
-        margin-bottom: 0;
-    }
-
-    .drag-confirm-label {
-        color: #94a3b8;
-        font-weight: 500;
-    }
-
-    .drag-confirm-value {
-        color: #e2e8f0;
-        font-family: "Monaco", "Menlo", monospace;
-        font-size: 13px;
-    }
-
-    .drag-confirm-snap-badge {
-        display: inline-flex;
-        align-items: center;
-        background: #10b981;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-    .drag-confirm-actions {
-        display: flex;
-        gap: 12px;
-        justify-content: flex-end;
-    }
-
-    .drag-confirm-btn {
-        padding: 12px 24px;
-        border-radius: 8px;
-        border: none;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 100px;
-        font-size: 14px;
-    }
-
-    .drag-confirm-btn-cancel {
-        background: rgba(100, 116, 139, 0.8);
-        color: white;
-    }
-
-    .drag-confirm-btn-cancel:hover {
-        background: rgba(71, 85, 105, 0.9);
-        transform: translateY(-1px);
-    }
-
-    .drag-confirm-btn-confirm {
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    }
-
-    .drag-confirm-btn-confirm:hover {
-        background: linear-gradient(135deg, #059669, #047857);
-        transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
-    }
-
-    .drag-confirm-btn-danger {
-        background: linear-gradient(135deg, #ef4444, #dc2626);
-        color: white;
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-    }
-
-    .drag-confirm-btn-danger:hover {
-        background: linear-gradient(135deg, #dc2626, #b91c1c);
-        transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-    }
-
-    @keyframes scaleIn {
-        from {
-            transform: scale(0.9);
-            opacity: 0;
-        }
-
-        to {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-
-    .context-menu-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 16px;
-        color: #e2e8f0;
-        font-size: 14px;
-        cursor: pointer;
-        transition: background 0.2s ease;
-    }
-
-    .context-menu-item:hover {
-        background: rgba(56, 189, 248, 0.2);
-        color: #ffffff;
-    }
-
-    .context-menu-item.disabled {
-        color: #64748b;
-        cursor: not-allowed;
-    }
-
-    .context-menu-item.disabled:hover {
-        background: transparent;
-        color: #64748b;
-    }
-
-    .context-menu-icon {
-        margin-right: 12px;
-        font-size: 16px;
-        width: 20px;
-        text-align: center;
-    }
-
-    .context-menu-text {
-        flex: 1;
-    }
-
-    .context-menu-subtitle {
-        font-size: 12px;
-        color: #94a3b8;
-        margin-top: 2px;
-    }
-
-    .context-menu-separator {
-        height: 1px;
-        background: rgba(148, 163, 184, 0.2);
-        margin: 8px 0;
-    }
-
-    /* Pulse animation for highlighting stations */
-    @keyframes pulse {
-        0% {
-            transform: scale(1);
-            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-        }
-
-        50% {
-            transform: scale(1.2);
-            box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
-        }
-
-        100% {
-            transform: scale(1);
-            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-        }
-    }
-</style>
+<link rel="stylesheet" href="{% static 'private/css/map_viewer.css' %}">
 {% endblock extra_css %}
 
 {% block content %}
 <main class="grow">
+    <form id="csrf-token-form" style="display:none">{% csrf_token %}</form>
+    <script>
+        // Initialize a global CSRF token immediately after it's rendered
+        (function(){
+            var el = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (el && el.value) {
+                window.CSRF_TOKEN = el.value;
+            }
+        })();
+    </script>
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
 
         <!-- Page header -->
@@ -1230,9 +209,9 @@
                             <div class="flex items-center space-x-4">
                                 <h2 id="station-modal-title" class="text-xl font-semibold text-white">Station Details</h2>
                                 <div id="station-modal-tabs" class="flex space-x-1 bg-slate-700 rounded-lg p-1">
-                                    <button class="tab-btn active" data-tab="details">Details</button>
-                                    <button class="tab-btn" data-tab="resources">Resources</button>
-                                    <button class="tab-btn" data-tab="add-resource">Add Resource</button>
+                                    <button class="tab-btn active" data-tab="details" onclick="switchTab('details')">Details</button>
+                                    <button class="tab-btn" data-tab="resources" onclick="switchTab('resources')">Resources</button>
+                                    <button class="tab-btn" data-tab="add-resource" onclick="switchTab('add-resource')">Add Resource</button>
                                 </div>
                             </div>
                             <button id="station-modal-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
@@ -1415,6 +394,10 @@
                         <h3 class="drag-confirm-title">Delete Resource</h3>
                     </div>
                     <div class="drag-confirm-body">
+                        <!-- Hidden inputs to carry identifiers across handlers -->
+                        <input type="hidden" id="resource-delete-id" value="">
+                        <input type="hidden" id="resource-delete-station-id" value="">
+                        <input type="hidden" id="resource-delete-project-id" value="">
                         <p class="drag-confirm-message">
                             Are you sure you want to delete this resource?
                         </p>
@@ -1455,7 +438,6 @@
                     <!-- Quick creation content -->
                 </div>
             </div>
-            
             <!-- New Station Creation Modal -->
             <div id="create-station-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md relative">
@@ -1590,7 +572,6 @@
                     </form>
                 </div>
             </div>
-            
             <!-- Context Menu Help Modal -->
             <div id="context-menu-help-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl">
@@ -1739,36 +720,52 @@
 {% endblock content %}
 {% block extra_js %}
 <script src='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js'></script>
+<script>
+    // Pass CSRF token from template scope to global scope for all modules
+    (function(){
+        var t = window.CSRF_TOKEN;
+        var tpl = "{{ csrf_token }}";
+        if (!t || typeof t !== 'string' || t.length < 8 || t === 'NOTPROVIDED') {
+            if (tpl && typeof tpl === 'string' && tpl !== 'NOTPROVIDED' && tpl.length >= 8) {
+                window.CSRF_TOKEN = tpl;
+            }
+        }
+    })();
+</script>
+<script type="module" src="{% static 'private/js/map_viewer/index.js' %}"></script>
 {% endblock extra_js %}
 {% block inline_extra_js %}
 <script src="{% static 'private/js/poi_functions.js' %}"></script>
 <script>
+    // // Fallback aliases to avoid race if module globals not ready yet
+    // if (typeof openPhotoLightbox === 'undefined') {
+    //     function openPhotoLightbox(url, title) {
+    //         if (window.openPhotoLightbox) return window.openPhotoLightbox(url, title);
+    //         try {
+    //             const lightbox = document.getElementById('photo-lightbox');
+    //             const img = document.getElementById('lightbox-image');
+    //             if (lightbox && img) {
+    //                 img.src = url;
+    //                 img.alt = title || 'Photo';
+    //                 lightbox.style.display = 'flex';
+    //             }
+    //         } catch (_) {}
+    //     }
+    // }
+    // if (typeof openVideoModal === 'undefined') {
+    //     function openVideoModal(url, title) {
+    //         if (window.openVideoModal) return window.openVideoModal(url, title);
+    //     }
+    // }
     // Set write access for POI functions
     window.hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
     
     // Get project IDs from the backend context
     const projects = {{ projects|safe }};
-    // Helper: does the user have write access on a specific project?
-    function hasProjectWriteAccess(projectId) {
-        try {
-            const proj = projects.find(p => p.id === String(projectId));
-            if (!proj) return false;
-            // Treat READ_AND_WRITE and ADMIN as write access
-            return proj.permissions === 'READ_AND_WRITE' || proj.permissions === 'ADMIN';
-        } catch (e) {
-            return false;
-        }
-    }
-    // Helper: does the user have admin access on a specific project?
-    function hasProjectAdminAccess(projectId) {
-        try {
-            const proj = projects.find(p => p.id === String(projectId));
-            if (!proj) return false;
-            return proj.permissions === 'ADMIN';
-        } catch (e) {
-            return false;
-        }
-    }
+    // Make projects globally available and stable (do not overwrite later)
+    window.projects = projects;
+    window.allProjects = projects;
+    // hasProjectWriteAccess / hasProjectAdminAccess are now provided by module utils.js and bound on window
     const projectIds = projects.map(project => project.id);
     
     // Global variables for layer management
@@ -1904,15 +901,44 @@
             console.error('Legend button not found');
         }
     });
-
-
-    // Get CSRF token from cookie
+    // Get CSRF token robustly (cookie preferred; fallbacks to DOM/meta)
     function getCSRFToken() {
-        const cookieValue = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrftoken='))
-            ?.split('=')[1];
-        return cookieValue || '{{ csrf_token }}';
+        // Prefer globally-initialized token
+        if (window.CSRF_TOKEN && typeof window.CSRF_TOKEN === 'string' && window.CSRF_TOKEN.length >= 8 && window.CSRF_TOKEN !== 'NOTPROVIDED') {
+            return window.CSRF_TOKEN;
+        }
+
+        // Try common cookie names
+        const cookieNames = ['csrftoken', 'csrf', 'X-CSRFToken', 'XSRF-TOKEN', 'csrfToken'];
+        const cookies = document.cookie ? document.cookie.split(';') : [];
+        let fromCookie = null;
+        for (const raw of cookies) {
+            const part = raw.trim();
+            for (const name of cookieNames) {
+                if (part.startsWith(name + '=')) {
+                    fromCookie = decodeURIComponent(part.split('=').slice(1).join('='));
+                    break;
+                }
+            }
+            if (fromCookie) break;
+        }
+
+        let token = fromCookie
+            || (document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || null)
+            || (document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || null);
+
+        if (typeof token === 'string') {
+            token = token.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+            const lower = token.toLowerCase();
+            if (lower === 'undefined' || lower === 'null' || token === 'NOTPROVIDED' || token.length < 8) {
+                token = null;
+            }
+        }
+
+        if (token) {
+            window.CSRF_TOKEN = token;
+        }
+        return token;
     }
 
     // Function to toggle layer visibility for a project
@@ -2143,7 +1169,6 @@
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
-
     // Visual feedback for magnetic snap
     let snapIndicator = null;
 
@@ -2216,7 +1241,6 @@
             snapIndicator = null;
         }
     }
-
     // Context Menu System
     function showContextMenu(point, lngLat, clickedElement = null) {
         const menu = document.getElementById('context-menu');
@@ -2684,9 +1708,8 @@
         // Show delete confirmation modal for POI
         showDeletePOIConfirmModal(poi);
     }
-
     // API function to create station
-    async function createStationAPI(projectId, stationData) {
+    async function createStationAPI(projectId, stationData, csrfToken) {
         // Round coordinates to 7 decimal places to match backend constraints
         if (stationData.latitude !== undefined) {
             stationData.latitude = Math.round(stationData.latitude * 10000000) / 10000000;
@@ -2703,7 +1726,9 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
+                'X-CSRFToken': csrfToken || window.CSRF_TOKEN || getCSRFToken(),
+                'X-CSRF-Token': csrfToken || window.CSRF_TOKEN || getCSRFToken(),
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify(stationData),
             credentials: 'same-origin'
@@ -2728,31 +1753,50 @@
     }
 
     // API function to update station
-    async function updateStationAPI(stationId, updateData) {
+    async function updateStationAPI(stationId, updateData, csrfToken) {
         // Direct UUID-based API call
-        const response = await fetch(`/api/v1/stations/${stationId}/`, {
-            method: 'PATCH',
-            headers: {
+        let csrf = csrfToken || window.CSRF_TOKEN || getCSRFToken();
+        if (!csrf) {
+            try {
+                await fetch(window.location.pathname, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                csrf = csrfToken || window.CSRF_TOKEN || getCSRFToken();
+            } catch (e) {
+                console.warn('Failed to prefetch CSRF cookie', e);
+            }
+        }
+        const headers = {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+        if (csrf) {
+            headers['X-CSRFToken'] = csrf;
+            headers['X-CSRF-Token'] = csrf;
+        }
+        const resp = await fetch(`/api/v1/stations/${stationId}/`, {
+            method: 'PATCH',
+            headers,
             body: JSON.stringify(updateData),
-            credentials: 'same-origin'
+            credentials: 'include'
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to update station');
+        if (!resp.ok) {
+            let details = '';
+            try { details = await resp.text(); } catch (_) {}
+            console.error('updateStationAPI failed', resp.status, details);
+            throw new Error('Failed to update station');
         }
 
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.error || 'Failed to update station');
+        const data = await resp.json();
+        if (!data || data.success === false) {
+            throw new Error((data && (data.error || data.message)) || 'Failed to update station');
         }
 
-        return data.data.station;
+        return (data.data && data.data.station) || data.station || data;
     }
-
     // API function to delete station
     async function deleteStationAPI(stationId) {
         // Direct UUID-based API call
@@ -2760,7 +1804,9 @@
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
+                'X-CSRFToken': window.CSRF_TOKEN || getCSRFToken(),
+                'X-CSRF-Token': window.CSRF_TOKEN || getCSRFToken(),
+                'X-Requested-With': 'XMLHttpRequest'
             },
             credentials: 'same-origin'
         });
@@ -2790,117 +1836,7 @@
         return data;
     }
 
-    // Enhanced notification system
-    function showNotification(type, message, duration = 3000) {
-        const notification = document.createElement('div');
-        notification.className = 'notification-toast';
-
-        const icons = {
-            success: '✅',
-            error: '❌',
-            info: 'ℹ️',
-            warning: '⚠️'
-        };
-
-        const colors = {
-            success: '#10b981',
-            error: '#ef4444',
-            info: '#00D8FF',
-            warning: '#f59e0b'
-        };
-
-        notification.innerHTML = `
-            <div class="notification-icon">${icons[type] || icons.info}</div>
-            <div class="notification-message">${message}</div>
-        `;
-
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${colors[type] || colors.info};
-            color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            z-index: 10001;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-            animation: slideIn 0.3s ease-out;
-            max-width: 400px;
-        `;
-
-        // Add slide-in animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-                    @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        #create-station-spinner {
-            animation: spin 1s linear infinite;
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
-        }
-        @keyframes flash {
-            0%, 100% { opacity: 0; }
-            50% { opacity: 0.3; }
-        }
-        .animate-flash {
-            animation: flash 0.5s ease-in-out 2;
-        }
-        @keyframes progress {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        .animate-progress {
-            animation: progress 1.5s ease-in-out infinite;
-        }`;
-        document.head.appendChild(style);
-
-        document.body.appendChild(notification);
-
-        // Remove after duration
-        setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease-out';
-            setTimeout(() => {
-                notification.remove();
-                style.remove();
-            }, 300);
-        }, duration);
-
-        return notification;
-    }
+    // showNotification migrated to module ui.js and rebound in module index
 
     // Enhanced loading overlay for station operations
     function showStationLoadingOverlay(title, message) {
@@ -3006,7 +1942,9 @@
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
+                    'X-CSRFToken': window.CSRF_TOKEN || getCSRFToken(),
+                    'X-CSRF-Token': window.CSRF_TOKEN || getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 credentials: 'same-origin'
             });
@@ -3262,7 +2200,6 @@
 
         return { totalMarkers, visibleMarkers };
     };
-
     // Force refresh station visibility
     window.refreshStationVisibility = function () {
         console.log('🔄 Forcing station visibility refresh...');
@@ -3424,7 +2361,6 @@
         console.log(`📎 Line handlers: ${attached}/${total} attached`);
         return attached;
     }
-
     // Station Management Functions
     async function loadStationsForProject(projectId) {
         // Skip loading stations if user only has WEB_VIEWER access on this project
@@ -3460,7 +2396,9 @@
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
+                        'X-CSRFToken': window.CSRF_TOKEN || getCSRFToken(),
+                        'X-CSRF-Token': window.CSRF_TOKEN || getCSRFToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     credentials: 'same-origin'
                 });
@@ -3650,7 +2588,6 @@
             });
         }
     }
-
     function displayStationsOnMap(projectId, stationData) {
         // Remove existing station markers for this project
         if (stationMarkers.has(projectId)) {
@@ -3697,6 +2634,11 @@
                 // Create station marker - ALWAYS starts hidden
                 const markerElement = document.createElement('div');
                 markerElement.className = `station-marker ${properties.resource_count > 0 ? 'has-resources' : ''}`;
+                // Attach dataset for delegated click handling
+                try {
+                    markerElement.setAttribute('data-station-id', properties.id);
+                    markerElement.setAttribute('data-project-id', projectId);
+                } catch (_) {}
                 markerElement.title = `Station: ${properties.name}${properties.is_demo ? ' (Demo)' : ''}`;
 
                 // Add demo indicator if it's a demo station
@@ -3731,10 +2673,10 @@
                 // Add click handler for station
                 markerElement.addEventListener('click', (e) => {
                     if (!draggedStation) { // Only open modal if not dragging
-                        console.log(`🖱️ Station clicked: ${properties.name} (${properties.id})`);
-                        console.log(`   Project: ${projectId}`);
-                        console.log(`   Properties:`, properties);
-                        openStationModal(properties.id, projectId);
+                        const sid = e.currentTarget.getAttribute('data-station-id') || properties.id;
+                        const pid = e.currentTarget.getAttribute('data-project-id') || projectId;
+                        console.log(`🖱️ Station clicked: ${properties.name} (${sid})`);
+                        openStationModal(sid, pid);
                     }
                 });
 
@@ -3891,7 +2833,6 @@
                 <div class="drag-confirm-detail-row">
                     <span class="drag-confirm-label">Distance to Point:</span>
                     <span class="drag-confirm-value">${snapResult.distance.toFixed(1)} meters</span>
-                </div>
             ` : `
                 <div class="drag-confirm-detail-row">
                     <span class="drag-confirm-label">Placement Type:</span>
@@ -4018,7 +2959,6 @@
             draggedStation = null;
         }
     }
-
     // Enhanced Modal Management
     // Station Creation Modal Functions
     let pendingStationData = null;
@@ -4141,7 +3081,6 @@
             }
         };
     }
-
     // POI Manager Function
     window.openPOIManager = function () {
         console.log('📋 Opening POI Manager');
@@ -4231,7 +3170,9 @@
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
+                    'X-CSRFToken': window.CSRF_TOKEN || getCSRFToken(),
+                    'X-CSRF-Token': window.CSRF_TOKEN || getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
                     latitude: newCoords[1],
@@ -4335,7 +3276,20 @@
         console.log(`📋 Opening station modal for: ${stationId || 'NEW STATION'}`);
 
         currentStationId = stationId;
-        currentProjectId = projectId || window.projects[0]?.id;
+        // Derive a robust currentProjectId
+        let derivedProjectId = projectId;
+        if (!derivedProjectId && stationId) {
+            const st = allStations.get(stationId);
+            derivedProjectId = st?.projectId || st?.project_id || derivedProjectId;
+        }
+        if (!derivedProjectId) {
+            derivedProjectId = (window.projectsWithData && window.projectsWithData[0]?.id) || (window.projects && window.projects[0]?.id) || null;
+        }
+        currentProjectId = derivedProjectId;
+        if (!currentProjectId) {
+            showNotification('error', 'Cannot determine project for this station.');
+            return;
+        }
 
         const modal = document.getElementById('station-modal');
         if (!modal) {
@@ -4436,7 +3390,26 @@
 
         // Re-query after cloning
         const freshButtons = document.querySelectorAll('.tab-btn');
+        // Handle permission-based disabling of Add Resource
+        try {
+            const addBtn = document.querySelector('.tab-btn[data-tab="add-resource"]');
+            const canWrite = currentProjectId && typeof hasProjectWriteAccess === 'function' ? hasProjectWriteAccess(currentProjectId) : false;
+            if (addBtn && !canWrite) {
+                addBtn.setAttribute('disabled', 'disabled');
+                addBtn.setAttribute('aria-disabled', 'true');
+                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                addBtn.title = 'You have read access and cannot modify.';
+            } else if (addBtn) {
+                addBtn.removeAttribute('disabled');
+                addBtn.removeAttribute('aria-disabled');
+                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                addBtn.removeAttribute('title');
+            }
+        } catch (e) {}
+
         freshButtons.forEach(btn => {
+            // Do not bind click for disabled buttons
+            if (btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true') return;
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const tab = btn.dataset.tab;
@@ -4445,25 +3418,43 @@
                 }
             });
         });
+
+        // Delegated handler on the tabs container as a safety net
+        const tabsContainer = document.getElementById('station-modal-tabs');
+        if (tabsContainer && !tabsContainer.__mvDelegated) {
+            tabsContainer.addEventListener('click', (e) => {
+                const target = e.target.closest('.tab-btn');
+                if (!target) return;
+                if (target.hasAttribute('disabled') || target.getAttribute('aria-disabled') === 'true') return;
+                e.preventDefault();
+                const tab = target.dataset.tab;
+                if (tab) switchTab(tab);
+            });
+            tabsContainer.__mvDelegated = true;
+        }
     }
+
+    // Expose to global to avoid scoping issues with dynamic HTML
+    window.switchTab = switchTab;
+    window.initializeTabs = initializeTabs;
 
     function switchTab(tabName) {
         console.log(`📑 Switching to tab: ${tabName}`);
-        activeTab = tabName;
+        // Resolve effective tab considering permissions
+        let effectiveTab = tabName;
+        if (effectiveTab === 'add-resource' && currentProjectId && typeof hasProjectWriteAccess === 'function' && !hasProjectWriteAccess(currentProjectId)) {
+            showNotification('warning', 'You have read access and cannot modify.');
+            effectiveTab = 'resources';
+        }
+        activeTab = effectiveTab;
 
         // Update tab buttons
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tab === tabName);
+            btn.classList.toggle('active', btn.dataset.tab === effectiveTab);
         });
 
         // Load tab content
-        // If trying to open Add Resource tab without write access, show warning and stay on resources
-        if (tabName === 'add-resource' && currentProjectId && !hasProjectWriteAccess(currentProjectId)) {
-            showNotification('warning', 'You have read access and cannot modify.');
-            tabName = 'resources';
-        }
-
-        switch (tabName) {
+        switch (effectiveTab) {
             case 'details':
                 if (currentStationId) {
                     console.log(`📑 Loading details for station: ${currentStationId}`);
@@ -4515,7 +3506,6 @@
             </div>
         `;
     }
-
     // Load Station Manager Content
     function loadStationManagerContent() {
         const content = document.getElementById('station-manager-content');
@@ -4524,7 +3514,8 @@
             return;
         }
 
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
+        const hasWriteAccess = (typeof hasProjectWriteAccess === 'function') ? hasProjectWriteAccess(projectId) : {{ has_write_access|yesno:"true,false" }};
+        const hasAdminAccess = (typeof hasProjectAdminAccess === 'function') ? hasProjectAdminAccess(projectId) : false;
 
         // Gather all stations organized by project
         const stationsByProject = new Map();
@@ -4565,8 +3556,9 @@
         } else {
             // Sort projects by name
             const sortedProjects = Array.from(stationsByProject.entries()).sort((a, b) => {
-                const projectA = window.projects.find(p => p.id === a[0]);
-                const projectB = window.projects.find(p => p.id === b[0]);
+                const baseList = (window.projectsWithData && window.projectsWithData.length) ? window.projectsWithData : window.projects;
+                const projectA = baseList.find(p => p.id === a[0]);
+                const projectB = baseList.find(p => p.id === b[0]);
                 const nameA = projectA?.name || 'Unknown Project';
                 const nameB = projectB?.name || 'Unknown Project';
                 return nameA.localeCompare(nameB);
@@ -4574,7 +3566,8 @@
 
             // Display stations organized by project
             sortedProjects.forEach(([projectId, projectStations]) => {
-                const project = window.projects.find(p => p.id === projectId);
+                const baseList2 = (window.projectsWithData && window.projectsWithData.length) ? window.projectsWithData : window.projects;
+                const project = baseList2.find(p => p.id === projectId);
                 const projectName = project?.name || 'Unknown Project';
 
                 // Sort stations by name
@@ -4645,7 +3638,6 @@
         html += '</div>';
         content.innerHTML = html;
     }
-
     // Load POI Manager Content
     function loadPOIManagerContent() {
         const content = document.getElementById('poi-manager-content');
@@ -4773,7 +3765,9 @@
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
+                    'X-CSRFToken': window.CSRF_TOKEN || getCSRFToken(),
+                    'X-CSRF-Token': window.CSRF_TOKEN || getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 credentials: 'same-origin'
             });
@@ -4922,7 +3916,6 @@
                 </div>
             `;
     }
-
     // Helper function for resource previews
     function getResourcePreview(resource) {
         switch (resource.resource_type) {
@@ -4930,7 +3923,7 @@
                 return resource.file_url ?
                     `<div class="resource-preview">
                         <img src="${resource.miniature_url || resource.file_url}" alt="${resource.title}" 
-                             onclick="openPhotoLightbox('${resource.file_url}', '${resource.title}')"
+                             onclick="window.openPhotoLightbox('${resource.file_url}', '${resource.title}')"
                              title="Click to view full size"
                              loading="lazy">
                     </div>` :
@@ -4938,7 +3931,7 @@
             case 'video':
                 return resource.file_url ?
                     resource.miniature_url ?
-                        `<div class="resource-preview video-preview" onclick="openVideoModal('${resource.file_url}', '${resource.title}')">
+                        `<div class="resource-preview video-preview" onclick="window.openVideoModal('${resource.file_url}', '${resource.title}')">
                             <img src="${resource.miniature_url}" alt="${resource.title}" 
                                  title="Click to play video"
                                  loading="lazy">
@@ -5032,7 +4025,8 @@
             station.resources = [];
         }
         
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
+        const hasWriteAccess = (typeof hasProjectWriteAccess === 'function') ? hasProjectWriteAccess(projectId) : {{ has_write_access|yesno:"true,false" }};
+        const hasAdminAccess = (typeof hasProjectAdminAccess === 'function') ? hasProjectAdminAccess(projectId) : false;
         const modalContent = document.getElementById('station-modal-content');
         
         modalContent.innerHTML = `
@@ -5053,20 +4047,46 @@
                                             </h4>
                                             <span class="px-2 py-1 bg-sky-500 text-white text-xs rounded mt-1 inline-block">${resource.resource_type}</span>
                                         </div>
-                                        ${hasWriteAccess ? `
-                                            <div class="flex space-x-1">
-                                                <button onclick="editResource('${resource.id}')" class="text-slate-400 hover:text-white" title="Edit">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        ${hasAdminAccess ? `
+                                            <div class=\"flex space-x-1\">
+                                                <button onclick=\"editResource('${resource.id}')\" class=\"text-slate-400 hover:text-white\" title=\"Edit\">
+                                                    <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
+                                                        <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z\"></path>
                                                     </svg>
                                                 </button>
-                                                <button onclick="deleteResource('${resource.id}', '${stationId}', '${projectId}')" class="text-red-400 hover:text-red-300" title="Delete">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                <button onclick=\"deleteResource('${resource.id}', '${stationId}', '${projectId}')\" class=\"text-red-400 hover:text-red-300\" title=\"Delete\">
+                                                    <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
+                                                        <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16\"></path>
                                                     </svg>
                                                 </button>
                                             </div>
-                                        ` : ''}
+                                        ` : (hasWriteAccess ? `
+                                            <div class=\"flex space-x-1\">
+                                                <button onclick=\"editResource('${resource.id}')\" class=\"text-slate-400 hover:text-white\" title=\"Edit\">
+                                                    <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
+                                                        <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z\"></path>
+                                                    </svg>
+                                                </button>
+                                                <button class=\"text-slate-500 cursor-not-allowed\" disabled aria-disabled=\"true\" title=\"Only admins can delete\">
+                                                    <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
+                                                        <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16\"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        ` : `
+                                            <div class=\"flex space-x-1 pointer-events-none opacity-50\" title=\"Read-only\">
+                                                <button class=\"text-slate-500 cursor-not-allowed\" disabled aria-disabled=\"true\">
+                                                    <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
+                                                        <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z\"></path>
+                                                    </svg>
+                                                </button>
+                                                <button class=\"text-slate-500 cursor-not-allowed\" disabled aria-disabled=\"true\">
+                                                    <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
+                                                        <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16\"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        `)}
                                     </div>
                                     
                                     ${resource.description ? `<p class="text-slate-300 text-sm mb-3">${resource.description}</p>` : ''}
@@ -5104,8 +4124,10 @@
                 </div>
             </div>
         `;
-    }
 
+        // Ensure tab handlers are bound after dynamic content
+        try { initializeTabs(); } catch (_e) {}
+    }
     // Add Resource Tab Functions
     function loadAddResourceTab(stationId, projectId, preselectedType = '') {
         const station = allStations.get(stationId);
@@ -5209,6 +4231,9 @@
 
         // Set up form handlers
         setupAddResourceTabHandlers(stationId, projectId, preselectedType);
+
+        // Ensure tab handlers are bound after dynamic content
+        try { initializeTabs(); } catch (_e) {}
     }
 
     function showAddResourceEmpty() {
@@ -5227,7 +4252,6 @@
             </div>
         `;
     }
-
     function setupAddResourceTabHandlers(stationId, projectId, preselectedType) {
         const resourceTypeSelect = document.querySelector('select[name="resource_type"]');
         const fileContainer = document.getElementById('file-input-container');
@@ -5263,6 +4287,7 @@
 
         // Trigger change for preselected type
         if (preselectedType) {
+            resourceTypeSelect.value = preselectedType;
             resourceTypeSelect.dispatchEvent(new Event('change'));
         }
 
@@ -5299,134 +4324,12 @@
             e.preventDefault();
             saveStationResource(stationId, projectId, form);
         });
-    }
-
-    // Photo Lightbox Functions
-    let currentPhotoUrl = null;
-    let currentPhotoTitle = null;
-
-    function openPhotoLightbox(url, title) {
-        currentPhotoUrl = url;
-        currentPhotoTitle = title || 'Photo';
-
-        const lightbox = document.getElementById('photo-lightbox');
-        const img = document.getElementById('lightbox-image');
-
-        img.src = url;
-        img.alt = title;
-        lightbox.style.display = 'flex';
-
-        // Prevent body scroll when lightbox is open
-        document.body.style.overflow = 'hidden';
-    }
-
-    // Video Modal Functions
-    function openVideoModal(url, title) {
-        // Create modal elements
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90';
-        modal.onclick = (e) => {
-            if (e.target === modal) closeVideoModal();
-        };
-
-        const container = document.createElement('div');
-        container.className = 'relative w-full max-w-4xl bg-slate-800 rounded-lg overflow-hidden';
-
-        const header = document.createElement('div');
-        header.className = 'flex justify-between items-center p-4 border-b border-slate-700';
-        header.innerHTML = `
-            <h3 class="text-lg font-medium text-white">${title || 'Video'}</h3>
-            <button onclick="closeVideoModal()" class="text-slate-400 hover:text-white">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        `;
-
-        const videoContainer = document.createElement('div');
-        videoContainer.className = 'relative bg-black';
-        videoContainer.innerHTML = `
-            <video controls autoplay class="w-full max-h-[70vh]">
-                <source src="${url}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        `;
-
-        container.appendChild(header);
-        container.appendChild(videoContainer);
-        modal.appendChild(container);
-        document.body.appendChild(modal);
-
-        // Prevent body scroll
-        document.body.style.overflow = 'hidden';
-
-        // Store reference for cleanup
-        window.currentVideoModal = modal;
-    }
-
-    function closeVideoModal() {
-        if (window.currentVideoModal) {
-            // Stop video playback
-            const video = window.currentVideoModal.querySelector('video');
-            if (video) {
-                video.pause();
-                video.currentTime = 0;
-            }
-
-            // Remove modal
-            window.currentVideoModal.remove();
-            window.currentVideoModal = null;
-
-            // Restore body scroll
-            document.body.style.overflow = '';
-        }
-    }
-
-    function closePhotoLightbox(event) {
-        // Only close if clicking on background or close button
-        if (!event || event.target.id === 'photo-lightbox' || event.target.closest('.photo-lightbox-close')) {
-            const lightbox = document.getElementById('photo-lightbox');
-            lightbox.style.display = 'none';
-            document.body.style.overflow = '';
-            currentPhotoUrl = null;
-            currentPhotoTitle = null;
-        }
-    }
-
-    function downloadPhoto() {
-        if (!currentPhotoUrl) return;
-
-        // Create a temporary link and trigger download
-        const link = document.createElement('a');
-        link.href = currentPhotoUrl;
-        link.download = currentPhotoTitle + '.jpg'; // Assume jpg, could be improved
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    function openPhotoInNewTab() {
-        if (!currentPhotoUrl) return;
-
-        // Check if it's a data URL (base64 encoded image like sketches)
-        if (currentPhotoUrl.startsWith('data:')) {
-            // For data URLs, trigger a download instead of opening in new tab
-            const link = document.createElement('a');
-            link.href = currentPhotoUrl;
-            link.download = currentPhotoTitle + '.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } else {
-            // For regular URLs (like S3 images), open in new tab
-            window.open(currentPhotoUrl, '_blank');
-        }
-    }
+    }    
 
     // Add keyboard support for closing lightbox
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && document.getElementById('photo-lightbox').style.display === 'flex') {
-            closePhotoLightbox();
+            window.closePhotoLightbox();
         }
     });
 
@@ -5437,92 +4340,19 @@
             const url = e.target.getAttribute('data-preview-url');
             const title = e.target.getAttribute('data-preview-title');
             if (url && title) {
-                openPhotoLightbox(url, title);
+                window.openPhotoLightbox(url, title);
             }
         }
     });
 
     // Note Viewer Functions
-    let currentNoteContent = null;
+    let currentNoteContent = null;    
 
-    function openNoteViewer(noteData) {
-        const modal = document.getElementById('note-viewer-modal');
+    function formatNoteContent(content) { return window.formatNoteContent(content); }
 
-        // Populate modal content
-        document.getElementById('note-viewer-title').textContent = noteData.title;
-        document.getElementById('note-viewer-author').textContent = `By ${noteData.author}`;
-        document.getElementById('note-viewer-date').textContent = new Date(noteData.date).toLocaleDateString();
+    function closeNoteViewer() { window.closeNoteViewer(); }
 
-        if (noteData.description) {
-            document.getElementById('note-viewer-description').textContent = noteData.description;
-            document.getElementById('note-viewer-description').style.display = 'block';
-        } else {
-            document.getElementById('note-viewer-description').style.display = 'none';
-        }
-
-        // Format the note content with proper line breaks and styling
-        const formattedContent = formatNoteContent(noteData.content);
-        document.getElementById('note-viewer-content').innerHTML = formattedContent;
-
-        // Update character count
-        document.getElementById('note-viewer-char-count').textContent = noteData.content.length;
-
-        // Store current note content for copying
-        currentNoteContent = noteData.content;
-
-        // Show modal
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
-
-    function formatNoteContent(content) {
-        // Escape HTML
-        const escaped = content
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-
-        // Convert line breaks to paragraphs
-        const paragraphs = escaped.split(/\n\n+/).filter(p => p.trim());
-
-        return paragraphs.map(paragraph => {
-            // Convert single line breaks to <br> within paragraphs
-            const formatted = paragraph.replace(/\n/g, '<br>');
-            return `<p class="mb-4 text-slate-300 leading-relaxed">${formatted}</p>`;
-        }).join('');
-    }
-
-    function closeNoteViewer() {
-        const modal = document.getElementById('note-viewer-modal');
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-        currentNoteContent = null;
-    }
-
-    function copyNoteToClipboard() {
-        if (!currentNoteContent) return;
-
-        navigator.clipboard.writeText(currentNoteContent).then(() => {
-            // Show success feedback
-            const button = event.target.closest('button');
-            const originalHTML = button.innerHTML;
-            button.innerHTML = `
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-                Copied!
-            `;
-            button.classList.add('bg-green-600', 'hover:bg-green-700');
-
-            setTimeout(() => {
-                button.innerHTML = originalHTML;
-                button.classList.remove('bg-green-600', 'hover:bg-green-700');
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy to clipboard:', err);
-            showNotification('error', 'Failed to copy to clipboard');
-        });
-    }
+    function copyNoteToClipboard(event) { window.copyNoteToClipboard(event); }
 
     // Add event delegation for note preview clicks
     document.addEventListener('click', function (e) {
@@ -5536,7 +4366,7 @@
                 author: notePreview.getAttribute('data-note-author'),
                 date: notePreview.getAttribute('data-note-date')
             };
-            openNoteViewer(noteData);
+            window.openNoteViewer(noteData);
         }
     });
 
@@ -5565,7 +4395,6 @@
             }
         }, 100);
     }
-
     function editStation(stationId) {
         console.log(`📝 Opening edit form for station ${stationId}`);
         if (!currentProjectId || !hasProjectWriteAccess(currentProjectId)) {
@@ -5873,7 +4702,6 @@
         switchTab('details');
         loadStationDetails(stationId, currentProjectId);
     }
-
     function pickLocationFromMap(stationId) {
         console.log(`📍 Pick location from map for station ${stationId}`);
 
@@ -5963,7 +4791,6 @@
             }
         });
     }
-
     async function saveStationEdits(stationId, originalProjectId, form) {
         if (!originalProjectId || !hasProjectWriteAccess(originalProjectId)) {
             showNotification('warning', 'You have read access and cannot modify.');
@@ -6275,6 +5102,14 @@
     function editResource(resourceId) {
         console.log('Edit resource called with ID:', resourceId);
 
+        // Permission guard: prevent editing on read-only projects
+        try {
+            if (!currentProjectId || (typeof hasProjectWriteAccess === 'function' && !hasProjectWriteAccess(currentProjectId))) {
+                showNotification('warning', 'You have read access and cannot modify.');
+                return;
+            }
+        } catch (e) {}
+
         // Find the resource in the current station's resources
         const station = allStations.get(currentStationId);
         if (!station || !station.resources) {
@@ -6297,6 +5132,7 @@
         if (!formContainer) return;
 
         formContainer.classList.remove('hidden');
+        const canWriteResource = (typeof hasProjectWriteAccess === 'function') ? hasProjectWriteAccess(projectId) : {{ has_write_access|yesno:"true,false" }};
         formContainer.innerHTML = `
             <div class="bg-slate-600 p-6 rounded-lg border-t-4 border-amber-500">
                 <h4 class="text-white font-semibold mb-4">Edit Resource</h4>
@@ -6311,23 +5147,23 @@
                         </div>
                         <div>
                             <label class="block text-slate-300 text-sm font-medium mb-2">Title</label>
-                            <input type="text" name="title" class="form-input" value="${resource.title}" required>
+                            <input type="text" name="title" class="form-input" value="${resource.title}" ${canWriteResource ? '' : 'disabled'} required>
                         </div>
                     </div>
                     
                     <div>
                         <label class="block text-slate-300 text-sm font-medium mb-2">Description (optional)</label>
-                        <textarea name="description" class="form-input form-textarea" placeholder="Additional details...">${resource.description || ''}</textarea>
+                        <textarea name="description" class="form-input form-textarea" ${canWriteResource ? '' : 'disabled'} placeholder="Additional details...">${resource.description || ''}</textarea>
                     </div>
                     
                     ${['photo', 'video', 'document'].includes(resource.resource_type) ? `
-                        <div class="file-upload-area">
+                        <div class="file-upload-area" ${canWriteResource ? '' : 'style="pointer-events:none; opacity:.6;"'}>
                             <div class="text-center">
                                 <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                 </svg>
                                 <p class="text-slate-300 text-sm mb-2">Click to upload new file (optional)</p>
-                                <input type="file" name="file" class="hidden" accept="${getFileAccept(resource.resource_type)}">
+                                <input type="file" name="file" class="hidden" ${canWriteResource ? '' : 'disabled'} accept="${getFileAccept(resource.resource_type)}">
                                 <p class="text-slate-400 text-xs">Leave empty to keep current file</p>
                                 ${resource.file_url ? `<p class="text-sky-400 text-xs mt-2">Current file: ${getFileName(resource.file_url)}</p>` : ''}
                             </div>
@@ -6337,36 +5173,40 @@
                     ${resource.resource_type === 'note' ? `
                         <div>
                             <label class="block text-slate-300 text-sm font-medium mb-2">Content</label>
-                            <textarea name="text_content" class="form-input form-textarea" rows="6" required>${resource.text_content || ''}</textarea>
+                            <textarea name="text_content" class="form-input form-textarea" rows="6" ${canWriteResource ? '' : 'disabled'} required>${resource.text_content || ''}</textarea>
                         </div>
                     ` : ''}
                     
                     ${resource.resource_type === 'sketch' ? `
                         <div>
                             <label class="block text-slate-300 text-sm font-medium mb-2">Sketch (Draw to update)</label>
-                                                                <canvas id="edit-sketch-canvas" width="1600" height="800" class="sketch-canvas w-full" style="max-height: 400px;"></canvas>
+                                                                <canvas id="edit-sketch-canvas" width="1600" height="800" class="sketch-canvas w-full" style="max-height: 400px;${canWriteResource ? '' : ' pointer-events:none; opacity:.6;'}"></canvas>
                             <input type="hidden" name="text_content" id="edit-sketch-data" value="${resource.text_content || ''}">
                             <div class="flex justify-between items-center mt-2">
                                 <div class="flex space-x-2">
+                                    ${canWriteResource ? `
                                     <button type="button" onclick="clearEditSketch()" class="text-slate-400 hover:text-white text-sm">Clear</button>
                                     <button type="button" onclick="undoEditSketch()" class="text-slate-400 hover:text-white text-sm">↶ Undo</button>
                                     <button type="button" onclick="redoEditSketch()" class="text-slate-400 hover:text-white text-sm">↷ Redo</button>
+                                    ` : ''}
                                 </div>
-                                <div class="text-slate-400 text-xs">Click and drag to draw</div>
+                                <div class="text-slate-400 text-xs">${canWriteResource ? 'Click and drag to draw' : 'Read-only preview'}</div>
                             </div>
                         </div>
                     ` : ''}
                     
                     <div class="flex gap-3">
-                        <button type="submit" class="btn-primary">💾 Save Changes</button>
-                        <button type="button" onclick="hideAddResourceForm()" class="btn-secondary">Cancel</button>
+                        ${canWriteResource ? `<button type="submit" class="btn-primary">💾 Save Changes</button>` : ''}
+                        <button type="button" onclick="hideAddResourceForm()" class="btn-secondary">${canWriteResource ? 'Cancel' : 'Close'}</button>
                     </div>
                 </form>
             </div>
         `;
 
         // Setup form handlers
+        if (canWriteResource) {
         setupEditResourceFormHandlers(resourceId, stationId, projectId, resource);
+        }
     }
 
     function getResourceTypeLabel(type) {
@@ -6437,7 +5277,6 @@
             await updateStationResource(resourceId, stationId, projectId, form);
         });
     }
-
     // Edit sketch functionality
     let editSketchCanvas, editSketchCtx, editSketchOps, isEditDrawing = false;
 
@@ -6509,7 +5348,6 @@
             updateEditUndoRedoButtons();
         }
     }
-
     function clearEditSketch() {
         if (editSketchOps) {
             editSketchOps.clearCanvas();
@@ -6544,7 +5382,6 @@
             redoBtn.classList.toggle('opacity-50', !info.canRedo);
         }
     }
-
     async function updateStationResource(resourceId, stationId, projectId, form) {
         const formData = new FormData(form);
 
@@ -6566,7 +5403,9 @@
             const response = await fetch(`/api/v1/resources/${resourceId}/`, {
                 method: 'PATCH',
                 headers: {
-                    'X-CSRFToken': getCSRFToken()
+                    'X-CSRFToken': window.CSRF_TOKEN || getCSRFToken(),
+                    'X-CSRF-Token': window.CSRF_TOKEN || getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: formData,
                 credentials: 'same-origin'
@@ -6830,149 +5669,9 @@
         }
     }
 
-    function updateFileDisplay(fileContainer, file) {
-        const textDiv = fileContainer.querySelector('.text-center');
-        if (!textDiv) return;
+    function updateFileDisplay(fileContainer, file) { window.updateFileDisplay(fileContainer, file); }
 
-        // Check file size limits
-        const maxVideoSize = 5 * 1024 * 1024; // 5MB for videos
-        const maxPhotoSize = 10 * 1024 * 1024; // 10MB for photos (reasonable limit)
-        const resourceTypeSelect = document.querySelector('select[name="resource_type"]');
-        const resourceType = resourceTypeSelect ? resourceTypeSelect.value : '';
-
-        let maxSize = 0;
-        let errorMessage = '';
-
-        if (resourceType === 'video') {
-            maxSize = maxVideoSize;
-            errorMessage = 'Video files must be under 5MB';
-        } else if (resourceType === 'photo') {
-            maxSize = maxPhotoSize;
-            errorMessage = 'Photo files must be under 10MB';
-        }
-
-        if (maxSize > 0 && file.size > maxSize) {
-            // Show error message
-            const maxSizeMB = maxSize / (1024 * 1024);
-            showNotification('error', `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)} file size cannot exceed ${maxSizeMB}MB. Your file is ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
-
-            // Reset the file input
-            const fileInput = textDiv.querySelector('input[type="file"]');
-            if (fileInput) {
-                fileInput.value = '';
-            }
-
-            // Optionally show error in the file container
-            fileContainer.classList.add('border-red-500');
-            fileContainer.classList.remove('border-slate-600', 'border-green-500');
-
-            // Update the display to show error
-            textDiv.innerHTML = `
-                <svg class="w-12 h-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <p class="text-red-400 font-medium text-sm mb-1">File Too Large!</p>
-                <p class="text-slate-300 text-sm">${file.name}</p>
-                <p class="text-red-400 text-xs">${errorMessage}</p>
-                <p class="text-slate-400 text-xs mt-2">Current file: ${(file.size / (1024 * 1024)).toFixed(1)}MB</p>
-                <input type="file" name="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.mp4,.mov,.avi,.webm">
-            `;
-
-            // Re-attach the file input handler
-            const newFileInput = textDiv.querySelector('input[type="file"]');
-            if (newFileInput) {
-                newFileInput.addEventListener('change', (e) => {
-                    if (e.target.files && e.target.files.length > 0) {
-                        updateFileDisplay(fileContainer, e.target.files[0]);
-                    }
-                });
-            }
-
-            return;
-        }
-
-        // Format file size
-        const fileSize = file.size < 1024 * 1024
-            ? (file.size / 1024).toFixed(1) + ' KB'
-            : (file.size / (1024 * 1024)).toFixed(1) + ' MB';
-
-        // Save the file input BEFORE any DOM manipulation
-        const fileInput = textDiv.querySelector('input[type="file"]');
-        if (!fileInput) {
-            console.error('File input not found in updateFileDisplay!');
-            return;
-        }
-
-        // Remove all children except the file input
-        const children = Array.from(textDiv.children);
-        children.forEach(child => {
-            if (child !== fileInput) {
-                child.remove();
-            }
-        });
-
-        // Create new elements
-        const svg = document.createElement('svg');
-        svg.className = 'w-12 h-12 text-green-400 mx-auto mb-3';
-        svg.setAttribute('fill', 'none');
-        svg.setAttribute('stroke', 'currentColor');
-        svg.setAttribute('viewBox', '0 0 24 24');
-        svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
-
-        const statusP = document.createElement('p');
-        statusP.className = 'text-green-400 font-medium text-sm mb-1';
-        statusP.textContent = 'File Selected!';
-
-        const nameP = document.createElement('p');
-        nameP.className = 'text-slate-300 text-sm';
-        nameP.textContent = file.name;
-
-        const sizeP = document.createElement('p');
-        sizeP.className = 'text-slate-400 text-xs';
-        sizeP.textContent = `${fileSize} • ${file.type || 'Unknown type'}`;
-
-        const changeP = document.createElement('p');
-        changeP.className = 'text-sky-400 text-xs mt-2 cursor-pointer hover:text-sky-300';
-        changeP.textContent = 'Click to change file';
-        changeP.onclick = () => fileContainer.click();
-
-        // Add elements in order (file input stays where it is)
-        textDiv.insertBefore(svg, fileInput);
-        textDiv.insertBefore(statusP, fileInput);
-        textDiv.insertBefore(nameP, fileInput);
-        textDiv.insertBefore(sizeP, fileInput);
-        textDiv.appendChild(changeP); // This goes after the file input
-
-        // Add success border
-        fileContainer.classList.add('border-green-500');
-        fileContainer.classList.remove('border-slate-600', 'border-red-500');
-    }
-
-    function resetFileDisplay(fileContainer) {
-        const textDiv = fileContainer.querySelector('.text-center');
-        if (!textDiv) return;
-
-        // Restore original display
-        textDiv.innerHTML = `
-            <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-            </svg>
-            <p class="text-slate-300 text-sm mb-2">Click to select file or drag and drop</p>
-            <p class="text-slate-400 text-xs">Max file size: 5MB • Images, videos, documents accepted</p>
-            <input type="file" name="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.mp4,.mov,.avi,.webm">
-        `;
-
-        // Reset border
-        fileContainer.classList.remove('border-green-500');
-        fileContainer.classList.add('border-slate-600');
-
-        // Reset file input
-        const fileInput = fileContainer.querySelector('input[type="file"]');
-        if (fileInput) {
-            fileInput.value = '';
-        }
-    }
-
+    function resetFileDisplay(fileContainer) { window.resetFileDisplay(fileContainer); }
     // Sketch Operations System - stores drawing as operations for undo/redo
     class SketchOperations {
         constructor(canvas, ctx) {
@@ -7122,68 +5821,18 @@
     // Sketch canvas functionality
     let sketchCanvas, sketchCtx, sketchOps, isDrawing = false;
 
-    function initializeSketchCanvas() {
-        sketchCanvas = document.getElementById('sketch-canvas');
-        if (!sketchCanvas) return;
+    function initializeSketchCanvas() { window.initializeSketchCanvas(); }
 
-        sketchCtx = sketchCanvas.getContext('2d');
-        sketchOps = new SketchOperations(sketchCanvas, sketchCtx);
+    function startDrawing(e) { window.startDrawing(e); }
 
-        // Initial clear
-        sketchOps.clearCanvas();
+    function draw(e) { window.draw(e); }
 
-        // Mouse events
-        sketchCanvas.addEventListener('mousedown', startDrawing);
-        sketchCanvas.addEventListener('mousemove', draw);
-        sketchCanvas.addEventListener('mouseup', stopDrawing);
-        sketchCanvas.addEventListener('mouseout', stopDrawing);
-    }
+    function stopDrawing() { window.stopDrawing(); }
 
-    function startDrawing(e) {
-        isDrawing = true;
-        const rect = sketchCanvas.getBoundingClientRect();
-        const scaleX = sketchCanvas.width / rect.width;
-        const scaleY = sketchCanvas.height / rect.height;
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
-        sketchOps.startStroke(x, y);
-    }
+    function clearSketch() { window.clearSketch(); }
 
-    function draw(e) {
-        if (!isDrawing) return;
-        const rect = sketchCanvas.getBoundingClientRect();
-        const scaleX = sketchCanvas.width / rect.width;
-        const scaleY = sketchCanvas.height / rect.height;
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
-        sketchOps.addPoint(x, y);
-    }
-
-    function stopDrawing() {
-        if (isDrawing) {
-            isDrawing = false;
-            sketchOps.endStroke();
-            updateUndoRedoButtons();
-        }
-    }
-
-    function clearSketch() {
-        if (sketchOps) {
-            sketchOps.clearCanvas();
-            updateUndoRedoButtons();
-        }
-    }
-
-    function undoSketch() {
-        if (sketchOps && sketchOps.undo()) {
-            updateUndoRedoButtons();
-        }
-    }
-    function redoSketch() {
-        if (sketchOps && sketchOps.redo()) {
-            updateUndoRedoButtons();
-        }
-    }
+    function undoSketch() { window.undoSketch(); }
+    function redoSketch() { window.redoSketch(); }
 
     function updateUndoRedoButtons() {
         const info = sketchOps.getHistoryInfo();
@@ -7227,7 +5876,10 @@
             const response = await fetch(`/api/v1/resources/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': getCSRFToken()},
+                    'X-CSRFToken': window.CSRF_TOKEN || getCSRFToken(),
+                    'X-CSRF-Token': window.CSRF_TOKEN || getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: formData,
                 credentials: 'same-origin'
             });
@@ -7334,7 +5986,6 @@
             stationModal.onclick = null;
         }
     }
-    
     // Function to setup station modal event handlers
     function setupStationModalHandlers() {
         const stationModal = document.getElementById('station-modal');
@@ -7350,659 +6001,24 @@
         }
         
         if (stationModal) {
-            // Use event delegation for the modal backdrop click
-            stationModal.removeEventListener('click', modalBackdropHandler);
-            stationModal.addEventListener('click', modalBackdropHandler);
-        }
-    }
-    
-    // Variables for resource deletion
-    let pendingResourceDelete = null;
-    
-    async function deleteResource(resourceId, stationId, projectId) {
-        // Get resource details for the modal
-        const station = allStations.get(stationId);
-        let resourceDetails = null;
-        
-        if (station && station.resources) {
-            resourceDetails = station.resources.find(r => r.id === resourceId);
-        }
-        
-        // Store pending delete info
-        pendingResourceDelete = {
-            resourceId: resourceId,
-            stationId: stationId,
-            projectId: projectId,
-            resource: resourceDetails
-        };
-        
-        // Populate modal details
-        const detailsDiv = document.getElementById('resource-delete-confirm-details');
-        if (detailsDiv && resourceDetails) {
-            detailsDiv.innerHTML = `
-                <div class="drag-confirm-detail-row">
-                    <span class="drag-confirm-label">Resource Type:</span>
-                    <span class="drag-confirm-value">${getResourceTypeLabel(resourceDetails.resource_type)}</span>
-                </div>
-                <div class="drag-confirm-detail-row">
-                    <span class="drag-confirm-label">Title:</span>
-                    <span class="drag-confirm-value">${resourceDetails.title || 'Untitled'}</span>
-                </div>
-                ${resourceDetails.created_at ? `
-                <div class="drag-confirm-detail-row">
-                    <span class="drag-confirm-label">Created:</span>
-                    <span class="drag-confirm-value">${new Date(resourceDetails.created_at).toLocaleDateString()}</span>
-                </div>
-                ` : ''}
-            `;
-        }
-        
-        // Show modal
-        const modal = document.getElementById('resource-delete-confirm-modal');
-        modal.style.display = 'flex';
-    }
-    
-    function cancelDeleteResource() {
-        document.getElementById('resource-delete-confirm-modal').style.display = 'none';
-        pendingResourceDelete = null;
-    }
-    async function confirmDeleteResource() {
-        if (!pendingResourceDelete) return;
-
-        const { resourceId, stationId, projectId } = pendingResourceDelete;
-        if (!projectId || !hasProjectWriteAccess(projectId)) {
-            showNotification('warning', 'You have read access and cannot modify.');
-            return;
-        }
-
-        // Hide the modal
-        document.getElementById('resource-delete-confirm-modal').style.display = 'none';
-
-        // Production mode - delete from database
-        const loadingOverlay = showStationLoadingOverlay('Deleting Resource', 'Removing resource from server...');
-
-        try {
-            const response = await fetch(`/api/v1/resources/${resourceId}/`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
-
-            if (response.ok) {
-                showNotification('success', 'Resource deleted successfully');
-
-                // Update the station's resources array
-                const station = allStations.get(stationId);
-                if (station && station.resources) {
-                    // Remove the resource from the array
-                    station.resources = station.resources.filter(r => r.id !== resourceId);
-                    station.resource_count = station.resources.length;
-                }
-
-                // Reload station details to remove deleted resource
-                if (activeTab === 'resources') {
-                    loadStationResources(stationId, projectId);
-                } else {
-                    loadStationDetails(stationId, projectId);
-                }
-            } else {
-                showNotification('error', 'Failed to delete resource. Please try again.');
-            }
-        } catch (error) {
-            console.error('Error deleting resource:', error);
-            showNotification('error', 'Error deleting resource. Please try again.');
-        } finally {
-            hideStationLoadingOverlay(loadingOverlay);
-            pendingResourceDelete = null;
-        }
-    }
-
-    function getResourceTypeLabel(type) {
-        const labels = {
-            'photo': '📷 Photo',
-            'video': '🎥 Video',
-            'note': '📝 Note',
-            'sketch': '✏️ Sketch',
-            'document': '📄 Document'
-        };
-        return labels[type] || type;
-    }
-
-    // Handler for clicking modal backdrop
-    function modalBackdropHandler(e) {
-        if (e.target === e.currentTarget) {
-            closeStationModal();
-        }
-    }
-
-    // Modal event handlers
-    document.addEventListener('DOMContentLoaded', () => {
-        // Global prevention of scroll wheel changing number inputs
-        document.addEventListener('wheel', (e) => {
-            if (e.target.type === 'number' && e.target.tagName === 'INPUT') {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        }, { passive: false });
-
-        // Initial setup of station modal handlers
-        // setupStationModalHandlers(); // Now handled in openStationManager
-
-        // Quick create overlay events
-        const quickCreateOverlay = document.getElementById('quick-create-overlay');
-        const quickCreateClose = document.getElementById('quick-create-close');
-
-        if (quickCreateClose) {
-            quickCreateClose.addEventListener('click', () => {
-                quickCreateOverlay.classList.add('hidden');
-            });
-        }
-
-        // ESC key to close modals
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const stationModal = document.getElementById('station-modal');
-                if (stationModal && !stationModal.classList.contains('hidden')) {
-                    closeStationModal();
-                }
-                const stationManagerModal = document.getElementById('station-manager-modal');
-                if (stationManagerModal && !stationManagerModal.classList.contains('hidden')) {
-                    stationManagerModal.classList.add('hidden');
-                }
-                if (quickCreateOverlay && !quickCreateOverlay.classList.contains('hidden')) {
-                    quickCreateOverlay.classList.add('hidden');
-                }
-                // Close drag confirmation modal
-                const dragModal = document.getElementById('drag-confirm-modal');
-                if (dragModal && dragModal.style.display === 'flex') {
-                    cancelStationMove();
-                }
-                // Close delete confirmation modal
-                const deleteModal = document.getElementById('delete-confirm-modal');
-                if (deleteModal && deleteModal.style.display === 'flex') {
-                    cancelDeleteStation();
-                }
-                // Close cancel edit modal
-                const cancelEditModal = document.getElementById('cancel-edit-modal');
-                if (cancelEditModal && cancelEditModal.style.display === 'flex') {
-                    closeCancelEditModal();
-                }
-                // Close create station modal
-                const createModal = document.getElementById('create-station-modal');
-                if (createModal && !createModal.classList.contains('hidden')) {
-                    hideCreateStationModal();
-                }
-                // Close resource delete modal
-                const resourceDeleteModal = document.getElementById('resource-delete-confirm-modal');
-                if (resourceDeleteModal && resourceDeleteModal.style.display === 'flex') {
-                    cancelDeleteResource();
-                }
-                // Close POI modals (dynamically created by poi_functions.js)
-                // POI Details Modal
-                const poiDetailsModal = document.getElementById('poi-details-modal');
-                if (poiDetailsModal) {
-                    closePOIModal();
-                }
-                // POI Create Modal
-                const createPOIModal = document.getElementById('create-poi-modal');
-                if (createPOIModal) {
-                    closeCreatePOIModal();
-                }
-                // POI Edit Modal
-                const editPOIModal = document.getElementById('edit-poi-modal');
-                if (editPOIModal) {
-                    closeEditPOIModal();
-                }
-                // POI Delete Modal
-                const deletePOIModal = document.getElementById('delete-poi-modal');
-                if (deletePOIModal) {
-                    closeDeletePOIModal();
-                }
-                const poiManagerModal = document.getElementById('poi-manager-modal');
-                if (poiManagerModal && !poiManagerModal.classList.contains('hidden')) {
-                    poiManagerModal.classList.add('hidden');
-                }
-                // Close POI drag modal
-                const poiDragModal = document.getElementById('poi-drag-confirm-modal');
-                if (poiDragModal && poiDragModal.style.display === 'flex') {
-                    cancelPOIMove();
-                }
-            }
-        });
-
-        // Click outside modal to close drag confirmation
-        const dragModal = document.getElementById('drag-confirm-modal');
-        if (dragModal) {
-            dragModal.addEventListener('click', (e) => {
-                if (e.target === dragModal) {
-                    cancelStationMove();
-                }
-            });
-        }
-
-        // Click outside modal to close delete confirmation
-        const deleteModal = document.getElementById('delete-confirm-modal');
-        if (deleteModal) {
-            deleteModal.addEventListener('click', (e) => {
-                if (e.target === deleteModal) {
-                    cancelDeleteStation();
-                }
-            });
-        }
-
-        // Click outside modal to close cancel edit confirmation
-        const cancelEditModal = document.getElementById('cancel-edit-modal');
-        if (cancelEditModal) {
-            cancelEditModal.addEventListener('click', (e) => {
-                if (e.target === cancelEditModal) {
-                    closeCancelEditModal();
-                }
-            });
-        }
-
-        // Click outside modal to close resource delete confirmation
-        const resourceDeleteModal = document.getElementById('resource-delete-confirm-modal');
-        if (resourceDeleteModal) {
-            resourceDeleteModal.addEventListener('click', (e) => {
-                if (e.target === resourceDeleteModal) {
-                    cancelDeleteResource();
-                }
-            });
-        }
-
-        // Station Creation Modal Event Handlers
-        const createStationForm = document.getElementById('create-station-form');
-        if (createStationForm) {
-            // Clear errors when user types
-            const stationNameInput = document.getElementById('station-name');
-            if (stationNameInput) {
-                stationNameInput.addEventListener('input', () => {
-                    // Hide the duplicate name alert
-                    document.getElementById('duplicate-name-alert').classList.add('hidden');
-                    document.getElementById('station-name-error').classList.add('hidden');
-
-                    // Remove error styling
-                    stationNameInput.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
-                });
-            }
-
-            createStationForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                if (!pendingStationData) return;
-
-                // Get form data
-                const name = document.getElementById('station-name').value.trim();
-                const description = document.getElementById('station-description').value.trim();
-                const selectedProjectId = document.getElementById('station-project').value;
-
-                if (!name) {
-                    document.getElementById('station-name-error').textContent = 'Station name is required';
-                    document.getElementById('station-name-error').classList.remove('hidden');
-                    return;
-                }
-
-                // Hide error
-                document.getElementById('station-name-error').classList.add('hidden');
-
-                // Show loading state
-                const submitBtn = document.getElementById('create-station-submit');
-                const spinner = document.getElementById('create-station-spinner');
-                const progressBar = document.getElementById('create-station-progress');
-                submitBtn.disabled = true;
-                spinner.classList.remove('hidden');
-                progressBar.classList.remove('opacity-0');
-                progressBar.classList.add('opacity-100');
-
-                // Prepare station data
-                const stationData = {
-                    name: name,
-                    description: description || (pendingStationData.snapResult.snapped ?
-                        `Station snapped to ${pendingStationData.snapResult.pointType} of ${pendingStationData.snapResult.lineName} (${pendingStationData.snapResult.distance.toFixed(1)}m away)` :
-                        'Station at specified coordinates'),
-                    latitude: pendingStationData.coordinates[1],
-                    longitude: pendingStationData.coordinates[0],
-                    creation_method: 'right_click'
+            // Ensure a single, stable backdrop handler exists on window to avoid scope issues
+            if (typeof window.modalBackdropHandler !== 'function') {
+                window.modalBackdropHandler = function(e) {
+                    const modal = document.getElementById('station-modal');
+                    if (!modal) return;
+                    const dialog = modal.querySelector('.bg-slate-800');
+                    // Close if click outside the dialog content
+                    if (e.target === modal && dialog && !dialog.contains(e.target)) {
+                        closeStationModal();
+                    }
                 };
-
-                try {
-                    // Create station via API using selected project
-                    const newStation = await createStationAPI(selectedProjectId, stationData);
-
-                    // Success!
-                    const snapMessage = pendingStationData.snapResult.snapped ?
-                        `🧲 Snapped to ${pendingStationData.snapResult.lineName}` :
-                        '📍 Station created';
-
-                    showNotification('success', `Station "${newStation.name}" created successfully! ${snapMessage}`);
-
-                    // Add the new station to allStations Map immediately
-                    allStations.set(newStation.id, {
-                        ...newStation,
-                        latitude: Number(newStation.latitude),
-                        longitude: Number(newStation.longitude),
-                        coordinates: [Number(newStation.longitude), Number(newStation.latitude), 0],
-                        projectId: selectedProjectId,
-                        resource_count: 0,
-                        resources: []
-                    });
-
-                    // Refresh stations on map for the selected project
-                    await loadStationsForProject(selectedProjectId);
-
-                    // If Station Manager is open, refresh its content
-                    const stationManagerModal = document.getElementById('station-manager-modal');
-                    if (stationManagerModal && !stationManagerModal.classList.contains('hidden')) {
-                        console.log('🔄 Refreshing Station Manager with new station');
-                        loadStationManagerContent();
-                    }
-
-                    // Hide creation modal
-                    hideCreateStationModal();
-
-                    // Open the station modal to allow adding resources
-                    setTimeout(() => {
-                        openStationModal(newStation.id, selectedProjectId, true); // true = newly created
-                    }, 300);
-
-                } catch (error) {
-                    console.error('Error creating station:', error);
-
-                    // Check for duplicate name error
-                    if (error.message && error.message.includes('already exists')) {
-                        // Show the prominent error alert
-                        const duplicateAlert = document.getElementById('duplicate-name-alert');
-                        const duplicateMessage = document.getElementById('duplicate-name-message');
-                        const nameInput = document.getElementById('station-name');
-                        const enteredName = nameInput.value.trim();
-
-                        // Update the error message
-                        duplicateMessage.textContent = error.message;
-
-                        // Generate suggestions
-                        document.getElementById('suggestion-1').textContent = `${enteredName} 2`;
-                        document.getElementById('suggestion-2').textContent = `${enteredName} - ${pendingStationData.snapResult.snapped ? pendingStationData.snapResult.lineName : 'North'}`;
-                        document.getElementById('suggestion-3').textContent = `${enteredName} - ${new Date().toLocaleDateString()}`;
-
-                        // Show the alert with animation
-                        duplicateAlert.classList.remove('hidden');
-                        duplicateAlert.style.animation = 'shake 0.5s ease-in-out';
-
-                        // Also highlight the input field
-                        nameInput.classList.add('border-red-500', 'ring-2', 'ring-red-500');
-                        nameInput.focus();
-                        nameInput.select();
-
-                        // Flash the modal background
-                        const modal = document.getElementById('create-station-modal');
-                        const modalContent = modal.querySelector('.bg-slate-800');
-                        const progressBar = document.getElementById('create-station-progress');
-                        modalContent.classList.add('ring-4', 'ring-red-500', 'ring-opacity-50');
-                        modalContent.style.transition = 'all 0.3s ease-in-out';
-
-                        // Vibrate on mobile devices (if supported)
-                        if (navigator.vibrate) {
-                            navigator.vibrate([100, 50, 100, 50, 200]);
-                        }
-
-                        // Scroll to make sure the alert is visible
-                        duplicateAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                        // Add shake animation
-                        setTimeout(() => {
-                            duplicateAlert.style.animation = '';
-                            modalContent.classList.remove('ring-4', 'ring-red-500', 'ring-opacity-50');
-                        }, 800);
-
-                    } else {
-                        showNotification('error', `Failed to create station: ${error.message}`);
-                    }
-                } finally {
-                    // Reset loading state
-                    submitBtn.disabled = false;
-                    spinner.classList.add('hidden');
-                    progressBar.classList.add('opacity-0');
-                    progressBar.classList.remove('opacity-100');
-                }
-            });
-        }
-
-        // Modal close handlers
-        const createStationClose = document.getElementById('create-station-close');
-        if (createStationClose) {
-            createStationClose.addEventListener('click', hideCreateStationModal);
-        }
-
-        const createStationCancel = document.getElementById('create-station-cancel');
-        if (createStationCancel) {
-            createStationCancel.addEventListener('click', hideCreateStationModal);
-        }
-
-        // Close on background click
-        const createStationModal = document.getElementById('create-station-modal');
-        if (createStationModal) {
-            createStationModal.addEventListener('click', (e) => {
-                if (e.target.id === 'create-station-modal') {
-                    hideCreateStationModal();
-                }
-            });
-        }
-
-        // POI event handlers are now handled in poi_functions.js
-
-        // Click outside modal to close POI drag confirmation
-        const poiDragModal = document.getElementById('poi-drag-confirm-modal');
-        if (poiDragModal) {
-            poiDragModal.addEventListener('click', (e) => {
-                if (e.target === poiDragModal) {
-                    cancelPOIMove();
-                }
-            });
-        }
-    });
-
-    // Quick test to list all stations
-    window.listAllStations = function () {
-        console.log('📍 ALL STATIONS SUMMARY:');
-        console.log('=====================');
-        console.log(`Total stations in memory: ${allStations.size}`);
-
-        if (allStations.size === 0) {
-            console.log('❌ No stations loaded yet');
-            console.log('💡 Try: reloadStations() or wait for map to load');
-            return;
-        }
-
-        console.log('\nStation List:');
-        let i = 1;
-        allStations.forEach((station, id) => {
-            console.log(`${i}. "${station.name}" (${id})`);
-            console.log(`   Type: ${station.is_demo ? 'DEMO' : 'API'}`);
-            console.log(`   Location: ${station.latitude}, ${station.longitude}`);
-            console.log(`   Resources: ${station.resource_count || 0}`);
-            console.log(`   Click to open: openStationModal("${id}")`);
-            i++;
-        });
-
-        console.log('\n💡 Commands:');
-        console.log('   openStationModal("station-id") - Open station modal');
-
-        return Array.from(allStations.keys());
-    };
-
-    // Comprehensive verification function
-    window.verifyIntegration = async function () {
-        console.log('🔍 VERIFYING SPELEODB MAP VIEWER INTEGRATION');
-        console.log('===========================================');
-
-        // 1. Check Configuration
-        console.log('\n1️⃣ CONFIGURATION CHECK:');
-        console.log('   Production Mode: ENABLED ✅');
-
-        // 2. Check Map State
-        console.log('\n2️⃣ MAP STATE CHECK:');
-        console.log(`   Map Loaded: ${map && map.loaded() ? 'YES ✅' : 'NO ❌'}`);
-        console.log(`   Current Zoom: ${map ? map.getZoom().toFixed(2) : 'N/A'}`);
-        console.log(`   Station Visibility Threshold: ${map && map.getZoom() >= 14 ? 'VISIBLE ✅' : 'HIDDEN (zoom < 14) ⚠️'}`);
-
-        // 3. Check Projects & Lines
-        console.log('\n3️⃣ PROJECT & LINE DATA:');
-        console.log(`   Projects Loaded: ${lineFeatureCache.size}`);
-        console.log(`   Total Survey Lines: ${Array.from(lineFeatureCache.values()).reduce((sum, lines) => sum + lines.size, 0)}`);
-        console.log(`   Snap Points Cached: ${Array.from(snapPointsCache.values()).reduce((sum, points) => sum + points.length, 0)}`);
-        console.log(`   Magnetic Snap Radius: ${magneticSnapRadius}m`);
-
-        // 4. Check Stations
-        console.log('\n4️⃣ STATION DATA:');
-        console.log(`   Total Stations in Memory: ${allStations.size}`);
-        let apiStations = 0, demoStations = 0;
-        allStations.forEach(station => {
-            if (station.is_demo) demoStations++;
-            else apiStations++;
-        });
-        console.log(`   API Stations: ${apiStations}`);
-        console.log(`   Demo Stations: ${demoStations}`);
-        console.log(`   Station Markers on Map: ${Array.from(stationMarkers.values()).reduce((sum, markers) => sum + markers.length, 0)}`);
-
-        // 5. Test API Connectivity
-        console.log('\n5️⃣ API CONNECTIVITY TEST:');
-        if (projects && projects.length > 0) {
-            try {
-                const testProjectId = projects[0].id;
-                console.log(`   Testing API with project: ${testProjectId}`);
-                const response = await fetch(`/api/v1/stations/?project_id=${testProjectId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                });
-                console.log(`   API Response Status: ${response.status} ${response.status === 200 ? '✅' : '❌'}`);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.data && data.data.stations) {
-                        console.log(`   API Format: {success: true, data: {stations: [...]}} ✅`);
-                        console.log(`   Stations from API: ${data.data.stations.length}`);
-                    } else if (data.stations) {
-                        console.log(`   API Format: {stations: [...]} ✅`);
-                        console.log(`   Stations from API: ${data.stations.length}`);
-                    } else {
-                        console.log(`   API Format: Unknown ⚠️`);
-                    }
-                }
-            } catch (error) {
-                console.log(`   API Test Failed: ${error.message} ❌`);
             }
-        } else {
-            console.log(`   No projects available for API test ❌`);
+            stationModal.removeEventListener('click', window.modalBackdropHandler);
+            stationModal.addEventListener('click', window.modalBackdropHandler);
         }
-
-        // 6. Test Core Features
-        console.log('\n6️⃣ FEATURE VERIFICATION:');
-        
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
-        
-        // Test Station Modal
-        console.log('\n   📋 Testing Station Modal:');
-        const firstStation = Array.from(allStations.values())[0];
-        if (firstStation) {
-            console.log(`      Opening modal for: ${firstStation.name}`);
-            openStationModal(firstStation.id, firstStation.projectId);
-            console.log('      Modal Opened ✅');
-            setTimeout(() => {
-                closeStationModal();
-                console.log('      Modal Closed ✅');
-            }, 2000);
-        } else {
-            console.log('      No stations to test modal ⚠️');
-        }
-
-        // Test Context Menu
-        console.log('\n   🖱️ Testing Context Menu:');
-        console.log('      Right-click functionality: ENABLED ✅');
-        console.log('      Station creation options: AVAILABLE ✅');
-        console.log('      Magnetic snap: ACTIVE ✅');
-
-        // Test Delete Confirmation
-        console.log('\n   🗑️ Testing Delete Confirmation:');
-        console.log('      Beautiful modal: IMPLEMENTED ✅');
-        console.log('      Station details shown: YES ✅');
-        console.log('      Warning messages: INCLUDED ✅');
-
-        // Test Drag & Drop
-        console.log('\n   🫳 Testing Drag & Drop:');
-        console.log(`      Draggable markers: ${hasWriteAccess ? "ENABLED" : "DISABLED (no write access)"} ✅`);
-        console.log('      Magnetic snap on drag: ACTIVE ✅');
-        console.log('      Confirmation modal: IMPLEMENTED ✅');
-
-        // 7. Performance Metrics
-        console.log('\n7️⃣ PERFORMANCE METRICS:');
-        console.log(`   Map container exists: ${!!map.getContainer() ? 'YES ✅' : 'NO ❌'}`);
-        console.log(`   Total layers on map: ${map.getStyle().layers.length}`);
-        console.log(`   Project layers tracked: ${allProjectLayers.size}`);
-
-        // 8. UI Components
-        console.log('\n8️⃣ UI COMPONENTS:');
-        console.log(`   Station Modal: ${document.getElementById('station-modal') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Context Menu: ${document.getElementById('context-menu') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Delete Modal: ${document.getElementById('delete-confirm-modal') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Drag Modal: ${document.getElementById('drag-confirm-modal') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Loading Overlay: ${document.getElementById('loading-overlay') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Demo Mode Badge: ${document.getElementById('demo-mode-indicator') ? 'SHOWN ✅' : 'HIDDEN'}`);
-
-        // Summary
-        console.log('\n✅ VERIFICATION COMPLETE!');
-        console.log('\n💡 QUICK TEST COMMANDS:');
-        console.log('   1. Create Station: Right-click on map');
-        console.log('   2. View Station: Click any orange/green marker');
-        console.log('   3. Move Station: Drag any marker (if you have write access)');
-        console.log('   4. Delete Station: Right-click marker → Delete');
-        console.log('   5. Reload Stations: reloadStations()');
-        console.log('   6. Check Zoom: checkZoom()');
-        console.log('   7. Force Visibility: map.setZoom(14)');
-
-        return {
-            mapReady: map && map.loaded(),
-            stations: allStations.size,
-            projects: lineFeatureCache.size,
-            currentZoom: map ? map.getZoom() : null
-        };
-    };
-    // Add helpful commands info to the console
-    setTimeout(() => {
-        console.log('\n📍 HELPFUL COMMANDS:');
-        console.log('listAllStations() - List all loaded stations');
-        console.log('reloadStations() - Force reload all stations');
-        console.log('checkZoom() - Check current zoom level and station visibility');
-        console.log('map.setZoom(14) - Zoom to station visibility level');
-        console.log('setSnapRadius(meters) - Set magnetic snap radius');
-        console.log('getSnapInfo() - Get current snap configuration');
-        console.log('debugStationVisibility() - Debug station visibility issues');
-        console.log('refreshStationVisibility() - Force refresh all station visibility');
-    }, 3000);
-
-    // Make functions globally accessible for onclick handlers
-    window.editResource = editResource;
-    window.deleteResource = deleteResource;
-    window.clearEditSketch = clearEditSketch;
-    window.undoEditSketch = undoEditSketch;
-    window.redoEditSketch = redoEditSketch;
-    window.clearSketch = clearSketch;
-    window.undoSketch = undoSketch;
-    window.redoSketch = redoSketch;
-    window.quickAddResource = quickAddResource;
-    window.editStation = editStation;
-    window.showAddResourceForm = showAddResourceForm;
-    window.hideAddResourceForm = hideAddResourceForm;
-    window.openPhotoLightbox = openPhotoLightbox;
-    window.closePhotoLightbox = closePhotoLightbox;
-    window.downloadPhoto = downloadPhoto;
-    window.openPhotoInNewTab = openPhotoInNewTab;
+    }
+    // Variables for resource deletion (already declared earlier in this script)
+    // Photo/Video/Note helpers now provided by module; do not rebind here
     window.cancelStationEdit = cancelStationEdit;
     window.switchTab = switchTab;
     window.deleteStation = deleteStation;
@@ -8076,7 +6092,7 @@
 
             // Demo mode indicator removed for production
 
-            // Add right-click context menu for station creation
+            // Add right-click context menu for station/POI creation
             map.on('contextmenu', function (e) {
                 e.preventDefault(); // Prevent browser context menu
                 showContextMenu(e.point, e.lngLat, null);
@@ -8429,7 +6445,6 @@
                 window.projectColorMap.set(projectId, color);
                 return color;
             }
-
             // Create promises to fetch GeoJSON data from API for each project
             const fetchPromises = projectIds.map((projectId, index) => {
                 const apiUrl = `/api/v1/projects/${projectId}/geojson/?limit=1`;
@@ -8547,12 +6562,11 @@
                     const validResults = results.filter(result => result !== null);
                     console.log(`✅ Valid results: ${validResults.length}`);
 
-                    // Update the global projects array to only contain projects with valid GeoJSON
-                    // This ensures all subsequent code only sees projects with actual survey data
-                    window.projects = validResults.map(result => 
+                    // Keep original projects for permissions/visibility. Store a separate list for those with data.
+                    window.projectsWithData = validResults.map(result => 
                         projects.find(p => p.id === result.projectId)
                     ).filter(Boolean);
-                    console.log(`📋 Updated projects array to ${window.projects.length} projects with valid GeoJSON`);
+                    console.log(`📋 Projects with valid GeoJSON: ${window.projectsWithData.length}`);
 
                     if (validResults.length === 0) {
                         console.log('❌ No projects have valid GeoJSON data, staying at world view');
@@ -8805,7 +6819,6 @@
                             });
                             projectLayers.push(strokeLayerId);
                         }
-
                         if (geometryTypes.has('LineString') || geometryTypes.has('MultiLineString')) {
                             const lineLayerId = `project-line-${projectId}`;
                             const lineLabelLayerId = `project-line-labels-${projectId}`;
@@ -9015,8 +7028,11 @@
                                 return nameA.localeCompare(nameB);
                             });
 
-                        // Create buttons for sorted projects
-                        sortedProjects.forEach(([projectId, projectData]) => {
+                        // Create buttons only for projects that have loaded data (bounds in map)
+                        sortedProjects.forEach(([projectId, projectData], idx) => {
+                            const projectName = projectData.name;
+                            const projectColor = getProjectColor(projectId, idx);
+
                             const buttonContainer = document.createElement('div');
                             buttonContainer.className = 'project-button';
 
@@ -9027,12 +7043,12 @@
                             // Create color indicator
                             const colorDot = document.createElement('span');
                             colorDot.className = 'project-color-dot';
-                            colorDot.style.backgroundColor = projectData.color;
+                            colorDot.style.backgroundColor = projectColor;
 
                             // Create text span
                             const textSpan = document.createElement('span');
                             textSpan.className = 'project-name';
-                            textSpan.textContent = projectData.name;
+                            textSpan.textContent = projectName;
 
                             buttonContent.appendChild(colorDot);
                             buttonContent.appendChild(textSpan);
@@ -9052,7 +7068,7 @@
 
                             const toggleInput = document.createElement('input');
                             toggleInput.type = 'checkbox';
-                            toggleInput.checked = true; // Default to visible
+                            toggleInput.checked = true; // Visible by default
 
                             const toggleSlider = document.createElement('span');
                             toggleSlider.className = 'toggle-slider';
@@ -9184,7 +7200,6 @@
                     } catch (e) {
                         console.warn('Unable to render/update depth scale:', e);
                     }
-
                     // Hide loading overlay now that everything is ready
                     setTimeout(() => {
                         hideLoadingOverlay();
