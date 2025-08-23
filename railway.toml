@@ -14,8 +14,8 @@ builder = "RAILPACK"
 [deploy]
 runtime = "V2"
 numReplicas = 1
-startCommand = "python /app/manage.py collectstatic --noinput --verbosity=3 && gunicorn config.wsgi:application"
-preDeployCommand = "python /app/manage.py migrate"
+startCommand = "gunicorn config.wsgi:application"
+preDeployCommand = "python /app/manage.py migrate && python /app/manage.py collectstatic --noinput --verbosity=3"
 sleepApplication = false
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10

@@ -226,6 +226,9 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# https://docs.djangoproject.com/en/5.2/ref/settings/#secure-referrer-policy
+SECURE_REFERRER_POLICY: str = "strict-origin-when-cross-origin"
+
 # DJANGO COUNTRIES
 # ------------------------------------------------------------------------------
 # https://github.com/SmileyChris/django-countries#show-certain-countries-first

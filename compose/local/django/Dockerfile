@@ -24,12 +24,6 @@ RUN apt-get update && apt-get install -y \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust & Cargo for `watchfiles` dependency
-RUN curl https://sh.rustup.rs -sSf | \
-    sh -s -- --default-toolchain stable -y
-
-ENV PATH=/root/.cargo/bin:$PATH
-
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
     # psycopg dependencies
