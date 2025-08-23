@@ -40,15 +40,6 @@ export function toggleProjectVisibility(projectId, visible) {
     });
 }
 
-// ---- Inert placeholders for upcoming color/depth helpers ----
-export function computeLineColorPaint(projectColor) {
-    // Placeholder: return a basic paint object; will be replaced with real logic
-    return {
-        'line-color': projectColor || '#38bdf8',
-        'line-width': 2,
-    };
-}
-
 export function parseDepthValue(raw) {
     const n = Number(raw);
     return Number.isFinite(n) ? n : null;
@@ -62,14 +53,3 @@ export function getFeatureDepthValue(props) {
     if (!props) return null;
     return parseDepthValue(props.depth || props.depth_value || props.elevation);
 }
-
-export function updateDepthLegendVisibility() {
-    // Placeholder: implemented during UI migration
-}
-
-export function setColorMode(mode) {
-    // Placeholder: will iterate over layers and update paint properties
-    console.debug('[geojsonLayer] setColorMode ->', mode);
-}
-
-
