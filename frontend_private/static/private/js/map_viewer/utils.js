@@ -14,26 +14,4 @@ export function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
-export function hasProjectWriteAccess(projectId) {
-    try {
-        const arr = window.projects || [];
-        const proj = arr.find(p => String(p.id) === String(projectId));
-        if (!proj) return false;
-        return proj.permissions === 'READ_AND_WRITE' || proj.permissions === 'ADMIN';
-    } catch (_) {
-        return false;
-    }
-}
-
-export function hasProjectAdminAccess(projectId) {
-    try {
-        const arr = window.projects || [];
-        const proj = arr.find(p => String(p.id) === String(projectId));
-        if (!proj) return false;
-        return proj.permissions === 'ADMIN';
-    } catch (_) {
-        return false;
-    }
-}
-
 
