@@ -23,23 +23,6 @@ export function processGeoJSONForAltitudeZero(geojsonData) {
     return processed;
 }
 
-export function toggleProjectVisibility(projectId, visible) {
-    state.store.projectVisibility.set(projectId, visible);
-    const map = getMap();
-    if (!map) return;
-    // Layers naming convention assumed; to be aligned when migrating layers
-    const base = `project-geojson-${projectId}`;
-    [
-        `${base}-lines`,
-        `${base}-lines-outline`,
-        `${base}-points`,
-    ].forEach(layerId => {
-        if (map.getLayer(layerId)) {
-            map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
-        }
-    });
-}
-
 export function parseDepthValue(raw) {
     const n = Number(raw);
     return Number.isFinite(n) ? n : null;

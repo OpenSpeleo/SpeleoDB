@@ -2,7 +2,6 @@
 
 import { setMap, getMap, emit } from './state.js';
 import * as ui from './ui.js';
-import { hasProjectWriteAccess, hasProjectAdminAccess } from './utils.js';
 import { getCSRFToken as apiGetCSRFToken, apiFetch } from './api.js';
 // Ensure modules are loaded
 // Avoid importing entire modules just to expose everything globally
@@ -25,8 +24,6 @@ import {
     undoEditSketch,
     redoEditSketch,
     updateEditUndoRedoButtons,
-    updateFileDisplay,
-    resetFileDisplay,
     deleteResource,
     confirmDeleteResource,
     cancelDeleteResource,
@@ -77,8 +74,6 @@ window.clearEditSketch = clearEditSketch;
 window.undoEditSketch = undoEditSketch;
 window.redoEditSketch = redoEditSketch;
 window.updateEditUndoRedoButtons = updateEditUndoRedoButtons;
-window.updateFileDisplay = updateFileDisplay;
-window.resetFileDisplay = resetFileDisplay;
 window.deleteResource = deleteResource;
 window.confirmDeleteResource = confirmDeleteResource;
 window.cancelDeleteResource = cancelDeleteResource;
@@ -124,14 +119,6 @@ async function isReady({ requireMapStyle = false, timeout = 8000 } = {}) {
 try { window.isReady = isReady; } catch (_) { }
 
 // Removed late dynamic rebind of sketch functions to minimize globals
-
-// Bind commonly used helpers early so inline code can use them
-try {
-    window.hasProjectWriteAccess = hasProjectWriteAccess;
-    window.hasProjectAdminAccess = hasProjectAdminAccess;
-} catch (e) {
-    console.debug('[map_viewer] could not bind project access helpers', e);
-}
 
 function adoptExistingMapIfAny() {
     if (getMap()) return true;

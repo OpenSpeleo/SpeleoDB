@@ -229,6 +229,91 @@ const MapViewer = {
         return projectColor;
     },
 
+    // -------------- VISIBILITY -------------- //
+
+
+
+    // Function to toggle layer visibility for a project
+    toggleProjectVisibility(projectId, isVisible) {
+        console.log(`Toggling project ${projectId} visibility to: ${isVisible}`);
+
+        // Toggle survey lines/polygons
+        if (window.AppState.allProjectLayers.has(projectId)) {
+            const layerIds = window.AppState.allProjectLayers.get(projectId);
+            const visibility = isVisible ? 'visible' : 'none';
+
+            layerIds.forEach(layerId => {
+                try {
+                    if (ApplicationState.map.getLayer(layerId)) {
+                        ApplicationState.map.setLayoutProperty(layerId, 'visibility', visibility);
+                        console.log(`Set ${layerId} visibility to ${visibility}`);
+                    }
+                } catch (error) {
+                    console.warn(`Failed to toggle visibility for layer ${layerId}:`, error);
+                }
+            });
+        }
+
+        // Toggle station markers
+        if (stationMarkers.has(projectId)) {
+            const markers = stationMarkers.get(projectId);
+            const currentZoom = ApplicationState.map.getZoom();
+            const shouldShowStations = currentZoom >= 14; // Respect zoom threshold
+
+            markers.forEach(marker => {
+                if (isVisible && shouldShowStations) {
+                    // Show marker if project is visible AND we're zoomed in enough
+                    if (!marker.addedToMap) {
+                        marker.addTo(ApplicationState.map);
+                        marker.addedToMap = true;
+                    }
+                } else {
+                    // Hide marker if project is hidden OR we're zoomed out
+                    if (marker.addedToMap) {
+                        marker.remove();
+                        marker.addedToMap = false;
+                    }
+                }
+            });
+
+            console.log(`Toggled ${markers.length} station markers for project ${projectId}`);
+        }
+
+        // Update state
+        projectLayerStates.set(projectId, isVisible);
+    },
+
+    // -------------- GOTOS -------------- //
+
+    // Function to fly to a POI on the map
+    goToPOI(poiId, latitude, longitude) {
+        console.log(`🚁 Flying to POI ${poiId} at ${latitude}, ${longitude}`);
+
+        // Close the POI manager modal
+        const poiManagerModal = document.getElementById('poi-manager-modal');
+        if (poiManagerModal) {
+            poiManagerModal.classList.add('hidden');
+        }
+
+        // Fly to the location
+        ApplicationState.map.flyTo({
+            center: [longitude, latitude],
+            zoom: 18, // Max zoom to focus on the POI
+            duration: 2000, // 2 second animation
+            essential: true, // This animation is essential with respect to prefers-reduced-motion
+            pitch: 0,
+            bearing: 0
+        });
+
+        // Highlight the POI marker
+        const marker = poiMarkers.find(m => m.poiId === poiId);
+        if (marker) {
+            const element = marker.getElement();
+            element.classList.add('highlight');
+            setTimeout(() => element.classList.remove('highlight'), 3000);
+        }
+    },
+
     // Function to fly to a station on the map
     goToStation(stationId, latitude, longitude) {
         console.log(`🚁 Flying to station ${stationId} at ${latitude}, ${longitude}`);
@@ -252,7 +337,7 @@ const MapViewer = {
         }
 
         // Fly to the location
-        map.flyTo({
+        ApplicationState.map.flyTo({
             center: [longitude, latitude],
             zoom: 18, // Max zoom to focus on the station
             duration: 2000, // 2 second animation
