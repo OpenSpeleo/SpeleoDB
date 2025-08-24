@@ -59,10 +59,6 @@ export function showNotification(type, message, duration = 3000) {
     }, timeout);
 }
 
-export function initializeTabs() {
-    // Placeholder: when migrating, wire tab buttons to show/hide panels
-}
-
 // Photo lightbox and video modal utilities (call from HTML)
 export function openPhotoLightbox(url, title) {
     const lightbox = document.getElementById('photo-lightbox');
