@@ -95,7 +95,7 @@
             <div id="loading-overlay" class="loading-overlay">
                 <div class="loading-spinner"></div>
                 <div class="loading-text">Loading Survey Data</div>
-                <div class="loading-subtext">Downloading and processing GeoJSON data from projects...</div>
+                <div class="loading-subtext">Downloading and processing GeoJSON data from projects ...</div>
             </div>
             
             <!-- Floating Project List Panel -->
@@ -342,7 +342,7 @@
                         </p>
                     </div>
                     <div class="drag-confirm-actions">
-                        <button type="button" class="drag-confirm-btn drag-confirm-btn-cancel" onclick="closeCancelEditModal()">
+                        <button type="button" class="drag-confirm-btn drag-confirm-btn-cancel" onclick="Station.closeCancelEditModal()">
                             Keep Editing
                         </button>
                         <button type="button" class="drag-confirm-btn drag-confirm-btn-danger" onclick="confirmCancelEdit()">
@@ -376,10 +376,10 @@
                         </div>
                     </div>
                     <div class="drag-confirm-actions">
-                        <button type="button" class="drag-confirm-btn drag-confirm-btn-cancel" onclick="cancelDeleteStation()">
+                        <button type="button" class="drag-confirm-btn drag-confirm-btn-cancel" onclick="Station.cancelDelete()">
                             Cancel
                         </button>
-                        <button type="button" class="drag-confirm-btn drag-confirm-btn-danger" onclick="confirmDeleteStation()">
+                        <button type="button" class="drag-confirm-btn drag-confirm-btn-danger" onclick="Station.confirmDelete()">
                             Delete Station
                         </button>
                     </div>
@@ -737,8 +737,12 @@
 {% block inline_extra_js %}
 <script src="{% static 'private/js/map_viewer/poi_functions.js' %}"></script>
 <script src="{% static 'private/js/map_viewer/nuevo/main.js' %}"></script>
-<script src="{% static 'private/js/map_viewer/nuevo/station.js' %}"></script>
+<script src="{% static 'private/js/map_viewer/nuevo/geojson.js' %}"></script>
 <script src="{% static 'private/js/map_viewer/nuevo/map_viewer.js' %}"></script>
+<script src="{% static 'private/js/map_viewer/nuevo/pois.js' %}"></script>
+<script src="{% static 'private/js/map_viewer/nuevo/station.js' %}"></script>
+<script src="{% static 'private/js/map_viewer/nuevo/resources.js' %}"></script>
+<script src="{% static 'private/js/map_viewer/nuevo/utils.js' %}"></script>
 <script>
 
     mapboxgl.accessToken = "{{ mapbox_api_token }}";
@@ -749,6 +753,8 @@
     }
 
     class ApplicationState {
+        static CSRF_TOKEN = '{{ csrf_token }}';
+
         static map = new mapboxgl.Map({
             container: 'map',
             // Satellite imagery with street labels
@@ -757,59 +763,31 @@
             center: [0, 0],
             zoom: 0
         }); 
+
         static hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
         static projects = {{ projects|safe }};
+    
+        // Global variables for layer management
+        static projectLayerStates = new Map(); // Track visibility state for each project
+        static allProjectLayers = new Map(); // Track all layer IDs for each project
+        static stationMarkers = new Map(); // Track station markers for each project
+        static currentProjectId = null; // Track currently selected project for station creation
+        static allStations = new Map(); // Track all stations (demo + API) by ID for easy access
+        static poiMarkers = []; // Track POI markers
+        static allPOIs = new Map(); // Track all POIs by ID for easy access
     }
 
-    // Set write access for POI functions
-    window.hasWriteAccess = ApplicationState.hasWriteAccess;
-    
-    // Get project IDs from the backend context
-    const projects = ApplicationState.projects;
     // Make projects globally available and stable (do not overwrite later)
-    window.projects = projects;
-    window.allProjects = projects;
-    // hasProjectWriteAccess / hasProjectAdminAccess are now provided by module utils.js and bound on window
-    const projectIds = projects.map(project => project.id);
-    
+    window.AppState = ApplicationState;
+
     // Global variables for layer management
     let projectLayerStates = new Map(); // Track visibility state for each project
-    let allProjectLayers = new Map(); // Track all layer IDs for each project
     let stationMarkers = new Map(); // Track station markers for each project
     let currentProjectId = null; // Track currently selected project for station creation
     let allStations = new Map(); // Track all stations (demo + API) by ID for easy access
     let poiMarkers = []; // Track POI markers
     let allPOIs = new Map(); // Track all POIs by ID for easy access
 
-    
-    // Function to fly to a POI on the map
-    window.goToPOI = function (poiId, latitude, longitude) {
-        console.log(`🚁 Flying to POI ${poiId} at ${latitude}, ${longitude}`);
-
-        // Close the POI manager modal
-        const poiManagerModal = document.getElementById('poi-manager-modal');
-        if (poiManagerModal) {
-            poiManagerModal.classList.add('hidden');
-        }
-
-        // Fly to the location
-        ApplicationState.map.flyTo({
-            center: [longitude, latitude],
-            zoom: 18, // Max zoom to focus on the POI
-            duration: 2000, // 2 second animation
-            essential: true, // This animation is essential with respect to prefers-reduced-motion
-            pitch: 0,
-            bearing: 0
-        });
-
-        // Highlight the POI marker
-        const marker = poiMarkers.find(m => m.poiId === poiId);
-        if (marker) {
-            const element = marker.getElement();
-            element.classList.add('highlight');
-            setTimeout(() => element.classList.remove('highlight'), 3000);
-        }
-    }
 
     // Setup legend toggle button
     document.addEventListener('DOMContentLoaded', function () {
@@ -880,57 +858,6 @@
         }
         return token;
     }
-
-    // Function to toggle layer visibility for a project
-    function toggleProjectVisibility(projectId, isVisible) {
-        console.log(`Toggling project ${projectId} visibility to: ${isVisible}`);
-
-        // Toggle survey lines/polygons
-        if (allProjectLayers.has(projectId)) {
-            const layerIds = allProjectLayers.get(projectId);
-            const visibility = isVisible ? 'visible' : 'none';
-
-            layerIds.forEach(layerId => {
-                try {
-                    if (ApplicationState.map.getLayer(layerId)) {
-                        ApplicationState.map.setLayoutProperty(layerId, 'visibility', visibility);
-                        console.log(`Set ${layerId} visibility to ${visibility}`);
-                    }
-                } catch (error) {
-                    console.warn(`Failed to toggle visibility for layer ${layerId}:`, error);
-                }
-            });
-        }
-
-        // Toggle station markers
-        if (stationMarkers.has(projectId)) {
-            const markers = stationMarkers.get(projectId);
-            const currentZoom = ApplicationState.map.getZoom();
-            const shouldShowStations = currentZoom >= 14; // Respect zoom threshold
-
-            markers.forEach(marker => {
-                if (isVisible && shouldShowStations) {
-                    // Show marker if project is visible AND we're zoomed in enough
-                    if (!marker.addedToMap) {
-                        marker.addTo(ApplicationState.map);
-                        marker.addedToMap = true;
-                    }
-                } else {
-                    // Hide marker if project is hidden OR we're zoomed out
-                    if (marker.addedToMap) {
-                        marker.remove();
-                        marker.addedToMap = false;
-                    }
-                }
-            });
-
-            console.log(`Toggled ${markers.length} station markers for project ${projectId}`);
-        }
-
-        // Update state
-        projectLayerStates.set(projectId, isVisible);
-    }
-
 
 
     // Enhanced station positioning system with magnetic snap
@@ -1286,7 +1213,7 @@
                             </div>
                         `;
 
-            const canDelete = clickedStation.projectId ? hasProjectAdminAccess(clickedStation.projectId) : false;
+            const canDelete = clickedStation.projectId ? Utils.hasProjectAdminAccess(clickedStation.projectId) : false;
             if (canDelete) {
                 menuHTML += `
                                 <div class="context-menu-item" onclick="deleteStationFromContextMenu()">
@@ -1302,7 +1229,7 @@
             // Only show create options when NOT clicking on a station or POI
             // Station creation requires write access (project-specific permissions)
             const nearestProjectId = getNearestProjectIdForLocation(lngLat);
-            const canCreate = nearestProjectId && hasProjectWriteAccess(nearestProjectId);
+            const canCreate = nearestProjectId && Utils.hasProjectWriteAccess(nearestProjectId);
             if (canCreate) {
                 menuHTML += `
                                 <div class="context-menu-item" onclick="createStationHere()">
@@ -1414,7 +1341,7 @@
                         </div>
                     `;
 
-        const canDelete = stationData && stationData.projectId ? hasProjectAdminAccess(stationData.projectId) : false;
+        const canDelete = stationData && stationData.projectId ? Utils.hasProjectAdminAccess(stationData.projectId) : false;
         if (canDelete) {
             menuHTML += `
                             <div class="context-menu-item" onclick="deleteStationFromContextMenu()">
@@ -1580,11 +1507,11 @@
 
             // 3) Final fallback: first known project
             if (!bestProjectId) {
-                bestProjectId = Array.from(lineFeatureCache.keys())[0] || window.projects?.[0]?.id || null;
+                bestProjectId = Array.from(lineFeatureCache.keys())[0] || ApplicationState.projects?.[0]?.id || null;
             }
             return bestProjectId;
         } catch (e) {
-            return Array.from(lineFeatureCache.keys())[0] || window.projects?.[0]?.id || null;
+            return Array.from(lineFeatureCache.keys())[0] || ApplicationState.projects?.[0]?.id || null;
         }
     }
 
@@ -1592,7 +1519,7 @@
         if (!contextMenuData || !contextMenuData.lngLat) return;
         const coordinates = [contextMenuData.lngLat.lng, contextMenuData.lngLat.lat];
         const nearestProjectId = getNearestProjectIdForLocation(contextMenuData.lngLat);
-        if (!nearestProjectId || !hasProjectWriteAccess(nearestProjectId)) {
+        if (!nearestProjectId || !Utils.hasProjectWriteAccess(nearestProjectId)) {
             showNotification('warning', 'You have read access and cannot create stations.');
             hideContextMenu();
             return;
@@ -2211,8 +2138,8 @@
     async function loadStationsForProject(projectId) {
         // Skip loading stations if user only has WEB_VIEWER access on this project
         try {
-            const proj = (typeof projects !== 'undefined' && Array.isArray(projects))
-                ? projects.find(p => p.id === String(projectId))
+            const proj = (typeof ApplicationState.projects !== 'undefined' && Array.isArray(ApplicationState.projects))
+                ? ApplicationState.projects.find(p => p.id === String(projectId))
                 : null;
             if (proj && proj.permissions === 'WEB_VIEWER') {
                 console.log('⏭️ Skipping station load for WEB_VIEWER project', projectId);
@@ -2452,7 +2379,7 @@
         }
 
         const markers = [];
-        const hasWriteAccess = hasProjectWriteAccess(projectId);
+        const hasWriteAccess = Utils.hasProjectWriteAccess(projectId);
 
         const currentZoom = ApplicationState.map.getZoom();
 
@@ -2718,7 +2645,7 @@
         };
 
         // Show loading overlay
-        const loadingOverlay = showStationLoadingOverlay(
+        const loadingOverlay = Station.showLoadingOverlay(
             'Updating Station Position',
             `Moving "${stationName}" to new location...`
         );
@@ -2765,7 +2692,7 @@
             draggedStation.marker.setLngLat(draggedStation.originalCoords);
         } finally {
             // Hide loading overlay
-            hideStationLoadingOverlay(loadingOverlay);
+            Station.hideLoadingOverlay(loadingOverlay);
 
             // Clean up
             cleanupStationDrag();
@@ -2842,7 +2769,7 @@
 
         // Populate project dropdown
         const projectSelect = document.getElementById('station-project');
-        projectSelect.innerHTML = window.projects.map(project => `
+        projectSelect.innerHTML = ApplicationState.projects.map(project => `
             <option value="${project.id}" ${project.id === projectId ? 'selected' : ''}>
                 ${project.name}
             </option>
@@ -2927,6 +2854,7 @@
             }
         };
     }
+
     // POI Manager Function
     window.openPOIManager = function () {
         console.log('📋 Opening POI Manager');
@@ -2941,7 +2869,7 @@
         modal.classList.remove('hidden');
 
         // Load content
-        loadPOIManagerContent();
+        POI.loadPOIManager();
 
         // Setup close handlers
         const closeBtn = document.getElementById('poi-manager-close');
@@ -2995,6 +2923,7 @@
         // Show modal
         modal.style.display = 'flex';
     }
+
     window.confirmPOIMove = async function () {
         if (!pendingPOIDrag) return;
 
@@ -3005,7 +2934,7 @@
         document.getElementById('poi-drag-confirm-modal').style.display = 'none';
 
         // Show loading overlay
-        const loadingOverlay = showStationLoadingOverlay(
+        const loadingOverlay = Station.showLoadingOverlay(
             'Updating Point of Interest Position',
             `Moving "${poiName}" to new location...`
         );
@@ -3062,7 +2991,7 @@
             marker.setLngLat(pendingPOIDrag.originalCoords);
         } finally {
             // Hide loading overlay
-            hideStationLoadingOverlay(loadingOverlay);
+            Station.hideLoadingOverlay(loadingOverlay);
 
             // Clean up
             cleanupPOIDrag();
@@ -3129,7 +3058,7 @@
             derivedProjectId = st?.projectId || st?.project_id || derivedProjectId;
         }
         if (!derivedProjectId) {
-            derivedProjectId = (window.projectsWithData && window.projectsWithData[0]?.id) || (window.projects && window.projects[0]?.id) || null;
+            derivedProjectId = (window.projectsWithData && window.projectsWithData[0]?.id) || (ApplicationState.projects && ApplicationState.projects[0]?.id) || null;
         }
         currentProjectId = derivedProjectId;
         if (!currentProjectId) {
@@ -3180,7 +3109,7 @@
         initializeTabs();
 
         // Setup modal handlers
-        setupStationModalHandlers();
+        Station.setupStationModalHandlers();
 
         // Show modal
         modal.classList.remove('hidden');
@@ -3239,7 +3168,7 @@
         // Handle permission-based disabling of Add Resource
         try {
             const addBtn = document.querySelector('.tab-btn[data-tab="add-resource"]');
-            const canWrite = currentProjectId && typeof hasProjectWriteAccess === 'function' ? hasProjectWriteAccess(currentProjectId) : false;
+            const canWrite = currentProjectId && Utils.hasProjectWriteAccess(currentProjectId);
             if (addBtn && !canWrite) {
                 addBtn.setAttribute('disabled', 'disabled');
                 addBtn.setAttribute('aria-disabled', 'true');
@@ -3288,7 +3217,7 @@
         console.log(`📑 Switching to tab: ${tabName}`);
         // Resolve effective tab considering permissions
         let effectiveTab = tabName;
-        if (effectiveTab === 'add-resource' && currentProjectId && typeof hasProjectWriteAccess === 'function' && !hasProjectWriteAccess(currentProjectId)) {
+        if (effectiveTab === 'add-resource' && currentProjectId && !Utils.hasProjectWriteAccess(currentProjectId)) {
             showNotification('warning', 'You have read access and cannot modify.');
             effectiveTab = 'resources';
         }
@@ -3331,11 +3260,6 @@
             return;
         }
 
-        // const hasWriteAccess = (typeof hasProjectWriteAccess === 'function') ? hasProjectWriteAccess(projectId) : {{ has_write_access|yesno:"true,false" }};
-        // const hasAdminAccess = (typeof hasProjectAdminAccess === 'function') ? hasProjectAdminAccess(projectId) : false;
-        const hasWriteAccess = false;
-        const hasAdminAccess = false;
-
         // Gather all stations organized by project
         const stationsByProject = new Map();
         let totalStations = 0;
@@ -3375,7 +3299,7 @@
         } else {
             // Sort projects by name
             const sortedProjects = Array.from(stationsByProject.entries()).sort((a, b) => {
-                const baseList = (window.projectsWithData && window.projectsWithData.length) ? window.projectsWithData : window.projects;
+                const baseList = (window.projectsWithData && window.projectsWithData.length) ? window.projectsWithData : ApplicationState.projects;
                 const projectA = baseList.find(p => p.id === a[0]);
                 const projectB = baseList.find(p => p.id === b[0]);
                 const nameA = projectA?.name || 'Unknown Project';
@@ -3385,7 +3309,7 @@
 
             // Display stations organized by project
             sortedProjects.forEach(([projectId, projectStations]) => {
-                const baseList2 = (window.projectsWithData && window.projectsWithData.length) ? window.projectsWithData : window.projects;
+                const baseList2 = (window.projectsWithData && window.projectsWithData.length) ? window.projectsWithData : ApplicationState.projects;
                 const project = baseList2.find(p => p.id === projectId);
                 const projectName = project?.name || 'Unknown Project';
 
@@ -3457,102 +3381,14 @@
         html += '</div>';
         content.innerHTML = html;
     }
-    // Load POI Manager Content
-    function loadPOIManagerContent() {
-        const content = document.getElementById('poi-manager-content');
-        if (!content) {
-            console.error('❌ poi-manager-content element not found!');
-            return;
-        }
+    
 
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
-
-        // Build the POI manager content
-        preparePOIManagerContent();
-    }
-
-    async function preparePOIManagerContent() {
-        const content = document.getElementById('poi-manager-content');
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
-
-        // Gather all POIs
-        const pois = Array.from(allPOIs.values());
-        const totalPOIs = pois.length;
-
-        // Sort POIs by name
-        pois.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-        // Build HTML
-        let html = `
-                <div class="p-6 overflow-y-auto" style="max-height: calc(100vh - 200px);">
-                    <div class="mb-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-medium text-white">All Points of Interest</h3>
-                            <span class="text-sm text-slate-400">${totalPOIs} Point${totalPOIs !== 1 ? 's' : ''} of Interest total</span>
-                        </div>
-                    </div>
-            `;
-
-        if (totalPOIs === 0) {
-            html += `
-                    <div class="text-center py-12">
-                        <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                        <h3 class="text-white text-lg font-medium mb-2">No Points of Interest Yet</h3>
-                        <p class="text-slate-400">Right-click on the map to create your first Point of Interest.</p>
-                    </div>
-                `;
-        } else {
-            html += `<div class="space-y-2">`;
-
-            pois.forEach(poi => {
-                html += `
-                        <div class="bg-slate-700/50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-3 flex-1 cursor-pointer" onclick="document.getElementById('poi-manager-modal').classList.add('hidden'); openPOIModal('${poi.id}');">
-                                    <div class="w-3 h-3 rounded-full border-2 border-white shadow-md flex-shrink-0" 
-                                        style="background: #00D8FF;"></div>
-                                    <div>
-                                        <h5 class="text-white font-medium">${poi.name}</h5>
-                                        <p class="text-xs text-slate-400">
-                                            ${Number(poi.latitude).toFixed(5)}, ${Number(poi.longitude).toFixed(5)}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <button onclick="event.stopPropagation(); goToPOI('${poi.id}', ${Number(poi.latitude)}, ${Number(poi.longitude)})" 
-                                            class="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded transition-all" 
-                                            title="Go to Point of Interest on map">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                        </svg>
-                                    </button>
-                                    <svg class="w-5 h-5 text-slate-400 group-hover:text-white transition-colors cursor-pointer" 
-                                        onclick="document.getElementById('poi-manager-modal').classList.add('hidden'); openPOIModal('${poi.id}');"
-                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-            });
-
-            html += `</div>`;
-        }
-
-        html += '</div>';
-        content.innerHTML = html;
-    }
 
     async function loadStationDetails(stationId, projectId) {
         // Skip fetching details if user only has WEB_VIEWER access on this project
         try {
-            const proj = (typeof projects !== 'undefined' && Array.isArray(projects))
-                ? projects.find(p => p.id === String(projectId))
+            const proj = (typeof ApplicationState.projects !== 'undefined' && Array.isArray(ApplicationState.projects))
+                ? ApplicationState.projects.find(p => p.id === String(projectId))
                 : null;
             if (proj && proj.permissions === 'WEB_VIEWER') {
                 console.log('⏭️ Skipping station details fetch for WEB_VIEWER project', projectId);
@@ -3616,6 +3452,7 @@
                 '<div class="tab-content active"><div class="flex items-center justify-center h-full min-h-[300px]"><div class="text-center text-red-400">Error loading station details</div></div></div>';
         }
     }
+    
     function displayStationDetails(station, projectId) {
         const modalTitle = document.getElementById('station-modal-title');
         const modalContent = document.getElementById('station-modal-content');
@@ -3629,10 +3466,10 @@
         const isDemoStation = station.is_demo || (station.id && station.id.startsWith('demo-'));
         modalTitle.innerHTML = `Station: ${station.name}${isDemoStation ? ' <span class="demo-badge">DEMO</span>' : ''}`;
 
-        const hasWriteAccess = hasProjectWriteAccess(projectId);
+        const hasWriteAccess = Utils.hasProjectWriteAccess(projectId);
 
         // Get project name
-        const project = projects.find(p => p.id === projectId);
+        const project = ApplicationState.projects.find(p => p.id === projectId);
         const projectName = project ? project.name : 'Unknown Project';
 
         // Calculate snap status dynamically - ensure coordinates are numbers
@@ -3666,7 +3503,7 @@
                                 </div>
                                 <div class="flex space-x-3 ml-6">
                                     <button ${hasWriteAccess ? `onclick="editStation('${station.id}')"` : ''} class="btn-secondary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'}>✏️ Edit</button>
-                                    ${hasProjectAdminAccess(projectId) ? `<button onclick="deleteStation('${station.id}', '${projectId}')" class="btn-danger text-sm">🗑️ Delete</button>` : `<button class="btn-danger text-sm opacity-50 cursor-not-allowed" disabled>🗑️ Delete</button>`}
+                                    ${Utils.hasProjectAdminAccess(projectId) ? `<button onclick="Station.delete('${station.id}', '${projectId}')" class="btn-danger text-sm">🗑️ Delete</button>` : `<button class="btn-danger text-sm opacity-50 cursor-not-allowed" disabled>🗑️ Delete</button>`}
                                 </div>
                             </div>
                             
@@ -3827,8 +3664,8 @@
             station.resources = [];
         }
         
-        const hasWriteAccess = (typeof hasProjectWriteAccess === 'function') ? hasProjectWriteAccess(projectId) : {{ has_write_access|yesno:"true,false" }};
-        const hasAdminAccess = (typeof hasProjectAdminAccess === 'function') ? hasProjectAdminAccess(projectId) : false;
+        const hasWriteAccess = Utils.hasProjectWriteAccess(projectId);
+        const hasAdminAccess = Utils.hasProjectAdminAccess(projectId);
         const modalContent = document.getElementById('station-modal-content');
         
         modalContent.innerHTML = `
@@ -4093,14 +3930,14 @@
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 fileInput.files = files;
-                updateFileDisplay(fileContainer, files[0]);
+                Resource.updateFileDisplay(fileContainer, files[0]);
             }
         });
 
         // Add file input change listener
         fileInput.addEventListener('change', (e) => {
             if (e.target.files && e.target.files.length > 0) {
-                updateFileDisplay(fileContainer, e.target.files[0]);
+                Resource.updateFileDisplay(fileContainer, e.target.files[0]);
             }
         });
 
@@ -4166,7 +4003,7 @@
     // Station Management Functions
     function quickAddResource(resourceType) {
         if (!currentStationId) return;
-        if (!currentProjectId || !hasProjectWriteAccess(currentProjectId)) {
+        if (!currentProjectId || !Utils.hasProjectWriteAccess(currentProjectId)) {
             showNotification('warning', 'You have read access and cannot modify.');
             return;
         }
@@ -4183,7 +4020,7 @@
     }
     function editStation(stationId) {
         console.log(`📝 Opening edit form for station ${stationId}`);
-        if (!currentProjectId || !hasProjectWriteAccess(currentProjectId)) {
+        if (!currentProjectId || !Utils.hasProjectWriteAccess(currentProjectId)) {
             showNotification('warning', 'You have read access and cannot modify.');
             return;
         }
@@ -4210,7 +4047,7 @@
                         <h3 class="text-xl font-semibold text-white">
                             Edit Station${isDemoStation ? ' <span class="demo-badge">DEMO</span>' : ''}
                         </h3>
-                        <button onclick="cancelStationEdit('${station.id}')" class="text-slate-400 hover:text-white transition-colors">
+                        <button onclick="Station.cancelEdit('${station.id}')" class="text-slate-400 hover:text-white transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
@@ -4239,7 +4076,7 @@
                                     </label>
                                     <div class="relative">
                                         <select id="project_id_select" name="project_id" class="form-input bg-slate-600 border-2 border-slate-500 font-medium hover:bg-slate-500 hover:border-sky-400 focus:border-sky-500 cursor-pointer appearance-none pr-10 transition-all" required id="edit-station-project">
-                                            ${window.projects.map(project => `
+                                            ${ApplicationState.projects.map(project => `
                                                 <option value="${project.id}" ${project.id === projectId ? 'selected' : ''}>
                                                     ${project.name}
                                                 </option>
@@ -4311,7 +4148,7 @@
                                 </svg>
                                 Save Changes
                             </button>
-                            <button type="button" onclick="cancelStationEdit('${station.id}')" class="btn-secondary">
+                            <button type="button" onclick="Station.cancelEdit('${station.id}')" class="btn-secondary">
                                 Cancel
                             </button>
                         </div>
@@ -4413,61 +4250,17 @@
         // Cancel on Escape
         else if (e.key === 'Escape' && window.currentEditingStation) {
             e.preventDefault();
-            cancelStationEdit(window.currentEditingStation);
+            Station.cancelEdit(window.currentEditingStation);
         }
     }
-    function cancelStationEdit(stationId) {
-        console.log(`❌ Checking for unsaved changes before cancelling edit for station ${stationId}`);
+    
+    
 
-        // Store the station ID for later use
-        window.pendingCancelStationId = stationId;
 
-        // Check if there are unsaved changes
-        const form = document.getElementById('edit-station-form');
-        if (form && window.originalStationValues) {
-            const currentValues = {
-                name: form.querySelector('input[name="name"]').value,
-                description: form.querySelector('textarea[name="description"]').value,
-                latitude: parseFloat(form.querySelector('input[name="latitude"]').value),
-                longitude: parseFloat(form.querySelector('input[name="longitude"]').value),
-                project_id: form.querySelector('select[name="project_id"]').value
-            };
-
-            // Check if any values changed
-            let hasChanges = false;
-            for (const key in currentValues) {
-                if (currentValues[key] !== window.originalStationValues[key]) {
-                    hasChanges = true;
-                    break;
-                }
-            }
-
-            // If there are changes, show confirmation modal
-            if (hasChanges) {
-                showCancelEditModal();
-                return;
-            }
-        }
-
-        // No changes, proceed with cancel
-        proceedWithCancelEdit(stationId);
-    }
-
-    function showCancelEditModal() {
-        const modal = document.getElementById('cancel-edit-modal');
-
-        // Show modal
-        modal.style.display = 'flex';
-    }
-
-    function closeCancelEditModal() {
-        document.getElementById('cancel-edit-modal').style.display = 'none';
-        window.pendingCancelStationId = null;
-    }
 
     function confirmCancelEdit() {
         const stationId = window.pendingCancelStationId;
-        closeCancelEditModal();
+        Station.closeCancelEditModal();
 
         if (stationId) {
             proceedWithCancelEdit(stationId);
@@ -4578,7 +4371,7 @@
         });
     }
     async function saveStationEdits(stationId, originalProjectId, form) {
-        if (!originalProjectId || !hasProjectWriteAccess(originalProjectId)) {
+        if (!originalProjectId || !Utils.hasProjectWriteAccess(originalProjectId)) {
             showNotification('warning', 'You have read access and cannot modify.');
             return;
         }
@@ -4641,7 +4434,7 @@
                 ]);
 
                 // Show success
-                showNotification('success', `Station moved to ${window.projects.find(p => p.id === newProjectId)?.name || 'new project'}`);
+                showNotification('success', `Station moved to ${ApplicationState.projects.find(p => p.id === newProjectId)?.name || 'new project'}`);
             } else {
                 // Update marker position if coordinates changed
                 const markers = stationMarkers.get(originalProjectId);
@@ -4670,7 +4463,7 @@
 
             // Re-setup modal handlers in case they were lost
             setTimeout(() => {
-                setupStationModalHandlers();
+                Station.setupStationModalHandlers();
             }, 100);
 
         } catch (error) {
@@ -4681,7 +4474,7 @@
                 // Show error with suggestions
                 const nameInput = form.querySelector('input[name="name"]');
                 const projectSelect = form.querySelector('select[name="project_id"]');
-                const targetProjectName = window.projects.find(p => p.id === newProjectId)?.name || 'the target project';
+                const targetProjectName = window.ApplicationState.find(p => p.id === newProjectId)?.name || 'the target project';
 
                 showNotification('error', `A station named "${nameInput.value}" already exists in ${targetProjectName}. Please choose a different name.`, 5000);
 
@@ -4702,195 +4495,12 @@
         }
     }
 
-    async function deleteStation(stationId, projectId) {
-        console.log(`🗑️ Preparing to delete station ${stationId} in project ${projectId}`);
-        if (!projectId || !hasProjectWriteAccess(projectId)) {
-            showNotification('warning', 'You have read access and cannot modify.');
-            return;
-        }
-
-        const station = allStations.get(stationId);
-        const stationName = station?.name || 'Station';
-
-        // Store data for modal
-        window.pendingDeleteStation = {
-            stationId,
-            projectId,
-            stationName,
-            station
-        };
-
-        // Show beautiful confirmation modal
-        showDeleteConfirmModal(station, stationId);
-    }
-
-    function showDeleteConfirmModal(station, stationId) {
-        const modal = document.getElementById('delete-confirm-modal');
-        const messageEl = document.getElementById('delete-confirm-message');
-        const detailsEl = document.getElementById('delete-confirm-details');
-
-        const stationName = station?.name || 'Station';
-        const resourceCount = station?.resource_count || 0;
-        const createdBy = station?.created_by_email || station?.created_by || 'Unknown';
-        const creationDate = station?.creation_date ? new Date(station.creation_date).toLocaleDateString() : 'Unknown';
-
-        // Update message
-        messageEl.innerHTML = `Are you sure you want to permanently delete <strong>"${stationName}"</strong>?`;
-
-        // Update details
-        detailsEl.innerHTML = `
-            <div class="drag-confirm-detail-row">
-                <span class="drag-confirm-label">Station Name:</span>
-                <span class="drag-confirm-value">${stationName}</span>
-            </div>
-            <div class="drag-confirm-detail-row">
-                <span class="drag-confirm-label">Location:</span>
-                <span class="drag-confirm-value">${station?.latitude ? station.latitude.toFixed(7) : 'Unknown'}, ${station?.longitude ? station.longitude.toFixed(7) : 'Unknown'}</span>
-            </div>
-            <div class="drag-confirm-detail-row">
-                <span class="drag-confirm-label">Resources:</span>
-                <span class="drag-confirm-value" style="${resourceCount > 0 ? 'color: #f87171; font-weight: 600;' : ''}">${resourceCount} ${resourceCount === 1 ? 'resource' : 'resources'}</span>
-            </div>
-            <div class="drag-confirm-detail-row">
-                <span class="drag-confirm-label">Created By:</span>
-                <span class="drag-confirm-value">${createdBy}</span>
-            </div>
-            <div class="drag-confirm-detail-row">
-                <span class="drag-confirm-label">Created On:</span>
-                <span class="drag-confirm-value">${creationDate}</span>
-            </div>
-        `;
-
-        // Show modal
-        modal.style.display = 'flex';
-    }
-
-    function cancelDeleteStation() {
-        document.getElementById('delete-confirm-modal').style.display = 'none';
-        window.pendingDeleteStation = null;
-    }
-
-    async function confirmDeleteStation() {
-        if (!window.pendingDeleteStation) return;
-
-        const { stationId, projectId, stationName } = window.pendingDeleteStation;
-        if (!projectId || !hasProjectAdminAccess(projectId)) {
-            showNotification('warning', 'Only admins can delete stations.');
-            return;
-        }
-
-        console.log(`🗑️ Starting delete for station ${stationId} in project ${projectId}`);
-        console.log(`🗑️ Station found: ${stationName}`);
-
-        // Hide the modal
-        document.getElementById('delete-confirm-modal').style.display = 'none';
-
-        // Show loading overlay
-        const loadingOverlay = showStationLoadingOverlay(
-            'Deleting Station',
-            `Removing "${stationName}" and all its resources...`
-        );
-
-        try {
-            // Call delete API
-            await deleteStationAPI(stationId);
-
-            console.log(`✅ API delete successful for ${stationId}`);
-
-
-
-            // Remove from global stations map
-            if (allStations.has(stationId)) {
-                allStations.delete(stationId);
-                console.log(`🗑️ Removed from allStations map`);
-            }
-
-            // Find and remove the marker from the map
-            console.log(`🔍 Looking for markers in project ${projectId}`);
-            if (stationMarkers.has(projectId)) {
-                const markers = stationMarkers.get(projectId);
-                console.log(`🔍 Found ${markers.length} markers in project`);
-
-                // Debug: log all marker IDs
-                markers.forEach((m, i) => {
-                    console.log(`  Marker ${i}: stationId=${m.stationId}, name=${m.stationName}`);
-                });
-
-                const markerIndex = markers.findIndex(m => m.stationId === stationId);
-                console.log(`🔍 Marker index: ${markerIndex}`);
-
-                if (markerIndex !== -1) {
-                    const marker = markers[markerIndex];
-                    console.log(`🗑️ Found marker to remove, addedToMap: ${marker.addedToMap}`);
-
-                    // Always try to remove the marker
-                    try {
-                        marker.remove();
-                        console.log(`🗑️ Marker removed from map`);
-                    } catch (e) {
-                        console.error(`❌ Error removing marker:`, e);
-                    }
-
-                    markers.splice(markerIndex, 1);
-                    console.log(`🗑️ Removed marker from array, remaining: ${markers.length}`);
-                } else {
-                    console.warn(`⚠️ Could not find marker with stationId ${stationId}`);
-                    // Try alternative search by name
-                    const markerByName = markers.findIndex(m => m.stationName === stationName);
-                    if (markerByName !== -1) {
-                        console.log(`🔍 Found marker by name instead`);
-                        try {
-                            markers[markerByName].remove();
-                        } catch (e) {
-                            console.error(`❌ Error removing marker by name:`, e);
-                        }
-                        markers.splice(markerByName, 1);
-                    }
-                }
-            } else {
-                console.warn(`⚠️ No markers found for project ${projectId}`);
-            }
-
-            // Close the modal
-            closeStationModal();
-
-            // Show success notification
-            showNotification('success', `Station "${stationName}" deleted successfully`);
-            console.log(`✅ Deleted station: ${stationName} (${stationId})`);
-
-            // Force update visibility in case we're zoomed in
-            if (window.updateStationVisibility) {
-                window.updateStationVisibility();
-            }
-
-            // Reload stations to ensure consistency
-            console.log(`🔄 Scheduling reload of stations for project ${projectId}`);
-            setTimeout(() => {
-                console.log(`🔄 Reloading stations now...`);
-                loadStationsForProject(projectId).then(() => {
-                    console.log(`✅ Station reload complete after delete`);
-                    // Update visibility again after reload
-                    if (window.updateStationVisibility) {
-                        window.updateStationVisibility();
-                    }
-                });
-            }, 500);
-
-        } catch (error) {
-            console.error('Error deleting station:', error);
-            showNotification('error', `Failed to delete station: ${error.message}`);
-        } finally {
-            hideStationLoadingOverlay(loadingOverlay);
-            window.pendingDeleteStation = null;
-        }
-    }
-
     function editResource(resourceId) {
         console.log('Edit resource called with ID:', resourceId);
 
         // Permission guard: prevent editing on read-only projects
         try {
-            if (!currentProjectId || (typeof hasProjectWriteAccess === 'function' && !hasProjectWriteAccess(currentProjectId))) {
+            if (!currentProjectId || !Utils.hasProjectWriteAccess(currentProjectId)) {
                 showNotification('warning', 'You have read access and cannot modify.');
                 return;
             }
@@ -4923,7 +4533,7 @@
         if (!formContainer) return;
 
         formContainer.classList.remove('hidden');
-        const canWriteResource = (typeof hasProjectWriteAccess === 'function') ? hasProjectWriteAccess(projectId) : {{ has_write_access|yesno:"true,false" }};
+        const canWriteResource = Utils.hasProjectWriteAccess(projectId);
         formContainer.innerHTML = `
             <div class="bg-slate-600 p-6 rounded-lg border-t-4 border-amber-500">
                 <h4 class="text-white font-semibold mb-4">Edit Resource</h4>
@@ -5045,14 +4655,14 @@
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
                     fileInput.files = files;
-                    updateFileDisplay(fileContainer, files[0]);
+                    Resource.updateFileDisplay(fileContainer, files[0]);
                 }
             });
 
             // Add file input change listener for visual feedback
             fileInput.addEventListener('change', (e) => {
                 if (e.target.files && e.target.files.length > 0) {
-                    updateFileDisplay(fileContainer, e.target.files[0]);
+                    Resource.updateFileDisplay(fileContainer, e.target.files[0]);
                 }
             });
         }
@@ -5196,7 +4806,7 @@
             formData.set('text_content', JSON.stringify(sketchData));
         }
 
-        const loadingOverlay = showStationLoadingOverlay('Updating Resource', 'Saving changes...');
+        const loadingOverlay = Station.showLoadingOverlay('Updating Resource', 'Saving changes...');
 
         try {
             const response = await fetch(`/api/v1/resources/${resourceId}/`, {
@@ -5239,11 +4849,11 @@
             console.error('Error updating resource:', error);
             showNotification('error', 'Error updating resource. Please try again.');
         } finally {
-            hideStationLoadingOverlay(loadingOverlay);
+            Station.hideLoadingOverlay(loadingOverlay);
         }
     }
     async function createStation(projectId, form) {
-        if (!projectId || !hasProjectWriteAccess(projectId)) {
+        if (!projectId || !Utils.hasProjectWriteAccess(projectId)) {
             showNotification('warning', 'You have read access and cannot create stations.');
             return;
         }
@@ -5317,7 +4927,7 @@
 
         // Reset any existing form state
         const existingFileContainers = formContainer.querySelectorAll('.file-upload-area');
-        existingFileContainers.forEach(container => resetFileDisplay(container));
+        existingFileContainers.forEach(container => Resource.resetFileDisplay(container));
 
         formContainer.classList.remove('hidden');
         formContainer.innerHTML = `
@@ -5440,14 +5050,14 @@
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 fileInput.files = files;
-                updateFileDisplay(fileContainer, files[0]);
+                Resource.updateFileDisplay(fileContainer, files[0]);
             }
         });
 
         // Add file input change listener for visual feedback
         fileInput.addEventListener('change', (e) => {
             if (e.target.files && e.target.files.length > 0) {
-                updateFileDisplay(fileContainer, e.target.files[0]);
+                Resource.updateFileDisplay(fileContainer, e.target.files[0]);
             }
         });
 
@@ -5465,13 +5075,10 @@
             formContainer.classList.add('hidden');
             // Reset any file displays
             const fileContainers = formContainer.querySelectorAll('.file-upload-area');
-            fileContainers.forEach(container => resetFileDisplay(container));
+            fileContainers.forEach(container => Resource.resetFileDisplay(container));
         }
     }
 
-    function updateFileDisplay(fileContainer, file) { window.updateFileDisplay(fileContainer, file); }
-
-    function resetFileDisplay(fileContainer) { window.resetFileDisplay(fileContainer); }
     // Sketch Operations System - stores drawing as operations for undo/redo
     class SketchOperations {
         constructor(canvas, ctx) {
@@ -5667,7 +5274,7 @@
         }
         
         // Production mode - save to database
-        const loadingOverlay = showStationLoadingOverlay('Saving Resource', 'Uploading resource to server...');
+        const loadingOverlay = Station.showLoadingOverlay('Saving Resource', 'Uploading resource to server...');
         
         try {
             // Add station_id to the form data
@@ -5740,7 +5347,7 @@
             console.error('Error saving resource:', error);
             showNotification('error', 'Error saving resource. Please try again.');
         } finally {
-            hideStationLoadingOverlay(loadingOverlay);
+            Station.hideLoadingOverlay(loadingOverlay);
         }
     }
     
@@ -5787,51 +5394,15 @@
         }
     }
     
-    // Function to setup station modal event handlers
-    function setupStationModalHandlers() {
-        const stationModal = document.getElementById('station-modal');
-        const stationModalClose = document.getElementById('station-modal-close');
-        
-        if (stationModalClose) {
-            // Remove any existing listeners first
-            const newClose = stationModalClose.cloneNode(true);
-            stationModalClose.parentNode.replaceChild(newClose, stationModalClose);
-            
-            // Add fresh listener
-            newClose.addEventListener('click', closeStationModal);
-        }
-        
-        if (stationModal) {
-            // Ensure a single, stable backdrop handler exists on window to avoid scope issues
-            if (typeof window.modalBackdropHandler !== 'function') {
-                window.modalBackdropHandler = function(e) {
-                    const modal = document.getElementById('station-modal');
-                    if (!modal) return;
-                    const dialog = modal.querySelector('.bg-slate-800');
-                    // Close if click outside the dialog content
-                    if (e.target === modal && dialog && !dialog.contains(e.target)) {
-                        closeStationModal();
-                    }
-                };
-            }
-            stationModal.removeEventListener('click', window.modalBackdropHandler);
-            stationModal.addEventListener('click', window.modalBackdropHandler);
-        }
-    }
     // Variables for resource deletion (already declared earlier in this script)
     // Photo/Video/Note helpers now provided by module; do not rebind here
-    window.cancelStationEdit = cancelStationEdit;
     window.switchTab = switchTab;
-    window.deleteStation = deleteStation;
     window.showContextMenu = showContextMenu;
     window.hideContextMenu = hideContextMenu;
     window.applySuggestion = applySuggestion;
     window.confirmStationMove = confirmStationMove;
     window.cancelStationMove = cancelStationMove;
-    window.confirmDeleteStation = confirmDeleteStation;
-    window.cancelDeleteStation = cancelDeleteStation;
     window.confirmCancelEdit = confirmCancelEdit;
-    window.closeCancelEditModal = closeCancelEditModal;
     window.showCreateStationModal = showCreateStationModal;
     window.hideCreateStationModal = hideCreateStationModal;
     window.returnToStationManager = returnToStationManager;
@@ -5952,7 +5523,7 @@
             loadAllPOIs();
 
             // Update loading status
-            UX.updateLoadingText('Loading Survey Data', `Downloading GeoJSON for ${projectIds.length} projects...`);
+            UX.updateLoadingText('Loading Survey Data', `Downloading GeoJSON for ${ApplicationState.projects.length} projects ...`);
 
             MapViewer.customize_map(ApplicationState.map);
 
@@ -6014,6 +5585,8 @@
                 return color;
             }
             // Create promises to fetch GeoJSON data from API for each project
+            const projectIds = ApplicationState.projects.map(project => project.id);
+
             const fetchPromises = projectIds.map((projectId, index) => {
                 const apiUrl = `/api/v1/projects/${projectId}/geojson/?limit=1`;
 
@@ -6108,7 +5681,7 @@
                                     data: geojsonData,
                                     index,
                                     projectId,
-                                    projectName: projects.find(p => p.id === projectId)?.name || `Project ${projectId}`
+                                    projectName: ApplicationState.projects.find(p => p.id === projectId)?.name || `Project ${projectId}`
                                 };
                             });
                     })
@@ -6130,7 +5703,7 @@
 
                     // Keep original projects for permissions/visibility. Store a separate list for those with data.
                     window.projectsWithData = validResults.map(result => 
-                        projects.find(p => p.id === result.projectId)
+                        ApplicationState.projects.find(p => p.id === result.projectId)
                     ).filter(Boolean);
                     console.log(`📋 Projects with valid GeoJSON: ${window.projectsWithData.length}`);
 
@@ -6568,7 +6141,7 @@
                         }
 
                         // Store layer IDs for this project
-                        allProjectLayers.set(projectId, projectLayers);
+                        ApplicationState.allProjectLayers.set(projectId, projectLayers);
                     });
 
                     // Performance summary
@@ -6646,7 +6219,7 @@
 
                             toggleInput.addEventListener('change', (e) => {
                                 const isVisible = e.target.checked;
-                                toggleProjectVisibility(projectId, isVisible);
+                                MapViewer.toggleProjectVisibility(projectId, isVisible);
                             });
 
                             toggleContainer.appendChild(toggleInput);

@@ -1,5 +1,4 @@
 const UX = {
-
     // Function to hide loading overlay with smooth transition
     hideLoadingOverlay() {
         const overlay = $('#loading-overlay');
