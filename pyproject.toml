@@ -28,7 +28,7 @@ dependencies = [
 
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
-    "jsonschema-rs==0.32.1", # https://github.com/Stranger6667/jsonschema
+    "jsonschema-rs==0.33.0", # https://github.com/Stranger6667/jsonschema
     "orjson==3.11.2",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
