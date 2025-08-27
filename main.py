@@ -8,7 +8,7 @@ import os
 import django
 from dotenv import load_dotenv
 
-load_dotenv(".envs/.local/.django")
+load_dotenv(".envs/.django")
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 

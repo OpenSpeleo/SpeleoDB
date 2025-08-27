@@ -50,23 +50,23 @@ COPY uv.lock .
 RUN --mount=type=bind,source=.uv,target=${UV_MOUNT_CACHE_DIR},readonly=false \
     uv sync --frozen --extra ${BUILD_ENV}
 
-COPY ./compose/production/django/entrypoint /entrypoint
+COPY ./compose/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
 RUN chmod +x /entrypoint
 
-COPY ./compose/local/django/start /start
+COPY ./compose/start /start
 RUN sed -i 's/\r$//g' /start
 RUN chmod +x /start
 
-COPY ./compose/local/django/celery/worker/start /start-celeryworker
+COPY ./compose/celery/worker/start /start-celeryworker
 RUN sed -i 's/\r$//g' /start-celeryworker
 RUN chmod +x /start-celeryworker
 
-COPY ./compose/local/django/celery/beat/start /start-celerybeat
+COPY ./compose/celery/beat/start /start-celerybeat
 RUN sed -i 's/\r$//g' /start-celerybeat
 RUN chmod +x /start-celerybeat
 
-COPY ./compose/local/django/celery/flower/start /start-flower
+COPY ./compose/celery/flower/start /start-flower
 RUN sed -i 's/\r$//g' /start-flower
 RUN chmod +x /start-flower
 

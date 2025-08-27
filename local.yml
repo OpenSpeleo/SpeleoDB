@@ -6,7 +6,7 @@ services:
   django: &django
     build:
       context: .
-      dockerfile: ./compose/local/django/Dockerfile
+      dockerfile: ./compose/Dockerfile
       args:
         - DOCKER_BUILDKIT=1
     image: speleodb_local_django
@@ -17,8 +17,8 @@ services:
     volumes:
       - .:/app:z
     env_file:
-      - ./.envs/.local/.django
-      - ./.envs/.local/.postgres
+      - ./.envs/.django
+      - ./.envs/.postgres
     ports:
       - "8000:8000"
     command: /start
@@ -27,7 +27,7 @@ services:
   postgres:
     build:
       context: .
-      dockerfile: ./compose/production/postgres/Dockerfile
+      dockerfile: ./compose/postgres/Dockerfile
       args:
         - DOCKER_BUILDKIT=1
     image: speleodb_production_postgres
@@ -36,7 +36,7 @@ services:
       - speleodb_local_postgres_data:/var/lib/postgresql/data
       - speleodb_local_postgres_data_backups:/backups
     env_file:
-      - ./.envs/.local/.postgres
+      - ./.envs/.postgres
     ports:
       - "5432:5432"
 
