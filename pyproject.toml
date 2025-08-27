@@ -123,7 +123,8 @@ local = [
 ]
 
 production = [
-    "gunicorn==23.0.0",  # https://github.com/benoitc/gunicorn
+    # "gunicorn==23.0.0",  # https://github.com/benoitc/gunicorn
+    "granian==2.5.1",
     "psycopg[c]==3.2.9", # https://github.com/psycopg/psycopg
 
     # Django
