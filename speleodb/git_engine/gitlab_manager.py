@@ -18,7 +18,6 @@ from cachetools import TTLCache
 from cachetools import cached
 from django.conf import settings
 
-from speleodb.common.models import Option
 from speleodb.git_engine.core import GitRepo
 from speleodb.utils.metaclasses import SingletonMetaClass
 
@@ -71,10 +70,10 @@ class GitlabCredentials:
     @cached(cache=TTLCache(maxsize=1, ttl=30))  # 60 secs cache
     def get(cls) -> Self:
         return cls(
-            instance=Option.get_or_empty(name="GITLAB_HOST_URL"),
-            token=Option.get_or_empty(name="GITLAB_TOKEN"),
-            group_id=Option.get_or_empty(name="GITLAB_GROUP_ID"),
-            group_name=Option.get_or_empty(name="GITLAB_GROUP_NAME"),
+            instance=settings.GITLAB_HOST_URL,
+            token=settings.GITLAB_TOKEN,
+            group_id=settings.GITLAB_GROUP_ID,
+            group_name=settings.GITLAB_GROUP_NAME,
         )
 
 

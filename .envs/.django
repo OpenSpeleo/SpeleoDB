@@ -17,6 +17,5 @@ CELERY_FLOWER_PASSWORD=debug
 
 # Django
 # -------------------------------------------------------------------------------
-DJANGO_FIELD_ENCRYPTION_KEY="4kVFsRch2sUbIMz3RlhWmWv_Q2y405xPyWRRNO_LAHA="
 DJANGO_DEBUG=True
 DJANGO_SECRET_KEY="1!(kim5&o=o6iu8gdmp%b4r6+pphg%_kgt*nd^k=k#88d6vyq3"

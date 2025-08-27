@@ -134,10 +134,6 @@ THIRD_PARTY_APPS = [
     # A raw_id_fields widget replacement that handles display of an object's
     # string value on change and can be overridden via a template.
     "dynamic_raw_id",
-    # https://github.com/enderlabs/django-cryptographic-fields
-    # A set of fields that wrap standard Django fields with encryption provided
-    # by the python cryptography library.
-    "encrypted_model_fields",
     # https://github.com/django-hijack/django-hijack
     # With Django Hijack, admins can log in and work on behalf of other users
     # without having to know their credentials.
@@ -264,10 +260,12 @@ COUNTRIES_OVERRIDE = {
     "VI": "Virgin Islands (USA)",
 }
 
-# ENCRYPTED FIELDS
+# GITLAB SETTINGS
 # ------------------------------------------------------------------------------
-# https://gitlab.com/lansharkconsulting/django/django-encrypted-model-fields/#getting-started
-FIELD_ENCRYPTION_KEY = env("DJANGO_FIELD_ENCRYPTION_KEY")
+GITLAB_GROUP_ID = env("GITLAB_GROUP_ID")
+GITLAB_GROUP_NAME = env("GITLAB_GROUP_NAME")
+GITLAB_HOST_URL = env("GITLAB_HOST_URL")
+GITLAB_TOKEN = env("GITLAB_TOKEN")
 
 # MIDDLEWARE
 # ------------------------------------------------------------------------------

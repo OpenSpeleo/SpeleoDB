@@ -27,7 +27,10 @@ jobs:
       # Dummy Key - Not Used
       DJANGO_SECRET_KEY: "s&=i@9h+)6bge)6!6vhbcx@=#^6nr73&7+6ep-xpbebhi5#)+_"
       # Dummy Key - Not Used
-      DJANGO_FIELD_ENCRYPTION_KEY: "Mi2dyK2q9uTi9_Yn2mpsmU2fFUM4P0U7XpEgxiGPtto="
+      GITLAB_GROUP_ID: "whatever"
+      GITLAB_GROUP_NAME: "whatever"
+      GITLAB_HOST_URL: "whatever"
+      GITLAB_TOKEN: "whatever"
       AWS_ACCESS_KEY_ID: "whatever"
       AWS_SECRET_ACCESS_KEY: "whatever"
       AWS_S3_REGION_NAME: "whatever"
@@ -94,7 +97,6 @@ jobs:
           python manage.py validate_templates --settings config.settings.test --ignore-app allauth
           pytest
         env:
-          DJANGO_FIELD_ENCRYPTION_KEY: ${{ secrets.DJANGO_FIELD_ENCRYPTION_KEY }}
           GITLAB_GROUP_ID: ${{ secrets.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ secrets.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ secrets.GITLAB_HOST_URL }}

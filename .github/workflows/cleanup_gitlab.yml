@@ -37,8 +37,6 @@ jobs:
       REDIS_URL: "redis://redis:6379/0"
       # Dummy Key - Not Used
       DJANGO_SECRET_KEY: "s&=i@9h+)6bge)6!6vhbcx@=#^6nr73&7+6ep-xpbebhi5#)+_"
-      # Dummy Key - Not Used
-      DJANGO_FIELD_ENCRYPTION_KEY: "Mi2dyK2q9uTi9_Yn2mpsmU2fFUM4P0U7XpEgxiGPtto="
 
     steps:
       - name: Checkout Code Repository
@@ -57,7 +55,6 @@ jobs:
       - name: Clean Gitlab Test Database
         run: make wipe_gitlab_test
         env:
-          DJANGO_FIELD_ENCRYPTION_KEY: ${{ secrets.DJANGO_FIELD_ENCRYPTION_KEY }}
           GITLAB_GROUP_ID: ${{ secrets.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ secrets.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ secrets.GITLAB_HOST_URL }}
