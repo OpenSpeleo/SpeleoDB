@@ -32,7 +32,7 @@ dependencies = [
 
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
-    "jsonschema-rs==0.32.1", # https://github.com/Stranger6667/jsonschema
+    "jsonschema-rs==0.33.0", # https://github.com/Stranger6667/jsonschema
     "orjson==3.11.2",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
@@ -65,8 +65,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "boto3==1.40.15",    # https://github.com/boto/boto3
-    "botocore==1.40.16", # https://github.com/boto/botocore
+    "boto3==1.40.20",    # https://github.com/boto/boto3
+    "botocore==1.40.20", # https://github.com/boto/botocore
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -88,7 +88,7 @@ local = [
     "factory-boy==3.3.3",   # https://github.com/FactoryBoy/factory_boy
     "mypy==1.17.1",         # https://github.com/python/mypy
     "parameterized==0.9.0", # https://github.com/wolever/parameterized
-    "pytest-sugar==1.1.0",  # https://github.com/Frozenball/pytest-sugar
+    "pytest-sugar==1.1.1",  # https://github.com/Frozenball/pytest-sugar
     "pytest==8.4.1",        # https://github.com/pytest-dev/pytest
 
     # Typing
@@ -107,8 +107,8 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.12.9",      # https://github.com/astral-sh/ruff
-    "coverage==7.10.4",  # https://github.com/nedbat/coveragepy
+    "ruff==0.12.11",     # https://github.com/astral-sh/ruff
+    "coverage==7.10.5",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
     "pre-commit==4.3.0", # https://github.com/pre-commit/pre-commit
 
