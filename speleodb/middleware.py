@@ -74,7 +74,9 @@ class DRFWrapResponseMiddleware:
         try:
             wrapped_response = self.get_response(request)
 
-            if not request.path.startswith("/api/v1"):
+            if not any(
+                request.path.startswith(path) for path in ["/api/v1", "/api/health"]
+            ):
                 return wrapped_response
 
             if isinstance(wrapped_response, FileResponse):
