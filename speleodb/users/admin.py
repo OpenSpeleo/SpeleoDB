@@ -11,7 +11,6 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
-from dynamic_raw_id.admin import DynamicRawIDMixin
 from hijack.contrib.admin import HijackUserAdminMixin
 
 from speleodb.users.forms import UserAdminChangeForm
@@ -99,9 +98,8 @@ admin.site.unregister(EmailAddress)
 
 
 @admin.register(EmailAddress)
-class EmailAddressAdmin(DynamicRawIDMixin, _EmailAddressAdmin):
-    dynamic_raw_id_fields: tuple[str] = ("user",)  # type: ignore[assignment]
-    raw_id_fields: tuple[()] = ()  # type: ignore[assignment,misc]
+class EmailAddressAdmin(_EmailAddressAdmin):
+    autocomplete_fields: tuple[str] = ("user",)  # type: ignore[misc]
 
     def get_form(  # type: ignore[override]
         self, request: HttpRequest, obj: EmailAddress | None = None, **kwargs: Any
