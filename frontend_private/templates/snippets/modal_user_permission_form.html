@@ -26,7 +26,8 @@
                     {% csrf_token %}
                     <div>
                         <label class="block text-sm font-medium mb-1" for="user">Email <span class="text-rose-500">*</span></label>
-                        <input id="user" name="user" class="form-input w-full px-2 py-1 h-10 mb-2" type="email" required />
+                        <input id="user" name="user" class="form-input w-full px-2 py-1 h-10 mb-2" data-1p-ignore data-lpignore="true" data-protonpass-ignore="true" type="email" required />
+                        <div id="user_suggestions" class="hidden max-h-40 overflow-auto border border-slate-600 rounded bg-slate-800 text-slate-200 text-sm shadow-lg"></div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1" for="level">Access Level:<span class="text-rose-600"> *</span></label>
