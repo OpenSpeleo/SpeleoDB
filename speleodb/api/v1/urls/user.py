@@ -7,6 +7,7 @@ from django.urls import path
 
 from speleodb.api.v1.views.user import ReleaseAllUserLocksView
 from speleodb.api.v1.views.user import UserAuthTokenView
+from speleodb.api.v1.views.user import UserAutocompleteView
 from speleodb.api.v1.views.user import UserInfo
 from speleodb.api.v1.views.user import UserPasswordChangeView
 
@@ -19,4 +20,5 @@ urlpatterns: list[URLPattern] = [
         ReleaseAllUserLocksView.as_view(),
         name="release_all_locks",
     ),
+    path("autocomplete/", UserAutocompleteView.as_view(), name="user_autocomplete"),
 ]

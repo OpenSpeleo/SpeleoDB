@@ -6,6 +6,10 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.contrib.auth.models import update_last_login
+from django.db import models
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -17,6 +21,7 @@ from rest_framework.throttling import UserRateThrottle
 from speleodb.api.v1.serializers import AuthTokenSerializer
 from speleodb.api.v1.serializers import PasswordChangeSerializer
 from speleodb.api.v1.serializers import UserSerializer
+from speleodb.api.v1.serializers.user import UserAutocompleteSerializer
 from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
@@ -153,3 +158,51 @@ class ReleaseAllUserLocksView(GenericAPIView[User], SDBAPIViewMixin):
         return SuccessResponse(
             "All locks have been released", status=status.HTTP_204_NO_CONTENT
         )
+
+
+class UserAutocompleteView(GenericAPIView[User]):
+    """Autocomplete endpoint for users.
+
+    - Authenticated only
+    - Query param `query` matches name or email (icontains)
+    - Minimum length: 3 characters
+    - Returns at most 10 users
+    """
+
+    MINIMUM_QUERY_LEN = 3
+    MAXIMUM_RESULTS = 10
+
+    serializer_class = UserAutocompleteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="query",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description=(
+                    "Case-insensitive substring to match on user email or name "
+                    "(minimum 3 characters)"
+                ),
+            ),
+        ],
+        responses={200: UserAutocompleteSerializer(many=True)},
+    )
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        query = request.query_params.get("query", "").strip()
+        if len(query) < self.MINIMUM_QUERY_LEN:
+            return ErrorResponse(
+                {"error": "Incorrect query: minimum 3 chars"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        queryset = (
+            User.objects.all()
+            .filter(models.Q(email__icontains=query) | models.Q(name__icontains=query))
+            .order_by("email")
+        )[: self.MAXIMUM_RESULTS]
+
+        serializer = self.get_serializer(queryset, many=True)
+        return SuccessResponse(serializer.data)

@@ -36,3 +36,16 @@ class UserSerializer(serializers.ModelSerializer[User]):
             EmailAddress.objects.add_new_email(request, request.user, email)  # pyright: ignore[reportAttributeAccessIssue]
 
         return super().update(instance, validated_data)
+
+
+class UserAutocompleteSerializer(serializers.ModelSerializer[User]):
+    """Minimal serializer for user autocomplete dropdowns."""
+
+    label = serializers.SerializerMethodField()  # type: ignore[assignment]
+
+    class Meta:
+        model = User
+        fields = ["email", "name", "label"]
+
+    def get_label(self, obj: User) -> str:
+        return f"{obj.name} <{obj.email}>"
