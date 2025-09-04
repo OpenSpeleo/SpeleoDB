@@ -9,7 +9,7 @@ dependencies = [
     # Utils
     # ------------------------------------------------------------------------------
     "argon2-cffi==25.1.0",  # https://github.com/hynek/argon2-cffi
-    "cachetools==6.1.0",    # https://github.com/tkem/cachetools
+    "cachetools==6.2.0",    # https://github.com/tkem/cachetools
     "python-dotenv==1.1.1", # https://github.com/theskumar/python-dotenv
     "pytz==2025.2",         # https://github.com/stub42/pytz
     "timeago==1.0.16",      # https://github.com/hustcc/timeago
@@ -23,17 +23,17 @@ dependencies = [
 
     # Media Processing
     # ------------------------------------------------------------------------------
-    "av==15.0.0",            # https://github.com/PyAV-Org/PyAV
+    "av==15.1.0",            # https://github.com/PyAV-Org/PyAV
     "imageio==2.37.0",       # https://github.com/imageio/imageio
     "imageio-ffmpeg==0.6.0", # https://github.com/imageio/imageio-ffmpeg
     "Pillow==11.3.0",        # https://github.com/python-pillow/Pillow
     "pillow-heif==1.1.0",    # https://github.com/bigcat88/pillow_heif
-    "PyMuPDF==1.26.3",       # https://github.com/pymupdf/PyMuPDF
+    "PyMuPDF==1.26.4",       # https://github.com/pymupdf/PyMuPDF
 
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
     "jsonschema-rs==0.33.0", # https://github.com/Stranger6667/jsonschema
-    "orjson==3.11.2",        # https://github.com/ijl/orjson
+    "orjson==3.11.3",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
     # ------------------------------------------------------------------------------
@@ -43,13 +43,13 @@ dependencies = [
     # Git Management
     # ------------------------------------------------------------------------------
     "GitPython==3.1.45",    # https://github.com/gitpython-developers/GitPython
-    "python-gitlab==6.2.0", # https://python-gitlab.readthedocs.io/en/stable/
+    "python-gitlab==6.3.0", # https://python-gitlab.readthedocs.io/en/stable/
 
     # Django
     # ------------------------------------------------------------------------------
     "Collectfasta==3.3.1",         # https://github.com/jasongi/collectfasta
     "django==5.2.5",               # https://www.djangoproject.com/
-    "django-allauth==65.11.0",     # https://github.com/pennersr/django-allauth
+    "django-allauth==65.11.1",     # https://github.com/pennersr/django-allauth
     "django-countries==7.6.1",     # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",  # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.12.0",      # https://github.com/joke2k/django-environ
@@ -65,8 +65,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "boto3==1.40.20",    # https://github.com/boto/boto3
-    "botocore==1.40.20", # https://github.com/boto/botocore
+    "boto3==1.40.22",    # https://github.com/boto/boto3
+    "botocore==1.40.22", # https://github.com/boto/botocore
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ local = [
     "djangorestframework-stubs[compatible-mypy]==3.16.2", # https://github.com/typeddjango/djangorestframework-stubs
     "django-stubs[compatible-mypy]==5.2.2",               # https://github.com/typeddjango/django-stubs
     "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
-    "types-cachetools==6.1.0.20250717",                   # https://github.com/python/typeshed
+    "types-cachetools==6.2.0.20250827",                   # https://github.com/python/typeshed
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
     "types-pytz==2025.2.0.20250809",                      # https://github.com/python/typeshed
 
@@ -108,7 +108,7 @@ local = [
     # Code quality
     # ------------------------------------------------------------------------------
     "ruff==0.12.11",     # https://github.com/astral-sh/ruff
-    "coverage==7.10.5",  # https://github.com/nedbat/coveragepy
+    "coverage==7.10.6",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
     "pre-commit==4.3.0", # https://github.com/pre-commit/pre-commit
 
@@ -117,12 +117,12 @@ local = [
     "django-debug-toolbar==6.0.0", # https://github.com/jazzband/django-debug-toolbar
     "django-extensions==4.1",      # https://github.com/django-extensions/django-extensions
     "django-schema-viewer==0.5.3", # https://github.com/pikhovkin/django-schema-viewer
-    "django-silk==5.4.0",          # https://github.com/jazzband/django-silk
+    "django-silk==5.4.2",          # https://github.com/jazzband/django-silk
 ]
 
 production = [
     # "gunicorn==23.0.0",  # https://github.com/benoitc/gunicorn
-    "granian==2.5.1",
+    "granian==2.5.2",
     "psycopg[c]==3.2.9", # https://github.com/psycopg/psycopg
 
     # Django
