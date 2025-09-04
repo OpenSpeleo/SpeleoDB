@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
@@ -127,6 +128,8 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
 
         project_dir = git_repo_base_dir / str(project_id)
 
+        shutil.rmtree(project_dir, ignore_errors=True)
+
         project_dir.parent.mkdir(exist_ok=True, parents=True)
         git_url = f"https://oauth2:{gitlab_creds.token}@{gitlab_creds.instance}/{gitlab_creds.group_name}/{project_id}.git"
 
@@ -135,6 +138,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             self.create_project(project_id=project_id)
 
             git_repo = GitRepo.init(project_dir)
+
             origin = git_repo.create_remote("origin", url=git_url)
             origin.fetch()
             assert origin.exists()
@@ -149,6 +153,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             repo = GitRepo.clone_from(url=git_url, to_path=project_dir)
             if not repo.head.is_valid():
                 repo.publish_first_commit()
+
             return repo
 
     # cache data for no longer than ten minutes
