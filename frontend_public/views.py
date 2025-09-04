@@ -7,9 +7,11 @@ from typing import Any
 from typing import TypeVar
 
 from django.conf import settings
+from django.http.response import HttpResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.views import View
+from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
 
 from frontend_public.models import BoardMember
@@ -20,7 +22,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from django.http import HttpRequest
-    from django.http.response import HttpResponse
     from django.http.response import HttpResponseRedirectBase
 
 RT = TypeVar("RT")
@@ -38,6 +39,20 @@ def redirect_authenticated_user[RT](
         return func(obj, request, *args, **kwargs)
 
     return wrapper
+
+
+@require_GET
+def robots_txt(request: HttpRequest) -> HttpResponse:
+    return HttpResponse(
+        """\
+User-Agent: *
+Disallow: /account/
+Disallow: /login/
+Disallow: /private/
+Disallow: /signup/
+""",
+        content_type="text/plain",
+    )
 
 
 class LoginView(View):

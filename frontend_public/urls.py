@@ -3,21 +3,44 @@
 from __future__ import annotations
 
 import allauth.account.views as allauth_views
+from django.contrib.sitemaps import views as sitemaps_views
 from django.urls import path
 from django.urls import re_path
+from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
 
+from frontend_public.sitemap import HomeViewSitemap
+from frontend_public.sitemap import PublicViewSitemap
 from frontend_public.views import LoginView
 from frontend_public.views import PasswordResetFromKeyView
 from frontend_public.views import PasswordResetView
 from frontend_public.views import PeoplePageView
 from frontend_public.views import SignUpView
+from frontend_public.views import robots_txt
 
 ArianeWebView = TemplateView.as_view(template_name="webviews/ariane.html")
+
+sitemaps = {
+    "home": HomeViewSitemap,
+    "public": PublicViewSitemap,
+}
+
 
 urlpatterns = [
     # Main Pages
     path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
+    path("robots.txt", robots_txt, name="robots_txt"),
+    path(
+        "sitemap.xml",
+        cache_page(86400)(sitemaps_views.index),
+        {"sitemaps": sitemaps, "sitemap_url_name": "sitemaps"},
+    ),
+    path(
+        "sitemap-<section>.xml",
+        cache_page(86400)(sitemaps_views.sitemap),
+        {"sitemaps": sitemaps},
+        name="sitemaps",
+    ),
     path(
         "about/", TemplateView.as_view(template_name="pages/about.html"), name="about"
     ),

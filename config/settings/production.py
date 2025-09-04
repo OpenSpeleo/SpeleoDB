@@ -156,7 +156,10 @@ LOGGING = {
 # -------------------------------------------------------------------------------
 # Tools that generate code samples can use SERVERS to point to the correct domain
 SPECTACULAR_SETTINGS["SERVERS"] = [
-    {"url": "https://www.speleodb.org", "description": "Production server"},  # type: ignore[list-item]
+    {
+        "url": env("DJANGO_SPECTALUR_SERVER", default="https://www.speleodb.org"),  # pyright: ignore[reportArgumentType]
+        "description": "Production server",
+    },
 ]
 # Your stuff...
 # ------------------------------------------------------------------------------

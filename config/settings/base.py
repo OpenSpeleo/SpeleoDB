@@ -107,6 +107,7 @@ DJANGO_APPS = [
     "django.contrib.sessions",
     "django.contrib.sites",
     "django.contrib.messages",
+    "django.contrib.sitemaps",
     # Note: 'collectfasta' must come before 'django.contrib.staticfiles' in INSTALLED_APPS.
     "collectfasta",
     "django.contrib.staticfiles",
@@ -548,6 +549,23 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAdminUser"],
     "SCHEMA_PATH_PREFIX": "/api/",
+    # Resolve naming collisions and custom field mapping for schema generation
+    # - Map our custom RelatedField (UserField) to string
+    # - Prefer short operationIds and append unique suffixes to avoid collisions
+    "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        # If multiple enums would generate the same name, override here.
+        # Example shown for RoleEnum collisions mentioned in logs.
+        "RoleEnum": "SurveyTeamMembershipRoleEnum",
+    },
+    "GENERIC_ADDITIONAL_PROPERTIES": False,
+    "TITLE_SUFFIX": "",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SCHEMA_PATH_PREFIX_TRIM": True,
+    "SORT_OPERATION_PARAMETERS": True,
+    "PERSIST_AUTH": False,
+    "POSTPROCESSING_HOOKS": [],
+    "COMPONENT_NO_READ_ONLY_REQUIRED": True,
 }
 
 # Custom Settings
