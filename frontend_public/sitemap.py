@@ -2,7 +2,7 @@ from django.contrib import sitemaps
 from django.urls import reverse
 
 
-class HomeViewSitemap(sitemaps.Sitemap):  # type: ignore[type-arg]
+class HomeSitemap(sitemaps.Sitemap):  # type: ignore[type-arg]
     priority = 1.0
     changefreq = "daily"
 
@@ -13,7 +13,7 @@ class HomeViewSitemap(sitemaps.Sitemap):  # type: ignore[type-arg]
         return reverse(item)
 
 
-class PublicViewSitemap(sitemaps.Sitemap):  # type: ignore[type-arg]
+class AboutSitemap(sitemaps.Sitemap):  # type: ignore[type-arg]
     priority = 0.8
     changefreq = "daily"
 
@@ -23,6 +23,18 @@ class PublicViewSitemap(sitemaps.Sitemap):  # type: ignore[type-arg]
             "people",
             "roadmap",
             "changelog",
+        ]
+
+    def location(self, item: str) -> str:
+        return reverse(item)
+
+
+class LegalSitemap(sitemaps.Sitemap):  # type: ignore[type-arg]
+    priority = 0.3
+    changefreq = "daily"
+
+    def items(self) -> list[str]:
+        return [
             "terms_and_conditions",
             "privacy_policy",
         ]
