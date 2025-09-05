@@ -20,6 +20,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.urls import reverse
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from git.exc import GitCommandError
 from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
@@ -99,6 +100,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
+    @extend_schema(operation_id="v1_projects_upload")
     def put(  # noqa: PLR0915
         self,
         request: Request,
@@ -402,6 +404,7 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     http_method_names = ["get"]
     lookup_field = "id"
 
+    @extend_schema(operation_id="v1_projects_download_retrieve_by_format")
     def get(
         self,
         request: Request,
@@ -504,6 +507,7 @@ class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     http_method_names = ["get"]
     lookup_field = "id"
 
+    @extend_schema(operation_id="v1_projects_download_blob_retrieve")
     def get(
         self,
         request: Request,
@@ -531,3 +535,18 @@ class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
             {"error": f"Object id=`{hexsha}` not found."},
             status=status.HTTP_404_NOT_FOUND,
         )
+
+
+class FileDownloadAtHashView(FileDownloadView):
+    """Dedicated view for hexsha route to provide unique operation_id."""
+
+    @extend_schema(operation_id="v1_projects_download_retrieve_by_format_at_hash")
+    def get(
+        self,
+        request: Request,
+        fileformat: str,
+        hexsha: str | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Response | FileResponse:
+        return super().get(request, fileformat, hexsha, *args, **kwargs)

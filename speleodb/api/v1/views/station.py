@@ -363,6 +363,10 @@ class ProjectStationListView(GenericAPIView[Station], SDBAPIViewMixin):
     """
 
     permission_classes = [StationUserHasReadAccess]
+    # Provide a serializer_class so schema generation doesn't fail. The response
+    # is a SuccessResponse wrapping a GeoJSON FeatureCollection, constructed
+    # manually below.
+    serializer_class = StationListSerializer
 
     def get(self, request: Request) -> Response:
         """Get all stations for a project in a map-friendly format."""

@@ -9,6 +9,7 @@ from django.urls import path
 
 import speleodb.utils.url_converters  # noqa: F401  # Necessary to import the converters
 from speleodb.api.v1.views.file import BlobDownloadView
+from speleodb.api.v1.views.file import FileDownloadAtHashView
 from speleodb.api.v1.views.file import FileDownloadView
 from speleodb.api.v1.views.file import FileUploadView
 from speleodb.api.v1.views.mutex import ProjectAcquireApiView
@@ -95,7 +96,7 @@ project_base_urlpatterns: list[URLPattern] = [
     ),
     path(
         "download/<download_format:fileformat>/<gitsha:hexsha>/",
-        FileDownloadView.as_view(),
+        FileDownloadAtHashView.as_view(),
         name="download_project_at_hash",
     ),
 ]
