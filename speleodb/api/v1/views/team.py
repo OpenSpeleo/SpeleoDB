@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -33,6 +34,7 @@ class TeamApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
         | (IsReadOnly & UserHasMemberAccess)
     ]
 
+    @extend_schema(operation_id="v1_teams_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         serializer = self.get_serializer(
@@ -64,6 +66,7 @@ class TeamSpecificApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
     serializer_class = SurveyTeamSerializer
     lookup_field = "id"
 
+    @extend_schema(operation_id="v1_team_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         team = self.get_object()
         user = self.get_user()

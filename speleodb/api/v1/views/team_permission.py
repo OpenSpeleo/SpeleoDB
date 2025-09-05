@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 class ProjectTeamPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
+    serializer_class = ProjectSerializer
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -53,6 +54,7 @@ class ProjectTeamPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):
 class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasAdminAccess | (IsReadOnly & UserHasReadAccess)]
+    serializer_class = ProjectSerializer
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:

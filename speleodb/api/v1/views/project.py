@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.db.utils import IntegrityError
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -38,6 +39,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
+    @extend_schema(operation_id="v1_project_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         project = self.get_object()
@@ -103,6 +105,7 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
 
+    @extend_schema(operation_id="v1_projects_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         serializer = self.get_serializer(
@@ -146,7 +149,18 @@ class ProjectGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasWebViewerAccess]
     lookup_field = "id"
+    # Provide a serializer_class to satisfy schema generation. We return a
+    # wrapped SuccessResponse with the following shape:
+    # {
+    #   "data": {
+    #     "geojson_files": [{"commit_sha": str, "date": str, "url": str}]
+    #   },
+    #   "success": true
+    # }
+    # Use ProjectSerializer as a placeholder; content is constructed manually.
+    serializer_class = ProjectSerializer
 
+    @extend_schema(operation_id="v1_project_geojson_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Return the raw GeoJSON data as JSON response."""
         # First check permissions by getting the object normally

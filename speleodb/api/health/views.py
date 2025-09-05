@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class StatusApiView(APIView):
     permission_classes = [permissions.AllowAny]
+    schema = None
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return SuccessResponse()
@@ -29,6 +30,7 @@ class StatusApiView(APIView):
 
 class HealthCheckApiView(APIView):
     permission_classes = [permissions.AllowAny]
+    schema = None
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Verify DB is connected

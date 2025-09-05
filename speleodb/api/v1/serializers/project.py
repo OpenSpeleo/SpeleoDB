@@ -6,6 +6,8 @@ from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
 from django_countries import countries
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from speleodb.surveys.models import PermissionLevel
@@ -20,6 +22,7 @@ def format_coordinate(value: Any) -> float:
     return round(float(value), 7)
 
 
+@extend_schema_field(OpenApiTypes.STR)
 class UserField(serializers.RelatedField[User, User, str]):
     def to_representation(self, value: User) -> str:
         return value.email
