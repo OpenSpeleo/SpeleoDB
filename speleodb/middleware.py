@@ -74,6 +74,9 @@ class DRFWrapResponseMiddleware:
         try:
             wrapped_response = self.get_response(request)
 
+            if wrapped_response.status_code == status.HTTP_304_NOT_MODIFIED:
+                return wrapped_response
+
             if not any(
                 request.path.startswith(path) for path in ["/api/v1", "/api/health"]
             ):

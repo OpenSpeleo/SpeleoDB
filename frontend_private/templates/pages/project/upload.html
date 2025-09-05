@@ -222,10 +222,10 @@
               return true;
 
             },
-            success: function(data) {
+            success: function(data, textStatus, xhr) {
               $("#loading_spinner").hide();
 
-              if (data.data.hexsha === null) {
+              if (xhr.status === 304) {
                 $("#modal_error_txt").text("The file(s) uploaded is/are identical to the one(s) currently stored.");
                 $("#modal_error").css('display', 'flex');
               } else {

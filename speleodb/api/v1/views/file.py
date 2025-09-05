@@ -18,6 +18,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
+from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -107,7 +108,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
         fileformat: str,
         *args: Any,
         **kwargs: Any,
-    ) -> Response:
+    ) -> Response | HttpResponse:
         user = self.get_user()
         with timed_section("Project Upload"):
             # ~~~~~~~~~~~~~~~~~~~~~~ START of URL Validation ~~~~~~~~~~~~~~~~~~~~ #
@@ -245,7 +246,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                         git_error = str(e)
                                 else:
                                     return ErrorResponse(
-                                        f"Git Error: {git_error}",
+                                        {"error": f"Git Error: {git_error}"},
                                         status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                                     )
 
@@ -282,39 +283,40 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                             message=commit_message, author=user
                         )
 
-                    if hexsha is not None:
-                        with timed_section("Conversion to GeoJSON"):
-                            for file in uploaded_files:
-                                if (
-                                    file.name == "project.tml"
-                                    and not project.exclude_geojson
-                                ):
-                                    try:
-                                        with contextlib.suppress(NoKnownAnchorError):
-                                            survey: Survey = ArianeInterface.from_file(
-                                                file
-                                            )
-                                            geojson_data = survey_to_geojson(survey)
+                    if hexsha is None:
+                        with timed_section("HTTP Error Response Construction"):
+                            return HttpResponse(status=304)
 
-                                            geojson_f = SimpleUploadedFile(
-                                                "test.geojson",  # filename
-                                                orjson.dumps(geojson_data),
-                                                content_type="application/geo+json",
-                                            )
+                    with timed_section("Conversion to GeoJSON"):
+                        for file in uploaded_files:
+                            if (
+                                file.name == "project.tml"
+                                and not project.exclude_geojson
+                            ):
+                                try:
+                                    with contextlib.suppress(NoKnownAnchorError):
+                                        survey: Survey = ArianeInterface.from_file(file)
+                                        geojson_data = survey_to_geojson(survey)
 
-                                            GeoJSON.objects.create(
-                                                project=project,
-                                                commit_sha=hexsha,
-                                                commit_date=timezone.now(),
-                                                file=geojson_f,
-                                            )
-                                    except Exception:
-                                        logger.exception("Error converting to GeoJSON")
-                                        continue
+                                        geojson_f = SimpleUploadedFile(
+                                            "test.geojson",  # filename
+                                            orjson.dumps(geojson_data),
+                                            content_type="application/geo+json",
+                                        )
 
-                                    break
+                                        GeoJSON.objects.create(
+                                            project=project,
+                                            commit_sha=hexsha,
+                                            commit_date=timezone.now(),
+                                            file=geojson_f,
+                                        )
+                                except Exception:
+                                    logger.exception("Error converting to GeoJSON")
+                                    continue
 
-                    with timed_section("HTTP Response Construction"):
+                                break
+
+                    with timed_section("HTTP Success Response Construction"):
                         # Refresh the `modified_date` field
                         project.save()
 
