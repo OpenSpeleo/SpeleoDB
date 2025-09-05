@@ -543,7 +543,7 @@ class FileDownloadAtHashView(FileDownloadView):
     """Dedicated view for hexsha route to provide unique operation_id."""
 
     @extend_schema(operation_id="v1_projects_download_retrieve_by_format_at_hash")
-    def get(
+    def get(  # type: ignore[override]
         self,
         request: Request,
         fileformat: str,
