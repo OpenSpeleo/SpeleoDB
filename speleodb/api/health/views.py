@@ -11,6 +11,7 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.views import APIView
 
+from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
@@ -35,16 +36,14 @@ class HealthCheckApiView(APIView):
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Verify DB is connected
         healthy, errors = self._perform_healthchecks()
-        data: dict[str, Any] | None = None
 
-        http_status: int
         if healthy:
-            http_status = status.HTTP_200_OK
-        else:
-            http_status = status.HTTP_503_SERVICE_UNAVAILABLE
-            data = {"errors": errors}
+            return SuccessResponse()
 
-        return SuccessResponse(data, status=http_status)
+        return ErrorResponse(
+            {"errors": errors},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
     def _perform_healthchecks(self) -> tuple[bool, list[str]]:
         errors = []

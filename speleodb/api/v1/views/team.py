@@ -84,7 +84,7 @@ class TeamSpecificApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
         )
         if serializer.is_valid():
             serializer.save()
-            return SuccessResponse(serializer.data, status=status.HTTP_200_OK)
+            return SuccessResponse(serializer.data)
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
@@ -101,7 +101,7 @@ class TeamSpecificApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
         )
         if serializer.is_valid():
             serializer.save()
-            return SuccessResponse(serializer.data, status=status.HTTP_200_OK)
+            return SuccessResponse(serializer.data)
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
