@@ -283,3 +283,37 @@ class StationCreateSerializer(serializers.ModelSerializer[Station]):
             data["longitude"] = format_coordinate(data["longitude"])
 
         return data
+
+
+class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
+    """Map serializer for POIs - returns GeoJSON-like format."""
+
+    class Meta:
+        model = Station
+        fields = [
+            "id",
+            "name",
+            "description",
+            "latitude",
+            "longitude",
+            "created_by",
+            "creation_date",
+        ]
+
+    def to_representation(self, instance: Station) -> dict[str, Any]:
+        """Convert to GeoJSON Feature format."""
+        return {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [float(instance.longitude), float(instance.latitude)],
+            },
+            "properties": {
+                "id": str(instance.id),
+                "name": instance.name,
+                "description": instance.description,
+                "created_by": instance.created_by.email,
+                "creation_date": instance.creation_date.isoformat(),
+                # "resource_count": StationResource.objects.filter(station=instance).count(),
+            },
+        }

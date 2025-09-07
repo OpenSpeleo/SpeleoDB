@@ -19,6 +19,8 @@ from speleodb.api.v1.views.project import ProjectGeoJsonApiView
 from speleodb.api.v1.views.project import ProjectSpecificApiView
 from speleodb.api.v1.views.project_explorer import ProjectGitExplorerApiView
 from speleodb.api.v1.views.project_explorer import ProjectRevisionsApiView
+from speleodb.api.v1.views.station import ProjectStationsGeoJSONView
+from speleodb.api.v1.views.station import ProjectStationsView
 from speleodb.api.v1.views.team_permission import ProjectTeamPermissionListView
 from speleodb.api.v1.views.team_permission import ProjectTeamPermissionView
 from speleodb.api.v1.views.user_permission import ProjectUserPermissionListView
@@ -98,6 +100,22 @@ project_base_urlpatterns: list[URLPattern] = [
         "download/<download_format:fileformat>/<gitsha:hexsha>/",
         FileDownloadAtHashView.as_view(),
         name="download_project_at_hash",
+    ),
+    # ============================ STATIONS ============================ #
+    path(
+        "stations/",
+        ProjectStationsView.as_view(),
+        name="stations_list",
+    ),
+    # path(
+    #     "stations/<uuid:id>/",
+    #     ProjectStationSpecificView.as_view(),
+    #     name="station_specific_api_view",
+    # ),
+    path(
+        "stations/geojson/",
+        ProjectStationsGeoJSONView.as_view(),
+        name="stations_list_geojson",
     ),
 ]
 

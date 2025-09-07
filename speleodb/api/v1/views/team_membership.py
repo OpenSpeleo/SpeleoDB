@@ -54,8 +54,7 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
             {
                 "team": team_serializer.data,
                 "membership": membership_serializer.data,
-            },
-            status=status.HTTP_200_OK,
+            }
         )
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -165,8 +164,7 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
             {
                 "team": team_serializer.data,
                 "membership": membership_serializer.data,
-            },
-            status=status.HTTP_200_OK,
+            }
         )
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -232,6 +230,5 @@ class TeamMembershipListApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
             {
                 "team": team_serializer.data,
                 "memberships": membership_serializer.data,
-            },
-            status=status.HTTP_200_OK,
+            }
         )
