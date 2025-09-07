@@ -116,9 +116,9 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
         if serializer.is_valid():
             try:
                 # Save with the station and created_by
-                resource = serializer.save(station=station, created_by=request.user)
+                serializer.save(station=station, created_by=request.user)
                 return SuccessResponse(
-                    {"resource": self.get_serializer(resource).data},
+                    {"resource": serializer.data},
                     status=status.HTTP_201_CREATED,
                 )
 
@@ -156,6 +156,7 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
         if serializer.is_valid():
             serializer.save()
             return SuccessResponse({"resource": serializer.data})
+
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )

@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404
+from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import FormParser
@@ -19,7 +20,12 @@ from rest_framework.viewsets import ModelViewSet
 from speleodb.api.v1.permissions import StationUserHasAdminAccess
 from speleodb.api.v1.permissions import StationUserHasReadAccess
 from speleodb.api.v1.permissions import StationUserHasWriteAccess
+from speleodb.api.v1.permissions import UserHasAdminAccess
+from speleodb.api.v1.permissions import UserHasReadAccess
+from speleodb.api.v1.permissions import UserHasWriteAccess
+from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers.station import StationCreateSerializer
+from speleodb.api.v1.serializers.station import StationGeoJSONSerializer
 from speleodb.api.v1.serializers.station import StationListSerializer
 from speleodb.api.v1.serializers.station import StationResourceSerializer
 from speleodb.api.v1.serializers.station import StationSerializer
@@ -129,12 +135,13 @@ class StationViewSet(ModelViewSet[Station], SDBAPIViewMixin):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             try:
-                station = serializer.save(project=project, created_by=request.user)
-                detail_serializer = StationSerializer(
-                    station, context=self.get_serializer_context()
-                )
+                serializer.save(project=project, created_by=request.user)
+                # detail_serializer = StationSerializer(
+                #     station, context=self.get_serializer_context()
+                # )
                 return SuccessResponse(
-                    {"station": detail_serializer.data}, status=status.HTTP_201_CREATED
+                    {"station": serializer.data},
+                    status=status.HTTP_201_CREATED,
                 )
             except IntegrityError as e:
                 # Check if it's a duplicate name error
@@ -198,12 +205,11 @@ class StationViewSet(ModelViewSet[Station], SDBAPIViewMixin):
         serializer = self.get_serializer(station, data=request.data, partial=partial)
         if serializer.is_valid():
             serializer.save()
-            # Refresh from DB to get updated relations
-            station.refresh_from_db()
-            detail_serializer = StationSerializer(
-                station, context=self.get_serializer_context()
-            )
-            return SuccessResponse({"station": detail_serializer.data})
+            # detail_serializer = StationSerializer(
+            #     station, context=self.get_serializer_context()
+            # )
+            return SuccessResponse({"station": serializer.data})
+
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
@@ -292,9 +298,10 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
             try:
                 # Set the station and created_by
                 station = self.get_serializer_context()["station"]
-                resource = serializer.save(station=station, created_by=request.user)
+                serializer.save(station=station, created_by=request.user)
+
                 return SuccessResponse(
-                    {"resource": self.get_serializer(resource).data},
+                    {"resource": serializer.data},
                     status=status.HTTP_201_CREATED,
                 )
 
@@ -332,8 +339,10 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
         if serializer.is_valid():
             serializer.save()
             return SuccessResponse({"resource": serializer.data})
+
         return ErrorResponse(
-            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+            {"errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -356,62 +365,62 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
         )
 
 
-class ProjectStationListView(GenericAPIView[Station], SDBAPIViewMixin):
+class ProjectStationsView(GenericAPIView[Station], SDBAPIViewMixin):
+    """
+    Simple view to get all stations that belongs to a user or create a station.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = StationSerializer
+    lookup_field = "id"
+
+    def get_queryset(self) -> QuerySet[Station]:
+        """Get only POIs created by the authenticated user."""
+        user = self.get_user()
+        return Station.objects.filter(project__in=user.projects).select_related(
+            "created_by"
+        )
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return SuccessResponse({"stations": serializer.data})
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Create a new POI for the authenticated user."""
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(created_by=request.user)
+            return SuccessResponse(
+                {"station": serializer.data},
+                status=status.HTTP_201_CREATED,
+            )
+
+        return ErrorResponse(
+            {"errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class ProjectStationsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixin):
     """
     Simple view to get all stations for a project as GeoJSON-compatible data.
     Used by the map viewer to display station markers.
     """
 
-    permission_classes = [StationUserHasReadAccess]
-    # Provide a serializer_class so schema generation doesn't fail. The response
-    # is a SuccessResponse wrapping a GeoJSON FeatureCollection, constructed
-    # manually below.
-    serializer_class = StationListSerializer
+    queryset = Project.objects.all()
+    permission_classes = [UserHasReadAccess]
+    serializer_class = ProjectSerializer  # Mentioned just to avoid failure
+    lookup_field = "id"
 
     def get(self, request: Request) -> Response:
         """Get all stations for a project in a map-friendly format."""
-        # Get project_id from query parameters
-        project_id = request.query_params.get("project_id")
-        if not project_id:
-            return ErrorResponse(
-                {"errors": {"project_id": ["This query parameter is required."]}},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        project = get_object_or_404(Project, id=project_id)
-        self.check_object_permissions(request, project)
+        project = self.get_object()
 
         stations = Station.objects.filter(project=project).select_related("created_by")
 
-        # Convert to GeoJSON-like format for easy map consumption
-        station_features = []
-        for station in stations:
-            # Skip stations without valid coordinates
-            if station.longitude is None or station.latitude is None:
-                continue
-
-            # Get resource count using direct query to avoid linter issues
-            resource_count = StationResource.objects.filter(station=station).count()
-
-            feature = {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [float(station.longitude), float(station.latitude)],
-                },
-                "properties": {
-                    "id": str(station.id),
-                    "name": station.name,
-                    "description": station.description,
-                    "resource_count": resource_count,
-                    "created_by": station.created_by.email
-                    if station.created_by
-                    else None,
-                    "creation_date": station.creation_date.isoformat(),
-                },
-            }
-            station_features.append(feature)
+        serializer = StationGeoJSONSerializer(stations, many=True)
 
         return SuccessResponse(
-            {"type": "FeatureCollection", "features": station_features}
+            {"type": "FeatureCollection", "features": serializer.data}
         )

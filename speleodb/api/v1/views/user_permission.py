@@ -50,8 +50,7 @@ class ProjectUserPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):
             {
                 "project": project_serializer.data,
                 "permissions": permission_serializer.data,
-            },
-            status=status.HTTP_200_OK,
+            }
         )
 
 
@@ -214,8 +213,7 @@ class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
             {
                 "project": project_serializer.data,
                 "permission": permission_serializer.data,
-            },
-            status=status.HTTP_200_OK,
+            }
         )
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
