@@ -1,27 +1,21 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from django.urls import path
 
-from speleodb.api.v1.views.resource import StationResourceViewSet
+from speleodb.api.v1.views.resource import StationResourceSpecificApiView
 
-# Direct resource CRUD operations (not nested under stations)
-urlpatterns = [
-    # Resource CRUD
-    path(
-        "",
-        StationResourceViewSet.as_view({"get": "list", "post": "create"}),
-        name="resource-list-create",
-    ),
+if TYPE_CHECKING:
+    from django.urls import URLPattern
+    from django.urls import URLResolver
+
+resource_urlpatterns: list[URLPattern | URLResolver] = [
     path(
         "<uuid:id>/",
-        StationResourceViewSet.as_view(
-            {
-                "get": "retrieve",
-                "put": "update",
-                "patch": "partial_update",
-                "delete": "destroy",
-            }
-        ),
+        StationResourceSpecificApiView.as_view(),
         name="resource-detail",
     ),
 ]

@@ -26,6 +26,7 @@ from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models import UserPermission
+from speleodb.surveys.models.station import StationResourceType
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.test_utils import named_product
 
@@ -68,12 +69,11 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             "description": "Created via right-click context menu with magnetic snap",
             "latitude": "20.194500",
             "longitude": "-87.497500",
-            "project_id": str(self.project.id),
         }
 
         # Create station via API (as frontend would do)
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=json.dumps(station_data),
             content_type="application/json",
             headers={"authorization": self.auth},
@@ -82,6 +82,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         if self.level < PermissionLevel.READ_AND_WRITE:
             # Read-only and web viewer users cannot create stations
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
@@ -89,28 +90,27 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         # Admin and write users can create stations
         assert response.status_code == status.HTTP_201_CREATED, (
+            response.status_code,
             self.level,
             self.permission_type,
         )
 
-        station_data_response = response.data["data"]["station"]
+        station_data_response = response.data["data"]
 
         # Verify station data matches frontend expectations
         assert station_data_response["name"] == station_data["name"]
         assert station_data_response["description"] == station_data["description"]
         assert station_data_response["latitude"] == float(station_data["latitude"])
         assert station_data_response["longitude"] == float(station_data["longitude"])
-        assert station_data_response["resource_count"] == 0
         assert "id" in station_data_response
-        assert "created_by_email" in station_data_response
+        assert "created_by" in station_data_response
         assert "creation_date" in station_data_response
 
         station_id = station_data_response["id"]
 
         # Test loading stations for map display (as frontend does after creation)
         response = self.client.get(
-            reverse("api:v1:stations-map"),
-            {"project_id": str(self.project.id)},
+            reverse("api:v1:project-stations-geojson", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
@@ -130,7 +130,6 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         ]
         assert feature["properties"]["id"] == station_id
         assert feature["properties"]["name"] == station_data["name"]
-        assert feature["properties"]["resource_count"] == 0
 
     def test_station_position_update_workflow(self) -> None:
         """Test updating station position via drag & drop (as frontend does)."""
@@ -156,16 +155,18 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         if self.level < PermissionLevel.READ_AND_WRITE:
             # Read-only and web viewer users cannot create stations
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
             return
 
         assert response.status_code == status.HTTP_200_OK, (
+            response.status_code,
             self.level,
             self.permission_type,
         )
-        updated_station = response.data["data"]["station"]
+        updated_station = response.data["data"]
 
         # Verify updated coordinates
         assert updated_station["latitude"] == new_latitude
@@ -191,19 +192,20 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         if self.level == PermissionLevel.WEB_VIEWER:
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
 
         else:
             assert response.status_code == status.HTTP_200_OK, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
-            station_data = response.data["data"]["station"]
+            station_data = response.data["data"]
 
             # Verify station includes all resources
-            assert station_data["resource_count"] == len(resources)
             assert len(station_data["resources"]) == len(resources)
 
             # Test each resource type
@@ -213,24 +215,23 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         # Test map display includes resource count
         response = self.client.get(
-            reverse("api:v1:stations-map"),
-            {"project_id": str(self.project.id)},
+            reverse("api:v1:project-stations-geojson", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
         if self.level == PermissionLevel.WEB_VIEWER:
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
 
         else:
             assert response.status_code == status.HTTP_200_OK, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
-            feature = response.data["data"]["features"][0]
-            assert feature["properties"]["resource_count"] == len(resources)
 
     def test_station_resource_creation_workflow_note(self) -> None:
         """Test creating new resources for a station (as frontend upload would do)."""
@@ -238,8 +239,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         # Test creating a note resource - MUST use JSON
         note_data = {
-            "station_id": str(station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Survey Notes from Frontend",
             "description": "Notes added via the station modal",
             "text_content": (
@@ -249,7 +249,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         }
 
         response = self.client.post(
-            reverse("api:v1:resource-list-create"),
+            reverse("api:v1:station-resources", kwargs={"id": station.id}),
             data=json.dumps(note_data),
             content_type="application/json",
             headers={"authorization": self.auth},
@@ -258,16 +258,18 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         if self.level < PermissionLevel.READ_AND_WRITE:
             # Read-only and web viewer users cannot create resources
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
             return
 
         assert response.status_code == status.HTTP_201_CREATED, (
+            response.status_code,
             self.level,
             self.permission_type,
         )
-        resource_data = response.data["data"]["resource"]
+        resource_data = response.data["data"]
 
         # Verify resource data
         assert resource_data["resource_type"] == note_data["resource_type"]
@@ -275,13 +277,13 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         assert resource_data["description"] == note_data["description"]
         assert resource_data["text_content"] == note_data["text_content"]
         assert "id" in resource_data
-        assert "created_by_email" in resource_data
+        assert "created_by" in resource_data
 
         # Verify station now has 1 resource
         assert (
             StationResource.objects.filter(
                 station=station,
-                resource_type=StationResource.ResourceType.NOTE,
+                resource_type=StationResourceType.NOTE,
             ).count()
             == 1
         )
@@ -292,8 +294,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         # Test creating a sketch resource - MUST use JSON
         sketch_data = {
-            "station_id": str(station.id),
-            "resource_type": StationResource.ResourceType.SKETCH,
+            "resource_type": StationResourceType.SKETCH,
             "title": "Cave Cross-Section",
             "description": "Hand-drawn diagram of the passage",
             "text_content": """<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
@@ -305,7 +306,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         }
 
         response = self.client.post(
-            reverse("api:v1:resource-list-create"),
+            reverse("api:v1:station-resources", kwargs={"id": station.id}),
             data=json.dumps(sketch_data),
             content_type="application/json",
             headers={"authorization": self.auth},
@@ -314,12 +315,14 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         if self.level < PermissionLevel.READ_AND_WRITE:
             # Read-only and web viewer users cannot create resources
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
             return
 
         assert response.status_code == status.HTTP_201_CREATED, (
+            response.status_code,
             self.level,
             self.permission_type,
         )
@@ -328,7 +331,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         assert (
             StationResource.objects.filter(
                 station=station,
-                resource_type=StationResource.ResourceType.SKETCH,
+                resource_type=StationResourceType.SKETCH,
             ).count()
             == 1
         )
@@ -344,6 +347,8 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         assert Station.objects.filter(id=station.id).exists()
         assert StationResource.objects.filter(station=station).count() == len(resources)
 
+        station_id = str(station.id)
+
         # Delete station via API
         response = self.client.delete(
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
@@ -353,16 +358,19 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         if self.level < PermissionLevel.ADMIN:
             # Read-only and web viewer users cannot create resources
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
             return
 
         assert response.status_code == status.HTTP_200_OK, (
+            response.status_code,
             self.level,
             self.permission_type,
         )
-        assert "deleted successfully" in response.data["data"]["message"]
+
+        assert station_id == response.data["data"]["id"]
 
         # Verify station and all resources are deleted
         assert not Station.objects.filter(id=station.id).exists()
@@ -370,8 +378,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         # Verify station no longer appears in map data
         response = self.client.get(
-            reverse("api:v1:stations-map"),
-            {"project_id": str(self.project.id)},
+            reverse("api:v1:project-stations-geojson", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
@@ -422,19 +429,20 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         # Test map data includes all stations with correct resource counts
         response = self.client.get(
-            reverse("api:v1:stations-map"),
-            {"project_id": str(self.project.id)},
+            reverse("api:v1:project-stations-geojson", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
         if self.level == PermissionLevel.WEB_VIEWER:
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
 
         else:
             assert response.status_code == status.HTTP_200_OK, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
@@ -446,42 +454,40 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
                 f["properties"]["name"]: f for f in geojson_data["features"]
             }
 
-            for i, station_data in enumerate(stations_data):
+            for station_data in stations_data:
                 feature = features_by_name[station_data["name"]]
                 assert feature["geometry"]["coordinates"] == [
                     float(station_data["longitude"]),  # type: ignore[arg-type]
                     float(station_data["latitude"]),  # type: ignore[arg-type]
                 ]
-                assert (
-                    feature["properties"]["resource_count"] == i + 1
-                )  # 1, 2, 3 resources
 
         # Test station list API
         response = self.client.get(
-            reverse("api:v1:station-list-create"),
-            {"project_id": str(self.project.id)},
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
         if self.level == PermissionLevel.WEB_VIEWER:
             assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                response.status_code,
                 self.level,
                 self.permission_type,
             )
             return
 
         assert response.status_code == status.HTTP_200_OK, (
+            response.status_code,
             self.level,
             self.permission_type,
         )
-        stations_list = response.data["data"]["stations"]
+        stations_list = response.json()["data"]
         assert len(stations_list) == 3  # noqa: PLR2004
 
         # Verify resource counts in list format
         stations_by_name = {s["name"]: s for s in stations_list}
         for i, station_data in enumerate(stations_data):
             _station = stations_by_name[station_data["name"]]
-            assert _station["resource_count"] == i + 1
+            assert len(_station["resources"]) == i + 1
 
     def test_station_permissions_read(self) -> None:
         """Test station operations with different permission levels."""
@@ -495,8 +501,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         # Read operations should work
         response = self.client.get(
-            reverse("api:v1:stations-map"),
-            {"project_id": str(self.project.id)},
+            reverse("api:v1:project-stations-geojson", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
@@ -519,13 +524,12 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         """Test station operations with different permission levels."""
         # Write operations should fail - MUST use JSON
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=json.dumps(
                 {
                     "name": "Test",
                     "latitude": "1.0",
                     "longitude": "1.0",
-                    "project_id": str(self.project.id),
                 }
             ),
             content_type="application/json",
@@ -621,8 +625,7 @@ class TestMapViewerWithFixtures(TransactionTestCase):
 
         # Test map viewer loads all stations
         response = self.client.get(
-            "/api/v1/stations/map/",
-            {"project_id": str(self.project.id)},
+            reverse("api:v1:project-stations-geojson", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
@@ -646,23 +649,22 @@ class TestMapViewerWithFixtures(TransactionTestCase):
         # Test detailed station loading (as modal would do)
         station_alpha = demo_stations[0]  # Station with most resources
         response = self.client.get(
-            f"/api/v1/stations/{station_alpha.id}/",
+            reverse("api:v1:station-detail", kwargs={"id": station_alpha.id}),
             headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_200_OK
-        station_data = response.json()["data"]["station"]
+        station_data = response.json()["data"]
 
         # Verify it has the expected 4 resources (photo, note, sketch, video)
-        assert station_data["resource_count"] == 4  # noqa: PLR2004
         assert len(station_data["resources"]) == 4  # noqa: PLR2004
 
         resource_types = {r["resource_type"] for r in station_data["resources"]}
         assert resource_types == {
-            StationResource.ResourceType.PHOTO,
-            StationResource.ResourceType.NOTE,
-            StationResource.ResourceType.SKETCH,
-            StationResource.ResourceType.VIDEO,
+            StationResourceType.PHOTO,
+            StationResourceType.NOTE,
+            StationResourceType.SKETCH,
+            StationResourceType.VIDEO,
         }
 
     def test_station_creation_with_realistic_names(self) -> None:
@@ -680,14 +682,13 @@ class TestMapViewerWithFixtures(TransactionTestCase):
         created_stations: list[dict[str, Any]] = []
         for name in station_names:
             response = self.client.post(
-                "/api/v1/stations/",
+                reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
                 data=json.dumps(
                     {
                         "name": name,
                         "description": f"Survey station {name}",
                         "latitude": str(20.1945 + len(created_stations) * 0.0001),
                         "longitude": str(-87.4975 + len(created_stations) * 0.0001),
-                        "project_id": str(self.project.id),
                     }
                 ),
                 headers={"authorization": self.auth},
@@ -695,12 +696,11 @@ class TestMapViewerWithFixtures(TransactionTestCase):
             )
 
             assert response.status_code == status.HTTP_201_CREATED
-            created_stations.append(response.json()["data"]["station"])
+            created_stations.append(response.json()["data"])
 
         # Verify all stations appear in map data
         response = self.client.get(
-            "/api/v1/stations/map/",
-            {"project_id": str(self.project.id)},
+            reverse("api:v1:project-stations-geojson", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 

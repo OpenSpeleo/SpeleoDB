@@ -14,7 +14,7 @@ from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import StationResource
+from speleodb.surveys.models.station import StationResourceType
 
 if TYPE_CHECKING:
     from speleodb.surveys.models.station import Station
@@ -44,8 +44,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         """Test successful video upload with a small file."""
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Test Video Upload",
             "description": "Testing video upload functionality",
             "file": get_video_file(),
@@ -53,9 +52,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + str(self.token.key)
         response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
+            reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -66,20 +63,19 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         )
 
         # Verify response data
-        resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == StationResource.ResourceType.VIDEO
+        resource_data = response.data["data"]
+        assert resource_data["resource_type"] == StationResourceType.VIDEO
         assert resource_data["title"] == "Test Video Upload"
         assert resource_data["file"] is not None
         assert "file_url" in resource_data or "file" in resource_data
 
         # Verify resource was created with correct type
-        assert resource_data["resource_type"] == StationResource.ResourceType.VIDEO
+        assert resource_data["resource_type"] == StationResourceType.VIDEO
 
     def test_video_upload_without_file(self) -> None:
         """Test video upload without providing a file."""
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Video Without File",
             "description": "This should fail",
             # No file provided
@@ -87,9 +83,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + str(self.token.key)
         response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
+            reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -117,8 +111,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         )
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Large Video",
             "description": "Video over size limit",
             "file": video_file,
@@ -126,9 +119,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + str(self.token.key)
         response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
+            reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -149,8 +140,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
     ) -> None:
         """Test video upload with different video formats."""
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": f"Test {filename}",
             "description": f"Testing {content_type} format",
             "file": get_video_file(),
@@ -158,9 +148,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + str(self.token.key)
         response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
+            reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -171,8 +159,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
     def test_video_upload_with_all_fields(self) -> None:
         """Test video upload with all optional fields."""
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Complete Video Test",
             "description": (
                 "This video has all fields populated including a long description that "
@@ -183,16 +170,14 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + str(self.token.key)
         response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
+            reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": auth},
         )
 
         assert response.status_code == status.HTTP_201_CREATED
 
-        resource_data = response.data["data"]["resource"]
+        resource_data = response.data["data"]
         assert resource_data["title"] == "Complete Video Test"
         assert len(resource_data["description"]) > 50  # noqa: PLR2004
 
@@ -201,8 +186,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         video_file = SimpleUploadedFile("empty.mp4", b"", content_type="video/mp4")
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Empty Video",
             "description": "Video file is empty",
             "file": video_file,
@@ -210,9 +194,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + str(self.token.key)
         response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
+            reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -224,8 +206,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         # Create form data manually to ensure proper structure
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Form Data Test",
             "description": "Testing form data structure",
             "file": get_video_file(),
@@ -234,9 +215,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         auth = self.header_prefix + str(self.token.key)
 
         response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
+            reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": auth},
             format="multipart",  # Explicitly set format to multipart
@@ -248,17 +227,14 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         """Test video upload with missing required fields."""
         # Missing title
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             # "title": "Missing",  # Title is missing
             "file": get_video_file(),
         }
 
         auth = self.header_prefix + str(self.token.key)
         response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
+            reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -270,23 +246,20 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         """Test updating a video resource with a new file."""
         # First create a video resource
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Initial Video",
             "file": get_video_file(),
         }
 
         auth = self.header_prefix + str(self.token.key)
         response = self.client.post(
-            reverse(
-                "api:v1:resource-list-create",
-            ),
+            reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": auth},
         )
 
         assert response.status_code == status.HTTP_201_CREATED
-        resource_id = response.data["data"]["resource"]["id"]
+        resource_id = response.data["data"]["id"]
 
         # Now update with a new file
         update_data = {
@@ -305,4 +278,4 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["data"]["resource"]["title"] == "Updated Video"
+        assert response.data["data"]["title"] == "Updated Video"

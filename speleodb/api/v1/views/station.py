@@ -5,413 +5,186 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models.query import QuerySet
-from django.shortcuts import get_object_or_404
+from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from rest_framework.parsers import FormParser
-from rest_framework.parsers import JSONParser
-from rest_framework.parsers import MultiPartParser
-from rest_framework.viewsets import ModelViewSet
 
+from speleodb.api.v1.permissions import IsObjectCreation
+from speleodb.api.v1.permissions import IsObjectDeletion
+from speleodb.api.v1.permissions import IsObjectEdition
+from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import StationUserHasAdminAccess
 from speleodb.api.v1.permissions import StationUserHasReadAccess
 from speleodb.api.v1.permissions import StationUserHasWriteAccess
-from speleodb.api.v1.serializers.station import StationCreateSerializer
-from speleodb.api.v1.serializers.station import StationListSerializer
-from speleodb.api.v1.serializers.station import StationResourceSerializer
+from speleodb.api.v1.permissions import UserHasReadAccess
+from speleodb.api.v1.serializers.station import StationGeoJSONSerializer
 from speleodb.api.v1.serializers.station import StationSerializer
+from speleodb.api.v1.serializers.station import StationWithResourcesSerializer
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import Station
-from speleodb.surveys.models import StationResource
+from speleodb.surveys.models.permission_lvl import PermissionLevel
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from rest_framework.compat import QuerySet
     from rest_framework.request import Request
     from rest_framework.response import Response
+    from rest_framework.serializers import ModelSerializer
 
 
-class StationViewSet(ModelViewSet[Station], SDBAPIViewMixin):
+class StationsApiView(GenericAPIView[Station], SDBAPIViewMixin):
     """
-    ViewSet for managing stations.
-
-    - List/Retrieve: Requires READ_ACCESS on station's project
-    - Create/Update/Delete: Requires WRITE_ACCESS on station's project
+    Simple view to get all stations that belongs to a user or create a station.
     """
 
-    serializer_class = StationSerializer
-    permission_classes = [StationUserHasReadAccess]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self) -> QuerySet[Station]:
+        """Get only stations that the user has access to."""
+        user = self.get_user()
+        user_projects: list[Project] = [
+            perm.project
+            for perm in user.permissions
+            if perm.level >= PermissionLevel.READ_ONLY
+        ]
+        return Station.objects.filter(project__in=user_projects).select_related(
+            "created_by"
+        )
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        stations = self.get_queryset()
+        serializer = StationWithResourcesSerializer(stations, many=True)
+        return SuccessResponse(serializer.data)
+
+
+class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
+    queryset = Station.objects.all().select_related("created_by")
+    permission_classes = [
+        (IsObjectDeletion & StationUserHasAdminAccess)
+        | (IsObjectEdition & StationUserHasWriteAccess)
+        | (IsReadOnly & StationUserHasReadAccess)
+    ]
     lookup_field = "id"
 
-    def get_queryset(self) -> QuerySet[Station, Station]:
-        """Get stations, optionally filtered by project."""
-        queryset = Station.objects.all()
-
-        # Filter by project if provided as query parameter
-        project_id = self.request.query_params.get("project_id")
-        if project_id:
-            queryset = queryset.filter(project_id=project_id)
-
-        return queryset
-
-    def get_serializer_class(self) -> type[Any]:
-        """Return appropriate serializer based on action."""
-        match self.action:
-            case "list":
-                return StationListSerializer
-
-            case "create":
-                return StationCreateSerializer
-
-            case _:
-                return StationSerializer
-
-    def get_permissions(  # type: ignore[override]
-        self,
-    ) -> (
-        list[StationUserHasAdminAccess]
-        | list[StationUserHasWriteAccess]
-        | list[StationUserHasReadAccess]
-    ):
-        """Set permissions based on action."""
-        match self.action:
-            case "create" | "update" | "partial_update":
-                return [StationUserHasWriteAccess()]
-
-            case "destroy":
-                return [StationUserHasAdminAccess()]
-
-            case _:
-                return [StationUserHasReadAccess()]
-
-    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """List stations, optionally filtered by project."""
-        # If filtering by project, check permissions on that project
-        project_id = request.query_params.get("project_id")
-        if project_id:
-            project = get_object_or_404(Project, id=project_id)
-            self.check_object_permissions(request, project)
-
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return SuccessResponse({"stations": serializer.data})
-
-    def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Get detailed station information including resources."""
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station = self.get_object()
-        # Check permissions on the station's project
-        self.check_object_permissions(request, station.project)
+        serializer = StationWithResourcesSerializer(station)
 
-        serializer = self.get_serializer(station)
-        return SuccessResponse({"station": serializer.data})
+        return SuccessResponse(serializer.data)
 
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Create a new station."""
-        # Get project_id from request body
-        project_id = request.data.get("project_id")
-        if not project_id:
-            return ErrorResponse(
-                {"errors": {"project_id": ["This field is required."]}},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Check permissions against the project
-        project = get_object_or_404(Project, id=project_id)
-        self.check_object_permissions(request, project)
-
-        serializer = self.get_serializer(data=request.data)
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        station = self.get_object()
+        serializer = StationSerializer(station, data=request.data)
         if serializer.is_valid():
-            try:
-                station = serializer.save(project=project, created_by=request.user)
-                detail_serializer = StationSerializer(
-                    station, context=self.get_serializer_context()
-                )
-                return SuccessResponse(
-                    {"station": detail_serializer.data}, status=status.HTTP_201_CREATED
-                )
-            except IntegrityError as e:
-                # Check if it's a duplicate name error
-                if "unique constraint" in str(e).lower() and "name" in str(e).lower():
-                    return ErrorResponse(
-                        {
-                            "errors": {
-                                "name": [
-                                    (
-                                        f"A station with the name "
-                                        f"'{request.data.get('name', '')}' already "
-                                        "exists in this project."
-                                    )
-                                ]
-                            }
-                        },
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                # Re-raise if it's a different integrity error
-                raise
+            serializer.save()
+            return SuccessResponse(serializer.data)
+
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Update a station."""
-        partial = kwargs.pop("partial", False)
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        station = self.get_object()
+        serializer = StationSerializer(station, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return SuccessResponse(serializer.data)
+
+        return ErrorResponse(
+            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station = self.get_object()
 
-        # Check permissions on the station's current project
-        self.check_object_permissions(request, station.project)
+        # Backup object `id` before deletion
+        station_id = station.id
 
-        # Check if project is being changed
-        new_project_id = request.data.get("project_id")
-        if new_project_id and str(new_project_id) != str(station.project.id):
-            # Check permissions on the new project
-            new_project = get_object_or_404(Project, id=new_project_id)
-            self.check_object_permissions(request, new_project)
+        # Delete object itself
+        station.delete()
 
-            # Check if a station with the same name exists in the new project
-            station_name = request.data.get("name", station.name)
-            if (
-                Station.objects.filter(project=new_project, name=station_name)
-                .exclude(id=station.id)
-                .exists()
-            ):
+        return SuccessResponse({"id": str(station_id)})
+
+
+class ProjectStationsApiView(GenericAPIView[Project], SDBAPIViewMixin):
+    """
+    Simple view to get all stations that belongs to a user or create a station.
+    """
+
+    queryset = Project.objects.all()
+    permission_classes = [
+        (IsObjectCreation & StationUserHasWriteAccess)
+        | (IsReadOnly & StationUserHasReadAccess)
+    ]
+    lookup_field = "id"
+
+    def get_serializer_class(self) -> type[ModelSerializer[Station]]:  # type: ignore[override]
+        if self.request.method == "GET":
+            return StationWithResourcesSerializer
+        return StationSerializer
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Get all stations that belong to the project."""
+        project = self.get_object()
+        serializer = StationWithResourcesSerializer(
+            project.rel_stations.all().select_related("created_by"),
+            many=True,
+        )
+        return SuccessResponse(serializer.data)
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Create a new station for the project."""
+        project = self.get_object()
+        # request.data["project"] = project
+        serializer = StationSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                serializer.save(created_by=request.user, project=project)
+            except IntegrityError:
                 return ErrorResponse(
                     {
-                        "errors": {
-                            "name": [
-                                (
-                                    f"A station with the name '{station_name}' already "
-                                    "exists in the target project."
-                                )
-                            ]
-                        }
+                        "error": (
+                            f"The station name `{serializer.data['name']}` already "
+                            f"exists in project `{project.id}`"
+                        )
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        serializer = self.get_serializer(station, data=request.data, partial=partial)
-        if serializer.is_valid():
-            serializer.save()
-            # Refresh from DB to get updated relations
-            station.refresh_from_db()
-            detail_serializer = StationSerializer(
-                station, context=self.get_serializer_context()
+            return SuccessResponse(
+                serializer.data,
+                status=status.HTTP_201_CREATED,
             )
-            return SuccessResponse({"station": detail_serializer.data})
+
         return ErrorResponse(
-            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Delete a station and all its resources."""
-        station = self.get_object()
-
-        # Check permissions on the station's project
-        self.check_object_permissions(request, station.project)
-
-        station_id = station.id
-        station.delete()
-        return SuccessResponse(
-            {"message": f"Station {station_id} deleted successfully"}
+            {"errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
 
-class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
-    """
-    ViewSet for managing station resources.
-
-    - List/Retrieve: Requires READ_ACCESS
-    - Create/Update/Delete: Requires WRITE_ACCESS
-    """
-
-    serializer_class = StationResourceSerializer
-    permission_classes = [StationUserHasReadAccess]
-    parser_classes = [MultiPartParser, FormParser, JSONParser]
-    lookup_field = "id"
-
-    def get_queryset(self) -> QuerySet[StationResource, StationResource]:
-        """Get resources for the specified station."""
-        station_id = self.kwargs.get("station_id")
-        station = get_object_or_404(Station, id=station_id)
-        return StationResource.objects.filter(station=station)
-
-    def get_permissions(  # type: ignore[override]
-        self,
-    ) -> list[StationUserHasWriteAccess] | list[StationUserHasReadAccess]:
-        """Set permissions based on action."""
-        if self.action in ["create", "update", "partial_update", "destroy"]:
-            return [StationUserHasWriteAccess()]
-
-        return [StationUserHasReadAccess()]
-
-    def get_serializer_context(self) -> dict[str, Any]:
-        """Add station to serializer context."""
-        context = super().get_serializer_context()
-        station_id = self.kwargs.get("station_id")
-        if station_id:
-            context["station"] = get_object_or_404(Station, id=station_id)
-        return context
-
-    def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Get detailed station resource information."""
-        # Check permissions against the station's project
-        station_id = self.kwargs.get("station_id")
-        station = get_object_or_404(Station, id=station_id)
-        self.check_object_permissions(request, station.project)
-
-        resource = self.get_object()
-        serializer = self.get_serializer(resource)
-        return SuccessResponse({"resource": serializer.data})
-
-    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """List all resources for a station."""
-        # Check permissions against the station's project
-        station_id = self.kwargs.get("station_id")
-        station = get_object_or_404(Station, id=station_id)
-        self.check_object_permissions(request, station.project)
-
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return SuccessResponse({"resources": serializer.data})
-
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Create a new station resource."""
-        # Check permissions against the station's project
-        station_id = self.kwargs.get("station_id")
-        station = get_object_or_404(Station, id=station_id)
-        self.check_object_permissions(request, station.project)
-
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                # Set the station and created_by
-                station = self.get_serializer_context()["station"]
-                resource = serializer.save(station=station, created_by=request.user)
-                return SuccessResponse(
-                    {"resource": self.get_serializer(resource).data},
-                    status=status.HTTP_201_CREATED,
-                )
-
-            except ValidationError as e:
-                # Convert model validation errors to API format
-                errors: Mapping[str, Any] = {}
-                if hasattr(e, "error_dict"):
-                    errors = e.error_dict
-                elif hasattr(e, "error_list"):
-                    errors = {"non_field_errors": e.error_list}
-                else:
-                    errors = {"non_field_errors": [str(e)]}
-
-                # Convert ErrorList to list of strings
-                for field, error_list in errors.items():
-                    errors[field] = [str(error) for error in error_list]  # type: ignore[misc]
-
-                return ErrorResponse(
-                    {"errors": errors}, status=status.HTTP_400_BAD_REQUEST
-                )
-        return ErrorResponse(
-            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Update a station resource."""
-        # Check permissions against the station's project
-        station_id = self.kwargs.get("station_id")
-        station = get_object_or_404(Station, id=station_id)
-        self.check_object_permissions(request, station.project)
-
-        partial = kwargs.pop("partial", False)
-        resource = self.get_object()
-        serializer = self.get_serializer(resource, data=request.data, partial=partial)
-        if serializer.is_valid():
-            serializer.save()
-            return SuccessResponse({"resource": serializer.data})
-        return ErrorResponse(
-            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Delete a station resource."""
-        # Check permissions against the station's project
-        station_id = self.kwargs.get("station_id")
-        station = get_object_or_404(Station, id=station_id)
-        self.check_object_permissions(request, station.project)
-
-        resource = self.get_object()
-        resource_id = resource.id
-
-        # Delete associated file if it exists
-        if resource.file:
-            resource.file.delete(save=False)
-
-        resource.delete()
-        return SuccessResponse(
-            {"message": f"Resource {resource_id} deleted successfully"}
-        )
-
-
-class ProjectStationListView(GenericAPIView[Station], SDBAPIViewMixin):
+class ProjectStationsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixin):
     """
     Simple view to get all stations for a project as GeoJSON-compatible data.
     Used by the map viewer to display station markers.
     """
 
-    permission_classes = [StationUserHasReadAccess]
-    # Provide a serializer_class so schema generation doesn't fail. The response
-    # is a SuccessResponse wrapping a GeoJSON FeatureCollection, constructed
-    # manually below.
-    serializer_class = StationListSerializer
+    queryset = Project.objects.all()
+    permission_classes = [UserHasReadAccess]
+    lookup_field = "id"
+    serializer_class = StationGeoJSONSerializer  # type: ignore[assignment]
 
-    def get(self, request: Request) -> Response:
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all stations for a project in a map-friendly format."""
-        # Get project_id from query parameters
-        project_id = request.query_params.get("project_id")
-        if not project_id:
-            return ErrorResponse(
-                {"errors": {"project_id": ["This query parameter is required."]}},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        project = get_object_or_404(Project, id=project_id)
-        self.check_object_permissions(request, project)
+        project = self.get_object()
 
         stations = Station.objects.filter(project=project).select_related("created_by")
 
-        # Convert to GeoJSON-like format for easy map consumption
-        station_features = []
-        for station in stations:
-            # Skip stations without valid coordinates
-            if station.longitude is None or station.latitude is None:
-                continue
-
-            # Get resource count using direct query to avoid linter issues
-            resource_count = StationResource.objects.filter(station=station).count()
-
-            feature = {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [float(station.longitude), float(station.latitude)],
-                },
-                "properties": {
-                    "id": str(station.id),
-                    "name": station.name,
-                    "description": station.description,
-                    "resource_count": resource_count,
-                    "created_by": station.created_by.email
-                    if station.created_by
-                    else None,
-                    "creation_date": station.creation_date.isoformat(),
-                },
-            }
-            station_features.append(feature)
+        serializer = StationGeoJSONSerializer(stations, many=True)
 
         return SuccessResponse(
-            {"type": "FeatureCollection", "features": station_features}
+            {"type": "FeatureCollection", "features": serializer.data}
         )

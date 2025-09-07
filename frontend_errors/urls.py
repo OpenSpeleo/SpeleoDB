@@ -25,18 +25,25 @@ if settings.DEBUG:
             "400/",
             default_views.bad_request,
             kwargs={"exception": Exception("Bad Request!")},
+            name="400_page",
         ),
         path(
             "403/",
             default_views.permission_denied,
             kwargs={"exception": Exception("Permission Denied")},
+            name="403_page",
         ),
         path(
             "404/",
             default_views.page_not_found,
             kwargs={"exception": Exception("Page not Found")},
+            name="404_page",
         ),
-        path("500/", default_views.server_error),
+        path(
+            "500/",
+            default_views.server_error,
+            name="500_page",
+        ),
     ]
 
 else:

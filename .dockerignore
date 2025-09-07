@@ -19,14 +19,19 @@ Procfile
 
 # Directories
 # ls -al | grep '^d' | awk '{print $9}'
+**/__pycache__
 .envs
 .git
 .github
 .ipython
+.mypy_cache
 .pytest_cache
+.ropeproject
 .ruff_cache
 .venv
 .vscode
 .workdir
+.uv
+.venv
 docs
 fixtures

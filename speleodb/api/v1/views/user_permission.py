@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from rest_framework.response import Response
 
 
-class ProjectUserPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):
+class ProjectUserPermissionListApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
@@ -50,12 +50,11 @@ class ProjectUserPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):
             {
                 "project": project_serializer.data,
                 "permissions": permission_serializer.data,
-            },
-            status=status.HTTP_200_OK,
+            }
         )
 
 
-class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
+class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasAdminAccess]
     serializer_class = ProjectSerializer
@@ -214,8 +213,7 @@ class ProjectUserPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
             {
                 "project": project_serializer.data,
                 "permission": permission_serializer.data,
-            },
-            status=status.HTTP_200_OK,
+            }
         )
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:

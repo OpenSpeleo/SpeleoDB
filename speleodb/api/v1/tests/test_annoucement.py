@@ -17,7 +17,7 @@ class TestPublicAnnouncementApiView(BaseAPITestCase):
     """
 
     url_name: str = (
-        "api:v1:public_announcements"  # Ensure you have this named in your urls.py
+        "api:v1:public-announcements"  # Ensure you have this named in your urls.py
     )
 
     def setUp(self) -> None:

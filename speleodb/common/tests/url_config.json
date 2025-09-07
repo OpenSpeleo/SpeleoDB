@@ -1,0 +1,890 @@
+[
+    {
+        "url": "/",
+        "module": "django.views.generic.base.TemplateView",
+        "name": "home",
+        "decorators": ""
+    },
+    {
+        "url": "/400/",
+        "module": "django.views.defaults.bad_request",
+        "name": "errors:400_page",
+        "decorators": ""
+    },
+    {
+        "url": "/403/",
+        "module": "django.views.defaults.permission_denied",
+        "name": "errors:403_page",
+        "decorators": ""
+    },
+    {
+        "url": "/404/",
+        "module": "django.views.defaults.page_not_found",
+        "name": "errors:404_page",
+        "decorators": ""
+    },
+    {
+        "url": "/500/",
+        "module": "django.views.defaults.server_error",
+        "name": "errors:500_page",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/account/email",
+        "module": "allauth.headless.account.views.ManageEmailView",
+        "name": "headless:app:account:manage_email",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/account/password/change",
+        "module": "allauth.headless.account.views.ChangePasswordView",
+        "name": "headless:app:account:change_password",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/account/phone",
+        "module": "allauth.headless.account.views.ManagePhoneView",
+        "name": "headless:app:account:manage_phone",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/code/confirm",
+        "module": "allauth.headless.account.views.ConfirmLoginCodeView",
+        "name": "headless:app:account:confirm_login_code",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/email/verify",
+        "module": "allauth.headless.account.views.VerifyEmailView",
+        "name": "headless:app:account:verify_email",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/email/verify/resend",
+        "module": "allauth.headless.account.views.ResendEmailVerificationCodeView",
+        "name": "headless:app:account:resend_email_verification_code",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/login",
+        "module": "allauth.headless.account.views.LoginView",
+        "name": "headless:app:account:login",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/password/request",
+        "module": "allauth.headless.account.views.RequestPasswordResetView",
+        "name": "headless:app:account:request_password_reset",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/password/reset",
+        "module": "allauth.headless.account.views.ResetPasswordView",
+        "name": "headless:app:account:reset_password",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/phone/verify",
+        "module": "allauth.headless.account.views.VerifyPhoneView",
+        "name": "headless:app:account:verify_phone",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/phone/verify/resend",
+        "module": "allauth.headless.account.views.ResendPhoneVerificationCodeView",
+        "name": "headless:app:account:resend_phone_verification_code",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/reauthenticate",
+        "module": "allauth.headless.account.views.ReauthenticateView",
+        "name": "headless:app:account:reauthenticate",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/session",
+        "module": "allauth.headless.account.views.SessionView",
+        "name": "headless:app:account:current_session",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/auth/signup",
+        "module": "allauth.headless.account.views.SignupView",
+        "name": "headless:app:account:signup",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/app/v1/config",
+        "module": "allauth.headless.base.views.ConfigView",
+        "name": "headless:app:config",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/account/email",
+        "module": "allauth.headless.account.views.ManageEmailView",
+        "name": "headless:browser:account:manage_email",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/account/password/change",
+        "module": "allauth.headless.account.views.ChangePasswordView",
+        "name": "headless:browser:account:change_password",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/account/phone",
+        "module": "allauth.headless.account.views.ManagePhoneView",
+        "name": "headless:browser:account:manage_phone",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/code/confirm",
+        "module": "allauth.headless.account.views.ConfirmLoginCodeView",
+        "name": "headless:browser:account:confirm_login_code",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/email/verify",
+        "module": "allauth.headless.account.views.VerifyEmailView",
+        "name": "headless:browser:account:verify_email",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/email/verify/resend",
+        "module": "allauth.headless.account.views.ResendEmailVerificationCodeView",
+        "name": "headless:browser:account:resend_email_verification_code",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/login",
+        "module": "allauth.headless.account.views.LoginView",
+        "name": "headless:browser:account:login",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/password/request",
+        "module": "allauth.headless.account.views.RequestPasswordResetView",
+        "name": "headless:browser:account:request_password_reset",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/password/reset",
+        "module": "allauth.headless.account.views.ResetPasswordView",
+        "name": "headless:browser:account:reset_password",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/phone/verify",
+        "module": "allauth.headless.account.views.VerifyPhoneView",
+        "name": "headless:browser:account:verify_phone",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/phone/verify/resend",
+        "module": "allauth.headless.account.views.ResendPhoneVerificationCodeView",
+        "name": "headless:browser:account:resend_phone_verification_code",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/reauthenticate",
+        "module": "allauth.headless.account.views.ReauthenticateView",
+        "name": "headless:browser:account:reauthenticate",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/session",
+        "module": "allauth.headless.account.views.SessionView",
+        "name": "headless:browser:account:current_session",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/auth/signup",
+        "module": "allauth.headless.account.views.SignupView",
+        "name": "headless:browser:account:signup",
+        "decorators": ""
+    },
+    {
+        "url": "/_allauth/browser/v1/config",
+        "module": "allauth.headless.base.views.ConfigView",
+        "name": "headless:browser:config",
+        "decorators": ""
+    },
+    {
+        "url": "/about/",
+        "module": "django.views.generic.base.TemplateView",
+        "name": "about",
+        "decorators": ""
+    },
+    {
+        "url": "/account/confirm-email/<key>/",
+        "module": "allauth.account.views.ConfirmEmailView",
+        "name": "account_confirm_email",
+        "decorators": ""
+    },
+    {
+        "url": "/account/password/reset/",
+        "module": "frontend_public.views.PasswordResetView",
+        "name": "account_reset_password",
+        "decorators": ""
+    },
+    {
+        "url": "/account/password/reset/<uidb36>-<key>/",
+        "module": "frontend_public.views.PasswordResetFromKeyView",
+        "name": "account_reset_password_from_key",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/account/email",
+        "module": "allauth.headless.account.views.ManageEmailView",
+        "name": "api:auth:app:account:manage_email",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/account/password/change",
+        "module": "allauth.headless.account.views.ChangePasswordView",
+        "name": "api:auth:app:account:change_password",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/account/phone",
+        "module": "allauth.headless.account.views.ManagePhoneView",
+        "name": "api:auth:app:account:manage_phone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/code/confirm",
+        "module": "allauth.headless.account.views.ConfirmLoginCodeView",
+        "name": "api:auth:app:account:confirm_login_code",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/email/verify",
+        "module": "allauth.headless.account.views.VerifyEmailView",
+        "name": "api:auth:app:account:verify_email",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/email/verify/resend",
+        "module": "allauth.headless.account.views.ResendEmailVerificationCodeView",
+        "name": "api:auth:app:account:resend_email_verification_code",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/login",
+        "module": "allauth.headless.account.views.LoginView",
+        "name": "api:auth:app:account:login",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/password/request",
+        "module": "allauth.headless.account.views.RequestPasswordResetView",
+        "name": "api:auth:app:account:request_password_reset",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/password/reset",
+        "module": "allauth.headless.account.views.ResetPasswordView",
+        "name": "api:auth:app:account:reset_password",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/phone/verify",
+        "module": "allauth.headless.account.views.VerifyPhoneView",
+        "name": "api:auth:app:account:verify_phone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/phone/verify/resend",
+        "module": "allauth.headless.account.views.ResendPhoneVerificationCodeView",
+        "name": "api:auth:app:account:resend_phone_verification_code",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/reauthenticate",
+        "module": "allauth.headless.account.views.ReauthenticateView",
+        "name": "api:auth:app:account:reauthenticate",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/session",
+        "module": "allauth.headless.account.views.SessionView",
+        "name": "api:auth:app:account:current_session",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/auth/signup",
+        "module": "allauth.headless.account.views.SignupView",
+        "name": "api:auth:app:account:signup",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/config",
+        "module": "allauth.headless.base.views.ConfigView",
+        "name": "api:auth:app:config",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/account/email",
+        "module": "allauth.headless.account.views.ManageEmailView",
+        "name": "api:auth:browser:account:manage_email",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/account/password/change",
+        "module": "allauth.headless.account.views.ChangePasswordView",
+        "name": "api:auth:browser:account:change_password",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/account/phone",
+        "module": "allauth.headless.account.views.ManagePhoneView",
+        "name": "api:auth:browser:account:manage_phone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/code/confirm",
+        "module": "allauth.headless.account.views.ConfirmLoginCodeView",
+        "name": "api:auth:browser:account:confirm_login_code",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/email/verify",
+        "module": "allauth.headless.account.views.VerifyEmailView",
+        "name": "api:auth:browser:account:verify_email",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/email/verify/resend",
+        "module": "allauth.headless.account.views.ResendEmailVerificationCodeView",
+        "name": "api:auth:browser:account:resend_email_verification_code",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/login",
+        "module": "allauth.headless.account.views.LoginView",
+        "name": "api:auth:browser:account:login",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/password/request",
+        "module": "allauth.headless.account.views.RequestPasswordResetView",
+        "name": "api:auth:browser:account:request_password_reset",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/password/reset",
+        "module": "allauth.headless.account.views.ResetPasswordView",
+        "name": "api:auth:browser:account:reset_password",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/phone/verify",
+        "module": "allauth.headless.account.views.VerifyPhoneView",
+        "name": "api:auth:browser:account:verify_phone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/phone/verify/resend",
+        "module": "allauth.headless.account.views.ResendPhoneVerificationCodeView",
+        "name": "api:auth:browser:account:resend_phone_verification_code",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/reauthenticate",
+        "module": "allauth.headless.account.views.ReauthenticateView",
+        "name": "api:auth:browser:account:reauthenticate",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/session",
+        "module": "allauth.headless.account.views.SessionView",
+        "name": "api:auth:browser:account:current_session",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/auth/signup",
+        "module": "allauth.headless.account.views.SignupView",
+        "name": "api:auth:browser:account:signup",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/browser/v1/config",
+        "module": "allauth.headless.base.views.ConfigView",
+        "name": "api:auth:browser:config",
+        "decorators": ""
+    },
+    {
+        "url": "/api/docs/",
+        "module": "drf_spectacular.views.SpectacularSwaggerView",
+        "name": "api-docs",
+        "decorators": ""
+    },
+    {
+        "url": "/api/health/",
+        "module": "speleodb.api.health.views.StatusApiView",
+        "name": "api:health:status",
+        "decorators": ""
+    },
+    {
+        "url": "/api/health/details/",
+        "module": "speleodb.api.health.views.HealthCheckApiView",
+        "name": "api:health:details",
+        "decorators": ""
+    },
+    {
+        "url": "/api/schema/",
+        "module": "drf_spectacular.views.SpectacularAPIView",
+        "name": "api-schema",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/announcements/",
+        "module": "speleodb.api.v1.views.announcement.PublicAnnouncementApiView",
+        "name": "api:v1:public-announcements",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/plugin_releases/",
+        "module": "speleodb.api.v1.views.plugin_release.PluginReleasesApiView",
+        "name": "api:v1:plugin-releases",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/points_of_interest/",
+        "module": "speleodb.api.v1.views.poi.PointOfInterestAPIView",
+        "name": "api:v1:pois",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/points_of_interest/<uuid:id>/",
+        "module": "speleodb.api.v1.views.poi.PointOfInterestSpecificAPIView",
+        "name": "api:v1:poi-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/points_of_interest/geojson/",
+        "module": "speleodb.api.v1.views.poi.PointOfInterestGeoJSONView",
+        "name": "api:v1:pois-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/",
+        "module": "speleodb.api.v1.views.project.ProjectApiView",
+        "name": "api:v1:projects",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/",
+        "module": "speleodb.api.v1.views.project.ProjectSpecificApiView",
+        "name": "api:v1:project-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/acquire/",
+        "module": "speleodb.api.v1.views.mutex.ProjectAcquireApiView",
+        "name": "api:v1:project-acquire",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/download/<download_format:fileformat>/",
+        "module": "speleodb.api.v1.views.file.FileDownloadView",
+        "name": "api:v1:project-download",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/download/<download_format:fileformat>/<gitsha:hexsha>/",
+        "module": "speleodb.api.v1.views.file.FileDownloadAtHashView",
+        "name": "api:v1:project-download-at-hash",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/download/blob/<blobsha:hexsha>/",
+        "module": "speleodb.api.v1.views.file.BlobDownloadView",
+        "name": "api:v1:project-download-blob",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/geojson/",
+        "module": "speleodb.api.v1.views.project.ProjectGeoJsonApiView",
+        "name": "api:v1:project-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/git_explorer/<gitsha:hexsha>/",
+        "module": "speleodb.api.v1.views.project_explorer.ProjectGitExplorerApiView",
+        "name": "api:v1:project-gitexplorer",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/permission/team/detail/",
+        "module": "speleodb.api.v1.views.team_permission.ProjectTeamPermissionSpecificApiView",
+        "name": "api:v1:project-team-permissions-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/permission/user/detail/",
+        "module": "speleodb.api.v1.views.user_permission.ProjectUserPermissionSpecificApiView",
+        "name": "api:v1:project-user-permissions-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/permissions/team/",
+        "module": "speleodb.api.v1.views.team_permission.ProjectTeamPermissionListApiView",
+        "name": "api:v1:project-team-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/permissions/user/",
+        "module": "speleodb.api.v1.views.user_permission.ProjectUserPermissionListApiView",
+        "name": "api:v1:project-user-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/release/",
+        "module": "speleodb.api.v1.views.mutex.ProjectReleaseApiView",
+        "name": "api:v1:project-release",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/revisions/",
+        "module": "speleodb.api.v1.views.project_explorer.ProjectRevisionsApiView",
+        "name": "api:v1:project-revisions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/stations/",
+        "module": "speleodb.api.v1.views.station.ProjectStationsApiView",
+        "name": "api:v1:project-stations",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/stations/geojson/",
+        "module": "speleodb.api.v1.views.station.ProjectStationsGeoJSONView",
+        "name": "api:v1:project-stations-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/upload/<upload_format:fileformat>/",
+        "module": "speleodb.api.v1.views.file.FileUploadView",
+        "name": "api:v1:project-upload",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/resources/<uuid:id>/",
+        "module": "speleodb.api.v1.views.resource.StationResourceSpecificApiView",
+        "name": "api:v1:resource-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/",
+        "module": "speleodb.api.v1.views.station.StationsApiView",
+        "name": "api:v1:stations",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/<uuid:id>/",
+        "module": "speleodb.api.v1.views.station.StationSpecificApiView",
+        "name": "api:v1:station-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/<uuid:id>/resources/",
+        "module": "speleodb.api.v1.views.resource.StationResourceApiView",
+        "name": "api:v1:station-resources",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/teams/",
+        "module": "speleodb.api.v1.views.team.TeamApiView",
+        "name": "api:v1:teams",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/teams/<uuid:id>/",
+        "module": "speleodb.api.v1.views.team.TeamSpecificApiView",
+        "name": "api:v1:team-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/teams/<uuid:id>/memberships/",
+        "module": "speleodb.api.v1.views.team_membership.TeamMembershipListApiView",
+        "name": "api:v1:team-memberships",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/teams/<uuid:id>/memberships/detail/",
+        "module": "speleodb.api.v1.views.team_membership.TeamMembershipApiView",
+        "name": "api:v1:team-memberships-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/user/",
+        "module": "speleodb.api.v1.views.user.UserInfo",
+        "name": "api:v1:user-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/user/auth-token/",
+        "module": "speleodb.api.v1.views.user.UserAuthTokenView",
+        "name": "api:v1:user-auth-token",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/user/autocomplete/",
+        "module": "speleodb.api.v1.views.user.UserAutocompleteView",
+        "name": "api:v1:user-autocomplete",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/user/password/",
+        "module": "speleodb.api.v1.views.user.UserPasswordChangeView",
+        "name": "api:v1:user-password-update",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/user/release_all_locks/",
+        "module": "speleodb.api.v1.views.user.ReleaseAllUserLocksView",
+        "name": "api:v1:release-all-locks",
+        "decorators": ""
+    },
+    {
+        "url": "/changelog/",
+        "module": "django.views.generic.base.TemplateView",
+        "name": "changelog",
+        "decorators": ""
+    },
+    {
+        "url": "/git/<uuid:id>.git/git-receive-pack",
+        "module": "speleodb.git_proxy.views.WriteServiceView",
+        "name": "git_service_write",
+        "decorators": ""
+    },
+    {
+        "url": "/git/<uuid:id>.git/git-upload-pack",
+        "module": "speleodb.git_proxy.views.ReadServiceView",
+        "name": "git_service_read",
+        "decorators": ""
+    },
+    {
+        "url": "/git/<uuid:id>.git/info/refs",
+        "module": "speleodb.git_proxy.views.InfoRefsView",
+        "name": "git_info",
+        "decorators": ""
+    },
+    {
+        "url": "/helper/url_reverse.js",
+        "module": "django_js_reverse.views.view",
+        "name": "url_reverse.js",
+        "decorators": ""
+    },
+    {
+        "url": "/login/",
+        "module": "frontend_public.views.LoginView",
+        "name": "account_login",
+        "decorators": ""
+    },
+    {
+        "url": "/logout/",
+        "module": "allauth.account.views.LogoutView",
+        "name": "account_logout",
+        "decorators": ""
+    },
+    {
+        "url": "/people/",
+        "module": "frontend_public.views.PeoplePageView",
+        "name": "people",
+        "decorators": ""
+    },
+    {
+        "url": "/privacy_policy/",
+        "module": "django.views.generic.base.TemplateView",
+        "name": "privacy_policy",
+        "decorators": ""
+    },
+    {
+        "url": "/private/",
+        "module": "frontend_private.views.DashboardView",
+        "name": "private:user_dashboard",
+        "decorators": ""
+    },
+    {
+        "url": "/private/auth-token/",
+        "module": "frontend_private.views.AuthTokenView",
+        "name": "private:user_authtoken",
+        "decorators": ""
+    },
+    {
+        "url": "/private/feedback/",
+        "module": "frontend_private.views.FeedbackView",
+        "name": "private:user_feedback",
+        "decorators": ""
+    },
+    {
+        "url": "/private/map_viewer/",
+        "module": "frontend_private.views.MapViewerView",
+        "name": "private:map_viewer",
+        "decorators": ""
+    },
+    {
+        "url": "/private/password/",
+        "module": "frontend_private.views.PassWordView",
+        "name": "private:user_password",
+        "decorators": ""
+    },
+    {
+        "url": "/private/preferences/",
+        "module": "frontend_private.views.PreferencesView",
+        "name": "private:user_preferences",
+        "decorators": ""
+    },
+    {
+        "url": "/private/project/<uuid:project_id>/",
+        "module": "frontend_private.views.ProjectDetailsView",
+        "name": "private:project_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/project/<uuid:project_id>/browser/<gitsha:hexsha>/",
+        "module": "frontend_private.views.ProjectGitExplorerView",
+        "name": "private:project_revision_explorer",
+        "decorators": ""
+    },
+    {
+        "url": "/private/project/<uuid:project_id>/danger_zone/",
+        "module": "frontend_private.views.ProjectDangerZoneView",
+        "name": "private:project_danger_zone",
+        "decorators": ""
+    },
+    {
+        "url": "/private/project/<uuid:project_id>/git_instructions/",
+        "module": "frontend_private.views.ProjectGitInstructionsView",
+        "name": "private:project_git_instructions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/project/<uuid:project_id>/mutexes/",
+        "module": "frontend_private.views.ProjectMutexesView",
+        "name": "private:project_mutexes",
+        "decorators": ""
+    },
+    {
+        "url": "/private/project/<uuid:project_id>/permissions/team/",
+        "module": "frontend_private.views.ProjectTeamPermissionsView",
+        "name": "private:project_team_permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/project/<uuid:project_id>/permissions/user/",
+        "module": "frontend_private.views.ProjectUserPermissionsView",
+        "name": "private:project_user_permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/project/<uuid:project_id>/revisions/",
+        "module": "frontend_private.views.ProjectRevisionHistoryView",
+        "name": "private:project_revisions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/project/<uuid:project_id>/upload/",
+        "module": "frontend_private.views.ProjectUploadView",
+        "name": "private:project_upload",
+        "decorators": ""
+    },
+    {
+        "url": "/private/project/new/",
+        "module": "frontend_private.views.NewProjectView",
+        "name": "private:project_new",
+        "decorators": ""
+    },
+    {
+        "url": "/private/projects/",
+        "module": "frontend_private.views.ProjectListingView",
+        "name": "private:projects",
+        "decorators": ""
+    },
+    {
+        "url": "/private/team/<uuid:team_id>/",
+        "module": "frontend_private.views.TeamDetailsView",
+        "name": "private:team_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/team/<uuid:team_id>/danger_zone/",
+        "module": "frontend_private.views.TeamDangerZoneView",
+        "name": "private:team_danger_zone",
+        "decorators": ""
+    },
+    {
+        "url": "/private/team/<uuid:team_id>/memberships/",
+        "module": "frontend_private.views.TeamMembershipsView",
+        "name": "private:team_memberships",
+        "decorators": ""
+    },
+    {
+        "url": "/private/team/new/",
+        "module": "frontend_private.views.NewTeamView",
+        "name": "private:team_new",
+        "decorators": ""
+    },
+    {
+        "url": "/private/teams/",
+        "module": "frontend_private.views.TeamListingView",
+        "name": "private:teams",
+        "decorators": ""
+    },
+    {
+        "url": "/roadmap/",
+        "module": "django.views.generic.base.TemplateView",
+        "name": "roadmap",
+        "decorators": ""
+    },
+    {
+        "url": "/robots.txt",
+        "module": "frontend_public.views.robots_txt",
+        "name": "robots.txt",
+        "decorators": ""
+    },
+    {
+        "url": "/schema-viewer/",
+        "module": "schema_viewer.views.IndexView",
+        "name": "",
+        "decorators": ""
+    },
+    {
+        "url": "/schema-viewer/schema/",
+        "module": "schema_viewer.views.SchemaView",
+        "name": "",
+        "decorators": ""
+    },
+    {
+        "url": "/signup/",
+        "module": "frontend_public.views.SignUpView",
+        "name": "account_signup",
+        "decorators": ""
+    },
+    {
+        "url": "/sitemap.xml",
+        "module": "django.contrib.sitemaps.views.sitemap",
+        "name": "sitemap.xml",
+        "decorators": ""
+    },
+    {
+        "url": "/static/<path>",
+        "module": "django.contrib.staticfiles.views.serve",
+        "name": "",
+        "decorators": ""
+    },
+    {
+        "url": "/terms_and_conditions/",
+        "module": "django.views.generic.base.TemplateView",
+        "name": "terms_and_conditions",
+        "decorators": ""
+    },
+    {
+        "url": "/webview/ariane/",
+        "module": "django.views.generic.base.TemplateView",
+        "name": "webview_ariane",
+        "decorators": ""
+    }
+]

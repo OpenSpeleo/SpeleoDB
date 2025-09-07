@@ -4,19 +4,18 @@ from __future__ import annotations
 
 import random
 import uuid
+from typing import Any
 
 from django.urls import reverse
 from faker import Faker
+from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
-from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import StationResource
-from speleodb.surveys.models import UserPermission
 from speleodb.surveys.models.station import Station
 from speleodb.utils.test_utils import named_product
 
@@ -27,7 +26,7 @@ class TestUnauthenticatedStationAPIAuthentication(BaseAPIProjectTestCase):
     def test_station_list_requires_authentication(self) -> None:
         """Test that station list endpoint requires authentication."""
         response = self.client.get(
-            f"{reverse('api:v1:station-list-create')}?project_id={self.project.id}"
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -46,10 +45,9 @@ class TestUnauthenticatedStationAPIAuthentication(BaseAPIProjectTestCase):
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
-            "project_id": str(self.project.id),
         }
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             content_type="application/json",
         )
@@ -111,7 +109,7 @@ class TestStationAPIPermissions(BaseAPIProjectTestCase):
         """Test station list endpoint with different permission levels."""
 
         response = self.client.get(
-            f"{reverse('api:v1:station-list-create')}?project_id={self.project.id}",
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
         assert (
@@ -141,11 +139,10 @@ class TestStationAPIPermissions(BaseAPIProjectTestCase):
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -225,13 +222,12 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
         data = {
             "name": "ST001",
             "description": "Main cave entrance",
-            "latitude": "45.1234567",
-            "longitude": "-123.8765432",
-            "project_id": str(self.project.id),
+            "latitude": "45.14908328409823490234567",
+            "longitude": "-123.876032940239093049235432",
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -242,19 +238,19 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_201_CREATED
-        station_data = response.data["data"]["station"]
+        station_data = response.data["data"]
         assert station_data["name"] == "ST001"
         assert station_data["description"] == "Main cave entrance"
-        assert station_data["latitude"] == 45.1234567  # noqa: PLR2004
-        assert station_data["longitude"] == -123.8765432  # noqa: PLR2004
+        assert station_data["latitude"] == 45.1490833  # noqa: PLR2004
+        assert station_data["longitude"] == -123.8760329  # noqa: PLR2004
 
-    def test_list_stations_success(self) -> None:
+    def test_list_project_stations(self) -> None:
         """Test successful station listing."""
         # Create test stations
         stations = StationFactory.create_batch(3, project=self.project)
 
         response = self.client.get(
-            f"{reverse('api:v1:station-list-create')}?project_id={self.project.id}",
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
@@ -263,7 +259,32 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_200_OK
-        stations_data = response.data["data"]["stations"]
+        stations_data = response.json()["data"]
+        assert len(stations_data) == 3  # noqa: PLR2004
+
+        # Verify station IDs are present
+        station_ids = {str(station.id) for station in stations}
+        response_ids = {station["id"] for station in stations_data}
+        assert station_ids == response_ids
+
+    def test_list_user_stations(self) -> None:
+        """Test successful station listing."""
+        # Create test stations
+        stations = StationFactory.create_batch(3, project=self.project)
+
+        response = self.client.get(
+            reverse("api:v1:stations"),
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+
+        if self.level == PermissionLevel.WEB_VIEWER:
+            assert len(response.data["data"]) == 0
+            return
+
+        assert response.status_code == status.HTTP_200_OK
+        stations_data = response.json()["data"]
         assert len(stations_data) == 3  # noqa: PLR2004
 
         # Verify station IDs are present
@@ -285,38 +306,15 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_200_OK
-        station_data = response.data["data"]["station"]
+        station_data = response.data["data"]
         assert station_data["id"] == str(station.id)
         assert station_data["name"] == station.name
-
-    def test_update_station_success(self) -> None:
-        """Test successful station update."""
-        station = StationFactory.create(project=self.project)
-
-        data = {
-            "name": "Updated Station",
-            "description": "Updated description",
-        }
-
-        response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": station.id}),
-            data=data,
-            headers={"authorization": self.auth},
-            content_type="application/json",
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-            return
-
-        assert response.status_code == status.HTTP_200_OK
-        station_data = response.data["data"]["station"]
-        assert station_data["name"] == "Updated Station"
-        assert station_data["description"] == "Updated description"
+        assert len(station_data["resources"]) == 0
 
     def test_delete_station_success(self) -> None:
         """Test successful station deletion."""
         station = StationFactory.create(project=self.project)
+        station_id = str(station.id)
 
         response = self.client.delete(
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
@@ -328,341 +326,63 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_200_OK
-        assert "deleted successfully" in response.data["data"]["message"]
+        assert station_id == response.data["data"]["id"]
 
         # Verify station is deleted
         assert not Station.objects.filter(id=station.id).exists()
 
-    def test_update_station_project(self) -> None:
-        """Test updating a station to a different project."""
-        # Create a second project
-        second_project = ProjectFactory.create(created_by=self.user)
-        # Grant write permissions to the second project
-        UserPermission.objects.create(
-            target=self.user,
-            project=second_project,
-            level=PermissionLevel.READ_AND_WRITE,
-        )
-
-        # Create a station in the first project
-        station = StationFactory.create(project=self.project, name="TestStation")
-
-        # Update the station to move it to the second project
-        data = {
-            "name": "TestStation",
-            "description": "Updated description",
-            "latitude": station.latitude,
-            "longitude": station.longitude,
-            "project_id": str(second_project.id),
-        }
-
-        response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": str(station.id)}),
-            data=data,
-            headers={"authorization": self.auth},
-            content_type="application/json",
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-            return
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["success"] is True
-
-        # Verify the station was moved
-        updated_station = Station.objects.get(id=station.id)
-        assert updated_station.project_id == second_project.id
-        assert updated_station.name == "TestStation"
-        assert updated_station.description == "Updated description"
-
-    def test_update_station_project_duplicate_name(self) -> None:
+    @parameterized.expand(["PUT", "PATCH"])
+    def test_update_station(self, method: str) -> None:
         """Test updating a station to a project with a duplicate name."""
-        # Create a second project
-        second_project = ProjectFactory.create(created_by=self.user)
-        # Grant write permissions to the second project
-        UserPermission.objects.create(
-            target=self.user,
-            project=second_project,
-            level=PermissionLevel.READ_AND_WRITE,
-        )
-
         # Create stations with the same name in both projects
-        station1 = StationFactory.create(project=self.project, name="DuplicateName")
-        StationFactory.create(project=second_project, name="DuplicateName")
+        station = StationFactory.create(project=self.project, name="DuplicateName")
 
         # Try to update station1 to move it to the second project (should fail)
-        data = {
+        data: dict[str, Any] = {
             "name": "DuplicateName",
-            "latitude": station1.latitude,
-            "longitude": station1.longitude,
-            "project_id": str(second_project.id),
-        }
-
-        response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": str(station1.id)}),
-            data=data,
-            headers={"authorization": self.auth},
-            content_type="application/json",
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-            return
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "already exists in the target project" in str(response.data)
-
-        # Verify the station was NOT moved
-        station1.refresh_from_db()
-        assert station1.project_id == self.project.id
-
-    def test_update_station_project_response_data(self) -> None:
-        """Test that project change returns correct response data structure."""
-        # Create a second project
-        second_project = ProjectFactory.create(created_by=self.user)
-        UserPermission.objects.create(
-            target=self.user,
-            project=second_project,
-            level=PermissionLevel.READ_AND_WRITE,
-        )
-
-        # Create a station with resources
-        station = StationFactory.create(
-            project=self.project,
-            name="StationWithResources",
-            description="Original description",
-        )
-
-        # Add some resources to the station
-
-        StationResource.objects.create(
-            station=station,
-            title="Test Resource 1",
-            resource_type=StationResource.ResourceType.NOTE,
-            text_content="Test note content",
-            created_by=self.user,
-        )
-        StationResource.objects.create(
-            station=station,
-            title="Test Resource 2",
-            resource_type=StationResource.ResourceType.NOTE,
-            text_content="Another test note",
-            created_by=self.user,
-        )
-
-        # Update with project change
-        data = {
-            "name": "UpdatedName",
             "description": "Updated description",
-            "latitude": "45.5",
-            "longitude": "-123.5",
-            "project_id": str(second_project.id),
         }
 
-        response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": str(station.id)}),
+        match method:
+            case "PUT":
+                data.update(latitude=12.3, longitude=-30.23)
+                client_method = self.client.put
+
+            case "PATCH":
+                client_method = self.client.patch
+
+            case _:
+                raise ValueError(f"Unknown method received: {method}")
+
+        response = client_method(
+            reverse("api:v1:station-detail", kwargs={"id": station.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
         )
 
         if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-            return
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["success"] is True
-
-        # Check response data structure
-        station_data = response.data["data"]["station"]
-        assert "id" in station_data
-        assert str(station_data["id"]) == str(station.id)
-        assert station_data["name"] == "UpdatedName"
-        assert station_data["description"] == "Updated description"
-        assert station_data["project_id"] == str(second_project.id)
-        assert float(station_data["latitude"]) == 45.5  # noqa: PLR2004
-        assert float(station_data["longitude"]) == -123.5  # noqa: PLR2004
-        assert "resources" in station_data
-        assert len(station_data["resources"]) == 2  # noqa: PLR2004
-        assert "resource_count" in station_data
-        assert station_data["resource_count"] == 2  # noqa: PLR2004
-        assert "created_by_email" in station_data
-        assert "created_by_email" in station_data  # Email may be from factory user
-        assert "creation_date" in station_data
-        assert "modified_date" in station_data
-
-    def test_update_station_project_without_permissions_on_target(self) -> None:
-        """Test that project change fails without permissions on target project."""
-        # Create a second project (no permissions granted)
-        second_project = ProjectFactory.create(created_by=self.user)
-
-        # Create a station in the first project
-        station = StationFactory.create(project=self.project, name="TestStation")
-
-        # Try to move to second project without permissions
-        data = {
-            "project_id": str(second_project.id),
-        }
-
-        response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": str(station.id)}),
-            data=data,
-            headers={"authorization": self.auth},
-            content_type="application/json",
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-            return
-
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-        # Verify the station was NOT moved
-        station.refresh_from_db()
-        assert station.project_id == self.project.id
-
-    def test_update_station_project_partial_update(self) -> None:
-        """Test changing only project without other fields."""
-        # Create a second project
-        second_project = ProjectFactory.create(created_by=self.user)
-        UserPermission.objects.create(
-            target=self.user,
-            project=second_project,
-            level=PermissionLevel.READ_AND_WRITE,
-        )
-
-        # Create a station
-        original_name = "OriginalName"
-        original_description = "Original description"
-        station = StationFactory.create(
-            project=self.project,
-            name=original_name,
-            description=original_description,
-            latitude=45.123,
-            longitude=-123.456,
-        )
-
-        # Update ONLY the project
-        data = {
-            "project_id": str(second_project.id),
-        }
-
-        response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": str(station.id)}),
-            data=data,
-            headers={"authorization": self.auth},
-            content_type="application/json",
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-            return
-
-        assert response.status_code == status.HTTP_200_OK
-
-        # Verify only project changed, other fields remain the same
-        station.refresh_from_db()
-        assert station.project_id == second_project.id
-        assert station.name == original_name
-        assert station.description == original_description
-        assert float(station.latitude) == 45.123  # noqa: PLR2004
-        assert float(station.longitude) == -123.456  # noqa: PLR2004
-
-    def test_update_station_project_with_name_change(self) -> None:
-        """Test changing project and name simultaneously to avoid conflicts."""
-        # Create a second project
-        second_project = ProjectFactory.create(created_by=self.user)
-        UserPermission.objects.create(
-            target=self.user,
-            project=second_project,
-            level=PermissionLevel.READ_AND_WRITE,
-        )
-
-        # Create stations with same name in both projects
-        station1 = StationFactory.create(project=self.project, name="ConflictName")
-        StationFactory.create(project=second_project, name="ConflictName")
-
-        # Update station1 with new name AND move to second project
-        data = {
-            "name": "NonConflictingName",
-            "project_id": str(second_project.id),
-        }
-
-        response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": str(station1.id)}),
-            data=data,
-            headers={"authorization": self.auth},
-            content_type="application/json",
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-            return
-
-        assert response.status_code == status.HTTP_200_OK
-
-        # Verify the station was moved with new name
-        station1.refresh_from_db()
-        assert station1.project_id == second_project.id
-        assert station1.name == "NonConflictingName"
-
-    def test_update_station_project_preserves_resources(self) -> None:
-        """Test that resources are preserved when changing projects."""
-        # Create a second project
-        second_project = ProjectFactory.create(created_by=self.user)
-        UserPermission.objects.create(
-            target=self.user,
-            project=second_project,
-            level=PermissionLevel.READ_AND_WRITE,
-        )
-
-        # Create a station with resources
-        station = StationFactory.create(
-            project=self.project, name="StationWithResources"
-        )
-
-        # Add resources
-        resources = []
-        for i in range(3):
-            resource = StationResource.objects.create(
-                station=station,
-                title=f"Resource {i + 1}",
-                resource_type=StationResource.ResourceType.NOTE,
-                text_content=f"Content {i + 1}",
-                created_by=self.user,
+            assert response.status_code == status.HTTP_403_FORBIDDEN, (
+                response.status_code,
+                self.level,
+                self.permission_type,
             )
-            resources.append(resource)
-
-        # Move station to new project
-        data = {
-            "project_id": str(second_project.id),
-        }
-
-        response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": str(station.id)}),
-            data=data,
-            headers={"authorization": self.auth},
-            content_type="application/json",
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN
             return
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, (
+            response.status_code,
+            self.level,
+            self.permission_type,
+        )
 
-        # Verify station moved
-        station.refresh_from_db()
-        assert station.project_id == second_project.id
+        resp_data = response.data["data"]
 
-        # Verify all resources still exist and are still linked
-        assert station.resources.count() == 3  # noqa: PLR2004
-        for i, resource in enumerate(resources):
-            resource.refresh_from_db()
-            assert resource.station_id == station.id
-            assert resource.title == f"Resource {i + 1}"
-            assert resource.text_content == f"Content {i + 1}"
+        assert resp_data["name"] == data["name"]
+        assert resp_data["description"] == data["description"]
+
+        if method == "PUT":
+            assert resp_data["latitude"] == data["latitude"]
+            assert resp_data["longitude"] == data["longitude"]
 
 
 @parameterized_class(
@@ -696,11 +416,10 @@ class TestStationValidation(BaseAPIProjectTestCase):
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -713,26 +432,6 @@ class TestStationValidation(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "name" in response.data["errors"]
 
-    def test_create_station_missing_project_id(self) -> None:
-        """Test station creation fails without project_id."""
-        data = {
-            "name": "ST001",
-            "description": "Test station",
-            "latitude": "45.1234567",
-            "longitude": "-123.8765432",
-        }
-
-        response = self.client.post(
-            reverse("api:v1:station-list-create"),
-            data=data,
-            headers={"authorization": self.auth},
-            content_type="application/json",
-        )
-
-        # Everybody get HTTP 400 - Can't identify the project.
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "project_id" in response.data["errors"]
-
     def test_create_station_duplicate_name(self) -> None:
         """Test station creation with duplicate name in same project returns proper
         error message."""
@@ -744,7 +443,7 @@ class TestStationValidation(BaseAPIProjectTestCase):
             description="First station",
             latitude="45.1234567",
             longitude="-123.8765432",
-            project_id=str(self.project.id),
+            project=self.project,
         )
 
         # Try to create second station with same name
@@ -753,11 +452,10 @@ class TestStationValidation(BaseAPIProjectTestCase):
             "description": "Second station",
             "latitude": "45.2234567",
             "longitude": "-123.7765432",
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -769,10 +467,11 @@ class TestStationValidation(BaseAPIProjectTestCase):
 
         # Should get a 400 error with a specific message
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "errors" in response.data
-        assert "name" in response.data["errors"]
-        assert unique_name in response.data["errors"]["name"][0]
-        assert "already exists in this project" in response.data["errors"]["name"][0]
+        assert "error" in response.data
+        assert (
+            f"The station name `{data['name']}` already exists in project `{self.project.id}`"  # noqa: E501
+            == response.data["error"]
+        )
 
     def test_create_station_invalid_coordinates(self) -> None:
         """Test station creation rejects invalid coordinates (validators are
@@ -782,11 +481,10 @@ class TestStationValidation(BaseAPIProjectTestCase):
             "description": "Test station",
             "latitude": "99.9999999",  # Invalid latitude (>90)
             "longitude": "-180.0000000",  # Valid longitude (at boundary)
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -809,11 +507,10 @@ class TestStationValidation(BaseAPIProjectTestCase):
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -893,11 +590,10 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
             "description": "High precision test",
             "latitude": "45.12345678901234567890",  # More than 7 decimal places
             "longitude": "-123.98765432109876543210",
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -909,7 +605,7 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_201_CREATED
         # Coordinates should be rounded to 7 decimal places
-        station_data = response.data["data"]["station"]
+        station_data = response.data["data"]
         assert station_data["latitude"] == 45.1234568  # noqa: PLR2004
         assert station_data["longitude"] == -123.9876543  # noqa: PLR2004
 
@@ -921,11 +617,10 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
             "description": "",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -975,11 +670,10 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 "description": self.fake.text(max_nb_chars=200),
                 "latitude": str(round(random.uniform(-90, 90), 7)),
                 "longitude": str(round(random.uniform(-180, 180), 7)),
-                "project_id": str(self.project.id),
             }
 
             response = self.client.post(
-                reverse("api:v1:station-list-create"),
+                reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
                 data=data,
                 headers={"authorization": self.auth},
                 content_type="application/json",
@@ -1007,11 +701,10 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 "description": "Unicode test",
                 "latitude": "45.1234567",
                 "longitude": "-123.8765432",
-                "project_id": str(self.project.id),
             }
 
             response = self.client.post(
-                reverse("api:v1:station-list-create"),
+                reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
                 data=data,
                 headers={"authorization": self.auth},
                 content_type="application/json",
@@ -1023,7 +716,7 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
 
             # Should handle unicode properly
             assert response.status_code == status.HTTP_201_CREATED
-            assert response.data["data"]["station"]["name"] == name
+            assert response.data["data"]["name"] == name
 
     def test_special_characters_in_names(self) -> None:
         """Test station names with special characters."""
@@ -1050,11 +743,10 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 "description": f"Special char test {i}",
                 "latitude": str(45.1 + i * 0.01),
                 "longitude": str(-123.8 + i * 0.01),
-                "project_id": str(self.project.id),
             }
 
             response = self.client.post(
-                reverse("api:v1:station-list-create"),
+                reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
                 data=data,
                 headers={"authorization": self.auth},
                 content_type="application/json",
@@ -1086,11 +778,10 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 "description": payload,
                 "latitude": "45.1234567",
                 "longitude": "-123.8765432",
-                "project_id": str(self.project.id),
             }
 
             response = self.client.post(
-                reverse("api:v1:station-list-create"),
+                reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
                 data=data,
                 headers={"authorization": self.auth},
                 content_type="application/json",
@@ -1103,7 +794,7 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
             # Should accept the input but store it safely
             assert response.status_code == status.HTTP_201_CREATED
             # Data should be stored as-is, not executed
-            assert response.data["data"]["station"]["description"] == payload
+            assert response.data["data"]["description"] == payload
 
     def test_random_coordinate_values(self) -> None:
         """Test various random coordinate values."""
@@ -1122,11 +813,10 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 "description": f"Coordinates: {lat}, {lng}",
                 "latitude": str(lat),
                 "longitude": str(lng),
-                "project_id": str(self.project.id),
             }
 
             response = self.client.post(
-                reverse("api:v1:station-list-create"),
+                reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
                 data=data,
                 headers={"authorization": self.auth},
                 content_type="application/json",
@@ -1172,11 +862,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "description": "Coordinate rounding test",
             "latitude": "45.123456789012345",  # 15 decimal places
             "longitude": "-123.987654321098765",  # 15 decimal places
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -1187,7 +876,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_201_CREATED
-        station_data = response.data["data"]["station"]
+        station_data = response.data["data"]
 
         # Check that coordinates were rounded to 7 decimal places
         assert station_data["latitude"] == 45.1234568  # noqa: PLR2004
@@ -1201,11 +890,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "description": "Precision preservation test",
             "latitude": "45.123",  # 3 decimal places
             "longitude": "-123.9876543",  # 7 decimal places
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -1216,7 +904,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_201_CREATED
-        station_data = response.data["data"]["station"]
+        station_data = response.data["data"]
 
         # Check that coordinates were preserved
         assert station_data["latitude"] == 45.123  # noqa: PLR2004
@@ -1249,7 +937,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_200_OK
-        station_data = response.data["data"]["station"]
+        station_data = response.data["data"]
 
         # Check that coordinates were rounded to 7 decimal places
         assert station_data["latitude"] == 46.9876543  # noqa: PLR2004
@@ -1271,11 +959,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
                 "description": f"Extreme coords: {lat}, {lng}",
                 "latitude": lat,
                 "longitude": lng,
-                "project_id": str(self.project.id),
             }
 
             response = self.client.post(
-                reverse("api:v1:station-list-create"),
+                reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
                 data=data,
                 headers={"authorization": self.auth},
                 content_type="application/json",
@@ -1296,11 +983,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "description": "Negative coordinate rounding",
             "latitude": "-45.123456789012345",  # Negative with many decimals
             "longitude": "-123.987654321098765",  # Negative with many decimals
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -1311,7 +997,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_201_CREATED
-        station_data = response.data["data"]["station"]
+        station_data = response.data["data"]
 
         # Negative values should round the same way
         assert station_data["latitude"] == -45.1234568  # noqa: PLR2004
@@ -1325,11 +1011,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "description": "Scientific notation test",
             "latitude": "4.5123456e1",  # 45.123456 in scientific notation
             "longitude": "-1.23987654e2",  # -123.987654 in scientific notation
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -1340,7 +1025,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_201_CREATED
-        station_data = response.data["data"]["station"]
+        station_data = response.data["data"]
 
         # Should be converted and rounded properly
         assert station_data["latitude"] == 45.123456  # noqa: PLR2004
@@ -1365,11 +1050,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
                 "description": f"Boundary test {i}",
                 "latitude": input_val,
                 "longitude": "0",
-                "project_id": str(self.project.id),
             }
 
             response = self.client.post(
-                reverse("api:v1:station-list-create"),
+                reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
                 data=data,
                 headers={"authorization": self.auth},
                 content_type="application/json",
@@ -1380,7 +1064,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
                 continue
 
             assert response.status_code == status.HTTP_201_CREATED
-            station_data = response.data["data"]["station"]
+            station_data = response.data["data"]
             assert station_data["latitude"] == expected, (
                 f"Input {input_val} should round to {expected}, got "
                 f"{station_data['latitude']}"
@@ -1394,11 +1078,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "description": "Total digits test",
             "latitude": "123.1234567",  # 10 total digits (3 + 7)
             "longitude": "-12.12345678",  # 10 total digits with extra decimal
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -1419,11 +1102,10 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "name": f"NullCoords_{str(uuid.uuid4())[:8]}",
             "description": "Null coordinates test",
             # Omit coordinates entirely
-            "project_id": str(self.project.id),
         }
 
         response = self.client.post(
-            reverse("api:v1:station-list-create"),
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",

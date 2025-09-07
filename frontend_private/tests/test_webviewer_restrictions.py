@@ -130,7 +130,7 @@ class TestWebViewerRestrictions(TestCase):
         token, _ = Token.objects.get_or_create(user=self.user)
 
         url = reverse(
-            "api:v1:one_project_geojson_apiview",
+            "api:v1:project-geojson",
             kwargs={"id": self.project_webviewer.id},
         )
         response = self.client.get(url, headers={"authorization": f"Token {token.key}"})

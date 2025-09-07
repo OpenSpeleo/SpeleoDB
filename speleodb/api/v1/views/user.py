@@ -37,9 +37,7 @@ class UserInfo(GenericAPIView[User]):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return SuccessResponse(
-            self.get_serializer(request.user).data, status=status.HTTP_200_OK
-        )
+        return SuccessResponse(self.get_serializer(request.user).data)
 
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = self.get_serializer(
@@ -47,7 +45,7 @@ class UserInfo(GenericAPIView[User]):
         )
         if serializer.is_valid():
             serializer.save()
-            return SuccessResponse(serializer.data, status=status.HTTP_200_OK)
+            return SuccessResponse(serializer.data)
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
@@ -59,7 +57,7 @@ class UserInfo(GenericAPIView[User]):
         )
         if serializer.is_valid():
             serializer.save()
-            return SuccessResponse(serializer.data, status=status.HTTP_200_OK)
+            return SuccessResponse(serializer.data)
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
@@ -131,9 +129,7 @@ class UserPasswordChangeView(GenericAPIView[User]):
         )
         if serializer.is_valid():
             serializer.save()
-            return NoWrapResponse(
-                {"message": "Password changed successfully"}, status=status.HTTP_200_OK
-            )
+            return NoWrapResponse({"message": "Password changed successfully"})
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST

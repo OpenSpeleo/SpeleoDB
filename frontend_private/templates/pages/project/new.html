@@ -131,6 +131,10 @@
 </main>
 {% endblock content %}
 
+{% block extra_js %}
+<script src="{% url 'url_reverse.js' %}"></script>
+{% endblock extra_js %}
+
 {% block inline_extra_js %}
 <script>
 
@@ -156,7 +160,7 @@
             var formData = new FormData(new_project_form);
 
             $.ajax({
-                url: "{% url 'api:v1:project_api' %}",
+                url: "{% url 'api:v1:projects' %}",
                 method: "POST",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
@@ -171,10 +175,7 @@
                     $("#modal_success").css('display', 'flex');
 
                     window.setTimeout(function(){
-                        // Redirect to project listing
-                        {% set base_project_id = "00000000-0000-0000-0000-000000000000" %}
-                        var redirect_url = "{% url 'private:project_details' project_id=base_project_id %}";
-                        window.location.href = redirect_url.replace("{{ base_project_id }}", data["data"]["id"]);
+                        window.location.href = Urls['private:project_details'](data["data"]["id"]);
                     }, 2000);
                 },
                 error: function (data) {

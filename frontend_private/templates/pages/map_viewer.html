@@ -1738,6 +1738,7 @@
 </main>
 {% endblock content %}
 {% block extra_js %}
+<script src="{% url 'url_reverse.js' %}"></script>
 <script src='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js'></script>
 {% endblock extra_js %}
 {% block inline_extra_js %}
@@ -1826,7 +1827,7 @@
         let stationProjectId = null;
         const station = allStations.get(stationId);
         if (station) {
-            stationProjectId = station.projectId || station.project || station.project_id;
+            stationProjectId = station.project;
         }
 
         // If the project is hidden, toggle it to visible
@@ -1989,7 +1990,7 @@
     let lineFeatureCache = new Map(); // Cache line geometries by project
     let snapPointsCache = new Map(); // Cache all start/end points for snapping by project
     let contextMenuData = null; // Store data for context menu actions
-    let magneticSnapRadius = 5; // Snap radius in meters (reasonable default)
+    let magneticSnapRadius = 10; // Snap radius in meters (max allowed distance to line)
     let draggedStation = null; // Track station being dragged
 
     // Function to adjust snap radius for testing
@@ -2076,57 +2077,122 @@
         return null;
     }
 
-    // Simple Point-Based Magnetic Snap System
+    // Magnetic Snap System using nearest point on any line (across ALL projects) with 30m threshold
     function findMagneticSnapPoint(coordinates, projectId = null) {
         const [lng, lat] = coordinates;
-        let closestPoint = null;
-        let closestDistanceMeters = Infinity;
-        let closestLineName = null;
-        let closestPointType = null;
+        const target = [lng, lat];
+        let bestPoint = null;
+        let bestDistance = Infinity;
+        let bestLineName = null;
+        let bestPointType = null;
 
-        // Check all projects if no specific project given
-        const projectsToCheck = projectId ? [projectId] : Array.from(snapPointsCache.keys());
-
-        let totalPointsChecked = 0;
-
-        projectsToCheck.forEach(pid => {
-            const snapPoints = snapPointsCache.get(pid);
-            if (!snapPoints) return;
-
-            snapPoints.forEach(point => {
-                totalPointsChecked++;
-
-                // Calculate distance to this point
-                const distanceMeters = calculateDistanceInMeters([lng, lat], point.coordinates);
-
-                if (distanceMeters < magneticSnapRadius) {
-                    if (distanceMeters < closestDistanceMeters) {
-                        closestDistanceMeters = distanceMeters;
-                        closestPoint = point.coordinates;
-                        closestLineName = point.lineName;
-                        closestPointType = point.type;
+        // 1) Check full line geometry distances across all projects
+        if (lineFeatureCache && lineFeatureCache.size > 0) {
+            for (const [pid, lines] of lineFeatureCache.entries()) {
+                if (projectId && pid !== projectId) continue;
+                if (!lines || lines.size === 0) continue;
+                for (const lineData of lines.values()) {
+                    const coords = lineData.coordinates;
+                    // Evaluate each segment to find closest projection point
+                    for (let i = 0; i < coords.length - 1; i++) {
+                        const a = [coords[i][0], coords[i][1]];
+                        const b = [coords[i + 1][0], coords[i + 1][1]];
+                        // Compute projection distance in meters
+                        const d = distancePointToSegmentMeters(target, a, b);
+                        if (d < bestDistance) {
+                            bestDistance = d;
+                            bestLineName = lineData.properties?.section_name || null;
+                            // Approximate nearest point as nearer endpoint when storing coordinate for display
+                            // (We keep distance precise; coordinate is for UI preview and hidden fields)
+                            bestPoint = d === 0 ? target : (calculateDistanceInMeters(target, a) < calculateDistanceInMeters(target, b) ? a : b);
+                            bestPointType = 'segment';
+                        }
+                        if (bestDistance === 0) break;
                     }
+                    if (bestDistance === 0) break;
+                }
+                if (bestDistance === 0) break;
+            }
+        }
+
+        // 2) Consider snap points as well (vertices) for potentially closer vertex snaps
+        if (snapPointsCache && snapPointsCache.size > 0) {
+            snapPointsCache.forEach((points, pid) => {
+                if (projectId && pid !== projectId) return;
+                if (!Array.isArray(points) || points.length === 0) return;
+                for (let i = 0; i < points.length; i++) {
+                    const d = calculateDistanceInMeters(target, points[i].coordinates);
+                    if (d < bestDistance) {
+                        bestDistance = d;
+                        bestPoint = points[i].coordinates;
+                        bestLineName = points[i].lineName;
+                        bestPointType = points[i].type || 'vertex';
+                    }
+                    if (bestDistance === 0) break;
                 }
             });
-        });
+        }
 
-        // Return result (optimized - minimal logging)
+        // Enforce 30m threshold
+        if (!isFinite(bestDistance) || bestDistance > magneticSnapRadius) {
+            return {
+                coordinates: target,
+                lineName: null,
+                pointType: null,
+                distance: bestDistance,
+                snapped: false
+            };
+        }
 
-        const result = closestPoint ? {
-            coordinates: closestPoint,
-            lineName: closestLineName,
-            pointType: closestPointType,
-            distance: closestDistanceMeters,
+        return {
+            coordinates: bestPoint || target,
+            lineName: bestLineName,
+            pointType: bestPointType,
+            distance: bestDistance,
             snapped: true
-        } : {
-            coordinates: [lng, lat],
-            lineName: null,
-            pointType: null,
-            distance: 0,
-            snapped: false
         };
+    }
 
-        return result;
+    // Find nearest snap POINT (vertex) within a given radius across ALL projects
+    function findNearestSnapPointWithinRadius(coordinates, radiusMeters) {
+        const [lng, lat] = coordinates;
+        const target = [lng, lat];
+        let bestPoint = null;
+        let bestDistance = Infinity;
+        let bestLineName = null;
+        let bestPointType = null;
+        let bestProjectId = null;
+
+        if (snapPointsCache && snapPointsCache.size > 0) {
+            for (const [pid, points] of snapPointsCache.entries()) {
+                if (!Array.isArray(points) || points.length === 0) continue;
+                for (let i = 0; i < points.length; i++) {
+                    const d = calculateDistanceInMeters(target, points[i].coordinates);
+                    if (d < bestDistance) {
+                        bestDistance = d;
+                        bestPoint = points[i].coordinates;
+                        bestLineName = points[i].lineName;
+                        bestPointType = points[i].type || 'vertex';
+                        bestProjectId = pid;
+                    }
+                    if (bestDistance === 0) break;
+                }
+                if (bestDistance === 0) break;
+            }
+        }
+
+        if (!isFinite(bestDistance) || bestDistance > radiusMeters) {
+            return { snapped: false, coordinates: target, distance: bestDistance };
+        }
+
+        return {
+            snapped: true,
+            coordinates: bestPoint,
+            distance: bestDistance,
+            lineName: bestLineName,
+            pointType: bestPointType,
+            projectId: bestProjectId
+        };
     }
 
     // Calculate distance in meters between two lat/lng points
@@ -2134,14 +2200,72 @@
         const [lng1, lat1] = point1;
         const [lng2, lat2] = point2;
 
-        const R = 6371000; // Earth's radius in meters
+        const EARTH_RADIUS_METERS = 6_371_000; // WGS84 mean Earth radius
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLng = (lng2 - lng1) * Math.PI / 180;
         const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
             Math.sin(dLng / 2) * Math.sin(dLng / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
+        
+        return EARTH_RADIUS_METERS * c;
+    }
+
+    // Calculate distance in meters from a point to a segment using local equirectangular projection
+    function distancePointToSegmentMeters(point, a, b) {
+        const EARTH_RADIUS_METERS = 6_371_000; // WGS84 mean Earth radius
+        const [plng, plat] = point;
+        const toRad = (deg) => deg * Math.PI / 180;
+        const platRad = toRad(plat);
+
+        function project(lng, lat) {
+            const x = EARTH_RADIUS_METERS * (toRad(lng - plng)) * Math.cos(platRad);
+            const y = EARTH_RADIUS_METERS * (toRad(lat - plat));
+            return { x, y };
+        }
+
+        // Guard if degenerate segment
+        if (!Array.isArray(a) || !Array.isArray(b)) {
+            return Infinity;
+        }
+        const ax = project(a[0], a[1]);
+        const bx = project(b[0], b[1]);
+        const px = { x: 0, y: 0 }; // point projected at origin
+
+        const vx = { x: bx.x - ax.x, y: bx.y - ax.y };
+        const wx = { x: px.x - ax.x, y: px.y - ax.y };
+
+        const c1 = vx.x * wx.x + vx.y * wx.y;
+        const c2 = vx.x * vx.x + vx.y * vx.y;
+
+        if (c2 === 0) {
+            // a and b are the same point
+            const dx = ax.x - px.x;
+            const dy = ax.y - px.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        let t = c1 / c2;
+        if (t < 0) t = 0;
+        else if (t > 1) t = 1;
+
+        const proj = { x: ax.x + t * vx.x, y: ax.y + t * vx.y };
+        const dx = proj.x - px.x;
+        const dy = proj.y - px.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // Calculate minimum distance (meters) from a point to a LineString (array of [lng,lat,(z)] coords)
+    function distancePointToLineStringMeters(point, coordinates) {
+        if (!Array.isArray(coordinates) || coordinates.length < 2) return Infinity;
+        let best = Infinity;
+        for (let i = 0; i < coordinates.length - 1; i++) {
+            const a = [coordinates[i][0], coordinates[i][1]]; // ignore altitude if present
+            const b = [coordinates[i + 1][0], coordinates[i + 1][1]];
+            const d = distancePointToSegmentMeters(point, a, b);
+            if (d < best) best = d;
+        }
+        return best;
     }
 
     // Visual feedback for magnetic snap
@@ -2354,28 +2478,41 @@
         } else {
             // Only show create options when NOT clicking on a station or POI
             // Station creation requires write access (project-specific permissions)
-            const nearestProjectId = getNearestProjectIdForLocation(lngLat);
-            const canCreate = nearestProjectId && hasProjectWriteAccess(nearestProjectId);
-            if (canCreate) {
+            const snapCheck = findNearestSnapPointWithinRadius([lngLat.lng, lngLat.lat], magneticSnapRadius);
+            if (!snapCheck.snapped) {
                 menuHTML += `
-                                <div class="context-menu-item" onclick="createStationHere()">
+                                <div class="context-menu-item disabled">
                                     <div class="context-menu-icon">📌</div>
                                     <div class="context-menu-text">
                                         <div>Create Station</div>
-                                        <div class="context-menu-subtitle">At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}</div>
+                                        <div class="context-menu-subtitle">Can't create a station at this location. Too far from the line</div>
                                     </div>
                                 </div>
                             `;
             } else {
-                menuHTML += `
-                                <div class="context-menu-item disabled">
-                                    <div class="context-menu-icon">🔒</div>
-                                    <div class="context-menu-text">
-                                        <div>No write access</div>
-                                        <div class="context-menu-subtitle">Cannot create stations</div>
+                const nearestProjectId = snapCheck.projectId || getNearestProjectIdForLocation(lngLat);
+                const canCreate = nearestProjectId && hasProjectWriteAccess(nearestProjectId);
+                if (canCreate) {
+                    menuHTML += `
+                                    <div class="context-menu-item" onclick="createStationHere()">
+                                        <div class="context-menu-icon">📌</div>
+                                        <div class="context-menu-text">
+                                            <div>Create Station</div>
+                                            <div class="context-menu-subtitle">At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}</div>
+                                        </div>
                                     </div>
-                                </div>
-                            `;
+                                `;
+                } else {
+                    menuHTML += `
+                                    <div class="context-menu-item disabled">
+                                        <div class="context-menu-icon">🔒</div>
+                                        <div class="context-menu-text">
+                                            <div>No write access</div>
+                                            <div class="context-menu-subtitle">Cannot create stations</div>
+                                        </div>
+                                    </div>
+                                `;
+                }
             }
 
             // POI creation is always available for authenticated users (POIs are not linked to projects)
@@ -2588,14 +2725,32 @@
         }
     }
 
-    // Compute nearest project to a clicked location using snap points first, then bounds center
+    // Compute nearest project to a clicked location by scanning ALL GeoJSON data (lines and snap points) across all projects
     function getNearestProjectIdForLocation(lngLat) {
         try {
             const target = [lngLat.lng, lngLat.lat];
             let bestProjectId = null;
             let bestDistance = Infinity;
 
-            // 1) Prefer proximity to existing survey snap points (more accurate)
+            // Consider full line geometry distances per project
+            if (lineFeatureCache && lineFeatureCache.size > 0) {
+                for (const [projectId, lines] of lineFeatureCache.entries()) {
+                    if (!lines || lines.size === 0) continue;
+                    let localBest = Infinity;
+                    for (const lineData of lines.values()) {
+                        const coords = lineData.coordinates;
+                        const d = distancePointToLineStringMeters(target, coords);
+                        if (d < localBest) localBest = d;
+                        if (localBest === 0) break;
+                    }
+                    if (localBest < bestDistance) {
+                        bestDistance = localBest;
+                        bestProjectId = projectId;
+                    }
+                }
+            }
+
+            // Also consider nearest snap points as a tie-breaker or if no lines found
             if (snapPointsCache && snapPointsCache.size > 0) {
                 snapPointsCache.forEach((points, projectId) => {
                     if (!Array.isArray(points) || points.length === 0) return;
@@ -2612,7 +2767,7 @@
                 });
             }
 
-            // 2) Fall back to nearest project bounds center if no snap points
+            // Fall back to nearest project bounds center if still nothing
             if ((!bestProjectId || !isFinite(bestDistance)) && window.projectBoundsMap && window.projectBoundsMap.size > 0) {
                 for (const [projectId, data] of window.projectBoundsMap.entries()) {
                     const b = data.bounds;
@@ -2631,7 +2786,7 @@
                 }
             }
 
-            // 3) Final fallback: first known project
+            // Final fallback: first known project
             if (!bestProjectId) {
                 bestProjectId = Array.from(lineFeatureCache.keys())[0] || window.projects?.[0]?.id || null;
             }
@@ -2643,16 +2798,27 @@
 
     function createStationHere() {
         if (!contextMenuData || !contextMenuData.lngLat) return;
-        const coordinates = [contextMenuData.lngLat.lng, contextMenuData.lngLat.lat];
-        const nearestProjectId = getNearestProjectIdForLocation(contextMenuData.lngLat);
+        const lngLat = contextMenuData.lngLat;
+        const coordinates = [lngLat.lng, lngLat.lat];
+
+        // Snap to nearest vertex across all projects within 30m
+        const snap = findNearestSnapPointWithinRadius(coordinates, magneticSnapRadius);
+        if (!snap.snapped || !isFinite(snap.distance) || snap.distance > magneticSnapRadius) {
+            showNotification('warning', "Can't create a station at this location. Too far from the line");
+            hideContextMenu();
+            return;
+        }
+
+        // Use the project from the snapped point when available; fallback to global scan
+        const nearestProjectId = snap.projectId || getNearestProjectIdForLocation(lngLat);
         if (!nearestProjectId || !hasProjectWriteAccess(nearestProjectId)) {
             showNotification('warning', 'You have read access and cannot create stations.');
             hideContextMenu();
             return;
         }
 
-        // Show the creation modal with nearest project preselected
-        showCreateStationModal(coordinates, nearestProjectId);
+        // Show the creation modal using snapped coordinates
+        showCreateStationModal(snap.coordinates, nearestProjectId);
         hideContextMenu();
     }
 
@@ -2695,11 +2861,9 @@
             stationData.longitude = Math.round(stationData.longitude * 10000000) / 10000000;
         }
 
-        // Add project_id to the request body
-        stationData.project_id = projectId;
-
         // Direct UUID-based API call
-        const response = await fetch('/api/v1/stations/', {
+        const response = await fetch(
+            Urls["api:v1:project-stations"](projectId), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2723,22 +2887,25 @@
             throw new Error(data.error || 'Failed to create station');
         }
 
-        // The middleware wraps the response, so the actual station data is in data.data.station
-        return data.data.station;
+        // The middleware wraps the response, so the actual station data is in data.data
+        return data.data;
     }
 
     // API function to update station
     async function updateStationAPI(stationId, updateData) {
         // Direct UUID-based API call
-        const response = await fetch(`/api/v1/stations/${stationId}/`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify(updateData),
-            credentials: 'same-origin'
-        });
+        const response = await fetch(
+            Urls['api:v1:station-detail'](stationId),
+            {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(updateData),
+                credentials: 'same-origin'
+            }
+        );
 
         if (!response.ok) {
             const errorData = await response.json();
@@ -2750,20 +2917,23 @@
             throw new Error(data.error || 'Failed to update station');
         }
 
-        return data.data.station;
+        return data.data;
     }
 
     // API function to delete station
     async function deleteStationAPI(stationId) {
         // Direct UUID-based API call
-        const response = await fetch(`/api/v1/stations/${stationId}/`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            credentials: 'same-origin'
-        });
+        const response = await fetch(
+            Urls['api:v1:station-detail'](stationId),
+            {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            }
+        );
 
         if (!response.ok) {
             let errorMessage = 'Failed to delete station';
@@ -3002,14 +3172,17 @@
         try {
             console.log(`📍 Loading all POIs...`);
 
-            const response = await fetch(`/api/v1/points_of_interest/map/`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const response = await fetch(
+                Urls['api:v1:pois-geojson'](), 
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin'
+                }
+            );
 
             if (response.ok) {
                 const data = await response.json();
@@ -3454,16 +3627,18 @@
             // Try to load from API (regardless of demo mode)
             try {
                 console.log(`🔄 Loading stations from API for project ${projectId}...`);
-                console.log(`🔗 Full URL: ${window.location.origin}/api/v1/stations/map/?project_id=${projectId}`);
 
-                const response = await fetch(`/api/v1/stations/map/?project_id=${projectId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                });
+                const response = await fetch(
+                    Urls["api:v1:project-stations-geojson"](projectId),
+                    {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        credentials: 'same-origin'
+                    }
+                );
 
                 console.log(`📡 API Response Status: ${response.status} ${response.statusText}`);
 
@@ -3471,154 +3646,25 @@
                     const data = await response.json();
                     console.log('📦 Full API Response:', data);
 
-                    // Check different possible response formats
-                    if (data.success && data.data) {
+                    if (data.success) {
                         // The ProjectStationListView returns a GeoJSON FeatureCollection
-                        // After middleware wrapping: data.data = {type: "FeatureCollection", features: [...]}
-                        if (data.data.type === 'FeatureCollection' && data.data.features) {
-                            apiStations = data.data.features;
-                            apiLoadSuccess = true;
-                            console.log(`✅ API: Loaded ${apiStations.length} stations (GeoJSON format)`);
-                            console.log('📍 Sample station:', apiStations[0]);
-                        } else if (data.data.features) {
-                            apiStations = data.data.features;
-                            apiLoadSuccess = true;
-                            console.log(`✅ API: Loaded ${apiStations.length} stations (GeoJSON format)`);
-                            console.log('📍 Sample station:', apiStations[0]);
-                        } else if (data.data.stations && Array.isArray(data.data.stations)) {
-                            // API returns {success: true, data: {stations: [...]}} format
-                            console.log('🔄 API returned nested stations array, converting to GeoJSON...');
-                            apiStations = data.data.stations.map(station => ({
-                                type: 'Feature',
-                                geometry: {
-                                    type: 'Point',
-                                    coordinates: [
-                                        parseFloat(station.longitude),
-                                        parseFloat(station.latitude),
-                                        0
-                                    ]
-                                },
-                                properties: {
-                                    id: station.id,
-                                    name: station.name,
-                                    description: station.description || '',
-                                    resource_count: station.resource_count || 0,
-                                    created_by_email: station.created_by_email || station.created_by || '',
-                                    creation_date: station.creation_date || station.created_at,
-                                    // Include the raw station data for later use
-                                    latitude: parseFloat(station.latitude),
-                                    longitude: parseFloat(station.longitude),
-                                    resources: station.resources || []
-                                }
-                            }));
-                            apiLoadSuccess = true;
-                            console.log(`✅ API: Converted ${apiStations.length} stations from {success: true, data: {stations: [...]}} format`);
-                            console.log('📍 Sample converted station:', apiStations[0]);
-                        } else if (Array.isArray(data.data)) {
-                            // Maybe the API returns a simple array instead of GeoJSON
-                            console.log('🔄 API returned array format, converting to GeoJSON...');
-                            apiStations = data.data.map(station => ({
-                                type: 'Feature',
-                                geometry: {
-                                    type: 'Point',
-                                    coordinates: [
-                                        parseFloat(station.longitude),
-                                        parseFloat(station.latitude),
-                                        0
-                                    ]
-                                },
-                                properties: {
-                                    id: station.id,
-                                    name: station.name,
-                                    description: station.description || '',
-                                    resource_count: station.resource_count || 0,
-                                    created_by_email: station.created_by || station.created_by_email || '',
-                                    creation_date: station.creation_date || station.created_at,
-                                    // Include the raw station data for later use
-                                    latitude: parseFloat(station.latitude),
-                                    longitude: parseFloat(station.longitude),
-                                    resources: station.resources || []
-                                }
-                            }));
-                            apiLoadSuccess = true;
-                            console.log(`✅ API: Converted ${apiStations.length} stations to GeoJSON`);
-                        } else {
-                            console.warn('❌ Unexpected data format:', data.data);
-                            console.warn('Full response:', data);
-                        }
-                    } else if (Array.isArray(data)) {
-                        // Direct array response
-                        console.log('🔄 API returned direct array, converting to GeoJSON...');
-                        apiStations = data.map(station => ({
-                            type: 'Feature',
-                            geometry: {
-                                type: 'Point',
-                                coordinates: [
-                                    parseFloat(station.longitude),
-                                    parseFloat(station.latitude),
-                                    0
-                                ]
-                            },
-                            properties: {
-                                id: station.id,
-                                name: station.name,
-                                description: station.description || '',
-                                resource_count: station.resource_count || 0,
-                                created_by_email: station.created_by || station.created_by_email || '',
-                                creation_date: station.creation_date || station.created_at,
-                                // Include the raw station data for later use
-                                latitude: parseFloat(station.latitude),
-                                longitude: parseFloat(station.longitude),
-                                resources: station.resources || []
-                            }
-                        }));
+                        apiStations = data.data.features;
                         apiLoadSuccess = true;
-                        console.log(`✅ API: Converted ${apiStations.length} stations from direct array`);
-                    } else if (data.stations && Array.isArray(data.stations)) {
-                        // API returns {stations: [...]} format
-                        console.log('🔄 API returned stations array, converting to GeoJSON...');
-                        apiStations = data.stations.map(station => ({
-                            type: 'Feature',
-                            geometry: {
-                                type: 'Point',
-                                coordinates: [
-                                    parseFloat(station.longitude),
-                                    parseFloat(station.latitude),
-                                    0
-                                ]
-                            },
-                            properties: {
-                                id: station.id,
-                                name: station.name,
-                                description: station.description || '',
-                                resource_count: station.resource_count || 0,
-                                created_by_email: station.created_by_email || station.created_by || '',
-                                creation_date: station.creation_date || station.created_at,
-                                // Include the raw station data for later use
-                                latitude: parseFloat(station.latitude),
-                                longitude: parseFloat(station.longitude),
-                                resources: station.resources || []
-                            }
-                        }));
-                        apiLoadSuccess = true;
-                        console.log(`✅ API: Converted ${apiStations.length} stations from {stations: [...]} format`);
-                        console.log('📍 Sample converted station:', apiStations[0]);
+                        console.log(`✅ API: Loaded ${apiStations.length} stations (GeoJSON format)`);
+                        console.log('📍 Sample station:', apiStations[0]);
                     } else {
-                        console.warn('❌ No valid station data in API response');
-                        console.warn('Response structure:', Object.keys(data));
-                    }
-                } else {
-                    console.error(`❌ API returned error status ${response.status}`);
-                    try {
-                        const errorData = await response.json();
-                        console.error('Error details:', errorData);
-                    } catch (e) {
-                        console.error('Could not parse error response');
+                        console.error(`❌ API returned error status ${response.status}`);
+                        try {
+                            const errorData = await response.json();
+                            console.error('Error details:', errorData);
+                        } catch (e) {
+                            console.error('Could not parse error response');
+                        }
                     }
                 }
-            } catch (apiError) {
-                console.error(`❌ Failed to load stations from API: ${apiError.message}`);
-                console.error('Full error:', apiError);
+            } catch (e) {
+                console.error(`❌ Failed to load stations from API: ${e.message}`);
+                console.error('Full error:', e);
             }
 
             // Production mode: Show API stations only
@@ -3689,7 +3735,7 @@
                     name: properties.name || 'Unnamed Station',
                     description: properties.description || '',
                     resource_count: properties.resource_count || 0,
-                    created_by_email: properties.created_by || properties.created_by_email || 'Unknown',
+                    created_by: properties.created_by || properties.created_by || 'Unknown',
                     creation_date: properties.creation_date || properties.created_at || new Date().toISOString(),
                     is_demo: properties.is_demo || false
                 });
@@ -4026,9 +4072,10 @@
     function showCreateStationModal(coordinates, projectId) {
         const modal = document.getElementById('create-station-modal');
 
-        // Apply magnetic snap
-        const snapResult = findMagneticSnapPoint(coordinates, null);
-        const finalCoords = snapResult.coordinates;
+        // Apply magnetic snap (coordinates may come pre-snapped from caller)
+        const preSnap = findNearestSnapPointWithinRadius(coordinates, magneticSnapRadius);
+        const snapResult = preSnap.snapped ? preSnap : findMagneticSnapPoint(coordinates, null);
+        const finalCoords = snapResult.snapped ? snapResult.coordinates : coordinates;
 
         // Store pending data
         pendingStationData = {
@@ -4227,18 +4274,21 @@
 
         try {
             // Update POI via API
-            const response = await fetch(`/api/v1/points_of_interest/${poiId}/`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    latitude: newCoords[1],
-                    longitude: newCoords[0]
-                }),
-                credentials: 'same-origin'
-            });
+            const response = await fetch(
+                Urls['api:v1:poi-detail'](poiId),
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        latitude: newCoords[1],
+                        longitude: newCoords[0]
+                    }),
+                    credentials: 'same-origin'
+                }
+            );
 
             if (response.ok) {
                 const data = await response.json();
@@ -4532,7 +4582,7 @@
 
         // Organize stations by project
         allStations.forEach((station, stationId) => {
-            const projectId = station.projectId || station.project || station.project_id;
+            const projectId = station.project;
             if (!stationsByProject.has(projectId)) {
                 stationsByProject.set(projectId, []);
             }
@@ -4769,19 +4819,22 @@
         }
         try {
             // Always fetch the full station details from the API to ensure we have all data including resources
-            const response = await fetch(`/api/v1/stations/${stationId}/`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const response = await fetch(
+                Urls['api:v1:station-detail'](stationId),
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin'
+                }
+            );
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.success && data.data.station) {
-                    const station = data.data.station;
+                if (data.success && data.data) {
+                    const station = data.data;
 
                     // Update the allStations map with the complete data
                     const existingStation = allStations.get(stationId);
@@ -4805,6 +4858,7 @@
                     }
 
                     displayStationDetails(station, projectId);
+
                     return;
                 }
             }
@@ -4886,7 +4940,7 @@
                                         <strong>Coordinates:</strong> ${Number(station.latitude).toFixed(7)}, ${Number(station.longitude).toFixed(7)}
                                     </p>
                                     <p class="text-slate-300 mt-2">
-                                        <strong>Created by:</strong> ${station.created_by_email || 'Unknown'}
+                                        <strong>Created by:</strong> ${station.created_by || 'Unknown'}
                                     </p>
                                     <p class="text-slate-300 mt-1">
                                         <strong>Created:</strong> ${station.creation_date ? new Date(station.creation_date).toLocaleDateString() : 'Unknown'}
@@ -4987,7 +5041,7 @@
                          data-note-title="${resource.title}"
                          data-note-content="${resource.text_content.replace(/"/g, '&quot;')}"
                          data-note-description="${(resource.description || '').replace(/"/g, '&quot;')}"
-                         data-note-author="${resource.created_by_email}"
+                         data-note-author="${resource.created_by}"
                          data-note-date="${resource.creation_date}"
                          title="Click to read full note">
                         <div class="flex items-start gap-2">
@@ -5060,7 +5114,7 @@
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                     </svg>
                                                 </button>
-                                                <button onclick="deleteResource('${resource.id}', '${stationId}', '${projectId}')" class="text-red-400 hover:text-red-300" title="Delete">
+                                                <button ${hasProjectAdminAccess(projectId) ? `onclick="deleteResource('${resource.id}', '${stationId}', '${projectId}')"` : ''} class="text-red-400 ${hasProjectAdminAccess(projectId) ? 'hover:text-red-300' : 'opacity-50 cursor-not-allowed'}" title="${hasProjectAdminAccess(projectId) ? 'Delete' : 'Only admins can delete'}" ${hasProjectAdminAccess(projectId) ? '' : 'disabled'}>
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                     </svg>
@@ -5075,7 +5129,7 @@
                                     
                                     <div class="flex justify-between items-center mt-3 text-xs text-slate-400">
                                         <span>${new Date(resource.creation_date).toLocaleDateString()}</span>
-                                        <span>${resource.created_by_email}</span>
+                                        <span>${resource.created_by}</span>
                                     </div>
                                 </div>
                             `).join('')}
@@ -5620,10 +5674,10 @@
                                 <div>
                                     <label class="form-label" for="project_id_select">
                                         Project <span class="text-red-400">*</span>
-                                        <span class="text-xs text-slate-400 ml-2">(click to move station to another project)</span>
+                                        <span class="text-xs text-slate-400 ml-2">(cannot be changed)</span>
                                     </label>
                                     <div class="relative">
-                                        <select id="project_id_select" name="project_id" class="form-input bg-slate-600 border-2 border-slate-500 font-medium hover:bg-slate-500 hover:border-sky-400 focus:border-sky-500 cursor-pointer appearance-none pr-10 transition-all" required id="edit-station-project">
+                                        <select id="project_id_select" name="project_id" class="form-input bg-slate-600 border-2 border-slate-500 font-medium hover:bg-slate-500 hover:border-sky-400 focus:border-sky-500 appearance-none pr-10 transition-all opacity-60 cursor-not-allowed" required id="edit-station-project" disabled title="Project cannot be changed">
                                             ${window.projects.map(project => `
                                                 <option value="${project.id}" ${project.id === projectId ? 'selected' : ''}>
                                                     ${project.name}
@@ -5636,7 +5690,7 @@
                                             </svg>
                                         </div>
                                     </div>
-                                    <p class="text-xs text-amber-400 mt-1">⚠️ Changing the project association may modify your edit rights.</p>
+                                    <p class="text-xs text-slate-400 mt-1">Project is fixed for existing stations and cannot be changed.</p>
                                 </div>
                             </div>
                         </div>
@@ -5683,7 +5737,7 @@
                         <div class="bg-slate-700/40 p-4 rounded-lg border border-slate-600/30">
                             <div class="text-sm text-slate-400">
                                 <p><strong>Station ID:</strong> ${station.id}</p>
-                                <p><strong>Created by:</strong> ${station.created_by_email || 'Unknown'}</p>
+                                <p><strong>Created by:</strong> ${station.created_by || 'Unknown'}</p>
                                 <p><strong>Created on:</strong> ${station.creation_date ? new Date(station.creation_date).toLocaleDateString() : 'Unknown'}</p>
                                 <p><strong>Resources:</strong> ${station.resource_count || 0} items</p>
                             </div>
@@ -5726,8 +5780,7 @@
             name: station.name,
             description: station.description || '',
             latitude: station.latitude,
-            longitude: station.longitude,
-            project_id: projectId
+            longitude: station.longitude
         };
 
         // Add change detection to form inputs
@@ -5755,12 +5808,6 @@
                         input.classList.add('ring-2', 'ring-amber-500');
                     } else {
                         input.classList.remove('ring-2', 'ring-amber-500');
-                    }
-
-                    // Log project selection changes but don't update currentEditingProjectId
-                    // This ensures we can detect the change when saving
-                    if (fieldName === 'project_id') {
-                        console.log(`📝 Project selection changed to: ${currentValue}`);
                     }
                 });
             }
@@ -5814,8 +5861,7 @@
                 name: form.querySelector('input[name="name"]').value,
                 description: form.querySelector('textarea[name="description"]').value,
                 latitude: parseFloat(form.querySelector('input[name="latitude"]').value),
-                longitude: parseFloat(form.querySelector('input[name="longitude"]').value),
-                project_id: form.querySelector('select[name="project_id"]').value
+                longitude: parseFloat(form.querySelector('input[name="longitude"]').value)
             };
 
             // Check if any values changed
@@ -5970,7 +6016,6 @@
             return;
         }
         const formData = new FormData(form);
-        const newProjectId = formData.get('project_id');
         const updateData = {
             name: formData.get('name'),
             description: formData.get('description'),
@@ -5979,10 +6024,7 @@
         };
 
         console.log(`💾 Saving edits for station ${stationId}:`, updateData);
-        console.log(`   Original project: ${originalProjectId}, New project: ${newProjectId}`);
-
-        // Check if project is changing
-        const isProjectChanging = newProjectId !== originalProjectId;
+        console.log(`   Project: ${originalProjectId}`);
 
         // Disable form and show loading state
         const submitButton = form.querySelector('button[type="submit"]');
@@ -5991,13 +6033,7 @@
         submitButton.innerHTML = '<span class="loading-spinner-inline"></span> Saving...';
 
         try {
-            // Add project_id to update data if changing
-            if (isProjectChanging) {
-                updateData.project_id = newProjectId;
-                console.log(`🔄 Moving station to new project: ${newProjectId}`);
-            }
-
-            // Update station via API - this handles both normal updates and project changes
+            // Update station via API
             const updatedStation = await updateStationAPI(stationId, updateData);
 
             console.log('Updated station from API:', updatedStation);
@@ -6009,8 +6045,8 @@
                 // Ensure coordinates are numbers
                 latitude: Number(updatedStation.latitude),
                 longitude: Number(updatedStation.longitude),
-                // The API returns project_id, but we also need projectId for backward compatibility
-                projectId: updatedStation.project_id || (isProjectChanging ? newProjectId : originalProjectId),
+                // Preserve projectId for backward compatibility
+                projectId: updatedStation.project_id || originalProjectId,
                 // Ensure resources array exists
                 resources: updatedStation.resources || [],
                 // Use the resource_count from API or calculate it
@@ -6020,28 +6056,17 @@
             // Update the global map
             allStations.set(stationId, stationData);
 
-            if (isProjectChanging) {
-                // Reload stations for both projects
-                await Promise.all([
-                    loadStationsForProject(originalProjectId),
-                    loadStationsForProject(newProjectId)
-                ]);
-
-                // Show success
-                showNotification('success', `Station moved to ${window.projects.find(p => p.id === newProjectId)?.name || 'new project'}`);
-            } else {
-                // Update marker position if coordinates changed
-                const markers = stationMarkers.get(originalProjectId);
-                if (markers) {
-                    const marker = markers.find(m => m.stationId === stationId);
-                    if (marker) {
-                        marker.setLngLat([Number(updateData.longitude), Number(updateData.latitude)]);
-                    }
+            // Update marker position if coordinates changed
+            const markers = stationMarkers.get(originalProjectId);
+            if (markers) {
+                const marker = markers.find(m => m.stationId === stationId);
+                if (marker) {
+                    marker.setLngLat([Number(updateData.longitude), Number(updateData.latitude)]);
                 }
-
-                // Show success notification
-                showNotification('success', 'Station updated successfully!');
             }
+
+            // Show success notification
+            showNotification('success', 'Station updated successfully!');
 
             console.log(`✅ Station ${stationId} updated successfully`);
             console.log('Updated station data:', updatedStation);
@@ -6053,7 +6078,7 @@
 
             // Return to details view
             switchTab('details');
-            loadStationDetails(stationId, isProjectChanging ? newProjectId : currentProjectId);
+            loadStationDetails(stationId, currentProjectId);
 
             // Re-setup modal handlers in case they were lost
             setTimeout(() => {
@@ -6063,25 +6088,7 @@
         } catch (error) {
             console.error('Error updating station:', error);
 
-            // Check if it's a duplicate name error when changing projects
-            if (error.message && error.message.includes('already exists') && isProjectChanging) {
-                // Show error with suggestions
-                const nameInput = form.querySelector('input[name="name"]');
-                const projectSelect = form.querySelector('select[name="project_id"]');
-                const targetProjectName = window.projects.find(p => p.id === newProjectId)?.name || 'the target project';
-
-                showNotification('error', `A station named "${nameInput.value}" already exists in ${targetProjectName}. Please choose a different name.`, 5000);
-
-                // Highlight the name field
-                nameInput.classList.add('ring-2', 'ring-red-500');
-                nameInput.focus();
-                nameInput.select();
-
-                // Reset project selection to original
-                projectSelect.value = originalProjectId;
-            } else {
-                showNotification('error', `Failed to update station: ${error.message}`);
-            }
+            showNotification('error', `Failed to update station: ${error.message}`);
 
             // Re-enable form
             submitButton.disabled = false;
@@ -6118,7 +6125,7 @@
 
         const stationName = station?.name || 'Station';
         const resourceCount = station?.resource_count || 0;
-        const createdBy = station?.created_by_email || station?.created_by || 'Unknown';
+        const createdBy = station?.created_by || station?.created_by || 'Unknown';
         const creationDate = station?.creation_date ? new Date(station.creation_date).toLocaleDateString() : 'Unknown';
 
         // Update message
@@ -6563,14 +6570,17 @@
         const loadingOverlay = showStationLoadingOverlay('Updating Resource', 'Saving changes...');
 
         try {
-            const response = await fetch(`/api/v1/resources/${resourceId}/`, {
-                method: 'PATCH',
-                headers: {
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: formData,
-                credentials: 'same-origin'
-            });
+            const response = await fetch(
+                Urls['api:v1:resource-detail'](resourceId),
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: formData,
+                    credentials: 'same-origin'
+                }
+            );
 
             if (response.ok) {
                 const data = await response.json();
@@ -6583,7 +6593,7 @@
                     if (station && station.resources) {
                         const index = station.resources.findIndex(r => r.id === resourceId);
                         if (index !== -1) {
-                            station.resources[index] = data.data.resource;
+                            station.resources[index] = data.data;
                         }
                     }
 
@@ -7220,17 +7230,17 @@
         // Production mode - save to database
         const loadingOverlay = showStationLoadingOverlay('Saving Resource', 'Uploading resource to server...');
         
-        try {
-            // Add station_id to the form data
-            formData.append('station_id', stationId);
-            
-            const response = await fetch(`/api/v1/resources/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCSRFToken()},
-                body: formData,
-                credentials: 'same-origin'
-            });
+        try {            
+            const response = await fetch(
+                Urls["api:v1:station-resources"](stationId),
+                {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()},
+                    body: formData,
+                    credentials: 'same-origin'
+                }
+            );
             
             if (response.ok) {
                 const data = await response.json();
@@ -7245,7 +7255,7 @@
                             station.resources = [];
                         }
                         // Add the new resource to the station's resources
-                        const newResource = data.data ? data.data.resource : data;
+                        const newResource = data.data ? data.data : data;
                         if (newResource) {
                             station.resources.push(newResource);
                             station.resource_count = station.resources.length;
@@ -7360,6 +7370,11 @@
     let pendingResourceDelete = null;
     
     async function deleteResource(resourceId, stationId, projectId) {
+        // Enforce admin permission before proceeding
+        if (!projectId || !hasProjectAdminAccess(projectId)) {
+            showNotification('warning', 'Only admins can delete resources.');
+            return;
+        }
         // Get resource details for the modal
         const station = allStations.get(stationId);
         let resourceDetails = null;
@@ -7410,8 +7425,8 @@
         if (!pendingResourceDelete) return;
 
         const { resourceId, stationId, projectId } = pendingResourceDelete;
-        if (!projectId || !hasProjectWriteAccess(projectId)) {
-            showNotification('warning', 'You have read access and cannot modify.');
+        if (!projectId || !hasProjectAdminAccess(projectId)) {
+            showNotification('warning', 'Only admins can delete resources.');
             return;
         }
 
@@ -7422,14 +7437,17 @@
         const loadingOverlay = showStationLoadingOverlay('Deleting Resource', 'Removing resource from server...');
 
         try {
-            const response = await fetch(`/api/v1/resources/${resourceId}/`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const response = await fetch(
+                Urls['api:v1:resource-detail'](resourceId),
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin'
+                }
+            );
 
             if (response.ok) {
                 showNotification('success', 'Resource deleted successfully');
@@ -7833,146 +7851,6 @@
         return Array.from(allStations.keys());
     };
 
-    // Comprehensive verification function
-    window.verifyIntegration = async function () {
-        console.log('🔍 VERIFYING SPELEODB MAP VIEWER INTEGRATION');
-        console.log('===========================================');
-
-        // 1. Check Configuration
-        console.log('\n1️⃣ CONFIGURATION CHECK:');
-        console.log('   Production Mode: ENABLED ✅');
-
-        // 2. Check Map State
-        console.log('\n2️⃣ MAP STATE CHECK:');
-        console.log(`   Map Loaded: ${map && map.loaded() ? 'YES ✅' : 'NO ❌'}`);
-        console.log(`   Current Zoom: ${map ? map.getZoom().toFixed(2) : 'N/A'}`);
-        console.log(`   Station Visibility Threshold: ${map && map.getZoom() >= 14 ? 'VISIBLE ✅' : 'HIDDEN (zoom < 14) ⚠️'}`);
-
-        // 3. Check Projects & Lines
-        console.log('\n3️⃣ PROJECT & LINE DATA:');
-        console.log(`   Projects Loaded: ${lineFeatureCache.size}`);
-        console.log(`   Total Survey Lines: ${Array.from(lineFeatureCache.values()).reduce((sum, lines) => sum + lines.size, 0)}`);
-        console.log(`   Snap Points Cached: ${Array.from(snapPointsCache.values()).reduce((sum, points) => sum + points.length, 0)}`);
-        console.log(`   Magnetic Snap Radius: ${magneticSnapRadius}m`);
-
-        // 4. Check Stations
-        console.log('\n4️⃣ STATION DATA:');
-        console.log(`   Total Stations in Memory: ${allStations.size}`);
-        let apiStations = 0, demoStations = 0;
-        allStations.forEach(station => {
-            if (station.is_demo) demoStations++;
-            else apiStations++;
-        });
-        console.log(`   API Stations: ${apiStations}`);
-        console.log(`   Demo Stations: ${demoStations}`);
-        console.log(`   Station Markers on Map: ${Array.from(stationMarkers.values()).reduce((sum, markers) => sum + markers.length, 0)}`);
-
-        // 5. Test API Connectivity
-        console.log('\n5️⃣ API CONNECTIVITY TEST:');
-        if (projects && projects.length > 0) {
-            try {
-                const testProjectId = projects[0].id;
-                console.log(`   Testing API with project: ${testProjectId}`);
-                const response = await fetch(`/api/v1/stations/?project_id=${testProjectId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                });
-                console.log(`   API Response Status: ${response.status} ${response.status === 200 ? '✅' : '❌'}`);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.data && data.data.stations) {
-                        console.log(`   API Format: {success: true, data: {stations: [...]}} ✅`);
-                        console.log(`   Stations from API: ${data.data.stations.length}`);
-                    } else if (data.stations) {
-                        console.log(`   API Format: {stations: [...]} ✅`);
-                        console.log(`   Stations from API: ${data.stations.length}`);
-                    } else {
-                        console.log(`   API Format: Unknown ⚠️`);
-                    }
-                }
-            } catch (error) {
-                console.log(`   API Test Failed: ${error.message} ❌`);
-            }
-        } else {
-            console.log(`   No projects available for API test ❌`);
-        }
-
-        // 6. Test Core Features
-        console.log('\n6️⃣ FEATURE VERIFICATION:');
-        
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
-        
-        // Test Station Modal
-        console.log('\n   📋 Testing Station Modal:');
-        const firstStation = Array.from(allStations.values())[0];
-        if (firstStation) {
-            console.log(`      Opening modal for: ${firstStation.name}`);
-            openStationModal(firstStation.id, firstStation.projectId);
-            console.log('      Modal Opened ✅');
-            setTimeout(() => {
-                closeStationModal();
-                console.log('      Modal Closed ✅');
-            }, 2000);
-        } else {
-            console.log('      No stations to test modal ⚠️');
-        }
-
-        // Test Context Menu
-        console.log('\n   🖱️ Testing Context Menu:');
-        console.log('      Right-click functionality: ENABLED ✅');
-        console.log('      Station creation options: AVAILABLE ✅');
-        console.log('      Magnetic snap: ACTIVE ✅');
-
-        // Test Delete Confirmation
-        console.log('\n   🗑️ Testing Delete Confirmation:');
-        console.log('      Beautiful modal: IMPLEMENTED ✅');
-        console.log('      Station details shown: YES ✅');
-        console.log('      Warning messages: INCLUDED ✅');
-
-        // Test Drag & Drop
-        console.log('\n   🫳 Testing Drag & Drop:');
-        console.log(`      Draggable markers: ${hasWriteAccess ? "ENABLED" : "DISABLED (no write access)"} ✅`);
-        console.log('      Magnetic snap on drag: ACTIVE ✅');
-        console.log('      Confirmation modal: IMPLEMENTED ✅');
-
-        // 7. Performance Metrics
-        console.log('\n7️⃣ PERFORMANCE METRICS:');
-        console.log(`   Map container exists: ${!!map.getContainer() ? 'YES ✅' : 'NO ❌'}`);
-        console.log(`   Total layers on map: ${map.getStyle().layers.length}`);
-        console.log(`   Project layers tracked: ${allProjectLayers.size}`);
-
-        // 8. UI Components
-        console.log('\n8️⃣ UI COMPONENTS:');
-        console.log(`   Station Modal: ${document.getElementById('station-modal') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Context Menu: ${document.getElementById('context-menu') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Delete Modal: ${document.getElementById('delete-confirm-modal') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Drag Modal: ${document.getElementById('drag-confirm-modal') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Loading Overlay: ${document.getElementById('loading-overlay') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Demo Mode Badge: ${document.getElementById('demo-mode-indicator') ? 'SHOWN ✅' : 'HIDDEN'}`);
-
-        // Summary
-        console.log('\n✅ VERIFICATION COMPLETE!');
-        console.log('\n💡 QUICK TEST COMMANDS:');
-        console.log('   1. Create Station: Right-click on map');
-        console.log('   2. View Station: Click any orange/green marker');
-        console.log('   3. Move Station: Drag any marker (if you have write access)');
-        console.log('   4. Delete Station: Right-click marker → Delete');
-        console.log('   5. Reload Stations: reloadStations()');
-        console.log('   6. Check Zoom: checkZoom()');
-        console.log('   7. Force Visibility: map.setZoom(14)');
-
-        return {
-            mapReady: map && map.loaded(),
-            stations: allStations.size,
-            projects: lineFeatureCache.size,
-            currentZoom: map ? map.getZoom() : null
-        };
-    };
     // Add helpful commands info to the console
     setTimeout(() => {
         console.log('\n📍 HELPFUL COMMANDS:');
@@ -8432,109 +8310,113 @@
 
             // Create promises to fetch GeoJSON data from API for each project
             const fetchPromises = projectIds.map((projectId, index) => {
-                const apiUrl = `/api/v1/projects/${projectId}/geojson/?limit=1`;
-
                 console.log('Fetching GeoJSON data for project:', projectId);
 
-                return fetch(apiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
-                    },
-                    credentials: 'same-origin'
+                return fetch(
+                    Urls['api:v1:project-geojson'](projectId), 
+                    {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        credentials: 'same-origin'
+                    }
+                )
+                .then(response => {
+                    console.log(`Project ${projectId} GeoJSON API response status:`, response.status);
+                    if (!response.ok) {
+                        console.error(`HTTP error for project ${projectId}! status: ${response.status}`);
+                        throw new Error(`HTTP error for project ${projectId}! status: ${response.status}`);
+                    }
+                    return response.json();
                 })
-                    .then(response => {
-                        console.log(`Project ${projectId} GeoJSON API response status:`, response.status);
-                        if (!response.ok) {
-                            console.error(`HTTP error for project ${projectId}! status: ${response.status}`);
-                            throw new Error(`HTTP error for project ${projectId}! status: ${response.status}`);
+                .then(apiResponse => {
+                    console.log(`Project ${projectId} API response:`, apiResponse);
+
+                    // Validate API envelope
+                    if (!apiResponse || !apiResponse.success || !apiResponse.data) {
+                        console.warn(`Project ${projectId} API response not successful or missing data`, apiResponse);
+                        return null;
+                    }
+
+                    const files = apiResponse.data.geojson_files || [];
+                    if (!Array.isArray(files) || files.length === 0) {
+                        console.log(`Project ${projectId} has no geojson_files, skipping`);
+                        return null;
+                    }
+
+                    const attemptFetch = (fileList) => {
+                        const latest = fileList[0]; // already sorted by -creation_date on backend
+                        if (!latest || !latest.url) {
+                            console.log(`Project ${projectId} latest file missing URL, skipping`);
+                            return Promise.resolve(null);
                         }
-                        return response.json();
-                    })
-                    .then(apiResponse => {
-                        console.log(`Project ${projectId} API response:`, apiResponse);
+                        return fetch(latest.url, { method: 'GET', mode: 'cors' })
+                            .then(resp => {
+                                if (!resp.ok) {
+                                    throw new Error(`S3 GET failed: ${resp.status}`);
+                                }
+                                return resp.json();
+                            });
+                    };
 
-                        // Validate API envelope
-                        if (!apiResponse || !apiResponse.success || !apiResponse.data) {
-                            console.warn(`Project ${projectId} API response not successful or missing data`, apiResponse);
-                            return null;
-                        }
-
-                        const files = apiResponse.data.geojson_files || [];
-                        if (!Array.isArray(files) || files.length === 0) {
-                            console.log(`Project ${projectId} has no geojson_files, skipping`);
-                            return null;
-                        }
-
-                        const attemptFetch = (fileList) => {
-                            const latest = fileList[0]; // already sorted by -creation_date on backend
-                            if (!latest || !latest.url) {
-                                console.log(`Project ${projectId} latest file missing URL, skipping`);
-                                return Promise.resolve(null);
-                            }
-                            return fetch(latest.url, { method: 'GET', mode: 'cors' })
-                                .then(resp => {
-                                    if (!resp.ok) {
-                                        throw new Error(`S3 GET failed: ${resp.status}`);
-                                    }
-                                    return resp.json();
-                                });
-                        };
-
-                        // Try S3 fetch; on failure, refresh signed URL list once and retry
-                        return attemptFetch(files)
-                            .catch(err => {
-                                console.warn(`S3 fetch failed for project ${projectId}, refreshing signed URL and retrying once...`, err);
-                                return fetch(`/api/v1/projects/${projectId}/geojson/?limit=1`, {
+                    // Try S3 fetch; on failure, refresh signed URL list once and retry
+                    return attemptFetch(files)
+                        .catch(err => {
+                            console.warn(`S3 fetch failed for project ${projectId}, refreshing signed URL and retrying once...`, err);
+                            return fetch(
+                                Urls['api:v1:project-geojson'](projectId),
+                                {
                                     method: 'GET',
                                     headers: {
                                         'Content-Type': 'application/json',
                                         'X-CSRFToken': getCSRFToken()
                                     },
                                     credentials: 'same-origin'
-                                })
-                                    .then(r => r.json())
-                                    .then(refreshResp => {
-                                        const refreshedFiles = refreshResp?.data?.geojson_files || [];
-                                        if (!Array.isArray(refreshedFiles) || refreshedFiles.length === 0) {
-                                            console.log(`Project ${projectId} still has no geojson_files after refresh, skipping`);
-                                            return null;
-                                        }
-                                        return attemptFetch(refreshedFiles);
-                                    });
-                            })
-                            .then(geojsonData => {
-                                if (!geojsonData) {
+                                }
+                            )
+                            .then(r => r.json())
+                            .then(refreshResp => {
+                                const refreshedFiles = refreshResp?.data?.geojson_files || [];
+                                if (!Array.isArray(refreshedFiles) || refreshedFiles.length === 0) {
+                                    console.log(`Project ${projectId} still has no geojson_files after refresh, skipping`);
                                     return null;
                                 }
-
-                                // Validate parsed GeoJSON
-                                if (!geojsonData.features) {
-                                    console.log(`Project ${projectId} has no features property, skipping`);
-                                    return null;
-                                }
-                                if (geojsonData.features.length === 0) {
-                                    console.log(`Project ${projectId} has empty features array, skipping`);
-                                    return null;
-                                }
-
-                                console.log(`✅ Project ${projectId} GeoJSON data loaded successfully!`);
-                                console.log(`   Features: ${geojsonData.features.length}`);
-                                console.log(`   Feature types:`, geojsonData.features.map(f => f.geometry?.type).filter(Boolean));
-
-                                return {
-                                    data: geojsonData,
-                                    index,
-                                    projectId,
-                                    projectName: projects.find(p => p.id === projectId)?.name || `Project ${projectId}`
-                                };
+                                return attemptFetch(refreshedFiles);
                             });
-                    })
-                    .catch(error => {
-                        console.error(`Error fetching GeoJSON for project ${projectId}:`, error);
-                        return null; // Return null for failed requests
-                    });
+                        })
+                        .then(geojsonData => {
+                            if (!geojsonData) {
+                                return null;
+                            }
+
+                            // Validate parsed GeoJSON
+                            if (!geojsonData.features) {
+                                console.log(`Project ${projectId} has no features property, skipping`);
+                                return null;
+                            }
+                            if (geojsonData.features.length === 0) {
+                                console.log(`Project ${projectId} has empty features array, skipping`);
+                                return null;
+                            }
+
+                            console.log(`✅ Project ${projectId} GeoJSON data loaded successfully!`);
+                            console.log(`   Features: ${geojsonData.features.length}`);
+                            console.log(`   Feature types:`, geojsonData.features.map(f => f.geometry?.type).filter(Boolean));
+
+                            return {
+                                data: geojsonData,
+                                index,
+                                projectId,
+                                projectName: projects.find(p => p.id === projectId)?.name || `Project ${projectId}`
+                            };
+                        });
+                })
+                .catch(error => {
+                    console.error(`Error fetching GeoJSON for project ${projectId}:`, error);
+                    return null; // Return null for failed requests
+                });
             });
             // Wait for all project GeoJSON data to load
             Promise.all(fetchPromises)

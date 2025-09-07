@@ -19,89 +19,102 @@ from speleodb.api.v1.views.project import ProjectGeoJsonApiView
 from speleodb.api.v1.views.project import ProjectSpecificApiView
 from speleodb.api.v1.views.project_explorer import ProjectGitExplorerApiView
 from speleodb.api.v1.views.project_explorer import ProjectRevisionsApiView
-from speleodb.api.v1.views.team_permission import ProjectTeamPermissionListView
-from speleodb.api.v1.views.team_permission import ProjectTeamPermissionView
-from speleodb.api.v1.views.user_permission import ProjectUserPermissionListView
-from speleodb.api.v1.views.user_permission import ProjectUserPermissionView
+from speleodb.api.v1.views.station import ProjectStationsApiView
+from speleodb.api.v1.views.station import ProjectStationsGeoJSONView
+from speleodb.api.v1.views.team_permission import ProjectTeamPermissionListApiView
+from speleodb.api.v1.views.team_permission import ProjectTeamPermissionSpecificApiView
+from speleodb.api.v1.views.user_permission import ProjectUserPermissionListApiView
+from speleodb.api.v1.views.user_permission import ProjectUserPermissionSpecificApiView
 
 project_base_urlpatterns: list[URLPattern] = [
-    path("", ProjectSpecificApiView.as_view(), name="one_project_apiview"),
+    path("", ProjectSpecificApiView.as_view(), name="project-detail"),
     # GeoJSON API
     path(
         "geojson/",
         ProjectGeoJsonApiView.as_view(),
-        name="one_project_geojson_apiview",
+        name="project-geojson",
     ),
     # =============================== GIT VIEW ============================== #
     path(
         "revisions/",
         ProjectRevisionsApiView.as_view(),
-        name="one_project_revisions_apiview",
+        name="project-revisions",
     ),
     path(
         "git_explorer/<gitsha:hexsha>/",
         ProjectGitExplorerApiView.as_view(),
-        name="one_project_gitexplorer_apiview",
+        name="project-gitexplorer",
     ),
     # ========================= PROJECT PERMISSIONS ========================= #
     # --------- USER PERMISSIONS --------- #
     path(
-        "permission/user/",
-        ProjectUserPermissionView.as_view(),
-        name="project_user_permission",
+        "permissions/user/",
+        ProjectUserPermissionListApiView.as_view(),
+        name="project-user-permissions",
     ),
     path(
-        "permissions/user/",
-        ProjectUserPermissionListView.as_view(),
-        name="list_project_user_permissions",
+        "permission/user/detail/",
+        ProjectUserPermissionSpecificApiView.as_view(),
+        name="project-user-permissions-detail",
     ),
     # --------- TEAM PERMISSIONS --------- #
     path(
-        "permission/team/",
-        ProjectTeamPermissionView.as_view(),
-        name="project_team_permission",
+        "permissions/team/",
+        ProjectTeamPermissionListApiView.as_view(),
+        name="project-team-permissions",
     ),
     path(
-        "permissions/team/",
-        ProjectTeamPermissionListView.as_view(),
-        name="list_project_team_permissions",
+        "permission/team/detail/",
+        ProjectTeamPermissionSpecificApiView.as_view(),
+        name="project-team-permissions-detail",
     ),
     # =========================== PROJECT MUTEXES =========================== #
     path(
         "acquire/",
         ProjectAcquireApiView.as_view(),
-        name="acquire_project",
+        name="project-acquire",
     ),
     path(
         "release/",
         ProjectReleaseApiView.as_view(),
-        name="release_project",
+        name="project-release",
     ),
     # ============================= FILE UPLOAD ============================= #
     path(
         "upload/<upload_format:fileformat>/",
         FileUploadView.as_view(),
-        name="upload_project",
+        name="project-upload",
     ),
     # ============================ FILE DOWNLOAD ============================ #
     path(
         "download/blob/<blobsha:hexsha>/",
         BlobDownloadView.as_view(),
-        name="download_blob",
+        name="project-download-blob",
     ),
     path(
         "download/<download_format:fileformat>/",
         FileDownloadView.as_view(),
-        name="download_project",
+        name="project-download",
     ),
     path(
         "download/<download_format:fileformat>/<gitsha:hexsha>/",
         FileDownloadAtHashView.as_view(),
-        name="download_project_at_hash",
+        name="project-download-at-hash",
+    ),
+    # ============================ STATIONS ============================ #
+    path(
+        "stations/",
+        ProjectStationsApiView.as_view(),
+        name="project-stations",
+    ),
+    path(
+        "stations/geojson/",
+        ProjectStationsGeoJSONView.as_view(),
+        name="project-stations-geojson",
     ),
 ]
 
 urlpatterns: list[URLPattern | URLResolver] = [
-    path("", ProjectApiView.as_view(), name="project_api"),
+    path("", ProjectApiView.as_view(), name="projects"),
     path("<uuid:id>/", include(project_base_urlpatterns)),
 ]

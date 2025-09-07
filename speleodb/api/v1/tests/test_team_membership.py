@@ -50,7 +50,7 @@ class TestTeamMembershipCreation(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:team_membership", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-memberships-detail", kwargs={"id": self.team.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -117,7 +117,7 @@ class TestTeamMembershipCreation(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:team_membership", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-memberships-detail", kwargs={"id": self.team.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -139,7 +139,7 @@ class TestTeamMembershipCreation(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:team_membership", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-memberships-detail", kwargs={"id": self.team.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -181,7 +181,7 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.put(
-            reverse("api:v1:team_membership", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-memberships-detail", kwargs={"id": self.team.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -224,7 +224,7 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.put(
-            reverse("api:v1:team_membership", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-memberships-detail", kwargs={"id": self.team.id}),
             data={
                 "user": target_user.email,
                 "role": SurveyTeamMembershipRole.MEMBER.label,
@@ -278,7 +278,7 @@ class TestTeamMembershipUpdate(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.put(
-            reverse("api:v1:team_membership", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-memberships-detail", kwargs={"id": self.team.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -306,7 +306,7 @@ class TestTeamMembershipDelete(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.delete(
-            reverse("api:v1:team_membership", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-memberships-detail", kwargs={"id": self.team.id}),
             data={"user": self.target_user.email},
             headers={"authorization": auth},
         )
@@ -325,7 +325,7 @@ class TestTeamMembershipDelete(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.delete(
-            reverse("api:v1:team_membership", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-memberships-detail", kwargs={"id": self.team.id}),
             data={"user": self.target_user.email},
             headers={"authorization": auth},
         )
@@ -352,7 +352,7 @@ class TestGetTeamMembership(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
-            reverse("api:v1:team_membership", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-memberships-detail", kwargs={"id": self.team.id}),
             headers={"authorization": auth},
         )
 
@@ -385,7 +385,7 @@ class TestGetTeamMembership(BaseAPITestCase):
         # Use a random UUID that doesn't exist
         non_existing_id = uuid.uuid4()
         response = self.client.get(
-            reverse("api:v1:team_membership", kwargs={"id": non_existing_id}),
+            reverse("api:v1:team-memberships-detail", kwargs={"id": non_existing_id}),
             headers={"authorization": auth},
         )
 
@@ -410,7 +410,7 @@ class TestGetTeamMembership(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
-            reverse("api:v1:team_list_membership", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-memberships", kwargs={"id": self.team.id}),
             headers={"authorization": auth},
         )
 
@@ -437,7 +437,7 @@ class TestGetTeamMembership(BaseAPITestCase):
         # Use a random UUID that doesn't exist
         non_existing_id = uuid.uuid4()
         response = self.client.get(
-            reverse("api:v1:team_list_membership", kwargs={"id": non_existing_id}),
+            reverse("api:v1:team-memberships", kwargs={"id": non_existing_id}),
             headers={"authorization": auth},
         )
 

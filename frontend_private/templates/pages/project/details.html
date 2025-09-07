@@ -114,7 +114,7 @@
             var formData = new FormData(project_details_form);
 
             $.ajax({
-                url: "{% url 'api:v1:one_project_apiview' id=project.id %}",
+                url: "{% url 'api:v1:project-detail' id=project.id %}",
                 method: "PUT",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",

@@ -33,7 +33,7 @@ class TestTeamCreation(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:team_api"),
+            reverse("api:v1:teams"),
             data=team_data,
             headers={"authorization": auth},
         )
@@ -102,7 +102,7 @@ class TestTeamCreation(BaseAPITestCase):
     def test_improper_team_creation(self, data: dict[str, str]) -> None:
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:team_api"),
+            reverse("api:v1:teams"),
             data=data,
             headers={"authorization": auth},
         )
@@ -131,7 +131,7 @@ class TestTeamUpdate(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.put(
-            reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-detail", kwargs={"id": self.team.id}),
             data=team_data,
             headers={"authorization": auth},
         )
@@ -190,7 +190,7 @@ class TestTeamUpdate(BaseAPITestCase):
     def test_partial_update_team(self, data: dict[str, str]) -> None:
         auth = self.header_prefix + self.token.key
         response = self.client.patch(
-            reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-detail", kwargs={"id": self.team.id}),
             data=data,
             headers={"authorization": auth},
         )
@@ -228,7 +228,7 @@ class TestTeamUpdateErrors(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = getattr(self.client, method_type.lower())(
-            reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-detail", kwargs={"id": self.team.id}),
             data=team_data,
             headers={"authorization": auth},
         )
@@ -251,7 +251,7 @@ class TestTeamDelete(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.delete(
-            reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-detail", kwargs={"id": self.team.id}),
             headers={"authorization": auth},
         )
 
@@ -264,7 +264,7 @@ class TestTeamDelete(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.delete(
-            reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-detail", kwargs={"id": self.team.id}),
             headers={"authorization": auth},
         )
 
@@ -287,7 +287,7 @@ class TestGetTeam(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
-            reverse("api:v1:one_team_apiview", kwargs={"id": self.team.id}),
+            reverse("api:v1:team-detail", kwargs={"id": self.team.id}),
             headers={"authorization": auth},
         )
 
@@ -309,7 +309,7 @@ class TestGetTeam(BaseAPITestCase):
         # Use a random UUID that doesn't exist
         non_existing_id = uuid.uuid4()
         response = self.client.get(
-            reverse("api:v1:one_team_apiview", kwargs={"id": non_existing_id}),
+            reverse("api:v1:team-detail", kwargs={"id": non_existing_id}),
             headers={"authorization": auth},
         )
 
@@ -324,7 +324,7 @@ class TestGetTeam(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
-            reverse("api:v1:team_api"),
+            reverse("api:v1:teams"),
             headers={"authorization": auth},
         )
 

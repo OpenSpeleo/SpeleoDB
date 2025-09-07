@@ -18,7 +18,7 @@ from speleodb.utils.test_utils import named_product
 
 class TestUserAPI(BaseAPITestCase):
     def test_get_user_info(self) -> None:
-        endpoint = reverse("api:v1:user_info")
+        endpoint = reverse("api:v1:user-detail")
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(endpoint, headers={"authorization": auth})
@@ -37,7 +37,7 @@ class TestUserAPI(BaseAPITestCase):
             assert getattr(self.user, key) == val, (getattr(self.user, key), val)
 
     def _patch_user_info(self, *, expect_success: bool = True, **kwargs: Any) -> None:
-        endpoint = reverse("api:v1:user_info")
+        endpoint = reverse("api:v1:user-detail")
 
         auth = self.header_prefix + self.token.key
         response = self.client.patch(

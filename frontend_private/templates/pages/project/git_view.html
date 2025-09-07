@@ -15,7 +15,7 @@
                      <header class="flex flex-wrap items-center justify-start pb-2 md:justify-end lg:flex-nowrap">
 
                        <div class="mb-2 mr-2 flex w-full items-center md:w-auto">
-                           <a class="btn git_btn group mr-0 flex-grow-0 cursor-pointer rounded-full text-sm md:px-4 md:text-base" href="{% url 'api:v1:download_project_at_hash' id=project.id hexsha=hexsha fileformat='dump' %}">
+                           <a class="btn git_btn group mr-0 flex-grow-0 cursor-pointer rounded-full text-sm md:px-4 md:text-base" href="{% url 'api:v1:project-download-at-hash' id=project.id hexsha=hexsha fileformat='dump' %}">
                            
                               <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-type-zip mr-2" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round"  width="1.5em" height="1.5em" viewBox="4.25 2.25 15.5 19.5">
                                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -152,7 +152,7 @@ $( document ).ready(function() {
     */
    function fetch_git_tree() {
       return $.ajax({
-         url : "{% url 'api:v1:one_project_gitexplorer_apiview' id=project.id hexsha=hexsha %}",
+         url : "{% url 'api:v1:project-gitexplorer' id=project.id hexsha=hexsha %}",
          type : "GET",
          dataType : "json",
          async : false,

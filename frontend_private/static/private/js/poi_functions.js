@@ -40,7 +40,7 @@ window.openPOIModal = function (poiId = null, isNewlyCreated = false) {
                                     <strong>Coordinates:</strong> ${Number(poi.latitude).toFixed(7)}, ${Number(poi.longitude).toFixed(7)}
                                 </p>
                                 <p class="text-slate-300">
-                                    <strong>Created by:</strong> ${poi.created_by_email || 'Unknown'}
+                                    <strong>Created by:</strong> ${poi.created_by || 'Unknown'}
                                 </p>
                                 <p class="text-slate-300">
                                     <strong>Created:</strong> ${poi.creation_date ? new Date(poi.creation_date).toLocaleDateString() : 'Unknown'}
@@ -204,20 +204,23 @@ window.showCreatePOIModal = function (coordinates) {
         submitBtn.textContent = 'Creating...';
 
         try {
-            const response = await fetch('/api/v1/points_of_interest/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    name: name,
-                    description: description,
-                    latitude: coordinates[1],
-                    longitude: coordinates[0]
-                })
-            });
+            const response = await fetch(
+                Urls['api:v1:pois'](),
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        name: name,
+                        description: description,
+                        latitude: coordinates[1],
+                        longitude: coordinates[0]
+                    })
+                }
+            );
 
             const data = await response.json();
             console.log('API Response:', response.status, data);
@@ -336,13 +339,16 @@ window.confirmDeletePOI = async function (poiId) {
     console.log(`🗑️ Deleting POI: ${poiId}`);
 
     try {
-        const response = await fetch(`/api/v1/points_of_interest/${poiId}/`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCSRFToken()
-            },
-            credentials: 'same-origin'
-        });
+        const response = await fetch(
+            Urls['api:v1:poi-detail'](poiId),
+            {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            }
+        );
 
         const data = await response.json();
 
@@ -461,18 +467,21 @@ window.editPOI = function (poiId) {
         submitBtn.textContent = 'Saving...';
 
         try {
-            const response = await fetch(`/api/v1/points_of_interest/${poiId}/`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    name: name,
-                    description: description
-                })
-            });
+            const response = await fetch(
+                Urls['api:v1:poi-detail'](poiId),
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        name: name,
+                        description: description
+                    })
+                }
+            );
 
             const data = await response.json();
             console.log('API Response:', response.status, data);

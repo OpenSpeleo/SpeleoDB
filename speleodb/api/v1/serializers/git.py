@@ -90,7 +90,7 @@ class GitCommitSerializer(serializers.Serializer[GitCommit]):
                         else "Everything (ZIP)"
                     ),
                     "download_url": reverse(
-                        "api:v1:download_project_at_hash",
+                        "api:v1:project-download-at-hash",
                         kwargs={
                             "id": project.id,
                             "hexsha": obj.hexsha,
@@ -179,7 +179,8 @@ class GitFileSerializer(serializers.Serializer[GitCommit]):
         project: Project | None = self.context.get("project")
         if project is not None:
             return reverse(
-                "api:v1:download_blob", kwargs={"id": project.id, "hexsha": obj.hexsha}
+                "api:v1:project-download-blob",
+                kwargs={"id": project.id, "hexsha": obj.hexsha},
             )
         return None
 

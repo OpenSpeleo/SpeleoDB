@@ -54,6 +54,7 @@ dependencies = [
     "django-dynamic-raw-id==4.4",  # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.12.0",      # https://github.com/joke2k/django-environ
     "django-hijack==3.7.4",        # https://github.com/django-hijack/django-hijack/
+    "django-js-reverse==0.10.2",   # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",   # https://github.com/jazzband/django-model-utils
     "django-storages[s3]==1.14.6", # https://github.com/jschneier/django-storages
 
@@ -107,7 +108,7 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.13.3",     # https://github.com/astral-sh/ruff
+    "ruff==0.13.3",      # https://github.com/astral-sh/ruff
     "coverage==7.10.7",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
     "pre-commit==4.3.0", # https://github.com/pre-commit/pre-commit
@@ -331,7 +332,6 @@ ignore = [
     "S101",   # Use of assert detected https://docs.astral.sh/ruff/rules/assert/
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
     "SIM102", # sometimes it's better to nest
-    "UP038",  # Checks for uses of isinstance/issubclass that take a tuple
     # of types for comparison.
     # Deactivated because it can make the code slow:
     # https://github.com/astral-sh/ruff/issues/7871
@@ -360,9 +360,6 @@ ignore = [
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
 unfixable = []
-# The fixes in extend-unsafe-fixes will require
-# provide the `--unsafe-fixes` flag when fixing.
-extend-unsafe-fixes = ["UP038"]
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 

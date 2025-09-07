@@ -1,18 +1,1 @@
-{
-    "makefile.configureOnOpen": false,
-    "python.defaultInterpreterPath": "/usr/local/bin/python",
-    "mypy-type-checker.args": [
-        "--config-file=pyproject.toml"
-    ],
-    "mypy-type-checker.reportingScope": "file",
-    "mypy-type-checker.importStrategy": "fromEnvironment",
-    "python.analysis.autoImportCompletions": true,
-    "python.analysis.logLevel": "Trace",
-    "python.analysis.indexing": false,
-    "[html]": {
-        "editor.formatOnSave": false,
-        "editor.defaultFormatter": null
-    },
-    "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.pythonProjects": []
-}
+{}

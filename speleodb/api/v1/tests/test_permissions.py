@@ -27,39 +27,35 @@ class TestPermissionsApiView(BaseAPIProjectTestCase):
 
         # Test that WEB_VIEWER cannot access the main project details
         response = self.client.get(
-            reverse("api:v1:one_project_apiview", kwargs={"id": self.project.id}),
+            reverse("api:v1:project-detail", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Test that WEB_VIEWER cannot acquire project mutex
         response = self.client.post(
-            reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
+            reverse("api:v1:project-acquire", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Test that WEB_VIEWER cannot release project mutex
         response = self.client.post(
-            reverse("api:v1:release_project", kwargs={"id": self.project.id}),
+            reverse("api:v1:project-release", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Test that WEB_VIEWER cannot access revisions
         response = self.client.get(
-            reverse(
-                "api:v1:one_project_revisions_apiview", kwargs={"id": self.project.id}
-            ),
+            reverse("api:v1:project-revisions", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # But WEB_VIEWER CAN access GeoJSON
         response = self.client.get(
-            reverse(
-                "api:v1:one_project_geojson_apiview", kwargs={"id": self.project.id}
-            ),
+            reverse("api:v1:project-geojson", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
         assert response.status_code == status.HTTP_200_OK

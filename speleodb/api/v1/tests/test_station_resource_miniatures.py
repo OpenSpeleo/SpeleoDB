@@ -18,6 +18,7 @@ from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
+from speleodb.surveys.models.station import StationResourceType
 
 User = get_user_model()
 
@@ -89,7 +90,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
 
         resource = StationResource.objects.create(
             station=self.station,
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=image,
             created_by=self.user,
@@ -109,7 +110,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
 
         resource = StationResource.objects.create(
             station=self.station,
-            resource_type=StationResource.ResourceType.VIDEO,
+            resource_type=StationResourceType.VIDEO,
             title="Test Video",
             file=video,
             created_by=self.user,
@@ -129,7 +130,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
 
         resource = StationResource.objects.create(
             station=self.station,
-            resource_type=StationResource.ResourceType.DOCUMENT,
+            resource_type=StationResourceType.DOCUMENT,
             title="Test Document",
             file=document,
             created_by=self.user,
@@ -147,7 +148,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         """Test that no miniature is created for note resources."""
         resource = StationResource.objects.create(
             station=self.station,
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="This is a test note",
             created_by=self.user,
@@ -163,7 +164,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         image1 = create_test_image(color="red")
         resource = StationResource.objects.create(
             station=self.station,
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=image1,
             created_by=self.user,
@@ -185,7 +186,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         image = create_test_image()
         resource = StationResource.objects.create(
             station=self.station,
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=image,
             created_by=self.user,
@@ -204,7 +205,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         image = create_test_image()
         resource = StationResource.objects.create(
             station=self.station,
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=image,
             created_by=self.user,
@@ -220,7 +221,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
-        resource_data = data["data"]["resource"]
+        resource_data = data["data"]
         assert "miniature_url" in resource_data
         assert resource_data["miniature_url"] is not None
 
@@ -231,7 +232,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         with pytest.raises(ValidationError, match="should not have a file"):
             StationResource.objects.create(
                 station=self.station,
-                resource_type=StationResource.ResourceType.NOTE,
+                resource_type=StationResourceType.NOTE,
                 title="Test Note",
                 file=image,  # This should fail
                 created_by=self.user,
@@ -242,7 +243,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         with pytest.raises(ValidationError, match="requires a file"):
             StationResource.objects.create(
                 station=self.station,
-                resource_type=StationResource.ResourceType.PHOTO,
+                resource_type=StationResourceType.PHOTO,
                 title="Test Photo",
                 # No file provided - should fail
                 created_by=self.user,

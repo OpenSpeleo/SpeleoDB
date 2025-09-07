@@ -56,6 +56,8 @@ jobs:
       # Consider using pre-commit.ci for open source project
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1
+        env:
+          DJANGO_DEBUG: True # necessary to collect all URLs
 
   # With no caching at all the entire ci process takes 3m to complete!
   pytest:

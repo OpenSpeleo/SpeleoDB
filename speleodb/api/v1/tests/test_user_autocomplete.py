@@ -17,7 +17,7 @@ from speleodb.users.tests.factories import UserFactory
 class TestUserAutocomplete(BaseAPITestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.url = reverse("api:v1:user_autocomplete")
+        self.url = reverse("api:v1:user-autocomplete")
 
     def test_requires_authentication(self) -> None:
         client = APIClient()

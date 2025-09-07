@@ -143,6 +143,9 @@ THIRD_PARTY_APPS = [
     #                to be used as an absolute last last resort.
     "hijack",
     "hijack.contrib.admin",
+    # https://github.com/vintasoftware/django-js-reverse
+    # Helps to resolve django URL from within JS files
+    "django_js_reverse",
 ]
 
 if DEBUG:

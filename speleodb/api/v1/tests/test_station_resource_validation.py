@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
@@ -14,6 +15,7 @@ from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models.permission_lvl import PermissionLevel
+from speleodb.surveys.models.station import StationResourceType
 
 
 class TestStationResourceFileValidation(BaseAPIProjectTestCase):
@@ -57,7 +59,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for ext in valid_extensions:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.PHOTO,
+                resource_type=StationResourceType.PHOTO,
                 title=f"Test {ext}",
                 file=self.create_test_file(f"test{ext}"),
                 created_by=self.user,
@@ -72,7 +74,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for filename in invalid_files:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.PHOTO,
+                resource_type=StationResourceType.PHOTO,
                 title="Test Photo",
                 file=self.create_test_file(filename),
                 created_by=self.user,
@@ -97,7 +99,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for ext in valid_extensions:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.VIDEO,
+                resource_type=StationResourceType.VIDEO,
                 title=f"Test {ext}",
                 file=self.create_test_file(f"test{ext}"),
                 created_by=self.user,
@@ -112,7 +114,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for filename in invalid_files:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.VIDEO,
+                resource_type=StationResourceType.VIDEO,
                 title="Test Video",
                 file=self.create_test_file(filename),
                 created_by=self.user,
@@ -137,7 +139,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for ext in valid_extensions:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.DOCUMENT,
+                resource_type=StationResourceType.DOCUMENT,
                 title=f"Test {ext}",
                 file=self.create_test_file(f"test{ext}"),
                 created_by=self.user,
@@ -152,7 +154,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for filename in invalid_files:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.DOCUMENT,
+                resource_type=StationResourceType.DOCUMENT,
                 title="Test Document",
                 file=self.create_test_file(filename),
                 created_by=self.user,
@@ -173,8 +175,8 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
     def test_note_and_sketch_reject_files(self) -> None:
         """Test that note and sketch resources reject any files."""
         for resource_type in [
-            StationResource.ResourceType.NOTE,
-            StationResource.ResourceType.SKETCH,
+            StationResourceType.NOTE,
+            StationResourceType.SKETCH,
         ]:
             resource = StationResource(
                 station=self.station,
@@ -196,10 +198,9 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         """Test that API returns proper validation errors."""
         # Try to create a photo with a video file
         response = self.client.post(
-            "/api/v1/resources/",
+            reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
             {
-                "station_id": str(self.station.id),
-                "resource_type": StationResource.ResourceType.PHOTO,
+                "resource_type": StationResourceType.PHOTO,
                 "title": "Test Photo",
                 "file": self.create_test_file("test.mp4"),
             },
@@ -220,10 +221,9 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         # Test valid photo upload
         with (artifacts_dir / "image.jpg").open(mode="rb") as f:
             response = self.client.post(
-                "/api/v1/resources/",
+                reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
                 {
-                    "station_id": str(self.station.id),
-                    "resource_type": StationResource.ResourceType.PHOTO,
+                    "resource_type": StationResourceType.PHOTO,
                     "title": "Test Photo",
                     "file": SimpleUploadedFile(
                         "photo.jpg", f.read(), content_type="image/jpeg"
@@ -237,10 +237,9 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         # Test invalid photo upload (using video file)
         with (artifacts_dir / "video.mp4").open(mode="rb") as f:
             response = self.client.post(
-                "/api/v1/resources/",
+                reverse("api:v1:station-resources", kwargs={"id": self.station.id}),
                 {
-                    "station_id": str(self.station.id),
-                    "resource_type": StationResource.ResourceType.PHOTO,
+                    "resource_type": StationResourceType.PHOTO,
                     "title": "Test Photo",
                     "file": SimpleUploadedFile(
                         "video.mp4", f.read(), content_type="video/mp4"

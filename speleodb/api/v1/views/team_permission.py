@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from rest_framework.response import Response
 
 
-class ProjectTeamPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):
+class ProjectTeamPermissionListApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
@@ -51,7 +51,7 @@ class ProjectTeamPermissionListView(GenericAPIView[Project], SDBAPIViewMixin):
         )
 
 
-class ProjectTeamPermissionView(GenericAPIView[Project], SDBAPIViewMixin):
+class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
     permission_classes = [UserHasAdminAccess | (IsReadOnly & UserHasReadAccess)]
     serializer_class = ProjectSerializer

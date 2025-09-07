@@ -214,6 +214,10 @@
 
 {% endblock content %}
 
+{% block extra_js %}
+<script src="{% url 'url_reverse.js' %}"></script>
+{% endblock extra_js %}
+
 {% block inline_extra_js %}
 <script>
 $( document ).ready(function() {
@@ -246,7 +250,7 @@ $( document ).ready(function() {
         $("#modal_confirmation_mass_unlock").hide();
 
         $.ajax({
-            url: "{% url 'api:v1:release_all_locks' %}",
+            url: "{% url 'api:v1:release-all-locks' %}",
             method: "DELETE",
             contentType: "application/json; charset=utf-8",
             cache: false,
@@ -277,8 +281,6 @@ $( document ).ready(function() {
         return false; // prevent default
     });
 
-    const nilUUID = '00000000-0000-0000-0000-000000000000';
-
     $('#btn_confirmed_unlock').click(function () {
         var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
 
@@ -286,10 +288,8 @@ $( document ).ready(function() {
         $("#success_div").hide();
         $("#modal_confirmation_unlock").hide();
 
-        var api_url = "{% url 'api:v1:release_project' id='00000000-0000-0000-0000-000000000000' %}";
-
         $.ajax({
-            url: api_url.replace(nilUUID, $(this).data('project_id')),
+            url: Urls['api:v1:project-release']($(this).data('project_id')),
             method: "POST",
             contentType: "application/json; charset=utf-8",
             cache: false,
@@ -321,12 +321,8 @@ $( document ).ready(function() {
     });
 
     function get_commit_history(project_id, target_div){
-        {% set base_project_id = "00000000-0000-0000-0000-000000000000" %}
-        var base_api_url = "{% url 'api:v1:one_project_apiview' id=base_project_id %}";
-        var api_url = base_api_url.replace("{{ base_project_id }}", project_id);
-
         $.ajax({
-            url : api_url,
+            url: Urls['api:v1:project-detail'](project_id),
             type : "GET",
             dataType : "json",
             success: function(data){

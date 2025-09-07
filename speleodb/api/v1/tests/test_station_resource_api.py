@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import uuid
 from pathlib import Path
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -21,6 +22,7 @@ from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
+from speleodb.surveys.models.station import StationResourceType
 from speleodb.utils.test_utils import named_product
 
 
@@ -60,7 +62,10 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         )
 
         # Create a station for testing
-        self.resource_url = reverse("api:v1:resource-list-create")
+        self.resource_url = reverse(
+            "api:v1:station-resources",
+            kwargs={"id": self.station.id},
+        )
 
     def _create_test_image(
         self, name: str = "test.jpg", size: tuple[int, int] = (100, 100)
@@ -81,7 +86,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_list_resources_empty(self) -> None:
         """Test listing resources when none exist."""
         response = self.client.get(
-            f"{self.resource_url}?station_id={self.station.id}",
+            self.resource_url,
             headers={"authorization": self.auth},
         )
 
@@ -91,20 +96,20 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["success"]
-        assert response.data["data"]["resources"] == []
+        assert response.data["data"] == []
 
     def test_list_resources_with_data(self) -> None:
         """Test listing resources when they exist."""
         # Create some resources
         StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="Some notes",
             created_by=self.user,
             station=self.station,
         )
         StationResource.objects.create(
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=self._create_test_image(),
             created_by=self.user,
@@ -112,7 +117,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         )
 
         response = self.client.get(
-            f"{self.resource_url}?station_id={self.station.id}",
+            self.resource_url,
             headers={"authorization": self.auth},
         )
 
@@ -122,7 +127,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["success"]
-        resources = response.data["data"]["resources"]
+        resources = response.data["data"]
         assert len(resources) == 2  # noqa: PLR2004
 
         # Check ordering - should be ordered by most recent modified date first
@@ -134,8 +139,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         """Test creating a photo resource."""
         image_file = self._create_test_image()
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.PHOTO,
+            "resource_type": StationResourceType.PHOTO,
             "title": "Cave Entrance Photo",
             "description": "Main entrance view",
             "file": image_file,
@@ -155,11 +159,11 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["success"]
 
-        resource = response.data["data"]["resource"]
+        resource = response.data["data"]
         assert resource["title"] == "Cave Entrance Photo"
-        assert resource["resource_type"] == StationResource.ResourceType.PHOTO
+        assert resource["resource_type"] == StationResourceType.PHOTO
         assert resource["file_url"] is not None
-        assert resource["created_by_email"] == self.user.email
+        assert resource["created_by"] == self.user.email
 
     def test_create_video_resource(self) -> None:
         with Path("speleodb/api/v1/tests/artifacts/video.mp4").open(mode="rb") as f:
@@ -168,8 +172,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             )
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Cave Tour Video",
             "description": "Walkthrough video",
             "file": video_file,
@@ -189,21 +192,23 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["success"]
 
-        resource = response.data["data"]["resource"]
-        assert resource["resource_type"] == StationResource.ResourceType.VIDEO
+        resource = response.data["data"]
+        assert resource["resource_type"] == StationResourceType.VIDEO
 
     def test_create_note_resource(self) -> None:
         """Test creating a note resource."""
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Field Notes",
             "description": "Important observations",
             "text_content": "The cave entrance is partially blocked by debris...",
         }
 
         response = self.client.post(
-            self.resource_url, data, format="json", headers={"authorization": self.auth}
+            self.resource_url,
+            data,
+            format="json",
+            headers={"authorization": self.auth},
         )
 
         if self.level < PermissionLevel.READ_AND_WRITE:
@@ -213,8 +218,8 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["success"]
 
-        resource = response.data["data"]["resource"]
-        assert resource["resource_type"] == StationResource.ResourceType.NOTE
+        resource = response.data["data"]
+        assert resource["resource_type"] == StationResourceType.NOTE
         assert resource["text_content"] == data["text_content"]
         assert resource["file_url"] is None
 
@@ -222,15 +227,17 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         """Test creating a sketch resource."""
         svg_content = '<svg><circle cx="50" cy="50" r="40" /></svg>'
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.SKETCH,
+            "resource_type": StationResourceType.SKETCH,
             "title": "Cave Map Sketch",
             "description": "Rough layout",
             "text_content": svg_content,
         }
 
         response = self.client.post(
-            self.resource_url, data, format="json", headers={"authorization": self.auth}
+            self.resource_url,
+            data,
+            format="json",
+            headers={"authorization": self.auth},
         )
 
         if self.level < PermissionLevel.READ_AND_WRITE:
@@ -240,16 +247,15 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["success"]
 
-        resource = response.data["data"]["resource"]
-        assert resource["resource_type"] == StationResource.ResourceType.SKETCH
+        resource = response.data["data"]
+        assert resource["resource_type"] == StationResourceType.SKETCH
         assert resource["text_content"] == svg_content
 
     def test_create_document_resource(self) -> None:
         """Test creating a document resource."""
         doc_file = self._create_test_text_file("report.txt", "Cave survey report...")
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "resource_type": StationResourceType.DOCUMENT,
             "title": "Survey Report",
             "description": "Detailed findings",
             "file": doc_file,
@@ -269,20 +275,22 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["success"]
 
-        resource = response.data["data"]["resource"]
-        assert resource["resource_type"] == StationResource.ResourceType.DOCUMENT
+        resource = response.data["data"]
+        assert resource["resource_type"] == StationResourceType.DOCUMENT
 
     def test_create_resource_missing_file(self) -> None:
         """Test creating a file-based resource without a file."""
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.PHOTO,
+            "resource_type": StationResourceType.PHOTO,
             "title": "Missing Photo",
             "description": "This should fail",
         }
 
         response = self.client.post(
-            self.resource_url, data, format="json", headers={"authorization": self.auth}
+            self.resource_url,
+            data,
+            format="json",
+            headers={"authorization": self.auth},
         )
 
         if self.level < PermissionLevel.READ_AND_WRITE:
@@ -296,14 +304,16 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_create_resource_missing_text(self) -> None:
         """Test creating a text-based resource without text content."""
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Empty Note",
             "description": "This should fail",
         }
 
         response = self.client.post(
-            self.resource_url, data, format="json", headers={"authorization": self.auth}
+            self.resource_url,
+            data,
+            format="json",
+            headers={"authorization": self.auth},
         )
 
         if self.level < PermissionLevel.READ_AND_WRITE:
@@ -317,14 +327,14 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_retrieve_resource(self) -> None:
         """Test retrieving a single resource."""
         resource = StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="Content",
             created_by=self.user,
             station=self.station,
         )
 
-        url = f"/api/v1/resources/{resource.id}/"
+        url = reverse("api:v1:resource-detail", kwargs={"id": resource.id})
         response = self.client.get(url, headers={"authorization": self.auth})
 
         if self.level == PermissionLevel.WEB_VIEWER:
@@ -334,29 +344,34 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_200_OK
         assert response.data["success"]
 
-        data = response.data["data"]["resource"]
+        data = response.data["data"]
         assert data["id"] == str(resource.id)
         assert data["title"] == "Test Note"
 
     def test_update_resource(self) -> None:
         """Test updating a resource."""
         resource = StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Old Title",
             text_content="Old content",
             created_by=self.user,
             station=self.station,
         )
 
-        url = f"/api/v1/resources/{resource.id}/"
+        reverse("api:v1:resource-detail", kwargs={"id": resource.id})
         update_data = {
             "title": "New Title",
             "description": "Updated description",
             "text_content": "New content",
         }
 
+        url = reverse("api:v1:resource-detail", kwargs={"id": resource.id})
+
         response = self.client.patch(
-            url, update_data, format="json", headers={"authorization": self.auth}
+            url,
+            update_data,
+            format="json",
+            headers={"authorization": self.auth},
         )
 
         if self.level < PermissionLevel.READ_AND_WRITE:
@@ -366,7 +381,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_200_OK
         assert response.data["success"]
 
-        updated = response.data["data"]["resource"]
+        updated = response.data["data"]
         assert updated["title"] == "New Title"
         assert updated["description"] == "Updated description"
         assert updated["text_content"] == "New content"
@@ -375,7 +390,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         """Test updating a file resource with a new file."""
         # Create initial resource
         resource = StationResource.objects.create(
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Old Photo",
             file=self._create_test_image("old.jpg"),
             created_by=self.user,
@@ -384,11 +399,12 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         # Update with new file
         new_image = self._create_test_image("new.jpg", size=(200, 200))
-        url = f"/api/v1/resources/{resource.id}/"
         update_data = {
             "title": "New Photo",
             "file": new_image,
         }
+
+        url = reverse("api:v1:resource-detail", kwargs={"id": resource.id})
 
         response = self.client.patch(
             url, update_data, format="multipart", headers={"authorization": self.auth}
@@ -401,21 +417,21 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_200_OK
         assert response.data["success"]
 
-        updated = response.data["data"]["resource"]
+        updated = response.data["data"]
         assert updated["title"] == "New Photo"
         assert "new.jpg" in updated["file_url"]
 
     def test_delete_resource(self) -> None:
         """Test deleting a resource."""
         resource = StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="To Delete",
             text_content="Content",
             created_by=self.user,
             station=self.station,
         )
 
-        url = f"/api/v1/resources/{resource.id}/"
+        url = reverse("api:v1:resource-detail", kwargs={"id": resource.id})
         response = self.client.delete(url, headers={"authorization": self.auth})
 
         if self.level < PermissionLevel.ADMIN:
@@ -431,7 +447,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_delete_resource_with_file(self) -> None:
         """Test deleting a resource also removes the file."""
         resource = StationResource.objects.create(
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Photo to Delete",
             file=self._create_test_image(),
             created_by=self.user,
@@ -439,7 +455,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         )
         resource_id = resource.id
 
-        url = f"/api/v1/resources/{resource.id}/"
+        url = reverse("api:v1:resource-detail", kwargs={"id": resource.id})
         response = self.client.delete(url, headers={"authorization": self.auth})
 
         if self.level < PermissionLevel.ADMIN:
@@ -455,21 +471,21 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         """Test resources are returned in correct order by modified date."""
         # Create resources with different modified times
         StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Third",
             text_content="3",
             created_by=self.user,
             station=self.station,
         )
         StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="First",
             text_content="1",
             created_by=self.user,
             station=self.station,
         )
         StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Second",
             text_content="2",
             created_by=self.user,
@@ -477,7 +493,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         )
 
         response = self.client.get(
-            f"{self.resource_url}?station_id={self.station.id}",
+            self.resource_url,
             headers={"authorization": self.auth},
         )
 
@@ -487,7 +503,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
 
-        resources = response.data["data"]["resources"]
+        resources = response.data["data"]
 
         # Resources should be ordered by most recent modified date
         # Since r2 was created last, it should be first
@@ -510,9 +526,7 @@ class TestUnauthenticatedStationResourceAPIAuthentication(BaseAPIProjectTestCase
     def test_resource_list_requires_authentication(self) -> None:
         """Test that resource list endpoint requires authentication."""
         response = self.client.get(
-            reverse(
-                "api:v1:resource-list-create",
-            )
+            reverse("api:v1:station-resources", kwargs={"id": uuid.uuid4()})
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -520,14 +534,14 @@ class TestUnauthenticatedStationResourceAPIAuthentication(BaseAPIProjectTestCase
     def test_resource_create_requires_authentication(self) -> None:
         """Test that resource create endpoint requires authentication."""
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Test Note",
             "text_content": "This is a test note",
         }
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
         )
@@ -568,15 +582,15 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         """Test that readonly permissions cannot create resources."""
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Test Note",
             "text_content": "This is a test note",
         }
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -591,8 +605,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
     def test_create_note_resource(self) -> None:
         """Test creating a note resource."""
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Cave Survey Notes",
             "description": "Detailed observations from the survey",
             "text_content": (
@@ -603,7 +616,8 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -615,8 +629,8 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_201_CREATED
 
-        resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == StationResource.ResourceType.NOTE
+        resource_data = response.data["data"]
+        assert resource_data["resource_type"] == StationResourceType.NOTE
         assert resource_data["title"] == "Cave Survey Notes"
         assert resource_data["text_content"] == data["text_content"]
 
@@ -628,8 +642,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         </svg>"""  # noqa: E501
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.SKETCH,
+            "resource_type": StationResourceType.SKETCH,
             "title": "Cave Entrance Sketch",
             "description": "Hand-drawn sketch of the cave entrance",
             "text_content": svg_content,
@@ -637,7 +650,8 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -649,8 +663,8 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_201_CREATED
 
-        resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == StationResource.ResourceType.SKETCH
+        resource_data = response.data["data"]
+        assert resource_data["resource_type"] == StationResourceType.SKETCH
         assert resource_data["title"] == "Cave Entrance Sketch"
         assert svg_content in resource_data["text_content"]
 
@@ -664,8 +678,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         )
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.PHOTO,
+            "resource_type": StationResourceType.PHOTO,
             "title": "Cave Entrance Photo",
             "description": "Photo taken at the main entrance",
             "file": image_file,
@@ -673,7 +686,8 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -685,8 +699,8 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_201_CREATED
 
-        resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == StationResource.ResourceType.PHOTO
+        resource_data = response.data["data"]
+        assert resource_data["resource_type"] == StationResourceType.PHOTO
         assert resource_data["title"] == "Cave Entrance Photo"
         assert resource_data["file"] is not None
 
@@ -701,7 +715,8 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         response = self.client.get(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             )
             + f"?station_id={self.station.id}",
             headers={"authorization": self.auth},
@@ -712,10 +727,10 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data["data"]["resources"]) == 3  # noqa: PLR2004
+        assert len(response.data["data"]) == 3  # noqa: PLR2004
 
         # Verify all resources are present (without depending on order)
-        response_resource_ids = {r["id"] for r in response.data["data"]["resources"]}
+        response_resource_ids = {r["id"] for r in response.data["data"]}
         expected_resource_ids = {str(r.id) for r in resources}
         assert response_resource_ids == expected_resource_ids
 
@@ -741,7 +756,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
 
-        resource_data = response.data["data"]["resource"]
+        resource_data = response.data["data"]
         assert resource_data["id"] == str(resource.id)
         assert resource_data["title"] == "Detailed Note"
         assert resource_data["text_content"] == resource.text_content
@@ -771,7 +786,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
 
-        resource_data = response.data["data"]["resource"]
+        resource_data = response.data["data"]
         assert resource_data["title"] == "Updated Note Title"
         assert resource_data["description"] == "Updated description"
         assert (
@@ -796,8 +811,8 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_200_OK
-        assert "message" in response.data["data"]
-        assert "deleted successfully" in response.data["data"]["message"]
+        assert "id" in response.data["data"]
+        assert response.data["data"]["id"] == str(resource_id)
 
         # Verify resource was deleted
         assert not StationResource.objects.filter(id=resource_id).exists()
@@ -835,14 +850,14 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
     def test_create_resource_missing_title(self) -> None:
         """Test creating a resource without a title."""
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "text_content": "Note without title",
         }
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -858,7 +873,6 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
     def test_create_resource_invalid_type(self) -> None:
         """Test creating a resource with invalid type."""
         data = {
-            "station_id": str(self.station.id),
             "resource_type": "invalid_type",
             "title": "Invalid Resource",
             "text_content": "This has an invalid type",
@@ -866,7 +880,8 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -881,9 +896,9 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
 
     @parameterized.expand(
         [
-            (StationResource.ResourceType.PHOTO, "test.jpg", "image/jpeg"),
-            (StationResource.ResourceType.VIDEO, "test.mp4", "video/mp4"),
-            (StationResource.ResourceType.DOCUMENT, "test.pdf", "application/pdf"),
+            (StationResourceType.PHOTO, "test.jpg", "image/jpeg"),
+            (StationResourceType.VIDEO, "test.mp4", "video/mp4"),
+            (StationResourceType.DOCUMENT, "test.pdf", "application/pdf"),
         ]
     )
     def test_create_file_based_resources(
@@ -891,15 +906,15 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
     ) -> None:
         """Test creating file-based resources."""
         match resource_type:
-            case StationResource.ResourceType.PHOTO:
+            case StationResourceType.PHOTO:
                 file_content = Path(
                     "speleodb/api/v1/tests/artifacts/image.jpg"
                 ).read_bytes()
-            case StationResource.ResourceType.VIDEO:
+            case StationResourceType.VIDEO:
                 file_content = Path(
                     "speleodb/api/v1/tests/artifacts/video.mp4"
                 ).read_bytes()
-            case StationResource.ResourceType.DOCUMENT:
+            case StationResourceType.DOCUMENT:
                 file_content = Path(
                     "speleodb/api/v1/tests/artifacts/document.pdf"
                 ).read_bytes()
@@ -909,7 +924,6 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
         uploaded_file = SimpleUploadedFile(filename, file_content, content_type)
 
         data = {
-            "station_id": str(self.station.id),
             "resource_type": resource_type,
             "title": f"Test {resource_type.title()}",
             "description": f"Test {resource_type} file",
@@ -918,7 +932,8 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -930,7 +945,7 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_201_CREATED
 
-        resource_data = response.data["data"]["resource"]
+        resource_data = response.data["data"]
         assert resource_data["resource_type"] == resource_type
         assert resource_data["file"] is not None
 
@@ -938,15 +953,15 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
         """Test creating a resource with title too long."""
         long_title = "A" * 201  # Exceeds max length of 200
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": long_title,
             "text_content": "Note with very long title",
         }
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -999,8 +1014,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
         )
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "resource_type": StationResourceType.DOCUMENT,
             "title": "Checksum Test Document",
             "description": "Document for testing file integrity",
             "file": uploaded_file,
@@ -1008,7 +1022,8 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -1021,9 +1036,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
 
         # Retrieve the created resource
-        resource = StationResource.objects.get(
-            id=response.data["data"]["resource"]["id"]
-        )
+        resource = StationResource.objects.get(id=response.data["data"]["id"])
 
         # Read the stored file and verify checksum
         if resource.file:
@@ -1043,8 +1056,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
         )
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "resource_type": StationResourceType.DOCUMENT,
             "title": "Large Test File",
             "description": "Testing large file upload",
             "file": uploaded_file,
@@ -1052,7 +1064,8 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -1075,8 +1088,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
         )
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "resource_type": StationResourceType.DOCUMENT,
             "title": "Invalid File Type",
             "description": "Testing invalid file extension",
             "file": uploaded_file,
@@ -1084,7 +1096,8 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -1105,8 +1118,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
         )
 
         data = {
-            "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "resource_type": StationResourceType.DOCUMENT,
             "title": "Empty File",
             "description": "Testing empty file upload",
             "file": uploaded_file,
@@ -1114,7 +1126,8 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         response = self.client.post(
             reverse(
-                "api:v1:resource-list-create",
+                "api:v1:station-resources",
+                kwargs={"id": self.station.id},
             ),
             data=data,
             headers={"authorization": self.auth},
@@ -1164,43 +1177,43 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
         fuzz_data_sets = [
             # Valid note data
             {
-                "resource_type": StationResource.ResourceType.NOTE,
+                "resource_type": StationResourceType.NOTE,
                 "title": self.faker.sentence(),
                 "text_content": self.faker.paragraph(),
             },
             # Edge case titles
             {
-                "resource_type": StationResource.ResourceType.NOTE,
+                "resource_type": StationResourceType.NOTE,
                 "title": "A" * 200,  # Max length
                 "text_content": "Test",
             },
             # Special characters in text
             {
-                "resource_type": StationResource.ResourceType.NOTE,
+                "resource_type": StationResourceType.NOTE,
                 "title": "Special Characters: !@#$%^&*()",
                 "text_content": "<script>alert('xss')</script>",
             },
             # Unicode content
             {
-                "resource_type": StationResource.ResourceType.NOTE,
+                "resource_type": StationResourceType.NOTE,
                 "title": "Unicode Test: 中文测试 🎉",
                 "text_content": "Unicode content: αβγδε",
             },
             # Very long text content
             {
-                "resource_type": StationResource.ResourceType.NOTE,
+                "resource_type": StationResourceType.NOTE,
                 "title": "Long Content Test",
                 "text_content": self.faker.text(max_nb_chars=10000),
             },
             # SVG sketch content
             {
-                "resource_type": StationResource.ResourceType.SKETCH,
+                "resource_type": StationResourceType.SKETCH,
                 "title": "SVG Test",
                 "text_content": '<svg><rect x="0" y="0" width="100" height="100"/></svg>',  # noqa: E501
             },
             # Malformed SVG
             {
-                "resource_type": StationResource.ResourceType.SKETCH,
+                "resource_type": StationResourceType.SKETCH,
                 "title": "Malformed SVG",
                 "text_content": '<svg><rect x="0" y="0" width="100"',  # Incomplete
             },
@@ -1210,7 +1223,8 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             data.update({"station_id": str(self.station.id)})
             response = self.client.post(
                 reverse(
-                    "api:v1:resource-list-create",
+                    "api:v1:station-resources",
+                    kwargs={"id": self.station.id},
                 ),
                 data=data,
                 headers={"authorization": self.auth},
@@ -1229,7 +1243,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
         file_tests = [
             # Valid image file
             (
-                StationResource.ResourceType.PHOTO,
+                StationResourceType.PHOTO,
                 "test.jpg",
                 Path("speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
                 "image/jpeg",
@@ -1237,7 +1251,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Valid video file
             (
-                StationResource.ResourceType.VIDEO,
+                StationResourceType.VIDEO,
                 "test.mp4",
                 Path("speleodb/api/v1/tests/artifacts/video.mp4").read_bytes(),
                 "video/mp4",
@@ -1245,7 +1259,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Invalid file extension
             (
-                StationResource.ResourceType.PHOTO,
+                StationResourceType.PHOTO,
                 "test.jpoog",
                 Path("speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
                 "image/jpeg",
@@ -1253,7 +1267,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Invalid file extension
             (
-                StationResource.ResourceType.PHOTO,
+                StationResourceType.PHOTO,
                 "test.jpg",
                 b"image",
                 "image/jpeg",
@@ -1261,7 +1275,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Filename too long
             (
-                StationResource.ResourceType.DOCUMENT,
+                StationResourceType.DOCUMENT,
                 "a" * 200 + ".pdf",
                 Path("speleodb/api/v1/tests/artifacts/document.pdf").read_bytes(),
                 "application/pdf",
@@ -1269,7 +1283,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Special characters in filename
             (
-                StationResource.ResourceType.DOCUMENT,
+                StationResourceType.DOCUMENT,
                 "test file with spaces & symbols!.pdf",
                 Path("speleodb/api/v1/tests/artifacts/document.pdf").read_bytes(),
                 "application/pdf",
@@ -1277,7 +1291,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Unicode filename
             (
-                StationResource.ResourceType.DOCUMENT,
+                StationResourceType.DOCUMENT,
                 "测试文件.pdf",
                 Path("speleodb/api/v1/tests/artifacts/document.pdf").read_bytes(),
                 "application/pdf",
@@ -1295,7 +1309,6 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             uploaded_file = SimpleUploadedFile(filename, content, content_type)
 
             data = {
-                "station_id": str(self.station.id),
                 "resource_type": resource_type,
                 "title": f"Fuzz Test: {filename}",
                 "file": uploaded_file,
@@ -1303,7 +1316,8 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
 
             response = self.client.post(
                 reverse(
-                    "api:v1:resource-list-create",
+                    "api:v1:station-resources",
+                    kwargs={"id": self.station.id},
                 ),
                 data=data,
                 headers={"authorization": self.auth},

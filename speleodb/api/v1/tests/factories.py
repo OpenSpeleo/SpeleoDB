@@ -25,6 +25,7 @@ from speleodb.surveys.models.platform_base import OperatingSystemEnum
 from speleodb.surveys.models.platform_base import SurveyPlatformEnum
 from speleodb.surveys.models.station import Station
 from speleodb.surveys.models.station import StationResource
+from speleodb.surveys.models.station import StationResourceType
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import SurveyTeamMembershipRole
@@ -219,14 +220,14 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
 
     id = factory.LazyFunction(uuid.uuid4)
     station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
-    resource_type: StationResource.ResourceType = factory.Faker(
+    resource_type: StationResourceType = factory.Faker(
         "random_element",
         elements=[
-            StationResource.ResourceType.PHOTO,
-            StationResource.ResourceType.VIDEO,
-            StationResource.ResourceType.NOTE,
-            StationResource.ResourceType.SKETCH,
-            StationResource.ResourceType.DOCUMENT,
+            StationResourceType.PHOTO,
+            StationResourceType.VIDEO,
+            StationResourceType.NOTE,
+            StationResourceType.SKETCH,
+            StationResourceType.DOCUMENT,
         ],
     )  # type: ignore[assignment]
     title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
@@ -241,10 +242,10 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
         if not create:
             return
 
-        if self.resource_type == StationResource.ResourceType.NOTE:
+        if self.resource_type == StationResourceType.NOTE:
             if not self.text_content:
                 self.text_content = f"Note content for {self.title}"
-        elif self.resource_type == StationResource.ResourceType.SKETCH:
+        elif self.resource_type == StationResourceType.SKETCH:
             if not self.text_content:
                 # Simple SVG sketch
                 self.text_content = """<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
@@ -268,25 +269,25 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
             resource_type = resource_type.fget()  # type: ignore[union-attr]
 
         if resource_type in [
-            StationResource.ResourceType.PHOTO,
-            StationResource.ResourceType.VIDEO,
-            StationResource.ResourceType.DOCUMENT,
+            StationResourceType.PHOTO,
+            StationResourceType.VIDEO,
+            StationResourceType.DOCUMENT,
         ]:
             if "file" not in kwargs or not kwargs.get("file"):
                 # Provide appropriate test file
                 artifacts_dir = Path(__file__).parent / "artifacts"
 
-                if resource_type == StationResource.ResourceType.PHOTO:
+                if resource_type == StationResourceType.PHOTO:
                     with (artifacts_dir / "image.jpg").open(mode="rb") as f:
                         kwargs["file"] = SimpleUploadedFile(
                             "test_image.jpg", f.read(), content_type="image/jpeg"
                         )
-                elif resource_type == StationResource.ResourceType.VIDEO:
+                elif resource_type == StationResourceType.VIDEO:
                     with (artifacts_dir / "video.mp4").open(mode="rb") as f:
                         kwargs["file"] = SimpleUploadedFile(
                             "test_video.mp4", f.read(), content_type="video/mp4"
                         )
-                elif resource_type == StationResource.ResourceType.DOCUMENT:
+                elif resource_type == StationResourceType.DOCUMENT:
                     with (artifacts_dir / "document.pdf").open(mode="rb") as f:
                         kwargs["file"] = SimpleUploadedFile(
                             "test_document.pdf",
@@ -301,7 +302,7 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
         """Create a photo resource."""
         return cls.create(
             station=station,
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Station Overview Photo",
             description="Wide angle shot of the station location",
             **kwargs,
@@ -322,7 +323,7 @@ Good visibility in all directions."""
 
         return cls.create(
             station=station,
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Survey Measurements",
             description="Water flow and depth readings",
             text_content=content,
@@ -334,7 +335,7 @@ Good visibility in all directions."""
         """Create a sketch resource."""
         return cls.create(
             station=station,
-            resource_type=StationResource.ResourceType.SKETCH,
+            resource_type=StationResourceType.SKETCH,
             title="Cross-section Diagram",
             description="Hand-drawn cross-section of the area",
             **kwargs,
@@ -345,7 +346,7 @@ Good visibility in all directions."""
         """Create a video resource."""
         return cls.create(
             station=station,
-            resource_type=StationResource.ResourceType.VIDEO,
+            resource_type=StationResourceType.VIDEO,
             title="360° Site Survey",
             description="Complete view of the station location",
             **kwargs,
@@ -365,21 +366,21 @@ Good visibility in all directions."""
 class PhotoStationResourceFactory(StationResourceFactory):
     """Factory specifically for photo station resources."""
 
-    resource_type = StationResource.ResourceType.PHOTO
+    resource_type = StationResourceType.PHOTO
     title: str = factory.LazyAttribute(lambda obj: f"Photo - {obj.station.name}")  # type: ignore[assignment]
 
 
 class VideoStationResourceFactory(StationResourceFactory):
     """Factory specifically for video station resources."""
 
-    resource_type = StationResource.ResourceType.VIDEO
+    resource_type = StationResourceType.VIDEO
     title: str = factory.LazyAttribute(lambda obj: f"Video - {obj.station.name}")  # type: ignore[assignment]
 
 
 class SketchStationResourceFactory(StationResourceFactory):
     """Factory specifically for sketch station resources."""
 
-    resource_type = StationResource.ResourceType.SKETCH
+    resource_type = StationResourceType.SKETCH
     title: str = factory.LazyAttribute(lambda obj: f"Sketch - {obj.station.name}")  # type: ignore[assignment]
     text_content = (
         '<svg width="200" height="200"><circle cx="100" cy="100" r="50" fill="blue"/>'
@@ -390,7 +391,7 @@ class SketchStationResourceFactory(StationResourceFactory):
 class NoteStationResourceFactory(StationResourceFactory):
     """Factory specifically for note station resources."""
 
-    resource_type = StationResource.ResourceType.NOTE
+    resource_type = StationResourceType.NOTE
     title: str = factory.LazyAttribute(lambda obj: f"Notes - {obj.station.name}")  # type: ignore[assignment]
     text_content: str = Faker("paragraph")  # type: ignore[assignment]
 
@@ -398,5 +399,5 @@ class NoteStationResourceFactory(StationResourceFactory):
 class DocumentStationResourceFactory(StationResourceFactory):
     """Factory specifically for document station resources."""
 
-    resource_type = StationResource.ResourceType.DOCUMENT
+    resource_type = StationResourceType.DOCUMENT
     title: str = factory.LazyAttribute(lambda obj: f"Document - {obj.station.name}")  # type: ignore[assignment]

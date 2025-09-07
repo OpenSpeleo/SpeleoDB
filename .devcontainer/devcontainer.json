@@ -21,6 +21,7 @@
                     "analysis.autoImportCompletions": true,
                     // https://github.com/microsoft/pylance-release/wiki/Pylance-Configuration-Tips
                     "analysis.languageServerMode": "light",
+                    "analysis.indexing": false,
                     "analysis.typeCheckingMode": "basic",
                     "defaultInterpreterPath": "/usr/local/bin/python",
                     "editor.codeActionsOnSave": {
@@ -37,7 +38,11 @@
                         "/app/pyproject.toml"
                     ],
                     "linting.pylintEnabled": true
-                }
+                },
+                "[html]": {
+                    "editor.formatOnSave": false,
+                    "editor.defaultFormatter": null
+                },
             },
             // https://code.visualstudio.com/docs/remote/devcontainerjson-reference#_vs-code-specific-properties
             // Add the IDs of extensions you want installed when the container is created.

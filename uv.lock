@@ -591,6 +591,19 @@ wheels = [
 ]
 
 [[package]]
+name = "django-js-reverse"
+version = "0.10.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/98/37/1d8c8a9f9de2588df8f18b36f6a3e4134e362f49a14d0c9b0b02a301ef9e/django-js-reverse-0.10.2.tar.gz", hash = "sha256:ac1664397935ed45ef1e23a80e6df182d766f4559d6dffd049beac92e63bce20", size = 25031, upload-time = "2023-08-14T22:40:32.16Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/43/802aed629f651a922a5a6f4932fa5dff5b5324b6e6f0e3054f4edb483134/django_js_reverse-0.10.2-py2.py3-none-any.whl", hash = "sha256:f17b328028a91f25ce2b8142e5e55b6622d0ab332324c7fd34aa002955f85a2d", size = 24535, upload-time = "2023-08-14T22:40:30.483Z" },
+]
+
+[[package]]
 name = "django-model-utils"
 version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2010,6 +2023,7 @@ dependencies = [
     { name = "django-dynamic-raw-id" },
     { name = "django-environ" },
     { name = "django-hijack" },
+    { name = "django-js-reverse" },
     { name = "django-model-utils" },
     { name = "django-redis" },
     { name = "django-storages", extra = ["s3"] },
@@ -2094,6 +2108,7 @@ requires-dist = [
     { name = "django-environ", specifier = "==0.12.0" },
     { name = "django-extensions", marker = "extra == 'local'", specifier = "==4.1" },
     { name = "django-hijack", specifier = "==3.7.4" },
+    { name = "django-js-reverse", specifier = "==0.10.2" },
     { name = "django-model-utils", specifier = "==5.0.0" },
     { name = "django-redis", specifier = "==6.0.0" },
     { name = "django-schema-viewer", marker = "extra == 'local'", specifier = "==0.5.3" },
