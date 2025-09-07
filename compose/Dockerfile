@@ -1,4 +1,4 @@
-FROM python:3.13
+FROM python:3.13-bookworm
 
 ARG BUILD_ENVIRONMENT=local
 ARG APP_HOME=/app
@@ -38,16 +38,15 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # UV settings
-ENV UV_MOUNT_CACHE_DIR=/tmp/.cache
-ENV UV_CACHE_DIR=${UV_MOUNT_CACHE_DIR}/cache
-# Use the system Python environment
 ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
 ENV UV_LINK_MODE=copy
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_PYTHON_DOWNLOADS=0
 
 # Install Project Dependencies
-COPY pyproject.toml .
-COPY uv.lock .
-RUN --mount=type=bind,source=.uv,target=${UV_MOUNT_CACHE_DIR},readonly=false \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
     uv sync --frozen --extra ${BUILD_ENV}
 
 COPY ./compose/entrypoint /entrypoint
