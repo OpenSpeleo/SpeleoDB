@@ -49,7 +49,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "Collectfasta==3.3.1",         # https://github.com/jasongi/collectfasta
     "django==5.2.5",               # https://www.djangoproject.com/
-    "django-allauth==65.11.1",     # https://github.com/pennersr/django-allauth
+    "django-allauth==65.11.2",     # https://github.com/pennersr/django-allauth
     "django-countries==7.6.1",     # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",  # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.12.0",      # https://github.com/joke2k/django-environ
