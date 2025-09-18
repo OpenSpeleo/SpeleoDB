@@ -281,6 +281,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    # Before django-hijack to log the correct user
+    "speleodb.middleware.LastLoginUpdateMiddleware",
     "hijack.middleware.HijackUserMiddleware",
     "speleodb.middleware.ViewNameMiddleware",
     "speleodb.middleware.DRFWrapResponseMiddleware",
@@ -524,7 +526,7 @@ ACCOUNT_SIGNUP_FORM_CLASS = "speleodb.users.forms.SignupForm"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
+        "speleodb.api.v1.authentication.SDBTokenAuthentication",
         "speleodb.api.v1.authentication.BearerAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),

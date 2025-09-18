@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from django.contrib.auth.models import update_last_login
 from django.db import models
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter
@@ -79,9 +78,7 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
             )
 
         user = request.user
-
         token, _ = Token.objects.get_or_create(user=user)
-        update_last_login(None, user=user)  # type: ignore[arg-type]
 
         return NoWrapResponse({"token": token.key})
 
@@ -103,7 +100,6 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
             Token.objects.filter(user=user).delete()
 
         token, created = Token.objects.get_or_create(user=user)
-        update_last_login(None, user=user)  # type: ignore[arg-type]
 
         return NoWrapResponse(
             {"token": token.key},

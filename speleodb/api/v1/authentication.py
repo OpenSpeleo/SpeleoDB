@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from django.contrib.auth.models import update_last_login
 from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from drf_spectacular.plumbing import build_bearer_security_scheme_object
 from rest_framework import exceptions
@@ -15,6 +16,8 @@ from rest_framework.authentication import TokenAuthentication
 if TYPE_CHECKING:
     from rest_framework.authtoken.models import Token
     from rest_framework.request import Request
+
+    from speleodb.users.models import User
 
 
 class DebugHeaderAuthentication(BaseAuthentication):
@@ -34,7 +37,16 @@ class DebugHeaderAuthentication(BaseAuthentication):
         return None  # noqa: PLR1711, RET501
 
 
-class BearerAuthentication(TokenAuthentication):
+class SDBTokenAuthentication(TokenAuthentication):
+    def authenticate(self, request: Request) -> tuple[User, Token] | None:
+        result = super().authenticate(request)
+        if result is not None:
+            user, token = result
+            update_last_login(None, user=user)  # type: ignore[arg-type]
+        return result
+
+
+class BearerAuthentication(SDBTokenAuthentication):
     """
     Simple token based authentication using utvsapitoken.
 

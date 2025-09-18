@@ -11,12 +11,10 @@ from typing import override
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponseRedirectBase
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.urls import reverse_lazy
 from django.views.generic import TemplateView
 from rest_framework.authtoken.models import Token
 
@@ -69,22 +67,7 @@ class UserAccessLevel:
         return self.level.label
 
 
-class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView):
-    login_url = reverse_lazy("account_login")
-
-    def refresh_user_login(self, user: User) -> None:
-        with contextlib.suppress(Exception):
-            update_last_login(None, user=user)  # type: ignore[arg-type]
-
-    def get(
-        self,
-        request: AuthenticatedHttpRequest,  # type: ignore[override]
-        *args: Any,
-        **kwargs: Any,
-    ) -> HttpResponse:
-        render = super().get(request, *args, **kwargs)
-        self.refresh_user_login(user=request.user)
-        return render
+class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView): ...
 
 
 # ============ Setting Pages ============ #

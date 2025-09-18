@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.conf import settings
+from django.contrib.auth.models import update_last_login
 from django.http import FileResponse
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -28,6 +29,20 @@ if TYPE_CHECKING:
 
     from rest_framework.request import Request
     from rest_framework.response import Response
+
+
+class LastLoginUpdateMiddleware:
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
+        # One-time configuration and initialization.
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        # Note this middleware only works for Session-based authentication
+        # Does not work for Django Token auth: Anonymous until DRF Auth.
+        if request.user.is_authenticated:
+            update_last_login(None, user=request.user)  # type: ignore[arg-type]
+
+        return self.get_response(request)
 
 
 class ViewNameMiddleware:
