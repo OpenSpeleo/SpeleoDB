@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .base import *  # noqa: F403
 from .base import INSTALLED_APPS
+from .base import LOGGING
 from .base import MIDDLEWARE
 from .base import env
 
@@ -15,6 +16,23 @@ DEBUG = True
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = ["*"]
+
+# LOGGING
+# ------------------------------------------------------------------------------
+
+LOGGING["loggers"] = {
+    "django": {
+        "handlers": ["console"],
+        "level": "INFO",
+        "propagate": False,
+    },
+    "werkzeug": {
+        "handlers": ["console"],
+        "level": "DEBUG",
+        "propagate": False,
+    },
+    # You can also add specific loggers for your apps here
+}
 
 # CACHES
 # ------------------------------------------------------------------------------
