@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 T = TypeVar("T", bound=Model)
 
 
-class BaseCountryFilter(Generic[T], admin.SimpleListFilter, ABC):  # noqa: UP046
+class BaseCountryFilter(admin.SimpleListFilter, ABC, Generic[T]):  # noqa: UP046
     """Custom filter that shows only countries actually used by objects."""
 
     title = "Country"
@@ -104,7 +104,7 @@ class UserCountryFilter(BaseCountryFilter[User]):
         )
 
 
-class BaseProjectFilter(Generic[T], admin.SimpleListFilter, ABC):  # noqa: UP046
+class BaseProjectFilter(admin.SimpleListFilter, ABC, Generic[T]):  # noqa: UP046
     """Custom filter that shows only countries actually used by objects."""
 
     title = "Project"

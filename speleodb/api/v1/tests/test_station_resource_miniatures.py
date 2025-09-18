@@ -239,7 +239,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
 
     def test_validation_requires_file_for_photo_resource(self) -> None:
         """Test that validation requires file for photo resources."""
-        with pytest.raises(ValidationError, match="requires a file."):
+        with pytest.raises(ValidationError, match="requires a file"):
             StationResource.objects.create(
                 station=self.station,
                 resource_type=StationResource.ResourceType.PHOTO,

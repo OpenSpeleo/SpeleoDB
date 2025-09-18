@@ -127,7 +127,7 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
     ) -> StreamingHttpResponse:
         try:
             project = self.get_object()
-            (old_hash, _), branch_name = parse_git_push_preamble(request.body)
+            (_old_hash, _), branch_name = parse_git_push_preamble(request.body)
 
             if (
                 branch_name is not None

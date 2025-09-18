@@ -41,7 +41,7 @@ class SDBTokenAuthentication(TokenAuthentication):
     def authenticate(self, request: Request) -> tuple[User, Token] | None:
         result = super().authenticate(request)
         if result is not None:
-            user, token = result
+            user, _ = result
             update_last_login(None, user=user)  # type: ignore[arg-type]
         return result
 
