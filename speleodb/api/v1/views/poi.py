@@ -8,7 +8,6 @@ from typing import Any
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from rest_framework.viewsets import ModelViewSet
 
 from speleodb.api.v1.permissions import POIOwnershipPermission
 from speleodb.api.v1.serializers.poi import PointOfInterestGeoJSONSerializer

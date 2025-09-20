@@ -20,9 +20,7 @@ from rest_framework.viewsets import ModelViewSet
 from speleodb.api.v1.permissions import StationUserHasAdminAccess
 from speleodb.api.v1.permissions import StationUserHasReadAccess
 from speleodb.api.v1.permissions import StationUserHasWriteAccess
-from speleodb.api.v1.permissions import UserHasAdminAccess
 from speleodb.api.v1.permissions import UserHasReadAccess
-from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers.station import StationCreateSerializer
 from speleodb.api.v1.serializers.station import StationGeoJSONSerializer

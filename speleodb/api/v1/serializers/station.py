@@ -314,6 +314,5 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
                 "description": instance.description,
                 "created_by": instance.created_by.email,
                 "creation_date": instance.creation_date.isoformat(),
-                # "resource_count": StationResource.objects.filter(station=instance).count(),
             },
         }
