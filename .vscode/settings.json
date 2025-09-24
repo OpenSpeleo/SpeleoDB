@@ -14,5 +14,9 @@
         "editor.defaultFormatter": null
     },
     "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "editor.formatOnSave": true,
+    "[python]": {
+        "editor.formatOnSave": true
+    }
 }

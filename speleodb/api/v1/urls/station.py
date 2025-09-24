@@ -4,8 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.urls import include
+from django.urls import path
+
+from speleodb.api.v1.views.resource import StationResourceApiView
+
 if TYPE_CHECKING:
     from django.urls import URLPattern
+    from django.urls import URLResolver
 
 # from django.urls import path
 
@@ -39,4 +45,15 @@ if TYPE_CHECKING:
 #         name="stations-map",
 #     ),
 # ]
-urlpatterns: list[URLPattern] = []
+
+station_base_urlpatterns = [
+    path(
+        "resources/",
+        StationResourceApiView.as_view(),
+        name="station-resources-api",
+    )
+]
+
+urlpatterns: list[URLPattern | URLResolver] = [
+    path("<uuid:id>/", include(station_base_urlpatterns)),
+]

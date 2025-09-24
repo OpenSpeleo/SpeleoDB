@@ -9,11 +9,13 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions
 from rest_framework import status
+from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import FormParser
 from rest_framework.parsers import JSONParser
 from rest_framework.parsers import MultiPartParser
 from rest_framework.viewsets import ModelViewSet
 
+from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import StationUserHasAdminAccess
 from speleodb.api.v1.permissions import StationUserHasReadAccess
 from speleodb.api.v1.permissions import StationUserHasWriteAccess
@@ -30,6 +32,62 @@ if TYPE_CHECKING:
     from rest_framework.compat import QuerySet
     from rest_framework.request import Request
     from rest_framework.response import Response
+
+
+class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
+    queryset = Station.objects.all()
+    permission_classes = [
+        StationUserHasWriteAccess | (IsReadOnly & StationUserHasReadAccess)
+    ]
+    lookup_field = "id"
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = self.get_user()
+        station = self.get_object()
+
+        serializer = StationResourceSerializer(
+            station.rel_resources,
+            many=True,
+            context={"user": user},
+        )
+
+        return SuccessResponse(serializer.data)
+
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Create a new resource."""
+        station = self.get_object()
+
+        serializer = StationResourceSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                # Save with the station and created_by
+                serializer.save(station=station, created_by=request.user)
+                return SuccessResponse(
+                    {"resource": serializer.data},
+                    status=status.HTTP_201_CREATED,
+                )
+
+            except ValidationError as e:
+                # Convert model validation errors to API format
+                errors: Mapping[str, Any] = {}
+                if hasattr(e, "error_dict"):
+                    errors = e.error_dict
+                elif hasattr(e, "error_list"):
+                    errors = {"non_field_errors": e.error_list}
+                else:
+                    errors = {"non_field_errors": [str(e)]}
+
+                # Convert ErrorList to list of strings
+                for field, error_list in errors.items():
+                    errors[field] = [str(error) for error in error_list]  # type: ignore[misc]
+
+                return ErrorResponse(
+                    {"errors": errors}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+        return ErrorResponse(
+            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
@@ -64,13 +122,13 @@ class StationResourceViewSet(ModelViewSet[StationResource], SDBAPIViewMixin):
         """Set permissions based on action."""
         match self.action:
             case "create" | "update" | "partial_update":
-                return [permissions.IsAuthenticated(), StationUserHasWriteAccess()]
+                return [StationUserHasWriteAccess()]
 
             case "destroy":
-                return [permissions.IsAuthenticated(), StationUserHasAdminAccess()]
+                return [StationUserHasAdminAccess()]
 
             case _:
-                return [permissions.IsAuthenticated(), StationUserHasReadAccess()]
+                return [StationUserHasReadAccess()]
 
     def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get detailed resource information."""

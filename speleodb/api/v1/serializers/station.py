@@ -21,29 +21,34 @@ def format_coordinate(value: Any) -> float:
 class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
     """Serializer for StationResource model."""
 
-    created_by_email = serializers.CharField(source="created_by.email", read_only=True)
+    created_by = serializers.CharField(source="created_by.email", read_only=True)
     file_url = serializers.SerializerMethodField()
     miniature_url = serializers.SerializerMethodField()
-    station_id = serializers.UUIDField(write_only=True, required=False)
 
     class Meta:
         model = StationResource
         fields = [
             "id",
-            "resource_type",
-            "title",
+            "created_by",
+            "creation_date",
             "description",
             "file",
             "file_url",
             "miniature_url",
+            "modified_date",
+            "resource_type",
+            "station",
             "text_content",
+            "title",
+        ]
+        read_only_fields = [
+            "id",
             "created_by",
-            "created_by_email",
             "creation_date",
             "modified_date",
-            "station_id",
+            "resource_type",
+            "station",
         ]
-        read_only_fields = ["id", "created_by", "creation_date", "modified_date"]
 
     def get_file_url(self, obj: StationResource) -> str | None:
         """Get the full URL for the file if it exists."""
