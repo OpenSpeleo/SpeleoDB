@@ -185,6 +185,22 @@ class IsObjectCreation(permissions.BasePermission):
         raise NotAuthenticated("Authentication credentials were not provided.")
 
 
+class IsObjectEdition(permissions.BasePermission):
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        if request.user and request.user.is_authenticated:
+            return request.method in ["PATCH", "PUT"]
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
+
+
+class IsObjectDeletion(permissions.BasePermission):
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        if request.user and request.user.is_authenticated:
+            return request.method in ["DELETE"]
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
+
+
 class UserOwnsProjectMutex(permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
         if request.user and request.user.is_authenticated:

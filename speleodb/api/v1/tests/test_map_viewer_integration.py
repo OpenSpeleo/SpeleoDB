@@ -26,6 +26,7 @@ from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models import UserPermission
+from speleodb.surveys.models.station import StationResourceType
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.test_utils import named_product
 
@@ -239,7 +240,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         # Test creating a note resource - MUST use JSON
         note_data = {
             "station_id": str(station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Survey Notes from Frontend",
             "description": "Notes added via the station modal",
             "text_content": (
@@ -281,7 +282,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         assert (
             StationResource.objects.filter(
                 station=station,
-                resource_type=StationResource.ResourceType.NOTE,
+                resource_type=StationResourceType.NOTE,
             ).count()
             == 1
         )
@@ -293,7 +294,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         # Test creating a sketch resource - MUST use JSON
         sketch_data = {
             "station_id": str(station.id),
-            "resource_type": StationResource.ResourceType.SKETCH,
+            "resource_type": StationResourceType.SKETCH,
             "title": "Cave Cross-Section",
             "description": "Hand-drawn diagram of the passage",
             "text_content": """<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
@@ -328,7 +329,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         assert (
             StationResource.objects.filter(
                 station=station,
-                resource_type=StationResource.ResourceType.SKETCH,
+                resource_type=StationResourceType.SKETCH,
             ).count()
             == 1
         )
@@ -659,10 +660,10 @@ class TestMapViewerWithFixtures(TransactionTestCase):
 
         resource_types = {r["resource_type"] for r in station_data["resources"]}
         assert resource_types == {
-            StationResource.ResourceType.PHOTO,
-            StationResource.ResourceType.NOTE,
-            StationResource.ResourceType.SKETCH,
-            StationResource.ResourceType.VIDEO,
+            StationResourceType.PHOTO,
+            StationResourceType.NOTE,
+            StationResourceType.SKETCH,
+            StationResourceType.VIDEO,
         }
 
     def test_station_creation_with_realistic_names(self) -> None:

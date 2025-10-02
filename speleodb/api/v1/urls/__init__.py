@@ -9,8 +9,8 @@ from django.urls import path
 
 from speleodb.api.v1.urls.poi import urlpatterns as poi_urlpatterns
 from speleodb.api.v1.urls.project import urlpatterns as project_urlpatterns
-from speleodb.api.v1.urls.resource import urlpatterns as resource_urlpatterns
-from speleodb.api.v1.urls.station import urlpatterns as station_urlpatterns
+from speleodb.api.v1.urls.resource import resource_urlpatterns
+from speleodb.api.v1.urls.station import station_urlpatterns
 from speleodb.api.v1.urls.team import urlpatterns as team_urlpatterns
 from speleodb.api.v1.urls.user import urlpatterns as user_urlpatterns
 from speleodb.api.v1.views.announcement import PublicAnnouncementApiView

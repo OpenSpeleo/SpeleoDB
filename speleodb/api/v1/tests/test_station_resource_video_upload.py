@@ -14,7 +14,7 @@ from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import StationResource
+from speleodb.surveys.models.station import StationResourceType
 
 if TYPE_CHECKING:
     from speleodb.surveys.models.station import Station
@@ -45,7 +45,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Test Video Upload",
             "description": "Testing video upload functionality",
             "file": get_video_file(),
@@ -67,19 +67,19 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         # Verify response data
         resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == StationResource.ResourceType.VIDEO
+        assert resource_data["resource_type"] == StationResourceType.VIDEO
         assert resource_data["title"] == "Test Video Upload"
         assert resource_data["file"] is not None
         assert "file_url" in resource_data or "file" in resource_data
 
         # Verify resource was created with correct type
-        assert resource_data["resource_type"] == StationResource.ResourceType.VIDEO
+        assert resource_data["resource_type"] == StationResourceType.VIDEO
 
     def test_video_upload_without_file(self) -> None:
         """Test video upload without providing a file."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Video Without File",
             "description": "This should fail",
             # No file provided
@@ -118,7 +118,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Large Video",
             "description": "Video over size limit",
             "file": video_file,
@@ -150,7 +150,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         """Test video upload with different video formats."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": f"Test {filename}",
             "description": f"Testing {content_type} format",
             "file": get_video_file(),
@@ -172,7 +172,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         """Test video upload with all optional fields."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Complete Video Test",
             "description": (
                 "This video has all fields populated including a long description that "
@@ -202,7 +202,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Empty Video",
             "description": "Video file is empty",
             "file": video_file,
@@ -225,7 +225,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         # Create form data manually to ensure proper structure
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Form Data Test",
             "description": "Testing form data structure",
             "file": get_video_file(),
@@ -249,7 +249,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         # Missing title
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             # "title": "Missing",  # Title is missing
             "file": get_video_file(),
         }
@@ -271,7 +271,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         # First create a video resource
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Initial Video",
             "file": get_video_file(),
         }

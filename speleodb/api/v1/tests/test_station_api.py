@@ -18,6 +18,7 @@ from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models import UserPermission
 from speleodb.surveys.models.station import Station
+from speleodb.surveys.models.station import StationResourceType
 from speleodb.utils.test_utils import named_product
 
 
@@ -439,14 +440,14 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
         StationResource.objects.create(
             station=station,
             title="Test Resource 1",
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             text_content="Test note content",
             created_by=self.user,
         )
         StationResource.objects.create(
             station=station,
             title="Test Resource 2",
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             text_content="Another test note",
             created_by=self.user,
         )
@@ -628,7 +629,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             resource = StationResource.objects.create(
                 station=station,
                 title=f"Resource {i + 1}",
-                resource_type=StationResource.ResourceType.NOTE,
+                resource_type=StationResourceType.NOTE,
                 text_content=f"Content {i + 1}",
                 created_by=self.user,
             )

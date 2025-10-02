@@ -13,6 +13,7 @@ from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models.permission_lvl import PermissionLevel
+from speleodb.surveys.models.station import StationResourceType
 from speleodb.utils.image_processing import ImageProcessor
 
 
@@ -50,7 +51,7 @@ class TestHEICSupport(BaseAPIProjectTestCase):
 
         resource = StationResource.objects.create(
             station=self.station,
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="HEIC Test",
             file=heic_file,
             created_by=self.user,
@@ -83,7 +84,7 @@ class TestHEICSupport(BaseAPIProjectTestCase):
         # For now, it tests the validator allows HEIF
         resource = StationResource.objects.create(
             station=self.station,
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="HEIF Test",
             file=heif_file,
             created_by=self.user,
@@ -134,7 +135,7 @@ class TestHEICSupport(BaseAPIProjectTestCase):
 
         resource = StationResource.objects.create(
             station=self.station,
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="HEIC Photo",
             file=heic_file,
             created_by=self.user,

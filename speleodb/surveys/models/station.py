@@ -9,6 +9,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Self
 
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
@@ -107,18 +108,23 @@ class Station(models.Model):
         return self.rel_resources.all()
 
 
+class StationResourceType(models.TextChoices):
+    PHOTO = "photo", "Photo"
+    VIDEO = "video", "Video"
+    SKETCH = "sketch", "Sketch"
+    NOTE = "note", "Note"
+    DOCUMENT = "document", "Document"
+
+    @classmethod
+    def from_str(cls, value: str) -> Self:
+        return cls._member_map_[value.upper()]  # type: ignore[return-value]
+
+
 class StationResource(models.Model):
     """
     Stores various types of resources (photos, videos, sketches, notes)
     associated with a survey station.
     """
-
-    class ResourceType(models.TextChoices):
-        PHOTO = "photo", "Photo"
-        VIDEO = "video", "Video"
-        SKETCH = "sketch", "Sketch"
-        NOTE = "note", "Note"
-        DOCUMENT = "document", "Document"
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -138,7 +144,7 @@ class StationResource(models.Model):
     # Resource details
     resource_type = models.CharField(
         max_length=20,
-        choices=ResourceType.choices,
+        choices=StationResourceType,
     )
 
     title = models.CharField(max_length=200, help_text="Title or name of the resource")
@@ -218,9 +224,9 @@ class StationResource(models.Model):
         if (
             self.resource_type
             in [
-                self.ResourceType.PHOTO,
-                self.ResourceType.VIDEO,
-                self.ResourceType.DOCUMENT,
+                StationResourceType.PHOTO,
+                StationResourceType.VIDEO,
+                StationResourceType.DOCUMENT,
             ]
             and self.file
         ):
@@ -244,11 +250,11 @@ class StationResource(models.Model):
                     old_miniature.delete(save=False)
 
                 # Generate new miniature based on resource type
-                if self.resource_type == self.ResourceType.PHOTO:
+                if self.resource_type == StationResourceType.PHOTO:
                     self._generate_photo_miniature()
-                elif self.resource_type == self.ResourceType.VIDEO:
+                elif self.resource_type == StationResourceType.VIDEO:
                     self._generate_video_miniature()
-                elif self.resource_type == self.ResourceType.DOCUMENT:
+                elif self.resource_type == StationResourceType.DOCUMENT:
                     self._generate_document_miniature()
 
             except Exception as e:
@@ -275,9 +281,9 @@ class StationResource(models.Model):
 
         # File-based resources require a file
         if self.resource_type in [
-            self.ResourceType.PHOTO,
-            self.ResourceType.VIDEO,
-            self.ResourceType.DOCUMENT,
+            StationResourceType.PHOTO,
+            StationResourceType.VIDEO,
+            StationResourceType.DOCUMENT,
         ]:
             if not self.file:
                 raise ValidationError(
@@ -295,7 +301,7 @@ class StationResource(models.Model):
 
                 # Define allowed extensions for each resource type
                 allowed_extensions = {
-                    self.ResourceType.PHOTO: {
+                    StationResourceType.PHOTO: {
                         ".jpg",
                         ".jpeg",
                         ".png",
@@ -305,7 +311,7 @@ class StationResource(models.Model):
                         ".heic",  # Allow HEIC for upload (will be converted)
                         ".heif",  # Allow HEIF for upload (will be converted)
                     },
-                    self.ResourceType.VIDEO: {
+                    StationResourceType.VIDEO: {
                         ".mp4",
                         ".avi",
                         ".mov",
@@ -313,7 +319,7 @@ class StationResource(models.Model):
                         ".flv",
                         ".webm",
                     },
-                    self.ResourceType.DOCUMENT: {
+                    StationResourceType.DOCUMENT: {
                         ".pdf",
                         ".doc",
                         ".docx",
@@ -458,15 +464,15 @@ class StationResource(models.Model):
     def is_file_based(self) -> bool:
         """Check if this resource type requires file storage."""
         return self.resource_type in [
-            self.ResourceType.PHOTO,
-            self.ResourceType.VIDEO,
-            self.ResourceType.DOCUMENT,
+            StationResourceType.PHOTO,
+            StationResourceType.VIDEO,
+            StationResourceType.DOCUMENT,
         ]
 
     @property
     def is_text_based(self) -> bool:
         """Check if this resource type uses text content."""
         return self.resource_type in [
-            self.ResourceType.NOTE,
-            self.ResourceType.SKETCH,
+            StationResourceType.NOTE,
+            StationResourceType.SKETCH,
         ]

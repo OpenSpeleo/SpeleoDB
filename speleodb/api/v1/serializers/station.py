@@ -6,11 +6,13 @@ import contextlib
 from decimal import InvalidOperation
 from typing import Any
 
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
+from speleodb.surveys.models.station import StationResourceType
 
 
 def format_coordinate(value: Any) -> float:
@@ -41,12 +43,12 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
             "text_content",
             "title",
         ]
+
         read_only_fields = [
             "id",
             "created_by",
             "creation_date",
             "modified_date",
-            "resource_type",
             "station",
         ]
 
@@ -71,17 +73,22 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
         """Validate that file-based resources have files and text-based have text."""
         # Get resource_type - if updating, use existing if not provided
         resource_type = attrs.get("resource_type")
-        if not resource_type and self.instance:
-            resource_type = self.instance.resource_type
+
+        if resource_type:
+            if isinstance(resource_type, str):
+                resource_type = StationResourceType.from_str(resource_type)
+
+        elif self.instance:
+            resource_type = self.instance.resource_type  # type: ignore[union-attr]
 
         file_field = attrs.get("file")
         text_content = attrs.get("text_content")
 
         # Only validate file requirement for new resources or when file is being updated
         if resource_type in [
-            StationResource.ResourceType.PHOTO,
-            StationResource.ResourceType.VIDEO,
-            StationResource.ResourceType.DOCUMENT,
+            StationResourceType.PHOTO,
+            StationResourceType.VIDEO,
+            StationResourceType.DOCUMENT,
         ]:
             # For updates, only validate if file is being changed
             if self.instance and not file_field:
@@ -101,8 +108,8 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
                     )
 
         elif resource_type in [
-            StationResource.ResourceType.NOTE,
-            StationResource.ResourceType.SKETCH,
+            StationResourceType.NOTE,
+            StationResourceType.SKETCH,
         ]:
             # For updates, check if text_content is being updated
             if self.instance and "text_content" not in attrs:
@@ -113,6 +120,9 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
                 raise serializers.ValidationError(
                     f"Resource type '{resource_type}' requires text content."
                 )
+
+        else:
+            raise ValidationError(f"Unknown value received: `{resource_type}`")
 
         return attrs
 

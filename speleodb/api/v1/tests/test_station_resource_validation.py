@@ -14,6 +14,7 @@ from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models.permission_lvl import PermissionLevel
+from speleodb.surveys.models.station import StationResourceType
 
 
 class TestStationResourceFileValidation(BaseAPIProjectTestCase):
@@ -57,7 +58,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for ext in valid_extensions:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.PHOTO,
+                resource_type=StationResourceType.PHOTO,
                 title=f"Test {ext}",
                 file=self.create_test_file(f"test{ext}"),
                 created_by=self.user,
@@ -72,7 +73,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for filename in invalid_files:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.PHOTO,
+                resource_type=StationResourceType.PHOTO,
                 title="Test Photo",
                 file=self.create_test_file(filename),
                 created_by=self.user,
@@ -97,7 +98,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for ext in valid_extensions:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.VIDEO,
+                resource_type=StationResourceType.VIDEO,
                 title=f"Test {ext}",
                 file=self.create_test_file(f"test{ext}"),
                 created_by=self.user,
@@ -112,7 +113,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for filename in invalid_files:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.VIDEO,
+                resource_type=StationResourceType.VIDEO,
                 title="Test Video",
                 file=self.create_test_file(filename),
                 created_by=self.user,
@@ -137,7 +138,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for ext in valid_extensions:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.DOCUMENT,
+                resource_type=StationResourceType.DOCUMENT,
                 title=f"Test {ext}",
                 file=self.create_test_file(f"test{ext}"),
                 created_by=self.user,
@@ -152,7 +153,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         for filename in invalid_files:
             resource = StationResource(
                 station=self.station,
-                resource_type=StationResource.ResourceType.DOCUMENT,
+                resource_type=StationResourceType.DOCUMENT,
                 title="Test Document",
                 file=self.create_test_file(filename),
                 created_by=self.user,
@@ -173,8 +174,8 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
     def test_note_and_sketch_reject_files(self) -> None:
         """Test that note and sketch resources reject any files."""
         for resource_type in [
-            StationResource.ResourceType.NOTE,
-            StationResource.ResourceType.SKETCH,
+            StationResourceType.NOTE,
+            StationResourceType.SKETCH,
         ]:
             resource = StationResource(
                 station=self.station,
@@ -199,7 +200,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
             "/api/v1/resources/",
             {
                 "station_id": str(self.station.id),
-                "resource_type": StationResource.ResourceType.PHOTO,
+                "resource_type": StationResourceType.PHOTO,
                 "title": "Test Photo",
                 "file": self.create_test_file("test.mp4"),
             },
@@ -223,7 +224,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 "/api/v1/resources/",
                 {
                     "station_id": str(self.station.id),
-                    "resource_type": StationResource.ResourceType.PHOTO,
+                    "resource_type": StationResourceType.PHOTO,
                     "title": "Test Photo",
                     "file": SimpleUploadedFile(
                         "photo.jpg", f.read(), content_type="image/jpeg"
@@ -240,7 +241,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 "/api/v1/resources/",
                 {
                     "station_id": str(self.station.id),
-                    "resource_type": StationResource.ResourceType.PHOTO,
+                    "resource_type": StationResourceType.PHOTO,
                     "title": "Test Photo",
                     "file": SimpleUploadedFile(
                         "video.mp4", f.read(), content_type="video/mp4"

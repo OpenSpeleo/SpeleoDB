@@ -12,6 +12,7 @@ from speleodb.api.v1.tests.factories import StationResourceFactory
 from speleodb.api.v1.tests.factories import UserPermissionFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import StationResource
+from speleodb.surveys.models.station import StationResourceType
 from speleodb.users.tests.factories import UserFactory
 
 
@@ -38,7 +39,7 @@ class TestStationResourceReadOnlyFields:
         # Create a note resource
         resource: StationResource = StationResourceFactory(
             station=self.station,
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="This is a test note",
         )  # type: ignore[assignment]
@@ -47,7 +48,7 @@ class TestStationResourceReadOnlyFields:
         response = self.client.patch(
             f"/api/v1/resources/{resource.id}/",
             {
-                "resource_type": StationResource.ResourceType.SKETCH,
+                "resource_type": StationResourceType.SKETCH,
                 "text_content": '{"type": "sketch_with_history", "operations": {}, "preview": "data:image/png;base64,..."}',  # noqa: E501
             },
             format="json",
@@ -58,7 +59,7 @@ class TestStationResourceReadOnlyFields:
 
         # Verify the resource type hasn't changed
         resource.refresh_from_db()
-        assert resource.resource_type == StationResource.ResourceType.NOTE
+        assert resource.resource_type == StationResourceType.NOTE
 
     def test_resource_type_cannot_be_changed_from_photo_to_video(self) -> None:
         """Test that changing resource_type from photo to video is rejected."""
@@ -68,7 +69,7 @@ class TestStationResourceReadOnlyFields:
         # validation is enough
         resource: StationResource = StationResourceFactory(
             station=self.station,
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Test Photo",
         )  # type: ignore[assignment]
 
@@ -76,7 +77,7 @@ class TestStationResourceReadOnlyFields:
         response = self.client.patch(
             f"/api/v1/resources/{resource.id}/",
             {
-                "resource_type": StationResource.ResourceType.VIDEO,
+                "resource_type": StationResourceType.VIDEO,
             },
             format="json",
         )
@@ -86,14 +87,14 @@ class TestStationResourceReadOnlyFields:
 
         # Verify the resource type hasn't changed
         resource.refresh_from_db()
-        assert resource.resource_type == StationResource.ResourceType.PHOTO
+        assert resource.resource_type == StationResourceType.PHOTO
 
     def test_resource_type_cannot_be_changed_from_sketch_to_document(self) -> None:
         """Test that changing resource_type from sketch to document is rejected."""
         # Create a sketch resource
         resource: StationResource = StationResourceFactory(
             station=self.station,
-            resource_type=StationResource.ResourceType.SKETCH,
+            resource_type=StationResourceType.SKETCH,
             title="Test Sketch",
             text_content='{"type": "sketch_with_history", "operations": {}, "preview": "data:image/png;base64,..."}',  # noqa: E501
         )  # type: ignore[assignment]
@@ -102,7 +103,7 @@ class TestStationResourceReadOnlyFields:
         response = self.client.patch(
             f"/api/v1/resources/{resource.id}/",
             {
-                "resource_type": StationResource.ResourceType.DOCUMENT,
+                "resource_type": StationResourceType.DOCUMENT,
             },
             format="json",
         )
@@ -112,14 +113,14 @@ class TestStationResourceReadOnlyFields:
 
         # Verify the resource type hasn't changed
         resource.refresh_from_db()
-        assert resource.resource_type == StationResource.ResourceType.SKETCH
+        assert resource.resource_type == StationResourceType.SKETCH
 
     def test_other_fields_can_be_updated(self) -> None:
         """Test that other fields can still be updated normally."""
         # Create a note resource
         resource: StationResource = StationResourceFactory(
             station=self.station,
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Original Title",
             description="Original Description",
             text_content="Original content",
@@ -143,14 +144,14 @@ class TestStationResourceReadOnlyFields:
         assert resource.title == "Updated Title"
         assert resource.description == "Updated Description"
         assert resource.text_content == "Updated content"
-        assert resource.resource_type == StationResource.ResourceType.NOTE
+        assert resource.resource_type == StationResourceType.NOTE
 
     def test_resource_type_same_value_is_allowed(self) -> None:
         """Test that sending the same resource_type value is allowed."""
         # Create a sketch resource
         resource: StationResource = StationResourceFactory(
             station=self.station,
-            resource_type=StationResource.ResourceType.SKETCH,
+            resource_type=StationResourceType.SKETCH,
             title="Test Sketch",
             text_content='{"type": "sketch_with_history", "operations": {}, "preview": "data:image/png;base64,..."}',  # noqa: E501
         )  # type: ignore[assignment]
@@ -159,7 +160,7 @@ class TestStationResourceReadOnlyFields:
         response = self.client.patch(
             f"/api/v1/resources/{resource.id}/",
             {
-                "resource_type": StationResource.ResourceType.SKETCH,
+                "resource_type": StationResourceType.SKETCH,
                 "title": "Updated Sketch Title",
             },
             format="json",
@@ -170,14 +171,14 @@ class TestStationResourceReadOnlyFields:
         # Verify the title was updated
         resource.refresh_from_db()
         assert resource.title == "Updated Sketch Title"
-        assert resource.resource_type == StationResource.ResourceType.SKETCH
+        assert resource.resource_type == StationResourceType.SKETCH
 
     def test_resource_type_field_optional_on_update(self) -> None:
         """Test that resource_type field is optional during updates."""
         # Create a note resource
         resource: StationResource = StationResourceFactory(
             station=self.station,
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="Original content",
         )  # type: ignore[assignment]
@@ -196,4 +197,4 @@ class TestStationResourceReadOnlyFields:
         # Verify the update worked
         resource.refresh_from_db()
         assert resource.title == "Updated Title Only"
-        assert resource.resource_type == StationResource.ResourceType.NOTE
+        assert resource.resource_type == StationResourceType.NOTE

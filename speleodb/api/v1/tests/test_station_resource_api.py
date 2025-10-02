@@ -21,6 +21,7 @@ from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
+from speleodb.surveys.models.station import StationResourceType
 from speleodb.utils.test_utils import named_product
 
 
@@ -97,14 +98,14 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         """Test listing resources when they exist."""
         # Create some resources
         StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="Some notes",
             created_by=self.user,
             station=self.station,
         )
         StationResource.objects.create(
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=self._create_test_image(),
             created_by=self.user,
@@ -135,7 +136,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         image_file = self._create_test_image()
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.PHOTO,
+            "resource_type": StationResourceType.PHOTO,
             "title": "Cave Entrance Photo",
             "description": "Main entrance view",
             "file": image_file,
@@ -157,7 +158,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         resource = response.data["data"]["resource"]
         assert resource["title"] == "Cave Entrance Photo"
-        assert resource["resource_type"] == StationResource.ResourceType.PHOTO
+        assert resource["resource_type"] == StationResourceType.PHOTO
         assert resource["file_url"] is not None
         assert resource["created_by_email"] == self.user.email
 
@@ -169,7 +170,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.VIDEO,
+            "resource_type": StationResourceType.VIDEO,
             "title": "Cave Tour Video",
             "description": "Walkthrough video",
             "file": video_file,
@@ -190,13 +191,13 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.data["success"]
 
         resource = response.data["data"]["resource"]
-        assert resource["resource_type"] == StationResource.ResourceType.VIDEO
+        assert resource["resource_type"] == StationResourceType.VIDEO
 
     def test_create_note_resource(self) -> None:
         """Test creating a note resource."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Field Notes",
             "description": "Important observations",
             "text_content": "The cave entrance is partially blocked by debris...",
@@ -214,7 +215,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.data["success"]
 
         resource = response.data["data"]["resource"]
-        assert resource["resource_type"] == StationResource.ResourceType.NOTE
+        assert resource["resource_type"] == StationResourceType.NOTE
         assert resource["text_content"] == data["text_content"]
         assert resource["file_url"] is None
 
@@ -223,7 +224,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         svg_content = '<svg><circle cx="50" cy="50" r="40" /></svg>'
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.SKETCH,
+            "resource_type": StationResourceType.SKETCH,
             "title": "Cave Map Sketch",
             "description": "Rough layout",
             "text_content": svg_content,
@@ -241,7 +242,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.data["success"]
 
         resource = response.data["data"]["resource"]
-        assert resource["resource_type"] == StationResource.ResourceType.SKETCH
+        assert resource["resource_type"] == StationResourceType.SKETCH
         assert resource["text_content"] == svg_content
 
     def test_create_document_resource(self) -> None:
@@ -249,7 +250,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         doc_file = self._create_test_text_file("report.txt", "Cave survey report...")
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "resource_type": StationResourceType.DOCUMENT,
             "title": "Survey Report",
             "description": "Detailed findings",
             "file": doc_file,
@@ -270,13 +271,13 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert response.data["success"]
 
         resource = response.data["data"]["resource"]
-        assert resource["resource_type"] == StationResource.ResourceType.DOCUMENT
+        assert resource["resource_type"] == StationResourceType.DOCUMENT
 
     def test_create_resource_missing_file(self) -> None:
         """Test creating a file-based resource without a file."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.PHOTO,
+            "resource_type": StationResourceType.PHOTO,
             "title": "Missing Photo",
             "description": "This should fail",
         }
@@ -297,7 +298,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         """Test creating a text-based resource without text content."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Empty Note",
             "description": "This should fail",
         }
@@ -317,7 +318,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_retrieve_resource(self) -> None:
         """Test retrieving a single resource."""
         resource = StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="Content",
             created_by=self.user,
@@ -341,7 +342,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_update_resource(self) -> None:
         """Test updating a resource."""
         resource = StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Old Title",
             text_content="Old content",
             created_by=self.user,
@@ -375,7 +376,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         """Test updating a file resource with a new file."""
         # Create initial resource
         resource = StationResource.objects.create(
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Old Photo",
             file=self._create_test_image("old.jpg"),
             created_by=self.user,
@@ -408,7 +409,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_delete_resource(self) -> None:
         """Test deleting a resource."""
         resource = StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="To Delete",
             text_content="Content",
             created_by=self.user,
@@ -431,7 +432,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
     def test_delete_resource_with_file(self) -> None:
         """Test deleting a resource also removes the file."""
         resource = StationResource.objects.create(
-            resource_type=StationResource.ResourceType.PHOTO,
+            resource_type=StationResourceType.PHOTO,
             title="Photo to Delete",
             file=self._create_test_image(),
             created_by=self.user,
@@ -455,21 +456,21 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         """Test resources are returned in correct order by modified date."""
         # Create resources with different modified times
         StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Third",
             text_content="3",
             created_by=self.user,
             station=self.station,
         )
         StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="First",
             text_content="1",
             created_by=self.user,
             station=self.station,
         )
         StationResource.objects.create(
-            resource_type=StationResource.ResourceType.NOTE,
+            resource_type=StationResourceType.NOTE,
             title="Second",
             text_content="2",
             created_by=self.user,
@@ -521,7 +522,7 @@ class TestUnauthenticatedStationResourceAPIAuthentication(BaseAPIProjectTestCase
         """Test that resource create endpoint requires authentication."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Test Note",
             "text_content": "This is a test note",
         }
@@ -569,7 +570,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Test Note",
             "text_content": "This is a test note",
         }
@@ -592,7 +593,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         """Test creating a note resource."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": "Cave Survey Notes",
             "description": "Detailed observations from the survey",
             "text_content": (
@@ -616,7 +617,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
 
         resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == StationResource.ResourceType.NOTE
+        assert resource_data["resource_type"] == StationResourceType.NOTE
         assert resource_data["title"] == "Cave Survey Notes"
         assert resource_data["text_content"] == data["text_content"]
 
@@ -629,7 +630,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.SKETCH,
+            "resource_type": StationResourceType.SKETCH,
             "title": "Cave Entrance Sketch",
             "description": "Hand-drawn sketch of the cave entrance",
             "text_content": svg_content,
@@ -650,7 +651,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
 
         resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == StationResource.ResourceType.SKETCH
+        assert resource_data["resource_type"] == StationResourceType.SKETCH
         assert resource_data["title"] == "Cave Entrance Sketch"
         assert svg_content in resource_data["text_content"]
 
@@ -665,7 +666,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.PHOTO,
+            "resource_type": StationResourceType.PHOTO,
             "title": "Cave Entrance Photo",
             "description": "Photo taken at the main entrance",
             "file": image_file,
@@ -686,7 +687,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_201_CREATED
 
         resource_data = response.data["data"]["resource"]
-        assert resource_data["resource_type"] == StationResource.ResourceType.PHOTO
+        assert resource_data["resource_type"] == StationResourceType.PHOTO
         assert resource_data["title"] == "Cave Entrance Photo"
         assert resource_data["file"] is not None
 
@@ -836,7 +837,7 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
         """Test creating a resource without a title."""
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "text_content": "Note without title",
         }
 
@@ -881,9 +882,9 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
 
     @parameterized.expand(
         [
-            (StationResource.ResourceType.PHOTO, "test.jpg", "image/jpeg"),
-            (StationResource.ResourceType.VIDEO, "test.mp4", "video/mp4"),
-            (StationResource.ResourceType.DOCUMENT, "test.pdf", "application/pdf"),
+            (StationResourceType.PHOTO, "test.jpg", "image/jpeg"),
+            (StationResourceType.VIDEO, "test.mp4", "video/mp4"),
+            (StationResourceType.DOCUMENT, "test.pdf", "application/pdf"),
         ]
     )
     def test_create_file_based_resources(
@@ -891,15 +892,15 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
     ) -> None:
         """Test creating file-based resources."""
         match resource_type:
-            case StationResource.ResourceType.PHOTO:
+            case StationResourceType.PHOTO:
                 file_content = Path(
                     "speleodb/api/v1/tests/artifacts/image.jpg"
                 ).read_bytes()
-            case StationResource.ResourceType.VIDEO:
+            case StationResourceType.VIDEO:
                 file_content = Path(
                     "speleodb/api/v1/tests/artifacts/video.mp4"
                 ).read_bytes()
-            case StationResource.ResourceType.DOCUMENT:
+            case StationResourceType.DOCUMENT:
                 file_content = Path(
                     "speleodb/api/v1/tests/artifacts/document.pdf"
                 ).read_bytes()
@@ -939,7 +940,7 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
         long_title = "A" * 201  # Exceeds max length of 200
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.NOTE,
+            "resource_type": StationResourceType.NOTE,
             "title": long_title,
             "text_content": "Note with very long title",
         }
@@ -1000,7 +1001,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "resource_type": StationResourceType.DOCUMENT,
             "title": "Checksum Test Document",
             "description": "Document for testing file integrity",
             "file": uploaded_file,
@@ -1044,7 +1045,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "resource_type": StationResourceType.DOCUMENT,
             "title": "Large Test File",
             "description": "Testing large file upload",
             "file": uploaded_file,
@@ -1076,7 +1077,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "resource_type": StationResourceType.DOCUMENT,
             "title": "Invalid File Type",
             "description": "Testing invalid file extension",
             "file": uploaded_file,
@@ -1106,7 +1107,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
 
         data = {
             "station_id": str(self.station.id),
-            "resource_type": StationResource.ResourceType.DOCUMENT,
+            "resource_type": StationResourceType.DOCUMENT,
             "title": "Empty File",
             "description": "Testing empty file upload",
             "file": uploaded_file,
@@ -1164,43 +1165,43 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
         fuzz_data_sets = [
             # Valid note data
             {
-                "resource_type": StationResource.ResourceType.NOTE,
+                "resource_type": StationResourceType.NOTE,
                 "title": self.faker.sentence(),
                 "text_content": self.faker.paragraph(),
             },
             # Edge case titles
             {
-                "resource_type": StationResource.ResourceType.NOTE,
+                "resource_type": StationResourceType.NOTE,
                 "title": "A" * 200,  # Max length
                 "text_content": "Test",
             },
             # Special characters in text
             {
-                "resource_type": StationResource.ResourceType.NOTE,
+                "resource_type": StationResourceType.NOTE,
                 "title": "Special Characters: !@#$%^&*()",
                 "text_content": "<script>alert('xss')</script>",
             },
             # Unicode content
             {
-                "resource_type": StationResource.ResourceType.NOTE,
+                "resource_type": StationResourceType.NOTE,
                 "title": "Unicode Test: 中文测试 🎉",
                 "text_content": "Unicode content: αβγδε",
             },
             # Very long text content
             {
-                "resource_type": StationResource.ResourceType.NOTE,
+                "resource_type": StationResourceType.NOTE,
                 "title": "Long Content Test",
                 "text_content": self.faker.text(max_nb_chars=10000),
             },
             # SVG sketch content
             {
-                "resource_type": StationResource.ResourceType.SKETCH,
+                "resource_type": StationResourceType.SKETCH,
                 "title": "SVG Test",
                 "text_content": '<svg><rect x="0" y="0" width="100" height="100"/></svg>',  # noqa: E501
             },
             # Malformed SVG
             {
-                "resource_type": StationResource.ResourceType.SKETCH,
+                "resource_type": StationResourceType.SKETCH,
                 "title": "Malformed SVG",
                 "text_content": '<svg><rect x="0" y="0" width="100"',  # Incomplete
             },
@@ -1229,7 +1230,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
         file_tests = [
             # Valid image file
             (
-                StationResource.ResourceType.PHOTO,
+                StationResourceType.PHOTO,
                 "test.jpg",
                 Path("speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
                 "image/jpeg",
@@ -1237,7 +1238,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Valid video file
             (
-                StationResource.ResourceType.VIDEO,
+                StationResourceType.VIDEO,
                 "test.mp4",
                 Path("speleodb/api/v1/tests/artifacts/video.mp4").read_bytes(),
                 "video/mp4",
@@ -1245,7 +1246,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Invalid file extension
             (
-                StationResource.ResourceType.PHOTO,
+                StationResourceType.PHOTO,
                 "test.jpoog",
                 Path("speleodb/api/v1/tests/artifacts/image.jpg").read_bytes(),
                 "image/jpeg",
@@ -1253,7 +1254,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Invalid file extension
             (
-                StationResource.ResourceType.PHOTO,
+                StationResourceType.PHOTO,
                 "test.jpg",
                 b"image",
                 "image/jpeg",
@@ -1261,7 +1262,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Filename too long
             (
-                StationResource.ResourceType.DOCUMENT,
+                StationResourceType.DOCUMENT,
                 "a" * 200 + ".pdf",
                 Path("speleodb/api/v1/tests/artifacts/document.pdf").read_bytes(),
                 "application/pdf",
@@ -1269,7 +1270,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Special characters in filename
             (
-                StationResource.ResourceType.DOCUMENT,
+                StationResourceType.DOCUMENT,
                 "test file with spaces & symbols!.pdf",
                 Path("speleodb/api/v1/tests/artifacts/document.pdf").read_bytes(),
                 "application/pdf",
@@ -1277,7 +1278,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
             ),
             # Unicode filename
             (
-                StationResource.ResourceType.DOCUMENT,
+                StationResourceType.DOCUMENT,
                 "测试文件.pdf",
                 Path("speleodb/api/v1/tests/artifacts/document.pdf").read_bytes(),
                 "application/pdf",
