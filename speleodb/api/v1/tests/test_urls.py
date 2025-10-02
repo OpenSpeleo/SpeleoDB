@@ -24,56 +24,56 @@ def sha1_hash() -> str:
 @pytest.mark.parametrize(
     ("name", "path", "kwargs"),
     [
-        ("api:v1:public_announcements", "/api/v1/announcements/", None),
-        ("api:v1:plugin_releases", "/api/v1/plugin_releases/", None),
-        ("api:v1:project_api", "/api/v1/projects/", None),
+        ("api:v1:public-announcements", "/api/v1/announcements/", None),
+        ("api:v1:plugin-releases", "/api/v1/plugin_releases/", None),
+        ("api:v1:projects", "/api/v1/projects/", None),
         (
-            "api:v1:one_project_apiview",
+            "api:v1:project-detail",
             "/api/v1/projects/{id}/",
             {"id": uuid.uuid4()},
         ),
         (
-            "api:v1:one_project_geojson_apiview",
+            "api:v1:project-geojson",
             "/api/v1/projects/{id}/geojson/",
             {"id": uuid.uuid4()},
         ),
         (
-            "api:v1:one_project_revisions_apiview",
+            "api:v1:project-revisions",
             "/api/v1/projects/{id}/revisions/",
             {"id": uuid.uuid4()},
         ),
         (
-            "api:v1:one_project_gitexplorer_apiview",
+            "api:v1:project-gitexplorer",
             "/api/v1/projects/{id}/git_explorer/{hexsha}/",
             {"id": uuid.uuid4(), "hexsha": sha1_hash()},
         ),
         (
-            "api:v1:list_project_user_permissions",
+            "api:v1:project-user-permissions",
             "/api/v1/projects/{id}/permissions/user/",
             {"id": uuid.uuid4()},
         ),
         (
-            "api:v1:list_project_team_permissions",
+            "api:v1:project-team-permissions",
             "/api/v1/projects/{id}/permissions/team/",
             {"id": uuid.uuid4()},
         ),
         (
-            "api:v1:project_user_permission",
-            "/api/v1/projects/{id}/permission/user/",
+            "api:v1:project-user-permissions-detail",
+            "/api/v1/projects/{id}/permission/user/detail/",
             {"id": uuid.uuid4()},
         ),
         (
-            "api:v1:project_team_permission",
-            "/api/v1/projects/{id}/permission/team/",
+            "api:v1:project-team-permissions-detail",
+            "/api/v1/projects/{id}/permission/team/detail/",
             {"id": uuid.uuid4()},
         ),
         (
-            "api:v1:acquire_project",
+            "api:v1:project-acquire",
             "/api/v1/projects/{id}/acquire/",
             {"id": uuid.uuid4()},
         ),
         (
-            "api:v1:release_project",
+            "api:v1:project-release",
             "/api/v1/projects/{id}/release/",
             {"id": uuid.uuid4()},
         ),
@@ -95,14 +95,14 @@ def test_url_resolution(name: str, path: str, kwargs: dict[str, Any] | None) -> 
 @pytest.mark.parametrize("fileformat", Format.FileFormat.upload_choices)
 def test_upload_project(fileformat: str, project: Project) -> None:
     endpoint = reverse(
-        "api:v1:upload_project",
+        "api:v1:project-upload",
         kwargs={"id": project.id, "fileformat": fileformat},
     )
     expected_endpoint = f"/api/v1/projects/{project.id}/upload/{fileformat}/"
 
     assert endpoint == expected_endpoint, endpoint
 
-    assert resolve(expected_endpoint).view_name == "api:v1:upload_project", resolve(
+    assert resolve(expected_endpoint).view_name == "api:v1:project-upload", resolve(
         expected_endpoint
     ).view_name
 
@@ -110,14 +110,14 @@ def test_upload_project(fileformat: str, project: Project) -> None:
 @pytest.mark.parametrize("fileformat", Format.FileFormat.download_choices)
 def test_download_project(fileformat: str, project: Project) -> None:
     endpoint = reverse(
-        "api:v1:download_project",
+        "api:v1:project-download",
         kwargs={"id": project.id, "fileformat": fileformat},
     )
     expected_endpoint = f"/api/v1/projects/{project.id}/download/{fileformat}/"
 
     assert endpoint == expected_endpoint, endpoint
 
-    assert resolve(expected_endpoint).view_name == "api:v1:download_project", resolve(
+    assert resolve(expected_endpoint).view_name == "api:v1:project-download", resolve(
         expected_endpoint
     ).view_name
 
@@ -126,14 +126,14 @@ def test_download_project(fileformat: str, project: Project) -> None:
 def test_download_project_at_hash(fileformat: str, project: Project) -> None:
     hexsha = sha1_hash()
     endpoint = reverse(
-        "api:v1:download_project_at_hash",
+        "api:v1:project-download-at-hash",
         kwargs={"id": project.id, "hexsha": hexsha, "fileformat": fileformat},
     )
     expected_endpoint = f"/api/v1/projects/{project.id}/download/{fileformat}/{hexsha}/"
 
     assert endpoint == expected_endpoint, endpoint
 
-    assert resolve(expected_endpoint).view_name == "api:v1:download_project_at_hash", (
+    assert resolve(expected_endpoint).view_name == "api:v1:project-download-at-hash", (
         resolve(expected_endpoint).view_name
     )
 
@@ -144,9 +144,9 @@ def test_download_project_at_hash(fileformat: str, project: Project) -> None:
 @pytest.mark.parametrize(
     ("name", "path"),
     [
-        ("api:v1:user_info", "/api/v1/user/"),
-        ("api:v1:auth_token", "/api/v1/user/auth-token/"),
-        ("api:v1:update_user_password", "/api/v1/user/password/"),
+        ("api:v1:user-detail", "/api/v1/user/"),
+        ("api:v1:user-auth-token", "/api/v1/user/auth-token/"),
+        ("api:v1:user-password-update", "/api/v1/user/password/"),
     ],
 )
 def test_user_api_urls(name: str, path: str) -> None:
@@ -163,19 +163,19 @@ def test_user_api_urls(name: str, path: str) -> None:
 @pytest.mark.parametrize(
     ("name", "path", "kwargs"),
     [
-        ("api:v1:team_api", "/api/v1/teams/", None),
+        ("api:v1:teams", "/api/v1/teams/", None),
         (
-            "api:v1:one_team_apiview",
+            "api:v1:team-detail",
             "/api/v1/teams/{id}/",
             {"id": uuid.uuid4()},
         ),
         (
-            "api:v1:team_membership",
-            "/api/v1/teams/{id}/membership/",
+            "api:v1:team-memberships-detail",
+            "/api/v1/teams/{id}/memberships/detail/",
             {"id": uuid.uuid4()},
         ),
         (
-            "api:v1:team_list_membership",
+            "api:v1:team-memberships",
             "/api/v1/teams/{id}/memberships/",
             {"id": uuid.uuid4()},
         ),

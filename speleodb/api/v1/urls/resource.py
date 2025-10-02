@@ -16,6 +16,6 @@ resource_urlpatterns: list[URLPattern | URLResolver] = [
     path(
         "<uuid:id>/",
         StationResourceSpecificApiView.as_view(),
-        name="one_station_resource_apiview",
+        name="resource-detail",
     ),
 ]

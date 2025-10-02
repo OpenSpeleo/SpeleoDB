@@ -94,7 +94,7 @@
             });
 
             $.ajax({
-                url: "{% url 'api:v1:user_info' %}",
+                url: "{% url 'api:v1:user-detail' %}",
                 method: "PATCH",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",

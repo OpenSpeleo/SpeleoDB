@@ -13,21 +13,21 @@ from speleodb.api.v1.views.team_membership import TeamMembershipApiView
 from speleodb.api.v1.views.team_membership import TeamMembershipListApiView
 
 team_url_patterns: list[URLPattern] = [
-    path("", TeamSpecificApiView.as_view(), name="one_team_apiview"),
+    path("", TeamSpecificApiView.as_view(), name="team-detail"),
     # Team Membership APIs
-    path(
-        "membership/",
-        TeamMembershipApiView.as_view(),
-        name="team_membership",
-    ),
     path(
         "memberships/",
         TeamMembershipListApiView.as_view(),
-        name="team_list_membership",
+        name="team-memberships",
+    ),
+    path(
+        "memberships/detail/",
+        TeamMembershipApiView.as_view(),
+        name="team-memberships-detail",
     ),
 ]
 
 urlpatterns: list[URLPattern | URLResolver] = [
-    path("", TeamApiView.as_view(), name="team_api"),
+    path("", TeamApiView.as_view(), name="teams"),
     path("<uuid:id>/", include(team_url_patterns)),
 ]

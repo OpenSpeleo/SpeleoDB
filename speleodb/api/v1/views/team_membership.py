@@ -35,7 +35,7 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        team: SurveyTeam = self.get_object()
+        team = self.get_object()
         user = self.get_user()
         try:
             membership = SurveyTeamMembership.objects.get(

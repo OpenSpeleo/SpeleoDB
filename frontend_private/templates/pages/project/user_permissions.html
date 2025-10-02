@@ -265,7 +265,7 @@
 
                 if (pending) { pending.abort(); }
                 pending = $.ajax({
-                    url: "{% url 'api:v1:user_autocomplete' %}",
+                    url: "{% url 'api:v1:user-autocomplete' %}",
                     method: "GET",
                     data: { query: val },
                     success: function(resp){ render(resp.data); },
@@ -321,7 +321,7 @@
             $("#permission_modal_header").text("Who would you like to add 🙌 ?");
             $("#permission_modal").css('display', 'flex');
             $("#user").prop("readonly", false);
-            attachUserAutocomplete($("#user"), $("#user_suggestions"), "{% url 'api:v1:user_autocomplete' %}");
+            attachUserAutocomplete($("#user"), $("#user_suggestions"), "{% url 'api:v1:user-autocomplete' %}");
         });
 
         /* ------------------------------------------------------------------------- */
@@ -357,7 +357,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:project_user_permission' id=project.id %}",
+                url: "{% url 'api:v1:project-user-permissions-detail' id=project.id %}",
                 method: $("#permission_form").data("method"),
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
@@ -419,7 +419,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:project_user_permission' id=project.id %}",
+                url: "{% url 'api:v1:project-user-permissions-detail' id=project.id %}",
                 method: "DELETE",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",

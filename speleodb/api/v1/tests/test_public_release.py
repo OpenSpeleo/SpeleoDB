@@ -17,7 +17,7 @@ class TestPluginReleasesApiView(BaseAPITestCase):
     """
 
     url_name: str = (
-        "api:v1:plugin_releases"  # Make sure this name is defined in your urls.py
+        "api:v1:plugin-releases"  # Make sure this name is defined in your urls.py
     )
 
     def setUp(self) -> None:

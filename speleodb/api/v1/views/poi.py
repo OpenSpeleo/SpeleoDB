@@ -132,10 +132,7 @@ class PointOfInterestGeoJSONView(GenericAPIView[PointOfInterest], SDBAPIViewMixi
 
     def get(self, request: Request) -> Response:
         """Get user's POIs in a map-friendly format."""
-        user = self.get_user()
-        pois = PointOfInterest.objects.filter(created_by=user).select_related(
-            "created_by"
-        )
+        pois = self.get_queryset()
 
         # Use the map serializer to convert to GeoJSON format
         serializer = self.get_serializer(pois, many=True)

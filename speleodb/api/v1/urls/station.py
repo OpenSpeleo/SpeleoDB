@@ -17,16 +17,16 @@ if TYPE_CHECKING:
 
 
 station_urlpatterns: list[URLPattern | URLResolver] = [
-    path("", StationsApiView.as_view(), name="station_apiview"),
+    path("", StationsApiView.as_view(), name="stations"),
     path(
         "<uuid:id>/",
         include(
             [
-                path("", StationSpecificApiView.as_view(), name="one_station_apiview"),
+                path("", StationSpecificApiView.as_view(), name="station-detail"),
                 path(
                     "resources/",
                     StationResourceApiView.as_view(),
-                    name="station_resource_apiview",
+                    name="station-resources",
                 ),
             ]
         ),

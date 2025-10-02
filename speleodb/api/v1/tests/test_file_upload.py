@@ -74,7 +74,7 @@ class FileViewTests(BaseAPIProjectTestCase):
             auth = f"{self.header_prefix}{self.token.key}"
             response = self.client.put(
                 reverse(
-                    "api:v1:upload_project",
+                    "api:v1:project-upload",
                     kwargs={
                         "id": self.project.id,
                         "fileformat": fileformat.label.lower(),
@@ -150,7 +150,7 @@ class FileViewTests(BaseAPIProjectTestCase):
             auth = self.header_prefix + self.token.key
             response = self.client.put(
                 reverse(
-                    "api:v1:upload_project",
+                    "api:v1:project-upload",
                     kwargs={
                         "id": self.project.id,
                         "fileformat": fileformat.label.lower(),
@@ -208,7 +208,7 @@ class FileViewTests(BaseAPIProjectTestCase):
             auth = self.header_prefix + self.token.key
             response = self.client.put(
                 reverse(
-                    "api:v1:upload_project",
+                    "api:v1:project-upload",
                     kwargs={
                         "id": self.project.id,
                         "fileformat": fileformat.label.lower(),

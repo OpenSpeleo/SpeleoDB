@@ -246,7 +246,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:project_team_permission' id=project.id %}",
+                url: "{% url 'api:v1:project-team-permissions-detail' id=project.id %}",
                 method: $("#permission_form").data("method"),
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",
@@ -308,7 +308,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:project_team_permission' id=project.id %}",
+                url: "{% url 'api:v1:project-team-permissions-detail' id=project.id %}",
                 method: "DELETE",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",

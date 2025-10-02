@@ -139,7 +139,7 @@ $(window).on('load', function() {
     $("#loading_spinner").show();
 
     $.ajax({
-        url : "{% url 'api:v1:one_project_revisions_apiview' id=project.id %}",
+        url : "{% url 'api:v1:project-revisions' id=project.id %}",
         type : "GET",
         dataType : "json",
         async: false,

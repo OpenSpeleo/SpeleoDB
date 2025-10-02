@@ -99,7 +99,7 @@
             var formData = new FormData(team_details_form);
 
             $.ajax({
-                url: "{% url 'api:v1:one_team_apiview' id=team.id %}",
+                url: "{% url 'api:v1:team-detail' id=team.id %}",
                 method: "PUT",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",

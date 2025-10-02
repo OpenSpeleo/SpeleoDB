@@ -15,7 +15,7 @@ USER_TEST_PASSWORD = "YeeOfLittleFaith"  # noqa: S105
 
 class TestTokenAuth(BaseAPITestCase):
     def test_token_retrieval_works(self) -> None:
-        endpoint = reverse("api:v1:auth_token")
+        endpoint = reverse("api:v1:user-auth-token")
 
         # Reset the user password since the factory sets a random one.
         self.user.set_password(USER_TEST_PASSWORD)
@@ -38,7 +38,7 @@ class TestTokenAuth(BaseAPITestCase):
 
     @parameterized.expand(["Token", "Bearer"])
     def test_token_auth_works(self, token_header: str) -> None:
-        endpoint = reverse("api:v1:auth_token")
+        endpoint = reverse("api:v1:user-auth-token")
 
         auth = f"{token_header} {self.token.key}"
         response = self.client.get(endpoint, headers={"authorization": auth})
@@ -61,7 +61,7 @@ class TestTokenAuth(BaseAPITestCase):
 
         method_fn = getattr(self.client, method.lower())
 
-        endpoint = reverse("api:v1:auth_token")
+        endpoint = reverse("api:v1:user-auth-token")
         response = method_fn(
             endpoint,
             {"email": self.user.email, "password": USER_TEST_PASSWORD}
@@ -94,7 +94,7 @@ class TestTokenAuth(BaseAPITestCase):
 
     def test_wrong_password(self) -> None:
         response = self.client.post(
-            reverse("api:v1:auth_token"),
+            reverse("api:v1:user-auth-token"),
             {"email": self.user.email, "password": "YeeOfLittleFaith"},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
@@ -104,7 +104,7 @@ class TestTokenAuth(BaseAPITestCase):
 
     def test_not_existing_email(self) -> None:
         response = self.client.post(
-            reverse("api:v1:auth_token"),
+            reverse("api:v1:user-auth-token"),
             {"email": "chuck@norris.com", "password": "YeeOfLittleFaith"},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
@@ -114,7 +114,7 @@ class TestTokenAuth(BaseAPITestCase):
 
     def test_missing_password(self) -> None:
         response = self.client.post(
-            reverse("api:v1:auth_token"),
+            reverse("api:v1:user-auth-token"),
             {"email": self.user.email},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
@@ -129,7 +129,7 @@ class TestTokenAuth(BaseAPITestCase):
 
     def test_missing_email(self) -> None:
         response = self.client.post(
-            reverse("api:v1:auth_token"),
+            reverse("api:v1:user-auth-token"),
             {"password": "YeeOfLittleFaith"},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data

@@ -58,7 +58,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.get(
-            reverse("api:v1:one_project_apiview", kwargs={"id": self.project.id}),
+            reverse("api:v1:project-detail", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
 
@@ -118,7 +118,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
         for _ in range(5):
             auth = self.header_prefix + self.token.key
             response = self.client.post(
-                reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
+                reverse("api:v1:project-acquire", kwargs={"id": self.project.id}),
                 headers={"authorization": auth},
             )
 
@@ -154,7 +154,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
         for _ in range(5):
             auth = self.header_prefix + self.token.key
             response = self.client.post(
-                reverse("api:v1:release_project", kwargs={"id": self.project.id}),
+                reverse("api:v1:project-release", kwargs={"id": self.project.id}),
                 headers={"authorization": auth},
             )
 
@@ -187,7 +187,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
+            reverse("api:v1:project-acquire", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
 
@@ -226,7 +226,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:release_project", kwargs={"id": self.project.id}),
+            reverse("api:v1:project-release", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
             data={"comment": test_comment},
         )
@@ -268,7 +268,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:acquire_project", kwargs={"id": self.project.id}),
+            reverse("api:v1:project-acquire", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
 
@@ -288,7 +288,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:release_project", kwargs={"id": self.project.id}),
+            reverse("api:v1:project-release", kwargs={"id": self.project.id}),
             headers={"authorization": auth},
         )
 
@@ -310,7 +310,7 @@ class TestProjectCreation(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:project_api"),
+            reverse("api:v1:projects"),
             data=data,
             format="json",
             headers={"authorization": auth},
@@ -331,7 +331,7 @@ class TestProjectCreation(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:project_api"),
+            reverse("api:v1:projects"),
             data=data,
             format="json",
             headers={"authorization": auth},
@@ -359,7 +359,7 @@ class TestProjectCreation(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:project_api"),
+            reverse("api:v1:projects"),
             data=data,
             format="json",
             headers={"authorization": auth},
@@ -385,7 +385,7 @@ class TestProjectCreation(BaseAPITestCase):
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
-            reverse("api:v1:project_api"),
+            reverse("api:v1:projects"),
             data=data,
             format="json",
             headers={"authorization": auth},

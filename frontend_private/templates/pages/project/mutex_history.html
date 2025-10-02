@@ -174,7 +174,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:release_project' id=project.id %}",
+                url: "{% url 'api:v1:project-release' id=project.id %}",
                 method: "POST",
                 contentType: "application/json; charset=utf-8",
                 cache: false,
@@ -207,7 +207,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:acquire_project' id=project.id %}",
+                url: "{% url 'api:v1:project-acquire' id=project.id %}",
                 method: "POST",
                 contentType: "application/json; charset=utf-8",
                 cache: false,

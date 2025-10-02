@@ -22,12 +22,12 @@ urlpatterns: list[URLResolver | URLPattern] = [
     path(
         "announcements/",
         PublicAnnouncementApiView.as_view(),
-        name="public_announcements",
+        name="public-announcements",
     ),
     path(
         "plugin_releases/",
         PluginReleasesApiView.as_view(),
-        name="plugin_releases",
+        name="plugin-releases",
     ),
     path("projects/", include(project_urlpatterns)),
     path("stations/", include(station_urlpatterns)),

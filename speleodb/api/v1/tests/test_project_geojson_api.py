@@ -100,9 +100,7 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         )
 
         response = self.client.get(
-            reverse(
-                "api:v1:one_project_geojson_apiview", kwargs={"id": self.project.id}
-            ),
+            reverse("api:v1:project-geojson", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
@@ -132,9 +130,7 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
             )
 
         response = self.client.get(
-            reverse(
-                "api:v1:one_project_geojson_apiview", kwargs={"id": self.project.id}
-            )
+            reverse("api:v1:project-geojson", kwargs={"id": self.project.id})
             + "?limit=1",
             headers={"authorization": self.auth},
         )
@@ -161,7 +157,7 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
 
         response = self.client.get(
             reverse(
-                "api:v1:one_project_geojson_apiview",
+                "api:v1:project-geojson",
                 kwargs={"id": self.project.id},
             )
             + "?limit=1",
@@ -189,7 +185,7 @@ class NoPermissionTestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse(
-                "api:v1:one_project_geojson_apiview",
+                "api:v1:project-geojson",
                 kwargs={"id": self.project.id},
             ),
             headers={"authorization": auth},
@@ -201,7 +197,7 @@ class NoPermissionTestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         """Test that unauthenticated users cannot access GeoJSON data."""
         response = self.client.get(
             reverse(
-                "api:v1:one_project_geojson_apiview",
+                "api:v1:project-geojson",
                 kwargs={"id": self.project.id},
             ),
         )
@@ -214,7 +210,7 @@ class NoPermissionTestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         auth = self.header_prefix + self.token.key
         response = self.client.get(
             reverse(
-                "api:v1:one_project_geojson_apiview",
+                "api:v1:project-geojson",
                 kwargs={"id": fake_project_id},
             ),
             headers={"authorization": auth},
