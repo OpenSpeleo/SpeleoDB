@@ -156,7 +156,7 @@ class ProjectStationsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixin):
     permission_classes = [UserHasReadAccess]
     lookup_field = "id"
 
-    def get(self, request: Request) -> Response:
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all stations for a project in a map-friendly format."""
         project = self.get_object()
 

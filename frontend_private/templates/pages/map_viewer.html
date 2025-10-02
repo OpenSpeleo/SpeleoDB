@@ -1,5 +1,6 @@
 {% extends "base_private.html" %}
 {% load static %}
+{% load url_templates %}
 
 {% block extra_css %}
 <link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css' rel='stylesheet' />
@@ -2750,7 +2751,7 @@
             throw new Error(data.error || 'Failed to update station');
         }
 
-        return data.data.station;
+        return data.data;
     }
 
     // API function to delete station
@@ -3002,7 +3003,7 @@
         try {
             console.log(`📍 Loading all POIs...`);
 
-            const response = await fetch(`/api/v1/points_of_interest/map/`, {
+            const response = await fetch("{% url 'api:v1:pois-geojson' %}", {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3454,9 +3455,18 @@
             // Try to load from API (regardless of demo mode)
             try {
                 console.log(`🔄 Loading stations from API for project ${projectId}...`);
-                console.log(`🔗 Full URL: ${window.location.origin}/api/v1/stations/map/?project_id=${projectId}`);
+               
+                const projectStationsGeojsonUrlTemplate = "{% url_uuid_template 'api:v1:project-stations-geojson' 'id' %}";
 
-                const response = await fetch(`/api/v1/stations/map/?project_id=${projectId}`, {
+                function getProjectStationsGeojsonUrl(projectID) {
+                    return projectStationsGeojsonUrlTemplate.replace("__id__", projectID);
+                }
+
+                let fetch_url = getProjectStationsGeojsonUrl(projectId);
+                console.log(`🔗 Fetch URL: ${fetch_url}`);
+
+
+                const response = await fetch(fetch_url, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -3471,154 +3481,25 @@
                     const data = await response.json();
                     console.log('📦 Full API Response:', data);
 
-                    // Check different possible response formats
-                    if (data.success && data.data) {
+                    if (data.success) {
                         // The ProjectStationListView returns a GeoJSON FeatureCollection
-                        // After middleware wrapping: data.data = {type: "FeatureCollection", features: [...]}
-                        if (data.data.type === 'FeatureCollection' && data.data.features) {
-                            apiStations = data.data.features;
-                            apiLoadSuccess = true;
-                            console.log(`✅ API: Loaded ${apiStations.length} stations (GeoJSON format)`);
-                            console.log('📍 Sample station:', apiStations[0]);
-                        } else if (data.data.features) {
-                            apiStations = data.data.features;
-                            apiLoadSuccess = true;
-                            console.log(`✅ API: Loaded ${apiStations.length} stations (GeoJSON format)`);
-                            console.log('📍 Sample station:', apiStations[0]);
-                        } else if (data.data.stations && Array.isArray(data.data.stations)) {
-                            // API returns {success: true, data: {stations: [...]}} format
-                            console.log('🔄 API returned nested stations array, converting to GeoJSON...');
-                            apiStations = data.data.stations.map(station => ({
-                                type: 'Feature',
-                                geometry: {
-                                    type: 'Point',
-                                    coordinates: [
-                                        parseFloat(station.longitude),
-                                        parseFloat(station.latitude),
-                                        0
-                                    ]
-                                },
-                                properties: {
-                                    id: station.id,
-                                    name: station.name,
-                                    description: station.description || '',
-                                    resource_count: station.resource_count || 0,
-                                    created_by_email: station.created_by_email || station.created_by || '',
-                                    creation_date: station.creation_date || station.created_at,
-                                    // Include the raw station data for later use
-                                    latitude: parseFloat(station.latitude),
-                                    longitude: parseFloat(station.longitude),
-                                    resources: station.resources || []
-                                }
-                            }));
-                            apiLoadSuccess = true;
-                            console.log(`✅ API: Converted ${apiStations.length} stations from {success: true, data: {stations: [...]}} format`);
-                            console.log('📍 Sample converted station:', apiStations[0]);
-                        } else if (Array.isArray(data.data)) {
-                            // Maybe the API returns a simple array instead of GeoJSON
-                            console.log('🔄 API returned array format, converting to GeoJSON...');
-                            apiStations = data.data.map(station => ({
-                                type: 'Feature',
-                                geometry: {
-                                    type: 'Point',
-                                    coordinates: [
-                                        parseFloat(station.longitude),
-                                        parseFloat(station.latitude),
-                                        0
-                                    ]
-                                },
-                                properties: {
-                                    id: station.id,
-                                    name: station.name,
-                                    description: station.description || '',
-                                    resource_count: station.resource_count || 0,
-                                    created_by_email: station.created_by || station.created_by_email || '',
-                                    creation_date: station.creation_date || station.created_at,
-                                    // Include the raw station data for later use
-                                    latitude: parseFloat(station.latitude),
-                                    longitude: parseFloat(station.longitude),
-                                    resources: station.resources || []
-                                }
-                            }));
-                            apiLoadSuccess = true;
-                            console.log(`✅ API: Converted ${apiStations.length} stations to GeoJSON`);
-                        } else {
-                            console.warn('❌ Unexpected data format:', data.data);
-                            console.warn('Full response:', data);
-                        }
-                    } else if (Array.isArray(data)) {
-                        // Direct array response
-                        console.log('🔄 API returned direct array, converting to GeoJSON...');
-                        apiStations = data.map(station => ({
-                            type: 'Feature',
-                            geometry: {
-                                type: 'Point',
-                                coordinates: [
-                                    parseFloat(station.longitude),
-                                    parseFloat(station.latitude),
-                                    0
-                                ]
-                            },
-                            properties: {
-                                id: station.id,
-                                name: station.name,
-                                description: station.description || '',
-                                resource_count: station.resource_count || 0,
-                                created_by_email: station.created_by || station.created_by_email || '',
-                                creation_date: station.creation_date || station.created_at,
-                                // Include the raw station data for later use
-                                latitude: parseFloat(station.latitude),
-                                longitude: parseFloat(station.longitude),
-                                resources: station.resources || []
-                            }
-                        }));
+                        apiStations = data.data.features;
                         apiLoadSuccess = true;
-                        console.log(`✅ API: Converted ${apiStations.length} stations from direct array`);
-                    } else if (data.stations && Array.isArray(data.stations)) {
-                        // API returns {stations: [...]} format
-                        console.log('🔄 API returned stations array, converting to GeoJSON...');
-                        apiStations = data.stations.map(station => ({
-                            type: 'Feature',
-                            geometry: {
-                                type: 'Point',
-                                coordinates: [
-                                    parseFloat(station.longitude),
-                                    parseFloat(station.latitude),
-                                    0
-                                ]
-                            },
-                            properties: {
-                                id: station.id,
-                                name: station.name,
-                                description: station.description || '',
-                                resource_count: station.resource_count || 0,
-                                created_by_email: station.created_by_email || station.created_by || '',
-                                creation_date: station.creation_date || station.created_at,
-                                // Include the raw station data for later use
-                                latitude: parseFloat(station.latitude),
-                                longitude: parseFloat(station.longitude),
-                                resources: station.resources || []
-                            }
-                        }));
-                        apiLoadSuccess = true;
-                        console.log(`✅ API: Converted ${apiStations.length} stations from {stations: [...]} format`);
-                        console.log('📍 Sample converted station:', apiStations[0]);
+                        console.log(`✅ API: Loaded ${apiStations.length} stations (GeoJSON format)`);
+                        console.log('📍 Sample station:', apiStations[0]);
                     } else {
-                        console.warn('❌ No valid station data in API response');
-                        console.warn('Response structure:', Object.keys(data));
-                    }
-                } else {
-                    console.error(`❌ API returned error status ${response.status}`);
-                    try {
-                        const errorData = await response.json();
-                        console.error('Error details:', errorData);
-                    } catch (e) {
-                        console.error('Could not parse error response');
+                        console.error(`❌ API returned error status ${response.status}`);
+                        try {
+                            const errorData = await response.json();
+                            console.error('Error details:', errorData);
+                        } catch (e) {
+                            console.error('Could not parse error response');
+                        }
                     }
                 }
-            } catch (apiError) {
-                console.error(`❌ Failed to load stations from API: ${apiError.message}`);
-                console.error('Full error:', apiError);
+            } catch (e) {
+                console.error(`❌ Failed to load stations from API: ${e.message}`);
+                console.error('Full error:', e);
             }
 
             // Production mode: Show API stations only
@@ -4780,8 +4661,8 @@
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.success && data.data.station) {
-                    const station = data.data.station;
+                if (data.success && data.data) {
+                    const station = data.data;
 
                     // Update the allStations map with the complete data
                     const existingStation = allStations.get(stationId);
@@ -4805,6 +4686,7 @@
                     }
 
                     displayStationDetails(station, projectId);
+
                     return;
                 }
             }
@@ -7225,6 +7107,7 @@
             formData.append('station_id', stationId);
             
             const response = await fetch(`/api/v1/resources/`, {
+                // "{% url 'api:v1:resource-detail' %}"
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCSRFToken()},
@@ -7833,146 +7716,6 @@
         return Array.from(allStations.keys());
     };
 
-    // Comprehensive verification function
-    window.verifyIntegration = async function () {
-        console.log('🔍 VERIFYING SPELEODB MAP VIEWER INTEGRATION');
-        console.log('===========================================');
-
-        // 1. Check Configuration
-        console.log('\n1️⃣ CONFIGURATION CHECK:');
-        console.log('   Production Mode: ENABLED ✅');
-
-        // 2. Check Map State
-        console.log('\n2️⃣ MAP STATE CHECK:');
-        console.log(`   Map Loaded: ${map && map.loaded() ? 'YES ✅' : 'NO ❌'}`);
-        console.log(`   Current Zoom: ${map ? map.getZoom().toFixed(2) : 'N/A'}`);
-        console.log(`   Station Visibility Threshold: ${map && map.getZoom() >= 14 ? 'VISIBLE ✅' : 'HIDDEN (zoom < 14) ⚠️'}`);
-
-        // 3. Check Projects & Lines
-        console.log('\n3️⃣ PROJECT & LINE DATA:');
-        console.log(`   Projects Loaded: ${lineFeatureCache.size}`);
-        console.log(`   Total Survey Lines: ${Array.from(lineFeatureCache.values()).reduce((sum, lines) => sum + lines.size, 0)}`);
-        console.log(`   Snap Points Cached: ${Array.from(snapPointsCache.values()).reduce((sum, points) => sum + points.length, 0)}`);
-        console.log(`   Magnetic Snap Radius: ${magneticSnapRadius}m`);
-
-        // 4. Check Stations
-        console.log('\n4️⃣ STATION DATA:');
-        console.log(`   Total Stations in Memory: ${allStations.size}`);
-        let apiStations = 0, demoStations = 0;
-        allStations.forEach(station => {
-            if (station.is_demo) demoStations++;
-            else apiStations++;
-        });
-        console.log(`   API Stations: ${apiStations}`);
-        console.log(`   Demo Stations: ${demoStations}`);
-        console.log(`   Station Markers on Map: ${Array.from(stationMarkers.values()).reduce((sum, markers) => sum + markers.length, 0)}`);
-
-        // 5. Test API Connectivity
-        console.log('\n5️⃣ API CONNECTIVITY TEST:');
-        if (projects && projects.length > 0) {
-            try {
-                const testProjectId = projects[0].id;
-                console.log(`   Testing API with project: ${testProjectId}`);
-                const response = await fetch(`/api/v1/stations/?project_id=${testProjectId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                });
-                console.log(`   API Response Status: ${response.status} ${response.status === 200 ? '✅' : '❌'}`);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.data && data.data.stations) {
-                        console.log(`   API Format: {success: true, data: {stations: [...]}} ✅`);
-                        console.log(`   Stations from API: ${data.data.stations.length}`);
-                    } else if (data.stations) {
-                        console.log(`   API Format: {stations: [...]} ✅`);
-                        console.log(`   Stations from API: ${data.stations.length}`);
-                    } else {
-                        console.log(`   API Format: Unknown ⚠️`);
-                    }
-                }
-            } catch (error) {
-                console.log(`   API Test Failed: ${error.message} ❌`);
-            }
-        } else {
-            console.log(`   No projects available for API test ❌`);
-        }
-
-        // 6. Test Core Features
-        console.log('\n6️⃣ FEATURE VERIFICATION:');
-        
-        const hasWriteAccess = {{ has_write_access|yesno:"true,false" }};
-        
-        // Test Station Modal
-        console.log('\n   📋 Testing Station Modal:');
-        const firstStation = Array.from(allStations.values())[0];
-        if (firstStation) {
-            console.log(`      Opening modal for: ${firstStation.name}`);
-            openStationModal(firstStation.id, firstStation.projectId);
-            console.log('      Modal Opened ✅');
-            setTimeout(() => {
-                closeStationModal();
-                console.log('      Modal Closed ✅');
-            }, 2000);
-        } else {
-            console.log('      No stations to test modal ⚠️');
-        }
-
-        // Test Context Menu
-        console.log('\n   🖱️ Testing Context Menu:');
-        console.log('      Right-click functionality: ENABLED ✅');
-        console.log('      Station creation options: AVAILABLE ✅');
-        console.log('      Magnetic snap: ACTIVE ✅');
-
-        // Test Delete Confirmation
-        console.log('\n   🗑️ Testing Delete Confirmation:');
-        console.log('      Beautiful modal: IMPLEMENTED ✅');
-        console.log('      Station details shown: YES ✅');
-        console.log('      Warning messages: INCLUDED ✅');
-
-        // Test Drag & Drop
-        console.log('\n   🫳 Testing Drag & Drop:');
-        console.log(`      Draggable markers: ${hasWriteAccess ? "ENABLED" : "DISABLED (no write access)"} ✅`);
-        console.log('      Magnetic snap on drag: ACTIVE ✅');
-        console.log('      Confirmation modal: IMPLEMENTED ✅');
-
-        // 7. Performance Metrics
-        console.log('\n7️⃣ PERFORMANCE METRICS:');
-        console.log(`   Map container exists: ${!!map.getContainer() ? 'YES ✅' : 'NO ❌'}`);
-        console.log(`   Total layers on map: ${map.getStyle().layers.length}`);
-        console.log(`   Project layers tracked: ${allProjectLayers.size}`);
-
-        // 8. UI Components
-        console.log('\n8️⃣ UI COMPONENTS:');
-        console.log(`   Station Modal: ${document.getElementById('station-modal') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Context Menu: ${document.getElementById('context-menu') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Delete Modal: ${document.getElementById('delete-confirm-modal') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Drag Modal: ${document.getElementById('drag-confirm-modal') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Loading Overlay: ${document.getElementById('loading-overlay') ? 'EXISTS ✅' : 'MISSING ❌'}`);
-        console.log(`   Demo Mode Badge: ${document.getElementById('demo-mode-indicator') ? 'SHOWN ✅' : 'HIDDEN'}`);
-
-        // Summary
-        console.log('\n✅ VERIFICATION COMPLETE!');
-        console.log('\n💡 QUICK TEST COMMANDS:');
-        console.log('   1. Create Station: Right-click on map');
-        console.log('   2. View Station: Click any orange/green marker');
-        console.log('   3. Move Station: Drag any marker (if you have write access)');
-        console.log('   4. Delete Station: Right-click marker → Delete');
-        console.log('   5. Reload Stations: reloadStations()');
-        console.log('   6. Check Zoom: checkZoom()');
-        console.log('   7. Force Visibility: map.setZoom(14)');
-
-        return {
-            mapReady: map && map.loaded(),
-            stations: allStations.size,
-            projects: lineFeatureCache.size,
-            currentZoom: map ? map.getZoom() : null
-        };
-    };
     // Add helpful commands info to the console
     setTimeout(() => {
         console.log('\n📍 HELPFUL COMMANDS:');
