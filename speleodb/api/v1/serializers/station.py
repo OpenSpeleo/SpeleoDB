@@ -55,7 +55,7 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
 
     def validate_resource_type(self, value: str) -> str:
         """Prevent resource_type from being changed during updates."""
-        if self.instance and self.instance.resource_type != value:  # type: ignore[union-attr]
+        if self.instance and self.instance.resource_type != value:
             raise serializers.ValidationError(
                 "Resource type cannot be changed once created."
             )
@@ -67,7 +67,7 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
         # Get resource_type - if updating, use existing if not provided
         resource_type = attrs.get("resource_type")
         if not resource_type and self.instance:
-            resource_type = self.instance.resource_type  # type: ignore[union-attr]
+            resource_type = self.instance.resource_type
 
         file_field = attrs.get("file")
         text_content = attrs.get("text_content")

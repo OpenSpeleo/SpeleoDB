@@ -6,32 +6,9 @@
   },
   "steps": {
     "install": {
-      "inputs": [
-        {
-          "step": "packages:mise"
-        }
-      ],
       "commands": [
-        {
-          "path": "/root/.local/bin"
-        },
-        {
-          "path": "/app/.venv/bin"
-        },
-        {
-          "cmd": "pipx install uv"
-        },
-        {
-          "src": "pyproject.toml",
-          "dest": "pyproject.toml"
-        },
-        {
-          "src": "uv.lock",
-          "dest": "uv.lock"
-        },
-        {
-          "cmd": "uv sync --extra production --frozen"
-        }
+        "...",
+        { "cmd": "uv sync --extra production --frozen" }
       ],
       "caches": [
         "uv"
