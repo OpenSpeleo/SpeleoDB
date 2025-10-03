@@ -5,14 +5,11 @@
     "python": "3.13"
   },
   "steps": {
-    "install": {
+    "build": {
       "commands": [
-        "...",
         { "cmd": "uv sync --extra production --frozen" }
       ],
-      "caches": [
-        "uv"
-      ],
+      "caches": ["uv"],
       "variables": {
         "PIP_DEFAULT_TIMEOUT": "100",
         "PIP_DISABLE_PIP_VERSION_CHECK": "1",
@@ -24,8 +21,7 @@
         "UV_CACHE_DIR": "/opt/uv-cache",
         "UV_COMPILE_BYTECODE": "1",
         "UV_LINK_MODE": "copy",
-        "UV_PYTHON_DOWNLOADS": "never",
-        "VIRTUAL_ENV": "/app/.venv"
+        "UV_PYTHON_DOWNLOADS": "never"
       }
     }
   },

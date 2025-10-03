@@ -28,10 +28,35 @@ DJANGO_ADMIN_URL="$(openssl rand -base64 4096 | tr -dc 'A-HJ-NP-Za-km-z2-9' | he
 
 #### DEPLOY DEBUG Commands
 
+A. Install `railpack`
+
+```bash
+curl -sSL https://railpack.com/install.sh | sh
+```
+
+B. Install `mise`
+
+```bash
+brew install mise
+```
+
+C. Start BuildKit
+
+```bash
+docker run --rm --privileged -d --name buildkit moby/**buildkit**
+export BUILDKIT_HOST='docker-container://buildkit'
+```
+
+D. Launch the build
+
 Execute the following:
 
 ```bash
 railpack build .
+# OR
+railpack build --show-plan .
+# OR
+railpack prepare --plan-out out.json .
 ```
 
 Verify
