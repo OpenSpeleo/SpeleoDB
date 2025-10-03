@@ -33,8 +33,8 @@ class PermissionLevel(BaseIntegerChoices):
 
     @classproperty
     def members_no_admin(cls) -> list[PermissionLevel]:  # noqa: N805
-        return [
-            member  # type: ignore[misc]
+        return [  # type: ignore[var-annotated]
+            member
             for member in PermissionLevel.members  # type: ignore[arg-type]
             if member.value < PermissionLevel.ADMIN.value
         ]
