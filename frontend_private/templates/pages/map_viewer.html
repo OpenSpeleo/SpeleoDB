@@ -1775,6 +1775,15 @@
     // Global variables for layer management
     let map;
     let projectLayerStates = new Map(); // Track visibility state for each project
+
+    // Helper: is a project currently visible?
+    function isProjectVisible(projectId) {
+        try {
+            return projectLayerStates && projectLayerStates.get(projectId) !== false;
+        } catch (e) {
+            return true; // default to visible if unknown
+        }
+    }
     let allProjectLayers = new Map(); // Track all layer IDs for each project
     let stationMarkers = new Map(); // Track station markers for each project
     let currentProjectId = null; // Track currently selected project for station creation
@@ -2090,6 +2099,7 @@
         if (lineFeatureCache && lineFeatureCache.size > 0) {
             for (const [pid, lines] of lineFeatureCache.entries()) {
                 if (projectId && pid !== projectId) continue;
+                if (!isProjectVisible(pid)) continue; // ignore hidden projects
                 if (!lines || lines.size === 0) continue;
                 for (const lineData of lines.values()) {
                     const coords = lineData.coordinates;
@@ -2119,6 +2129,7 @@
         if (snapPointsCache && snapPointsCache.size > 0) {
             snapPointsCache.forEach((points, pid) => {
                 if (projectId && pid !== projectId) return;
+                if (!isProjectVisible(pid)) return; // ignore hidden projects
                 if (!Array.isArray(points) || points.length === 0) return;
                 for (let i = 0; i < points.length; i++) {
                     const d = calculateDistanceInMeters(target, points[i].coordinates);
@@ -2166,6 +2177,7 @@
         if (snapPointsCache && snapPointsCache.size > 0) {
             for (const [pid, points] of snapPointsCache.entries()) {
                 if (!Array.isArray(points) || points.length === 0) continue;
+                if (!isProjectVisible(pid)) continue; // ignore hidden projects
                 for (let i = 0; i < points.length; i++) {
                     const d = calculateDistanceInMeters(target, points[i].coordinates);
                     if (d < bestDistance) {
@@ -2479,7 +2491,8 @@
             // Only show create options when NOT clicking on a station or POI
             // Station creation requires write access (project-specific permissions)
             const snapCheck = findNearestSnapPointWithinRadius([lngLat.lng, lngLat.lat], magneticSnapRadius);
-            if (!snapCheck.snapped) {
+            // If no snap within radius OR the snapped project's layer is hidden, disable create
+            if (!snapCheck.snapped || (snapCheck.projectId && !isProjectVisible(snapCheck.projectId))) {
                 menuHTML += `
                                 <div class="context-menu-item disabled">
                                     <div class="context-menu-icon">📌</div>
@@ -2508,7 +2521,7 @@
                                         <div class="context-menu-icon">🔒</div>
                                         <div class="context-menu-text">
                                             <div>No write access</div>
-                                            <div class="context-menu-subtitle">Cannot create stations</div>
+                                            <div class="context-menu-subtitle">Can't create a station for this project</div>
                                         </div>
                                     </div>
                                 `;
@@ -2810,7 +2823,11 @@
         }
 
         // Use the project from the snapped point when available; fallback to global scan
-        const nearestProjectId = snap.projectId || getNearestProjectIdForLocation(lngLat);
+        let nearestProjectId = snap.projectId || getNearestProjectIdForLocation(lngLat);
+        // If resolved project is hidden, treat as not creatable
+        if (nearestProjectId && !isProjectVisible(nearestProjectId)) {
+            nearestProjectId = null;
+        }
         if (!nearestProjectId || !hasProjectWriteAccess(nearestProjectId)) {
             showNotification('warning', 'You have read access and cannot create stations.');
             hideContextMenu();
