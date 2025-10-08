@@ -4,7 +4,7 @@ name = "SpeleoDB_Repo"
 version = "1.0.0"
 authors = [{ name = "Jonathan Dekhtiar", email = "jonathan@dekhtiar.com" }]
 readme = "README.md"
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.14,<3.15"
 dependencies = [
     # Utils
     # ------------------------------------------------------------------------------
@@ -37,8 +37,8 @@ dependencies = [
 
     # Speleo Libraries
     # ------------------------------------------------------------------------------
-    "mnemo-lib==0.0.3",      # https://github.com/OpenSpeleo/pytool_mnemo_lib
-    "openspeleo-lib==0.0.5", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
+    "mnemo-lib==0.0.4",      # https://github.com/OpenSpeleo/pytool_mnemo_lib
+    "openspeleo-lib==0.0.6", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 
     # Git Management
     # ------------------------------------------------------------------------------
@@ -187,7 +187,7 @@ check_untyped_defs = true
 disable_error_code = "method-assign"
 follow_untyped_imports = true
 plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
-python_version = "3.13"
+python_version = "3.14"
 scripts_are_modules = true
 strict = true
 cache_fine_grained = true
@@ -270,7 +270,7 @@ exclude = [
 # Same as Django: https://github.com/cookiecutter/cookiecutter-django/issues/4792.
 line-length = 88
 indent-width = 4
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [
@@ -396,7 +396,7 @@ exclude = [
     "fixtures",
     "mediafiles",
 ]
-pythonVersion = '3.13'
+pythonVersion = '3.14'
 reportUnknownMemberType = "none"
 reportIncompatibleMethodOverride = "none"
 reportIncompatibleVariableOverride = "none"

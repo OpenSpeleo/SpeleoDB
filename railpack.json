@@ -2,14 +2,18 @@
   "$schema": "https://schema.railpack.com",
   "provider": "python",
   "packages": {
-    "python": "3.13"
+    "python": "3.14"
   },
   "steps": {
     "build": {
       "commands": [
-        { "cmd": "uv sync --extra production --frozen" }
+        {
+          "cmd": "uv sync --extra production --frozen"
+        }
       ],
-      "caches": ["uv"],
+      "caches": [
+        "uv"
+      ],
       "variables": {
         "PIP_DEFAULT_TIMEOUT": "100",
         "PIP_DISABLE_PIP_VERSION_CHECK": "1",
@@ -26,6 +30,9 @@
     }
   },
   "deploy": {
-    "aptPackages": ["git", "libpq5"]
+    "aptPackages": [
+      "git",
+      "libpq5"
+    ]
   }
 }
