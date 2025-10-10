@@ -27,7 +27,7 @@ dependencies = [
     "imageio==2.37.0",       # https://github.com/imageio/imageio
     "imageio-ffmpeg==0.6.0", # https://github.com/imageio/imageio-ffmpeg
     "Pillow==11.3.0",        # https://github.com/python-pillow/Pillow
-    "pillow-heif==1.1.0",    # https://github.com/bigcat88/pillow_heif
+    "pillow-heif==1.1.1",    # https://github.com/bigcat88/pillow_heif
     "PyMuPDF==1.26.4",       # https://github.com/pymupdf/PyMuPDF
 
     # GeoJSON & GIS
@@ -49,7 +49,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "Collectfasta==3.3.1",         # https://github.com/jasongi/collectfasta
     "django==5.2.7",               # https://www.djangoproject.com/
-    "django-allauth==65.11.2",     # https://github.com/pennersr/django-allauth
+    "django-allauth==65.12.0",     # https://github.com/pennersr/django-allauth
     "django-countries==7.6.1",     # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",  # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.12.0",      # https://github.com/joke2k/django-environ
@@ -66,8 +66,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.40.44", # https://github.com/boto/botocore
-    "boto3==1.40.44",    # https://github.com/boto/boto3
+    "botocore==1.40.45", # https://github.com/boto/botocore
+    "boto3==1.40.45",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -95,7 +95,7 @@ local = [
     # Typing
     # ------------------------------------------------------------------------------
     "djangorestframework-stubs[compatible-mypy]==3.16.4", # https://github.com/typeddjango/djangorestframework-stubs
-    "django-stubs[compatible-mypy]==5.2.5",               # https://github.com/typeddjango/django-stubs
+    "django-stubs[compatible-mypy]==5.2.6",               # https://github.com/typeddjango/django-stubs
     "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
     "types-cachetools==6.2.0.20250827",                   # https://github.com/python/typeshed
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
@@ -103,7 +103,7 @@ local = [
 
     # Django Testing
     # ------------------------------------------------------------------------------
-    "django-coverage-plugin==3.1.1", # https://github.com/nedbat/django_coverage_plugin
+    "django-coverage-plugin==3.2.0", # https://github.com/nedbat/django_coverage_plugin
     "pytest-django==4.11.1",         # https://github.com/pytest-dev/pytest-django
 
     # Code quality
