@@ -8,6 +8,8 @@
 
     <form id="project_details_form" autocomplete="off">
 
+        <fieldset {% if not has_write_access %}disabled{% endif %}>
+
         {% csrf_token %}
 
         <!-- Panel body -->
@@ -80,6 +82,8 @@
                 </div>
             </div>
         </footer>
+
+        </fieldset>
 
     </form>
 

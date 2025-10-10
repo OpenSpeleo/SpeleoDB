@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import contextlib
 import pathlib
 import uuid
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 
+from cachetools import TTLCache
+from cachetools import cached
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
@@ -134,12 +135,16 @@ class Project(models.Model):
     def __str__(self) -> str:
         return self.name
 
-    @property
-    def active_mutex(self) -> Mutex | None:
+    @cached(cache=TTLCache(maxsize=1, ttl=30))
+    def _cached_active_mutex(self) -> Mutex | None:
         try:
-            return self.rel_mutexes.filter(is_active=True)[0]
+            return self.rel_mutexes.filter(is_active=True).select_related("user")[0]
         except IndexError:
             return None
+
+    @property
+    def active_mutex(self) -> Mutex | None:
+        return self._cached_active_mutex()
 
     @property
     def mutex_owner(self) -> User | None:
@@ -175,9 +180,11 @@ class Project(models.Model):
 
             _ = Mutex.objects.create(project=self, user=user)
 
+        # Void `active_mutex` cache
+        self._cached_active_mutex.cache_clear()  # type: ignore  # noqa: PGH003
+
     def release_mutex(self, user: User, comment: str = "") -> None:
-        active_mutex = self.active_mutex
-        if active_mutex is None:
+        if (active_mutex := self.active_mutex) is None:
             # if nobody owns the project, returns without error.
             return
 
@@ -187,19 +194,11 @@ class Project(models.Model):
         # AutoSave in the background
         active_mutex.release_mutex(user=user, comment=comment)
 
+        # Void `active_mutex` cache
+        self._cached_active_mutex.cache_clear()  # type: ignore  # noqa: PGH003
+
     def get_best_permission(self, user: User) -> TeamPermission | UserPermission:
-        permissions: list[TeamPermission | UserPermission] = []
-        with contextlib.suppress(ObjectDoesNotExist):
-            permissions.append(self.get_user_permission(user))
-
-        for team in user.teams:
-            with contextlib.suppress(ObjectDoesNotExist):
-                permissions.append(self.get_team_permission(team))
-
-        if not permissions:
-            raise ObjectDoesNotExist("No permission found for user")
-
-        return max(permissions, key=lambda perm: perm.level)
+        return user.get_best_permission(project=self)
 
     def get_user_permission(self, user: User) -> UserPermission:
         return self.rel_user_permissions.get(target=user, is_active=True)
@@ -209,14 +208,18 @@ class Project(models.Model):
 
     @property
     def user_permissions(self) -> models.QuerySet[UserPermission]:
-        return self.rel_user_permissions.filter(is_active=True).order_by(
-            "-level", "target__email"
+        return (
+            self.rel_user_permissions.filter(is_active=True)
+            .select_related("target")
+            .order_by("-level", "target__email")
         )
 
     @property
     def team_permissions(self) -> models.QuerySet[TeamPermission]:
-        return self.rel_team_permissions.filter(is_active=True).order_by(
-            "-level", "target__name"
+        return (
+            self.rel_team_permissions.filter(is_active=True)
+            .select_related("target")
+            .order_by("-level", "target__name")
         )
 
     @property
@@ -233,18 +236,21 @@ class Project(models.Model):
 
     @property
     def collaborator_count(self) -> int:
-        users = [
-            perm.target for perm in self.rel_user_permissions.filter(is_active=True)
-        ]
+        from speleodb.surveys.models import UserPermission  # noqa: PLC0415
+        from speleodb.users.models import SurveyTeamMembership  # noqa: PLC0415
 
-        teams = [
-            perm.target for perm in self.rel_team_permissions.filter(is_active=True)
-        ]
-        for team in teams:
-            users += [mbrship.user for mbrship in team.get_all_memberships()]
+        direct_user_ids = UserPermission.objects.filter(
+            project=self,
+            is_active=True,
+        ).values_list("target", flat=True)
 
-        users = list(set(users))
-        return len(users)
+        team_user_ids = SurveyTeamMembership.objects.filter(
+            team__rel_permissions__project=self,
+            team__rel_permissions__is_active=True,
+            is_active=True,
+        ).values_list("user", flat=True)
+
+        return direct_user_ids.union(team_user_ids).count()
 
     def _has_user_permission(self, user: User, permission: PermissionLevel) -> bool:
         if not isinstance(permission, PermissionLevel):

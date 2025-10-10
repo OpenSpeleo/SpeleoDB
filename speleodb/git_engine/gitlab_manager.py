@@ -6,6 +6,7 @@ import json
 import logging
 import shutil
 from dataclasses import dataclass
+from functools import cache
 from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -68,7 +69,7 @@ class GitlabCredentials:
     group_name: str
 
     @classmethod
-    @cached(cache=TTLCache(maxsize=1, ttl=30))  # 60 secs cache
+    @cache
     def get(cls) -> Self:
         return cls(
             instance=settings.GITLAB_HOST_URL,

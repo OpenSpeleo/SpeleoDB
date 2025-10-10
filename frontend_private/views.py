@@ -233,14 +233,15 @@ class _BaseProjectView(_AuthenticatedTemplateView):
             if best_permission.level == PermissionLevel.WEB_VIEWER:
                 # User only has WEB_VIEWER access, which is not allowed for these views
                 raise PermissionError("Insufficient permissions")
+
         except ObjectDoesNotExist as e:
             # User has no permissions at all
             raise PermissionError("No permissions") from e
 
         return {
             "project": project,
-            "is_project_admin": project.is_admin(user),
-            "has_write_access": project.has_write_access(user),
+            "is_project_admin": best_permission.level == PermissionLevel.ADMIN,
+            "has_write_access": best_permission.level >= PermissionLevel.READ_AND_WRITE,
         }
 
 
@@ -420,7 +421,11 @@ class ProjectMutexesView(_BaseProjectView):
         except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
-        data["mutexes"] = data["project"].rel_mutexes.all().order_by("-creation_date")
+        projects: Project = data["project"]
+
+        data["mutexes"] = (
+            projects.rel_mutexes.all().select_related("user").order_by("-creation_date")
+        )
 
         return super().get(request, *args, **data, **kwargs)
 

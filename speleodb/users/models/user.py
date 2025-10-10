@@ -7,6 +7,8 @@ from operator import attrgetter
 from typing import TYPE_CHECKING
 from typing import ClassVar
 
+from cachetools import TTLCache
+from cachetools import cached
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models import BooleanField
@@ -17,6 +19,7 @@ from django_countries.fields import CountryField
 from speleodb.users.managers import UserManager
 
 if TYPE_CHECKING:
+    from django.db.models import QuerySet
     from django_stubs_ext import StrOrPromise
 
     from speleodb.surveys.models import Mutex
@@ -136,27 +139,41 @@ class User(AbstractUser):
         """Returns a sorted list of `TeamPermission` or `UserPermission` by project
         name. The method finds the best permission (user or team) for each project."""
 
-        from speleodb.surveys.models import TeamPermission  # noqa: PLC0415
-        from speleodb.users.models import SurveyTeam  # noqa: PLC0415
-
-        # -------------------------- USER PERMISSIONS -------------------------- #
-
-        user_permissions = self.rel_permissions.filter(is_active=True)
-
-        # -------------------------- TEAM PERMISSIONS -------------------------- #
-
-        active_user_teams = SurveyTeam.objects.filter(
-            rel_team_memberships__user=self, rel_team_memberships__is_active=True
-        )
-
-        team_permissions = TeamPermission.objects.filter(
-            target__in=active_user_teams,
-            is_active=True,
-        )
+        user_permissions, team_permissions = self._fetch_permissions()
 
         return filter_permissions_by_best([*user_permissions, *team_permissions])
 
+    def _fetch_permissions(
+        self, project: Project | None = None
+    ) -> tuple[QuerySet[UserPermission], QuerySet[TeamPermission]]:
+        from speleodb.surveys.models import TeamPermission  # noqa: PLC0415
+
+        project_filter = {"project": project} if project else {}
+
+        # -------------------------- USER PERMISSIONS -------------------------- #
+
+        user_permissions = self.rel_permissions.filter(
+            is_active=True,
+            **project_filter,
+        ).select_related("project")
+
+        # -------------------------- TEAM PERMISSIONS -------------------------- #
+
+        team_permissions = TeamPermission.objects.filter(
+            target__rel_team_memberships__user=self,
+            target__rel_team_memberships__is_active=True,
+            is_active=True,
+            **project_filter,
+        ).select_related("project")
+
+        return user_permissions, team_permissions
+
+    def get_best_permission(self, project: Project) -> TeamPermission | UserPermission:
+        user_permissions, team_permissions = self._fetch_permissions(project=project)
+        return filter_permissions_by_best([*user_permissions, *team_permissions])[0]
+
     @property
+    @cached(cache=TTLCache(maxsize=1, ttl=30))
     def active_mutexes(self) -> models.QuerySet[Mutex]:
         return self.rel_mutexes.filter(is_active=True)
 
