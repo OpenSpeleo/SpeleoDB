@@ -4,16 +4,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.core.exceptions import ObjectDoesNotExist
 from django_countries import countries
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from speleodb.surveys.models import GeoJSON
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import User
+from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.serializer_fields import CustomChoiceField
 
 
@@ -73,10 +74,23 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
     def to_representation(self, instance: Project) -> dict[str, Any]:
         """Ensure coordinates are rounded to 7 decimal places."""
         data = super().to_representation(instance)
+
         if data.get("latitude") is not None:
             data["latitude"] = format_coordinate(data["latitude"])
+        else:
+            del data["latitude"]
+
         if data.get("longitude") is not None:
             data["longitude"] = format_coordinate(data["longitude"])
+        else:
+            del data["longitude"]
+
+        if data.get("n_commits") is None:
+            del data["n_commits"]
+
+        if data.get("permission") is None:
+            del data["permission"]
+
         return data
 
     def validate(self, attrs: Any) -> Any:
@@ -123,14 +137,15 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
             # Unsaved object
             return None
 
-        user = self.context.get("user")
+        user: User | None = self.context.get("user")  # pyright: ignore[reportAssignmentType]
 
         if user is None:
             return None
 
         try:
-            return str(obj.get_best_permission(user=user).level_label)
-        except ObjectDoesNotExist:
+            return str(user.get_best_permission(project=obj).level_label)
+
+        except NotAuthorizedError:
             return None
 
     def get_active_mutex(self, obj: Project) -> dict[str, Any] | None:
@@ -153,3 +168,31 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
             # return len(obj.commit_history)
             return obj.git_repo.commit_count
         return None
+
+
+class ProjectGeoJSONFileSerializer(serializers.ModelSerializer[GeoJSON]):
+    date = serializers.DateTimeField(source="commit_date")
+    url = serializers.CharField(source="get_signed_download_url", read_only=True)
+
+    class Meta:
+        model = GeoJSON
+        fields = ["commit_sha", "date", "url"]
+        read_only_fields = ["commit_sha", "date", "url"]
+
+
+class ProjectWithGeoJsonSerializer(ProjectSerializer):
+    geojson_files = serializers.SerializerMethodField()
+
+    class Meta(ProjectSerializer.Meta):
+        read_only_fields = ["__all__"]
+
+    def get_geojson_files(self, obj: Project) -> dict[str, str]:
+        """
+        Retrieve geojson files from serializer context.
+        Expect the context to have a 'geojson_files' key containing
+        a queryset or list of GeoJson instances.
+        """
+        geojson_qs = self.context.get("geojson_files", [])
+        return ProjectGeoJSONFileSerializer(
+            geojson_qs, many=True, context=self.context
+        ).data

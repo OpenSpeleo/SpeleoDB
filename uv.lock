@@ -116,6 +116,18 @@ wheels = [
 ]
 
 [[package]]
+name = "autopep8"
+version = "2.3.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pycodestyle" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/50/d8/30873d2b7b57dee9263e53d142da044c4600a46f2d28374b3e38b023df16/autopep8-2.3.2.tar.gz", hash = "sha256:89440a4f969197b69a995e4ce0661b031f455a9f776d2c5ba3dbd83466931758", size = 92210, upload-time = "2025-01-14T14:46:18.454Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9e/43/53afb8ba17218f19b77c7834128566c5bbb100a0ad9ba2e8e89d089d7079/autopep8-2.3.2-py2.py3-none-any.whl", hash = "sha256:ce8ad498672c845a0c3de2629c15b635ec2b05ef8177a6e7c91c74f3e9b51128", size = 45807, upload-time = "2025-01-14T14:46:15.466Z" },
+]
+
+[[package]]
 name = "av"
 version = "15.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -680,6 +692,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3a/03/6094b030f7f874bedc5726f36ebd23d6ad6ad4596b199ad850ecf887f9a6/django_silk-5.4.2.tar.gz", hash = "sha256:f3b2be63c0b92a660b7aaee591c8a505bb0757e2de55f6914cb95c1ee9ea2138", size = 4495504, upload-time = "2025-08-26T06:55:07.309Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a3/e8/b45d7b141afe735ee10244ec69b5d43e25755281ed02196126ad14ee2d71/django_silk-5.4.2-py3-none-any.whl", hash = "sha256:8154203fae904dc66e99ede75a2bad9410abd672dbba6cb5b07b22f8b5577253", size = 1944482, upload-time = "2025-08-26T06:55:33.786Z" },
+]
+
+[package.optional-dependencies]
+formatting = [
+    { name = "autopep8" },
 ]
 
 [[package]]
@@ -1593,6 +1610,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pycodestyle"
+version = "2.14.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/11/e0/abfd2a0d2efe47670df87f3e3a0e2edda42f055053c85361f19c0e2c1ca8/pycodestyle-2.14.0.tar.gz", hash = "sha256:c4b5b517d278089ff9d0abdec919cd97262a3367449ea1c8b49b91529167b783", size = 39472, upload-time = "2025-06-20T18:49:48.75Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/27/a58ddaf8c588a3ef080db9d0b7e0b97215cee3a45df74f3a94dbbf5c893a/pycodestyle-2.14.0-py2.py3-none-any.whl", hash = "sha256:dd6bf7cb4ee77f8e016f9c8e74a35ddd9f67e1d5fd4184d86c3b98e07099f42d", size = 31594, upload-time = "2025-06-20T18:49:47.491Z" },
+]
+
+[[package]]
 name = "pycparser"
 version = "2.23"
 source = { registry = "https://pypi.org/simple" }
@@ -2083,7 +2109,7 @@ local = [
     { name = "django-debug-toolbar" },
     { name = "django-extensions" },
     { name = "django-schema-viewer" },
-    { name = "django-silk" },
+    { name = "django-silk", extra = ["formatting"] },
     { name = "django-stubs", extra = ["compatible-mypy"] },
     { name = "djangorestframework-stubs", extra = ["compatible-mypy"] },
     { name = "djlint" },
@@ -2136,7 +2162,7 @@ requires-dist = [
     { name = "django-model-utils", specifier = "==5.0.0" },
     { name = "django-redis", specifier = "==6.0.0" },
     { name = "django-schema-viewer", marker = "extra == 'local'", specifier = "==0.5.3" },
-    { name = "django-silk", marker = "extra == 'local'", specifier = "==5.4.2" },
+    { name = "django-silk", extras = ["formatting"], marker = "extra == 'local'", specifier = "==5.4.2" },
     { name = "django-storages", extras = ["s3"], specifier = "==1.14.6" },
     { name = "django-stubs", extras = ["compatible-mypy"], marker = "extra == 'local'", specifier = "==5.2.6" },
     { name = "djangorestframework", specifier = "==3.16.1" },

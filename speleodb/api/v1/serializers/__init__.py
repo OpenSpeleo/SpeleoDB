@@ -15,7 +15,9 @@ from speleodb.api.v1.serializers.permissions import TeamPermissionSerializer
 from speleodb.api.v1.serializers.permissions import UserPermissionListSerializer
 from speleodb.api.v1.serializers.permissions import UserPermissionSerializer
 from speleodb.api.v1.serializers.plugin_release import PluginReleaseSerializer
+from speleodb.api.v1.serializers.project import ProjectGeoJSONFileSerializer
 from speleodb.api.v1.serializers.project import ProjectSerializer
+from speleodb.api.v1.serializers.project import ProjectWithGeoJsonSerializer
 from speleodb.api.v1.serializers.request_serializers import TeamRequestSerializer
 from speleodb.api.v1.serializers.request_serializers import (
     TeamRequestWithProjectLevelSerializer,
@@ -38,7 +40,9 @@ __all__ = [
     "GitFileSerializer",
     "PasswordChangeSerializer",
     "PluginReleaseSerializer",
+    "ProjectGeoJSONFileSerializer",
     "ProjectSerializer",
+    "ProjectWithGeoJsonSerializer",
     "PublicAnnoucementSerializer",
     "SurveyTeamListSerializer",
     "SurveyTeamMembershipListSerializer",

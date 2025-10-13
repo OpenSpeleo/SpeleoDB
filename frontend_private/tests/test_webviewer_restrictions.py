@@ -45,7 +45,9 @@ class TestWebViewerRestrictions(TestCase):
             level=PermissionLevel.READ_AND_WRITE,
         )
         UserPermissionFactory.create(
-            target=self.user, project=self.project_admin, level=PermissionLevel.ADMIN
+            target=self.user,
+            project=self.project_admin,
+            level=PermissionLevel.ADMIN,
         )
 
         self.client.force_login(self.user)

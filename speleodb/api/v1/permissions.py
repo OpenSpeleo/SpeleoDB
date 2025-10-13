@@ -14,6 +14,7 @@ from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models.point_of_interest import PointOfInterest
 from speleodb.users.models import SurveyTeamMembershipRole
+from speleodb.utils.exceptions import NotAuthorizedError
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
@@ -39,23 +40,12 @@ class BaseProjectAccessLevel(permissions.BasePermission):
         obj: Project,
     ) -> bool:
         try:
-            user_access = (
-                obj.get_user_permission(user=request.user).level
+            return (
+                request.user.get_best_permission(project=obj).level
                 >= self.MIN_ACCESS_LEVEL
             )
-        except ObjectDoesNotExist:
-            user_access = False
-
-        if user_access or self.MIN_ACCESS_LEVEL is None:
-            return user_access
-
-        for team in request.user.teams:
-            try:
-                if obj.get_team_permission(team=team).level >= self.MIN_ACCESS_LEVEL:
-                    return True
-            except ObjectDoesNotExist:
-                continue
-        return False
+        except NotAuthorizedError:
+            return False
 
 
 class BaseStationAccessLevel(permissions.BasePermission):
@@ -98,7 +88,7 @@ class BaseStationAccessLevel(permissions.BasePermission):
 
         try:
             return (
-                project.get_best_permission(user=request.user).level
+                request.user.get_best_permission(project=project).level
                 >= self.MIN_ACCESS_LEVEL
             )
 
@@ -219,7 +209,7 @@ class UserOwnsProjectMutex(permissions.BasePermission):
         if mutex is None:
             return False
 
-        return mutex.user == request.user
+        return mutex.user.id == request.user.id
 
 
 class POIOwnershipPermission(permissions.BasePermission):
@@ -245,4 +235,5 @@ class POIOwnershipPermission(permissions.BasePermission):
         # Check if the object has a created_by field and if it matches the user
         if not isinstance(obj, PointOfInterest):
             raise TypeError(f"Expected a `PointOfInterest` object, got {type(obj)}")
-        return obj.created_by == request.user
+
+        return obj.created_by.id == request.user.id

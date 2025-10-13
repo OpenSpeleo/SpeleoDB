@@ -18,6 +18,7 @@ from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.permissions import UserHasWebViewerAccess
 from speleodb.api.v1.permissions import UserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
+from speleodb.api.v1.serializers import ProjectWithGeoJsonSerializer
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
-    queryset = Project.objects.all()
+    queryset = Project.objects.all().select_related("created_by")
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
@@ -101,7 +102,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
 
 class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
-    queryset = Project.objects.all()
+    queryset = Project.objects.all().select_related("created_by")
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
 
@@ -146,45 +147,34 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
 class ProjectGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
     """API view that returns raw GeoJSON data for a project."""
 
-    queryset = Project.objects.all()
+    queryset = Project.objects.all().select_related("created_by")
     permission_classes = [UserHasWebViewerAccess]
+    serializer_class = ProjectWithGeoJsonSerializer
     lookup_field = "id"
-    # Provide a serializer_class to satisfy schema generation. We return a
-    # wrapped SuccessResponse with the following shape:
-    # {
-    #   "data": {
-    #     "geojson_files": [{"commit_sha": str, "date": str, "url": str}]
-    #   },
-    #   "success": true
-    # }
-    # Use ProjectSerializer as a placeholder; content is constructed manually.
-    serializer_class = ProjectSerializer
 
-    @extend_schema(operation_id="v1_project_geojson_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Return the raw GeoJSON data as JSON response."""
         # First check permissions by getting the object normally
         project = self.get_object()
+        ordered_geojson_qs = project.rel_geojsons.order_by("-commit_date")
 
         # Build ordered queryset and apply optional limit
-        ordered_geojson_qs = project.rel_geojsons.order_by("-commit_date")
         limit_param = request.query_params.get("limit")
+
+        limit_val = 1  # default limit value
         if limit_param is not None:
             # Ignore invalid limit values and return full list
             with contextlib.suppress(TypeError, ValueError):
-                limit_val = int(limit_param)
-                if limit_val > 0:
-                    ordered_geojson_qs = ordered_geojson_qs[:limit_val]
+                # limit_param in [1, 20]
+                limit_val = min(20, max(1, int(limit_param)))
 
-        data = {
-            "geojson_files": [
-                {
-                    "commit_sha": geojson.commit_sha,
-                    "date": geojson.commit_date.isoformat(),
-                    "url": geojson.get_signed_download_url(),
-                }
-                for geojson in ordered_geojson_qs
-            ]
-        }
+        ordered_geojson_qs = ordered_geojson_qs[:limit_val]
 
-        return SuccessResponse(data)
+        serializer = self.get_serializer(
+            project,
+            context={
+                "geojson_files": ordered_geojson_qs,
+            },
+        )
+
+        return SuccessResponse(serializer.data)

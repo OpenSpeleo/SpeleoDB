@@ -148,7 +148,7 @@ class Project(models.Model):
 
     @property
     def mutex_owner(self) -> User | None:
-        if (active_mutex := self.active_mutex) is None:
+        if (active_mutex := self._cached_active_mutex()) is None:
             return None
 
         return active_mutex.user
@@ -188,7 +188,7 @@ class Project(models.Model):
             # if nobody owns the project, returns without error.
             return
 
-        if self.mutex_owner != user and not self.is_admin(user):
+        if self.mutex_owner != user and not self.has_admin_access(user):
             raise PermissionError(f"User: `{user.email} can not execute this action.`")
 
         # AutoSave in the background
@@ -252,53 +252,14 @@ class Project(models.Model):
 
         return direct_user_ids.union(team_user_ids).count()
 
-    def _has_user_permission(self, user: User, permission: PermissionLevel) -> bool:
-        if not isinstance(permission, PermissionLevel):
-            raise TypeError(f"Unexpected value received for: `{permission=}`")
-
-        try:
-            return self.get_user_permission(user=user).level >= permission
-        except ObjectDoesNotExist:
-            return False
-
-    def _has_team_permission(
-        self, team: SurveyTeam, permission: PermissionLevel
-    ) -> bool:
-        if not isinstance(permission, PermissionLevel):
-            raise TypeError(f"Unexpected value received for: `{permission=}`")
-
-        try:
-            return self.get_team_permission(team=team).level >= permission
-        except ObjectDoesNotExist:
-            return False
-
-    def _has_permission(
-        self, target: User | SurveyTeam, permission: PermissionLevel
-    ) -> bool:
-        if isinstance(target, User):
-            return self._has_user_permission(user=target, permission=permission)
-        if isinstance(target, SurveyTeam):
-            return self._has_team_permission(team=target, permission=permission)
-        raise TypeError(f"Unexpected value received for: `{target=}`")
-
     def has_write_access(self, user: User) -> bool:
-        user_permission = self._has_user_permission(
-            user, permission=PermissionLevel.READ_AND_WRITE
-        )
+        return user.get_best_permission(self).level >= PermissionLevel.READ_AND_WRITE
 
-        if user_permission:
-            return True
-
-        for team in user.teams:
-            if self._has_team_permission(
-                team, permission=PermissionLevel.READ_AND_WRITE
-            ):
-                return True
-
-        return False
-
-    def is_admin(self, user: User) -> bool:
-        return self._has_user_permission(user, permission=PermissionLevel.ADMIN)
+    def has_admin_access(self, user: User) -> bool:
+        try:
+            return self.get_user_permission(user=user).level >= PermissionLevel.ADMIN
+        except ObjectDoesNotExist:
+            return False
 
     @property
     def git_repo_dir(self) -> pathlib.Path:

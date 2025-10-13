@@ -17,6 +17,7 @@ from django.db.models import EmailField
 from django_countries.fields import CountryField
 
 from speleodb.users.managers import UserManager
+from speleodb.utils.exceptions import NotAuthorizedError
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -143,6 +144,7 @@ class User(AbstractUser):
 
         return filter_permissions_by_best([*user_permissions, *team_permissions])
 
+    @cached(cache=TTLCache(maxsize=100, ttl=30))
     def _fetch_permissions(
         self, project: Project | None = None
     ) -> tuple[QuerySet[UserPermission], QuerySet[TeamPermission]]:
@@ -168,12 +170,17 @@ class User(AbstractUser):
 
         return user_permissions, team_permissions
 
+    @cached(cache=TTLCache(maxsize=100, ttl=30))
     def get_best_permission(self, project: Project) -> TeamPermission | UserPermission:
-        user_permissions, team_permissions = self._fetch_permissions(project=project)
-        return filter_permissions_by_best([*user_permissions, *team_permissions])[0]
+        try:
+            user_permissions, team_permissions = self._fetch_permissions(project)
+            return filter_permissions_by_best([*user_permissions, *team_permissions])[0]
+        except IndexError as e:
+            raise NotAuthorizedError(
+                "The user does not have access to the project"
+            ) from e
 
     @property
-    @cached(cache=TTLCache(maxsize=1, ttl=30))
     def active_mutexes(self) -> models.QuerySet[Mutex]:
         return self.rel_mutexes.filter(is_active=True)
 

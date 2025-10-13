@@ -421,10 +421,10 @@ class ProjectMutexesView(_BaseProjectView):
         except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
-        projects: Project = data["project"]
+        project: Project = data["project"]
 
         data["mutexes"] = (
-            projects.rel_mutexes.all().select_related("user").order_by("-creation_date")
+            project.rel_mutexes.all().select_related("user").order_by("-creation_date")
         )
 
         return super().get(request, *args, **data, **kwargs)
@@ -510,7 +510,7 @@ class MapViewerView(_AuthenticatedTemplateView):
                 "id": str(project.id),
                 "name": project.name,
                 "modified_date": project.modified_date.isoformat(),
-                "permissions": project.get_best_permission(request.user).level_label,
+                "permissions": request.user.get_best_permission(project).level_label,
             }
             for project in survey_projects
         ]
@@ -518,8 +518,9 @@ class MapViewerView(_AuthenticatedTemplateView):
         # Check if user has write access to any project
         # For map viewer, we'll grant write access if user has write access
         # to any project
+
         has_write_access = any(
-            project.has_write_access(request.user) for project in survey_projects
+            request.user.get_best_permission(project) for project in survey_projects
         )
 
         data = {

@@ -5,6 +5,8 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
+from cachetools import TTLCache
+from cachetools import cached
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django_countries.fields import CountryField
@@ -49,6 +51,7 @@ class SurveyTeam(models.Model):
     def __str__(self) -> str:
         return str(self.name)
 
+    @cached(cache=TTLCache(maxsize=100, ttl=30))
     def get_membership(self, user: User) -> SurveyTeamMembership:
         return self.rel_team_memberships.get(user=user, is_active=True)
 
@@ -56,13 +59,15 @@ class SurveyTeam(models.Model):
         return self.get_all_memberships().count()
 
     def get_all_memberships(self) -> models.QuerySet[SurveyTeamMembership]:
-        return self.rel_team_memberships.filter(is_active=True).order_by(
-            "-role", "user__email"
+        return (
+            self.rel_team_memberships.filter(is_active=True)
+            .select_related("user")
+            .order_by("-role", "user__email")
         )
 
     def is_member(self, user: User) -> bool:
         try:
-            _ = self.rel_team_memberships.get(user=user, is_active=True)
+            _ = self.get_membership(user=user)
             return True
         except ObjectDoesNotExist:
             return False
@@ -70,8 +75,7 @@ class SurveyTeam(models.Model):
     def is_leader(self, user: User) -> bool:
         try:
             return (
-                self.rel_team_memberships.get(user=user, is_active=True).role
-                == SurveyTeamMembershipRole.LEADER
+                self.get_membership(user=user).role == SurveyTeamMembershipRole.LEADER
             )
         except ObjectDoesNotExist:
             return False
