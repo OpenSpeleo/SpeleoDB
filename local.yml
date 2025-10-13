@@ -1,9 +1,10 @@
 volumes:
   speleodb_local_postgres_data: {}
   speleodb_local_postgres_data_backups: {}
-  gitlab_config: {}
-  gitlab_logs: {}
-  gitlab_data: {}
+  speleodb_local_gitlab_config: {}
+  speleodb_local_gitlab_logs: {}
+  speleodb_local_gitlab_data: {}
+  speleodb_local_localstack_data: {}
 
 services:
   django: &django
@@ -98,6 +99,35 @@ services:
       - "2443:443"
       - "2222:22"
     volumes:
-      - gitlab_config:/etc/gitlab
-      - gitlab_logs:/var/log/gitlab
-      - gitlab_data:/var/opt/gitlab
+      - speleodb_local_gitlab_config:/etc/gitlab
+      - speleodb_local_gitlab_logs:/var/log/gitlab
+      - speleodb_local_gitlab_data:/var/opt/gitlab
+
+  localstack:
+    image: localstack/localstack:0.12.8
+    container_name: speleodb_localstack
+    ports:
+      - "4566:4566" # LocalStack main API port
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - DATA_DIR=/localstack/data
+    volumes:
+      - speleodb_local_localstack_data:/localstack/
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  localstack-s3-ui:
+    container_name: speleodb_localstack_s3_ui
+    depends_on:
+      - localstack
+    image: gosuper/localstack-s3-ui
+    ports:
+      - 9000:9000
+    environment:
+      - API_REQ_FILE_PATH=/tmp/localstack/data/recorded_api_calls.json
+      - PORT=9000
+    volumes:
+      - speleodb_local_localstack_data:/tmp/localstack
