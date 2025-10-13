@@ -30,6 +30,7 @@ load_env_files_from_pyproject()
 
 
 from .base import *  # noqa: E402, F403
+from .base import GITLAB_HOST_URL  # noqa: E402
 from .base import INSTALLED_APPS  # noqa: E402
 from .base import TEMPLATES  # noqa: E402
 from .base import env  # noqa: E402
@@ -47,6 +48,10 @@ SECRET_KEY = env(
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#test-runner
 TEST_RUNNER = "django.test.runner.DiscoverRunner"
+
+# GITLAB
+# ------------------------------------------------------------------------------
+GITLAB_HTTP_PROTOCOL = "http" if GITLAB_HOST_URL == "gitlab-lab" else "https"
 
 # PASSWORDS
 # ------------------------------------------------------------------------------

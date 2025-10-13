@@ -11,6 +11,7 @@ from typing import Any
 
 import gitlab
 import gitlab.exceptions
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from dotenv import load_dotenv
 
@@ -72,7 +73,7 @@ class Command(BaseCommand):
         self.stdout.write("")  # Visual Spacing
         try:
             gl = gitlab.Gitlab(
-                f"https://{os.environ['GITLAB_HOST_URL']}/",
+                f"{settings.GITLAB_HTTP_PROTOCOL}://{os.environ['GITLAB_HOST_URL']}/",
                 private_token=os.environ["GITLAB_TOKEN"],
             )
             group = gl.groups.get(os.environ["GITLAB_GROUP_ID"])

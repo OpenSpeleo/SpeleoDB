@@ -271,6 +271,8 @@ GITLAB_GROUP_NAME = env("GITLAB_GROUP_NAME")
 GITLAB_HOST_URL = env("GITLAB_HOST_URL")
 GITLAB_TOKEN = env("GITLAB_TOKEN")
 
+GITLAB_HTTP_PROTOCOL = "https"
+
 # MIDDLEWARE
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#middleware

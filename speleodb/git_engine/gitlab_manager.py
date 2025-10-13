@@ -91,7 +91,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         gitlab_creds = GitlabCredentials.get()
 
         self._gl = gitlab.Gitlab(
-            f"https://{gitlab_creds.instance}/",
+            f"{settings.GITLAB_HTTP_PROTOCOL}://{gitlab_creds.instance}",
             private_token=gitlab_creds.token,
         )
 
@@ -132,7 +132,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         shutil.rmtree(project_dir, ignore_errors=True)
 
         project_dir.parent.mkdir(exist_ok=True, parents=True)
-        git_url = f"https://oauth2:{gitlab_creds.token}@{gitlab_creds.instance}/{gitlab_creds.group_name}/{project_id}.git"
+        git_url = f"{settings.GITLAB_HTTP_PROTOCOL}://oauth2:{gitlab_creds.token}@{gitlab_creds.instance}/{gitlab_creds.group_name}/{project_id}.git"
 
         try:
             # try to create the repository in Gitlab

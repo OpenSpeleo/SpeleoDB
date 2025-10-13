@@ -17,6 +17,10 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = ["*"]
 
+# GITLAB
+# ------------------------------------------------------------------------------
+GITLAB_HTTP_PROTOCOL = "http"
+
 # LOGGING
 # ------------------------------------------------------------------------------
 
@@ -78,14 +82,14 @@ MIDDLEWARE += ["silk.middleware.SilkyMiddleware"]
 SILKY_ANALYZE_QUERIES = False
 
 # Enable Silk's internal profiling
-SILKY_PYTHON_PROFILER = True
+SILKY_PYTHON_PROFILER = False
 
 # Record every request (not just decorated ones)
-SILKY_INTERCEPT_FUNC = lambda request: True  # noqa: E731
+SILKY_INTERCEPT_FUNC = lambda request: False  # noqa: E731
 
 # Optional: store SQL queries and response content
-SILKY_INTERCEPT_PERCENT = 100  # percentage of requests to profile (100 = all)
-SILKY_META = True  # optional, include meta info
+SILKY_INTERCEPT_PERCENT = 0  # percentage of requests to profile (100 = all)
+SILKY_META = False  # optional, include meta info
 
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
 INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]

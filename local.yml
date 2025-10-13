@@ -1,6 +1,9 @@
 volumes:
   speleodb_local_postgres_data: {}
   speleodb_local_postgres_data_backups: {}
+  gitlab_config: {}
+  gitlab_logs: {}
+  gitlab_data: {}
 
 services:
   django: &django
@@ -71,3 +74,30 @@ services:
     ports:
       - "5555:5555"
     command: /start-flower
+
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: speleodb_gitlab_lab
+    hostname: gitlab-lab
+    privileged: true
+    restart: always
+    environment:
+      # Root User Credentials: root:WE66dZFgKevGzj31My!5
+      GITLAB_ROOT_PASSWORD: WE66dZFgKevGzj31My!5
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://gitlab-lab:80'
+        pages_external_url "http://gitlab-lab:80/"
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+        prometheus_monitoring['enable'] = false
+        alertmanager['enable'] = false
+        node_exporter['enable'] = false
+        redis_exporter['enable'] = false
+        postgres_exporter['enable'] = false
+    ports:
+      - "8080:80"
+      - "2443:443"
+      - "2222:22"
+    volumes:
+      - gitlab_config:/etc/gitlab
+      - gitlab_logs:/var/log/gitlab
+      - gitlab_data:/var/opt/gitlab

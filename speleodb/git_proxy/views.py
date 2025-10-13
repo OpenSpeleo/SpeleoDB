@@ -145,7 +145,7 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
             #         service_name=path,
             #     )
 
-            target_url = f"https://oauth2:{self.git_creds.token}@{self.git_creds.instance}/{self.git_creds.group_name}/{project.id}.git/{path}"
+            target_url = f"{settings.GITLAB_HTTP_PROTOCOL}://oauth2:{self.git_creds.token}@{self.git_creds.instance}/{self.git_creds.group_name}/{project.id}.git/{path}"
             headers = dict(request.headers.copy())
             headers.pop("Host", None)
             headers["Accept-Encoding"] = "identity"
