@@ -4,7 +4,7 @@ volumes:
   speleodb_local_gitlab_config: {}
   speleodb_local_gitlab_logs: {}
   speleodb_local_gitlab_data: {}
-  speleodb_local_localstack_data: {}
+  speleodb_local_minio_data: {}
 
 services:
   django: &django
@@ -26,7 +26,10 @@ services:
     ports:
       - "8000:8000"
     command: /start
-    # command: sleep 600 && /start
+    network_mode: "host"
+    environment:
+      # Pre-commit skip jobs - Only dev env not on CI
+      SKIP: pysentry
 
   postgres:
     build:
@@ -47,6 +50,8 @@ services:
   redis:
     image: docker.io/redis:6
     container_name: speleodb_local_redis
+    ports:
+      - "6379:6379"
 
   celeryworker:
     <<: *django
@@ -79,15 +84,14 @@ services:
   gitlab:
     image: gitlab/gitlab-ce:latest
     container_name: speleodb_gitlab_lab
-    hostname: gitlab-lab
     privileged: true
     restart: always
     environment:
       # Root User Credentials: root:WE66dZFgKevGzj31My!5
       GITLAB_ROOT_PASSWORD: WE66dZFgKevGzj31My!5
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://gitlab-lab:80'
-        pages_external_url "http://gitlab-lab:80/"
+        external_url 'http://localhost:9080'
+        pages_external_url "http://localhost:9080/"
         gitlab_rails['gitlab_shell_ssh_port'] = 2222
         prometheus_monitoring['enable'] = false
         alertmanager['enable'] = false
@@ -95,7 +99,7 @@ services:
         redis_exporter['enable'] = false
         postgres_exporter['enable'] = false
     ports:
-      - "8080:80"
+      - "9080:9080"
       - "2443:443"
       - "2222:22"
     volumes:
@@ -103,31 +107,16 @@ services:
       - speleodb_local_gitlab_logs:/var/log/gitlab
       - speleodb_local_gitlab_data:/var/opt/gitlab
 
-  localstack:
-    image: localstack/localstack:0.12.8
-    container_name: speleodb_localstack
-    ports:
-      - "4566:4566" # LocalStack main API port
+  minio:
+    image: minio/minio
+    container_name: speleodb_minio
     environment:
-      - SERVICES=s3
-      - DEBUG=1
-      - AWS_DEFAULT_REGION=us-east-1
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - DATA_DIR=/localstack/data
+      - MINIO_ROOT_USER=access_key
+      - MINIO_ROOT_PASSWORD=secret_key
+      - MINIO_BROWSER=on
     volumes:
-      - speleodb_local_localstack_data:/localstack/
-      - /var/run/docker.sock:/var/run/docker.sock
-
-  localstack-s3-ui:
-    container_name: speleodb_localstack_s3_ui
-    depends_on:
-      - localstack
-    image: gosuper/localstack-s3-ui
+      - speleodb_local_minio_data:/data
     ports:
-      - 9000:9000
-    environment:
-      - API_REQ_FILE_PATH=/tmp/localstack/data/recorded_api_calls.json
-      - PORT=9000
-    volumes:
-      - speleodb_local_localstack_data:/tmp/localstack
+      - "9000:9000"
+      - "9001:9001"
+    command: server --console-address ":9001" /data

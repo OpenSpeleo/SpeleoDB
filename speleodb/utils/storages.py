@@ -29,6 +29,29 @@ class BaseS3Storage(S3Storage):
         unique_name = f"{uuid.uuid4().hex}_{path.name}"
         return super().get_available_name(unique_name, max_length)  # type: ignore[no-untyped-call]
 
+    if settings.DEBUG:
+
+        def url(
+            self,
+            name: Any,
+            parameters: Any = None,
+            expire: Any = None,
+            http_method: Any = None,
+        ) -> Any:
+            # Let the parent class build the URL
+            url = super().url(  # type: ignore[no-untyped-call]
+                name, parameters=parameters, expire=expire, http_method=http_method
+            )
+
+            # Force HTTP if using a non-SSL endpoint (useful for MinIO local dev)
+            if (
+                isinstance(self.custom_domain, str)
+                and "localhost" in self.custom_domain
+            ):
+                return url.replace("https://", "http://", 1)
+
+            return url
+
 
 class S3MediaStorage(BaseS3Storage):
     """Custom S3 storage for media files."""

@@ -78,9 +78,12 @@ class GeoJSON(models.Model):
 
         s3_client = boto3.client(  # type: ignore[no-untyped-call]
             "s3",
+            endpoint_url=getattr(settings, "AWS_S3_ENDPOINT_URL", None),
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             region_name=settings.AWS_S3_REGION_NAME,
+            use_ssl=getattr(settings, "AWS_S3_USE_SSL", True),
+            verify=getattr(settings, "AWS_S3_VERIFY", True),
         )
 
         try:

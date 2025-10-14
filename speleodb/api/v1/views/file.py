@@ -13,11 +13,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import orjson
+from botocore.exceptions import ClientError
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
+from django.db import transaction
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
@@ -304,16 +306,26 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                             content_type="application/geo+json",
                                         )
 
-                                        GeoJSON.objects.create(
-                                            project=project,
-                                            commit_sha=hexsha,
-                                            commit_date=timezone.now(),
-                                            file=geojson_f,
-                                        )
                                 except Exception:
                                     logger.exception("Error converting to GeoJSON")
                                     continue
 
+                                try:
+                                    with transaction.atomic():
+                                        GeoJSON.objects.create(
+                                            project=project,
+                                            commit_sha=hexsha,
+                                            commit_date=timezone.now(),
+                                            file=geojson_f,  # pyright: ignore[reportPossiblyUnboundVariable]
+                                        )
+                                except ClientError:
+                                    # # This ensures the atomic block is rolled back
+                                    # transaction.set_rollback(True)
+                                    logger.exception("Error uploading GeoJSON to S3.")
+                                    continue
+
+                                # There can be only one file called `project.tml`
+                                # No point to continue the loop.
                                 break
 
                     with timed_section("HTTP Success Response Construction"):

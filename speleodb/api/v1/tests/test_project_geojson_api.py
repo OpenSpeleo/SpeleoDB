@@ -4,16 +4,12 @@ from __future__ import annotations
 
 import random
 import string
-import tempfile
 import uuid
 from hashlib import sha1
-from pathlib import Path
 from typing import Any
-from unittest.mock import patch
 
 import orjson
-import pytest
-from django.core.files import File
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
@@ -170,7 +166,7 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         assert len(response.data["data"]["geojson_files"]) == 1
         assert "url" in response.data["data"]["geojson_files"][0]
         assert (
-            "s3.amazonaws.com/geojson/"
+            f"{settings.AWS_S3_CUSTOM_DOMAIN}/geojson/"
             in response.data["data"]["geojson_files"][0]["url"]
         )
 

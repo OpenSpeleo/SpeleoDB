@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .base import *  # noqa: F403
+from .base import AWS_STORAGE_BUCKET_NAME
 from .base import INSTALLED_APPS
 from .base import LOGGING
 from .base import MIDDLEWARE
@@ -20,6 +21,18 @@ ALLOWED_HOSTS = ["*"]
 # GITLAB
 # ------------------------------------------------------------------------------
 GITLAB_HTTP_PROTOCOL = "http"
+
+# AWS S3 CONFIGURATION
+# ------------------------------------------------------------------------------
+if (s3_endpoint_url := env.str("AWS_S3_ENDPOINT_URL", default=None)) is not None:  # pyright: ignore[reportArgumentType]
+    AWS_S3_ENDPOINT_URL: str = s3_endpoint_url  # pyright: ignore[reportAssignmentType]
+    AWS_S3_USE_SSL = False
+    AWS_S3_VERIFY = False
+    AWS_S3_ADDRESSING_STYLE = "path"
+    AWS_S3_CUSTOM_DOMAIN = (
+        f"{AWS_S3_ENDPOINT_URL.replace('http://', '')}/{AWS_STORAGE_BUCKET_NAME}"
+    )
+
 
 # LOGGING
 # ------------------------------------------------------------------------------

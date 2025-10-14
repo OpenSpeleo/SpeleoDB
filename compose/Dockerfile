@@ -14,8 +14,9 @@ RUN apt-get update && apt-get install -y \
     sudo \
     git \
     bash-completion \
-    wget \
+    ca-certificates \
     curl \
+    wget \
     vim \
     ssh \
     make \
