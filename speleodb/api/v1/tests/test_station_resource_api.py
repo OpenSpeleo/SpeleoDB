@@ -6,6 +6,7 @@ import hashlib
 import uuid
 from pathlib import Path
 
+import requests
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from faker import Faker
@@ -24,6 +25,16 @@ from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models.station import StationResourceType
 from speleodb.utils.test_utils import named_product
+
+
+def sha256_from_url(url: str) -> str:
+    sha256 = hashlib.sha256()
+    with requests.get(url, stream=True, timeout=10) as r:
+        r.raise_for_status()  # ensure the request succeeded
+        for chunk in r.iter_content(chunk_size=8192):
+            if chunk:  # skip keep-alive chunks
+                sha256.update(chunk)
+    return sha256.hexdigest()
 
 
 @parameterized_class(
@@ -419,7 +430,14 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         updated = response.data["data"]
         assert updated["title"] == "New Photo"
-        assert "new.jpg" in updated["file_url"]
+
+        sha256 = hashlib.sha256()
+        for chunk in new_image.chunks():
+            sha256.update(chunk)
+
+        expected_digest = sha256.hexdigest()
+
+        assert expected_digest == sha256_from_url(updated["file_url"])
 
     def test_delete_resource(self) -> None:
         """Test deleting a resource."""

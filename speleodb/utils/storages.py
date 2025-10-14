@@ -76,20 +76,33 @@ class PersonPhotoStorage(BaseS3Storage):
     querystring_auth = False  # No signed URLs - relies on bucket policy
 
 
-class StationResourceStorage(BaseS3Storage):
+class StationResourceStorage(S3Storage):
+    """Private S3 storage for Station Resources uploads.
+
+    Files are stored under the "stations/resources/" prefix; the model's
+    upload_to callable should place them into "project.id/station.id/" subfolder.
+    """
+
     """Custom S3 storage specifically for station resources."""
+
+    bucket_name = BaseS3Storage.bucket_name
+    file_overwrite = BaseS3Storage.file_overwrite
+
+    # Cache control for performance
+    object_parameters = BaseS3Storage.object_parameters
 
     location = "stations/resources"
     default_acl = "private"  # Keep files private for security
+
     # Use signed URLs for private files
-    custom_domain = False  # type: ignore[assignment]
+    custom_domain = False
 
 
 class GeoJSONStorage(S3Storage):
     """Private S3 storage for GeoJSON uploads.
 
-    Files are stored under the "geojson/" prefix; the model's upload_to callable
-    should place them into project- and commit-specific subfolders.
+    Files are stored under the "geojson/" prefix; the model's upload_to
+    callable should place them into "project.id/commit.sha/" subfolder.
     """
 
     # NOTE: This class can **not** inherit from BaseS3Storage because it uses a

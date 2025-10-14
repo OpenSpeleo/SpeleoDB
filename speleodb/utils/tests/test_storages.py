@@ -89,15 +89,9 @@ class StationResourceStorageTests(TestCase):
         assert storage.object_parameters == expected_params
 
     def test_s3_unique_filename_generation(self) -> None:
-        """Test that S3 storage generates unique filenames."""
+        """Test that S3 storage does not modify filenames."""
 
         storage = StationResourceStorage()
 
-        name = storage.get_available_name("test.jpg")
-        assert re.search(r"^[a-f0-9]{32}_test\.jpg$", name)
-
-        name = storage.get_available_name("test.mp4")
-        assert re.search(r"^[a-f0-9]{32}_test\.mp4$", name)
-
-        name = storage.get_available_name("test.pdf")
-        assert re.search(r"^[a-f0-9]{32}_test\.pdf$", name)
+        for filename in ["test.jpg", "test.mp4", "test.pdf"]:
+            assert storage.get_available_name(filename) == filename

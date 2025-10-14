@@ -120,6 +120,10 @@ class StationResourceType(models.TextChoices):
         return cls._member_map_[value.upper()]  # type: ignore[return-value]
 
 
+def get_station_resource_path(instance: StationResource, filename: str) -> str:
+    return f"{instance.station.project.id}/{instance.station.id}/{uuid.uuid4().hex}_{filename}"  # noqa: E501
+
+
 class StationResource(models.Model):
     """
     Stores various types of resources (photos, videos, sketches, notes)
@@ -155,7 +159,7 @@ class StationResource(models.Model):
 
     # File storage (for photos, videos, documents)
     file = models.FileField(
-        upload_to="stations/resources/%Y/%m/%d/",
+        upload_to=get_station_resource_path,
         blank=True,
         null=True,
         storage=StationResourceStorage(),  # type: ignore[no-untyped-call]
@@ -164,7 +168,7 @@ class StationResource(models.Model):
 
     # Miniature/thumbnail storage
     miniature = models.ImageField(
-        upload_to="stations/resources/miniatures/%Y/%m/%d/",
+        upload_to=get_station_resource_path,
         storage=StationResourceStorage(),  # type: ignore[no-untyped-call]
         null=True,
         blank=True,
