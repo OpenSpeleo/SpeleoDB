@@ -29,6 +29,7 @@ class NewRepoTest(TestCase):
                 _ = repo.head.commit
 
 
+@pytest.mark.skip_if_offline
 class CloneRepoTest(TestCase):
     def setUp(self) -> None:
         self.git_dir = tempfile.TemporaryDirectory(delete=False)

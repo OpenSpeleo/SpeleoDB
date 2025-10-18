@@ -33,14 +33,27 @@ def pytest_addoption(parser: Parser) -> None:
         help="Skip on heavy duty tests - Namely those calling on git/gitlab",
     )
 
+    parser.addoption(
+        "--offline",
+        action="store_true",
+        default=False,
+        help="Skip on tests that can only be executed with a network connection",
+    )
+
 
 def pytest_runtest_setup(item: Item) -> None:
     markers = [marker.name for marker in item.iter_markers()]
     if item.config.getoption("--light") and "skip_if_lighttest" in markers:
-        pytest.skip("Skip GIT/GITLAB related tests to accelerate development")
+        pytest.skip("Skip GIT/GITLAB related tests to accelerate development ...")
+
+    if item.config.getoption("--offline") and "skip_if_offline" in markers:
+        pytest.skip("Skip - This test needs an internet connection ...")
 
 
 def pytest_configure(config: Config) -> None:
     config.addinivalue_line(
         "markers", "skip_if_lighttest: mark test to be skip in light test mode."
+    )
+    config.addinivalue_line(
+        "markers", "skip_if_offline: mark test to be skip in offline test mode."
     )
