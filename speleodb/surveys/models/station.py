@@ -17,11 +17,10 @@ from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from speleodb.users.models import User
 from speleodb.utils.document_processing import DocumentProcessor
 from speleodb.utils.image_processing import ImageProcessor
-from speleodb.utils.storages import StationResourceStorage
-from speleodb.utils.validators import StationResourceFileValidator
+from speleodb.utils.storages import AttachmentStorage
+from speleodb.utils.validators import AttachmentValidator
 from speleodb.utils.video_processing import VideoProcessor
 
 logger = logging.getLogger(__name__)
@@ -76,12 +75,10 @@ class Station(models.Model):
     )
 
     # Metadata
-    created_by = models.ForeignKey(
-        "users.User",
-        related_name="rel_stations_created",
-        on_delete=models.RESTRICT,
-        blank=False,
+    created_by = models.EmailField(
         null=False,
+        blank=False,
+        help_text="User who created or submitted the entry.",
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)
@@ -121,7 +118,7 @@ class StationResourceType(models.TextChoices):
 
 
 def get_station_resource_path(instance: StationResource, filename: str) -> str:
-    return f"{instance.station.project.id}/{instance.station.id}/{uuid.uuid4().hex}_{filename}"  # noqa: E501
+    return f"{instance.station.project.id}/{instance.station.id}/resources/{uuid.uuid4().hex}_{filename}"  # noqa: E501
 
 
 class StationResource(models.Model):
@@ -162,14 +159,14 @@ class StationResource(models.Model):
         upload_to=get_station_resource_path,
         blank=True,
         null=True,
-        storage=StationResourceStorage(),  # type: ignore[no-untyped-call]
-        validators=[StationResourceFileValidator()],
+        storage=AttachmentStorage(),  # type: ignore[no-untyped-call]
+        validators=[AttachmentValidator()],
     )
 
     # Miniature/thumbnail storage
     miniature = models.ImageField(
         upload_to=get_station_resource_path,
-        storage=StationResourceStorage(),  # type: ignore[no-untyped-call]
+        storage=AttachmentStorage(),  # type: ignore[no-untyped-call]
         null=True,
         blank=True,
         help_text="Thumbnail/preview image for the resource",
@@ -183,12 +180,10 @@ class StationResource(models.Model):
     )
 
     # Metadata
-    created_by = models.ForeignKey(
-        User,
-        related_name="created_station_resources",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+    created_by = models.EmailField(
+        null=False,
+        blank=False,
+        help_text="User who created or submitted the entry.",
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)

@@ -51,12 +51,13 @@ class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new resource."""
         station = self.get_object()
+        user = self.get_user()
 
         serializer = StationResourceSerializer(data=request.data)
         if serializer.is_valid():
             try:
                 # Save with the station and created_by
-                serializer.save(station=station, created_by=request.user)
+                serializer.save(station=station, created_by=user.email)
                 return SuccessResponse(
                     serializer.data,
                     status=status.HTTP_201_CREATED,

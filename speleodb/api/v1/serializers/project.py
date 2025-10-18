@@ -5,8 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from django_countries import countries
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from speleodb.surveys.models import GeoJSON
@@ -23,21 +21,6 @@ def format_coordinate(value: Any) -> float:
     return round(float(value), 7)
 
 
-@extend_schema_field(OpenApiTypes.STR)
-class UserField(serializers.RelatedField[User, User, str]):
-    def to_representation(self, value: User) -> str:
-        return value.email
-
-    def to_internal_value(self, data: User | str) -> User:
-        match data:
-            case User():
-                return data
-            case str():
-                return User.objects.get(email=data)
-            case _:
-                raise TypeError
-
-
 class ProjectSerializer(serializers.ModelSerializer[Project]):
     country = CustomChoiceField(choices=list(countries))
     visibility = CustomChoiceField(
@@ -49,8 +32,6 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
     active_mutex = serializers.SerializerMethodField()
 
     n_commits = serializers.SerializerMethodField()
-
-    created_by = UserField(queryset=User.objects.all(), required=False)
 
     class Meta:
         model = Project
@@ -121,7 +102,7 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
         # assign an ADMIN permission to the creator
         _ = UserPermission.objects.create(
             project=project,
-            target=validated_data["created_by"],
+            target=User.objects.get(email=validated_data["created_by"]),
             level=PermissionLevel.ADMIN,
         )
 

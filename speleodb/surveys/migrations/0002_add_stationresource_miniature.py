@@ -102,7 +102,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 help_text='Thumbnail/preview image for the resource',
                 null=True,
-                storage=speleodb.utils.storages.StationResourceStorage(),
+                storage=speleodb.utils.storages.AttachmentStorage(),
                 upload_to='stations/resources/miniatures/%Y/%m/%d/'
             ),
         ),

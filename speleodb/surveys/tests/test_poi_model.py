@@ -29,7 +29,7 @@ class TestPointOfInterestModel:
             description="A beautiful cave entrance with stalactites",
             latitude=45.123456,
             longitude=-122.654321,
-            created_by=user,
+            user=user,
         )
 
     def test_create_poi_with_valid_data(self, user: User) -> None:
@@ -39,7 +39,7 @@ class TestPointOfInterestModel:
             description="Stunning panoramic views",
             latitude=47.608013,
             longitude=-122.335167,
-            created_by=user,
+            user=user,
         )
 
         assert poi.id is not None
@@ -47,7 +47,7 @@ class TestPointOfInterestModel:
         assert poi.description == "Stunning panoramic views"
         assert poi.latitude == 47.608013  # noqa: PLR2004
         assert poi.longitude == -122.335167  # noqa: PLR2004
-        assert poi.created_by == user
+        assert poi.user == user
         assert poi.creation_date is not None
         assert poi.modified_date is not None
 
@@ -57,13 +57,13 @@ class TestPointOfInterestModel:
             name="Minimal POI",
             latitude=0.0,
             longitude=0.0,
-            created_by=user,
+            user=user,
         )
 
         assert poi.id is not None
         assert poi.name == "Minimal POI"
         assert poi.description == ""  # Default value
-        assert poi.created_by == user
+        assert poi.user == user
 
     def test_poi_string_representation(self, poi: PointOfInterest) -> None:
         """Test the string representation of POI."""
@@ -77,7 +77,7 @@ class TestPointOfInterestModel:
                 name="Invalid Latitude High",
                 latitude=91.0,
                 longitude=0.0,
-                created_by=user,
+                user=user,
             )
             poi.full_clean()
 
@@ -89,7 +89,7 @@ class TestPointOfInterestModel:
                 name="Invalid Latitude Low",
                 latitude=-91.0,
                 longitude=0.0,
-                created_by=user,
+                user=user,
             )
             poi.full_clean()
 
@@ -100,7 +100,7 @@ class TestPointOfInterestModel:
             name="North Pole",
             latitude=90.0,
             longitude=0.0,
-            created_by=user,
+            user=user,
         )
         poi_north.full_clean()  # Should not raise
 
@@ -108,7 +108,7 @@ class TestPointOfInterestModel:
             name="South Pole",
             latitude=-90.0,
             longitude=0.0,
-            created_by=user,
+            user=user,
         )
         poi_south.full_clean()  # Should not raise
 
@@ -120,7 +120,7 @@ class TestPointOfInterestModel:
                 name="Invalid Longitude High",
                 latitude=0.0,
                 longitude=181.0,
-                created_by=user,
+                user=user,
             )
             poi.full_clean()
 
@@ -132,7 +132,7 @@ class TestPointOfInterestModel:
                 name="Invalid Longitude Low",
                 latitude=0.0,
                 longitude=-181.0,
-                created_by=user,
+                user=user,
             )
             poi.full_clean()
 
@@ -143,7 +143,7 @@ class TestPointOfInterestModel:
             name="International Date Line East",
             latitude=0.0,
             longitude=180.0,
-            created_by=user,
+            user=user,
         )
         poi_east.full_clean()  # Should not raise
 
@@ -151,7 +151,7 @@ class TestPointOfInterestModel:
             name="International Date Line West",
             latitude=0.0,
             longitude=-180.0,
-            created_by=user,
+            user=user,
         )
         poi_west.full_clean()  # Should not raise
 
@@ -161,7 +161,7 @@ class TestPointOfInterestModel:
             name="Precise Location",
             latitude=45.1234567,
             longitude=-122.7654321,
-            created_by=user,
+            user=user,
         )
 
         # Refresh from database
@@ -171,11 +171,11 @@ class TestPointOfInterestModel:
         assert str(poi.latitude) == "45.1234567"
         assert str(poi.longitude) == "-122.7654321"
 
-    def test_created_by_cascade_on_user_delete(
+    def test_user_cascade_on_user_delete(
         self, poi: PointOfInterest, user: User
     ) -> None:
         """Test that POI is deleted when user is deleted (CASCADE)."""
-        assert poi.created_by == user
+        assert poi.user == user
         poi_id = poi.id
 
         # Delete the user
@@ -191,19 +191,19 @@ class TestPointOfInterestModel:
             name="Cave C",
             latitude=0.0,
             longitude=0.0,
-            created_by=user,
+            user=user,
         )
         _ = PointOfInterest.objects.create(
             name="Arch A",
             latitude=0.0,
             longitude=0.0,
-            created_by=user,
+            user=user,
         )
         _ = PointOfInterest.objects.create(
             name="Bridge B",
             latitude=0.0,
             longitude=0.0,
-            created_by=user,
+            user=user,
         )
 
         # Query all POIs
@@ -240,7 +240,7 @@ class TestPointOfInterestModel:
             name="No Description POI",
             latitude=10.0,
             longitude=20.0,
-            created_by=user,
+            user=user,
             description="",
         )
 

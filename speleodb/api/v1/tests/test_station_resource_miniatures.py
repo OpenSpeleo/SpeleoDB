@@ -81,7 +81,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
             project=self.project,  # BaseAPIProjectTestCase uses self.project
             latitude=45.0,
             longitude=-75.0,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
     def test_photo_miniature_created_on_upload(self) -> None:
@@ -93,7 +93,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
             resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=image,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Check miniature was created
@@ -112,7 +112,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
             resource_type=StationResourceType.VIDEO,
             title="Test Video",
             file=video,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Check miniature was created
@@ -131,7 +131,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
             resource_type=StationResourceType.DOCUMENT,
             title="Test Document",
             file=document,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Check miniature was created
@@ -148,7 +148,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
             resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="This is a test note",
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Check no miniature was created
@@ -164,7 +164,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
             resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=image1,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         original_miniature = resource.miniature.name
@@ -186,7 +186,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
             resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=image,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Delete resource
@@ -205,7 +205,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
             resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=image,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Get resource through API
@@ -232,7 +232,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
                 resource_type=StationResourceType.NOTE,
                 title="Test Note",
                 file=image,  # This should fail
-                created_by=self.user,
+                created_by=self.user.email,
             )
 
     def test_validation_requires_file_for_photo_resource(self) -> None:
@@ -243,5 +243,5 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
                 resource_type=StationResourceType.PHOTO,
                 title="Test Photo",
                 # No file provided - should fail
-                created_by=self.user,
+                created_by=self.user.email,
             )

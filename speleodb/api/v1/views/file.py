@@ -296,15 +296,20 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                 and not project.exclude_geojson
                             ):
                                 try:
-                                    with contextlib.suppress(NoKnownAnchorError):
-                                        survey: Survey = ArianeInterface.from_file(file)
-                                        geojson_data = survey_to_geojson(survey)
+                                    survey: Survey = ArianeInterface.from_file(file)
+                                    geojson_data = survey_to_geojson(survey)
 
-                                        geojson_f = SimpleUploadedFile(
-                                            "test.geojson",  # filename
-                                            orjson.dumps(geojson_data),
-                                            content_type="application/geo+json",
-                                        )
+                                    geojson_f = SimpleUploadedFile(
+                                        "test.geojson",  # filename
+                                        orjson.dumps(geojson_data),
+                                        content_type="application/geo+json",
+                                    )
+                                except NoKnownAnchorError:
+                                    logger.info(
+                                        "No known GPS anchor was found for project "
+                                        f"`{project.id}`. Skipping GeoJSON..."
+                                    )
+                                    continue
 
                                 except Exception:
                                     logger.exception("Error converting to GeoJSON")
@@ -316,7 +321,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                             project=project,
                                             commit_sha=hexsha,
                                             commit_date=timezone.now(),
-                                            file=geojson_f,  # pyright: ignore[reportPossiblyUnboundVariable]
+                                            file=geojson_f,
                                         )
                                 except ClientError:
                                     # # This ensures the atomic block is rolled back

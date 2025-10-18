@@ -23,10 +23,10 @@ class TestWebViewerRestrictions(TestCase):
     def setUp(self) -> None:
         super().setUp()
         self.user = UserFactory.create()
-        self.project_webviewer = ProjectFactory.create(created_by=self.user)
-        self.project_readonly = ProjectFactory.create(created_by=self.user)
-        self.project_readwrite = ProjectFactory.create(created_by=self.user)
-        self.project_admin = ProjectFactory.create(created_by=self.user)
+        self.project_webviewer = ProjectFactory.create(created_by=self.user.email)
+        self.project_readonly = ProjectFactory.create(created_by=self.user.email)
+        self.project_readwrite = ProjectFactory.create(created_by=self.user.email)
+        self.project_admin = ProjectFactory.create(created_by=self.user.email)
 
         # Create permissions
         UserPermissionFactory.create(

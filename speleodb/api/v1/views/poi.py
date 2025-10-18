@@ -31,7 +31,7 @@ class PointOfInterestSpecificAPIView(GenericAPIView[PointOfInterest], SDBAPIView
     - Requires authentication and ownership
     """
 
-    queryset = PointOfInterest.objects.all().select_related("created_by")
+    queryset = PointOfInterest.objects.all().select_related("user")
     permission_classes = [POIOwnershipPermission]
     serializer_class = PointOfInterestSerializer
     lookup_field = "id"
@@ -88,9 +88,7 @@ class PointOfInterestAPIView(GenericAPIView[PointOfInterest], SDBAPIViewMixin):
     def get_queryset(self) -> QuerySet[PointOfInterest]:
         """Get only POIs created by the authenticated user."""
         user = self.get_user()
-        return PointOfInterest.objects.filter(created_by=user).select_related(
-            "created_by"
-        )
+        return PointOfInterest.objects.filter(user=user).select_related("user")
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         queryset = self.get_queryset()
@@ -99,9 +97,11 @@ class PointOfInterestAPIView(GenericAPIView[PointOfInterest], SDBAPIViewMixin):
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new POI for the authenticated user."""
+        user = self.get_user()
+
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(created_by=request.user)
+            serializer.save(user=user)
             return SuccessResponse(
                 {"poi": serializer.data},
                 status=status.HTTP_201_CREATED,
@@ -126,9 +126,7 @@ class PointOfInterestGeoJSONView(GenericAPIView[PointOfInterest], SDBAPIViewMixi
     def get_queryset(self) -> QuerySet[PointOfInterest]:
         """Get only POIs created by the authenticated user."""
         user = self.get_user()
-        return PointOfInterest.objects.filter(created_by=user).select_related(
-            "created_by"
-        )
+        return PointOfInterest.objects.filter(user=user).select_related("user")
 
     def get(self, request: Request) -> Response:
         """Get user's POIs in a map-friendly format."""

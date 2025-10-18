@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='stationresource',
             name='file',
-            field=models.FileField(blank=True, null=True, storage=speleodb.utils.storages.StationResourceStorage(), upload_to='stations/resources/%Y/%m/%d/', validators=[speleodb.utils.validators.StationResourceFileValidator()]),
+            field=models.FileField(blank=True, null=True, storage=speleodb.utils.storages.AttachmentStorage(), upload_to='stations/resources/%Y/%m/%d/', validators=[speleodb.utils.validators.AttachmentValidator()]),
         ),
         migrations.AlterField(
             model_name='stationresource',

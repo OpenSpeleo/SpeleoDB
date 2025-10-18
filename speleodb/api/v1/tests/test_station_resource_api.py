@@ -69,7 +69,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             name="Test Station",
             latitude=45.1234567,
             longitude=-122.7654321,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Create a station for testing
@@ -116,14 +116,14 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="Some notes",
-            created_by=self.user,
+            created_by=self.user.email,
             station=self.station,
         )
         StationResource.objects.create(
             resource_type=StationResourceType.PHOTO,
             title="Test Photo",
             file=self._create_test_image(),
-            created_by=self.user,
+            created_by=self.user.email,
             station=self.station,
         )
 
@@ -341,7 +341,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="Content",
-            created_by=self.user,
+            created_by=self.user.email,
             station=self.station,
         )
 
@@ -365,7 +365,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             resource_type=StationResourceType.NOTE,
             title="Old Title",
             text_content="Old content",
-            created_by=self.user,
+            created_by=self.user.email,
             station=self.station,
         )
 
@@ -404,7 +404,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             resource_type=StationResourceType.PHOTO,
             title="Old Photo",
             file=self._create_test_image("old.jpg"),
-            created_by=self.user,
+            created_by=self.user.email,
             station=self.station,
         )
 
@@ -445,7 +445,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             resource_type=StationResourceType.NOTE,
             title="To Delete",
             text_content="Content",
-            created_by=self.user,
+            created_by=self.user.email,
             station=self.station,
         )
 
@@ -468,7 +468,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             resource_type=StationResourceType.PHOTO,
             title="Photo to Delete",
             file=self._create_test_image(),
-            created_by=self.user,
+            created_by=self.user.email,
             station=self.station,
         )
         resource_id = resource.id
@@ -492,21 +492,21 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
             resource_type=StationResourceType.NOTE,
             title="Third",
             text_content="3",
-            created_by=self.user,
+            created_by=self.user.email,
             station=self.station,
         )
         StationResource.objects.create(
             resource_type=StationResourceType.NOTE,
             title="First",
             text_content="1",
-            created_by=self.user,
+            created_by=self.user.email,
             station=self.station,
         )
         StationResource.objects.create(
             resource_type=StationResourceType.NOTE,
             title="Second",
             text_content="2",
-            created_by=self.user,
+            created_by=self.user.email,
             station=self.station,
         )
 

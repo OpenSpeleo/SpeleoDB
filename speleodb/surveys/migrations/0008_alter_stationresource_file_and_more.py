@@ -16,11 +16,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='stationresource',
             name='file',
-            field=models.FileField(blank=True, null=True, storage=speleodb.utils.storages.StationResourceStorage(), upload_to=speleodb.surveys.models.station.get_station_resource_path, validators=[speleodb.utils.validators.StationResourceFileValidator()]),
+            field=models.FileField(blank=True, null=True, storage=speleodb.utils.storages.AttachmentStorage(), upload_to=speleodb.surveys.models.station.get_station_resource_path, validators=[speleodb.utils.validators.AttachmentValidator()]),
         ),
         migrations.AlterField(
             model_name='stationresource',
             name='miniature',
-            field=models.ImageField(blank=True, help_text='Thumbnail/preview image for the resource', null=True, storage=speleodb.utils.storages.StationResourceStorage(), upload_to=speleodb.surveys.models.station.get_station_resource_path),
+            field=models.ImageField(blank=True, help_text='Thumbnail/preview image for the resource', null=True, storage=speleodb.utils.storages.AttachmentStorage(), upload_to=speleodb.surveys.models.station.get_station_resource_path),
         ),
     ]

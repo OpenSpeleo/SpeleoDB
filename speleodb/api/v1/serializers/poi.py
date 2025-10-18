@@ -19,7 +19,7 @@ def format_coordinate(value: Any) -> float:
 class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
     """Serializer for POI with all details."""
 
-    created_by = serializers.EmailField(source="created_by.email", read_only=True)
+    user = serializers.EmailField(source="user.email", read_only=True)
 
     class Meta:
         model = PointOfInterest
@@ -28,14 +28,14 @@ class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
             "id",
             "creation_date",
             "modified_date",
-            "created_by",
+            "user",
         ]
 
     def create(self, validated_data: Any) -> PointOfInterest:
-        """Create a new POI and set created_by from request user."""
+        """Create a new POI and set user from request user."""
         request = self.context.get("request")
         if request and hasattr(request, "user") and request.user.is_authenticated:
-            validated_data["created_by"] = request.user
+            validated_data["user"] = request.user
         return super().create(validated_data)
 
     def to_internal_value(self, data: Any) -> Any:
@@ -75,8 +75,6 @@ class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
 class PointOfInterestGeoJSONSerializer(serializers.ModelSerializer[PointOfInterest]):
     """Map serializer for POIs - returns GeoJSON-like format."""
 
-    created_by = serializers.EmailField(source="created_by.email", read_only=True)
-
     class Meta:
         model = PointOfInterest
         fields = [
@@ -85,7 +83,7 @@ class PointOfInterestGeoJSONSerializer(serializers.ModelSerializer[PointOfIntere
             "description",
             "latitude",
             "longitude",
-            "created_by",
+            "user",
             "creation_date",
         ]
 
@@ -101,9 +99,5 @@ class PointOfInterestGeoJSONSerializer(serializers.ModelSerializer[PointOfIntere
                 "id": str(instance.id),
                 "name": instance.name,
                 "description": instance.description,
-                # "created_by": instance.created_by.email
-                # if instance.created_by
-                # else "Unknown",
-                # "creation_date": instance.creation_date.isoformat(),
             },
         }

@@ -32,7 +32,7 @@ class TestHEICSupport(BaseAPIProjectTestCase):
             name="Test Station",
             latitude=0.0,
             longitude=0.0,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Path to test HEIC file
@@ -54,7 +54,7 @@ class TestHEICSupport(BaseAPIProjectTestCase):
             resource_type=StationResourceType.PHOTO,
             title="HEIC Test",
             file=heic_file,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Check resource was created and file was converted to JPEG
@@ -87,7 +87,7 @@ class TestHEICSupport(BaseAPIProjectTestCase):
             resource_type=StationResourceType.PHOTO,
             title="HEIF Test",
             file=heif_file,
-            created_by=self.user,
+            created_by=self.user.email,
         )
         # If pillow-heif is available, it should convert
         assert resource.file.name.endswith(".jpg") or resource.file.name.endswith(
@@ -138,7 +138,7 @@ class TestHEICSupport(BaseAPIProjectTestCase):
             resource_type=StationResourceType.PHOTO,
             title="HEIC Photo",
             file=heic_file,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Check miniature was created

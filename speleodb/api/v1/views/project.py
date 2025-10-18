@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
-    queryset = Project.objects.all().select_related("created_by")
+    queryset = Project.objects.all()
     permission_classes = [UserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
@@ -102,7 +102,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
 
 class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
-    queryset = Project.objects.all().select_related("created_by")
+    queryset = Project.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
 
@@ -125,7 +125,7 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
         user = self.get_user()
 
         data = request.data
-        data["created_by"] = user
+        data["created_by"] = user.email
 
         try:
             serializer = self.get_serializer(data=data, context={"user": user})
@@ -147,7 +147,7 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
 class ProjectGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
     """API view that returns raw GeoJSON data for a project."""
 
-    queryset = Project.objects.all().select_related("created_by")
+    queryset = Project.objects.all()
     permission_classes = [UserHasWebViewerAccess]
     serializer_class = ProjectWithGeoJsonSerializer
     lookup_field = "id"

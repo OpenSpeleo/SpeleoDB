@@ -22,7 +22,6 @@ def format_coordinate(value: Any) -> float:
 class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
     """Serializer for StationResource model."""
 
-    created_by = serializers.EmailField(source="created_by.email", read_only=True)
     file_url = serializers.URLField(source="get_file_url", read_only=True)
     miniature_url = serializers.URLField(source="get_miniature_url", read_only=True)
 
@@ -131,8 +130,6 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
 class StationSerializer(serializers.ModelSerializer[Station]):
     """Serializer for creating stations."""
 
-    created_by = serializers.EmailField(source="created_by.email", read_only=True)
-
     class Meta:
         model = Station
         fields = "__all__"
@@ -210,7 +207,7 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
                 "id": str(instance.id),
                 "name": instance.name,
                 "description": instance.description,
-                "created_by": instance.created_by.email,
+                "created_by": instance.created_by,
                 "creation_date": instance.creation_date.isoformat(),
             },
         }

@@ -51,9 +51,7 @@ class StationsApiView(GenericAPIView[Station], SDBAPIViewMixin):
             for perm in user.permissions
             if perm.level >= PermissionLevel.READ_ONLY
         ]
-        return Station.objects.filter(project__in=user_projects).select_related(
-            "created_by"
-        )
+        return Station.objects.filter(project__in=user_projects)
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         stations = self.get_queryset()
@@ -62,7 +60,7 @@ class StationsApiView(GenericAPIView[Station], SDBAPIViewMixin):
 
 
 class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
-    queryset = Station.objects.all().select_related("created_by")
+    queryset = Station.objects.all()
     permission_classes = [
         (IsObjectDeletion & StationUserHasAdminAccess)
         | (IsObjectEdition & StationUserHasWriteAccess)
@@ -131,7 +129,7 @@ class ProjectStationsApiView(GenericAPIView[Project], SDBAPIViewMixin):
         """Get all stations that belong to the project."""
         project = self.get_object()
         serializer = StationWithResourcesSerializer(
-            project.rel_stations.all().select_related("created_by"),
+            project.rel_stations.all(),
             many=True,
         )
         return SuccessResponse(serializer.data)
@@ -139,11 +137,12 @@ class ProjectStationsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new station for the project."""
         project = self.get_object()
-        # request.data["project"] = project
+        user = self.get_user()
+
         serializer = StationSerializer(data=request.data)
         if serializer.is_valid():
             try:
-                serializer.save(created_by=request.user, project=project)
+                serializer.save(created_by=user.email, project=project)
             except IntegrityError:
                 return ErrorResponse(
                     {
@@ -181,7 +180,7 @@ class ProjectStationsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixin):
         """Get all stations for a project in a map-friendly format."""
         project = self.get_object()
 
-        stations = Station.objects.filter(project=project).select_related("created_by")
+        stations = Station.objects.filter(project=project)
 
         serializer = StationGeoJSONSerializer(stations, many=True)
 

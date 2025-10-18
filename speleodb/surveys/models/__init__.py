@@ -15,12 +15,15 @@ from speleodb.surveys.models.mutex import Mutex
 from speleodb.surveys.models.permission_team import TeamPermission
 from speleodb.surveys.models.permission_user import UserPermission
 from speleodb.surveys.models.point_of_interest import PointOfInterest
-from speleodb.surveys.models.station import Station, StationResource
+from speleodb.surveys.models.station import Station
+from speleodb.surveys.models.station import StationResource
+from speleodb.surveys.models.log_entry import LogEntry
 
 
 __all__ = [
     "Format",
     "GeoJSON",
+    "LogEntry",
     "Mutex",
     "PermissionLevel",
     "PluginRelease",

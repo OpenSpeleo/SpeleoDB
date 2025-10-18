@@ -236,4 +236,4 @@ class POIOwnershipPermission(permissions.BasePermission):
         if not isinstance(obj, PointOfInterest):
             raise TypeError(f"Expected a `PointOfInterest` object, got {type(obj)}")
 
-        return obj.created_by.id == request.user.id
+        return obj.user == request.user

@@ -30,7 +30,7 @@ def poi(user: User) -> PointOfInterest:
         description="Test description",
         latitude=45.123456,
         longitude=-122.654321,
-        created_by=user,
+        user=user,
     )
 
 
@@ -48,8 +48,7 @@ class TestPointOfInterestSerializer:
         assert data["description"] == "Test description"
         assert data["latitude"] == 45.123456  # noqa: PLR2004
         assert data["longitude"] == -122.654321  # noqa: PLR2004
-        assert data["created_by"] == poi.created_by.email
-        # assert data["created_by"] == "testuser@example.com"
+        assert data["user"] == poi.user.email
         assert "creation_date" in data
         assert "modified_date" in data
 
@@ -67,7 +66,7 @@ class TestPointOfInterestSerializer:
         serializer = PointOfInterestSerializer(data=data)
         assert serializer.is_valid()
 
-        # Set created_by in context
+        # Set user in context
         class MockRequest:
             def __init__(self, user: User) -> None:
                 self.user = user
@@ -79,7 +78,7 @@ class TestPointOfInterestSerializer:
         assert saved_poi.description == "New description"
         assert saved_poi.latitude == round(latitude, 7)
         assert saved_poi.longitude == round(longitude, 7)
-        assert saved_poi.created_by == user
+        assert saved_poi.user == user
 
     def test_deserialize_poi_update(self, poi: PointOfInterest) -> None:
         """Test updating a POI from JSON data."""
@@ -143,7 +142,7 @@ class TestPointOfInterestSerializer:
     def test_read_only_fields(self, poi: PointOfInterest) -> None:
         """Test that read-only fields cannot be updated."""
         original_id = poi.id
-        original_created_by = poi.created_by
+        original_user = poi.user
         original_creation_date = poi.creation_date
 
         data = {
@@ -151,7 +150,7 @@ class TestPointOfInterestSerializer:
             "name": poi.name,
             "latitude": f"{poi.latitude}",
             "longitude": f"{poi.longitude}",
-            "created_by": "johndoe@example.com",
+            "user": "johndoe@example.com",
             "creation_date": "2020-01-01T00:00:00Z",
             "modified_date": "2020-01-01T00:00:00Z",
         }
@@ -162,7 +161,7 @@ class TestPointOfInterestSerializer:
 
         # Read-only fields should not change
         assert updated_poi.id == original_id
-        assert updated_poi.created_by == original_created_by
+        assert updated_poi.user == original_user
         assert updated_poi.creation_date == original_creation_date
 
 
@@ -197,13 +196,13 @@ class TestPointOfInterestGeoJSONSerializer:
             name="POI 1",
             latitude=45.0,
             longitude=-122.0,
-            created_by=user,
+            user=user,
         )
         _ = PointOfInterest.objects.create(
             name="POI 2",
             latitude=46.0,
             longitude=-123.0,
-            created_by=user,
+            user=user,
         )
 
         pois = PointOfInterest.objects.all()
@@ -231,7 +230,7 @@ class TestPointOfInterestGeoJSONSerializer:
             description="",
             latitude=45.0,
             longitude=-122.0,
-            created_by=user,
+            user=user,
         )
 
         serializer = PointOfInterestGeoJSONSerializer(poi)

@@ -23,8 +23,6 @@ from django_countries.fields import CountryField
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import PermissionLevel
-from speleodb.users.models import SurveyTeam
-from speleodb.users.models import User
 from speleodb.utils.django_base_models import BaseIntegerChoices
 from speleodb.utils.exceptions import ProjectNotFound
 
@@ -37,6 +35,8 @@ if TYPE_CHECKING:
     from speleodb.surveys.models import Station
     from speleodb.surveys.models import TeamPermission
     from speleodb.surveys.models import UserPermission
+    from speleodb.users.models import SurveyTeam
+    from speleodb.users.models import User
 
 
 class Project(models.Model):
@@ -79,12 +79,10 @@ class Project(models.Model):
         default=None,
     )
 
-    created_by = models.ForeignKey(
-        User,
-        related_name="rel_projects_created",
-        on_delete=models.RESTRICT,
-        blank=False,
+    created_by = models.EmailField(
         null=False,
+        blank=False,
+        help_text="User who created or submitted the entry.",
     )
 
     # Geo Coordinates

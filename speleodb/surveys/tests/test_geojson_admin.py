@@ -29,7 +29,10 @@ def admin_client(client: Any, admin_user: User) -> Any:  # built-in fixture admi
 @pytest.fixture
 def project(db: None, user: User) -> Project:
     return Project.objects.create(
-        name="Geo Admin", description="d", country="US", created_by=user
+        name="Geo Admin",
+        description="d",
+        country="US",
+        created_by=user.email,
     )
 
 

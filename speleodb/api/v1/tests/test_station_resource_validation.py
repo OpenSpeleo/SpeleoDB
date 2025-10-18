@@ -32,7 +32,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
             name="Test Station",
             latitude=45.0,
             longitude=-73.0,
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
     def create_test_file(
@@ -62,7 +62,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 resource_type=StationResourceType.PHOTO,
                 title=f"Test {ext}",
                 file=self.create_test_file(f"test{ext}"),
-                created_by=self.user,
+                created_by=self.user.email,
             )
             # Should not raise ValidationError
             resource.full_clean()
@@ -77,7 +77,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 resource_type=StationResourceType.PHOTO,
                 title="Test Photo",
                 file=self.create_test_file(filename),
-                created_by=self.user,
+                created_by=self.user.email,
             )
 
             with pytest.raises(ValidationError) as exc_info:
@@ -102,7 +102,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 resource_type=StationResourceType.VIDEO,
                 title=f"Test {ext}",
                 file=self.create_test_file(f"test{ext}"),
-                created_by=self.user,
+                created_by=self.user.email,
             )
             # Should not raise ValidationError
             resource.full_clean()
@@ -117,7 +117,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 resource_type=StationResourceType.VIDEO,
                 title="Test Video",
                 file=self.create_test_file(filename),
-                created_by=self.user,
+                created_by=self.user.email,
             )
 
             with pytest.raises(ValidationError) as exc_info:
@@ -142,7 +142,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 resource_type=StationResourceType.DOCUMENT,
                 title=f"Test {ext}",
                 file=self.create_test_file(f"test{ext}"),
-                created_by=self.user,
+                created_by=self.user.email,
             )
             # Should not raise ValidationError
             resource.full_clean()
@@ -157,7 +157,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 resource_type=StationResourceType.DOCUMENT,
                 title="Test Document",
                 file=self.create_test_file(filename),
-                created_by=self.user,
+                created_by=self.user.email,
             )
 
             with pytest.raises(ValidationError) as exc_info:
@@ -184,7 +184,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 title="Test",
                 file=self.create_test_file("test.txt"),
                 text_content="Some content",
-                created_by=self.user,
+                created_by=self.user.email,
             )
 
             with pytest.raises(ValidationError) as exc_info:

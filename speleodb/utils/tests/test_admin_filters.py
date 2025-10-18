@@ -71,7 +71,7 @@ class TestProjectCountryFilter:
         for country in random_countries:
             project = ProjectFactory.create(
                 country=country.code,
-                created_by=user,
+                created_by=user.email,
             )
             projects.append(project)
 
@@ -134,13 +134,13 @@ class TestProjectCountryFilter:
         for _ in range(5):
             _ = ProjectFactory.create(
                 country=country_A.code,  # Same country for all
-                created_by=user,
+                created_by=user.email,
             )
 
         # Create one project with a different country
         _ = ProjectFactory.create(
             country=country_B.code,
-            created_by=user,
+            created_by=user.email,
         )
 
         request = request_factory.get("/admin/")
@@ -240,7 +240,7 @@ class TestProjectCountryFilter:
         for country in countries_random:
             _ = ProjectFactory.create(
                 country=country.code,
-                created_by=user,
+                created_by=user.email,
             )
 
         request = request_factory.get("/admin/")
@@ -271,12 +271,12 @@ class TestProjectCountryFilter:
         # Create projects
         project1 = ProjectFactory.create(
             country="US",
-            created_by=user,
+            created_by=user.email,
         )
 
         _ = ProjectFactory.create(
             country="FR",
-            created_by=user,
+            created_by=user.email,
         )
 
         # Delete one project
@@ -304,7 +304,7 @@ class TestProjectCountryFilter:
         for _ in range(100):
             _ = ProjectFactory.create(
                 country=next(countries_iter).code,
-                created_by=user,
+                created_by=user.email,
             )
 
         request = request_factory.get("/admin/")

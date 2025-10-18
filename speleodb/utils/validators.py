@@ -38,7 +38,7 @@ class ImageWithHeicSupportValidator(FileExtensionValidator):
         return self.storage_extensions
 
 
-class StationResourceFileValidator(FileExtensionValidator):
+class AttachmentValidator(FileExtensionValidator):
     """
     Validator for StationResource files that allows HEIC/HEIF for photos.
 

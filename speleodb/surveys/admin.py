@@ -18,6 +18,7 @@ from django.utils.html import format_html
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import GeoJSON
+from speleodb.surveys.models import LogEntry
 from speleodb.surveys.models import Mutex
 from speleodb.surveys.models import PluginRelease
 from speleodb.surveys.models import PointOfInterest
@@ -101,14 +102,14 @@ class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "description_preview",
         "latitude",
         "longitude",
-        "created_by",
+        "user",
         "creation_date",
         "modified_date",
     )
     ordering = ("name",)
     list_filter = ["creation_date", "modified_date"]
     search_fields = ["name", "description"]
-    readonly_fields = ("id", "creation_date", "modified_date", "coordinates")
+    readonly_fields = ("id", "coordinates", "creation_date", "modified_date", "user")
 
     fieldsets = (
         ("Basic Information", {"fields": ("name", "description")}),
@@ -124,7 +125,7 @@ class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             {
                 "fields": (
                     "id",
-                    "created_by",
+                    "user",
                     "creation_date",
                     "modified_date",
                 ),
@@ -166,6 +167,7 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "created_by",
     )
     ordering = ("name",)
+    readonly_fields = ("created_by", "creation_date", "modified_date")
 
     list_filter = [ProjectCountryFilter]
 
@@ -285,7 +287,7 @@ class StationResourceInline(admin.TabularInline):  # type: ignore[type-arg]
         "creation_date",
         "modified_date",
     )
-    readonly_fields = ("creation_date", "modified_date", "created_by")
+    readonly_fields = ("created_by", "creation_date", "modified_date", "created_by")
     ordering = ("-modified_date",)
 
 
@@ -304,7 +306,13 @@ class StationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     ordering = ("project", "name")
     list_filter = [StationProjectFilter, "creation_date"]
     search_fields = ["name", "description", "project__name"]
-    readonly_fields = ("id", "creation_date", "modified_date", "resource_count")
+    readonly_fields = (
+        "id",
+        "created_by",
+        "creation_date",
+        "modified_date",
+        "resource_count",
+    )
     inlines = [StationResourceInline]
 
     fieldsets = (
@@ -353,6 +361,7 @@ class StationResourceAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     search_fields = ["title", "description", "station__name", "text_content"]
     readonly_fields = (
         "id",
+        "created_by",
         "creation_date",
         "modified_date",
         "is_file_based",
@@ -439,3 +448,30 @@ class GeoJSONAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if obj is not None:
             return False
         return super().has_change_permission(request, obj)
+
+
+@admin.register(LogEntry)
+class LogEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "id",
+        "station",
+        "created_by",
+        "title",
+        "creation_date",
+        "modified_date",
+    )
+    list_filter = ("station", "creation_date", "modified_date")
+    search_fields = (
+        "title",
+        "notes",
+        "created_by",
+        "station__name",
+        "station__project__name",
+    )
+    readonly_fields = ("created_by", "creation_date", "modified_date")
+    ordering = ("-creation_date",)
+    fieldsets = (
+        (None, {"fields": ("station", "created_by", "title", "notes")}),
+        ("Attachment", {"fields": ("attachment",)}),
+        ("Timestamps", {"fields": ("creation_date", "modified_date")}),
+    )

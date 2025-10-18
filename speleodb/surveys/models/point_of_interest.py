@@ -49,9 +49,9 @@ class PointOfInterest(models.Model):
     )
 
     # Metadata
-    created_by = models.ForeignKey(
+    user = models.ForeignKey(
         "users.User",
-        related_name="pois_created",
+        related_name="pois",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -68,7 +68,7 @@ class PointOfInterest(models.Model):
             models.Index(fields=["latitude", "longitude"]),  # For spatial queries
             models.Index(fields=["name"]),  # For name lookups
             models.Index(fields=["creation_date"]),  # For recent POIs
-            models.Index(fields=["created_by"]),  # For user's POIs
+            models.Index(fields=["user"]),  # For user's POIs
         ]
 
     def __str__(self) -> str:

@@ -24,16 +24,16 @@ class TestStationResourceReadOnlyFields:
     def setup_method(self) -> None:
         """Set up test data."""
         self.client = APIClient()
-        self.user = UserFactory()
-        self.project = ProjectFactory(created_by=self.user)
+        self.user = UserFactory.create()
+        self.project = ProjectFactory(created_by=self.user.email)
         # Give user write permission
         self.permission = UserPermissionFactory(
             target=self.user,
             project=self.project,
             level=PermissionLevel.READ_AND_WRITE,
         )
-        self.station = StationFactory(project=self.project, created_by=self.user)
-        self.client.force_authenticate(user=self.user)  # type: ignore[arg-type]
+        self.station = StationFactory(project=self.project, created_by=self.user.email)
+        self.client.force_authenticate(user=self.user)
 
     def test_resource_type_cannot_be_changed_from_note_to_sketch(self) -> None:
         """Test that changing resource_type from note to sketch is rejected."""

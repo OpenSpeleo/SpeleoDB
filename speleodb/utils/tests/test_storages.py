@@ -7,9 +7,9 @@ import re
 from django.conf import settings
 from django.test import TestCase
 
+from speleodb.utils.storages import AttachmentStorage
 from speleodb.utils.storages import PersonPhotoStorage
 from speleodb.utils.storages import S3MediaStorage
-from speleodb.utils.storages import StationResourceStorage
 
 
 class PersonPhotoStorageS3Tests(TestCase):
@@ -69,19 +69,19 @@ class S3MediaStorageTests(TestCase):
         assert re.search(r"^[a-f0-9]{32}_test\.jpg$", name)
 
 
-class StationResourceStorageTests(TestCase):
+class AttachmentStorageTests(TestCase):
     """Test S3 storage backend configuration."""
 
     def test_s3_storage_configuration(self) -> None:
         """Test S3 storage is configured correctly."""
 
-        storage = StationResourceStorage()
+        storage = AttachmentStorage()
 
         # Check public access settings
         assert storage.default_acl == "private"
         assert not storage.file_overwrite
         assert not storage.custom_domain
-        assert storage.location == "stations/resources"
+        assert storage.location == "attachments"
         assert storage.bucket_name == settings.AWS_STORAGE_BUCKET_NAME
 
         # Check cache control
@@ -91,7 +91,7 @@ class StationResourceStorageTests(TestCase):
     def test_s3_unique_filename_generation(self) -> None:
         """Test that S3 storage does not modify filenames."""
 
-        storage = StationResourceStorage()
+        storage = AttachmentStorage()
 
         for filename in ["test.jpg", "test.mp4", "test.pdf"]:
             assert storage.get_available_name(filename) == filename

@@ -53,8 +53,8 @@ def admin_user(db: None) -> User:
 
 
 @pytest.fixture
-def project(db: None) -> Project:
-    return ProjectFactory.create(created_by=UserFactory())
+def project(db: None, user: User) -> Project:
+    return ProjectFactory.create(created_by=user.email)
 
 
 @pytest.fixture

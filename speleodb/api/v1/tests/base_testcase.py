@@ -64,7 +64,7 @@ class BaseProjectTestCaseMixin(BaseUserTestCaseMixin):
 
     def setUp(self) -> None:
         super().setUp()
-        self.project = ProjectFactory.create(created_by=self.user)
+        self.project = ProjectFactory.create(created_by=self.user.email)
 
     def set_test_project_permission(
         self, level: PermissionLevel, permission_type: PermissionType

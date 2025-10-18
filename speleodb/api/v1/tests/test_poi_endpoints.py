@@ -46,7 +46,7 @@ class TestPointOfInterestEndpoints:
             description="Test description",
             latitude=45.123456,
             longitude=-122.654321,
-            created_by=user,
+            user=user,
         )
 
     # List endpoint tests
@@ -91,7 +91,7 @@ class TestPointOfInterestEndpoints:
                 name=f"POI {i}",
                 latitude=45.0 + i,
                 longitude=-122.0 + i,
-                created_by=user,
+                user=user,
             )
 
         api_client.force_authenticate(user=user)
@@ -122,7 +122,7 @@ class TestPointOfInterestEndpoints:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["data"]["poi"]["created_by"] == "testuser@example.com"
+        assert data["data"]["poi"]["user"] == "testuser@example.com"
 
     def test_retrieve_poi_not_found(self, api_client: APIClient, user: User) -> None:
         """Test retrieving a non-existent POI."""
@@ -166,11 +166,11 @@ class TestPointOfInterestEndpoints:
         response_data = response.json()
         assert response_data["success"] is True
         assert response_data["data"]["poi"]["name"] == "New POI"
-        assert response_data["data"]["poi"]["created_by"] == "testuser@example.com"
+        assert response_data["data"]["poi"]["user"] == "testuser@example.com"
 
         # Verify POI was created in database
         poi = PointOfInterest.objects.get(name="New POI")
-        assert poi.created_by == user
+        assert poi.user == user
 
     def test_create_poi_minimal_data(self, api_client: APIClient, user: User) -> None:
         """Test creating a POI with minimal data."""
@@ -359,13 +359,13 @@ class TestPointOfInterestEndpoints:
             description="Description 1",
             latitude=45.0,
             longitude=-122.0,
-            created_by=user,
+            user=user,
         )
         PointOfInterest.objects.create(
             name="POI 2",
             latitude=46.0,
             longitude=-123.0,
-            created_by=user,  # Using the same user
+            user=user,  # Using the same user
         )
 
         url = reverse("api:v1:pois-geojson")

@@ -76,14 +76,14 @@ class PersonPhotoStorage(BaseS3Storage):
     querystring_auth = False  # No signed URLs - relies on bucket policy
 
 
-class StationResourceStorage(S3Storage):
+class AttachmentStorage(S3Storage):
     """Private S3 storage for Station Resources uploads.
 
-    Files are stored under the "stations/resources/" prefix; the model's
+    Files are stored under the "attachments/" prefix; the model's
     upload_to callable should place them into "project.id/station.id/" subfolder.
     """
 
-    """Custom S3 storage specifically for station resources."""
+    """Custom S3 storage specifically for attachments."""
 
     bucket_name = BaseS3Storage.bucket_name
     file_overwrite = BaseS3Storage.file_overwrite
@@ -91,7 +91,7 @@ class StationResourceStorage(S3Storage):
     # Cache control for performance
     object_parameters = BaseS3Storage.object_parameters
 
-    location = "stations/resources"
+    location = "attachments"
     default_acl = "private"  # Keep files private for security
 
     # Use signed URLs for private files

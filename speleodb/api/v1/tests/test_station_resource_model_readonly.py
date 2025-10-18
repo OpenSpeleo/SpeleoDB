@@ -18,9 +18,9 @@ class TestStationResourceModelReadOnly:
 
     def setup_method(self) -> None:
         """Set up test data."""
-        self.user = UserFactory()
-        self.project = ProjectFactory(created_by=self.user)
-        self.station = StationFactory(project=self.project, created_by=self.user)
+        self.user = UserFactory.create()
+        self.project = ProjectFactory(created_by=self.user.email)
+        self.station = StationFactory(project=self.project, created_by=self.user.email)
 
     def test_model_save_prevents_resource_type_change(self) -> None:
         """Test that changing resource_type at model level raises ValueError."""
@@ -30,7 +30,7 @@ class TestStationResourceModelReadOnly:
             resource_type=StationResourceType.NOTE,
             title="Test Note",
             text_content="This is a test note",
-            created_by=self.user,
+            created_by=self.user.email,
         )  # type: ignore[assignment]
 
         # Try to change resource type directly and save
@@ -52,7 +52,7 @@ class TestStationResourceModelReadOnly:
             resource_type=StationResourceType.SKETCH,
             title="Test Sketch",
             text_content='{"type": "sketch_with_history"}',
-            created_by=self.user,
+            created_by=self.user.email,
         )  # type: ignore[assignment]
 
         # Update title but keep same resource type
@@ -76,7 +76,7 @@ class TestStationResourceModelReadOnly:
                 resource_type=StationResourceType.NOTE,
                 title=f"Note {i}",
                 text_content=f"Content {i}",
-                created_by=self.user,
+                created_by=self.user.email,
             )  # type:ignore[misc]
             for i in range(3)
         ]  # pyright: ignore[reportAssignmentType]
@@ -99,7 +99,7 @@ class TestStationResourceModelReadOnly:
             resource_type=StationResourceType.NOTE,
             title="New Note",
             text_content="This is a note",
-            created_by=self.user,
+            created_by=self.user.email,
         )
 
         # Should save without error

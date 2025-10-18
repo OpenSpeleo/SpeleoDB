@@ -73,7 +73,7 @@ class ProjectFactory(DjangoModelFactory[Project]):
     # Defer to Faker for a valid ISO country code; avoids empty-iterator races
     country: str = factory.Faker("country_code")  # type: ignore[assignment]
 
-    created_by: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
+    created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
 
     class Meta:
         model = Project
@@ -162,7 +162,7 @@ class StationFactory(DjangoModelFactory[Station]):
     description: str = factory.Faker("text", max_nb_chars=200)  # type: ignore[assignment]
     latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
     longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
-    created_by: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
+    created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
 
     @classmethod
     def create_with_coordinates(cls, lat: float, lng: float, **kwargs: Any) -> Station:
@@ -232,7 +232,7 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
     )  # type: ignore[assignment]
     title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
     description: str = factory.Faker("text", max_nb_chars=300)  # type: ignore[assignment]
-    created_by: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
+    created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
 
     text_content: str = ""
 

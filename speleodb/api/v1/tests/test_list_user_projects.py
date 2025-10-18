@@ -35,7 +35,7 @@ class TestProjectInteraction(BaseAPITestCase):
 
         for project_id in range(self.PROJECT_COUNT):
             # spread equally some projects with user and team access
-            project = ProjectFactory.create(created_by=self.user)
+            project = ProjectFactory.create(created_by=self.user.email)
             if project_id % 2 == 0:
                 perm_lvls.append(
                     UserPermissionFactory(  # type: ignore[arg-type]
