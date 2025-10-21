@@ -4,6 +4,16 @@
 
 from __future__ import annotations
 
+import logging
+
+import sentry_sdk
+from sentry_sdk.integrations.boto3 import Boto3Integration
+
+# from sentry_sdk.integrations.celery import CeleryIntegration
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
+
 from .base import *  # noqa: F403
 from .base import DATABASES
 from .base import INSTALLED_APPS
@@ -139,18 +149,61 @@ LOGGING = {
     },
     "root": {"level": "INFO", "handlers": ["console"]},
     "loggers": {
-        "django.request": {
-            "handlers": ["mail_admins"],
+        "django.db.backends": {
             "level": "ERROR",
-            "propagate": True,
+            "handlers": ["console"],
+            "propagate": False,
+        },
+        "django.request": {
+            "level": "ERROR",
+            "handlers": ["mail_admins"],
+            "propagate": False,
+        },
+        # Errors logged by the SDK itself
+        "sentry_sdk": {
+            "level": "ERROR",
+            "handlers": ["console"],
+            "propagate": False,
         },
         "django.security.DisallowedHost": {
             "level": "ERROR",
             "handlers": ["console", "mail_admins"],
-            "propagate": True,
+            "propagate": False,
         },
     },
 }
+
+
+# Sentry
+# ------------------------------------------------------------------------------
+SENTRY_DSN: str | None = env("SENTRY_DSN", None)
+
+if SENTRY_DSN is not None:
+    SENTRY_LOG_LEVEL: int = env.int("DJANGO_SENTRY_LOG_LEVEL", logging.INFO)
+
+    sentry_logging = LoggingIntegration(
+        level=SENTRY_LOG_LEVEL,  # Capture info and above as breadcrumbs
+        event_level=logging.ERROR,  # Send errors as events
+    )
+    integrations = [
+        sentry_logging,
+        DjangoIntegration(),
+        # CeleryIntegration(monitor_beat_tasks=True),
+        Boto3Integration(),
+        RedisIntegration(),
+    ]
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=integrations,
+        environment=env("SENTRY_ENVIRONMENT", default="production"),
+        send_default_pii=env.bool("SENTRY_SEND_DEFAULT_PII", default=True),
+        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
+        profiles_sample_rate=env.float("SENTRY_PROFILES_SAMPLE_RATE", default=0.1),
+        profile_lifecycle=env("SENTRY_PROFILE_LIFECYCLE", default="trace"),
+        enable_logs=True,
+        enable_backpressure_handling=True,
+    )
+
 
 # django-rest-framework
 # -------------------------------------------------------------------------------
@@ -161,5 +214,3 @@ SPECTACULAR_SETTINGS["SERVERS"] = [
         "description": "Production server",
     },
 ]
-# Your stuff...
-# ------------------------------------------------------------------------------

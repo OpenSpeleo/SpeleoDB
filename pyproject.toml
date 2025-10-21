@@ -75,6 +75,10 @@ dependencies = [
     "django-celery-beat==2.8.1", # https://github.com/celery/django-celery-beat
     "flower==2.0.1",             # https://github.com/mher/flower
     "watchfiles==1.1.0",         # https://github.com/samuelcolvin/watchfiles
+
+    # Sentry-SDK
+    # ------------------------------------------------------------------------------
+    "sentry-sdk[django]==2.42.1", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
