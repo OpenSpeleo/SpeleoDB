@@ -156,15 +156,15 @@ class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
-        "name",
-        "short_description",
-        "creation_date",
-        "modified_date",
         "country",
+        "created_by",
+        "creation_date",
+        "fork_from",
         "latitude",
         "longitude",
-        "fork_from",
-        "created_by",
+        "modified_date",
+        "name",
+        "short_description",
     )
     ordering = ("name",)
     readonly_fields = ("created_by", "creation_date", "modified_date")

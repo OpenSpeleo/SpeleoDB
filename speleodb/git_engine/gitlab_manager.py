@@ -7,6 +7,7 @@ import logging
 import shutil
 from dataclasses import dataclass
 from functools import cache
+from functools import lru_cache
 from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -27,7 +28,9 @@ if TYPE_CHECKING:
     import uuid
     from collections.abc import Callable
 
-    from gitlab.v4.objects.projects import Project
+    from gitlab.v4.objects.projects import Project as GL_Project
+
+    from speleodb.surveys.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +107,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             self._gl.enable_debug()
 
     @check_initialized
-    def create_project(self, project_id: uuid.UUID) -> None:
+    def create_project(self, project: Project) -> None:
         """Trying to create the repository in Gitlab."""
         if self._gl is None:
             raise ValueError("Gitlab API has not been initialized")
@@ -112,12 +115,14 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         gitlab_creds = GitlabCredentials.get()
 
         self._gl.projects.create(
-            {"name": str(project_id), "namespace_id": str(gitlab_creds.group_id)}
+            {"name": str(project.id), "namespace_id": str(gitlab_creds.group_id)}
         )
 
     @check_initialized
     def create_or_clone_project(
-        self, project_id: uuid.UUID, base_dir: str | Path | None = None
+        self,
+        project: Project,
+        base_dir: str | Path | None = None,
     ) -> GitRepo | None:
         gitlab_creds = GitlabCredentials.get()
 
@@ -127,16 +132,16 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             else Path(settings.DJANGO_GIT_PROJECTS_DIR)
         )
 
-        project_dir = git_repo_base_dir / str(project_id)
+        project_dir = git_repo_base_dir / str(project.id)
 
         shutil.rmtree(project_dir, ignore_errors=True)
 
         project_dir.parent.mkdir(exist_ok=True, parents=True)
-        git_url = f"{settings.GITLAB_HTTP_PROTOCOL}://oauth2:{gitlab_creds.token}@{gitlab_creds.instance}/{gitlab_creds.group_name}/{project_id}.git"
+        git_url = f"{settings.GITLAB_HTTP_PROTOCOL}://oauth2:{gitlab_creds.token}@{gitlab_creds.instance}/{gitlab_creds.group_name}/{project.id}.git"
 
         try:
             # try to create the repository in Gitlab
-            self.create_project(project_id=project_id)
+            self.create_project(project)
 
             git_repo = GitRepo.init(project_dir)
 
@@ -157,32 +162,31 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
 
             return repo
 
-    # cache data for no longer than ten minutes
-    @cached(cache=TTLCache(maxsize=100, ttl=600))
+    @lru_cache(maxsize=256)  # noqa: B019
     @check_initialized
-    def _get_project(self, project_id: uuid.UUID) -> Project | None:
+    def _get_project(self, project: Project) -> GL_Project | None:
         if self._gl is None:
             raise ValueError("Gitlab API has not been initialized")
 
         gitlab_creds = GitlabCredentials.get()
         try:
-            return self._gl.projects.get(f"{gitlab_creds.group_name}/{project_id}")
+            return self._gl.projects.get(f"{gitlab_creds.group_name}/{project.id}")
         except gitlab.exceptions.GitlabHttpError:
             # Communication Problem
             return None
 
     @check_initialized
-    def get_commit_history(self, project_id: uuid.UUID) -> list[dict[str, Any]] | None:
+    def get_commit_history(self, project: Project) -> list[dict[str, Any]] | None:
         try:
             try:
-                project = self._get_project(project_id)
+                gl_project = self._get_project(project)
             except gitlab.exceptions.GitlabGetError as e:
                 raise RuntimeError from e
 
-            if project is None:
+            if gl_project is None:
                 return None
 
-            commits = project.commits.list(get_all=True, all=True)
+            commits = gl_project.commits.list(get_all=True, all=True)
             data = [json.loads(commit.to_json()) for commit in commits]
 
             # Removes traces of a download URL from gitlab
@@ -194,17 +198,17 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
 
         return data
 
-    def get_last_commit_hash(self, project_id: uuid.UUID) -> str | None:
+    def get_last_commit_hash(self, project: Project) -> str | None:
         try:
             try:
-                project = self._get_project(project_id)
+                gl_project = self._get_project(project)
             except gitlab.exceptions.GitlabGetError as e:
                 raise RuntimeError from e
 
-            if project is None:
+            if gl_project is None:
                 return None
 
-            branch = project.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
+            branch = gl_project.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
 
             # Get the current hash of the branch
             return branch.commit["id"]  # type: ignore[no-any-return]

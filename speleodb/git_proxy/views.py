@@ -166,7 +166,7 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
                     break
 
                 if tentative_id == 0:
-                    GitlabManager.create_or_clone_project(project.id)
+                    GitlabManager.create_or_clone_project(project)
             else:
                 return generate_git_error_response(
                     "Impossible to connect with Gitlab distant server.",

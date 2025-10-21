@@ -18,13 +18,13 @@ if TYPE_CHECKING:
 @shared_task()
 def refresh_project_geojson(project_id: UUID) -> None:
     """Refresh the geojson for all projects."""
-    _ = Project.objects.get(id=project_id)
+    project = Project.objects.get(id=project_id)
 
     with tempfile.TemporaryDirectory() as _temp_dir:
         temp_dir = Path(_temp_dir)
 
         # Clone the project in a temporary directory
-        git_repo = GitlabManager.create_or_clone_project(project_id, temp_dir)
+        git_repo = GitlabManager.create_or_clone_project(project, temp_dir)
         if git_repo is None:
             raise RuntimeError(
                 "Impossible to clone the project in a temporary directory."

@@ -267,7 +267,7 @@ class Project(models.Model):
     def git_repo(self) -> GitRepo:
         for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
             if not self.git_repo_dir.exists():
-                git_repo = GitlabManager.create_or_clone_project(self.id)
+                git_repo = GitlabManager.create_or_clone_project(self)
                 if git_repo is None:
                     raise RuntimeError("Impossible to connect to the Gitlab API.")
 
@@ -296,7 +296,7 @@ class Project(models.Model):
     def commit_history(self) -> list[dict[str, Any]] | None:
         try:
             if (
-                commit_history := GitlabManager.get_commit_history(project_id=self.id)
+                commit_history := GitlabManager.get_commit_history(project=self)
             ) is None:
                 return []
 
