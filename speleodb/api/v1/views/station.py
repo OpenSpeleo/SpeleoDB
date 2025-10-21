@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from rest_framework.serializers import ModelSerializer
 
 
-class StationsApiView(GenericAPIView[Station], SDBAPIViewMixin):
+class BaseStationsApiView(GenericAPIView[Station], SDBAPIViewMixin):
     """
     Simple view to get all stations that belongs to a user or create a station.
     """
@@ -53,10 +53,36 @@ class StationsApiView(GenericAPIView[Station], SDBAPIViewMixin):
         ]
         return Station.objects.filter(project__in=user_projects)
 
+
+class StationsApiView(BaseStationsApiView):
+    """
+    Simple view to get all stations that belongs to a user.
+    """
+
+    serializer_class = StationSerializer
+
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         stations = self.get_queryset()
-        serializer = StationWithResourcesSerializer(stations, many=True)
+        serializer = self.get_serializer(stations, many=True)
         return SuccessResponse(serializer.data)
+
+
+class StationsGeoJSONApiView(BaseStationsApiView):
+    """
+    Simple view to get all stations for a user as GeoJSON-compatible data.
+    Used by the map viewer to display station markers.
+    """
+
+    serializer_class = StationGeoJSONSerializer
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Get all stations for a user in a map-friendly format."""
+        stations = self.get_queryset()
+        serializer = self.get_serializer(stations, many=True)
+
+        return SuccessResponse(
+            {"type": "FeatureCollection", "features": serializer.data}
+        )
 
 
 class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
@@ -182,7 +208,7 @@ class ProjectStationsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixin):
 
         stations = Station.objects.filter(project=project)
 
-        serializer = StationGeoJSONSerializer(stations, many=True)
+        serializer = self.get_serializer(stations, many=True)
 
         return SuccessResponse(
             {"type": "FeatureCollection", "features": serializer.data}

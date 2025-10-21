@@ -25,6 +25,9 @@ from speleodb.utils.video_processing import VideoProcessor
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from speleodb.surveys.models import LogEntry
+
 
 class Station(models.Model):
     """
@@ -33,7 +36,8 @@ class Station(models.Model):
     """
 
     # type checking
-    rel_resources: models.QuerySet[StationResource]
+    resources: models.QuerySet[StationResource]
+    log_entries: models.QuerySet[LogEntry]
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -100,10 +104,6 @@ class Station(models.Model):
             return (float(self.longitude), float(self.latitude))
         return None
 
-    @property
-    def resources(self) -> models.QuerySet[StationResource]:
-        return self.rel_resources.all()
-
 
 class StationResourceType(models.TextChoices):
     PHOTO = "photo", "Photo"
@@ -136,7 +136,7 @@ class StationResource(models.Model):
     # Station relationship
     station = models.ForeignKey(
         Station,
-        related_name="rel_resources",
+        related_name="resources",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -438,26 +438,6 @@ class StationResource(models.Model):
         # Save miniature
         self.miniature.save(miniature_name, miniature_content, save=False)
         logger.info(f"Generated document miniature for resource {self.id}")
-
-    def get_file_url(self) -> str | None:
-        """Get the file URL (public URL for S3, regular URL for local)."""
-        if not self.file:
-            return None
-
-        try:
-            return self.file.url  # type: ignore[no-any-return]
-        except AttributeError:
-            return None
-
-    def get_miniature_url(self) -> str | None:
-        """Get the miniature URL if available."""
-        if not self.miniature:
-            return None
-
-        try:
-            return self.miniature.url  # type: ignore[no-any-return]
-        except AttributeError:
-            return None
 
     @property
     def is_file_based(self) -> bool:

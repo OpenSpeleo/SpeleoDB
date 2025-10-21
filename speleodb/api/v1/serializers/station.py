@@ -22,9 +22,6 @@ def format_coordinate(value: Any) -> float:
 class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
     """Serializer for StationResource model."""
 
-    file_url = serializers.URLField(source="get_file_url", read_only=True)
-    miniature_url = serializers.URLField(source="get_miniature_url", read_only=True)
-
     class Meta:
         model = StationResource
         fields = [
@@ -33,8 +30,7 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
             "creation_date",
             "description",
             "file",
-            "file_url",
-            "miniature_url",
+            "miniature",
             "modified_date",
             "resource_type",
             "station",
@@ -47,18 +43,8 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
             "created_by",
             "creation_date",
             "modified_date",
-            "file_url",
-            "miniature_url",
             "station",
         ]
-
-    def get_file_url(self, obj: StationResource) -> str | None:
-        """Get the full URL for the file if it exists."""
-        return obj.get_file_url()
-
-    def get_miniature_url(self, obj: StationResource) -> str | None:
-        """Get miniature URL if available (for PHOTO, VIDEO, DOCUMENT resources)."""
-        return obj.get_miniature_url()
 
     def validate_resource_type(self, value: str) -> str:
         """Prevent resource_type from being changed during updates."""
@@ -193,6 +179,8 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
             "longitude",
             "created_by",
             "creation_date",
+            "modified_date",
+            "project",
         ]
 
     def to_representation(self, instance: Station) -> dict[str, Any]:
@@ -209,5 +197,7 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
                 "description": instance.description,
                 "created_by": instance.created_by,
                 "creation_date": instance.creation_date.isoformat(),
+                "modified_date": instance.modified_date.isoformat(),
+                "project": str(instance.project.id),
             },
         }

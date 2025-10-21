@@ -15,9 +15,9 @@ from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import StationUserHasAdminAccess
 from speleodb.api.v1.permissions import StationUserHasReadAccess
 from speleodb.api.v1.permissions import StationUserHasWriteAccess
-from speleodb.api.v1.serializers.station import StationResourceSerializer
+from speleodb.api.v1.serializers.log_entry import LogEntrySerializer
+from speleodb.surveys.models import LogEntry
 from speleodb.surveys.models import Station
-from speleodb.surveys.models import StationResource
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from rest_framework.response import Response
 
 
-class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
+class LogEntryApiView(GenericAPIView[Station], SDBAPIViewMixin):
     queryset = Station.objects.all()
     permission_classes = [
         StationUserHasWriteAccess | (IsReadOnly & StationUserHasReadAccess)
@@ -38,7 +38,8 @@ class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station = self.get_object()
-        serializer = StationResourceSerializer(station.resources, many=True)
+
+        serializer = LogEntrySerializer(station.log_entries, many=True)
 
         return SuccessResponse(serializer.data)
 
@@ -47,8 +48,7 @@ class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
         station = self.get_object()
         user = self.get_user()
 
-        serializer = StationResourceSerializer(data=request.data)
-
+        serializer = LogEntrySerializer(data=request.data)
         if serializer.is_valid():
             try:
                 # Save with the station and created_by
@@ -81,8 +81,8 @@ class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
         )
 
 
-class StationResourceSpecificApiView(GenericAPIView[StationResource], SDBAPIViewMixin):
-    queryset = StationResource.objects.all()
+class LogEntrySpecificApiView(GenericAPIView[LogEntry], SDBAPIViewMixin):
+    queryset = LogEntry.objects.all()
     permission_classes = [
         (IsObjectDeletion & StationUserHasAdminAccess)
         | (IsObjectEdition & StationUserHasWriteAccess)
@@ -91,8 +91,8 @@ class StationResourceSpecificApiView(GenericAPIView[StationResource], SDBAPIView
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        station_resource = self.get_object()
-        serializer = StationResourceSerializer(station_resource)
+        log_entry = self.get_object()
+        serializer = LogEntrySerializer(log_entry)
 
         return SuccessResponse(serializer.data)
 
@@ -100,11 +100,7 @@ class StationResourceSpecificApiView(GenericAPIView[StationResource], SDBAPIView
         self, request: Request, partial: bool, *args: Any, **kwargs: Any
     ) -> Response:
         project = self.get_object()
-        serializer = StationResourceSerializer(
-            project,
-            data=request.data,
-            partial=partial,
-        )
+        serializer = LogEntrySerializer(project, data=request.data, partial=partial)
 
         if serializer.is_valid():
             serializer.save()
@@ -121,19 +117,16 @@ class StationResourceSpecificApiView(GenericAPIView[StationResource], SDBAPIView
         return self._modify_obj(request, partial=True, **kwargs)
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        station_resource = self.get_object()
+        log_entry = self.get_object()
 
         # Backup object `id` before deletion
-        resource_id = station_resource.id
+        log_id = log_entry.id
 
         # Delete associated files if they exist
-        if file := station_resource.file:
-            file.delete(save=False)
-
-        if file := station_resource.miniature:
-            file.delete(save=False)
+        if attachment := log_entry.attachment:
+            attachment.delete(save=False)
 
         # Delete object itsel
-        station_resource.delete()
+        log_entry.delete()
 
-        return SuccessResponse({"id": str(resource_id)})
+        return SuccessResponse({"id": str(log_id)})

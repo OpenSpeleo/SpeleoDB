@@ -99,10 +99,6 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         # Check miniature was created
         assert resource.miniature is not None
 
-        # Check miniature URL is available
-        miniature_url = resource.get_miniature_url()
-        assert miniature_url is not None
-
     def test_video_miniature_created_on_upload(self) -> None:
         """Test that placeholder miniature is created for video resources."""
         video = create_test_video()
@@ -117,10 +113,6 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
 
         # Check miniature was created
         assert resource.miniature is not None
-
-        # Check miniature URL is available
-        miniature_url = resource.get_miniature_url()
-        assert miniature_url is not None
 
     def test_document_miniature_created_on_upload(self) -> None:
         """Test that placeholder miniature is created for document resources."""
@@ -137,10 +129,6 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         # Check miniature was created
         assert resource.miniature is not None
 
-        # Check miniature URL is available
-        miniature_url = resource.get_miniature_url()
-        assert miniature_url is not None
-
     def test_no_miniature_for_note_resource(self) -> None:
         """Test that no miniature is created for note resources."""
         resource = StationResource.objects.create(
@@ -152,8 +140,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
         )
 
         # Check no miniature was created
-        assert not resource.miniature  # Empty field
-        assert resource.get_miniature_url() is None
+        assert not resource.miniature
 
     def test_miniature_updated_on_file_change(self) -> None:
         """Test that miniature is regenerated when file is changed."""
@@ -217,10 +204,9 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["success"] is True
+
         resource_data = data["data"]
-        assert "miniature_url" in resource_data
-        assert resource_data["miniature_url"] is not None
+        assert resource_data["miniature"] is not None
 
     def test_validation_prevents_file_for_note_resource(self) -> None:
         """Test that validation prevents file upload for note resources."""

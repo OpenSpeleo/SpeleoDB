@@ -91,18 +91,21 @@ DEBUG_TOOLBAR_CONFIG = {
 # ------------------------------------------------------------------------------
 MIDDLEWARE += ["silk.middleware.SilkyMiddleware"]
 
+__ENABLE_PROFILING__ = True
+
 # Enable Silk analysis of SQL queries
-SILKY_ANALYZE_QUERIES = False
+SILKY_ANALYZE_QUERIES = __ENABLE_PROFILING__
 
 # Enable Silk's internal profiling
-SILKY_PYTHON_PROFILER = False
+SILKY_PYTHON_PROFILER = __ENABLE_PROFILING__
 
 # Record every request (not just decorated ones)
-SILKY_INTERCEPT_FUNC = lambda request: False  # noqa: E731
+SILKY_INTERCEPT_FUNC = lambda request: __ENABLE_PROFILING__  # noqa: E731
 
 # Optional: store SQL queries and response content
-SILKY_INTERCEPT_PERCENT = 0  # percentage of requests to profile (100 = all)
-SILKY_META = False  # optional, include meta info
+# percentage of requests to profile (100 = all)
+SILKY_INTERCEPT_PERCENT = 100 if __ENABLE_PROFILING__ else 0
+SILKY_META = __ENABLE_PROFILING__  # optional, include meta info
 
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
 INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]

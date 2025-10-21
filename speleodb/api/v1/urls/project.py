@@ -14,6 +14,7 @@ from speleodb.api.v1.views.file import FileDownloadView
 from speleodb.api.v1.views.file import FileUploadView
 from speleodb.api.v1.views.mutex import ProjectAcquireApiView
 from speleodb.api.v1.views.mutex import ProjectReleaseApiView
+from speleodb.api.v1.views.project import ProjectAllGeoJsonApiView
 from speleodb.api.v1.views.project import ProjectApiView
 from speleodb.api.v1.views.project import ProjectGeoJsonApiView
 from speleodb.api.v1.views.project import ProjectSpecificApiView
@@ -116,5 +117,7 @@ project_base_urlpatterns: list[URLPattern] = [
 
 urlpatterns: list[URLPattern | URLResolver] = [
     path("", ProjectApiView.as_view(), name="projects"),
+    # GeoJSON API
+    path("geojson/", ProjectAllGeoJsonApiView.as_view(), name="all-projects-geojson"),
     path("<uuid:id>/", include(project_base_urlpatterns)),
 ]

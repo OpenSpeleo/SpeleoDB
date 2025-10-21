@@ -158,7 +158,7 @@ class ProjectGeoJSONFileSerializer(serializers.ModelSerializer[GeoJSON]):
     class Meta:
         model = GeoJSON
         fields = ["commit_sha", "date", "url"]
-        read_only_fields = ["commit_sha", "date", "url"]
+        read_only_fields = ["__all__"]
 
 
 class ProjectWithGeoJsonSerializer(ProjectSerializer):
@@ -173,7 +173,12 @@ class ProjectWithGeoJsonSerializer(ProjectSerializer):
         Expect the context to have a 'geojson_files' key containing
         a queryset or list of GeoJson instances.
         """
-        geojson_qs = self.context.get("geojson_files", [])
+        if hasattr(obj, "_geojson_files"):
+            geojson_qs = obj._geojson_files  # noqa: SLF001  # type: ignore[attr-defined]
+
+        else:
+            geojson_qs = obj.rel_geojsons
+
         return ProjectGeoJSONFileSerializer(
             geojson_qs, many=True, context=self.context
         ).data

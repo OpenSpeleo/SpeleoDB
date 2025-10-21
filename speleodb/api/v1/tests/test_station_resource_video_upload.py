@@ -67,7 +67,6 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         assert resource_data["resource_type"] == StationResourceType.VIDEO
         assert resource_data["title"] == "Test Video Upload"
         assert resource_data["file"] is not None
-        assert "file_url" in resource_data or "file" in resource_data
 
         # Verify resource was created with correct type
         assert resource_data["resource_type"] == StationResourceType.VIDEO

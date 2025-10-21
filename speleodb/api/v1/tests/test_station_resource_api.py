@@ -173,7 +173,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         resource = response.data["data"]
         assert resource["title"] == "Cave Entrance Photo"
         assert resource["resource_type"] == StationResourceType.PHOTO
-        assert resource["file_url"] is not None
+        assert resource["file"] is not None
         assert resource["created_by"] == self.user.email
 
     def test_create_video_resource(self) -> None:
@@ -232,7 +232,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         resource = response.data["data"]
         assert resource["resource_type"] == StationResourceType.NOTE
         assert resource["text_content"] == data["text_content"]
-        assert resource["file_url"] is None
+        assert resource["file"] is None
 
     def test_create_sketch_resource(self) -> None:
         """Test creating a sketch resource."""
@@ -437,7 +437,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
 
         expected_digest = sha256.hexdigest()
 
-        assert expected_digest == sha256_from_url(updated["file_url"])
+        assert expected_digest == sha256_from_url(updated["file"])
 
     def test_delete_resource(self) -> None:
         """Test deleting a resource."""

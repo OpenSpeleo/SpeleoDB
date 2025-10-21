@@ -15,6 +15,7 @@ from factory import Faker
 from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
+from speleodb.surveys.models import LogEntry
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import PluginRelease
 from speleodb.surveys.models import Project
@@ -401,3 +402,19 @@ class DocumentStationResourceFactory(StationResourceFactory):
 
     resource_type = StationResourceType.DOCUMENT
     title: str = factory.LazyAttribute(lambda obj: f"Document - {obj.station.name}")  # type: ignore[assignment]
+
+
+class LogEntryFactory(DjangoModelFactory[LogEntry]):
+    """Factory for creating LogEntry instances."""
+
+    class Meta:
+        model = LogEntry
+        skip_postgeneration_save = True  # Add this to avoid deprecation warning
+
+    id = factory.LazyFunction(uuid.uuid4)
+    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
+
+    title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
+    notes: str = factory.Faker("text", max_nb_chars=300)  # type: ignore[assignment]
+    # text_content: str = ""

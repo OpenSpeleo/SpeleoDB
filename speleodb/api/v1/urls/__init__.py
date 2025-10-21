@@ -7,6 +7,7 @@ from django.urls import URLResolver
 from django.urls import include
 from django.urls import path
 
+from speleodb.api.v1.urls.log_entry import log_entry_urlpatterns
 from speleodb.api.v1.urls.poi import urlpatterns as poi_urlpatterns
 from speleodb.api.v1.urls.project import urlpatterns as project_urlpatterns
 from speleodb.api.v1.urls.resource import resource_urlpatterns
@@ -33,6 +34,7 @@ urlpatterns: list[URLResolver | URLPattern] = [
     path("stations/", include(station_urlpatterns)),
     path("points_of_interest/", include(poi_urlpatterns)),
     path("resources/", include(resource_urlpatterns)),
+    path("logs/", include(log_entry_urlpatterns)),
     path("teams/", include(team_urlpatterns)),
     path("user/", include(user_urlpatterns)),
 ]

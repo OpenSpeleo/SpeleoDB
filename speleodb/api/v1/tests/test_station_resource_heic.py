@@ -161,4 +161,4 @@ class TestHEICSupport(BaseAPIProjectTestCase):
         assert miniature_img.format == "JPEG"
 
         # Miniature URL should be available
-        assert resource.get_miniature_url() is not None
+        assert resource.miniature.url is not None

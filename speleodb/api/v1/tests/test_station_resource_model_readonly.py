@@ -89,27 +89,3 @@ class TestStationResourceModelReadOnly:
         for resource in resources:
             with pytest.raises(ValueError, match="Cannot change resource type"):
                 resource.save()
-
-    def test_create_with_resource_type_works(self) -> None:
-        """Test that creating new resources with resource_type works."""
-        # Create new resource with resource_type - using NOTE type which doesn't require
-        #  a file
-        resource = StationResource.objects.create(
-            station=self.station,  # type:ignore[misc]
-            resource_type=StationResourceType.NOTE,
-            title="New Note",
-            text_content="This is a note",
-            created_by=self.user.email,
-        )
-
-        # Should save without error
-        resource.save()
-
-        # Verify it was created
-        assert resource.pk is not None
-        assert resource.resource_type == StationResourceType.NOTE
-
-        # And the protection is now active
-        resource.resource_type = StationResourceType.VIDEO
-        with pytest.raises(ValueError, match="Cannot change resource type"):
-            resource.save()

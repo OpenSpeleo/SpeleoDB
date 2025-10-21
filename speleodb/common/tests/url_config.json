@@ -444,6 +444,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/logs/<uuid:id>/",
+        "module": "speleodb.api.v1.views.log_entry.LogEntrySpecificApiView",
+        "name": "api:v1:log-detail",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/plugin_releases/",
         "module": "speleodb.api.v1.views.plugin_release.PluginReleasesApiView",
         "name": "api:v1:plugin-releases",
@@ -570,6 +576,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/projects/geojson/",
+        "module": "speleodb.api.v1.views.project.ProjectAllGeoJsonApiView",
+        "name": "api:v1:all-projects-geojson",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/resources/<uuid:id>/",
         "module": "speleodb.api.v1.views.resource.StationResourceSpecificApiView",
         "name": "api:v1:resource-detail",
@@ -588,9 +600,21 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/stations/<uuid:id>/logs/",
+        "module": "speleodb.api.v1.views.log_entry.LogEntryApiView",
+        "name": "api:v1:station-logs",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/stations/<uuid:id>/resources/",
         "module": "speleodb.api.v1.views.resource.StationResourceApiView",
         "name": "api:v1:station-resources",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/geojson/",
+        "module": "speleodb.api.v1.views.station.StationsGeoJSONApiView",
+        "name": "api:v1:stations-geojson",
         "decorators": ""
     },
     {
