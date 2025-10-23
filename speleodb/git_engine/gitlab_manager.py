@@ -17,15 +17,12 @@ from typing import TypeVar
 
 import gitlab
 import gitlab.exceptions
-from cachetools import TTLCache
-from cachetools import cached
 from django.conf import settings
 
 from speleodb.git_engine.core import GitRepo
 from speleodb.utils.metaclasses import SingletonMetaClass
 
 if TYPE_CHECKING:
-    import uuid
     from collections.abc import Callable
 
     from gitlab.v4.objects.projects import Project as GL_Project

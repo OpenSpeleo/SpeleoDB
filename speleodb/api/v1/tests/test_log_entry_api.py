@@ -3,24 +3,17 @@
 from __future__ import annotations
 
 import hashlib
-import uuid
 from pathlib import Path
 from typing import Any
 
-import requests
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
-from faker import Faker
 from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
-from speleodb.api.v1.tests.factories import NoteStationResourceFactory
-from speleodb.api.v1.tests.factories import PhotoStationResourceFactory
-from speleodb.api.v1.tests.factories import SketchStationResourceFactory
-from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.file_utils import create_test_image
 from speleodb.api.v1.tests.file_utils import create_test_text_file
 from speleodb.api.v1.tests.file_utils import create_test_video
@@ -28,8 +21,6 @@ from speleodb.api.v1.tests.file_utils import sha256_from_url
 from speleodb.surveys.models import LogEntry
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Station
-from speleodb.surveys.models import StationResource
-from speleodb.surveys.models.station import StationResourceType
 from speleodb.utils.test_utils import named_product
 
 
@@ -644,72 +635,6 @@ class TestLogEntryGetAPI(BaseAPIProjectTestCase):
 #             else status.HTTP_201_CREATED
 #         )
 
-#     def test_create_note_resource(self) -> None:
-#         """Test creating a note resource."""
-#         data = {
-#             "resource_type": StationResourceType.NOTE,
-#             "title": "Cave Survey Notes",
-#             "description": "Detailed observations from the survey",
-#             "text_content": (
-#                 "The cave entrance is approximately 2m wide and 1.5m high. Temperature "
-#                 "is constant at around 12°C."
-#             ),
-#         }
-
-#         response = self.client.post(
-#             reverse(
-#                 "api:v1:station-resources",
-#                 kwargs={"id": self.station.id},
-#             ),
-#             data=data,
-#             headers={"authorization": self.auth},
-#         )
-
-#         if self.level < PermissionLevel.READ_AND_WRITE:
-#             assert response.status_code == status.HTTP_403_FORBIDDEN
-#             return
-
-#         assert response.status_code == status.HTTP_201_CREATED
-
-#         resource_data = response.data["data"]
-#         assert resource_data["resource_type"] == StationResourceType.NOTE
-#         assert resource_data["title"] == "Cave Survey Notes"
-#         assert resource_data["text_content"] == data["text_content"]
-
-#     def test_create_sketch_resource(self) -> None:
-#         """Test creating a sketch resource."""
-#         svg_content = """<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-#             <circle cx="100" cy="100" r="50" fill="blue" stroke="black" stroke-width="2"/>
-#             <text x="100" y="105" text-anchor="middle" fill="white" font-size="14">Cave</text>
-#         </svg>"""  # noqa: E501
-
-#         data = {
-#             "resource_type": StationResourceType.SKETCH,
-#             "title": "Cave Entrance Sketch",
-#             "description": "Hand-drawn sketch of the cave entrance",
-#             "text_content": svg_content,
-#         }
-
-#         response = self.client.post(
-#             reverse(
-#                 "api:v1:station-resources",
-#                 kwargs={"id": self.station.id},
-#             ),
-#             data=data,
-#             headers={"authorization": self.auth},
-#         )
-
-#         if self.level < PermissionLevel.READ_AND_WRITE:
-#             assert response.status_code == status.HTTP_403_FORBIDDEN
-#             return
-
-#         assert response.status_code == status.HTTP_201_CREATED
-
-#         resource_data = response.data["data"]
-#         assert resource_data["resource_type"] == StationResourceType.SKETCH
-#         assert resource_data["title"] == "Cave Entrance Sketch"
-#         assert svg_content in resource_data["text_content"]
-
 #     def test_create_photo_resource_with_file(self) -> None:
 #         """Test creating a photo resource with file upload."""
 #         # Create a fake image file
@@ -769,7 +694,7 @@ class TestLogEntryGetAPI(BaseAPIProjectTestCase):
 #             return
 
 #         assert response.status_code == status.HTTP_200_OK
-#         assert len(response.data["data"]) == 3  # noqa: PLR2004
+#         assert len(response.data["data"]) == 3
 
 #         # Verify all resources are present (without depending on order)
 #         response_resource_ids = {r["id"] for r in response.data["data"]}
