@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from rest_framework.exceptions import NotAuthenticated
 
+from speleodb.surveys.models import LogEntry
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import Station
@@ -64,7 +65,7 @@ class BaseStationAccessLevel(permissions.BasePermission):
         self,
         request: AuthenticatedDRFRequest,  # type: ignore[override]
         view: APIView,
-        obj: Project | Station | StationResource,
+        obj: Project | Station | StationResource | LogEntry,
     ) -> bool:
         # Get the project from the object
         project: Project
@@ -77,7 +78,7 @@ class BaseStationAccessLevel(permissions.BasePermission):
                 # Try station.project for StationResource objects
                 project = obj.project
 
-            case StationResource():
+            case StationResource() | LogEntry():
                 project = obj.station.project
 
             case _:
