@@ -3614,6 +3614,18 @@
     window._allStationsGeoJson = window._allStationsGeoJson || null; // FeatureCollection
     window._allStationsFetchPromise = window._allStationsFetchPromise || null; // Promise to dedupe concurrent fetches
 
+    function invalidateAllStationsGeoJsonCache() {
+        // Clear in-memory cache so the next load fetches fresh data
+        window._allStationsGeoJson = null;
+        window._allStationsFetchPromise = null;
+    }
+
+    async function refreshStationsAfterChange(projectId) {
+        // Invalidate and then reload the project's stations from the server
+        invalidateAllStationsGeoJsonCache();
+        await loadStationsForProject(projectId);
+    }
+
     async function ensureAllStationsLoaded() {
         // If already loaded, nothing to do
         if (window._allStationsGeoJson && window._allStationsGeoJson.type === 'FeatureCollection' && Array.isArray(window._allStationsGeoJson.features)) {
@@ -4027,9 +4039,9 @@
                 '';
             showNotification('success', `Station moved successfully${snapMessage}!`);
 
-            // Reload all stations to ensure consistency
+            // Reload all stations to ensure consistency (invalidate cache first)
             setTimeout(() => {
-                loadStationsForProject(projectId);
+                refreshStationsAfterChange(projectId);
             }, 500);
 
         } catch (error) {
@@ -6253,8 +6265,8 @@
             // Reload stations to ensure consistency
             console.log(`🔄 Scheduling reload of stations for project ${projectId}`);
             setTimeout(() => {
-                console.log(`🔄 Reloading stations now...`);
-                loadStationsForProject(projectId).then(() => {
+                console.log(`🔄 Reloading stations now (with cache invalidation)...`);
+                refreshStationsAfterChange(projectId).then(() => {
                     console.log(`✅ Station reload complete after delete`);
                     // Update visibility again after reload
                     if (window.updateStationVisibility) {
@@ -6657,8 +6669,8 @@
             // Reset form
             form.reset();
 
-            // Refresh stations on map
-            loadStationsForProject(projectId);
+            // Refresh stations on map with fresh GeoJSON
+            await refreshStationsAfterChange(projectId);
 
             // Close modal and open the new station
             document.getElementById('station-modal').classList.add('hidden');
@@ -7698,8 +7710,8 @@
                         resources: []
                     });
 
-                    // Refresh stations on map for the selected project
-                    await loadStationsForProject(selectedProjectId);
+                    // Refresh stations on map for the selected project with fresh GeoJSON
+                    await refreshStationsAfterChange(selectedProjectId);
 
                     // If Station Manager is open, refresh its content
                     const stationManagerModal = document.getElementById('station-manager-modal');
