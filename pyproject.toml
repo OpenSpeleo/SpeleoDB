@@ -98,7 +98,7 @@ local = [
 
     # Typing
     # ------------------------------------------------------------------------------
-    "djangorestframework-stubs[compatible-mypy]==3.16.4", # https://github.com/typeddjango/djangorestframework-stubs
+    "djangorestframework-stubs[compatible-mypy]==3.16.5", # https://github.com/typeddjango/djangorestframework-stubs
     "django-stubs[compatible-mypy]==5.2.6",               # https://github.com/typeddjango/django-stubs
     "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
     "types-cachetools==6.2.0.20250827",                   # https://github.com/python/typeshed
