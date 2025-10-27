@@ -33,7 +33,7 @@ dependencies = [
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
     "jsonschema-rs==0.33.0", # https://github.com/Stranger6667/jsonschema
-    "orjson==3.11.3",        # https://github.com/ijl/orjson
+    "orjson==3.11.4",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
     # ------------------------------------------------------------------------------
