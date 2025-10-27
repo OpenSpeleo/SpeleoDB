@@ -10,7 +10,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "argon2-cffi==25.1.0",  # https://github.com/hynek/argon2-cffi
     "cachetools==6.2.0",    # https://github.com/tkem/cachetools
-    "python-dotenv==1.1.1", # https://github.com/theskumar/python-dotenv
+    "python-dotenv==1.2.1", # https://github.com/theskumar/python-dotenv
     "pytz==2025.2",         # https://github.com/stub42/pytz
     "timeago==1.0.16",      # https://github.com/hustcc/timeago
     "wrapt==1.17.3",        # https://github.com/GrahamDumpleton/wrapt
