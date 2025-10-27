@@ -26,7 +26,7 @@ dependencies = [
     "av==15.1.0",            # https://github.com/PyAV-Org/PyAV
     "imageio==2.37.0",       # https://github.com/imageio/imageio
     "imageio-ffmpeg==0.6.0", # https://github.com/imageio/imageio-ffmpeg
-    "Pillow==11.3.0",        # https://github.com/python-pillow/Pillow
+    "Pillow==12.0.0",        # https://github.com/python-pillow/Pillow
     "pillow-heif==1.1.1",    # https://github.com/bigcat88/pillow_heif
     "PyMuPDF==1.26.4",       # https://github.com/pymupdf/PyMuPDF
 
