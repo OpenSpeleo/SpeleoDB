@@ -122,7 +122,7 @@ local = [
     "django-debug-toolbar==6.0.0",    # https://github.com/jazzband/django-debug-toolbar
     "django-extensions==4.1",         # https://github.com/django-extensions/django-extensions
     "django-schema-viewer==0.5.3",    # https://github.com/pikhovkin/django-schema-viewer
-    "django-silk[formatting]==5.4.2", # https://github.com/jazzband/django-silk
+    "django-silk[formatting]==5.4.3", # https://github.com/jazzband/django-silk
 ]
 
 production = [
