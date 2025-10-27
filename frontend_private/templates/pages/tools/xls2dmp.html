@@ -1,0 +1,431 @@
+{% extends "pages/tools/base.html" %}
+{% load static %}
+{% load countries %}
+
+{% block extra_css %}
+<style>
+    button.tool-action {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        cursor: pointer;
+    }
+
+    .trash {
+        background: #ffecec;
+        color: #b30000;
+        border: 1px solid #f1b0b0;
+    }
+
+    .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        outline: none;
+    }
+
+    table:focus {
+        outline: none;
+    }
+
+    thead th {
+        background: #f7f9fc;
+        border-bottom: 2px solid #e6eefc;
+        padding: 8px;
+        font-size: 13px;
+        position: sticky;
+        top: 0;
+    }
+
+    tbody td {
+        padding: 6px;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+    }
+
+    tbody tr:nth-child(even) {
+        background: #fcfdff;
+    }
+
+    td.invalid {
+        background: #ffefef;
+        border: 1px solid rgb(240, 88, 88);
+    }
+
+    td.actions button {
+        padding: 4px 8px;
+        margin: 0 2px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+
+    ul.instructions {
+        list-style: disc;
+        margin-block-end: 16px;
+        margin-block-start: 16px;
+        padding-inline-start: 40px;
+    }
+
+</style>
+{% endblock extra_css %}
+
+{% block right_panel %}
+<div class="grow">
+    <div class="p-6">
+        <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: Excel to Ariane DMP</h2>
+        <p class="lead">
+            <b>Instructions:</b>
+            <ul class="instructions">
+                <li>Use the Google Sheet Template below to prepare the data</li>
+                <li>Paste data directly into the table (Ctrl/Cmd+V) or use the <strong>"Paste Excel"</strong> button</li>
+                <li>You can add or remove rows; columns are fixed</li>
+                <li>Click "Download as DMP" when you're done. Might take 3-5 secs</li>
+                <li>Load the DMP into `Ariane` as if it was coming from the Mnemo</li>
+            </ul>
+        </p>
+
+        <div class="my-3">
+            <b>Please use the following:</b>
+                <a href="https://docs.google.com/spreadsheets/d/15DwmV2-78g58LDbnx8cHAONfx2Gj_bqRMJxjDBLkJB0/edit?usp=sharing" 
+                   target="_blank"
+                   style="color: #ff8900; text-decoration: underline;"
+                >
+                    Google Spreadsheet Template
+                </a>
+        </div>
+
+        <div class="controls my-6">
+            <button class="tool-action" id="addRowBtn">Add Row</button>
+            <button class="tool-action" id="clearBtn">Clear All</button>
+            <button class="tool-action" id="pasteExcelBtn">Paste Excel</button>
+            <button class="tool-action" id="downloadDMPBtn">Download as DMP</button>
+            <div id="status" style="margin-left:12px;"></div>
+        </div>
+
+        {% csrf_token %}
+
+        <div style="overflow:auto;max-height:520px;border:1px solid #eef6ff;border-radius:8px">
+            <table class="text-slate-800 text-center" id="dataTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Length</th>
+                        <th>Azimuth</th>
+                        <th>Depth</th>
+                        <th>Left</th>
+                        <th>Right</th>
+                        <th>Up</th>
+                        <th>Down</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    {% include 'snippets/modal_success.html' %}
+    {% include 'snippets/modal_error.html' %}
+</div>
+{% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+$(document).ready(function() {
+    const COLUMNS = ['Length', 'Azimuth', 'Depth', 'Left', 'Right', 'Up', 'Down'];
+    const VALID_TYPES = ['REAL', 'VIRTUAL', 'START', 'CLOSURE'];
+    const $tbody = $('#dataTable tbody');
+    const $statusEl = $('#status');
+
+    function validateCell(value, column) {
+        const v = (value ?? '').trim();
+        if (['Length', 'Depth'].includes(column)) return v !== '' && !isNaN(v) && isFinite(parseFloat(v));
+        if (column === 'Azimuth') {
+            if (v === '') return false;
+            const n = parseFloat(v);
+            return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
+        }
+        if (['Left', 'Right', 'Up', 'Down'].includes(column)) {
+            if (v === '') return true;
+            const n = parseFloat(v);
+            return !isNaN(n) && isFinite(n) && n >= 0;
+        }
+        return true;
+    }
+
+    function addRow(values = [], idx) {
+        const index = idx ?? $tbody.children().length + 1;
+        const html = `
+<td>${index}</td>` + COLUMNS.map((col, j) => `
+<td contenteditable="true" data-col="${col}">${escapeHtml(values[j] ?? '')}</td>`).join('') + `
+<td class="actions">
+    <button class="trash" title="Delete row">🗑️</button>
+</td>`;
+        const $tr = $('<tr>').html(html);
+        $tbody.append($tr);
+        // listeners are delegated; no per-cell binding needed
+        // delete handler
+        $tr.find('.trash').on('click', function() {
+            $tr.remove();
+            refreshIndexes();
+            validateTable();
+        });
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function refreshIndexes() {
+        $tbody.children('tr').each(function(i) {
+            $(this).children('td').first().text(i + 1);
+        });
+    }
+
+    function renderRows(rows) {
+        $tbody.empty();
+        rows.forEach((r, i) => addRow(r, i + 1));
+        refreshIndexes();
+        validateTable();
+    }
+
+    function parseClipboardText(text) {
+        if (!text) return [];
+        const lines = text.replace(/\r/g, '\n').split(/\n/).filter(l => l.trim());
+        const rows = lines.map(line => {
+            let parts = line.split('\t');
+            if (parts.length === 1) parts = line.split(',');
+            return parts.map(p => p.replace(/^\uFEFF/, '').trim());
+        });
+        if (rows.length > 0 && /length/i.test(rows[0][0])) rows.shift();
+        return rows;
+    }
+
+    $('#pasteExcelBtn').on('click', async function() {
+        try {
+            const text = await navigator.clipboard.readText();
+            const rows = parseClipboardText(text);
+            renderRows(rows);
+            $statusEl.text(`Imported ${rows.length} rows.`);
+        } catch {
+            $statusEl.text('Unable to read clipboard. Try Ctrl+V directly.');
+        }
+    });
+
+    $(document).on('paste', function(e) {
+        const text = (e.originalEvent.clipboardData || window.clipboardData).getData('text/plain');
+        if (!text) return;
+        const sel = window.getSelection();
+        if (sel && sel.anchorNode && $tbody[0].contains(sel.anchorNode)) {
+            setTimeout(() => validateTable(), 50);
+            return;
+        }
+        e.preventDefault();
+        const rows = parseClipboardText(text);
+        renderRows(rows);
+        $statusEl.text(`Imported ${rows.length} rows.`);
+    });
+
+    function onCellInput(td) {
+        const $td = $(td);
+        const col = $td.data('col');
+        const ok = validateCell($td.text(), col);
+        $td.toggleClass('invalid', !ok);
+        validateTable();
+    }
+
+    function validateTable() {
+        let allValid = true;
+        $('#dataTable tbody td[data-col]').each(function() {
+            const $td = $(this);
+            const col = $td.data('col');
+            const ok = validateCell($td.text(), col);
+            $td.toggleClass('invalid', !ok);
+            if (!ok) allValid = false;
+        });
+        $('#status').text(allValid ? 'All cells valid.' : 'Some cells are invalid.')
+                    .css({ 'color': allValid ? 'green' : 'red', 'font-weight': 'bold' });
+        return allValid;
+    }
+
+    $('#addRowBtn').on('click', function() { 
+        addRow(); 
+        validateTable(); 
+    });
+    
+    $('#clearBtn').on('click', function() { 
+        $tbody.empty(); 
+        $statusEl.text('Cleared.'); 
+    });
+
+    // Navigation helpers for Excel-like Enter behavior
+    function getEditableTdFromTarget(target) {
+        if (!target) return null;
+        // If it's a text node, climb to its parent element first
+        let node = target.nodeType === 3 ? target.parentElement : target; // 3 = TEXT_NODE
+        if (!node) return null;
+        const $node = $(node);
+        const $td = $node.closest('td[data-col]');
+        return $td.length ? $td[0] : null;
+    }
+
+    function placeCaretAtEnd(el) {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+
+    function focusCell(cell) {
+        if (!cell) return;
+        $(cell).focus();
+        placeCaretAtEnd(cell);
+    }
+
+    function moveToCellBelow(currentTd) {
+        const $currentTd = $(currentTd);
+        const $currentRow = $currentTd.parent();
+        const $currentRowCells = $currentRow.find('td[data-col]');
+        const colIndex = $currentRowCells.index($currentTd);
+        const $nextRow = $currentRow.next();
+        if ($nextRow.length) {
+            const $nextRowCells = $nextRow.find('td[data-col]');
+            focusCell($nextRowCells.eq(colIndex)[0] || $nextRowCells.last()[0]);
+        } else {
+            // Last row: blur to avoid inserting newlines
+            $currentTd.blur();
+            $('#dataTable').blur();
+            // Also clear selection
+            const sel = window.getSelection();
+            if (sel) sel.removeAllRanges();
+        }
+    }
+
+    // Prevent Enter from inserting line breaks; move to cell below instead
+    $tbody[0].addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter') return;
+        const td = getEditableTdFromTarget(e.target);
+        if (!td) return;
+        e.preventDefault();
+        // Re-validate the whole table on commit-like action
+        validateTable();
+        moveToCellBelow(td);
+    }, true);
+
+    // Delegated input listener so ANY change in any cell revalidates the table
+    $tbody.on('input', 'td[data-col]', function(e) {
+        const td = getEditableTdFromTarget(e.target);
+        if (!td) return;
+        onCellInput(td);
+    });
+
+    // Some browsers fire beforeinput more consistently for contenteditable
+    $tbody[0].addEventListener('beforeinput', function(e) {
+        const td = getEditableTdFromTarget(e.target);
+        if (!td) return;
+        // Defer until after DOM mutation to read updated textContent
+        setTimeout(() => onCellInput(td), 0);
+    });
+
+    // Keyup fallback to ensure validation runs after typing
+    $tbody.on('keyup', 'td[data-col]', function(e) {
+        const td = getEditableTdFromTarget(e.target);
+        if (!td) return;
+        onCellInput(td);
+    });
+
+    // Also validate on blur to catch edits that don't emit input in some browsers
+    $tbody[0].addEventListener('blur', function(e) {
+        const td = getEditableTdFromTarget(e.target);
+        if (!td) return;
+        onCellInput(td);
+    }, true);
+
+    function tableToCsv() {
+        const rows = [];
+        $tbody.children('tr').each(function() {
+            const row = [];
+            $(this).find('td[data-col]').each(function() {
+                row.push($(this).text().trim());
+            });
+            rows.push(row);
+        });
+        return rows.map(r => r.map(cell => { 
+            if(cell.includes(',') || cell.includes('"') || cell.includes('\n')) 
+                return '"'+cell.replace(/"/g,'""')+'"'; 
+            return cell; 
+        }).join(',')).join('\n');
+    }
+
+    $('#downloadDMPBtn').on('click', function() {
+        // Validate the table before proceeding
+        if (!validateTable()) {
+            $('#status').text('Some cells are invalid. Please correct them before downloading.')
+                        .css({ 'color': 'red', 'font-weight': 'bold' });
+            return;
+        }
+
+        // Collect table data
+        const rows = [];
+        $('#dataTable tbody tr').each(function() {
+            const row = {};
+            $(this).find('td[data-col]').each(function() {
+                const col = $(this).data('col');
+                row[col] = $(this).text().trim();
+            });
+            if (Object.keys(row).length > 0) {
+                rows.push(row);
+            }
+        });
+
+        var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+        // AJAX call
+        $.ajax({
+            url: "{% url 'api:v1:tool-xls2dmp' %}",
+            method: "POST",
+            data: JSON.stringify({ shots: rows }),
+            contentType: "application/json; charset=utf-8",
+            cache: false,
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                return true;
+            },
+            success: function(response) {
+                const blob = new Blob([response], { type: 'application/octet-stream' });
+                let a = document.createElement('a');
+                document.body.appendChild(a);
+
+                a.href = window.URL.createObjectURL(blob);
+                a.style.display = 'none';
+                a.download = 'survey.dmp';
+                a.click();
+
+                window.URL.revokeObjectURL(a.href);
+                a.remove();
+            },
+            error: function(xhr, status, error) {
+                $('#status').text('Error: ' + error)
+                            .css({ 'color': 'red', 'font-weight': 'bold' });
+            },
+            xhrFields: {
+                responseType: 'blob'
+            }
+        });
+
+    });
+
+    renderRows([]);
+});
+</script>
+{% endblock inline_extra_js %}

@@ -13,6 +13,7 @@ from speleodb.api.v1.urls.project import urlpatterns as project_urlpatterns
 from speleodb.api.v1.urls.resource import resource_urlpatterns
 from speleodb.api.v1.urls.station import station_urlpatterns
 from speleodb.api.v1.urls.team import urlpatterns as team_urlpatterns
+from speleodb.api.v1.urls.tools import urlpatterns as tool_urlpatterns
 from speleodb.api.v1.urls.user import urlpatterns as user_urlpatterns
 from speleodb.api.v1.views.announcement import PublicAnnouncementApiView
 from speleodb.api.v1.views.plugin_release import PluginReleasesApiView
@@ -36,5 +37,6 @@ urlpatterns: list[URLResolver | URLPattern] = [
     path("resources/", include(resource_urlpatterns)),
     path("logs/", include(log_entry_urlpatterns)),
     path("teams/", include(team_urlpatterns)),
+    path("tools/", include(tool_urlpatterns)),
     path("user/", include(user_urlpatterns)),
 ]

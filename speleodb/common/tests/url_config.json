@@ -642,6 +642,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/tools/xls2dmp/",
+        "module": "speleodb.api.v1.views.tools.ToolXLSToDMP",
+        "name": "api:v1:tool-xls2dmp",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/user/",
         "module": "speleodb.api.v1.views.user.UserInfo",
         "name": "api:v1:user-detail",
@@ -727,134 +733,140 @@
     },
     {
         "url": "/private/",
-        "module": "frontend_private.views.DashboardView",
+        "module": "frontend_private.views.user.DashboardView",
         "name": "private:user_dashboard",
         "decorators": ""
     },
     {
         "url": "/private/auth-token/",
-        "module": "frontend_private.views.AuthTokenView",
+        "module": "frontend_private.views.user.AuthTokenView",
         "name": "private:user_authtoken",
         "decorators": ""
     },
     {
         "url": "/private/feedback/",
-        "module": "frontend_private.views.FeedbackView",
+        "module": "frontend_private.views.user.FeedbackView",
         "name": "private:user_feedback",
         "decorators": ""
     },
     {
         "url": "/private/map_viewer/",
-        "module": "frontend_private.views.MapViewerView",
+        "module": "frontend_private.views.map.MapViewerView",
         "name": "private:map_viewer",
         "decorators": ""
     },
     {
         "url": "/private/password/",
-        "module": "frontend_private.views.PassWordView",
+        "module": "frontend_private.views.user.PassWordView",
         "name": "private:user_password",
         "decorators": ""
     },
     {
         "url": "/private/preferences/",
-        "module": "frontend_private.views.PreferencesView",
+        "module": "frontend_private.views.user.PreferencesView",
         "name": "private:user_preferences",
         "decorators": ""
     },
     {
         "url": "/private/project/<uuid:project_id>/",
-        "module": "frontend_private.views.ProjectDetailsView",
+        "module": "frontend_private.views.project.ProjectDetailsView",
         "name": "private:project_details",
         "decorators": ""
     },
     {
         "url": "/private/project/<uuid:project_id>/browser/<gitsha:hexsha>/",
-        "module": "frontend_private.views.ProjectGitExplorerView",
+        "module": "frontend_private.views.project.ProjectGitExplorerView",
         "name": "private:project_revision_explorer",
         "decorators": ""
     },
     {
         "url": "/private/project/<uuid:project_id>/danger_zone/",
-        "module": "frontend_private.views.ProjectDangerZoneView",
+        "module": "frontend_private.views.project.ProjectDangerZoneView",
         "name": "private:project_danger_zone",
         "decorators": ""
     },
     {
         "url": "/private/project/<uuid:project_id>/git_instructions/",
-        "module": "frontend_private.views.ProjectGitInstructionsView",
+        "module": "frontend_private.views.project.ProjectGitInstructionsView",
         "name": "private:project_git_instructions",
         "decorators": ""
     },
     {
         "url": "/private/project/<uuid:project_id>/mutexes/",
-        "module": "frontend_private.views.ProjectMutexesView",
+        "module": "frontend_private.views.project.ProjectMutexesView",
         "name": "private:project_mutexes",
         "decorators": ""
     },
     {
         "url": "/private/project/<uuid:project_id>/permissions/team/",
-        "module": "frontend_private.views.ProjectTeamPermissionsView",
+        "module": "frontend_private.views.project.ProjectTeamPermissionsView",
         "name": "private:project_team_permissions",
         "decorators": ""
     },
     {
         "url": "/private/project/<uuid:project_id>/permissions/user/",
-        "module": "frontend_private.views.ProjectUserPermissionsView",
+        "module": "frontend_private.views.project.ProjectUserPermissionsView",
         "name": "private:project_user_permissions",
         "decorators": ""
     },
     {
         "url": "/private/project/<uuid:project_id>/revisions/",
-        "module": "frontend_private.views.ProjectRevisionHistoryView",
+        "module": "frontend_private.views.project.ProjectRevisionHistoryView",
         "name": "private:project_revisions",
         "decorators": ""
     },
     {
         "url": "/private/project/<uuid:project_id>/upload/",
-        "module": "frontend_private.views.ProjectUploadView",
+        "module": "frontend_private.views.project.ProjectUploadView",
         "name": "private:project_upload",
         "decorators": ""
     },
     {
         "url": "/private/project/new/",
-        "module": "frontend_private.views.NewProjectView",
+        "module": "frontend_private.views.project.NewProjectView",
         "name": "private:project_new",
         "decorators": ""
     },
     {
         "url": "/private/projects/",
-        "module": "frontend_private.views.ProjectListingView",
+        "module": "frontend_private.views.project.ProjectListingView",
         "name": "private:projects",
         "decorators": ""
     },
     {
         "url": "/private/team/<uuid:team_id>/",
-        "module": "frontend_private.views.TeamDetailsView",
+        "module": "frontend_private.views.team.TeamDetailsView",
         "name": "private:team_details",
         "decorators": ""
     },
     {
         "url": "/private/team/<uuid:team_id>/danger_zone/",
-        "module": "frontend_private.views.TeamDangerZoneView",
+        "module": "frontend_private.views.team.TeamDangerZoneView",
         "name": "private:team_danger_zone",
         "decorators": ""
     },
     {
         "url": "/private/team/<uuid:team_id>/memberships/",
-        "module": "frontend_private.views.TeamMembershipsView",
+        "module": "frontend_private.views.team.TeamMembershipsView",
         "name": "private:team_memberships",
         "decorators": ""
     },
     {
         "url": "/private/team/new/",
-        "module": "frontend_private.views.NewTeamView",
+        "module": "frontend_private.views.team.NewTeamView",
         "name": "private:team_new",
         "decorators": ""
     },
     {
         "url": "/private/teams/",
-        "module": "frontend_private.views.TeamListingView",
+        "module": "frontend_private.views.team.TeamListingView",
         "name": "private:teams",
+        "decorators": ""
+    },
+    {
+        "url": "/private/tools/xls_to_dmp/",
+        "module": "frontend_private.views.tools.ToolXLSToArianeDMP",
+        "name": "private:tool-xls2dmp",
         "decorators": ""
     },
     {

@@ -869,14 +869,14 @@ wheels = [
 
 [[package]]
 name = "faker"
-version = "37.11.0"
+version = "37.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tzdata" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c9/4b/ca43f6bbcef63deb8ac01201af306388670a172587169aab3b192f7490f0/faker-37.11.0.tar.gz", hash = "sha256:22969803849ba0618be8eee2dd01d0d9e2cd3b75e6ff1a291fa9abcdb34da5e6", size = 1935301, upload-time = "2025-10-07T14:49:01.481Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/84/e95acaa848b855e15c83331d0401ee5f84b2f60889255c2e055cb4fb6bdf/faker-37.12.0.tar.gz", hash = "sha256:7505e59a7e02fa9010f06c3e1e92f8250d4cfbb30632296140c2d6dbef09b0fa", size = 1935741, upload-time = "2025-10-24T15:19:58.764Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a3/46/8f4097b55e43af39e8e71e1f7aec59ff7398bca54d975c30889bc844719d/faker-37.11.0-py3-none-any.whl", hash = "sha256:1508d2da94dfd1e0087b36f386126d84f8583b3de19ac18e392a2831a6676c57", size = 1975525, upload-time = "2025-10-07T14:48:58.29Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/98/2c050dec90e295a524c9b65c4cb9e7c302386a296b2938710448cbd267d5/faker-37.12.0-py3-none-any.whl", hash = "sha256:afe7ccc038da92f2fbae30d8e16d19d91e92e242f8401ce9caf44de892bab4c4", size = 1975461, upload-time = "2025-10-24T15:19:55.739Z" },
 ]
 
 [[package]]
@@ -1252,14 +1252,15 @@ wheels = [
 
 [[package]]
 name = "mnemo-lib"
-version = "0.0.4"
+version = "0.0.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "orjson" },
     { name = "pydantic" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/fe/04/4828c39e36f5273c02c9ae057a9d11811b51679189a84cd2d58309a12b13/mnemo_lib-0.0.5.tar.gz", hash = "sha256:bc3a1f0cc8660c5aed80b86aaf39be087e2100b3d16c3cf7ec4582447804bc74", size = 14330, upload-time = "2025-10-27T23:39:56.584Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/77/2e/0dfac5bdd0998e7100f568581d3bafff6c4da024baa86437375fa5e97f1c/mnemo_lib-0.0.4-py3-none-any.whl", hash = "sha256:23325b7da789524128b5a20fd2beac9ff752e26a1166b2045c1bc6183abe6858", size = 15671, upload-time = "2025-10-08T02:17:27.658Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/00/86daad97a1af509d93eea9d5d2fc7143ff985d1eb26dfd6fea0dbfea6bde/mnemo_lib-0.0.5-py3-none-any.whl", hash = "sha256:7320dd3abe2a93b140608c7169fc97440408ca20de48989abd962eb8f20e6d86", size = 15671, upload-time = "2025-10-27T23:39:55.207Z" },
 ]
 
 [[package]]
@@ -2204,7 +2205,7 @@ requires-dist = [
     { name = "imageio-ffmpeg", specifier = "==0.6.0" },
     { name = "ipdb", marker = "extra == 'local'", specifier = "==0.13.13" },
     { name = "jsonschema-rs", specifier = "==0.33.0" },
-    { name = "mnemo-lib", specifier = "==0.0.4" },
+    { name = "mnemo-lib", specifier = "==0.0.5" },
     { name = "mypy", marker = "extra == 'local'", specifier = "==1.18.2" },
     { name = "openspeleo-lib", specifier = "==0.0.6" },
     { name = "orjson", specifier = "==3.11.3" },
@@ -2259,11 +2260,11 @@ wheels = [
 
 [[package]]
 name = "termcolor"
-version = "3.1.0"
+version = "3.2.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ca/6c/3d75c196ac07ac8749600b60b03f4f6094d54e132c4d94ebac6ee0e0add0/termcolor-3.1.0.tar.gz", hash = "sha256:6a6dd7fbee581909eeec6a756cff1d7f7c376063b14e4a298dc4980309e55970", size = 14324, upload-time = "2025-04-30T11:37:53.791Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/56/ab275c2b56a5e2342568838f0d5e3e66a32354adcc159b495e374cda43f5/termcolor-3.2.0.tar.gz", hash = "sha256:610e6456feec42c4bcd28934a8c87a06c3fa28b01561d46aa09a9881b8622c58", size = 14423, upload-time = "2025-10-25T19:11:42.586Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/bd/de8d508070629b6d84a30d01d57e4a65c69aa7f5abe7560b8fad3b50ea59/termcolor-3.1.0-py3-none-any.whl", hash = "sha256:591dd26b5c2ce03b9e43f391264626557873ce1d379019786f99b0c2bee140aa", size = 7684, upload-time = "2025-04-30T11:37:52.382Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/d5/141f53d7c1eb2a80e6d3e9a390228c3222c27705cbe7f048d3623053f3ca/termcolor-3.2.0-py3-none-any.whl", hash = "sha256:a10343879eba4da819353c55cb8049b0933890c2ebf9ad5d3ecd2bb32ea96ea6", size = 7698, upload-time = "2025-10-25T19:11:41.536Z" },
 ]
 
 [[package]]

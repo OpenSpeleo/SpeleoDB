@@ -2,22 +2,17 @@
 
 from __future__ import annotations
 
-import contextlib
-import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import override
 
 from django.conf import settings
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
-from django.http.response import HttpResponseRedirectBase
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.views.generic import TemplateView
 from rest_framework.authtoken.models import Token
 
+from frontend_private.views.base import AuthenticatedTemplateView
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
@@ -25,9 +20,8 @@ from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from django.http import HttpResponse
+    from django.http.response import HttpResponseRedirectBase
     from django_stubs_ext import StrOrPromise
 
     from speleodb.utils.requests import AuthenticatedHttpRequest
@@ -67,140 +61,7 @@ class UserAccessLevel:
         return self.level.label
 
 
-class _AuthenticatedTemplateView(LoginRequiredMixin, TemplateView): ...
-
-
-# ============ Setting Pages ============ #
-class DashboardView(_AuthenticatedTemplateView):
-    template_name = "pages/user/dashboard.html"
-
-
-class PassWordView(_AuthenticatedTemplateView):
-    template_name = "pages/user/password.html"
-
-
-class AuthTokenView(_AuthenticatedTemplateView):
-    template_name = "pages/user/auth-token.html"
-
-    def get(  # type: ignore[override]
-        self,
-        request: AuthenticatedHttpRequest,
-        *args: Any,
-        **kwargs: Any,
-    ) -> HttpResponse:
-        context = self.get_context_data(**kwargs)
-        context["auth_token"], _ = Token.objects.get_or_create(user=request.user)
-        return self.render_to_response(context)
-
-    def post(
-        self,
-        request: AuthenticatedHttpRequest,
-        *args: Any,
-        **kwargs: Any,
-    ) -> HttpResponse:
-        with contextlib.suppress(ObjectDoesNotExist):
-            Token.objects.get(user=request.user).delete()
-
-        return self.get(request, *args, **kwargs)
-
-
-class FeedbackView(_AuthenticatedTemplateView):
-    template_name = "pages/user/feedback.html"
-
-
-class PreferencesView(_AuthenticatedTemplateView):
-    template_name = "pages/user/preferences.html"
-
-
-# ============ Team Pages ============ #
-class TeamListingView(_AuthenticatedTemplateView):
-    template_name = "pages/teams.html"
-
-
-class NewTeamView(_AuthenticatedTemplateView):
-    template_name = "pages/team/new.html"
-
-
-class _BaseTeamView(_AuthenticatedTemplateView):
-    def get_data_or_redirect(
-        self,
-        request: AuthenticatedHttpRequest,
-        team_id: UUID,
-    ) -> HttpResponseRedirectBase | dict[str, SurveyTeam | bool]:
-        try:
-            team = SurveyTeam.objects.get(id=team_id)
-            if request.user and request.user.is_authenticated:
-                if not team.is_member(request.user):
-                    return redirect(reverse("private:teams"))
-            else:
-                return redirect(reverse("home"))
-        except ObjectDoesNotExist:
-            return redirect(reverse("private:teams"))
-
-        return {"team": team, "is_team_leader": team.is_leader(request.user)}
-
-
-class TeamDetailsView(_BaseTeamView):
-    template_name = "pages/team/details.html"
-
-    def get(  # type: ignore[override]
-        self,
-        request: AuthenticatedHttpRequest,
-        team_id: UUID,
-        *args: Any,
-        **kwargs: Any,
-    ) -> HttpResponseRedirectBase | HttpResponse | dict[str, SurveyTeam | bool]:
-        data = self.get_data_or_redirect(request, team_id=team_id)
-        if isinstance(data, HttpResponseRedirectBase):
-            return data
-
-        return super().get(request, *args, **data, **kwargs)
-
-
-class TeamMembershipsView(_BaseTeamView):
-    template_name = "pages/team/memberships.html"
-
-    @override
-    def get(  # type: ignore[override]
-        self,
-        request: AuthenticatedHttpRequest,
-        team_id: UUID,
-        *args: Any,
-        **kwargs: Any,
-    ) -> HttpResponseRedirectBase | HttpResponse:
-        data: Any = self.get_data_or_redirect(request, team_id=team_id)
-        if isinstance(data, HttpResponseRedirectBase):
-            return data
-
-        data["memberships"] = data["team"].get_all_memberships()  # pyright: ignore[reportAttributeAccessIssue]
-
-        return super().get(request, *args, **data, **kwargs)
-
-
-class TeamDangerZoneView(_BaseTeamView):
-    template_name = "pages/team/danger_zone.html"
-
-    def get(  # type: ignore[override]
-        self,
-        request: AuthenticatedHttpRequest,
-        team_id: UUID,
-        *args: Any,
-        **kwargs: Any,
-    ) -> HttpResponseRedirectBase | HttpResponse:
-        data = self.get_data_or_redirect(request, team_id=team_id)
-        if not isinstance(data, dict):
-            return data  # redirection
-
-        if not data["is_team_leader"]:
-            return redirect(
-                reverse("private:team_details", kwargs={"team_id": team_id})
-            )
-
-        return super().get(request, *args, **data, **kwargs)
-
-
-# ============ Project Pages ============ #
-class ProjectListingView(_AuthenticatedTemplateView):
+class ProjectListingView(AuthenticatedTemplateView):
     template_name = "pages/projects.html"
 
     def get(  # type: ignore[override]
@@ -219,11 +80,11 @@ class ProjectListingView(_AuthenticatedTemplateView):
         return self.render_to_response(context)
 
 
-class NewProjectView(_AuthenticatedTemplateView):
+class NewProjectView(AuthenticatedTemplateView):
     template_name = "pages/project/new.html"
 
 
-class _BaseProjectView(_AuthenticatedTemplateView):
+class _BaseProjectView(AuthenticatedTemplateView):
     def get_project_data(self, user: User, project_id: str) -> dict[str, Any]:
         project = Project.objects.get(id=project_id)
 
@@ -488,44 +349,4 @@ class ProjectGitInstructionsView(_BaseProjectView):
         data["auth_token"], _ = Token.objects.get_or_create(user=request.user)
         data["default_branch"] = settings.DJANGO_GIT_BRANCH_NAME
 
-        return super().get(request, *args, **data, **kwargs)
-
-
-class MapViewerView(_AuthenticatedTemplateView):
-    template_name = "pages/map_viewer.html"
-
-    def get(  # type: ignore[override]
-        self,
-        request: AuthenticatedHttpRequest,
-        *args: Any,
-        **kwargs: Any,
-    ) -> HttpResponseRedirectBase | HttpResponse:
-        survey_projects = [
-            project for project in request.user.projects if not project.exclude_geojson
-        ]
-
-        # Convert projects to a JSON-serializable format
-        projects_data = [
-            {
-                "id": str(project.id),
-                "name": project.name,
-                "modified_date": project.modified_date.isoformat(),
-                "permissions": request.user.get_best_permission(project).level_label,
-            }
-            for project in survey_projects
-        ]
-
-        # Check if user has write access to any project
-        # For map viewer, we'll grant write access if user has write access
-        # to any project
-
-        has_write_access = any(
-            request.user.get_best_permission(project) for project in survey_projects
-        )
-
-        data = {
-            "projects": json.dumps(projects_data),
-            "has_write_access": has_write_access,
-            "mapbox_api_token": settings.MAPBOX_API_TOKEN,
-        }
         return super().get(request, *args, **data, **kwargs)

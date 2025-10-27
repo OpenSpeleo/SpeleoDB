@@ -30,6 +30,7 @@ from frontend_private.views import TeamDangerZoneView
 from frontend_private.views import TeamDetailsView
 from frontend_private.views import TeamListingView
 from frontend_private.views import TeamMembershipsView
+from frontend_private.views import ToolXLSToArianeDMP
 
 app_name = "private"
 
@@ -104,4 +105,6 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("project/<uuid:project_id>/", include(project_patterns)),
     # Map Viewer URLs
     path("map_viewer/", MapViewerView.as_view(), name="map_viewer"),
+    # Tool URLs
+    path("tools/xls_to_dmp/", ToolXLSToArianeDMP.as_view(), name="tool-xls2dmp"),
 ]
