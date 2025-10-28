@@ -265,7 +265,7 @@
             <button class="tool-action" id="addRowBtn">Add Row</button>
             <button class="tool-action" id="clearBtn">Clear All</button>
             <button class="tool-action" id="pasteExcelBtn">Paste Excel</button>
-            <button class="tool-action" id="downloadDMPBtn">Download as DMP</button>
+            <button class="tool-action" id="downloadBtn">Download as DMP</button>
             <div class="spinner" id="downloadSpinner"></div>
             <div id="status" style="margin-left:12px;"></div>
         </div>
@@ -299,7 +299,6 @@
 <script>
 $(document).ready(function() {
     const COLUMNS = ['Length', 'Azimuth', 'Depth', 'Left', 'Right', 'Up', 'Down'];
-    const VALID_TYPES = ['REAL', 'VIRTUAL', 'START', 'CLOSURE'];
     const $tbody = $('#dataTable tbody');
     const $statusEl = $('#status');
     
@@ -569,7 +568,7 @@ $(document).ready(function() {
         }).join(',')).join('\n');
     }
 
-    $('#downloadDMPBtn').on('click', function() {
+    $('#downloadBtn').on('click', function() {
         // Validate the table before proceeding
         if (!validateTable()) {
             $('#status').text('Some cells are invalid. Please correct them before downloading.')
@@ -637,14 +636,14 @@ $(document).ready(function() {
                 
                 // Hide spinner and show success
                 $("#loading_spinner").hide();
-                $('#downloadDMPBtn').prop('disabled', false);
+                $('#downloadBtn').prop('disabled', false);
                 $('#status').text('Download successful!')
                             .css({ 'color': 'green', 'font-weight': 'bold' });
             },
             error: function(xhr, status, error) {
                 // Hide spinner and show error
                 $("#loading_spinner").hide();
-                $('#downloadDMPBtn').prop('disabled', false);
+                $('#downloadBtn').prop('disabled', false);
                 $('#status').text('Error: ' + error)
                             .css({ 'color': 'red', 'font-weight': 'bold' });
             },
