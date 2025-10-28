@@ -42,8 +42,8 @@ class BaseUserTestCaseMixin(TestCase):
         self.token = TokenFactory.create(user=self.user)
 
         # Clear caches to avoid carrying over values from one test to the other.
-        self.user._fetch_permissions.cache_clear()  # type: ignore[attr-defined] # noqa: SLF001
-        self.user.get_best_permission.cache_clear()  # type: ignore[attr-defined]
+        self.user._fetch_permissions.cache_clear()  # noqa: SLF001
+        self.user.get_best_permission.cache_clear()
 
 
 class BaseAPITestCase(BaseUserTestCaseMixin):

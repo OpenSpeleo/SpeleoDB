@@ -179,7 +179,7 @@ class Project(models.Model):
             _ = Mutex.objects.create(project=self, user=user)
 
         # Void `active_mutex` cache
-        self._cached_active_mutex.cache_clear()  # type: ignore  # noqa: PGH003
+        self._cached_active_mutex.cache_clear()
 
     def release_mutex(self, user: User, comment: str = "") -> None:
         if (active_mutex := self.active_mutex) is None:
@@ -193,7 +193,7 @@ class Project(models.Model):
         active_mutex.release_mutex(user=user, comment=comment)
 
         # Void `active_mutex` cache
-        self._cached_active_mutex.cache_clear()  # type: ignore  # noqa: PGH003
+        self._cached_active_mutex.cache_clear()
 
     def get_best_permission(self, user: User) -> TeamPermission | UserPermission:
         return user.get_best_permission(project=self)
