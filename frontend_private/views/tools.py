@@ -7,3 +7,7 @@ from frontend_private.views.base import AuthenticatedTemplateView
 
 class ToolXLSToArianeDMP(AuthenticatedTemplateView):
     template_name = "pages/tools/xls2dmp.html"
+
+
+class ToolXLSToCompass(AuthenticatedTemplateView):
+    template_name = "pages/tools/xls2compass.html"

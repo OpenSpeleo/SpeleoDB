@@ -31,6 +31,7 @@ from frontend_private.views import TeamDetailsView
 from frontend_private.views import TeamListingView
 from frontend_private.views import TeamMembershipsView
 from frontend_private.views import ToolXLSToArianeDMP
+from frontend_private.views import ToolXLSToCompass
 
 app_name = "private"
 
@@ -107,4 +108,5 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("map_viewer/", MapViewerView.as_view(), name="map_viewer"),
     # Tool URLs
     path("tools/xls_to_dmp/", ToolXLSToArianeDMP.as_view(), name="tool-xls2dmp"),
+    path("tools/xls_to_compass/", ToolXLSToCompass.as_view(), name="tool-xls2compass"),
 ]

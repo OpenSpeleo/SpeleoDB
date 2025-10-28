@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-# -*- coding: utf-8 -*-
-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import io
@@ -23,6 +22,8 @@ if TYPE_CHECKING:
     from django.http import FileResponse
     from rest_framework.request import Request
     from rest_framework.response import Response
+
+# ruff: noqa: E501
 
 
 logger = logging.getLogger(__name__)
@@ -119,3 +120,38 @@ class ToolXLSToDMP(APIView):
         return DownloadResponseFromBlob(
             obj=obj_stream, filename=dmp_file.name, attachment=True
         )
+
+
+class ToolXLSToCompass(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(
+        self, request: Request, *args: Any, **kwargs: Any
+    ) -> Response | FileResponse:
+        obj_stream = io.BytesIO()
+        obj_stream.write(b"""Fulford Cave
+SURVEY NAME: SS
+SURVEY DATE: 8 28 1988  COMMENT:Surface to shelter
+SURVEY TEAM:
+Mike Roberts,Ken Kreager,Rick Rhinehart, ,
+DECLINATION:   11.18  FORMAT: DDDDUDLRLADN  CORRECTIONS:  0.00 0.00 0.00
+
+        FROM           TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+          A1          SS1    62.45   104.00    34.50 -9999.00 -9999.00 -9999.00 -9999.00  #|P#
+         SS1          SS2    35.35   120.50    22.00 -9999.00 -9999.00 -9999.00 -9999.00  #|P#
+         SS2          SS3    25.35   150.50    10.50 -9999.00 -9999.00 -9999.00 -9999.00  #|P#
+         SS3          SS4    67.20   117.00    29.50 -9999.00 -9999.00 -9999.00 -9999.00  #|P#
+         SS4          SS5    60.10   123.50    16.00 -9999.00 -9999.00 -9999.00 -9999.00  #|P#
+         SS5          SS6    54.50   112.00    11.00 -9999.00 -9999.00 -9999.00 -9999.00  #|P#
+         SS6          SS7    36.30    89.00    21.00 -9999.00 -9999.00 -9999.00 -9999.00
+         SS6          SS8    41.70   333.50    -2.50 -9999.00 -9999.00 -9999.00 -9999.00
+\f""")
+
+        obj_stream.seek(0)
+
+        return DownloadResponseFromBlob(
+            obj=obj_stream, filename="survey.dat", attachment=True
+        )
+
+        # return Response(status=status.HTTP_200_OK)
