@@ -4517,9 +4517,29 @@ span.flatpickr-weekday {
   color: rgb(79 70 229 / var(--tw-text-opacity));
 }
 
+.text-red-200 {
+  --tw-text-opacity: 1;
+  color: rgb(254 202 202 / var(--tw-text-opacity));
+}
+
+.text-red-300 {
+  --tw-text-opacity: 1;
+  color: rgba(254, 178, 178, var(--tw-text-opacity));
+}
+
+.text-red-400 {
+  --tw-text-opacity: 1;
+  color: rgba(248, 113, 113, var(--tw-text-opacity));
+}
+
 .text-red-500 {
   --tw-text-opacity: 1;
   color: rgb(239 68 68 / var(--tw-text-opacity));
+}
+
+.text-red-600 {
+  --tw-text-opacity: 1;
+  color: rgba(220, 38, 38, var(--tw-text-opacity));
 }
 
 .text-rose-100 {
@@ -6500,6 +6520,12 @@ focus\:border-slate-900:focus {
 
   .lg\:flex-row {
     flex-direction: row;
+  }
+
+  .lg\:flex-1 {
+    @media (width >=64rem) {
+      flex: 1;
+    }
   }
 
   .lg\:flex-col {
