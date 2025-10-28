@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 from mnemo_lib.models import DMPFile
 from rest_framework import permissions
 from rest_framework import status
@@ -35,32 +34,44 @@ class ToolXLSToDMP(APIView):
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
-        dt_now = timezone.now()
+        survey_unit = request.data["unit"]
+
+        def format_float(val: str | None) -> float:
+            if val is None or val == "":
+                return 0.0
+
+            value = float(val)  # pyright: ignore[reportAssignmentType]
+            if survey_unit == "feet":
+                value /= 3.28084
+
+            return round(value, 2)
 
         try:
             survey_data = {
-                "date": dt_now.strftime("%Y-%m-%d %H:%M"),
-                "direction": 1,
+                "date": f"{request.data['survey_date']} 00:00",
+                "direction": 0
+                if request.data["direction"] == "in"
+                else 1,  # In: 0, Out: 1
                 "name": "AA1",
                 "shots": [
                     {
-                        "depth_in": 0,
-                        "depth_out": float(shot_data["Depth"]),
-                        "down": float(shot_data["Down"]) if shot_data["Down"] else 0,
-                        "head_in": float(shot_data["Azimuth"]),
-                        "head_out": float(shot_data["Azimuth"]),
-                        "hours": dt_now.hour,
-                        "left": float(shot_data["Left"]) if shot_data["Left"] else 0,
-                        "length": float(shot_data["Length"]),
+                        "depth_in": format_float(shot_data["Depth"]),
+                        "depth_out": format_float(shot_data["Depth"]),
+                        "down": format_float(shot_data["Down"]),
+                        "head_in": round(float(shot_data["Azimuth"])),
+                        "head_out": round(float(shot_data["Azimuth"])),
+                        "hours": 0,
+                        "left": format_float(shot_data["Left"]),
+                        "length": format_float(shot_data["Length"]),
                         "marker_idx": 0,
-                        "minutes": dt_now.minute,
+                        "minutes": 0,
                         "pitch_in": 0,
                         "pitch_out": 0,
-                        "right": float(shot_data["Right"]) if shot_data["Right"] else 0,
-                        "seconds": dt_now.second,
+                        "right": format_float(shot_data["Right"]),
+                        "seconds": 0,
                         "temperature": 0,
                         "type": 2,  # TypeShot: 0:CSA, 1: CSB, 2: STD, 3: EOL
-                        "up": float(shot_data["Up"]) if shot_data["Up"] else 0,
+                        "up": format_float(shot_data["Up"]),
                     }
                     for shot_data in request.data["shots"]
                 ],
@@ -68,7 +79,7 @@ class ToolXLSToDMP(APIView):
             }
 
             # Adding the EOL shot
-            survey_data["shots"].append(  # type: ignore[attr-defined]
+            survey_data["shots"].append(  # type: ignore[union-attr]
                 {
                     "depth_in": 0.0,
                     "depth_out": 0.0,
@@ -91,6 +102,7 @@ class ToolXLSToDMP(APIView):
             )
 
             dmp_obj = DMPFile.model_validate([survey_data])
+
         except (ValueError, ValidationError) as e:
             return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -106,4 +118,4 @@ class ToolXLSToDMP(APIView):
 
         return DownloadResponseFromBlob(
             obj=obj_stream, filename=dmp_file.name, attachment=True
-        )  # pyright: ignore[reportReturnType]
+        )

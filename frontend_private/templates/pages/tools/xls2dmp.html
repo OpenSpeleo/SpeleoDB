@@ -74,6 +74,129 @@
         padding-inline-start: 40px;
     }
 
+    .form-controls {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .form-group label {
+        color: #e2e8f0;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .date-input {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        font-size: 14px;
+        min-width: 200px;
+        font-family: monospace;
+    }
+
+    .date-input.invalid-date {
+        border: 2px solid #dc2626;
+        background: #fef2f2;
+    }
+
+    /* Toggle Switch for Units */
+    .unit-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+    }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 30px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #2196F3;
+        transition: .4s;
+        border-radius: 30px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #ff8900;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(30px);
+    }
+
+    .unit-label {
+        color: #94a3b8;
+        font-size: 14px;
+        font-weight: 400;
+        min-width: 50px;
+        transition: all 0.3s ease;
+    }
+
+    .unit-label.active {
+        color: #ffffff;
+        font-weight: 700;
+    }
+
+    /* Spinner */
+    .spinner {
+        display: none;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #ff8900;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        margin-left: 12px;
+    }
+
+    .spinner.active {
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
 </style>
 {% endblock extra_css %}
 
@@ -101,12 +224,49 @@
                     Google Spreadsheet Template
                 </a>
         </div>
+        
+        <hr class="border-slate-600 mt-6">
+
+        <div class="form-controls mt-6">
+
+            <div class="form-group text-center">
+                <label for="surveyDate">Survey Date</label>
+                <input type="date" id="surveyDate" class="date-input">
+            </div>
+
+            <div class="form-group text-center">
+                <label>Survey Units</label>
+                <div class="unit-toggle">
+                    <span class="unit-label" id="metersLabel">Meters</span>
+                    <label class="switch">
+                        <input type="checkbox" id="unitSwitch" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="unit-label active" id="feetLabel">Feet</span>
+                </div>
+            </div>
+
+            <div class="form-group text-center">
+                <label>Survey Direction</label>
+                <div class="unit-toggle">
+                    <span class="unit-label active" id="inLabel">In</span>
+                    <label class="switch">
+                        <input type="checkbox" id="directionSwitch">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="unit-label" id="outLabel">Out</span>
+                </div>
+            </div>
+        </div>
+
+        <hr class="border-slate-600 mt-6">
 
         <div class="controls my-6">
             <button class="tool-action" id="addRowBtn">Add Row</button>
             <button class="tool-action" id="clearBtn">Clear All</button>
             <button class="tool-action" id="pasteExcelBtn">Paste Excel</button>
             <button class="tool-action" id="downloadDMPBtn">Download as DMP</button>
+            <div class="spinner" id="downloadSpinner"></div>
             <div id="status" style="margin-left:12px;"></div>
         </div>
 
@@ -131,10 +291,8 @@
             </table>
         </div>
     </div>
-
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
 </div>
+<div id="loading_spinner" class="loading" style="display:none;"></div>
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
@@ -144,6 +302,50 @@ $(document).ready(function() {
     const VALID_TYPES = ['REAL', 'VIRTUAL', 'START', 'CLOSURE'];
     const $tbody = $('#dataTable tbody');
     const $statusEl = $('#status');
+    
+    // Set max date to today (no future dates allowed)
+    const today = new Date().toISOString().split('T')[0];
+    $('#surveyDate').attr('max', today);
+    
+    // Unit switch handler
+    let currentUnit = 'feet'; // Default unit is feet
+    $('#unitSwitch').on('change', function() {
+        if (this.checked) {
+            currentUnit = 'feet';
+            $('#metersLabel').removeClass('active');
+            $('#feetLabel').addClass('active');
+        } else {
+            currentUnit = 'meters';
+            $('#feetLabel').removeClass('active');
+            $('#metersLabel').addClass('active');
+        }
+    });
+
+    // Direction switch handler
+    let surveyDirection = 'in'; // Default direction is in
+    $('#directionSwitch').on('change', function() {
+        if (this.checked) {
+            surveyDirection = 'out';
+            $('#inLabel').removeClass('active');
+            $('#outLabel').addClass('active');
+        } else {
+            surveyDirection = 'in';
+            $('#outLabel').removeClass('active');
+            $('#inLabel').addClass('active');
+        }
+    });
+
+    // Date validation function
+    function validateDate(dateString) {
+        if (!dateString) return false;
+        const date = new Date(dateString);
+        return date instanceof Date && !isNaN(date);
+    }
+
+    // Remove red highlight when user changes date
+    $('#surveyDate').on('change input', function() {
+        $(this).removeClass('invalid-date');
+    });
 
     function validateCell(value, column) {
         const v = (value ?? '').trim();
@@ -375,6 +577,17 @@ $(document).ready(function() {
             return;
         }
 
+        // Validate the survey date
+        const surveyDate = $('#surveyDate').val();
+        if (!validateDate(surveyDate)) {
+            $('#surveyDate').addClass('invalid-date');
+            $('#status').text('Please enter a valid survey date.')
+                        .css({ 'color': 'red', 'font-weight': 'bold' });
+            return;
+        } else {
+            $('#surveyDate').removeClass('invalid-date');
+        }
+
         // Collect table data
         const rows = [];
         $('#dataTable tbody tr').each(function() {
@@ -390,11 +603,19 @@ $(document).ready(function() {
 
         var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
 
-        // AJAX call
+        // Show spinner
+        $("#loading_spinner").show();
+
+        // AJAX call with survey date, unit, and direction
         $.ajax({
             url: "{% url 'api:v1:tool-xls2dmp' %}",
             method: "POST",
-            data: JSON.stringify({ shots: rows }),
+            data: JSON.stringify({ 
+                shots: rows,
+                survey_date: surveyDate,
+                unit: currentUnit,
+                direction: surveyDirection
+            }),
             contentType: "application/json; charset=utf-8",
             cache: false,
             beforeSend: function (xhr) {
@@ -413,8 +634,17 @@ $(document).ready(function() {
 
                 window.URL.revokeObjectURL(a.href);
                 a.remove();
+                
+                // Hide spinner and show success
+                $("#loading_spinner").hide();
+                $('#downloadDMPBtn').prop('disabled', false);
+                $('#status').text('Download successful!')
+                            .css({ 'color': 'green', 'font-weight': 'bold' });
             },
             error: function(xhr, status, error) {
+                // Hide spinner and show error
+                $("#loading_spinner").hide();
+                $('#downloadDMPBtn').prop('disabled', false);
                 $('#status').text('Error: ' + error)
                             .css({ 'color': 'red', 'font-weight': 'bold' });
             },
