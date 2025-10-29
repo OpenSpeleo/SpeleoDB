@@ -298,7 +298,7 @@
 {% block inline_extra_js %}
 <script>
 $(document).ready(function() {
-    const COLUMNS = ['Length', 'Azimuth', 'Depth', 'Left', 'Right', 'Up', 'Down'];
+    const COLUMNS = ['length', 'azimuth', 'depth', 'left', 'right', 'up', 'down'];
     const $tbody = $('#dataTable tbody');
     const $statusEl = $('#status');
     
@@ -348,13 +348,13 @@ $(document).ready(function() {
 
     function validateCell(value, column) {
         const v = (value ?? '').trim();
-        if (['Length', 'Depth'].includes(column)) return v !== '' && !isNaN(v) && isFinite(parseFloat(v));
-        if (column === 'Azimuth') {
+        if (['length', 'depth'].includes(column)) return v !== '' && !isNaN(v) && isFinite(parseFloat(v));
+        if (column === 'azimuth') {
             if (v === '') return false;
             const n = parseFloat(v);
             return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
         }
-        if (['Left', 'Right', 'Up', 'Down'].includes(column)) {
+        if (['left', 'right', 'up', 'down'].includes(column)) {
             if (v === '') return true;
             const n = parseFloat(v);
             return !isNaN(n) && isFinite(n) && n >= 0;

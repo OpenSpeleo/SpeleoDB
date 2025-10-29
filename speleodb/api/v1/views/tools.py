@@ -56,23 +56,23 @@ class ToolXLSToDMP(APIView):
                 "name": "AA1",
                 "shots": [
                     {
-                        "depth_in": format_float(shot_data["Depth"]),
-                        "depth_out": format_float(shot_data["Depth"]),
-                        "down": format_float(shot_data["Down"]),
-                        "head_in": round(float(shot_data["Azimuth"])),
-                        "head_out": round(float(shot_data["Azimuth"])),
+                        "depth_in": format_float(shot_data["depth"]),
+                        "depth_out": format_float(shot_data["depth"]),
+                        "down": format_float(shot_data["down"]),
+                        "head_in": round(float(shot_data["azimuth"])),
+                        "head_out": round(float(shot_data["azimuth"])),
                         "hours": 0,
-                        "left": format_float(shot_data["Left"]),
-                        "length": format_float(shot_data["Length"]),
+                        "left": format_float(shot_data["left"]),
+                        "length": format_float(shot_data["length"]),
                         "marker_idx": 0,
                         "minutes": 0,
                         "pitch_in": 0,
                         "pitch_out": 0,
-                        "right": format_float(shot_data["Right"]),
+                        "right": format_float(shot_data["right"]),
                         "seconds": 0,
                         "temperature": 0,
                         "type": 2,  # TypeShot: 0:CSA, 1: CSB, 2: STD, 3: EOL
-                        "up": format_float(shot_data["Up"]),
+                        "up": format_float(shot_data["up"]),
                     }
                     for shot_data in request.data["shots"]
                 ],
