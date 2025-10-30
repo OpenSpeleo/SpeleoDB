@@ -384,6 +384,18 @@ wheels = [
 ]
 
 [[package]]
+name = "compass-lib"
+version = "0.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "orjson" },
+    { name = "pydantic" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/7d/693b663a0c861758ef0831c17799c19d0eaa8cf99fab41cd060ee8d22cce/compass_lib-0.0.2-py3-none-any.whl", hash = "sha256:5db0ac8d446d7752e62c0ce8265b7fefa8f969437552cfcaff4f9c9c25140812", size = 17540, upload-time = "2025-10-08T03:43:04.577Z" },
+]
+
+[[package]]
 name = "coverage"
 version = "7.11.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2126,6 +2138,7 @@ dependencies = [
     { name = "cachetools" },
     { name = "celery" },
     { name = "collectfasta" },
+    { name = "compass-lib" },
     { name = "django" },
     { name = "django-allauth" },
     { name = "django-celery-beat" },
@@ -2206,6 +2219,7 @@ requires-dist = [
     { name = "celery", specifier = "==5.5.3" },
     { name = "celery-types", marker = "extra == 'local'", specifier = "==0.23.0" },
     { name = "collectfasta", specifier = "==3.3.1" },
+    { name = "compass-lib", specifier = "==0.0.2" },
     { name = "coverage", marker = "extra == 'local'", specifier = "==7.11.0" },
     { name = "deepdiff", marker = "extra == 'local'", specifier = ">=7.0,<9.0" },
     { name = "django", specifier = "==5.2.7" },
