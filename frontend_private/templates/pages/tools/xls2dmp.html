@@ -236,21 +236,25 @@
             <b>Instructions:</b>
             <ul class="instructions">
                 <li>Use the Google Sheet Template below to prepare the data</li>
-                <li>Paste data directly into the table (Ctrl/Cmd+V) or use the <strong>"Paste Excel"</strong> button</li>
-                <li>You can add or remove rows; columns are fixed</li>
-                <li>Click "Download as DMP" when you're done. Might take 3-5 secs</li>
-                <li>Load the DMP into `Ariane` as if it was coming from the Mnemo</li>
+                <li>Use the "<span class="text-orange-300">Paste Excel</span>" button to copy the data into the table</li>
+                <li>You can add or remove rows, however columns are fixed</li>
+                <li>Click "<span class="text-orange-300">Download as DMP</span>" when you're done</li>
+                <li>Load the DMP into Ariane as if it was coming from the Mnemo</li>
             </ul>
         </p>
 
-        <div class="my-3">
+        <div class="my-4">
             <b>Please use the following:</b>
-                <a href="https://docs.google.com/spreadsheets/d/15DwmV2-78g58LDbnx8cHAONfx2Gj_bqRMJxjDBLkJB0/edit?usp=sharing" 
+                <a href="https://docs.google.com/spreadsheets/d/15DwmV2-78g58LDbnx8cHAONfx2Gj_bqRMJxjDBLkJB0/edit?usp=sharing"
+                   class="text-orange-500 underline"
                    target="_blank"
-                   style="color: #ff8900; text-decoration: underline;"
                 >
                     Google Spreadsheet Template
                 </a>
+        </div>
+
+        <div class="my-4 text-orange-300">
+            <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
         </div>
         
         <hr class="border-slate-600 mt-6">
@@ -457,20 +461,6 @@ $(document).ready(function() {
         } catch {
             $statusEl.text('Unable to read clipboard. Try Ctrl+V directly.');
         }
-    });
-
-    $(document).on('paste', function(e) {
-        const text = (e.originalEvent.clipboardData || window.clipboardData).getData('text/plain');
-        if (!text) return;
-        const sel = window.getSelection();
-        if (sel && sel.anchorNode && $tbody[0].contains(sel.anchorNode)) {
-            setTimeout(() => validateTable(), 50);
-            return;
-        }
-        e.preventDefault();
-        const rows = parseClipboardText(text);
-        renderRows(rows);
-        $statusEl.text(`Imported ${rows.length} rows.`);
     });
 
     function onCellInput(td) {
