@@ -11,6 +11,34 @@
         background: #fff;
         color: #474848;
         cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    button.tool-action:hover {
+        background: #f8f9fa;
+        border-color: #999;
+    }
+
+    #downloadBtn {
+        background: linear-gradient(135deg, #ff8900 0%, #ff6600 100%);
+        color: #fff;
+        border: none;
+        padding: 10px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(255, 137, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    #downloadBtn:hover {
+        background: linear-gradient(135deg, #ff9d1a 0%, #ff7a1a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(255, 137, 0, 0.4);
+    }
+
+    #downloadBtn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(255, 137, 0, 0.3);
     }
 
     .trash {
@@ -663,11 +691,10 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>From</th>
-                        <th>To</th>
+                        <th>Station</th>
+                        <th>Depth</th>
                         <th>Length</th>
                         <th>Azimuth</th>
-                        <th>Depth</th>
                         <th>Left</th>
                         <th>Right</th>
                         <th>Up</th>
@@ -717,12 +744,14 @@
     </div>
 </div>
 
+{% include 'snippets/modal_error.html' %}
+
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
 <script>
 $(document).ready(function() {
-    const COLUMNS = ["from", "to", "length", "azimuth", "depth", "left", "right", "up", "down", "flags", "comment"];
+    const COLUMNS = ["station", "depth", "length", "azimuth", "left", "right", "up", "down", "flags", "comment"];
     const $tbody = $('#dataTable tbody');
     const $statusEl = $('#status');
     
@@ -730,6 +759,14 @@ $(document).ready(function() {
     const surveyTeamMembers = [];
     const $teamContainer = $('#surveyTeamContainer');
     const $teamInput = $('#surveyTeamInput');
+
+    $(window).on('load', function() {
+        $("body").click(function () {
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+    });
 
     function renderTeamTags() {
         // Remove all existing tags
@@ -1028,19 +1065,44 @@ $(document).ready(function() {
         $(this).removeClass('invalid-date');
     });
 
-    function validateCell(value, column) {
+    function validateCell(value, column, isLastRow = false) {
         const v = (value ?? '').trim();
-        if (['length', 'depth'].includes(column)) return v !== '' && !isNaN(v) && isFinite(parseFloat(v));
-        if (column === 'azimuth') {
-            if (v === '') return false;
-            const n = parseFloat(v);
-            return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
+        
+        // Station must always be non-empty (any value accepted)
+        if (column === 'station') {
+            return v !== '';
         }
-        if (['left', 'right', 'up', 'down'].includes(column)) {
-            if (v === '') return true;
-            const n = parseFloat(v);
+        
+        // Depth: must be non-empty, numeric, and >= 0
+        if (column === 'depth') {
+            if (v === '') return false;
+            const n = Number(v);
             return !isNaN(n) && isFinite(n) && n >= 0;
         }
+        
+        // Length: MUST be empty on last row, required and >= 0 for all other rows
+        if (column === 'length') {
+            if (isLastRow) return v === ''; // Must be empty on last row
+            if (v === '') return false;
+            const n = Number(v);
+            return !isNaN(n) && isFinite(n) && n >= 0;
+        }
+        
+        // Azimuth: MUST be empty on last row, required and in [0, 360) for all other rows
+        if (column === 'azimuth') {
+            if (isLastRow) return v === ''; // Must be empty on last row
+            if (v === '') return false;
+            const n = Number(v);
+            return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
+        }
+        
+        // Left, right, up, down are always optional, but if provided must be >= 0
+        if (['left', 'right', 'up', 'down'].includes(column)) {
+            if (v === '') return true;
+            const n = Number(v);
+            return !isNaN(n) && isFinite(n) && n >= 0;
+        }
+        
         return true;
     }
 
@@ -1088,7 +1150,7 @@ $(document).ready(function() {
             if (parts.length === 1) parts = line.split(',');
             return parts.map(p => p.replace(/^\uFEFF/, '').trim());
         });
-        if (rows.length > 0 && /from/i.test(rows[0][0])) rows.shift();
+        if (rows.length > 0 && /station/i.test(rows[0][0])) rows.shift();
         return rows;
     }
 
@@ -1106,21 +1168,57 @@ $(document).ready(function() {
     function onCellInput(td) {
         const $td = $(td);
         const col = $td.data('col');
-        const ok = validateCell($td.text(), col);
+        const $row = $td.parent();
+        const $allRows = $tbody.children('tr');
+        const isLastRow = $allRows.last().is($row);
+        const ok = validateCell($td.text(), col, isLastRow);
         $td.toggleClass('invalid', !ok);
         validateTable();
     }
 
     function validateTable() {
         let allValid = true;
+        let lastRowLengthError = false;
+        let lastRowAzimuthError = false;
+        const $allRows = $tbody.children('tr');
+        const $lastRow = $allRows.last();
+        
         $('#dataTable tbody td[data-col]').each(function() {
             const $td = $(this);
             const col = $td.data('col');
-            const ok = validateCell($td.text(), col);
+            const $row = $td.parent();
+            const isLastRow = $lastRow.is($row);
+            const ok = validateCell($td.text(), col, isLastRow);
             $td.toggleClass('invalid', !ok);
-            if (!ok) allValid = false;
+            
+            if (!ok) {
+                allValid = false;
+                // Check if it's a last row Length/Azimuth error
+                if (isLastRow) {
+                    if (col === 'length' && $td.text().trim() !== '') {
+                        lastRowLengthError = true;
+                    }
+                    if (col === 'azimuth' && $td.text().trim() !== '') {
+                        lastRowAzimuthError = true;
+                    }
+                }
+            }
         });
-        $('#status').text(allValid ? 'All cells valid.' : 'Some cells are invalid.')
+        
+        // Create specific error message
+        let statusMessage = 'All cells valid.';
+        if (!allValid) {
+            if (lastRowLengthError || lastRowAzimuthError) {
+                const errors = [];
+                if (lastRowLengthError) errors.push('Length');
+                if (lastRowAzimuthError) errors.push('Azimuth');
+                statusMessage = `Error: The last row should not have ${errors.join(' or ')} ${errors.length > 1 ? 'values' : 'value'}.`;
+            } else {
+                statusMessage = 'Some cells are invalid.';
+            }
+        }
+        
+        $('#status').text(statusMessage)
                     .css({ 'color': allValid ? 'green' : 'red', 'font-weight': 'bold' });
         return allValid;
     }
@@ -1326,7 +1424,27 @@ $(document).ready(function() {
                 // Hide spinner and show error
                 $("#loading_spinner").hide();
                 $('#downloadBtn').prop('disabled', false);
-                $('#status').text('Error: ' + error)
+                
+                // Try to extract error message from response
+                let errorMessage = error;
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                } else if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    errorMessage = xhr.responseJSON.detail;
+                } else if (xhr.responseText) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.error || response.detail || response.message || error;
+                    } catch (e) {
+                        errorMessage = xhr.responseText.substring(0, 200); // Limit length
+                    }
+                }
+                
+                // Display error in modal
+                $("#modal_error_txt").text(errorMessage);
+                $("#modal_error").css('display', 'flex');
+                
+                $('#status').text('Error occurred. See details.')
                             .css({ 'color': 'red', 'font-weight': 'bold' });
             }
         });
@@ -1369,13 +1487,23 @@ $(document).ready(function() {
     });
 
     // Copy to clipboard
+    let copyButtonTimeout = null;
+    const originalCopyButtonHTML = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg> Copy to Clipboard';
+    const copiedButtonHTML = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg> Copied!';
+    
     $('#copyCodeBtn').on('click', function() {
+        const $btn = $('#copyCodeBtn');
+        
+        // Clear any existing timeout
+        if (copyButtonTimeout) {
+            clearTimeout(copyButtonTimeout);
+        }
+        
         navigator.clipboard.writeText(originalCode).then(function() {
-            const $btn = $('#copyCodeBtn');
-            const originalText = $btn.html();
-            $btn.html('<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg> Copied!');
-            setTimeout(function() {
-                $btn.html(originalText);
+            $btn.html(copiedButtonHTML);
+            copyButtonTimeout = setTimeout(function() {
+                $btn.html(originalCopyButtonHTML);
+                copyButtonTimeout = null;
             }, 2000);
         }).catch(function(err) {
             alert('Failed to copy to clipboard');

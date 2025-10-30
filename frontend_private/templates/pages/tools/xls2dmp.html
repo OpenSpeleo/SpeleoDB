@@ -11,6 +11,34 @@
         background: #fff;
         color: #474848;
         cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    button.tool-action:hover {
+        background: #f8f9fa;
+        border-color: #999;
+    }
+
+    #downloadBtn {
+        background: linear-gradient(135deg, #ff8900 0%, #ff6600 100%);
+        color: #fff;
+        border: none;
+        padding: 10px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(255, 137, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    #downloadBtn:hover {
+        background: linear-gradient(135deg, #ff9d1a 0%, #ff7a1a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(255, 137, 0, 0.4);
+    }
+
+    #downloadBtn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(255, 137, 0, 0.3);
     }
 
     .trash {
@@ -293,6 +321,8 @@
     </div>
 </div>
 <div id="loading_spinner" class="loading" style="display:none;"></div>
+
+{% include 'snippets/modal_error.html' %}
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
@@ -301,6 +331,14 @@ $(document).ready(function() {
     const COLUMNS = ['length', 'azimuth', 'depth', 'left', 'right', 'up', 'down'];
     const $tbody = $('#dataTable tbody');
     const $statusEl = $('#status');
+
+    $(window).on('load', function() {
+        $("body").click(function () {
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+    });
     
     // Set max date to today (no future dates allowed)
     const today = new Date().toISOString().split('T')[0];
@@ -644,7 +682,35 @@ $(document).ready(function() {
                 // Hide spinner and show error
                 $("#loading_spinner").hide();
                 $('#downloadBtn').prop('disabled', false);
-                $('#status').text('Error: ' + error)
+                
+                // Try to extract error message from response
+                let errorMessage = error;
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                } else if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    errorMessage = xhr.responseJSON.detail;
+                } else if (xhr.response) {
+                    // Response might be a Blob, try to read it as text
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        try {
+                            const response = JSON.parse(reader.result);
+                            errorMessage = response.error || response.detail || response.message || error;
+                        } catch (e) {
+                            errorMessage = reader.result.substring(0, 200); // Limit length
+                        }
+                        $("#modal_error_txt").text(errorMessage);
+                        $("#modal_error").css('display', 'flex');
+                    };
+                    reader.readAsText(xhr.response);
+                    return; // Exit early as we'll show modal in the reader callback
+                }
+                
+                // Display error in modal
+                $("#modal_error_txt").text(errorMessage);
+                $("#modal_error").css('display', 'flex');
+                
+                $('#status').text('Error occurred. See details.')
                             .css({ 'color': 'red', 'font-weight': 'bold' });
             },
             xhrFields: {
