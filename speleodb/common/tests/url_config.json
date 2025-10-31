@@ -120,6 +120,12 @@
         "decorators": ""
     },
     {
+        "url": "/_allauth/app/v1/tokens/refresh",
+        "module": "allauth.headless.tokens.views.RefreshTokenView",
+        "name": "headless:app:tokens:refresh",
+        "decorators": ""
+    },
+    {
         "url": "/_allauth/browser/v1/account/email",
         "module": "allauth.headless.account.views.ManageEmailView",
         "name": "headless:browser:account:manage_email",
@@ -321,6 +327,12 @@
         "url": "/api/auth/app/v1/config",
         "module": "allauth.headless.base.views.ConfigView",
         "name": "api:auth:app:config",
+        "decorators": ""
+    },
+    {
+        "url": "/api/auth/app/v1/tokens/refresh",
+        "module": "allauth.headless.tokens.views.RefreshTokenView",
+        "name": "api:auth:app:tokens:refresh",
         "decorators": ""
     },
     {
