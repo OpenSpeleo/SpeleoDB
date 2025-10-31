@@ -251,7 +251,7 @@ class SurveyData(BaseModel):
 
         # Section Header
         buffer.write(f"{self.cave_name}\n")
-        buffer.write(f"SURVEY NAME: {self.survey_name}\n")
+        buffer.write(f"SURVEY NAME: {self.survey_name.replace(" ", "_")}\n")
         buffer.write(f"SURVEY DATE: {self.survey_date.strftime('%m %-d %Y')}\n")
         buffer.write(f"COMMENT: {self.comment}\n")
         buffer.write(f"SURVEY TEAM:\n{', '.join(self.survey_team)}\n")
