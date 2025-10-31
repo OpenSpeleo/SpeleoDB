@@ -1100,11 +1100,18 @@ $(document).ready(function() {
             return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
         }
         
-        // Left, right, up, down are always optional, but if provided must be >= 0
+        // Left, right, up, down: MUST be empty on last row, optional but if provided must be >= 0 for all other rows
         if (['left', 'right', 'up', 'down'].includes(column)) {
+            if (isLastRow) return v === ''; // Must be empty on last row
             if (v === '') return true;
             const n = Number(v);
             return !isNaN(n) && isFinite(n) && n >= 0;
+        }
+        
+        // Flags and comment: MUST be empty on last row, optional for all other rows
+        if (['flags', 'comment'].includes(column)) {
+            if (isLastRow) return v === ''; // Must be empty on last row
+            return true; // Always valid for non-last rows
         }
         
         return true;
@@ -1182,8 +1189,7 @@ $(document).ready(function() {
 
     function validateTable() {
         let allValid = true;
-        let lastRowLengthError = false;
-        let lastRowAzimuthError = false;
+        let lastRowErrors = [];
         const $allRows = $tbody.children('tr');
         const $lastRow = $allRows.last();
         
@@ -1197,13 +1203,11 @@ $(document).ready(function() {
             
             if (!ok) {
                 allValid = false;
-                // Check if it's a last row Length/Azimuth error
-                if (isLastRow) {
-                    if (col === 'length' && $td.text().trim() !== '') {
-                        lastRowLengthError = true;
-                    }
-                    if (col === 'azimuth' && $td.text().trim() !== '') {
-                        lastRowAzimuthError = true;
+                // Check if it's a last row error with data that should be empty
+                if (isLastRow && $td.text().trim() !== '' && col !== 'station' && col !== 'depth') {
+                    const fieldName = col.charAt(0).toUpperCase() + col.slice(1);
+                    if (!lastRowErrors.includes(fieldName)) {
+                        lastRowErrors.push(fieldName);
                     }
                 }
             }
@@ -1212,11 +1216,8 @@ $(document).ready(function() {
         // Create specific error message
         let statusMessage = 'All cells valid.';
         if (!allValid) {
-            if (lastRowLengthError || lastRowAzimuthError) {
-                const errors = [];
-                if (lastRowLengthError) errors.push('Length');
-                if (lastRowAzimuthError) errors.push('Azimuth');
-                statusMessage = `Error: The last row should not have ${errors.join(' or ')} ${errors.length > 1 ? 'values' : 'value'}.`;
+            if (lastRowErrors.length > 0) {
+                statusMessage = `Error: The last row should only have Station and Depth. Remove: ${lastRowErrors.join(', ')}.`;
             } else {
                 statusMessage = 'Some cells are invalid.';
             }

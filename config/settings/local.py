@@ -91,7 +91,7 @@ DEBUG_TOOLBAR_CONFIG = {
 # ------------------------------------------------------------------------------
 MIDDLEWARE += ["silk.middleware.SilkyMiddleware"]
 
-__ENABLE_PROFILING__ = True
+__ENABLE_PROFILING__ = False
 
 # Enable Silk analysis of SQL queries
 SILKY_ANALYZE_QUERIES = __ENABLE_PROFILING__

@@ -152,8 +152,12 @@ class ToolXLSToCompass(APIView):
             )
             return ErrorResponse({"error": error}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Convert StringIO → BytesIO
+        bytes_io = io.BytesIO(buffer.getvalue().encode("utf-8"))
+        bytes_io.seek(0)
+
         return DownloadResponseFromBlob(
-            obj=buffer,
+            obj=bytes_io,
             filename="survey.dat",
             attachment=True,
         )

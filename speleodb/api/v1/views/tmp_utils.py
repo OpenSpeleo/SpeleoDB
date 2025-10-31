@@ -289,6 +289,6 @@ class SurveyData(BaseModel):
             buffer.write("\n")
 
         # End of Section - Form_feed: https://www.ascii-code.com/12
-        buffer.write(f"{COMPASS_SECTION_SEPARATOR}\n")
+        buffer.write(f"{COMPASS_SECTION_SEPARATOR}")
         buffer.seek(0)
         return buffer
