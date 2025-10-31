@@ -42,18 +42,35 @@ def calc_inclination(length: float, delta_depth: float) -> float:
     return -round(math.degrees(theta_rad), 2)
 
 
-class BaseShot(BaseModel):
+class CompassShot(BaseModel):
+    from_: str = Field(..., min_length=1, max_length=32)
+    to: str = Field(..., min_length=1, max_length=32)
+
+    azimuth: float = Field(..., ge=0, lt=360, description="Bearing in degrees [0-360)")
+    inclination: float = Field(..., ge=-90.0, le=90.0)
+    length: float = Field(..., gt=0, description="Shot length in unit system")
+
     # LRUD
     left: float | None = None
     right: float | None = None
     up: float | None = None
     down: float | None = None
 
+    # Optional
     flags: str | None = Field(None, max_length=64)
     comment: str | None = Field(None, max_length=256)
 
     # Convert stringified numbers to floats
-    @field_validator("left", "right", "up", "down", mode="before")
+    @field_validator(
+        "azimuth",
+        "inclination",
+        "length",
+        "left",
+        "right",
+        "up",
+        "down",
+        mode="before",
+    )
     @classmethod
     def parse_numeric_str(cls, v: Any) -> float | None:
         if v in ("", None):
@@ -63,6 +80,30 @@ class BaseShot(BaseModel):
             return float(v)
         except (TypeError, ValueError) as e:
             raise ValueError(f"Expected numeric or empty value, got {v!r}") from e
+
+    @field_validator("flags", mode="before")
+    @classmethod
+    def normalize_flags(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+
+        if not isinstance(v, str):
+            raise TypeError("flags must be a string")
+
+        # Remove Start & Stop Tokens
+        v = v.lstrip(ShotFlag.__start_token__)
+        v = v.rstrip(ShotFlag.__end_token__)
+
+        # Verify flag validity
+        allowed_flags = {flag.value for flag in ShotFlag}
+        chars = list(v.strip())
+
+        if not all(c in allowed_flags for c in chars):
+            invalid = [c for c in chars if c not in allowed_flags]
+            raise ValueError(f"Invalid flag characters: {invalid}")
+
+        # Sort alphabetically & remove duplicates for consistency
+        return "".join(sorted(set(chars)))
 
     @model_validator(mode="after")
     def check_measurements(self) -> Self:
@@ -77,35 +118,6 @@ class BaseShot(BaseModel):
     @model_validator(mode="after")
     def validate_model(self) -> Self:
         return self
-
-
-class InputShot(BaseShot):
-    station: str = Field(..., min_length=1, max_length=32)
-
-    azimuth: float | str | None = Field(
-        ..., ge=0, lt=360, description="Bearing in degrees [0-360)"
-    )
-    depth: float = Field(..., description="Depth change (positive = down)")
-    length: float | str | None = Field(
-        ..., gt=0, description="Shot length in unit system"
-    )
-
-    _ = field_validator("azimuth", "depth", "length", mode="before")(
-        BaseShot.parse_numeric_str
-    )
-
-
-class CompassShot(BaseShot):
-    from_: str = Field(..., min_length=1, max_length=32)
-    to: str = Field(..., min_length=1, max_length=32)
-
-    azimuth: float = Field(..., ge=0, lt=360, description="Bearing in degrees [0-360)")
-    inclination: float = Field(..., ge=-90.0, le=90.0)
-    length: float = Field(..., gt=0, description="Shot length in unit system")
-
-    _ = field_validator("azimuth", "inclination", "length", mode="before")(
-        BaseShot.parse_numeric_str
-    )
 
 
 class DeclinationObj(BaseModel):
@@ -146,6 +158,9 @@ class SurveyData(BaseModel):
     @classmethod
     def validate_model(cls, data: dict[str, Any]) -> dict[str, Any]:
         shots: list[dict[str, Any]] | None = data.pop("shots", None)
+
+        # ========================= Shot Validation ========================= #
+
         if shots is None or not len(shots):
             raise ValueError("No shot data received ...")
 
@@ -154,12 +169,8 @@ class SurveyData(BaseModel):
                 "A minimum of 2 entries must be received. Only 1 received ..."
             )
 
-        processed_shots: list[InputShot] = [
-            InputShot.model_validate(shot) for shot in shots
-        ]
-
         # The last shot should only contain: `station` and `depth` - no length/azimuth/LRUD/flags/comment  # noqa: E501
-        last_shot = processed_shots[-1]
+        last_shot = shots[-1]
         for key in [
             # Core
             "azimuth",
@@ -173,26 +184,28 @@ class SurveyData(BaseModel):
             "flags",
             "comment",
         ]:
-            if val := getattr(last_shot, key):
+            if val := last_shot.get(key, None):
                 raise ValueError(
                     f"The last shot can not contain any value for `{key}`, "
                     f"received: {val}."
                 )
 
-        output_shots: list[CompassShot] = []
-        for station_start, station_end in pairwise(processed_shots):
-            delta_depth = station_end.depth - station_start.depth
+        # ========================= Shot Processing ========================= #
+
+        output_shots: list[dict[str, Any]] = []
+        for station_start, station_end in pairwise(shots):
+            delta_depth = float(station_end["depth"]) - float(station_start["depth"])
 
             try:
-                shot_length = float(station_start.length)  # type: ignore[arg-type]
+                shot_length = float(station_start["length"])
             except TypeError as e:
                 raise ValueError(
-                    f"Shot `{station_start.station}` must have length defined."
+                    f"Shot `{station_start['station']}` must have length defined."
                 ) from e
 
             if abs(delta_depth) > shot_length:
                 raise ValueError(
-                    f"Shot `{station_start.station}` has an invalid length."
+                    f"Shot `{station_start['station']}` has an invalid length."
                     f"\n\t- Length: {shot_length}"
                     f"\n\t- Delta Depth: {delta_depth}"
                 )
@@ -202,29 +215,20 @@ class SurveyData(BaseModel):
                 delta_depth=delta_depth,
             )
 
-            output_shots.append(
-                CompassShot(
-                    from_=station_start.station,
-                    to=station_end.station,
-                    # Core
-                    length=shot_length,
-                    inclination=inclination,
-                    azimuth=station_start.azimuth,  # type: ignore[arg-type]
-                    # LRUD
-                    left=station_start.left,
-                    right=station_start.right,
-                    up=station_start.up,
-                    down=station_start.down,
-                    # extra
-                    flags=station_start.flags.lstrip(ShotFlag.__start_token__).rstrip(
-                        ShotFlag.__end_token__
-                    )
-                    if isinstance(station_start.flags, str)
-                    else None,
-                    comment=station_start.comment,
-                )
+            shot_data = station_start.copy()
+            del shot_data["depth"]
+
+            shot_data.update(
+                {
+                    "from_": shot_data.pop("station"),
+                    "to": station_end["station"],
+                    "inclination": inclination,
+                }
             )
-        data["shots"] = [shot.model_dump() for shot in output_shots]
+
+            output_shots.append(shot_data)
+
+        data["shots"] = output_shots
 
         data["declination"] = DeclinationObj(
             survey_date=data["survey_date"],
@@ -236,7 +240,112 @@ class SurveyData(BaseModel):
 
     @property
     def survey_format(self) -> str:
-        return "DDDDUDLRLADN"
+        # File Format (Line 5). For backward compatibility, this item is optional.
+        # This field specifies the format of the original survey notebook. Since Compass
+        # converts the file to fixed format, this information is used by programs like
+        # the editor to display and edit the data in original form. The field begins
+        # with the string: "FORMAT: " followed by 11, 12 or 13 upper case alphabetic
+        # characters. Each character specifies a particular part of the format.
+
+        # Compatibility Issues. Over time, the Compass Format string has changed to
+        # accommodate more format information. For backward compatibility, Compass can
+        # read all previous versions of the format. Here is detailed information about
+        # different versions of the Format strings:
+
+        # (U = Units, D = Dimension Order, S = Shot Order, B = Backsight Info, L = LRUD association)  # noqa: E501
+
+        # 11-Character Format. The earliest version of the string had 11 characters
+        # like this: UUUUDDDDSSS
+
+        # 12-Character Format. The next version had 12 characters, adding Backsight
+        # information: UUUUDDDDSSSB
+
+        # 13-Character Format. The next version had 13 characters, adding information
+        # about the LRUD associations: UUUUDDDDSSSBL
+
+        # 15-Character Format. Finally, the current version has 15 characters, adding
+        # backsights to order information: UUUUDDDDSSSSSBL
+
+        # ---------------------------------------------------------------------------- #
+        #
+        # Here is a list of the format items:
+
+        # XIV.	Backsight: B=Redundant, N or empty=No Redundant Backsights.
+        # XV.	LRUD Association: F=From Station, T=To Station
+
+        cformat = ""
+
+        # I.	Bearing Units: D = Degrees, Q = quads, R = Grads
+        cformat += "D"
+
+        # II.	Length Units: D = Decimal Feet, I = Feet and Inches M = Meters
+        cformat += "D" if self.unit == "feet" else "M"
+
+        # III.	Passage Units: Same as length
+        cformat += "D" if self.unit == "feet" else "M"
+
+        # IV.	Inclination Units:
+        #         - D = Degrees
+        #         - G = Percent Grade
+        #         - M = Degrees and Minutes
+        #         - R = Grads
+        #         - W = Depth Gauge
+        cformat += "D"
+
+        # V.	Passage Dimension Order: U = Up, D = Down, R = Right L = Left
+        cformat += "L"
+        # VI.	Passage Dimension Order: U = Up, D = Down, R = Right L = Left
+        cformat += "R"
+        # VII.	Passage Dimension Order: U = Up, D = Down, R = Right L = Left
+        cformat += "U"
+        # VIII.	Passage Dimension Order: U = Up, D = Down, R = Right L = Left
+        cformat += "D"
+
+        # IX.	Shot Item Order:
+        #         - L = Length
+        #         - A = Azimuth
+        #         - D = Inclination
+        #         - a = Back Azimuth
+        #         - d = Back Inclination
+        cformat += "L"
+
+        # X.	Shot Item Order:
+        #         - L = Length
+        #         - A = Azimuth
+        #         - D = Inclination
+        #         - a = Back Azimuth
+        #         - d = Back Inclination
+        cformat += "A"
+
+        # XI.	Shot Item Order:
+        #         - L = Length
+        #         - A = Azimuth
+        #         - D = Inclination
+        #         - a = Back Azimuth
+        #         - d = Back Inclination
+        cformat += "D"
+
+        # XII.	Shot Item Order:
+        #         - L = Length
+        #         - A = Azimuth
+        #         - D = Inclination
+        #         - a = Back Azimuth
+        #         - d = Back Inclination
+        #         - B = Redundant
+        #         - N or empty = No Redundant Backsights
+        cformat += "N"
+
+        # XIII.	Shot Item Order:
+        #         - L = Length
+        #         - A = Azimuth
+        #         - D = Inclination
+        #         - a = Back Azimuth
+        #         - d = Back Inclination
+        #         - B = Redundant
+        #         - N or empty = No Redundant Backsights
+        cformat += "N"
+
+        return cformat
 
     @property
     def correction(self) -> list[float]:
@@ -251,12 +360,12 @@ class SurveyData(BaseModel):
 
         # Section Header
         buffer.write(f"{self.cave_name}\n")
-        buffer.write(f"SURVEY NAME: {self.survey_name.replace(" ", "_")}\n")
+        buffer.write(f"SURVEY NAME: {self.survey_name.replace(' ', '_')}\n")
         buffer.write(f"SURVEY DATE: {self.survey_date.strftime('%m %-d %Y')}\n")
         buffer.write(f"COMMENT: {self.comment}\n")
         buffer.write(f"SURVEY TEAM:\n{', '.join(self.survey_team)}\n")
         buffer.write(f"DECLINATION: {self.declination:>7.02f}  ")
-        buffer.write("FORMAT: DDDDUDLRLADN  ")
+        buffer.write(f"FORMAT: {self.survey_format}  ")
         buffer.write(
             f"CORRECTIONS:  {' '.join(f'{nbr:.02f}' for nbr in self.correction)}  "
         )
@@ -266,7 +375,7 @@ class SurveyData(BaseModel):
 
         # Shots - Header
         buffer.write("        FROM           TO   LENGTH  BEARING      INC")
-        buffer.write("     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS\n\n")
+        buffer.write("     LEFT    RIGHT       UP     DOWN  FLAGS  COMMENTS\n\n")
 
         # Shots - Data
         for shot in self.shots:
@@ -276,9 +385,9 @@ class SurveyData(BaseModel):
             buffer.write(f"{shot.azimuth:8.2f} ")
             buffer.write(f"{shot.inclination:8.2f} ")
             buffer.write(f"{shot.left if shot.left is not None else -9999:8.2f} ")
+            buffer.write(f"{shot.right if shot.right is not None else -9999:8.2f} ")
             buffer.write(f"{shot.up if shot.up is not None else -9999:8.2f} ")
             buffer.write(f"{shot.down if shot.down is not None else -9999:8.2f} ")
-            buffer.write(f"{shot.right if shot.right is not None else -9999:8.2f} ")
             if shot.flags is not None and shot.flags != "":
                 escaped_start_token = str(ShotFlag.__start_token__).replace("\\", "")
                 buffer.write(
