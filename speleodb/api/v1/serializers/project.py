@@ -31,6 +31,8 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
     permission = serializers.SerializerMethodField()
     active_mutex = serializers.SerializerMethodField()
 
+    created_by = serializers.CharField(required=False)
+
     n_commits = serializers.SerializerMethodField()
 
     class Meta:
@@ -113,7 +115,7 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
 
         return super().update(instance, validated_data)
 
-    def get_permission(self, obj: Project) -> str | None:
+    def get_permission(self, obj: Project | dict[str, Any]) -> str | None:
         if isinstance(obj, dict):
             # Unsaved object
             return None
