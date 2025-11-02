@@ -161,3 +161,63 @@ class ToolXLSToCompass(APIView):
             filename="survey.dat",
             attachment=True,
         )
+
+
+class ToolDMP2JSON(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(
+        self, request: Request, *args: Any, **kwargs: Any
+    ) -> Response | FileResponse:
+        try:
+            # Get the uploaded file
+            if "file" not in request.FILES:
+                return ErrorResponse(
+                    {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            uploaded_file = request.FILES["file"]
+
+            # Validate file extension
+            if not uploaded_file.name.lower().endswith(".dmp"):
+                return ErrorResponse(
+                    {"error": "Invalid file type. Only .dmp files are allowed"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Save to temporary file and parse
+            with tempfile.TemporaryDirectory() as tmpdir:
+                dmp_file_path = Path(tmpdir) / uploaded_file.name
+
+                # Write uploaded file to disk
+                with dmp_file_path.open("wb") as f:
+                    for chunk in uploaded_file.chunks():
+                        f.write(chunk)
+
+                # Parse DMP file
+                dmp_obj = DMPFile.from_dmp(dmp_file_path)
+
+        except (ValueError, ValidationError, PydanticValidationError) as exc:
+            error = (
+                format_pydantic_error(exc)
+                if isinstance(exc, PydanticValidationError)
+                else str(exc)
+            )
+            return ErrorResponse({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as exc:
+            logger.exception("Error converting DMP to JSON")
+            return ErrorResponse(
+                {"error": f"Failed to parse DMP file: {exc!s}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Convert StringIO → BytesIO
+        bytes_io = io.BytesIO(dmp_obj.model_dump_json(indent=4).encode("utf-8"))
+        bytes_io.seek(0)
+
+        return DownloadResponseFromBlob(
+            obj=bytes_io,
+            filename="survey.dat",
+            attachment=True,
+        )

@@ -1,0 +1,723 @@
+{% extends "pages/tools/base.html" %}
+{% load static %}
+{% load countries %}
+
+{% block extra_css %}
+
+{% if debug %}
+<link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}" rel="stylesheet">
+<link href="{% static 'private/css/vendors/prism-line-numbers.min.css' %}" rel="stylesheet">
+{% else %}
+<link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-tomorrow.min.css" 
+    integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer" 
+/>
+<link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css" 
+    integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer" 
+/>
+{% endif %}
+
+<style>
+    button.tool-action {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    button.tool-action:hover {
+        background: #f8f9fa;
+        border-color: #999;
+    }
+
+    #downloadBtn {
+        background: linear-gradient(135deg, #ff8900 0%, #ff6600 100%);
+        color: #fff;
+        border: none;
+        padding: 10px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(255, 137, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    #downloadBtn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #ff9d1a 0%, #ff7a1a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(255, 137, 0, 0.4);
+    }
+
+    #downloadBtn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(255, 137, 0, 0.3);
+    }
+
+    #downloadBtn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    ul.instructions {
+        list-style: disc;
+        margin-block-end: 16px;
+        margin-block-start: 16px;
+        padding-inline-start: 40px;
+    }
+
+    /* Spinner */
+    .spinner {
+        display: none;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #ff8900;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        margin-left: 12px;
+    }
+
+    .spinner.active {
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* File Upload Area */
+    .file-upload-container {
+        margin: 30px 0;
+    }
+
+    .file-drop-zone {
+        border: 2px dashed #64748b;
+        border-radius: 8px;
+        padding: 60px 40px;
+        text-align: center;
+        background: #1e293b;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .file-drop-zone:hover {
+        border-color: #ff8900;
+        background: #2d3748;
+    }
+
+    .file-drop-zone.drag-over {
+        border-color: #ff8900;
+        background: #2d3748;
+        border-style: solid;
+    }
+
+    .file-drop-zone.has-file {
+        border-color: #10b981;
+        background: #1e3a32;
+    }
+
+    .file-drop-zone.invalid-file {
+        border-color: #dc2626;
+        background: #3a1e1e;
+    }
+
+    .file-drop-icon {
+        font-size: 48px;
+        color: #64748b;
+        margin-bottom: 16px;
+    }
+
+    .file-drop-zone.drag-over .file-drop-icon,
+    .file-drop-zone:hover .file-drop-icon {
+        color: #ff8900;
+    }
+
+    .file-drop-zone.has-file .file-drop-icon {
+        color: #10b981;
+    }
+
+    .file-drop-zone.invalid-file .file-drop-icon {
+        color: #dc2626;
+    }
+
+    .file-drop-text {
+        color: #e2e8f0;
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+
+    .file-drop-hint {
+        color: #94a3b8;
+        font-size: 14px;
+    }
+
+    .file-name-display {
+        color: #10b981;
+        font-size: 16px;
+        font-weight: 600;
+        margin-top: 12px;
+        word-break: break-all;
+    }
+
+    .file-error-display {
+        color: #dc2626;
+        font-size: 14px;
+        margin-top: 12px;
+    }
+
+    #fileInput {
+        display: none;
+    }
+
+    .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-container {
+        background: #1e293b;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 1000px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #334155;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        color: #f1f5f9;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 28px;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+        background: #334155;
+        color: #f1f5f9;
+    }
+
+    .modal-body {
+        padding: 0;
+        overflow: hidden;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: rgb(41 47 57);
+    }
+
+    .modal-actions {
+        padding: 16px 24px;
+        border-bottom: 1px solid #334155;
+        display: flex;
+        gap: 12px;
+    }
+
+    .modal-actions button {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: 1px solid #475569;
+        background: #1e293b;
+        color: #f1f5f9;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .modal-actions button:hover {
+        background: #334155;
+        border-color: #64748b;
+    }
+
+    .code-container {
+        flex: 1;
+        overflow: auto;
+    }
+
+    .code-display {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #e2e8f0;
+        height: 100%;
+    }
+
+    .code-display pre {
+        margin: 0 !important;
+        background: transparent !important;
+        padding: 20px 20px 20px 0 !important;
+        height: 100%;
+    }
+
+    .code-display pre.line-numbers {
+        padding-left: 4.5em !important;
+        position: relative;
+    }
+
+    .code-display code {
+        font-family: inherit !important;
+        font-size: inherit !important;
+        line-height: inherit !important;
+        background: transparent !important;
+    }
+
+    /* Override Prism line-numbers styling to match our theme */
+    .code-display .line-numbers .line-numbers-rows {
+        border-right: 1px solid #334155 !important;
+        width: 3.5em !important;
+    }
+
+    .code-display .line-numbers-rows > span {
+        display: block;
+        text-align: right;
+        padding-right: 0.5em;
+    }
+
+    .code-display .line-numbers-rows > span:before {
+        color: #64748b !important;
+        text-align: right !important;
+        min-width: 3em;
+        display: inline-block;
+    }
+
+    .code-display::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+    }
+
+    .code-display::-webkit-scrollbar-track {
+        background: #1e293b;
+    }
+
+    .code-display::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 4px;
+    }
+
+    .code-display::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
+
+</style>
+{% endblock extra_css %}
+
+{% block right_panel %}
+<div class="grow">
+    <div class="p-6">
+        <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: DMP to JSON</h2>
+        <p class="lead">
+            <b>Instructions:</b>
+            <ul class="instructions">
+                <li>Upload a DMP file from Ariane survey software</li>
+                <li>The file must have a <span class="text-orange-300">.dmp</span> extension</li>
+                <li>Click "<span class="text-orange-300">Download as JSON</span>" to convert the file</li>
+                <li>The result will be displayed in a modal where you can copy or download it</li>
+            </ul>
+        </p>
+
+        <div class="my-4 text-orange-300">
+            <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+        </div>
+        
+        <hr class="border-slate-600 mt-6">
+
+        <div class="file-upload-container">
+            <div class="file-drop-zone" id="fileDropZone">
+                <div class="file-drop-icon">📁</div>
+                <div class="file-drop-text">Drag and drop your DMP file here</div>
+                <div class="file-drop-hint">or click to browse</div>
+                <div class="file-name-display" id="fileNameDisplay" style="display: none;"></div>
+                <div class="file-error-display" id="fileErrorDisplay" style="display: none;"></div>
+            </div>
+            <input type="file" id="fileInput" accept=".dmp,.DMP">
+        </div>
+
+        <hr class="border-slate-600 mt-6">
+
+        <div class="controls my-6">
+            <button class="tool-action" id="downloadBtn" disabled>Download as JSON</button>
+            <div class="spinner" id="downloadSpinner"></div>
+            <div id="status" style="margin-left:12px;"></div>
+        </div>
+
+        {% csrf_token %}
+
+    </div>
+</div>
+<div id="loading_spinner" class="loading" style="display:none;"></div>
+
+<!-- Result Modal -->
+<div id="resultModal" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>JSON Output</h3>
+            <button class="modal-close" id="closeModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-actions">
+                <button id="copyCodeBtn">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                        <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                    </svg>
+                    Copy to Clipboard
+                </button>
+                <button id="downloadCodeBtn">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    </svg>
+                    Download File
+                </button>
+            </div>
+            <div class="code-container">
+                <div class="code-display" id="codeDisplay"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'snippets/modal_error.html' %}
+
+{% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+$(document).ready(function() {
+    const $fileDropZone = $('#fileDropZone');
+    const $fileInput = $('#fileInput');
+    const $fileNameDisplay = $('#fileNameDisplay');
+    const $fileErrorDisplay = $('#fileErrorDisplay');
+    const $downloadBtn = $('#downloadBtn');
+    const $statusEl = $('#status');
+    
+    let selectedFile = null;
+
+    $(window).on('load', function() {
+        $("body").click(function () {
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+    });
+
+    // Click to browse
+    $fileDropZone.on('click', function() {
+        $fileInput.click();
+    });
+
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        $fileDropZone[0].addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // Highlight drop zone when item is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+        $fileDropZone[0].addEventListener(eventName, function() {
+            $fileDropZone.addClass('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        $fileDropZone[0].addEventListener(eventName, function() {
+            $fileDropZone.removeClass('drag-over');
+        }, false);
+    });
+
+    // Handle dropped files
+    $fileDropZone[0].addEventListener('drop', function(e) {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    }, false);
+
+    // Handle file selection
+    $fileInput.on('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        // Reset states
+        $fileDropZone.removeClass('has-file invalid-file');
+        $fileNameDisplay.hide();
+        $fileErrorDisplay.hide();
+        selectedFile = null;
+        $downloadBtn.prop('disabled', true);
+        $statusEl.text('');
+
+        // Check file extension (case insensitive)
+        const fileName = file.name;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        
+        if (fileExtension !== 'dmp') {
+            $fileDropZone.addClass('invalid-file');
+            $fileErrorDisplay.text('Invalid file type. Please upload a .dmp file').show();
+            return;
+        }
+
+        // File is valid
+        selectedFile = file;
+        $fileDropZone.addClass('has-file');
+        $fileNameDisplay.text(fileName).show();
+        $downloadBtn.prop('disabled', false);
+        $statusEl.text('File ready for conversion')
+                  .css({ 'color': 'green', 'font-weight': 'bold' });
+    }
+
+    $('#downloadBtn').on('click', function() {
+        if (!selectedFile) {
+            $statusEl.text('Please select a DMP file first.')
+                      .css({ 'color': 'red', 'font-weight': 'bold' });
+            return;
+        }
+
+        var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+        // Show spinner
+        $("#loading_spinner").show();
+        $downloadBtn.prop('disabled', true);
+
+        // Create FormData and append the file
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        // AJAX call to convert DMP to JSON
+        $.ajax({
+            url: "{% url 'api:v1:tool-dmp2json' %}",
+            method: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            cache: false,
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                return true;
+            },
+            success: function(response) {
+                // Hide spinner
+                $("#loading_spinner").hide();
+                $downloadBtn.prop('disabled', false);
+                
+                // Response should be JSON string or object
+                let jsonString;
+                if (typeof response === 'string') {
+                    jsonString = response;
+                } else {
+                    jsonString = JSON.stringify(response, null, 2);
+                }
+                
+                // Store the response for later use
+                window.surveyData = jsonString;
+                
+                // Display the content in the modal
+                displayCodeInModal(jsonString);
+                
+                $statusEl.text('Conversion successful!')
+                          .css({ 'color': 'green', 'font-weight': 'bold' });
+            },
+            error: function(xhr, status, error) {
+                // Hide spinner and show error
+                $("#loading_spinner").hide();
+                $downloadBtn.prop('disabled', false);
+                
+                // Try to extract error message from response
+                let errorMessage = error;
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                } else if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    errorMessage = xhr.responseJSON.detail;
+                } else if (xhr.responseText) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.error || response.detail || response.message || error;
+                    } catch (e) {
+                        errorMessage = xhr.responseText.substring(0, 200); // Limit length
+                    }
+                }
+                
+                // Display error in modal
+                $("#modal_error_txt").text(errorMessage);
+                $("#modal_error").css('display', 'flex');
+                
+                $statusEl.text('Error occurred. See details.')
+                          .css({ 'color': 'red', 'font-weight': 'bold' });
+            }
+        });
+    });
+
+    // Store original code for copying
+    let originalCode = '';
+
+    // Function to display code in modal with line numbers
+    function displayCodeInModal(code) {
+        // Store original code for copy/download
+        originalCode = code;
+        
+        // Escape HTML and create code block
+        const escapedCode = $('<div>').text(code).html();
+        $('#codeDisplay').html('<pre class="line-numbers"><code class="language-json">' + escapedCode + '</code></pre>');
+        
+        // Highlight with Prism
+        Prism.highlightElement($('#codeDisplay code')[0]);
+        
+        // Show modal
+        $('#resultModal').addClass('show');
+    }
+
+    // Close modal handlers
+    $('#closeModal').on('click', function() {
+        $('#resultModal').removeClass('show');
+    });
+
+    // Track mousedown position to distinguish clicks from drag selections
+    let mouseDownTarget = null;
+    $('#resultModal').on('mousedown', function(e) {
+        mouseDownTarget = e.target;
+    });
+
+    $('#resultModal').on('click', function(e) {
+        // Only close if mousedown and click happened on the same overlay element
+        if (e.target === this && mouseDownTarget === this) {
+            $('#resultModal').removeClass('show');
+        }
+        mouseDownTarget = null;
+    });
+
+    // ESC key to close modal
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape' && $('#resultModal').hasClass('show')) {
+            $('#resultModal').removeClass('show');
+        }
+    });
+
+    // Copy to clipboard
+    let copyButtonTimeout = null;
+    const originalCopyButtonHTML = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg> Copy to Clipboard';
+    const copiedButtonHTML = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg> Copied!';
+    
+    $('#copyCodeBtn').on('click', function() {
+        const $btn = $('#copyCodeBtn');
+        
+        // Clear any existing timeout
+        if (copyButtonTimeout) {
+            clearTimeout(copyButtonTimeout);
+        }
+        
+        navigator.clipboard.writeText(originalCode).then(function() {
+            $btn.html(copiedButtonHTML);
+            copyButtonTimeout = setTimeout(function() {
+                $btn.html(originalCopyButtonHTML);
+                copyButtonTimeout = null;
+            }, 2000);
+        }).catch(function(err) {
+            alert('Failed to copy to clipboard');
+        });
+    });
+
+    // Download file
+    $('#downloadCodeBtn').on('click', function() {
+        const blob = new Blob([originalCode], { type: 'application/json' });
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.href = window.URL.createObjectURL(blob);
+        a.style.display = 'none';
+        a.download = 'survey.json';
+        a.click();
+        window.URL.revokeObjectURL(a.href);
+        a.remove();
+    });
+});
+</script>
+
+{% if debug %}
+<script src="{% static 'private/js/vendors/prism.min.js' %}"></script>
+<script src="{% static 'private/js/vendors/prism-line-numbers.min.js' %}"></script>
+<script src="{% static 'private/js/vendors/prism-json.min.js' %}"></script>
+{% else %}
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js" 
+    integrity="sha512-HiD3V4nv8fcjtouznjT9TqDNDm1EXngV331YGbfVGeKUoH+OLkRTCMzA34ecjlgSQZpdHZupdSrqHY+Hz3l6uQ==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.js" 
+    integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-json.min.js" 
+    integrity="sha512-QXFMVAusM85vUYDaNgcYeU3rzSlc+bTV4JvkfJhjxSHlQEo+ig53BtnGkvFTiNJh8D+wv6uWAQ2vJaVmxe8d3w==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+{% endif %}
+
+{% endblock inline_extra_js %}

@@ -11,3 +11,7 @@ class ToolXLSToArianeDMP(AuthenticatedTemplateView):
 
 class ToolXLSToCompass(AuthenticatedTemplateView):
     template_name = "pages/tools/xls2compass.html"
+
+
+class ToolDMP2Json(AuthenticatedTemplateView):
+    template_name = "pages/tools/dmp2json.html"

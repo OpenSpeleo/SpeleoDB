@@ -15,6 +15,7 @@ from frontend_private.views.team import TeamDangerZoneView
 from frontend_private.views.team import TeamDetailsView
 from frontend_private.views.team import TeamListingView
 from frontend_private.views.team import TeamMembershipsView
+from frontend_private.views.tools import ToolDMP2Json
 from frontend_private.views.tools import ToolXLSToArianeDMP
 from frontend_private.views.tools import ToolXLSToCompass
 from frontend_private.views.user import AuthTokenView
@@ -46,6 +47,7 @@ __all__ = [
     "TeamDetailsView",
     "TeamListingView",
     "TeamMembershipsView",
+    "ToolDMP2Json",
     "ToolXLSToArianeDMP",
     "ToolXLSToCompass",
 ]

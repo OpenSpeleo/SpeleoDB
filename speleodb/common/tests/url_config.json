@@ -654,6 +654,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/tools/dmp2json/",
+        "module": "speleodb.api.v1.views.tools.ToolDMP2JSON",
+        "name": "api:v1:tool-dmp2json",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/tools/xls2compass/",
         "module": "speleodb.api.v1.views.tools.ToolXLSToCompass",
         "name": "api:v1:tool-xls2compass",
@@ -879,6 +885,12 @@
         "url": "/private/teams/",
         "module": "frontend_private.views.team.TeamListingView",
         "name": "private:teams",
+        "decorators": ""
+    },
+    {
+        "url": "/private/tools/dmp_to_json/",
+        "module": "frontend_private.views.tools.ToolDMP2Json",
+        "name": "private:tool-dmp2json",
         "decorators": ""
     },
     {

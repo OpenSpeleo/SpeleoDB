@@ -3,6 +3,27 @@
 {% load countries %}
 
 {% block extra_css %}
+
+{% if debug %}
+<link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}" rel="stylesheet">
+<link href="{% static 'private/css/vendors/prism-line-numbers.min.css' %}" rel="stylesheet">
+{% else %}
+<link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-tomorrow.min.css" 
+    integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer" 
+/>
+<link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css" 
+    integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer" 
+/>
+{% endif %}
+
 <style>
     button.tool-action {
         padding: 6px 10px;
@@ -505,48 +526,69 @@
     .code-container {
         flex: 1;
         overflow: auto;
-        padding: 20px 0;
     }
 
     .code-display {
-        display: flex;
         font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
         font-size: 13px;
         line-height: 1.6;
         color: #e2e8f0;
+        height: 100%;
     }
 
-    .line-numbers {
-        padding: 0 16px;
-        text-align: right;
-        color: #b3b3b3;
-        user-select: none;
-        border-right: 1px solid #1e293b;
-        white-space: pre;
+    .code-display pre {
+        margin: 0 !important;
+        background: transparent !important;
+        padding: 20px 20px 20px 0 !important;
+        height: 100%;
     }
 
-    .code-content {
-        flex: 1;
-        padding: 0 20px;
-        white-space: pre;
-        overflow-x: auto;
+    .code-display pre.line-numbers {
+        padding-left: 4.5em !important;
         position: relative;
     }
 
-    .code-content::-webkit-scrollbar {
-        height: 8px;
+    .code-display code {
+        font-family: inherit !important;
+        font-size: inherit !important;
+        line-height: inherit !important;
+        background: transparent !important;
     }
 
-    .code-content::-webkit-scrollbar-track {
+    /* Override Prism line-numbers styling to match our theme */
+    .code-display .line-numbers .line-numbers-rows {
+        border-right: 1px solid #334155 !important;
+        width: 3.5em !important;
+    }
+
+    .code-display .line-numbers-rows > span {
+        display: block;
+        text-align: right;
+        padding-right: 0.5em;
+    }
+
+    .code-display .line-numbers-rows > span:before {
+        color: #64748b !important;
+        text-align: right !important;
+        min-width: 3em;
+        display: inline-block;
+    }
+
+    .code-display::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+    }
+
+    .code-display::-webkit-scrollbar-track {
         background: #1e293b;
     }
 
-    .code-content::-webkit-scrollbar-thumb {
+    .code-display::-webkit-scrollbar-thumb {
         background: #475569;
         border-radius: 4px;
     }
 
-    .code-content::-webkit-scrollbar-thumb:hover {
+    .code-display::-webkit-scrollbar-thumb:hover {
         background: #64748b;
     }
 
@@ -739,10 +781,7 @@
                 </button>
             </div>
             <div class="code-container">
-                <div class="code-display">
-                    <div class="line-numbers" id="lineNumbers"></div>
-                    <div class="code-content" id="codeContent"></div>
-                </div>
+                <div class="code-display" id="codeDisplay"></div>
             </div>
         </div>
     </div>
@@ -1464,12 +1503,18 @@ $(document).ready(function() {
         // Store original code for copy/download
         originalCode = code;
         
-        const lines = code.split('\n');
-        const lineNumbersHtml = lines.map((_, i) => i + 1).join('\n');
+        // Escape HTML and create code block
+        const escapedCode = $('<div>').text(code).html();
+        $('#codeDisplay').html('<pre class="line-numbers"><code class="language-makefile">' + escapedCode + '</code></pre>');
         
-        // Wrap form feed characters in span for visual styling (keeps actual \f in DOM)
-        $('#lineNumbers').text(lineNumbersHtml);
-        $('#codeContent').html(escapeHtml(code).replace(/\f/g, '<span class="ff-char">\f</span>'));
+        // Highlight with Prism
+        Prism.highlightElement($('#codeDisplay code')[0]);
+        
+        // After highlighting, wrap form feed characters in span for visual styling
+        const $codeElement = $('#codeDisplay code');
+        $codeElement.html($codeElement.html().replace(/\f/g, '<span class="ff-char">\f</span>'));
+        
+        // Show modal
         $('#resultModal').addClass('show');
     }
 
@@ -1478,10 +1523,18 @@ $(document).ready(function() {
         $('#resultModal').removeClass('show');
     });
 
+    // Track mousedown position to distinguish clicks from drag selections
+    let mouseDownTarget = null;
+    $('#resultModal').on('mousedown', function(e) {
+        mouseDownTarget = e.target;
+    });
+
     $('#resultModal').on('click', function(e) {
-        if (e.target === this) {
+        // Only close if mousedown and click happened on the same overlay element
+        if (e.target === this && mouseDownTarget === this) {
             $('#resultModal').removeClass('show');
         }
+        mouseDownTarget = null;
     });
 
     // ESC key to close modal
@@ -1531,4 +1584,30 @@ $(document).ready(function() {
     renderRows([]);
 });
 </script>
+
+{% if debug %}
+<script src="{% static 'private/js/vendors/prism.min.js' %}"></script>
+<script src="{% static 'private/js/vendors/prism-line-numbers.min.js' %}"></script>
+<script src="{% static 'private/js/vendors/prism-makefile.min.js' %}"></script>
+{% else %}
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js" 
+    integrity="sha512-HiD3V4nv8fcjtouznjT9TqDNDm1EXngV331YGbfVGeKUoH+OLkRTCMzA34ecjlgSQZpdHZupdSrqHY+Hz3l6uQ==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.js" 
+    integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-makefile.min.js" 
+    integrity="sha512-9MXjDxOwWNLJZRSwZRFdc1lvSIxld5c9DeLhySKjTAIEpj8a48Kezdc/hKjUsyD8S+oa3a+5SpuqdcCFodSI3Q==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+{% endif %}
+
 {% endblock inline_extra_js %}
