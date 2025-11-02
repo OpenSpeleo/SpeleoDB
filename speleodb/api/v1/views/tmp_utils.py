@@ -22,7 +22,14 @@ if TYPE_CHECKING:
 
 
 class CompassShot(BaseModel):
-    from_: Annotated[str, Field(min_length=1, max_length=32)]
+    from_: Annotated[
+        str,
+        Field(
+            min_length=1,
+            max_length=32,
+            serialization_alias="from",
+        ),
+    ]
     to: Annotated[str, Field(min_length=1, max_length=32)]
 
     azimuth: Annotated[float, Field(..., ge=0, lt=360)]
