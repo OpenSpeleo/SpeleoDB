@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import io
-import math
 from datetime import datetime
 from itertools import pairwise
 from typing import TYPE_CHECKING
+from typing import Annotated
+from typing import Literal
 
 import pyIGRF14 as pyIGRF
 from compass_lib.constants import COMPASS_SECTION_SEPARATOR
@@ -18,52 +19,30 @@ from pydantic import model_validator
 
 if TYPE_CHECKING:
     from typing import Any
-    from typing import Self
-
-
-def calc_inclination(length: float, delta_depth: float) -> float:
-    """
-    Calculate inclination (in degrees) given shot length and delta depth.
-
-    Compass Convention:
-    - Positive: Going Up/Shallower (delta_depth < 0)
-    - Negative: Going Down/Deeper (delta_depth > 0)
-    """
-    if abs(delta_depth) > length:
-        raise ValueError("Delta depth cannot be greater than shot length.")
-
-    if length == 0.0:
-        raise ValueError("Impossible to calculate inclination of a zero-length shot.")
-
-    # Calculate inclination in radians
-    theta_rad = math.asin(delta_depth / length)
-
-    # Convert to degrees
-    return -round(math.degrees(theta_rad), 2)
 
 
 class CompassShot(BaseModel):
-    from_: str = Field(..., min_length=1, max_length=32)
-    to: str = Field(..., min_length=1, max_length=32)
+    from_: Annotated[str, Field(min_length=1, max_length=32)]
+    to: Annotated[str, Field(min_length=1, max_length=32)]
 
-    azimuth: float = Field(..., ge=0, lt=360, description="Bearing in degrees [0-360)")
-    inclination: float = Field(..., ge=-90.0, le=90.0)
-    length: float = Field(..., gt=0, description="Shot length in unit system")
+    azimuth: Annotated[float, Field(..., ge=0, lt=360)]
+    delta_depth: Annotated[float, Field(ge=-1000, le=1000)]
+    length: Annotated[float, Field(ge=0, le=1000)]
 
     # LRUD
-    left: float | None = None
-    right: float | None = None
-    up: float | None = None
-    down: float | None = None
+    left: Annotated[float, Field(ge=0)] | None = None
+    right: Annotated[float, Field(ge=0)] | None = None
+    up: Annotated[float, Field(ge=0)] | None = None
+    down: Annotated[float, Field(ge=0)] | None = None
 
     # Optional
-    flags: str | None = Field(None, max_length=64)
-    comment: str | None = Field(None, max_length=256)
+    flags: Annotated[str, Field(max_length=5)] | None = None
+    comment: Annotated[str, Field(max_length=256)] | None = None
 
     # Convert stringified numbers to floats
     @field_validator(
         "azimuth",
-        "inclination",
+        "delta_depth",
         "length",
         "left",
         "right",
@@ -77,7 +56,7 @@ class CompassShot(BaseModel):
             return None
 
         try:
-            return float(v)
+            return round(float(v), 2)
         except (TypeError, ValueError) as e:
             raise ValueError(f"Expected numeric or empty value, got {v!r}") from e
 
@@ -105,25 +84,11 @@ class CompassShot(BaseModel):
         # Sort alphabetically & remove duplicates for consistency
         return "".join(sorted(set(chars)))
 
-    @model_validator(mode="after")
-    def check_measurements(self) -> Self:
-        # Ensure Left/Right/Up/Down are non-negative if present
-        for field_name in ("left", "right", "up", "down"):
-            value = getattr(self, field_name)
-            if value is not None and value < 0:
-                raise ValueError(f"{field_name} cannot be negative")
-
-        return self
-
-    @model_validator(mode="after")
-    def validate_model(self) -> Self:
-        return self
-
 
 class DeclinationObj(BaseModel):
     survey_date: PastDate
-    latitude: float = Field(..., ge=-90.0, le=90.0)
-    longitude: float = Field(..., ge=-180.0, le=180.0)
+    latitude: Annotated[float, Field(ge=-90.0, le=90.0)]
+    longitude: Annotated[float, Field(ge=-180.0, le=180.0)]
 
     @property
     def declination(self) -> float:
@@ -137,17 +102,17 @@ class DeclinationObj(BaseModel):
 
 
 class SurveyData(BaseModel):
-    cave_name: str = Field(..., min_length=1, max_length=64)
-    survey_name: str = Field(..., min_length=1, max_length=64)
+    cave_name: Annotated[str, Field(min_length=1, max_length=64)]
+    survey_name: Annotated[str, Field(min_length=1, max_length=64)]
     survey_date: PastDate
 
-    survey_team: list[str] = Field(..., min_length=0)
+    survey_team: Annotated[list[str], Field(min_length=0)]
 
-    unit: str = Field(..., pattern=r"^(feet|meters)$", description="Supported units")
-    comment: str | None = Field(None, max_length=512)
-    declination: float = Field(..., ge=-90.0, le=90.0)
+    unit: Literal["feet", "meters"]
+    comment: Annotated[str, Field(max_length=512)] | None
+    declination: Annotated[float, Field(ge=-90.0, le=90.0)]
 
-    shots: list[CompassShot] = Field(..., min_length=1)
+    shots: Annotated[list[CompassShot], Field(min_length=1)]
 
     @field_validator("survey_team")
     @classmethod
@@ -210,19 +175,12 @@ class SurveyData(BaseModel):
                     f"\n\t- Delta Depth: {delta_depth}"
                 )
 
-            inclination = calc_inclination(
-                length=shot_length,
-                delta_depth=delta_depth,
-            )
-
             shot_data = station_start.copy()
-            del shot_data["depth"]
-
             shot_data.update(
                 {
                     "from_": shot_data.pop("station"),
                     "to": station_end["station"],
-                    "inclination": inclination,
+                    "delta_depth": delta_depth,
                 }
             )
 
@@ -290,7 +248,7 @@ class SurveyData(BaseModel):
         #         - M = Degrees and Minutes
         #         - R = Grads
         #         - W = Depth Gauge
-        cformat += "D"
+        cformat += "W"
 
         # V.	Passage Dimension Order: U = Up, D = Down, R = Right L = Left
         cformat += "L"
@@ -374,7 +332,7 @@ class SurveyData(BaseModel):
         )
 
         # Shots - Header
-        buffer.write("        FROM           TO   LENGTH  BEARING      INC")
+        buffer.write("        FROM           TO   LENGTH  BEARING   ΔDEPTH")
         buffer.write("     LEFT    RIGHT       UP     DOWN  FLAGS  COMMENTS\n\n")
 
         # Shots - Data
@@ -383,7 +341,10 @@ class SurveyData(BaseModel):
             buffer.write(f"{shot.to: >12} ")
             buffer.write(f"{shot.length:8.2f} ")
             buffer.write(f"{shot.azimuth:8.2f} ")
-            buffer.write(f"{shot.inclination:8.2f} ")
+            # In Compass - Delta Depth is the negative.
+            # - x < 0: Means going down/deeper
+            # - x > 0: Means going up/shallower
+            buffer.write(f"{-shot.delta_depth:8.2f} ")
             buffer.write(f"{shot.left if shot.left is not None else -9999:8.2f} ")
             buffer.write(f"{shot.right if shot.right is not None else -9999:8.2f} ")
             buffer.write(f"{shot.up if shot.up is not None else -9999:8.2f} ")
