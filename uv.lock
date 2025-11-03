@@ -1295,15 +1295,15 @@ wheels = [
 
 [[package]]
 name = "mnemo-lib"
-version = "0.0.5"
+version = "0.0.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "orjson" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/04/4828c39e36f5273c02c9ae057a9d11811b51679189a84cd2d58309a12b13/mnemo_lib-0.0.5.tar.gz", hash = "sha256:bc3a1f0cc8660c5aed80b86aaf39be087e2100b3d16c3cf7ec4582447804bc74", size = 14330, upload-time = "2025-10-27T23:39:56.584Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d6/4d/2ac949e3b76a9ea0ed902152747fbe4906e2f82cde5cbaabb706aad63071/mnemo_lib-0.0.6.tar.gz", hash = "sha256:64bce7f14925ac763219773d992c406ea93ff55cab186193fcf28de56d03b02a", size = 14932, upload-time = "2025-11-02T22:30:23.376Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/00/86daad97a1af509d93eea9d5d2fc7143ff985d1eb26dfd6fea0dbfea6bde/mnemo_lib-0.0.5-py3-none-any.whl", hash = "sha256:7320dd3abe2a93b140608c7169fc97440408ca20de48989abd962eb8f20e6d86", size = 15671, upload-time = "2025-10-27T23:39:55.207Z" },
+    { url = "https://files.pythonhosted.org/packages/23/0f/dc9cf23e4729ef616cee8f9ca8159ac79f1a83afd344949b03ddb01a03b6/mnemo_lib-0.0.6-py3-none-any.whl", hash = "sha256:4167a529ecf42633645b9666d0f7230775915d95c381b419ae8be75c04ba064c", size = 16414, upload-time = "2025-11-02T22:30:22.279Z" },
 ]
 
 [[package]]
@@ -2257,7 +2257,7 @@ requires-dist = [
     { name = "imageio-ffmpeg", specifier = "==0.6.0" },
     { name = "ipdb", marker = "extra == 'local'", specifier = "==0.13.13" },
     { name = "jsonschema-rs", specifier = "==0.33.0" },
-    { name = "mnemo-lib", specifier = "==0.0.5" },
+    { name = "mnemo-lib", specifier = "==0.0.6" },
     { name = "mypy", marker = "extra == 'local'", specifier = "==1.18.2" },
     { name = "openspeleo-lib", specifier = "==0.0.6" },
     { name = "orjson", specifier = "==3.11.4" },

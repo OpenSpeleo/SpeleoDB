@@ -37,7 +37,7 @@ dependencies = [
 
     # Speleo Libraries
     # ------------------------------------------------------------------------------
-    "mnemo-lib==0.0.5",      # https://github.com/OpenSpeleo/pytool_mnemo_lib
+    "mnemo-lib==0.0.6",      # https://github.com/OpenSpeleo/pytool_mnemo_lib
     "compass-lib==0.0.2",    # https://github.com/OpenSpeleo/pytool_compass_lib
     "openspeleo-lib==0.0.6", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 

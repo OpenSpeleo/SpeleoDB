@@ -5,11 +5,14 @@ import io
 import logging
 import shutil
 import tempfile
+from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ValidationError
+from mnemo_lib.constants import ShotType
+from mnemo_lib.constants import SurveyDirection
 from mnemo_lib.models import DMPFile
 from pydantic import ValidationError as PydanticValidationError
 from rest_framework import permissions
@@ -48,39 +51,43 @@ class ToolXLSToDMP(APIView):
             return round(value, 2)
 
         try:
-            survey_data = {
+            survey_data: dict[str, Any] = {
                 "date": f"{request.data['survey_date']} 00:00",
-                "direction": 0
-                if request.data["direction"] == "in"
-                else 1,  # In: 0, Out: 1
+                "direction": (
+                    SurveyDirection.IN
+                    if request.data["direction"] == "in"
+                    else SurveyDirection.OUT
+                ),
                 "name": "AA1",
-                "shots": [
+                "version": 5,
+            }
+
+            shots: list[dict[str, Any]] = []
+            for shot_data_start, shot_data_end in pairwise(request.data["shots"]):
+                shots.append(
                     {
-                        "depth_in": format_float(shot_data["depth"]),
-                        "depth_out": format_float(shot_data["depth"]),
-                        "down": format_float(shot_data["down"]),
-                        "head_in": round(float(shot_data["azimuth"])),
-                        "head_out": round(float(shot_data["azimuth"])),
+                        "depth_in": format_float(shot_data_start["depth"]),
+                        "depth_out": format_float(shot_data_end["depth"]),
+                        "down": format_float(shot_data_start["down"]),
+                        "head_in": round(float(shot_data_start["azimuth"]), 2),
+                        "head_out": round(float(shot_data_start["azimuth"]), 2),
                         "hours": 0,
-                        "left": format_float(shot_data["left"]),
-                        "length": format_float(shot_data["length"]),
+                        "left": format_float(shot_data_start["left"]),
+                        "length": format_float(shot_data_start["length"]),
                         "marker_idx": 0,
                         "minutes": 0,
                         "pitch_in": 0,
                         "pitch_out": 0,
-                        "right": format_float(shot_data["right"]),
+                        "right": format_float(shot_data_start["right"]),
                         "seconds": 0,
                         "temperature": 0,
-                        "type": 2,  # TypeShot: 0:CSA, 1: CSB, 2: STD, 3: EOL
-                        "up": format_float(shot_data["up"]),
+                        "type": ShotType.STANDARD,
+                        "up": format_float(shot_data_start["up"]),
                     }
-                    for shot_data in request.data["shots"]
-                ],
-                "version": 5,
-            }
+                )
 
             # Adding the EOL shot
-            survey_data["shots"].append(  # type: ignore[union-attr]
+            shots.append(
                 {
                     "depth_in": 0.0,
                     "depth_out": 0.0,
@@ -97,10 +104,12 @@ class ToolXLSToDMP(APIView):
                     "right": 0.0,
                     "seconds": 0,
                     "temperature": 0.0,
-                    "type": 3,  # TypeShot: 0:CSA, 1: CSB, 2: STD, 3: EOL
+                    "type": ShotType.END_OF_SURVEY,
                     "up": 0.0,
                 }
             )
+
+            survey_data["shots"] = shots
 
             dmp_obj = DMPFile.model_validate([survey_data])
 

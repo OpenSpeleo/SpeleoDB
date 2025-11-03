@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 
 import pytest
 from django.urls import reverse
@@ -81,6 +82,15 @@ class TestXLS2MnemoDMP(BaseAPITestCase):
                     "up": "",
                     "down": "",
                 },
+                {
+                    "length": "",
+                    "azimuth": "",
+                    "depth": "73.44",
+                    "left": "",
+                    "right": "",
+                    "up": "",
+                    "down": "",
+                },
             ],
             "survey_date": "2025-10-27",
             "unit": "feet",
@@ -105,7 +115,7 @@ class TestXLS2MnemoDMP(BaseAPITestCase):
 
         assert (
             hashlib.sha256(content.encode("utf-8")).hexdigest()
-            == "7850f283314dacd212ffc756e128876aa40c65f29abcd21593111d7a84251640"
+            == "fdcfe05641f8fe916c70a00a170b467f00e261c5e70ccb6e4b1d5f958b56537f"
         ), content
 
 
@@ -238,4 +248,42 @@ class TestXLS2Compass(BaseAPITestCase):
         assert (
             hashlib.sha256(content.encode("utf-8")).hexdigest()
             == "5fac2d5a43f007e32cd6c04a4581e20086e59e8bf0c4126a0c5696f34626cb8f"
+        ), content
+
+
+@pytest.mark.django_db
+class TestDMP2JSON(BaseAPITestCase):
+    def setUp(self) -> None:
+        super().setUp()
+
+        self.url = reverse("api:v1:tool-dmp2json")
+
+    def test_requires_authentication(self) -> None:
+        client = APIClient()
+        response = client.get(self.url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_dmp_to_json(self) -> None:
+        dmp_file_path = Path(__file__).parent / "artifacts" / "test_v5.dmp"
+
+        with dmp_file_path.open("rb") as f:
+            response = self.client.post(
+                self.url,
+                data={"file": f},
+                headers={"authorization": self.auth},
+                format="multipart",
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+
+        assert hasattr(response, "streaming_content")
+
+        content = "".join(
+            chunk if isinstance(chunk, str) else chunk.decode("utf-8")
+            for chunk in response.streaming_content  # pyright: ignore[reportAttributeAccessIssue]
+        )
+
+        assert (
+            hashlib.sha256(content.encode("utf-8")).hexdigest()
+            == "a097ac3894da3ad78f1952c61921211a006d2edefb8726abf2b79bcd7426d0db"
         ), content
