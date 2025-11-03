@@ -37,7 +37,8 @@ dependencies = [
 
     # Speleo Libraries
     # ------------------------------------------------------------------------------
-    "mnemo-lib==0.0.5",      # https://github.com/OpenSpeleo/pytool_mnemo_lib
+    "mnemo-lib==0.0.6",      # https://github.com/OpenSpeleo/pytool_mnemo_lib
+    "compass-lib==0.0.2",    # https://github.com/OpenSpeleo/pytool_compass_lib
     "openspeleo-lib==0.0.6", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 
     # Git Management
@@ -49,7 +50,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "Collectfasta==3.3.1",         # https://github.com/jasongi/collectfasta
     "django==5.2.7",               # https://www.djangoproject.com/
-    "django-allauth==65.12.1",     # https://github.com/pennersr/django-allauth
+    "django-allauth==65.13.0",     # https://github.com/pennersr/django-allauth
     "django-countries==7.6.1",     # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",  # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.12.0",      # https://github.com/joke2k/django-environ

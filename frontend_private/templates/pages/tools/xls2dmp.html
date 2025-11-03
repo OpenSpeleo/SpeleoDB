@@ -11,6 +11,34 @@
         background: #fff;
         color: #474848;
         cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    button.tool-action:hover {
+        background: #f8f9fa;
+        border-color: #999;
+    }
+
+    #downloadBtn {
+        background: linear-gradient(135deg, #ff8900 0%, #ff6600 100%);
+        color: #fff;
+        border: none;
+        padding: 10px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(255, 137, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    #downloadBtn:hover {
+        background: linear-gradient(135deg, #ff9d1a 0%, #ff7a1a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(255, 137, 0, 0.4);
+    }
+
+    #downloadBtn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(255, 137, 0, 0.3);
     }
 
     .trash {
@@ -208,21 +236,25 @@
             <b>Instructions:</b>
             <ul class="instructions">
                 <li>Use the Google Sheet Template below to prepare the data</li>
-                <li>Paste data directly into the table (Ctrl/Cmd+V) or use the <strong>"Paste Excel"</strong> button</li>
-                <li>You can add or remove rows; columns are fixed</li>
-                <li>Click "Download as DMP" when you're done. Might take 3-5 secs</li>
-                <li>Load the DMP into `Ariane` as if it was coming from the Mnemo</li>
+                <li>Use the "<span class="text-orange-300">Paste Excel</span>" button to copy the data into the table</li>
+                <li>You can add or remove rows, however columns are fixed</li>
+                <li>Click "<span class="text-orange-300">Download as DMP</span>" when you're done</li>
+                <li>Load the DMP into Ariane as if it was coming from the Mnemo</li>
             </ul>
         </p>
 
-        <div class="my-3">
+        <div class="my-4">
             <b>Please use the following:</b>
-                <a href="https://docs.google.com/spreadsheets/d/15DwmV2-78g58LDbnx8cHAONfx2Gj_bqRMJxjDBLkJB0/edit?usp=sharing" 
+                <a href="https://docs.google.com/spreadsheets/d/15DwmV2-78g58LDbnx8cHAONfx2Gj_bqRMJxjDBLkJB0/edit?usp=sharing"
+                   class="text-orange-500 underline"
                    target="_blank"
-                   style="color: #ff8900; text-decoration: underline;"
                 >
                     Google Spreadsheet Template
                 </a>
+        </div>
+
+        <div class="my-4 text-orange-300">
+            <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
         </div>
         
         <hr class="border-slate-600 mt-6">
@@ -276,10 +308,10 @@
             <table class="text-slate-800 text-center" id="dataTable">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Length</th>
-                        <th>Azimuth</th>
-                        <th>Depth</th>
+                        <th>Station #</th>
+                        <th>Station Depth</th>
+                        <th>Shot Length</th>
+                        <th>Shot Azimuth</th>
                         <th>Left</th>
                         <th>Right</th>
                         <th>Up</th>
@@ -293,21 +325,29 @@
     </div>
 </div>
 <div id="loading_spinner" class="loading" style="display:none;"></div>
+
+{% include 'snippets/modal_error.html' %}
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
 <script>
 $(document).ready(function() {
-    const COLUMNS = ['Length', 'Azimuth', 'Depth', 'Left', 'Right', 'Up', 'Down'];
+    const COLUMNS = ['depth', 'length', 'azimuth', 'left', 'right', 'up', 'down'];
     const $tbody = $('#dataTable tbody');
     const $statusEl = $('#status');
+
+    $(window).on('load', function() {
+        $("body").click(function () {
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+    });
     
-    // Set max date to today (no future dates allowed)
     const today = new Date().toISOString().split('T')[0];
     $('#surveyDate').attr('max', today);
     
-    // Unit switch handler
-    let currentUnit = 'feet'; // Default unit is feet
+    let currentUnit = 'feet';
     $('#unitSwitch').on('change', function() {
         if (this.checked) {
             currentUnit = 'feet';
@@ -320,8 +360,7 @@ $(document).ready(function() {
         }
     });
 
-    // Direction switch handler
-    let surveyDirection = 'in'; // Default direction is in
+    let surveyDirection = 'in';
     $('#directionSwitch').on('change', function() {
         if (this.checked) {
             surveyDirection = 'out';
@@ -334,31 +373,46 @@ $(document).ready(function() {
         }
     });
 
-    // Date validation function
     function validateDate(dateString) {
         if (!dateString) return false;
         const date = new Date(dateString);
         return date instanceof Date && !isNaN(date);
     }
 
-    // Remove red highlight when user changes date
     $('#surveyDate').on('change input', function() {
         $(this).removeClass('invalid-date');
     });
 
-    function validateCell(value, column) {
+    function validateCell(value, column, isLastRow = false) {
         const v = (value ?? '').trim();
-        if (['Length', 'Depth'].includes(column)) return v !== '' && !isNaN(v) && isFinite(parseFloat(v));
-        if (column === 'Azimuth') {
+        
+        if (column === 'depth') {
+            if (v === '') return false;
+            const n = parseFloat(v);
+            return !isNaN(n) && isFinite(n) && n >= 0;
+        }
+        
+        if (column === 'length') {
+            if (isLastRow) return v === '';
+            if (v === '') return false;
+            const n = parseFloat(v);
+            return !isNaN(n) && isFinite(n) && n >= 0;
+        }
+        
+        if (column === 'azimuth') {
+            if (isLastRow) return v === '';
             if (v === '') return false;
             const n = parseFloat(v);
             return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
         }
-        if (['Left', 'Right', 'Up', 'Down'].includes(column)) {
+        
+        if (['left', 'right', 'up', 'down'].includes(column)) {
+            if (isLastRow) return v === '';
             if (v === '') return true;
             const n = parseFloat(v);
             return !isNaN(n) && isFinite(n) && n >= 0;
         }
+        
         return true;
     }
 
@@ -372,8 +426,6 @@ $(document).ready(function() {
 </td>`;
         const $tr = $('<tr>').html(html);
         $tbody.append($tr);
-        // listeners are delegated; no per-cell binding needed
-        // delete handler
         $tr.find('.trash').on('click', function() {
             $tr.remove();
             refreshIndexes();
@@ -400,13 +452,70 @@ $(document).ready(function() {
 
     function parseClipboardText(text) {
         if (!text) return [];
-        const lines = text.replace(/\r/g, '\n').split(/\n/).filter(l => l.trim());
-        const rows = lines.map(line => {
+        
+        const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
+        
+        let rows = lines.map(line => {
             let parts = line.split('\t');
-            if (parts.length === 1) parts = line.split(',');
-            return parts.map(p => p.replace(/^\uFEFF/, '').trim());
+            
+            if (parts.length === 1 && line.includes(',')) {
+                parts = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    const nextChar = line[i + 1];
+                    
+                    if (char === '"') {
+                        if (inQuotes && nextChar === '"') {
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === ',' && !inQuotes) {
+                        parts.push(current);
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                parts.push(current);
+            }
+            
+            return parts.map(p => {
+                let cleaned = p.replace(/^\uFEFF/, '').trim();
+                if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+                    cleaned = cleaned.slice(1, -1);
+                }
+                return cleaned;
+            });
         });
-        if (rows.length > 0 && /length/i.test(rows[0][0])) rows.shift();
+        
+        if (rows.length > 0 && rows[0].length > 0) {
+            const firstCell = rows[0][0].trim();
+            
+            if (/^station/i.test(firstCell)) {
+                const headerRow = rows[0];
+                const stationColIndex = headerRow.findIndex(cell => 
+                    /^station\s*#?$/i.test(cell.trim())
+                );
+                
+                rows.shift();
+                
+                if (stationColIndex !== -1) {
+                    rows = rows.map(row => {
+                        const newRow = [...row];
+                        newRow.splice(stationColIndex, 1);
+                        return newRow;
+                    });
+                }
+            }
+        }
+        
+        rows = rows.filter(row => row.some(cell => cell.trim() !== ''));
+        
         return rows;
     }
 
@@ -421,38 +530,52 @@ $(document).ready(function() {
         }
     });
 
-    $(document).on('paste', function(e) {
-        const text = (e.originalEvent.clipboardData || window.clipboardData).getData('text/plain');
-        if (!text) return;
-        const sel = window.getSelection();
-        if (sel && sel.anchorNode && $tbody[0].contains(sel.anchorNode)) {
-            setTimeout(() => validateTable(), 50);
-            return;
-        }
-        e.preventDefault();
-        const rows = parseClipboardText(text);
-        renderRows(rows);
-        $statusEl.text(`Imported ${rows.length} rows.`);
-    });
-
     function onCellInput(td) {
         const $td = $(td);
         const col = $td.data('col');
-        const ok = validateCell($td.text(), col);
+        const $row = $td.parent();
+        const $allRows = $tbody.children('tr');
+        const isLastRow = $allRows.last().is($row);
+        const ok = validateCell($td.text(), col, isLastRow);
         $td.toggleClass('invalid', !ok);
         validateTable();
     }
 
     function validateTable() {
         let allValid = true;
+        let lastRowErrors = [];
+        const $allRows = $tbody.children('tr');
+        const $lastRow = $allRows.last();
+        
         $('#dataTable tbody td[data-col]').each(function() {
             const $td = $(this);
             const col = $td.data('col');
-            const ok = validateCell($td.text(), col);
+            const $row = $td.parent();
+            const isLastRow = $lastRow.is($row);
+            const ok = validateCell($td.text(), col, isLastRow);
             $td.toggleClass('invalid', !ok);
-            if (!ok) allValid = false;
+            
+            if (!ok) {
+                allValid = false;
+                if (isLastRow && $td.text().trim() !== '' && col !== 'depth') {
+                    const fieldName = col.charAt(0).toUpperCase() + col.slice(1);
+                    if (!lastRowErrors.includes(fieldName)) {
+                        lastRowErrors.push(fieldName);
+                    }
+                }
+            }
         });
-        $('#status').text(allValid ? 'All cells valid.' : 'Some cells are invalid.')
+        
+        let statusMessage = 'All cells valid.';
+        if (!allValid) {
+            if (lastRowErrors.length > 0) {
+                statusMessage = `Error: The last row should only have Station Depth. Remove: ${lastRowErrors.join(', ')}.`;
+            } else {
+                statusMessage = 'Some cells are invalid.';
+            }
+        }
+        
+        $('#status').text(statusMessage)
                     .css({ 'color': allValid ? 'green' : 'red', 'font-weight': 'bold' });
         return allValid;
     }
@@ -467,11 +590,9 @@ $(document).ready(function() {
         $statusEl.text('Cleared.'); 
     });
 
-    // Navigation helpers for Excel-like Enter behavior
     function getEditableTdFromTarget(target) {
         if (!target) return null;
-        // If it's a text node, climb to its parent element first
-        let node = target.nodeType === 3 ? target.parentElement : target; // 3 = TEXT_NODE
+        const node = target.nodeType === 3 ? target.parentElement : target;  // 3 = TEXT_NODE
         if (!node) return null;
         const $node = $(node);
         const $td = $node.closest('td[data-col]');
@@ -503,49 +624,40 @@ $(document).ready(function() {
             const $nextRowCells = $nextRow.find('td[data-col]');
             focusCell($nextRowCells.eq(colIndex)[0] || $nextRowCells.last()[0]);
         } else {
-            // Last row: blur to avoid inserting newlines
             $currentTd.blur();
             $('#dataTable').blur();
-            // Also clear selection
             const sel = window.getSelection();
             if (sel) sel.removeAllRanges();
         }
     }
 
-    // Prevent Enter from inserting line breaks; move to cell below instead
     $tbody[0].addEventListener('keydown', function(e) {
         if (e.key !== 'Enter') return;
         const td = getEditableTdFromTarget(e.target);
         if (!td) return;
         e.preventDefault();
-        // Re-validate the whole table on commit-like action
         validateTable();
         moveToCellBelow(td);
     }, true);
 
-    // Delegated input listener so ANY change in any cell revalidates the table
     $tbody.on('input', 'td[data-col]', function(e) {
         const td = getEditableTdFromTarget(e.target);
         if (!td) return;
         onCellInput(td);
     });
 
-    // Some browsers fire beforeinput more consistently for contenteditable
     $tbody[0].addEventListener('beforeinput', function(e) {
         const td = getEditableTdFromTarget(e.target);
         if (!td) return;
-        // Defer until after DOM mutation to read updated textContent
         setTimeout(() => onCellInput(td), 0);
     });
 
-    // Keyup fallback to ensure validation runs after typing
     $tbody.on('keyup', 'td[data-col]', function(e) {
         const td = getEditableTdFromTarget(e.target);
         if (!td) return;
         onCellInput(td);
     });
 
-    // Also validate on blur to catch edits that don't emit input in some browsers
     $tbody[0].addEventListener('blur', function(e) {
         const td = getEditableTdFromTarget(e.target);
         if (!td) return;
@@ -569,14 +681,12 @@ $(document).ready(function() {
     }
 
     $('#downloadBtn').on('click', function() {
-        // Validate the table before proceeding
         if (!validateTable()) {
             $('#status').text('Some cells are invalid. Please correct them before downloading.')
                         .css({ 'color': 'red', 'font-weight': 'bold' });
             return;
         }
 
-        // Validate the survey date
         const surveyDate = $('#surveyDate').val();
         if (!validateDate(surveyDate)) {
             $('#surveyDate').addClass('invalid-date');
@@ -587,7 +697,6 @@ $(document).ready(function() {
             $('#surveyDate').removeClass('invalid-date');
         }
 
-        // Collect table data
         const rows = [];
         $('#dataTable tbody tr').each(function() {
             const row = {};
@@ -602,10 +711,8 @@ $(document).ready(function() {
 
         var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
 
-        // Show spinner
         $("#loading_spinner").show();
 
-        // AJAX call with survey date, unit, and direction
         $.ajax({
             url: "{% url 'api:v1:tool-xls2dmp' %}",
             method: "POST",
@@ -623,32 +730,42 @@ $(document).ready(function() {
             },
             success: function(response) {
                 const blob = new Blob([response], { type: 'application/octet-stream' });
-                let a = document.createElement('a');
+                const a = document.createElement('a');
                 document.body.appendChild(a);
-
                 a.href = window.URL.createObjectURL(blob);
                 a.style.display = 'none';
                 a.download = 'survey.dmp';
                 a.click();
-
                 window.URL.revokeObjectURL(a.href);
                 a.remove();
                 
-                // Hide spinner and show success
                 $("#loading_spinner").hide();
                 $('#downloadBtn').prop('disabled', false);
                 $('#status').text('Download successful!')
                             .css({ 'color': 'green', 'font-weight': 'bold' });
             },
             error: function(xhr, status, error) {
-                // Hide spinner and show error
                 $("#loading_spinner").hide();
                 $('#downloadBtn').prop('disabled', false);
-                $('#status').text('Error: ' + error)
+                
+                let errorMessage = error;
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                } else if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    errorMessage = xhr.responseJSON.detail;
+                } else if (xhr.responseText) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.error || response.detail || response.message || error;
+                    } catch (e) {
+                        errorMessage = xhr.responseText.substring(0, 200);
+                    }
+                }
+                
+                $("#modal_error_txt").text(errorMessage);
+                $("#modal_error").css('display', 'flex');
+                $('#status').text('Error occurred. See details.')
                             .css({ 'color': 'red', 'font-weight': 'bold' });
-            },
-            xhrFields: {
-                responseType: 'blob'
             }
         });
 

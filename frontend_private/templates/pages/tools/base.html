@@ -52,12 +52,58 @@
                     <!-- Group 2 -->
                     <div>
                         <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Compass Tools</div>
-                        <small class="mr-3 md:mr-0 px-2.5 py-2 italic">TO BE COMING SOON ...</small>
+                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                            <!-- Accont Info -->
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'tool-xls2compass' %}bg-indigo-500/30{% endif %}" 
+                                   href="{% url 'private:tool-xls2compass' %}">
+                                    {% if request.url_name == 'tool-xls2compass' %}
+                                        <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400" viewBox="3.45 3.5 17.05 17.05">
+                                    {% else %}
+                                        <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-slate-500" viewBox="3.45 3.5 17.05 17.05">
+                                    {% endif %}
+                                            <path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"></path>
+                                            <path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"></path>
+                                            <path d="M15 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path>
+                                        </svg>
+                                    {% if request.url_name == 'tool-xls2compass' %}
+                                        <span class="text-sm font-medium text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                                    {% endif %}
+                                        Excel to Compass
+                                    </span>
+                                </a>
+                            </li>
+                        </ul>
                     </div>
                     <!-- Group 3 -->
                     <div>
                         <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Mnemo Tools</div>
-                        <small class="mr-3 md:mr-0 px-2.5 py-2 italic">TO BE COMING SOON ...</small>
+                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                            <!-- Accont Info -->
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'tool-dmp2json' %}bg-indigo-500/30{% endif %}" 
+                                   href="{% url 'private:tool-dmp2json' %}">
+                                    {% if request.url_name == 'tool-dmp2json' %}
+                                        <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400" viewBox="3.45 3.5 17.05 17.05">
+                                    {% else %}
+                                        <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-slate-500" viewBox="3.45 3.5 17.05 17.05">
+                                    {% endif %}
+                                            <path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"></path>
+                                            <path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"></path>
+                                            <path d="M15 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path>
+                                        </svg>
+                                    {% if request.url_name == 'tool-dmp2json' %}
+                                        <span class="text-sm font-medium text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                                    {% endif %}
+                                        Mnemo DMP to JSON
+                                    </span>
+                                </a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
 

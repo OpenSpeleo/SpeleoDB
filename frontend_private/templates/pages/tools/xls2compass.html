@@ -1,0 +1,1613 @@
+{% extends "pages/tools/base.html" %}
+{% load static %}
+{% load countries %}
+
+{% block extra_css %}
+
+{% if debug %}
+<link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}" rel="stylesheet">
+<link href="{% static 'private/css/vendors/prism-line-numbers.min.css' %}" rel="stylesheet">
+{% else %}
+<link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-tomorrow.min.css" 
+    integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer" 
+/>
+<link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css" 
+    integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer" 
+/>
+{% endif %}
+
+<style>
+    button.tool-action {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    button.tool-action:hover {
+        background: #f8f9fa;
+        border-color: #999;
+    }
+
+    #downloadBtn {
+        background: linear-gradient(135deg, #ff8900 0%, #ff6600 100%);
+        color: #fff;
+        border: none;
+        padding: 10px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(255, 137, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    #downloadBtn:hover {
+        background: linear-gradient(135deg, #ff9d1a 0%, #ff7a1a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(255, 137, 0, 0.4);
+    }
+
+    #downloadBtn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(255, 137, 0, 0.3);
+    }
+
+    .trash {
+        background: #ffecec;
+        color: #b30000;
+        border: 1px solid #f1b0b0;
+    }
+
+    .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        outline: none;
+    }
+
+    table:focus {
+        outline: none;
+    }
+
+    thead th {
+        background: #f7f9fc;
+        border-bottom: 2px solid #e6eefc;
+        padding: 8px;
+        font-size: 13px;
+        position: sticky;
+        top: 0;
+    }
+
+    tbody td {
+        padding: 6px;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+    }
+
+    tbody tr:nth-child(even) {
+        background: #fcfdff;
+    }
+
+    td.invalid {
+        background: #ffefef;
+        border: 1px solid rgb(240, 88, 88);
+    }
+
+    td.actions button {
+        padding: 4px 8px;
+        margin: 0 2px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+
+    ul.instructions {
+        list-style: disc;
+        margin-block-end: 16px;
+        margin-block-start: 16px;
+        padding-inline-start: 40px;
+    }
+
+    .form-controls {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .form-group label {
+        color: #e2e8f0;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .date-input {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        font-size: 14px;
+        min-width: 200px;
+        font-family: monospace;
+    }
+
+    .date-input.invalid-date {
+        border: 2px solid #dc2626;
+        background: #fef2f2;
+    }
+
+    /* Toggle Switch for Units */
+    .unit-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+    }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 30px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #2196F3;
+        transition: .4s;
+        border-radius: 30px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #ff8900;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(30px);
+    }
+
+    .unit-label {
+        color: #94a3b8;
+        font-size: 14px;
+        font-weight: 400;
+        min-width: 50px;
+        transition: all 0.3s ease;
+    }
+
+    .unit-label.active {
+        color: #ffffff;
+        font-weight: 700;
+    }
+
+    /* Spinner */
+    .spinner {
+        display: none;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #ff8900;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        margin-left: 12px;
+    }
+
+    .spinner.active {
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Text Input Fields */
+    .text-input {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        font-size: 14px;
+        min-width: 200px;
+    }
+
+    .text-input.invalid-field {
+        border: 2px solid #dc2626;
+        background: #fef2f2;
+    }
+
+    .number-input {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        font-size: 14px;
+        min-width: 150px;
+    }
+
+    .number-input.invalid-field {
+        border: 2px solid #dc2626;
+        background: #fef2f2;
+    }
+
+    /* Tag Input Container */
+    .tag-input-container {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        align-content: flex-start;
+        gap: 6px;
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background: #fff;
+        min-width: 300px;
+        min-height: 90px;
+        cursor: text;
+    }
+
+    .tag-input-container.invalid-field {
+        border: 2px solid #dc2626;
+        background: #fef2f2;
+    }
+
+    .tag-input-container:focus-within {
+        border-color: #ff8900;
+        outline: none;
+    }
+
+    .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        background: #e2e8f0;
+        color: #1e293b;
+        border-radius: 4px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .tag-remove {
+        background: none;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        padding: 0;
+        font-size: 16px;
+        line-height: 1;
+        font-weight: bold;
+    }
+
+    .tag-remove:hover {
+        color: #dc2626;
+    }
+
+    .tag-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        padding: 4px;
+        font-size: 14px;
+        min-width: 100px;
+        color: #474848;
+    }
+
+    /* Textarea for Comment */
+    .textarea-input {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        font-size: 14px;
+        min-width: 300px;
+        resize: vertical;
+        font-family: inherit;
+    }
+
+    /* Location Search */
+    .location-search-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .location-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        max-height: 300px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .location-results.show {
+        display: block;
+    }
+
+    .location-result-item {
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 14px;
+        color: #474848;
+    }
+
+    .location-result-item:hover {
+        background: #f7f9fc;
+    }
+
+    .location-result-item:last-child {
+        border-bottom: none;
+    }
+
+    .location-result-item .location-name {
+        font-weight: 500;
+    }
+
+    .location-result-item .location-details {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 2px;
+    }
+
+    .location-search-spinner {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #ff8900;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        animation: spin 1s linear infinite;
+        display: none;
+    }
+
+    .location-search-spinner.active {
+        display: block;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-container {
+        background: #1e293b;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 1000px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #334155;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        color: #f1f5f9;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 28px;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+        background: #334155;
+        color: #f1f5f9;
+    }
+
+    .modal-body {
+        padding: 0;
+        overflow: hidden;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: rgb(41 47 57);
+    }
+
+    .modal-actions {
+        padding: 16px 24px;
+        border-bottom: 1px solid #334155;
+        display: flex;
+        gap: 12px;
+    }
+
+    .modal-actions button {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: 1px solid #475569;
+        background: #1e293b;
+        color: #f1f5f9;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .modal-actions button:hover {
+        background: #334155;
+        border-color: #64748b;
+    }
+
+    .code-container {
+        flex: 1;
+        overflow: auto;
+    }
+
+    .code-display {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #e2e8f0;
+        height: 100%;
+    }
+
+    .code-display pre {
+        margin: 0 !important;
+        background: transparent !important;
+        padding: 20px 20px 20px 0 !important;
+        height: 100%;
+    }
+
+    .code-display pre.line-numbers {
+        padding-left: 4.5em !important;
+        position: relative;
+    }
+
+    .code-display code {
+        font-family: inherit !important;
+        font-size: inherit !important;
+        line-height: inherit !important;
+        background: transparent !important;
+    }
+
+    /* Override Prism line-numbers styling to match our theme */
+    .code-display .line-numbers .line-numbers-rows {
+        border-right: 1px solid #334155 !important;
+        width: 3.5em !important;
+    }
+
+    .code-display .line-numbers-rows > span {
+        display: block;
+        text-align: right;
+        padding-right: 0.5em;
+    }
+
+    .code-display .line-numbers-rows > span:before {
+        color: #64748b !important;
+        text-align: right !important;
+        min-width: 3em;
+        display: inline-block;
+    }
+
+    .code-display::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+    }
+
+    .code-display::-webkit-scrollbar-track {
+        background: #1e293b;
+    }
+
+    .code-display::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 4px;
+    }
+
+    .code-display::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
+
+    /* Style form feed characters to be visible */
+    .ff-char {
+        position: relative;
+        color: transparent;
+        background: #1e293b;
+        border: 1px dashed #475569;
+        border-radius: 3px;
+        padding: 2px 6px;
+        margin: 0 2px;
+        font-size: 0;
+        white-space: nowrap;
+    }
+
+    .ff-char::after {
+        content: 'FF';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: #64748b;
+        font-size: 11px;
+        font-family: sans-serif;
+        pointer-events: none;
+    }
+
+</style>
+{% endblock extra_css %}
+
+{% block right_panel %}
+<div class="grow">
+    <div class="p-6">
+        <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: Excel to Compass Survey</h2>
+        <p class="lead">
+            <b>Instructions:</b>
+            <ul class="instructions">
+                <li>Use the Google Sheet Template below to prepare the data</li>
+                <li>Use the "<span class="text-orange-300">Paste Excel</span>" button to copy the data into the table</li>
+                <li>You can add or remove rows, however columns are fixed</li>
+                <li>Click "<span class="text-orange-300">Download Compass Survey</span>" when you're done</li>
+                <li>Copy the file content inside the Compass DAT File</li>
+            </ul>
+        </p>
+
+        <div class="my-4">
+            <b>Please use the following:</b>
+                <a href="https://docs.google.com/spreadsheets/d/1a7rhd8YqGyphcx7s16ANNJ5v3JJqEmDSq9e7bfpve3Y/edit?usp=sharing"
+                   class="text-orange-500 underline"
+                   target="_blank"
+                >
+                    Google Spreadsheet Template
+                </a>
+        </div>
+
+        <div class="my-4 text-orange-300">
+            <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+        </div>
+        
+        <hr class="border-slate-600 mt-6">
+
+        <div class="form-controls mt-6">
+
+            <div class="form-group flex-1">
+                <label for="caveName">Cave Name <span style="color: #ff8900;">*</span></label>
+                <input type="text" id="caveName" class="text-input" placeholder="Enter cave name">
+            </div>
+
+            <div class="form-group flex-1">
+                <label for="surveyName">Survey Name <span style="color: #ff8900;">*</span></label>
+                <input type="text" id="surveyName" class="text-input" placeholder="Enter survey name">
+            </div>
+        </div>
+
+        <div class="form-controls mt-4">
+
+            <div class="form-group flex-1">
+                <label for="locationSearch">Location (Town/State) <span style="color: #ff8900;">*</span></label>
+                <div class="location-search-wrapper">
+                    <input type="text" id="locationSearch" class="text-input flex-1" placeholder="Search for a location..." autocomplete="off" style="width: inherit;">
+                    <div class="location-search-spinner" id="locationSpinner"></div>
+                    <div class="location-results" id="locationResults"></div>
+                </div>
+                <input type="hidden" id="latitude" value="">
+                <input type="hidden" id="longitude" value="">
+            </div>
+
+            <div class="form-group">
+                <label>Longitude</label>
+                <div class="text-input" id="lonDisplay" style="background: #f8fafc; color: #64748b; min-width: 150px;">-</div>
+            </div>
+
+            <div class="form-group">
+                <label>Latitude</label>
+                <div class="text-input" id="latDisplay" style="background: #f8fafc; color: #64748b; min-width: 150px;">-</div>
+            </div>
+
+            <div class="form-group">
+                <label for="surveyDate">Survey Date <span style="color: #ff8900;">*</span></label>
+                <input type="date" id="surveyDate" class="date-input">
+            </div>
+            
+            <div class="form-group">
+                <label>Survey Units<span style="color: #ff8900;">*</span></label>
+                <div class="unit-toggle">
+                    <span class="unit-label" id="metersLabel">Meters</span>
+                    <label class="switch">
+                        <input type="checkbox" id="unitSwitch" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="unit-label active" id="feetLabel">Feet</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-controls mt-4">
+            <div class="form-group" style="flex: 1; min-width: 300px;">
+                <label for="surveyTeam">Survey Team</label>
+                <div id="surveyTeamContainer" class="tag-input-container">
+                    <input type="text" id="surveyTeamInput" class="tag-input" placeholder="Add team member and press Enter">
+                </div>
+            </div>
+
+            <div class="form-group" style="flex: 1; min-width: 300px;">
+                <label for="surveyComment">Comment (Optional)</label>
+                <textarea id="surveyComment" class="textarea-input" rows="3" placeholder="Additional notes..."></textarea>
+            </div>
+        </div>
+
+        <hr class="border-slate-600 mt-6">
+
+        <div class="controls my-6">
+            <button class="tool-action" id="addRowBtn">Add Row</button>
+            <button class="tool-action" id="clearBtn">Clear All</button>
+            <button class="tool-action" id="pasteExcelBtn">Paste Excel</button>
+            <button class="tool-action" id="downloadBtn">Download Compass Survey</button>
+            <div class="spinner" id="downloadSpinner"></div>
+            <div id="status" style="margin-left:12px;"></div>
+        </div>
+
+        {% csrf_token %}
+
+        <div style="overflow:auto;max-height:520px;border:1px solid #eef6ff;border-radius:8px">
+            <table class="text-slate-800 text-center" id="dataTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Station</th>
+                        <th>Depth</th>
+                        <th>Length</th>
+                        <th>Azimuth</th>
+                        <th>Left</th>
+                        <th>Right</th>
+                        <th>Up</th>
+                        <th>Down</th>
+                        <th>Flags</th>
+                        <th>Comment</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div id="loading_spinner" class="loading" style="display:none;"></div>
+
+<!-- Result Modal -->
+<div id="resultModal" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>Compass Survey Data</h3>
+            <button class="modal-close" id="closeModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-actions">
+                <button id="copyCodeBtn">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                        <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                    </svg>
+                    Copy to Clipboard
+                </button>
+                <button id="downloadCodeBtn">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    </svg>
+                    Download File
+                </button>
+            </div>
+            <div class="code-container">
+                <div class="code-display" id="codeDisplay"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'snippets/modal_error.html' %}
+
+{% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+$(document).ready(function() {
+    const COLUMNS = ["station", "depth", "length", "azimuth", "left", "right", "up", "down", "flags", "comment"];
+    const $tbody = $('#dataTable tbody');
+    const $statusEl = $('#status');
+    
+    // Survey Team Tags
+    const surveyTeamMembers = [];
+    const $teamContainer = $('#surveyTeamContainer');
+    const $teamInput = $('#surveyTeamInput');
+
+    $(window).on('load', function() {
+        $("body").click(function () {
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+    });
+
+    function renderTeamTags() {
+        // Remove all existing tags
+        $teamContainer.find('.tag').remove();
+        
+        // Add each tag before the input field
+        surveyTeamMembers.forEach((member, index) => {
+            const $tag = $('<div class="tag"></div>');
+            $tag.append(`<span>${escapeHtml(member)}</span>`);
+            const $removeBtn = $('<button class="tag-remove" type="button">&times;</button>');
+            $removeBtn.on('click', function() {
+                surveyTeamMembers.splice(index, 1);
+                renderTeamTags();
+                validateFormFields();
+            });
+            $tag.append($removeBtn);
+            $teamInput.before($tag);
+        });
+    }
+
+    function addTeamMember(name) {
+        const trimmedName = name.trim();
+        if (trimmedName && !surveyTeamMembers.includes(trimmedName)) {
+            surveyTeamMembers.push(trimmedName);
+            renderTeamTags();
+            validateFormFields();
+        }
+        $teamInput.val('');
+    }
+
+    // Handle Enter key and comma in team input
+    $teamInput.on('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            addTeamMember($teamInput.val());
+        }
+    });
+
+    // Handle blur to add incomplete entry
+    $teamInput.on('blur', function() {
+        const value = $teamInput.val().trim();
+        if (value) {
+            addTeamMember(value);
+        }
+    });
+
+    // Click on container focuses the input
+    $teamContainer.on('click', function(e) {
+        if (e.target === $teamContainer[0]) {
+            $teamInput.focus();
+        }
+    });
+
+    // Location Search with Nominatim API
+    let locationSearchTimeout = null;
+    let selectedLocation = null;
+
+    $('#locationSearch').on('input', function() {
+        const query = $(this).val().trim();
+        
+        // Clear previous timeout
+        if (locationSearchTimeout) {
+            clearTimeout(locationSearchTimeout);
+        }
+
+        // Clear results if query is too short
+        if (query.length < 3) {
+            $('#locationResults').removeClass('show').empty();
+            $('#locationSpinner').removeClass('active');
+            return;
+        }
+
+        // Show spinner
+        $('#locationSpinner').addClass('active');
+
+        // Debounce search
+        locationSearchTimeout = setTimeout(function() {
+            searchLocation(query);
+        }, 500);
+    });
+
+    function searchLocation(query) {
+        // OpenStreetMap Nominatim API
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&addressdetails=1`;
+        
+        $.ajax({
+            url: url,
+            method: 'GET',
+            headers: {
+                'User-Agent': 'SpeleoDB Survey Tool'
+            },
+            success: function(results) {
+                $('#locationSpinner').removeClass('active');
+                displayLocationResults(results);
+            },
+            error: function() {
+                $('#locationSpinner').removeClass('active');
+                $('#locationResults').removeClass('show').empty();
+            }
+        });
+    }
+
+    function displayLocationResults(results) {
+        const $resultsContainer = $('#locationResults');
+        $resultsContainer.empty();
+
+        if (results.length === 0) {
+            $resultsContainer.removeClass('show');
+            return;
+        }
+
+        results.forEach(function(result) {
+            const $item = $('<div class="location-result-item"></div>');
+            
+            const displayName = result.display_name;
+            const parts = displayName.split(', ');
+            const mainName = parts.slice(0, 2).join(', ');
+            const details = parts.slice(2).join(', ');
+            
+            $item.append(`<div class="location-name">${escapeHtml(mainName)}</div>`);
+            if (details) {
+                $item.append(`<div class="location-details">${escapeHtml(details)}</div>`);
+            }
+
+            $item.on('click', function() {
+                selectLocation(result);
+            });
+
+            $resultsContainer.append($item);
+        });
+
+        $resultsContainer.addClass('show');
+    }
+
+    function selectLocation(location) {
+        selectedLocation = location;
+        
+        // Set the search input to the selected location
+        $('#locationSearch').val(location.display_name);
+        
+        // Store coordinates
+        $('#latitude').val(location.lat);
+        $('#longitude').val(location.lon);
+        
+        // Display coordinates
+        $('#latDisplay').text(parseFloat(location.lat).toFixed(6));
+        $('#lonDisplay').text(parseFloat(location.lon).toFixed(6));
+        
+        // Remove invalid state since location is now selected
+        $('#locationSearch').removeClass('invalid-field');
+        
+        // Hide results
+        $('#locationResults').removeClass('show').empty();
+    }
+
+    // Close location results when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.location-search-wrapper').length) {
+            $('#locationResults').removeClass('show');
+        }
+    });
+
+    // Remove red highlight when user changes input
+    $('#caveName, #surveyName, #locationSearch').on('input', function() {
+        $(this).removeClass('invalid-field');
+    });
+
+    $('#surveyDate').on('change input', function() {
+        $(this).removeClass('invalid-date');
+    });
+
+    // Individual field validation functions
+    function validateCaveName() {
+        const caveName = $('#caveName').val().trim();
+        if (!caveName) {
+            $('#caveName').addClass('invalid-field');
+            return false;
+        } else {
+            $('#caveName').removeClass('invalid-field');
+            return true;
+        }
+    }
+
+    function validateSurveyName() {
+        const surveyName = $('#surveyName').val().trim();
+        if (!surveyName) {
+            $('#surveyName').addClass('invalid-field');
+            return false;
+        } else {
+            $('#surveyName').removeClass('invalid-field');
+            return true;
+        }
+    }
+
+    function validateLocation() {
+        const latitude = $('#latitude').val();
+        const longitude = $('#longitude').val();
+        if (!latitude || !longitude) {
+            $('#locationSearch').addClass('invalid-field');
+            return false;
+        } else {
+            $('#locationSearch').removeClass('invalid-field');
+            return true;
+        }
+    }
+
+    function validateSurveyDate() {
+        const surveyDate = $('#surveyDate').val();
+        if (!validateDate(surveyDate)) {
+            $('#surveyDate').addClass('invalid-date');
+            return false;
+        } else {
+            $('#surveyDate').removeClass('invalid-date');
+            return true;
+        }
+    }
+
+    // Validate fields on blur (lose focus)
+    $('#caveName').on('blur', function() {
+        validateCaveName();
+    });
+
+    $('#surveyName').on('blur', function() {
+        validateSurveyName();
+    });
+
+    $('#locationSearch').on('blur', function() {
+        // Only validate if there's text but no coordinates selected
+        if ($('#locationSearch').val().trim() && !$('#latitude').val()) {
+            validateLocation();
+        }
+    });
+
+    $('#surveyDate').on('blur', function() {
+        validateSurveyDate();
+    });
+
+    function validateFormFields() {
+        let isValid = true;
+        let errors = [];
+
+        // Validate Cave Name
+        if (!validateCaveName()) {
+            errors.push('Cave Name');
+            isValid = false;
+        }
+
+        // Validate Survey Name
+        if (!validateSurveyName()) {
+            errors.push('Survey Name');
+            isValid = false;
+        }
+
+        // Validate Location
+        if (!validateLocation()) {
+            errors.push('Location (please select from dropdown)');
+            isValid = false;
+        }
+
+        // Validate Survey Date
+        if (!validateSurveyDate()) {
+            errors.push('Survey Date');
+            isValid = false;
+        }
+
+        return { valid: isValid, errors: errors };
+    }
+    
+    // Set max date to today (no future dates allowed)
+    const today = new Date().toISOString().split('T')[0];
+    $('#surveyDate').attr('max', today);
+    
+    // Unit switch handler
+    let currentUnit = 'feet'; // Default unit is feet
+    $('#unitSwitch').on('change', function() {
+        if (this.checked) {
+            currentUnit = 'feet';
+            $('#metersLabel').removeClass('active');
+            $('#feetLabel').addClass('active');
+        } else {
+            currentUnit = 'meters';
+            $('#feetLabel').removeClass('active');
+            $('#metersLabel').addClass('active');
+        }
+    });
+
+    // Date validation function
+    function validateDate(dateString) {
+        if (!dateString) return false;
+        const date = new Date(dateString);
+        return date instanceof Date && !isNaN(date);
+    }
+
+    // Remove red highlight when user changes date
+    $('#surveyDate').on('change input', function() {
+        $(this).removeClass('invalid-date');
+    });
+
+    function validateCell(value, column, isLastRow = false) {
+        const v = (value ?? '').trim();
+        
+        // Station must always be non-empty (any value accepted)
+        if (column === 'station') {
+            return v !== '';
+        }
+        
+        // Depth: must be non-empty, numeric, and >= 0
+        if (column === 'depth') {
+            if (v === '') return false;
+            const n = Number(v);
+            return !isNaN(n) && isFinite(n) && n >= 0;
+        }
+        
+        // Length: MUST be empty on last row, required and >= 0 for all other rows
+        if (column === 'length') {
+            if (isLastRow) return v === ''; // Must be empty on last row
+            if (v === '') return false;
+            const n = Number(v);
+            return !isNaN(n) && isFinite(n) && n >= 0;
+        }
+        
+        // Azimuth: MUST be empty on last row, required and in [0, 360) for all other rows
+        if (column === 'azimuth') {
+            if (isLastRow) return v === ''; // Must be empty on last row
+            if (v === '') return false;
+            const n = Number(v);
+            return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
+        }
+        
+        // Left, right, up, down: MUST be empty on last row, optional but if provided must be >= 0 for all other rows
+        if (['left', 'right', 'up', 'down'].includes(column)) {
+            if (isLastRow) return v === ''; // Must be empty on last row
+            if (v === '') return true;
+            const n = Number(v);
+            return !isNaN(n) && isFinite(n) && n >= 0;
+        }
+        
+        // Flags and comment: MUST be empty on last row, optional for all other rows
+        if (['flags', 'comment'].includes(column)) {
+            if (isLastRow) return v === ''; // Must be empty on last row
+            return true; // Always valid for non-last rows
+        }
+        
+        return true;
+    }
+
+    function addRow(values = [], idx) {
+        const index = idx ?? $tbody.children().length + 1;
+        const html = `
+<td>${index}</td>` + COLUMNS.map((col, j) => `
+<td contenteditable="true" data-col="${col}">${escapeHtml(values[j] ?? '')}</td>`).join('') + `
+<td class="actions">
+    <button class="trash" title="Delete row">🗑️</button>
+</td>`;
+        const $tr = $('<tr>').html(html);
+        $tbody.append($tr);
+        // listeners are delegated; no per-cell binding needed
+        // delete handler
+        $tr.find('.trash').on('click', function() {
+            $tr.remove();
+            refreshIndexes();
+            validateTable();
+        });
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function refreshIndexes() {
+        $tbody.children('tr').each(function(i) {
+            $(this).children('td').first().text(i + 1);
+        });
+    }
+
+    function renderRows(rows) {
+        $tbody.empty();
+        rows.forEach((r, i) => addRow(r, i + 1));
+        refreshIndexes();
+        validateTable();
+    }
+
+    function parseClipboardText(text) {
+        if (!text) return [];
+        const lines = text.replace(/\r/g, '\n').split(/\n/).filter(l => l.trim());
+        const rows = lines.map(line => {
+            let parts = line.split('\t');
+            if (parts.length === 1) parts = line.split(',');
+            return parts.map(p => p.replace(/^\uFEFF/, '').trim());
+        });
+        if (rows.length > 0 && /station/i.test(rows[0][0])) rows.shift();
+        return rows;
+    }
+
+    $('#pasteExcelBtn').on('click', async function() {
+        try {
+            const text = await navigator.clipboard.readText();
+            const rows = parseClipboardText(text);
+            renderRows(rows);
+            $statusEl.text(`Imported ${rows.length} rows.`);
+        } catch {
+            $statusEl.text('Unable to read clipboard. Try Ctrl+V directly.');
+        }
+    });
+
+    function onCellInput(td) {
+        const $td = $(td);
+        const col = $td.data('col');
+        const $row = $td.parent();
+        const $allRows = $tbody.children('tr');
+        const isLastRow = $allRows.last().is($row);
+        const ok = validateCell($td.text(), col, isLastRow);
+        $td.toggleClass('invalid', !ok);
+        validateTable();
+    }
+
+    function validateTable() {
+        let allValid = true;
+        let lastRowErrors = [];
+        const $allRows = $tbody.children('tr');
+        const $lastRow = $allRows.last();
+        
+        $('#dataTable tbody td[data-col]').each(function() {
+            const $td = $(this);
+            const col = $td.data('col');
+            const $row = $td.parent();
+            const isLastRow = $lastRow.is($row);
+            const ok = validateCell($td.text(), col, isLastRow);
+            $td.toggleClass('invalid', !ok);
+            
+            if (!ok) {
+                allValid = false;
+                // Check if it's a last row error with data that should be empty
+                if (isLastRow && $td.text().trim() !== '' && col !== 'station' && col !== 'depth') {
+                    const fieldName = col.charAt(0).toUpperCase() + col.slice(1);
+                    if (!lastRowErrors.includes(fieldName)) {
+                        lastRowErrors.push(fieldName);
+                    }
+                }
+            }
+        });
+        
+        // Create specific error message
+        let statusMessage = 'All cells valid.';
+        if (!allValid) {
+            if (lastRowErrors.length > 0) {
+                statusMessage = `Error: The last row should only have Station and Depth. Remove: ${lastRowErrors.join(', ')}.`;
+            } else {
+                statusMessage = 'Some cells are invalid.';
+            }
+        }
+        
+        $('#status').text(statusMessage)
+                    .css({ 'color': allValid ? 'green' : 'red', 'font-weight': 'bold' });
+        return allValid;
+    }
+
+    $('#addRowBtn').on('click', function() { 
+        addRow(); 
+        validateTable(); 
+    });
+    
+    $('#clearBtn').on('click', function() { 
+        $tbody.empty(); 
+        $statusEl.text('Cleared.'); 
+    });
+
+    // Navigation helpers for Excel-like Enter behavior
+    function getEditableTdFromTarget(target) {
+        if (!target) return null;
+        // If it's a text node, climb to its parent element first
+        let node = target.nodeType === 3 ? target.parentElement : target; // 3 = TEXT_NODE
+        if (!node) return null;
+        const $node = $(node);
+        const $td = $node.closest('td[data-col]');
+        return $td.length ? $td[0] : null;
+    }
+
+    function placeCaretAtEnd(el) {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+
+    function focusCell(cell) {
+        if (!cell) return;
+        $(cell).focus();
+        placeCaretAtEnd(cell);
+    }
+
+    function moveToCellBelow(currentTd) {
+        const $currentTd = $(currentTd);
+        const $currentRow = $currentTd.parent();
+        const $currentRowCells = $currentRow.find('td[data-col]');
+        const colIndex = $currentRowCells.index($currentTd);
+        const $nextRow = $currentRow.next();
+        if ($nextRow.length) {
+            const $nextRowCells = $nextRow.find('td[data-col]');
+            focusCell($nextRowCells.eq(colIndex)[0] || $nextRowCells.last()[0]);
+        } else {
+            // Last row: blur to avoid inserting newlines
+            $currentTd.blur();
+            $('#dataTable').blur();
+            // Also clear selection
+            const sel = window.getSelection();
+            if (sel) sel.removeAllRanges();
+        }
+    }
+
+    // Prevent Enter from inserting line breaks; move to cell below instead
+    $tbody[0].addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter') return;
+        const td = getEditableTdFromTarget(e.target);
+        if (!td) return;
+        e.preventDefault();
+        // Re-validate the whole table on commit-like action
+        validateTable();
+        moveToCellBelow(td);
+    }, true);
+
+    // Delegated input listener so ANY change in any cell revalidates the table
+    $tbody.on('input', 'td[data-col]', function(e) {
+        const td = getEditableTdFromTarget(e.target);
+        if (!td) return;
+        onCellInput(td);
+    });
+
+    // Some browsers fire beforeinput more consistently for contenteditable
+    $tbody[0].addEventListener('beforeinput', function(e) {
+        const td = getEditableTdFromTarget(e.target);
+        if (!td) return;
+        // Defer until after DOM mutation to read updated textContent
+        setTimeout(() => onCellInput(td), 0);
+    });
+
+    // Keyup fallback to ensure validation runs after typing
+    $tbody.on('keyup', 'td[data-col]', function(e) {
+        const td = getEditableTdFromTarget(e.target);
+        if (!td) return;
+        onCellInput(td);
+    });
+
+    // Also validate on blur to catch edits that don't emit input in some browsers
+    $tbody[0].addEventListener('blur', function(e) {
+        const td = getEditableTdFromTarget(e.target);
+        if (!td) return;
+        onCellInput(td);
+    }, true);
+
+    function tableToCsv() {
+        const rows = [];
+        $tbody.children('tr').each(function() {
+            const row = [];
+            $(this).find('td[data-col]').each(function() {
+                row.push($(this).text().trim());
+            });
+            rows.push(row);
+        });
+        return rows.map(r => r.map(cell => { 
+            if(cell.includes(',') || cell.includes('"') || cell.includes('\n')) 
+                return '"'+cell.replace(/"/g,'""')+'"'; 
+            return cell; 
+        }).join(',')).join('\n');
+    }
+
+    $('#downloadBtn').on('click', function() {
+        // Validate form fields first
+        const formValidation = validateFormFields();
+        if (!formValidation.valid) {
+            const errorMessage = 'Missing or invalid fields: ' + formValidation.errors.join(', ');
+            $('#status').text(errorMessage)
+                        .css({ 'color': 'red', 'font-weight': 'bold' });
+            return;
+        }
+
+        // Validate the table before proceeding
+        if (!validateTable()) {
+            $('#status').text('Some cells are invalid. Please correct them before downloading.')
+                        .css({ 'color': 'red', 'font-weight': 'bold' });
+            return;
+        }
+
+        const surveyDate = $('#surveyDate').val();
+
+        // Collect form field data
+        const caveName = $('#caveName').val().trim();
+        const surveyName = $('#surveyName').val().trim();
+        const surveyComment = $('#surveyComment').val().trim();
+        const latitude = $('#latitude').val();
+        const longitude = $('#longitude').val();
+
+        // Collect table data
+        const rows = [];
+        $('#dataTable tbody tr').each(function() {
+            const row = {};
+            $(this).find('td[data-col]').each(function() {
+                const col = $(this).data('col');
+                row[col] = $(this).text().trim();
+            });
+            if (Object.keys(row).length > 0) {
+                rows.push(row);
+            }
+        });
+
+        var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+        // Show spinner
+        $("#loading_spinner").show();
+
+        // Build AJAX data object
+        const ajaxData = { 
+            shots: rows,
+            survey_date: surveyDate,
+            unit: currentUnit,
+            cave_name: caveName,
+            survey_name: surveyName,
+            survey_team: surveyTeamMembers,
+            comment: surveyComment
+        };
+
+        // Add location coordinates if available
+        if (latitude && longitude) {
+            ajaxData.latitude = parseFloat(latitude);
+            ajaxData.longitude = parseFloat(longitude);
+        }
+
+        // AJAX call with all survey data
+        $.ajax({
+            url: "{% url 'api:v1:tool-xls2compass' %}",
+            method: "POST",
+            data: JSON.stringify(ajaxData),
+            contentType: "application/json; charset=utf-8",
+            cache: false,
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                return true;
+            },
+            success: function(response) {
+                // Hide spinner
+                $("#loading_spinner").hide();
+                $('#downloadBtn').prop('disabled', false);
+                
+                // Store the response for later use
+                window.surveyData = response;
+                
+                // Display the content in the modal
+                displayCodeInModal(response);
+                
+                $('#status').text('Survey generated successfully!')
+                            .css({ 'color': 'green', 'font-weight': 'bold' });
+            },
+            error: function(xhr, status, error) {
+                // Hide spinner and show error
+                $("#loading_spinner").hide();
+                $('#downloadBtn').prop('disabled', false);
+                
+                // Try to extract error message from response
+                let errorMessage = error;
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                } else if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    errorMessage = xhr.responseJSON.detail;
+                } else if (xhr.responseText) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.error || response.detail || response.message || error;
+                    } catch (e) {
+                        errorMessage = xhr.responseText.substring(0, 200); // Limit length
+                    }
+                }
+                
+                // Display error in modal
+                $("#modal_error_txt").text(errorMessage);
+                $("#modal_error").css('display', 'flex');
+                
+                $('#status').text('Error occurred. See details.')
+                            .css({ 'color': 'red', 'font-weight': 'bold' });
+            }
+        });
+
+    });
+
+    // Store original code for copying
+    let originalCode = '';
+
+    // Function to display code in modal with line numbers
+    function displayCodeInModal(code) {
+        // Store original code for copy/download
+        originalCode = code;
+        
+        // Escape HTML and create code block
+        const escapedCode = $('<div>').text(code).html();
+        $('#codeDisplay').html('<pre class="line-numbers"><code class="language-makefile">' + escapedCode + '</code></pre>');
+        
+        // Highlight with Prism
+        Prism.highlightElement($('#codeDisplay code')[0]);
+        
+        // After highlighting, wrap form feed characters in span for visual styling
+        const $codeElement = $('#codeDisplay code');
+        $codeElement.html($codeElement.html().replace(/\f/g, '<span class="ff-char">\f</span>'));
+        
+        // Show modal
+        $('#resultModal').addClass('show');
+    }
+
+    // Close modal handlers
+    $('#closeModal').on('click', function() {
+        $('#resultModal').removeClass('show');
+    });
+
+    // Track mousedown position to distinguish clicks from drag selections
+    let mouseDownTarget = null;
+    $('#resultModal').on('mousedown', function(e) {
+        mouseDownTarget = e.target;
+    });
+
+    $('#resultModal').on('click', function(e) {
+        // Only close if mousedown and click happened on the same overlay element
+        if (e.target === this && mouseDownTarget === this) {
+            $('#resultModal').removeClass('show');
+        }
+        mouseDownTarget = null;
+    });
+
+    // ESC key to close modal
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape' && $('#resultModal').hasClass('show')) {
+            $('#resultModal').removeClass('show');
+        }
+    });
+
+    // Copy to clipboard
+    let copyButtonTimeout = null;
+    const originalCopyButtonHTML = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg> Copy to Clipboard';
+    const copiedButtonHTML = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg> Copied!';
+    
+    $('#copyCodeBtn').on('click', function() {
+        const $btn = $('#copyCodeBtn');
+        
+        // Clear any existing timeout
+        if (copyButtonTimeout) {
+            clearTimeout(copyButtonTimeout);
+        }
+        
+        navigator.clipboard.writeText(originalCode).then(function() {
+            $btn.html(copiedButtonHTML);
+            copyButtonTimeout = setTimeout(function() {
+                $btn.html(originalCopyButtonHTML);
+                copyButtonTimeout = null;
+            }, 2000);
+        }).catch(function(err) {
+            alert('Failed to copy to clipboard');
+        });
+    });
+
+    // Download file
+    $('#downloadCodeBtn').on('click', function() {
+        const blob = new Blob([originalCode], { type: 'text/plain' });
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.href = window.URL.createObjectURL(blob);
+        a.style.display = 'none';
+        a.download = 'survey.dat';
+        a.click();
+        window.URL.revokeObjectURL(a.href);
+        a.remove();
+    });
+
+    renderRows([]);
+});
+</script>
+
+{% if debug %}
+<script src="{% static 'private/js/vendors/prism.min.js' %}"></script>
+<script src="{% static 'private/js/vendors/prism-line-numbers.min.js' %}"></script>
+<script src="{% static 'private/js/vendors/prism-makefile.min.js' %}"></script>
+{% else %}
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js" 
+    integrity="sha512-HiD3V4nv8fcjtouznjT9TqDNDm1EXngV331YGbfVGeKUoH+OLkRTCMzA34ecjlgSQZpdHZupdSrqHY+Hz3l6uQ==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.js" 
+    integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-makefile.min.js" 
+    integrity="sha512-9MXjDxOwWNLJZRSwZRFdc1lvSIxld5c9DeLhySKjTAIEpj8a48Kezdc/hKjUsyD8S+oa3a+5SpuqdcCFodSI3Q==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+{% endif %}
+
+{% endblock inline_extra_js %}

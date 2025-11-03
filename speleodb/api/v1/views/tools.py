@@ -1,21 +1,25 @@
-# -*- coding: utf-8 -*-# -*- coding: utf-8 -*-
-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import io
 import logging
 import shutil
 import tempfile
+from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ValidationError
+from mnemo_lib.constants import ShotType
+from mnemo_lib.constants import SurveyDirection
 from mnemo_lib.models import DMPFile
+from pydantic import ValidationError as PydanticValidationError
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.views import APIView
 
+from speleodb.api.v1.views.tmp_utils import SurveyData
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import ErrorResponse
 
@@ -47,39 +51,43 @@ class ToolXLSToDMP(APIView):
             return round(value, 2)
 
         try:
-            survey_data = {
+            survey_data: dict[str, Any] = {
                 "date": f"{request.data['survey_date']} 00:00",
-                "direction": 0
-                if request.data["direction"] == "in"
-                else 1,  # In: 0, Out: 1
+                "direction": (
+                    SurveyDirection.IN
+                    if request.data["direction"] == "in"
+                    else SurveyDirection.OUT
+                ),
                 "name": "AA1",
-                "shots": [
+                "version": 5,
+            }
+
+            shots: list[dict[str, Any]] = []
+            for shot_data_start, shot_data_end in pairwise(request.data["shots"]):
+                shots.append(
                     {
-                        "depth_in": format_float(shot_data["Depth"]),
-                        "depth_out": format_float(shot_data["Depth"]),
-                        "down": format_float(shot_data["Down"]),
-                        "head_in": round(float(shot_data["Azimuth"])),
-                        "head_out": round(float(shot_data["Azimuth"])),
+                        "depth_in": format_float(shot_data_start["depth"]),
+                        "depth_out": format_float(shot_data_end["depth"]),
+                        "down": format_float(shot_data_start["down"]),
+                        "head_in": round(float(shot_data_start["azimuth"]), 2),
+                        "head_out": round(float(shot_data_start["azimuth"]), 2),
                         "hours": 0,
-                        "left": format_float(shot_data["Left"]),
-                        "length": format_float(shot_data["Length"]),
+                        "left": format_float(shot_data_start["left"]),
+                        "length": format_float(shot_data_start["length"]),
                         "marker_idx": 0,
                         "minutes": 0,
                         "pitch_in": 0,
                         "pitch_out": 0,
-                        "right": format_float(shot_data["Right"]),
+                        "right": format_float(shot_data_start["right"]),
                         "seconds": 0,
                         "temperature": 0,
-                        "type": 2,  # TypeShot: 0:CSA, 1: CSB, 2: STD, 3: EOL
-                        "up": format_float(shot_data["Up"]),
+                        "type": ShotType.STANDARD,
+                        "up": format_float(shot_data_start["up"]),
                     }
-                    for shot_data in request.data["shots"]
-                ],
-                "version": 5,
-            }
+                )
 
             # Adding the EOL shot
-            survey_data["shots"].append(  # type: ignore[union-attr]
+            shots.append(
                 {
                     "depth_in": 0.0,
                     "depth_out": 0.0,
@@ -96,10 +104,12 @@ class ToolXLSToDMP(APIView):
                     "right": 0.0,
                     "seconds": 0,
                     "temperature": 0.0,
-                    "type": 3,  # TypeShot: 0:CSA, 1: CSB, 2: STD, 3: EOL
+                    "type": ShotType.END_OF_SURVEY,
                     "up": 0.0,
                 }
             )
+
+            survey_data["shots"] = shots
 
             dmp_obj = DMPFile.model_validate([survey_data])
 
@@ -118,4 +128,105 @@ class ToolXLSToDMP(APIView):
 
         return DownloadResponseFromBlob(
             obj=obj_stream, filename=dmp_file.name, attachment=True
+        )
+
+
+def format_pydantic_error(err: PydanticValidationError) -> str:
+    """
+    Convert a Pydantic ValidationError into a nicely formatted string.
+    """
+    messages: list[str] = []
+    for e in err.errors():
+        loc = " → ".join(str(x) for x in e["loc"])
+        msg = e["msg"]
+        typ = e["type"]
+        return f'- [{typ}] "{loc}": {msg}'
+    return "\n".join(messages)
+
+
+class ToolXLSToCompass(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(
+        self, request: Request, *args: Any, **kwargs: Any
+    ) -> Response | FileResponse:
+        try:
+            compass_survey = SurveyData.model_validate(request.data)
+            buffer = compass_survey.export_to_dat_format()
+        except (ValueError, PydanticValidationError) as exc:
+            error = (
+                format_pydantic_error(exc)
+                if isinstance(exc, PydanticValidationError)
+                else str(exc)
+            )
+            return ErrorResponse({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Convert StringIO → BytesIO
+        bytes_io = io.BytesIO(buffer.getvalue().encode("utf-8"))
+        bytes_io.seek(0)
+
+        return DownloadResponseFromBlob(
+            obj=bytes_io,
+            filename="survey.dat",
+            attachment=True,
+        )
+
+
+class ToolDMP2JSON(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(
+        self, request: Request, *args: Any, **kwargs: Any
+    ) -> Response | FileResponse:
+        try:
+            # Get the uploaded file
+            if "file" not in request.FILES:
+                return ErrorResponse(
+                    {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            uploaded_file = request.FILES["file"]
+
+            # Validate file extension
+            if not uploaded_file.name.lower().endswith(".dmp"):
+                return ErrorResponse(
+                    {"error": "Invalid file type. Only .dmp files are allowed"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Save to temporary file and parse
+            with tempfile.TemporaryDirectory() as tmpdir:
+                dmp_file_path = Path(tmpdir) / uploaded_file.name
+
+                # Write uploaded file to disk
+                with dmp_file_path.open("wb") as f:
+                    for chunk in uploaded_file.chunks():
+                        f.write(chunk)
+
+                # Parse DMP file
+                dmp_obj = DMPFile.from_dmp(dmp_file_path)
+
+        except (ValueError, ValidationError, PydanticValidationError) as exc:
+            error = (
+                format_pydantic_error(exc)
+                if isinstance(exc, PydanticValidationError)
+                else str(exc)
+            )
+            return ErrorResponse({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as exc:
+            logger.exception("Error converting DMP to JSON")
+            return ErrorResponse(
+                {"error": f"Failed to parse DMP file: {exc!s}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Convert StringIO → BytesIO
+        bytes_io = io.BytesIO(dmp_obj.model_dump_json(indent=4).encode("utf-8"))
+        bytes_io.seek(0)
+
+        return DownloadResponseFromBlob(
+            obj=bytes_io,
+            filename="survey.dat",
+            attachment=True,
         )
