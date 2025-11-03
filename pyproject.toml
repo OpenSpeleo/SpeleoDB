@@ -19,7 +19,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "django-redis==6.0.0", # https://github.com/jazzband/django-redis
     "hiredis==3.3.0",      # https://github.com/redis/hiredis-py
-    "redis==7.0.0",        # https://github.com/redis/redis-py
+    "redis==7.0.1",        # https://github.com/redis/redis-py
 
     # Media Processing
     # ------------------------------------------------------------------------------
@@ -44,7 +44,7 @@ dependencies = [
     # Git Management
     # ------------------------------------------------------------------------------
     "GitPython==3.1.45",    # https://github.com/gitpython-developers/GitPython
-    "python-gitlab==6.5.0", # https://python-gitlab.readthedocs.io/en/stable/
+    "python-gitlab==7.0.0", # https://python-gitlab.readthedocs.io/en/stable/
 
     # Django
     # ------------------------------------------------------------------------------
@@ -63,12 +63,12 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "djangorestframework==3.16.1", # https://github.com/encode/django-rest-framework
     "django-cors-headers==4.9.0",  # https://github.com/adamchainz/django-cors-headers
-    "drf-spectacular==0.28.0",     # https://github.com/tfranzel/drf-spectacular
+    "drf-spectacular==0.29.0",     # https://github.com/tfranzel/drf-spectacular
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.40.59", # https://github.com/boto/botocore
-    "boto3==1.40.59",    # https://github.com/boto/boto3
+    "botocore==1.40.64", # https://github.com/boto/botocore
+    "boto3==1.40.64",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -79,7 +79,7 @@ dependencies = [
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.42.1", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.43.0", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
@@ -113,14 +113,14 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.14.2",      # https://github.com/astral-sh/ruff
+    "ruff==0.14.3",      # https://github.com/astral-sh/ruff
     "coverage==7.11.0",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
     "pre-commit==4.3.0", # https://github.com/pre-commit/pre-commit
 
     # Django
     # ------------------------------------------------------------------------------
-    "django-debug-toolbar==6.0.0",    # https://github.com/jazzband/django-debug-toolbar
+    "django-debug-toolbar==6.1.0",    # https://github.com/jazzband/django-debug-toolbar
     "django-extensions==4.1",         # https://github.com/django-extensions/django-extensions
     "django-schema-viewer==0.5.3",    # https://github.com/pikhovkin/django-schema-viewer
     "django-silk[formatting]==5.4.3", # https://github.com/jazzband/django-silk
