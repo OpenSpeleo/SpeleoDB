@@ -79,7 +79,7 @@ dependencies = [
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.42.1", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.43.0", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
