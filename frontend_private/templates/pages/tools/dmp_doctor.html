@@ -1,0 +1,1019 @@
+{% extends "pages/tools/base.html" %}
+{% load static %}
+{% load countries %}
+
+{% block extra_css %}
+<style>
+    button.tool-action {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    button.tool-action:hover {
+        background: #f8f9fa;
+        border-color: #999;
+    }
+
+    #downloadBtn {
+        background: linear-gradient(135deg, #ff8900 0%, #ff6600 100%);
+        color: #fff;
+        border: none;
+        padding: 10px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(255, 137, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    #downloadBtn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #ff9d1a 0%, #ff7a1a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(255, 137, 0, 0.4);
+    }
+
+    #downloadBtn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(255, 137, 0, 0.3);
+    }
+
+    #downloadBtn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    ul.instructions {
+        list-style: disc;
+        margin-block-end: 16px;
+        margin-block-start: 16px;
+        padding-inline-start: 40px;
+    }
+
+    /* Form Controls */
+    .adjustments-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin: 24px 0;
+    }
+
+    .adjustment-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.4) 100%);
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .adjustment-card:hover {
+        border-color: rgba(255, 137, 0, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .adjustment-card-title {
+        color: #ff8900;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .adjustment-card-title::before {
+        content: '';
+        display: inline-block;
+        width: 3px;
+        height: 16px;
+        background: #ff8900;
+        border-radius: 2px;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+
+    .form-row.single {
+        justify-content: center;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-group label {
+        color: #cbd5e1;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+    }
+
+    .number-input {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        font-size: 14px;
+        width: 100%;
+        font-family: monospace;
+        transition: all 0.2s;
+    }
+
+    .number-input:focus {
+        outline: none;
+        border-color: #ff8900;
+    }
+
+    .number-input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: #e5e7eb;
+    }
+
+    .number-input.invalid {
+        border: 2px solid #dc2626;
+        background: #fef2f2;
+    }
+
+    .date-input {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #474848;
+        font-size: 14px;
+        width: 100%;
+        font-family: monospace;
+    }
+
+    .date-input.invalid-date {
+        border: 2px solid #dc2626;
+        background: #fef2f2;
+    }
+
+    .input-with-suffix {
+        position: relative;
+        display: block;
+        width: 100%;
+    }
+
+    .input-with-suffix .number-input {
+        padding-right: 40px;
+        width: 100%;
+    }
+
+    .input-suffix {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 14px;
+        font-weight: 600;
+        pointer-events: none;
+    }
+
+    .form-row.stacked {
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
+    }
+
+    .form-row.stacked .form-group {
+        width: 100%;
+    }
+
+    .form-row.horizontal {
+        display: flex;
+        gap: 20px;
+        padding: 0px 20px;
+        align-items: flex-end;
+        width: 100%;
+    }
+
+    .form-row.horizontal .form-group {
+        flex: 1;
+    }
+
+    .form-row.horizontal .form-group.compact {
+        flex: 0 0 auto;
+        min-width: 200px;
+    }
+
+    /* Toggle Switch */
+    .unit-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+    }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 30px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #2196F3;
+        transition: .4s;
+        border-radius: 30px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #ff8900;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(30px);
+    }
+
+    input:disabled + .slider {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .unit-label {
+        color: #94a3b8;
+        font-size: 14px;
+        font-weight: 400;
+        min-width: 50px;
+        transition: all 0.3s ease;
+    }
+
+    .unit-label.active {
+        color: #ffffff;
+        font-weight: 700;
+    }
+
+    /* Tabs */
+    .tabs-container {
+        margin: 24px 0;
+    }
+
+    .tab-navigation {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 24px;
+        background: rgba(15, 23, 42, 0.5);
+        padding: 6px;
+        border-radius: 12px;
+        flex-wrap: wrap;
+    }
+
+    .tab-button {
+        padding: 14px 20px;
+        background: transparent;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        color: #94a3b8;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.2;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        flex: 1 1 auto;
+        min-width: 140px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tab-button:hover {
+        color: #e2e8f0;
+        background: rgba(100, 116, 139, 0.2);
+        border-color: rgba(100, 116, 139, 0.3);
+    }
+
+    .tab-button.active {
+        color: #fff;
+        background: linear-gradient(135deg, #ff8900 0%, #ff6600 100%);
+        border-color: #ff8900;
+        box-shadow: 0 4px 12px rgba(255, 137, 0, 0.3);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .context-box {
+        /* margin-bottom: 24px; */
+        padding: 20px;
+        background: rgba(30, 41, 59, 0.3);
+        border-radius: 8px;
+    }
+
+    .context-box h4 {
+        color: #ff8900;
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+
+    .context-box p {
+        color: #cbd5e1;
+        line-height: 1.6;
+        margin-bottom: 12px;
+    }
+
+    .context-box code {
+        background: #1e293b;
+        padding: 2px 8px;
+        border-radius: 4px;
+        color: #ff8900;
+        font-family: monospace;
+        font-size: 13px;
+    }
+
+    /* Spinner */
+    .spinner {
+        display: none;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #ff8900;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        margin-left: 12px;
+    }
+
+    .spinner.active {
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* File Upload Area */
+    .file-upload-container {
+        margin: 30px 0;
+    }
+
+    .file-drop-zone {
+        border: 2px dashed #64748b;
+        border-radius: 8px;
+        padding: 60px 40px;
+        text-align: center;
+        background: #1e293b;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .file-drop-zone:hover {
+        border-color: #ff8900;
+        background: #2d3748;
+    }
+
+    .file-drop-zone.drag-over {
+        border-color: #ff8900;
+        background: #2d3748;
+        border-style: solid;
+    }
+
+    .file-drop-zone.has-file {
+        border-color: #10b981;
+        background: #1e3a32;
+    }
+
+    .file-drop-zone.invalid-file {
+        border-color: #dc2626;
+        background: #3a1e1e;
+    }
+
+    .file-drop-icon {
+        font-size: 48px;
+        color: #64748b;
+        margin-bottom: 16px;
+    }
+
+    .file-drop-zone.drag-over .file-drop-icon,
+    .file-drop-zone:hover .file-drop-icon {
+        color: #ff8900;
+    }
+
+    .file-drop-zone.has-file .file-drop-icon {
+        color: #10b981;
+    }
+
+    .file-drop-zone.invalid-file .file-drop-icon {
+        color: #dc2626;
+    }
+
+    .file-drop-text {
+        color: #e2e8f0;
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+
+    .file-drop-hint {
+        color: #94a3b8;
+        font-size: 14px;
+    }
+
+    .file-name-display {
+        color: #10b981;
+        font-size: 16px;
+        font-weight: 600;
+        margin-top: 12px;
+        word-break: break-all;
+    }
+
+    .file-error-display {
+        color: #dc2626;
+        font-size: 14px;
+        margin-top: 12px;
+    }
+
+    #fileInput {
+        display: none;
+    }
+
+    .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+</style>
+{% endblock extra_css %}
+
+{% block right_panel %}
+<div class="grow">
+    <div class="p-6">
+        <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: Mnemo DMP Doctor</h2>
+        
+        <p class="text-slate-300 mb-6">
+            This tool helps you <strong class="text-orange-300">correct an Mnemo Survey file</strong> after a dive if you mis-calibrated or mis-managed your Mnemo device. Instead of re-diving, you can apply corrections to fix common survey errors.
+        </p>
+
+        <div class="my-4 text-orange-300">
+            <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+        </div>
+        
+        <hr class="border-slate-600 mt-6">
+
+        <!-- Tab Navigation -->
+        <div class="tabs-container">
+            <div class="tab-navigation">
+                <button class="tab-button active" data-tab="uncorrupt">Un-Corrupt Mnemo DMP</button>
+                <button class="tab-button" data-tab="date">Date Correction</button>
+                <button class="tab-button" data-tab="length">Shot Length Correction</button>
+                <button class="tab-button" data-tab="compass">Compass Correction</button>
+                <button class="tab-button" data-tab="depth">Depth Correction</button>
+            </div>
+
+            <!-- Un-Corrupt Tab -->
+            <div class="tab-content active" id="tab-uncorrupt">
+                <div class="context-box">
+                    <h4>Fix Corrupted DMP Files</h4>
+                    <p>This feature automatically repairs corrupted or malformed Mnemo DMP files that fail to import properly into Ariane survey software.</p>
+                    <p><strong>Enable this option</strong> if your DMP file won't import into Ariane or shows errors during the import process.</p>
+                </div>
+                <div class="form-row horizontal" style="max-width: 700px;">
+                    <div class="form-group" style="max-width: 400px;">
+                        <label>Fix my DMP File</label>
+                        <div class="unit-toggle">
+                            <span class="unit-label active" id="fixDmpNoLabel">No</span>
+                            <label class="switch">
+                                <input type="checkbox" id="fixDmpSwitch">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="unit-label" id="fixDmpYesLabel">Yes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date Tab -->
+            <div class="tab-content" id="tab-date">
+                <div class="context-box">
+                    <h4>About Date Correction</h4>
+                    <p>Change the survey date if it was incorrectly set on your Mnemo device.</p>
+                    <p>This is useful when you forgot to update the date on your device or if the date was lost due to battery issues.</p>
+                </div>
+
+                <div class="form-row horizontal" style="max-width: 700px;">
+                    <div class="form-group" style="max-width: 400px;">
+                        <label for="surveyDate">New Survey Date</label>
+                        <input type="date" id="surveyDate" class="date-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Length Tab -->
+            <div class="tab-content" id="tab-length">
+                <div class="context-box">
+                    <h4>About Shot Length Correction</h4>
+                    <p>Correct systematic measurement errors in shot lengths due to calibration issues.</p>
+                    <p><strong>Example:</strong> If you measured a known 100ft distance and the Mnemo recorded 104ft, calculate the scaling factor:</p>
+                    <p><code>(100ft ÷ 104ft) × 100 = 96.15%</code></p>
+                    <p>This will proportionally scale all shot lengths in your survey.</p>
+                </div>
+
+                <div class="form-row horizontal" style="max-width: 700px;">
+                    <div class="form-group" style="max-width: 400px;">
+                        <label for="lengthScaling">Shot Length Scaling</label>
+                        <div class="input-with-suffix">
+                            <input type="number" id="lengthScaling" class="number-input" 
+                                value="100" step="1" min="1" placeholder="100">
+                            <span class="input-suffix">%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compass Tab -->
+            <div class="tab-content" id="tab-compass">
+                <div class="context-box">
+                    <h4>About Compass Correction</h4>
+                    <p>Adjust for compass calibration errors or magnetic interference.</p>
+                    <p><strong>Offset Example:</strong> If a passage should be 190° but was measured as 205°, apply an offset: <code>190° - 205° = -15°</code></p>
+                    <p>This offset will be applied to all compass readings. Positive values rotate right, negative values rotate left.</p>
+                    <p><strong>Reverse Direction:</strong> Use this to fix surveys done in the wrong direction (In vs Out). This applies a 180° compass offset, essentially flipping the direction of the entire survey.</p>
+                </div>
+                <div class="form-row horizontal" style="max-width: 700px;">
+                    <div class="form-group">
+                        <label for="compassOffset">Compass Offset <small>(Positive = right • Negative = left)</small></label>
+                        <div class="input-with-suffix">
+                            <input type="number" id="compassOffset" class="number-input" 
+                                   value="0" step="1" min="-359" max="359" placeholder="0">
+                            <span class="input-suffix">°</span>
+                        </div>
+                    </div>
+                    <div class="form-group compact">
+                        <label>Reverse Survey Direction</label>
+                        <div class="unit-toggle">
+                            <span class="unit-label active" id="reverseOffLabel">Off</span>
+                            <label class="switch">
+                                <input type="checkbox" id="reverseDirectionSwitch">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="unit-label" id="reverseOnLabel">On</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Depth Tab -->
+            <div class="tab-content" id="tab-depth">
+                <div class="context-box">
+                    <h4>About Depth Correction</h4>
+                    <p>Compensate for depth calibration errors in your Mnemo.</p>
+                    <p><strong>Example:</strong> If at 100ft actual depth the Mnemo measured 104ft, calculate the offset: <code>100ft - 104ft = -4ft</code></p>
+                    <p>Positive offsets make all depths deeper, negative offsets make them shallower.</p>
+                </div>
+                <div class="form-row horizontal" style="max-width: 700px;">
+                    <div class="form-group">
+                        <label for="depthOffset">Depth Offset <small>(Positive = deeper • Negative = shallower)</small></label>
+                        <div class="input-with-suffix">
+                            <input type="number" id="depthOffset" class="number-input" 
+                                   value="0" step="1" min="-1000" max="1000" placeholder="0">
+                            <span class="input-suffix" id="depthUnitSuffix">ft</span>
+                        </div>
+                    </div>
+                    <div class="form-group compact">
+                        <label>Depth Unit</label>
+                        <div class="unit-toggle">
+                            <span class="unit-label" id="metersLabel">Meters</span>
+                            <label class="switch">
+                                <input type="checkbox" id="depthUnitSwitch" checked>
+                                <span class="slider"></span>
+                            </label>
+                            <span class="unit-label active" id="feetLabel">Feet</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="border-slate-600 mt-6">
+
+        <div class="file-upload-container">
+            <div class="file-drop-zone" id="fileDropZone">
+                <div class="file-drop-icon">📁</div>
+                <div class="file-drop-text">Drag and drop your DMP file here</div>
+                <div class="file-drop-hint">or click to browse</div>
+                <div class="file-name-display" id="fileNameDisplay" style="display: none;"></div>
+                <div class="file-error-display" id="fileErrorDisplay" style="display: none;"></div>
+            </div>
+            <input type="file" id="fileInput" accept=".dmp,.DMP">
+        </div>
+
+        <hr class="border-slate-600 mt-6">
+
+        <div class="controls my-6">
+            <button class="tool-action" id="resetFormBtn">Reset Form</button>
+            <button class="tool-action" id="downloadBtn" disabled>Download as DMP</button>
+            <div class="spinner" id="downloadSpinner"></div>
+            <div id="status" style="margin-left:12px;"></div>
+        </div>
+
+        {% csrf_token %}
+
+    </div>
+</div>
+<div id="loading_spinner" class="loading" style="display:none;"></div>
+
+{% include 'snippets/modal_error.html' %}
+
+{% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+$(document).ready(function() {
+    const $fileDropZone = $('#fileDropZone');
+    const $fileInput = $('#fileInput');
+    const $fileNameDisplay = $('#fileNameDisplay');
+    const $fileErrorDisplay = $('#fileErrorDisplay');
+    const $downloadBtn = $('#downloadBtn');
+    const $statusEl = $('#status');
+    
+    let selectedFile = null;
+    let currentTab = 'uncorrupt';
+
+    // Set up date input - max date is today
+    const today = new Date().toISOString().split('T')[0];
+    $('#surveyDate').attr('max', today);
+
+    // Tab switching with form reset
+    $('.tab-button').on('click', function() {
+        const targetTab = $(this).data('tab');
+        
+        // Don't reset if clicking same tab
+        if (targetTab === currentTab) return;
+        
+        // Switch active tab button
+        $('.tab-button').removeClass('active');
+        $(this).addClass('active');
+        
+        // Switch active tab content
+        $('.tab-content').removeClass('active');
+        $(`#tab-${targetTab}`).addClass('active');
+        
+        // Reset form fields (except file)
+        resetFormFields();
+        
+        currentTab = targetTab;
+        $statusEl.text('Tab changed - form reset').css({ 'color': '#94a3b8', 'font-weight': 'normal' });
+    });
+
+    function resetFormFields() {
+        // Reset all form fields to defaults
+        $('#surveyDate').val('');
+        $('#lengthScaling').val('100').removeClass('invalid');
+        $('#compassOffset').val('0').prop('disabled', false).removeClass('invalid');
+        $('#depthOffset').val('0').removeClass('invalid');
+        
+        // Reset toggles
+        $('#fixDmpSwitch').prop('checked', false);
+        $('#fixDmpNoLabel').addClass('active');
+        $('#fixDmpYesLabel').removeClass('active');
+        
+        $('#depthUnitSwitch').prop('checked', true);
+        depthOffsetUnit = 'feet';
+        $('#metersLabel').removeClass('active');
+        $('#feetLabel').addClass('active');
+        $('#depthUnitSuffix').text('ft');
+        
+        $('#reverseDirectionSwitch').prop('checked', false);
+        $('#reverseOffLabel').addClass('active');
+        $('#reverseOnLabel').removeClass('active');
+    }
+
+    // Fix DMP toggle
+    $('#fixDmpSwitch').on('change', function() {
+        if (this.checked) {
+            $('#fixDmpNoLabel').removeClass('active');
+            $('#fixDmpYesLabel').addClass('active');
+        } else {
+            $('#fixDmpYesLabel').removeClass('active');
+            $('#fixDmpNoLabel').addClass('active');
+        }
+    });
+
+    // Depth offset unit toggle (Meters/Feet)
+    let depthOffsetUnit = 'feet';
+    $('#depthUnitSwitch').on('change', function() {
+        if (this.checked) {
+            depthOffsetUnit = 'feet';
+            $('#metersLabel').removeClass('active');
+            $('#feetLabel').addClass('active');
+            $('#depthUnitSuffix').text('ft');
+        } else {
+            depthOffsetUnit = 'meters';
+            $('#feetLabel').removeClass('active');
+            $('#metersLabel').addClass('active');
+            $('#depthUnitSuffix').text('m');
+        }
+    });
+
+    // Reverse azimuth toggle - sets compass offset to 180 and disables field
+    $('#reverseDirectionSwitch').on('change', function() {
+        const $compassOffset = $('#compassOffset');
+        
+        if (this.checked) {
+            // Store current value if not already 180
+            if ($compassOffset.val() !== '180') {
+                $compassOffset.data('previous-value', $compassOffset.val());
+            }
+            $compassOffset.val('180').prop('disabled', true);
+            $('#reverseOffLabel').removeClass('active');
+            $('#reverseOnLabel').addClass('active');
+        } else {
+            // Restore previous value or set to 0
+            const previousValue = $compassOffset.data('previous-value') || '0';
+            $compassOffset.val(previousValue).prop('disabled', false);
+            $('#reverseOnLabel').removeClass('active');
+            $('#reverseOffLabel').addClass('active');
+        }
+    });
+
+    // Input validation
+    $('#lengthScaling').on('input', function() {
+        const val = parseFloat($(this).val());
+        if (isNaN(val) || val < 1) {
+            $(this).addClass('invalid');
+        } else {
+            $(this).removeClass('invalid');
+        }
+    });
+
+    $('#compassOffset').on('input', function() {
+        const val = parseFloat($(this).val());
+        if (isNaN(val) || val < -360 || val >= 360) {
+            $(this).addClass('invalid');
+        } else {
+            $(this).removeClass('invalid');
+        }
+    });
+
+    $('#depthOffset').on('input', function() {
+        const val = parseFloat($(this).val());
+        if (isNaN(val) || val < -1000 || val > 1000) {
+            $(this).addClass('invalid');
+        } else {
+            $(this).removeClass('invalid');
+        }
+    });
+
+    $(window).on('load', function() {
+        $("body").click(function () {
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+    });
+
+    // Click to browse
+    $fileDropZone.on('click', function() {
+        $fileInput.click();
+    });
+
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        $fileDropZone[0].addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // Highlight drop zone when item is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+        $fileDropZone[0].addEventListener(eventName, function() {
+            $fileDropZone.addClass('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        $fileDropZone[0].addEventListener(eventName, function() {
+            $fileDropZone.removeClass('drag-over');
+        }, false);
+    });
+
+    // Handle dropped files
+    $fileDropZone[0].addEventListener('drop', function(e) {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    }, false);
+
+    // Handle file selection
+    $fileInput.on('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        // Reset states
+        $fileDropZone.removeClass('has-file invalid-file');
+        $fileNameDisplay.hide();
+        $fileErrorDisplay.hide();
+        selectedFile = null;
+        $downloadBtn.prop('disabled', true);
+        $statusEl.text('');
+
+        // Check file extension (case insensitive)
+        const fileName = file.name;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        
+        if (fileExtension !== 'dmp') {
+            $fileDropZone.addClass('invalid-file');
+            $fileErrorDisplay.text('Invalid file type. Please upload a .dmp file').show();
+            return;
+        }
+
+        // File is valid
+        selectedFile = file;
+        $fileDropZone.addClass('has-file');
+        $fileNameDisplay.text(fileName).show();
+        $downloadBtn.prop('disabled', false);
+        $statusEl.text('File ready for conversion')
+                  .css({ 'color': 'green', 'font-weight': 'bold' });
+    }
+
+    // Reset form button
+    $('#resetFormBtn').on('click', function() {
+        // Reset form fields
+        resetFormFields();
+        
+        // Reset file
+        selectedFile = null;
+        $fileDropZone.removeClass('has-file invalid-file');
+        $fileNameDisplay.hide();
+        $fileErrorDisplay.hide();
+        $downloadBtn.prop('disabled', true);
+        $fileInput.val('');
+        
+        // Clear status
+        $statusEl.text('Form reset').css({ 'color': '#94a3b8', 'font-weight': 'normal' });
+    });
+
+    $('#downloadBtn').on('click', function() {
+        if (!selectedFile) {
+            $statusEl.text('Please select a DMP file first.')
+                      .css({ 'color': 'red', 'font-weight': 'bold' });
+            return;
+        }
+
+        // Validate inputs
+        const lengthScalingPercent = parseFloat($('#lengthScaling').val());
+        if (isNaN(lengthScalingPercent) || lengthScalingPercent < 1) {
+            $statusEl.text('Shot Length Scaling must be at least 1%.')
+                      .css({ 'color': 'red', 'font-weight': 'bold' });
+            $('#lengthScaling').addClass('invalid');
+            return;
+        }
+        
+        // Convert percentage to float (100% = 1.0)
+        const lengthScaling = lengthScalingPercent / 100;
+
+        const compassOffset = parseFloat($('#compassOffset').val());
+        if (isNaN(compassOffset) || compassOffset < -360 || compassOffset >= 360) {
+            $statusEl.text('Compass Offset must be between -360 and 359.')
+                      .css({ 'color': 'red', 'font-weight': 'bold' });
+            $('#compassOffset').addClass('invalid');
+            return;
+        }
+
+        const depthOffset = parseFloat($('#depthOffset').val());
+        if (isNaN(depthOffset) || depthOffset < -1000 || depthOffset > 1000) {
+            $statusEl.text('Depth Offset must be between -1000 and 1000.')
+                      .css({ 'color': 'red', 'font-weight': 'bold' });
+            $('#depthOffset').addClass('invalid');
+            return;
+        }
+
+        var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+        // Show spinner
+        $("#loading_spinner").show();
+        $downloadBtn.prop('disabled', true);
+
+        // Create FormData and append the file and adjustment parameters
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        
+        // Add all parameters as JSON
+        const fixDmp = $('#fixDmpSwitch').is(':checked');
+        const surveyDate = $('#surveyDate').val();
+        const reverseDirection = $('#reverseDirectionSwitch').is(':checked');
+        
+        formData.append('data', JSON.stringify({
+            fix_dmp: fixDmp,
+            survey_date: surveyDate || null,
+            length_scaling: lengthScaling,
+            compass_offset: compassOffset,
+            reverse_direction: reverseDirection,
+            depth_offset: depthOffset,
+            depth_offset_unit: depthOffsetUnit,
+        }));
+
+        // AJAX call to process DMP file
+        $.ajax({
+            url: "{% url 'api:v1:tool-dmp-doctor' %}",
+            method: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            cache: false,
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                return true;
+            },
+            success: function(response) {
+                const blob = new Blob([response], { type: 'application/octet-stream' });
+                const a = document.createElement('a');
+                document.body.appendChild(a);
+                a.href = window.URL.createObjectURL(blob);
+                a.style.display = 'none';
+                a.download = 'survey.dmp';
+                a.click();
+                window.URL.revokeObjectURL(a.href);
+                a.remove();
+                
+                $("#loading_spinner").hide();
+                $downloadBtn.prop('disabled', false);
+                $statusEl.text('Download successful!')
+                          .css({ 'color': 'green', 'font-weight': 'bold' });
+            },
+            error: function(xhr, status, error) {
+                $("#loading_spinner").hide();
+                $downloadBtn.prop('disabled', false);
+                
+                let errorMessage = error;
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                } else if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    errorMessage = xhr.responseJSON.detail;
+                } else if (xhr.responseText) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.error || response.detail || response.message || error;
+                    } catch (e) {
+                        errorMessage = xhr.responseText.substring(0, 200);
+                    }
+                }
+                
+                $("#modal_error_txt").text(errorMessage);
+                $("#modal_error").css('display', 'flex');
+                $statusEl.text('Error occurred. See details.')
+                          .css({ 'color': 'red', 'font-weight': 'bold' });
+            }
+        });
+    });
+
+});
+</script>
+
+{% endblock inline_extra_js %}

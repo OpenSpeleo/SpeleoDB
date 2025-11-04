@@ -654,6 +654,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/tools/dmp-doctor/",
+        "module": "speleodb.api.v1.views.tools.ToolDMPDoctor",
+        "name": "api:v1:tool-dmp-doctor",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/tools/dmp2json/",
         "module": "speleodb.api.v1.views.tools.ToolDMP2JSON",
         "name": "api:v1:tool-dmp2json",
@@ -885,6 +891,12 @@
         "url": "/private/teams/",
         "module": "frontend_private.views.team.TeamListingView",
         "name": "private:teams",
+        "decorators": ""
+    },
+    {
+        "url": "/private/tools/dmp_doctor/",
+        "module": "frontend_private.views.tools.ToolDMPDoctor",
+        "name": "private:tool-dmp-doctor",
         "decorators": ""
     },
     {

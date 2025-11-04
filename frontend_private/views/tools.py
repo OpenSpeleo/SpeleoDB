@@ -15,3 +15,7 @@ class ToolXLSToCompass(AuthenticatedTemplateView):
 
 class ToolDMP2Json(AuthenticatedTemplateView):
     template_name = "pages/tools/dmp2json.html"
+
+
+class ToolDMPDoctor(AuthenticatedTemplateView):
+    template_name = "pages/tools/dmp_doctor.html"

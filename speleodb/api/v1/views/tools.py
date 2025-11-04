@@ -2,18 +2,25 @@
 from __future__ import annotations
 
 import io
+import json
 import logging
 import shutil
 import tempfile
 from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
+from typing import Annotated
 from typing import Any
+from typing import Literal
 
 from django.core.exceptions import ValidationError
+from mnemo_lib.commands.correct import correct as correct_dmp_cmd
 from mnemo_lib.constants import ShotType
 from mnemo_lib.constants import SurveyDirection
 from mnemo_lib.models import DMPFile
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import PastDate
 from pydantic import ValidationError as PydanticValidationError
 from rest_framework import permissions
 from rest_framework import status
@@ -227,6 +234,129 @@ class ToolDMP2JSON(APIView):
 
         return DownloadResponseFromBlob(
             obj=bytes_io,
+            filename="survey.dat",
+            attachment=True,
+        )
+
+
+class DMPDoctorQuery(BaseModel):
+    fix_dmp: bool
+
+    survey_date: PastDate | None
+
+    length_scaling: Annotated[float, Field(gt=0)]
+
+    compass_offset: Annotated[int, Field(gt=-360, lt=360)]
+    reverse_direction: bool
+
+    depth_offset: Annotated[float, Field(gt=-300, lt=300)]
+    depth_offset_unit: Literal["feet", "meters"]
+
+
+class ToolDMPDoctor(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(
+        self, request: Request, *args: Any, **kwargs: Any
+    ) -> Response | FileResponse:
+        # Get the uploaded file
+        if "file" not in request.FILES:
+            return ErrorResponse(
+                {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        uploaded_file = request.FILES["file"]
+
+        # Validate file extension
+        if not uploaded_file.name.lower().endswith(".dmp"):
+            return ErrorResponse(
+                {"error": "Invalid file type. Only .dmp files are allowed"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Parse JSON data from the 'data' field
+
+        try:
+            data = json.loads(request.data.get("data", {}))
+        except json.JSONDecodeError:
+            return ErrorResponse(
+                {"error": "Invalid data format"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            params = DMPDoctorQuery.model_validate(data)
+        except (ValueError, PydanticValidationError) as exc:
+            error = (
+                format_pydantic_error(exc)
+                if isinstance(exc, PydanticValidationError)
+                else str(exc)
+            )
+            return ErrorResponse({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+
+        # import pprint
+
+        # pprint.pprint(params.model_dump())
+        obj_stream = io.BytesIO()
+        if params.fix_dmp:
+            return ErrorResponse(
+                {"error": "Not implemented yet"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            input_file = Path(tmpdir) / "input.dmp"
+            output_file = Path(tmpdir) / "output.dmp"
+
+            # Write uploaded file to disk
+            with input_file.open("wb") as f:
+                for chunk in uploaded_file.chunks():
+                    f.write(chunk)
+
+            flags = [
+                "--input_file",
+                str(input_file.resolve()),
+                "--output_file",
+                str(output_file.resolve()),
+            ]
+
+            if params.survey_date:
+                flags.extend(["--date", params.survey_date.strftime("%Y-%m-%d")])
+
+            if params.length_scaling != 1.0:
+                flags.extend(["--length_scaling", str(params.length_scaling)])
+
+            if params.depth_offset != 0.0:
+                flags.extend(
+                    [
+                        "--depth_offset",
+                        str(params.depth_offset)
+                        if params.depth_offset_unit == "meters"
+                        else str(params.depth_offset * 0.3048),
+                    ]
+                )
+
+            if params.reverse_direction:
+                flags.append("--reverse_azimuth")
+            elif params.compass_offset != 0:
+                flags.extend(["--compass_offset", str(params.compass_offset % 360)])
+
+            # try:
+            #     assert correct_dmp_cmd(flags) == 0
+            # except Exception as e:
+            #     return ErrorResponse(
+            #         {"error": f"Unexpected behavior: {e}"},
+            #         status=status.HTTP_400_BAD_REQUEST,
+            #     )
+            correct_dmp_cmd(flags)
+
+            with output_file.open(mode="rb") as f:
+                # Copy the contents from the source file to the destination stream
+                shutil.copyfileobj(f, obj_stream)
+                obj_stream.seek(0)  # Reset stream position to the beginning
+
+        return DownloadResponseFromBlob(
+            obj=uploaded_file,
             filename="survey.dat",
             attachment=True,
         )
