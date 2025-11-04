@@ -1400,7 +1400,7 @@ wheels = [
 
 [[package]]
 name = "openspeleo-lib"
-version = "0.0.6"
+version = "0.0.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "argparse" },
@@ -1415,8 +1415,9 @@ dependencies = [
     { name = "pyproj" },
     { name = "xmltodict" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/74/c1/bef929b085560be5eedd49c906c9bb209864d1a5ce9a76939d3c8f52c0ea/openspeleo_lib-0.0.7.tar.gz", hash = "sha256:7ca6161d251747aa01cef0e2751fd554eecf37979f0e8a4391d9e073b9b7cf9b", size = 22419, upload-time = "2025-11-04T03:17:39.492Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/b0/35074a82503b9843f52376619c0c7bedb44cb7ba0e457b44065e8eae0479/openspeleo_lib-0.0.6-py3-none-any.whl", hash = "sha256:b165dd15921519c63d047e27ce1b8938b4b2d0cd3d3748f35991dda55045ed8a", size = 28093, upload-time = "2025-10-08T04:33:07.588Z" },
+    { url = "https://files.pythonhosted.org/packages/53/89/7eb2ad95daa25c33727fc95d626b3d0b4716cfabd4c320e046a1b1cfdc50/openspeleo_lib-0.0.7-py3-none-any.whl", hash = "sha256:35d1ee486f3b5f3da56f4223c338ad224be1d308f9134e8c51ba5d73f1b37598", size = 28078, upload-time = "2025-11-04T03:17:37.799Z" },
 ]
 
 [[package]]
@@ -2259,7 +2260,7 @@ requires-dist = [
     { name = "jsonschema-rs", specifier = "==0.33.0" },
     { name = "mnemo-lib", specifier = "==0.0.6" },
     { name = "mypy", marker = "extra == 'local'", specifier = "==1.18.2" },
-    { name = "openspeleo-lib", specifier = "==0.0.6" },
+    { name = "openspeleo-lib", specifier = "==0.0.7" },
     { name = "orjson", specifier = "==3.11.4" },
     { name = "parameterized", marker = "extra == 'local'", specifier = "==0.9.0" },
     { name = "pillow", specifier = "==12.0.0" },
