@@ -39,6 +39,19 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def format_pydantic_error(err: PydanticValidationError) -> str:
+    """
+    Convert a Pydantic ValidationError into a nicely formatted string.
+    """
+    messages: list[str] = []
+    for e in err.errors():
+        loc = " → ".join(str(x) for x in e["loc"])
+        msg = e["msg"]
+        typ = e["type"]
+        return f'- [{typ}] "{loc}": {msg}'
+    return "\n".join(messages)
+
+
 class ToolXLSToDMP(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -136,19 +149,6 @@ class ToolXLSToDMP(APIView):
         return DownloadResponseFromBlob(
             obj=obj_stream, filename=dmp_file.name, attachment=True
         )
-
-
-def format_pydantic_error(err: PydanticValidationError) -> str:
-    """
-    Convert a Pydantic ValidationError into a nicely formatted string.
-    """
-    messages: list[str] = []
-    for e in err.errors():
-        loc = " → ".join(str(x) for x in e["loc"])
-        msg = e["msg"]
-        typ = e["type"]
-        return f'- [{typ}] "{loc}": {msg}'
-    return "\n".join(messages)
 
 
 class ToolXLSToCompass(APIView):
@@ -294,61 +294,70 @@ class ToolDMPDoctor(APIView):
             )
             return ErrorResponse({"error": error}, status=status.HTTP_400_BAD_REQUEST)
 
-        # import pprint
-
-        # pprint.pprint(params.model_dump())
         obj_stream = io.BytesIO()
-        if params.fix_dmp:
-            return ErrorResponse(
-                {"error": "Not implemented yet"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            input_file = Path(tmpdir) / "input.dmp"
             output_file = Path(tmpdir) / "output.dmp"
 
-            # Write uploaded file to disk
-            with input_file.open("wb") as f:
-                for chunk in uploaded_file.chunks():
-                    f.write(chunk)
+            if params.fix_dmp:
+                if params.survey_date is None:
+                    return ErrorResponse(
+                        {"error": "`survey_date` is necessary to fix a DMP file."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
-            flags = [
-                "--input_file",
-                str(input_file.resolve()),
-                "--output_file",
-                str(output_file.resolve()),
-            ]
+                content: str = uploaded_file.read().decode("utf-8")
+                dmp_data = [int(v) for v in content.split(";") if v]
 
-            if params.survey_date:
-                flags.extend(["--date", params.survey_date.strftime("%Y-%m-%d")])
+                _ = DMPFile.from_dmp_data(
+                    dmp_data,
+                    uncorrupt=True,
+                    uncorrupt_date=params.survey_date,
+                ).to_dmp(output_file)
 
-            if params.length_scaling != 1.0:
-                flags.extend(["--length_scaling", str(params.length_scaling)])
+            else:
+                input_file = Path(tmpdir) / "input.dmp"
 
-            if params.depth_offset != 0.0:
-                flags.extend(
-                    [
-                        "--depth_offset",
-                        str(params.depth_offset)
-                        if params.depth_offset_unit == "meters"
-                        else str(params.depth_offset * 0.3048),
-                    ]
-                )
+                # Write uploaded file to disk
+                with input_file.open("wb") as f:
+                    for chunk in uploaded_file.chunks():
+                        f.write(chunk)
 
-            if params.reverse_direction:
-                flags.append("--reverse_azimuth")
-            elif params.compass_offset != 0:
-                flags.extend(["--compass_offset", str(params.compass_offset % 360)])
+                flags = [
+                    "--input_file",
+                    str(input_file.resolve()),
+                    "--output_file",
+                    str(output_file.resolve()),
+                ]
 
-            # try:
-            #     assert correct_dmp_cmd(flags) == 0
-            # except Exception as e:
-            #     return ErrorResponse(
-            #         {"error": f"Unexpected behavior: {e}"},
-            #         status=status.HTTP_400_BAD_REQUEST,
-            #     )
-            correct_dmp_cmd(flags)
+                if params.survey_date:
+                    flags.extend(["--date", params.survey_date.strftime("%Y-%m-%d")])
+
+                if params.length_scaling != 1.0:
+                    flags.extend(["--length_scaling", str(params.length_scaling)])
+
+                if params.depth_offset != 0.0:
+                    flags.extend(
+                        [
+                            "--depth_offset",
+                            str(params.depth_offset)
+                            if params.depth_offset_unit == "meters"
+                            else str(params.depth_offset * 0.3048),
+                        ]
+                    )
+
+                if params.reverse_direction:
+                    flags.append("--reverse_azimuth")
+                elif params.compass_offset != 0:
+                    flags.extend(["--compass_offset", str(params.compass_offset % 360)])
+
+                try:
+                    assert correct_dmp_cmd(flags) == 0
+
+                except Exception as e:  # noqa: BLE001
+                    return ErrorResponse(
+                        {"error": f"Unexpected behavior: {e}"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
             with output_file.open(mode="rb") as f:
                 # Copy the contents from the source file to the destination stream
@@ -356,7 +365,7 @@ class ToolDMPDoctor(APIView):
                 obj_stream.seek(0)  # Reset stream position to the beginning
 
         return DownloadResponseFromBlob(
-            obj=uploaded_file,
+            obj=obj_stream,
             filename="survey.dat",
             attachment=True,
         )

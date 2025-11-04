@@ -515,6 +515,7 @@
                     <p>This feature automatically repairs corrupted or malformed Mnemo DMP files that fail to import properly into Ariane survey software.</p>
                     <p><strong>Enable this option</strong> if your DMP file won't import into Ariane or shows errors during the import process.</p>
                 </div>
+
                 <div class="form-row horizontal" style="max-width: 700px;">
                     <div class="form-group" style="max-width: 400px;">
                         <label>Fix my DMP File</label>
@@ -527,7 +528,12 @@
                             <span class="unit-label" id="fixDmpYesLabel">Yes</span>
                         </div>
                     </div>
+                    <div class="form-group" style="max-width: 400px;">
+                        <label for="surveyDateUncorrupt">New Survey Date</label>
+                        <input type="date" id="surveyDateUncorrupt" class="date-input">
+                    </div>
                 </div>
+                
             </div>
 
             <!-- Date Tab -->
@@ -677,9 +683,13 @@ $(document).ready(function() {
     let selectedFile = null;
     let currentTab = 'uncorrupt';
 
-    // Set up date input - max date is today
+    // Set up date inputs - max date is today
     const today = new Date().toISOString().split('T')[0];
     $('#surveyDate').attr('max', today);
+    $('#surveyDateUncorrupt').attr('max', today);
+
+    // Start value should be Yes
+    $('#fixDmpSwitch').prop('checked', true);
 
     // Tab switching with form reset
     $('.tab-button').on('click', function() {
@@ -706,6 +716,7 @@ $(document).ready(function() {
     function resetFormFields() {
         // Reset all form fields to defaults
         $('#surveyDate').val('');
+        $('#surveyDateUncorrupt').val('');
         $('#lengthScaling').val('100').removeClass('invalid');
         $('#compassOffset').val('0').prop('disabled', false).removeClass('invalid');
         $('#depthOffset').val('0').removeClass('invalid');
@@ -946,12 +957,13 @@ $(document).ready(function() {
         
         // Add all parameters as JSON
         const fixDmp = $('#fixDmpSwitch').is(':checked');
-        const surveyDate = $('#surveyDate').val();
+        // Check both date fields (only one will have a value due to tab resets)
+        const surveyDate = $('#surveyDateUncorrupt').val() || $('#surveyDate').val() || null;
         const reverseDirection = $('#reverseDirectionSwitch').is(':checked');
         
         formData.append('data', JSON.stringify({
             fix_dmp: fixDmp,
-            survey_date: surveyDate || null,
+            survey_date: surveyDate,
             length_scaling: lengthScaling,
             compass_offset: compassOffset,
             reverse_direction: reverseDirection,
