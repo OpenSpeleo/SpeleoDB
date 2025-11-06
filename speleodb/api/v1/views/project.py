@@ -134,6 +134,11 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
             serializer = self.get_serializer(data=data, context={"user": user})
             if serializer.is_valid():
                 serializer.save()
+
+                # void permission caches
+                user._fetch_permissions.cache_clear()  # noqa: SLF001
+                user.get_best_permission.cache_clear()
+
                 return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
             return ErrorResponse(

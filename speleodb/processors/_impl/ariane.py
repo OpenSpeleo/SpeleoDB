@@ -37,7 +37,7 @@ def calculate_sha1(
     :return: SHA-1 hash as a hexadecimal string
     """
 
-    if (file_path is None) ^ (file_obj is None):  # XOR Comparison
+    if not ((file_path is None) ^ (file_obj is None)):  # XOR Comparison
         raise ValueError(
             "`file_path` and `file_obj` are mutually exclusive. "
             f"{file_path=} && {file_obj=}"
