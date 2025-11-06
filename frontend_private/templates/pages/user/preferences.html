@@ -1,6 +1,39 @@
 {% extends "pages/user/base.html" %}
 {% load static %}
 
+{% block extra_css %}
+{{ block.super }}
+
+<style>
+    /* Mobile Responsive Styles for Preferences Page */
+    @media (max-width: 768px) {
+        /* Make preference items stack on mobile */
+        li.flex.justify-between.items-center {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 12px;
+        }
+
+        li.flex.justify-between.items-center .flex.items-center {
+            margin-left: 0 !important;
+            align-self: flex-end;
+        }
+
+        /* Give more room for descriptions */
+        li.flex.justify-between.items-center > div:first-child {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 640px) {
+        /* Make toggle text smaller on small screens */
+        .text-sm.text-slate-500.italic {
+            font-size: 12px;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
 {% block right_panel %}
 <!-- Panel -->
 <div class="grow">

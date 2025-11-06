@@ -3,6 +3,83 @@
 
 {% load countries %}
 
+{% block extra_css %}
+<style>
+    /* Mobile card layout */
+    @media (max-width: 768px) {
+        .teams-table {
+            display: none;
+        }
+        
+        .teams-cards {
+            display: block;
+        }
+        
+        .team-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .team-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .team-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .team-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+        
+        .team-card-body {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .team-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .team-card-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        
+        .team-card-value {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .teams-table {
+            display: block;
+        }
+        
+        .teams-cards {
+            display: none;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
 {% block content %}
 <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
@@ -24,20 +101,60 @@
             <!-- Right: Actions -->
             <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
 
-                <!-- New button -->
-                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                <!-- Create Team button -->
+                <a href="{% url 'private:team_new' %}" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
                     <svg class="w-4 h-4 fill-current opacity-50 shrink-0" viewBox="0 0 16 16">
                         <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
                     </svg>
-                    <a href="{% url 'private:team_new' %}" class="hidden xs:block ml-2">New Team</a>
-                </button>
+                    <span class="ml-2">Create Team</span>
+                </a>
 
             </div>
 
         </div>
 
-        <!-- Table -->
-        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <!-- Mobile Cards View -->
+        <div class="teams-cards">
+            <div class="p-4">
+                {% for membership in user.team_memberships %}
+                <div class="team-card">
+                    <div class="team-card-header">
+                        <div class="team-card-title">{{ membership.team.name }}</div>
+                        <a href="{% url 'private:team_details' team_id=membership.team.id %}" class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition">
+                            <img src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="View">
+                        </a>
+                    </div>
+                    <div class="team-card-body">
+                        <div class="team-card-row">
+                            <span class="team-card-label">Members</span>
+                            <span class="team-card-value">{{ membership.team.get_member_count }}</span>
+                        </div>
+                        <div class="team-card-row">
+                            <span class="team-card-label">Country</span>
+                            <span class="team-card-value">
+                                {% get_country membership.team.country as country %}
+                                {{ country.name }}
+                            </span>
+                        </div>
+                        <div class="team-card-row">
+                            <span class="team-card-label">Role</span>
+                            <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5
+                            {% if membership.role_label == "MEMBER" %}
+                                bg-pastel-purple text-white">Member</div>
+                            {% elif membership.role_label == "LEADER" %}
+                                bg-pastel-orange text-white">Leader</div>
+                            {% else %}
+                                bg-rose-500/30 text-rose-400">Unknown</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="teams-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
 
             <div>
 

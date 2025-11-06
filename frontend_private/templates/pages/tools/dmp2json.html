@@ -1,8 +1,8 @@
 {% extends "pages/tools/base.html" %}
 {% load static %}
-{% load countries %}
 
 {% block extra_css %}
+{{ block.super }}
 
 {% if debug %}
 <link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}" rel="stylesheet">
@@ -184,6 +184,19 @@
         display: flex;
         gap: 8px;
         align-items: center;
+    }
+    
+    /* Mobile responsive styles */
+    @media (max-width: 768px) {
+        .controls {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .controls button {
+            flex: 1 1 calc(50% - 4px);
+            min-width: 120px;
+        }
     }
 
     /* Modal Styles */

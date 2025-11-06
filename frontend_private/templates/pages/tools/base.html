@@ -1,7 +1,144 @@
 {% extends "base_private.html" %}
 {% load static %}
 
-{% load countries %}
+{% block extra_css %}
+<style>
+    /* Dropdown menu styles for project settings */
+    .tools-dropdown-trigger {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(67, 56, 202, 0.1) 100%);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 8px;
+        color: #e2e8f0;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .tools-dropdown-trigger:hover {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(67, 56, 202, 0.2) 100%);
+        border-color: rgba(99, 102, 241, 0.5);
+    }
+
+    .tools-dropdown-trigger svg {
+        transition: transform 0.3s ease;
+    }
+
+    .tools-dropdown-trigger.open svg {
+        transform: rotate(180deg);
+    }
+
+    .tools-dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 8px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
+    
+    /* Ensure all parents allow overflow on mobile */
+    @media (max-width: 768px) {
+        .bg-slate-800.shadow-lg.rounded-sm,
+        .bg-slate-800.shadow-lg.rounded-sm > div,
+        .flex.flex-col.md\:flex-row {
+            overflow: visible !important;
+        }
+        
+        /* Allow content to extend beyond */
+        main.grow {
+            overflow: visible !important;
+        }
+        
+        .px-4.sm\:px-6.lg\:px-8 {
+            overflow: visible !important;
+        }
+    }
+
+    .tools-dropdown-section {
+        padding: 12px 8px;
+    }
+
+    .tools-dropdown-section:not(:last-child) {
+        border-bottom: 1px solid #334155;
+    }
+
+    .tools-dropdown-section-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #94a3b8;
+        padding: 8px 12px;
+        letter-spacing: 0.5px;
+    }
+
+    .tools-dropdown-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 6px;
+        color: #cbd5e1;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .tools-dropdown-item:hover {
+        background: rgba(99, 102, 241, 0.1);
+        color: #e2e8f0;
+    }
+
+    .tools-dropdown-item.active {
+        background: rgba(99, 102, 241, 0.2);
+        color: #a5b4fc;
+    }
+
+    .tools-dropdown-item.danger {
+        color: #fca5a5;
+    }
+
+    .tools-dropdown-item.danger:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: #fecaca;
+    }
+
+    .tools-dropdown-item.danger.active {
+        background: rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+    }
+
+    .tools-dropdown-item.warning {
+        color: #fcd34d;
+    }
+
+    .tools-dropdown-item.warning:hover {
+        background: rgba(245, 158, 11, 0.1);
+        color: #fde68a;
+    }
+
+    .tools-dropdown-item.warning.active {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+    }
+
+    .tools-dropdown-item svg {
+        margin-right: 10px;
+        flex-shrink: 0;
+    }
+</style>
+{% endblock extra_css %}
 
 {% block content %}
 <!-- Welcome banner -->
@@ -19,8 +156,87 @@
         <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
             <div class="flex flex-col md:flex-row md:-mr-px">
 
-                <!-- Sidebar -->
-                <div class="flex flex-nowrap overflow-x-scroll no-scrollbar md:block md:overflow-auto px-3 py-6 border-b md:border-b-0 md:border-r border-slate-200 border-slate-700 min-w-60 md:space-y-3">
+                <!-- Mobile Dropdown Menu -->
+                <div class="md:hidden px-4 py-4 border-b border-slate-700" x-data="{ open: false }">
+                    <div class="relative">
+                        <button 
+                            @click="open = !open" 
+                            :class="open ? 'open' : ''"
+                            class="tools-dropdown-trigger">
+                            <span>Tools</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        
+                        <div 
+                            x-show="open" 
+                            @click.outside="open = false"
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 -translate-y-2"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 -translate-y-2"
+                            class="tools-dropdown-menu"
+                            x-cloak>
+                            
+                            <!-- All Tools Section -->
+                            <div class="tools-dropdown-section">
+                                <div class="tools-dropdown-section-title">Ariane Tools</div>
+                                <a href="{% url 'private:tool-xls2dmp' %}" 
+                                   class="tools-dropdown-item {% if request.url_name == 'tool-xls2dmp' %}active{% endif %}" 
+                                   @click="open = false">
+                                    <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="3.45 3.5 17.05 17.05">
+                                        <path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"></path>
+                                        <path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"></path>
+                                        <path d="M15 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path>
+                                    </svg>
+                                    <span>Excel to Ariane DMP</span>
+                                </a>
+                                
+                                <div class="tools-dropdown-section-title" style="margin-top: 12px;">Compass Tools</div>
+                                <a href="{% url 'private:tool-xls2compass' %}" 
+                                   class="tools-dropdown-item {% if request.url_name == 'tool-xls2compass' %}active{% endif %}" 
+                                   @click="open = false">
+                                    <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="3.45 3.5 17.05 17.05">
+                                        <path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"></path>
+                                        <path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"></path>
+                                        <path d="M15 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path>
+                                    </svg>
+                                    <span>Excel to Compass</span>
+                                </a>
+                                
+                                <div class="tools-dropdown-section-title" style="margin-top: 12px;">Mnemo Tools</div>
+                                <a href="{% url 'private:tool-dmp2json' %}" 
+                                   class="tools-dropdown-item {% if request.url_name == 'tool-dmp2json' %}active{% endif %}" 
+                                   @click="open = false">
+                                    <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="3.45 3.5 17.05 17.05">
+                                        <path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"></path>
+                                        <path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"></path>
+                                        <path d="M15 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path>
+                                    </svg>
+                                    <span>Mnemo DMP to JSON</span>
+                                </a>
+                                <a href="{% url 'private:tool-dmp-doctor' %}" 
+                                   class="tools-dropdown-item {% if request.url_name == 'tool-dmp-doctor' %}active{% endif %}" 
+                                   @click="open = false">
+                                    <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="2.5 2.5 20 19">
+                                        <path d="M6 4h-1a2 2 0 0 0 -2 2v3.5h0a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1"></path>
+                                        <path d="M8 15a6 6 0 1 0 12 0v-3"></path>
+                                        <path d="M11 3v2"></path>
+                                        <path d="M6 3v2"></path>
+                                        <path d="M20 10m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                                    </svg>
+                                    <span>Mnemo DMP Doctor</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desktop Sidebar -->
+                <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 space-y-3">
                     <!-- Group 1 -->
                     <div>
                         <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Ariane Tools</div>

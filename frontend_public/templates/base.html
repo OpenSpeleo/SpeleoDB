@@ -57,8 +57,8 @@
                     <!-- Site branding -->
                     <div class="flex-1">
                         <!-- Logo -->
-                        <a class="inline-flex" href="{% url 'home' %}" aria-label="Cruip">
-                            <img class="max-w-none" src="{% static 'media/logo.svg' %}" style="height:42px" alt="SpeleoDB">
+                        <a class="inline-flex items-center py-2" href="{% url 'home' %}" aria-label="Cruip">
+                            <img class="max-w-none h-8 md:h-10" src="{% static 'media/logo.svg' %}" alt="SpeleoDB">
                         </a>
                     </div>
 
@@ -93,8 +93,8 @@
 
                     </nav>
 
-                    <!-- Desktop sign in links -->
-                    <ul class="flex-1 flex justify-end items-center">
+                    <!-- Desktop sign in links (hidden on mobile) -->
+                    <ul class="hidden md:flex flex-1 justify-end items-center">
                         {% if request.user.is_authenticated %}
                             <li class="ml-6">
                                 <a class="btn-sm text-slate-300 hover:text-white transition duration-150 ease-in-out w-full group [background:linear-gradient(theme(colors.slate.900),_theme(colors.slate.900))_padding-box,_conic-gradient(theme(colors.slate.400),_theme(colors.slate.700)_25%,_theme(colors.slate.700)_75%,_theme(colors.slate.400)_100%)_border-box] relative before:absolute before:inset-0 before:bg-slate-800/30 before:rounded-full before:pointer-events-none">
@@ -161,6 +161,30 @@
                                 <li>
                                     <a class="flex font-medium text-sm text-slate-300 hover:text-white py-1.5" href="{% url 'admin:index' %}">Admin Panel</a>
                                 </li>
+                                {% endif %}
+                                
+                                <!-- Divider -->
+                                <li class="border-t border-slate-700 my-4"></li>
+                                
+                                <!-- Authentication Links -->
+                                {% if request.user.is_authenticated %}
+                                <li>
+                                    <form method="post" action="{% url 'account_logout' %}" class="w-full">
+                                        {% csrf_token %}
+                                        <button type="submit" class="flex w-full font-medium text-sm text-purple-400 hover:text-purple-300 py-1.5">
+                                            Sign Out →
+                                        </button>
+                                    </form>
+                                </li>
+                                {% else %}
+                                <li>
+                                    <a class="flex font-medium text-sm text-slate-300 hover:text-white py-1.5" href="{% url 'account_login' %}">Sign In</a>
+                                </li>
+                                {% if ACCOUNT_ALLOW_REGISTRATION %}
+                                <li>
+                                    <a class="flex font-medium text-sm text-purple-400 hover:text-purple-300 py-1.5" href="{% url 'account_signup' %}">Sign Up →</a>
+                                </li>
+                                {% endif %}
                                 {% endif %}
                             </ul>
                         </nav>

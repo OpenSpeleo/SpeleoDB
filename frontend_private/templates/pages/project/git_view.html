@@ -3,6 +3,85 @@
 
 {% load filter_utils %}
 
+{% block extra_css %}
+{{ block.super }}
+<style>
+    /* Mobile responsive styles for git file browser */
+    @media (max-width: 768px) {
+        /* Simplify header buttons */
+        header .flex.flex-wrap {
+            gap: 8px;
+        }
+        
+        .git_btn {
+            font-size: 13px !important;
+            padding: 8px 12px !important;
+        }
+        
+        .git_btn svg {
+            width: 1.2em !important;
+            height: 1.2em !important;
+        }
+        
+        .git_btn span {
+            font-size: 12px !important;
+        }
+        
+        /* Simplify commit info bar */
+        .grid.grid-cols-12.from-gray-100-to-white {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px !important;
+        }
+        
+        .grid.grid-cols-12.from-gray-100-to-white > div {
+            width: 100% !important;
+        }
+        
+        #commit-message {
+            margin-left: 0 !important;
+            white-space: normal !important;
+            overflow: visible !important;
+        }
+        
+        /* Simplify file browser rows */
+        #git-viewer-container li {
+            grid-template-columns: 1fr auto !important;
+            gap: 8px !important;
+            height: auto !important;
+            min-height: 44px !important;
+            padding: 8px 12px !important;
+        }
+        
+        /* Hide desktop-only columns */
+        .commit-message,
+        .commit-time-ago {
+            display: none !important;
+        }
+        
+        /* Make folder/file names wrap if needed */
+        .gitfolder-name,
+        .download-file-name {
+            white-space: normal !important;
+            word-break: break-word;
+        }
+        
+        /* Adjust file size display */
+        .file-size-link {
+            font-size: 11px !important;
+            padding-right: 0 !important;
+        }
+        
+        /* Current folder header */
+        .current-gitfolder-name {
+            font-size: 14px !important;
+            white-space: normal !important;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
 {% block right_panel %}
 <div class="grow">
     <div class="p-6 space-y-6">

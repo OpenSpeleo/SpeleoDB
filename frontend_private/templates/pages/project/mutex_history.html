@@ -1,7 +1,111 @@
 {% extends "pages/project/base.html" %}
 {% load static %}
 
-{% load countries %}
+{% block extra_css %}
+{{ block.super }}
+<style>
+    /* Mobile timeline layout for mutex history */
+    @media (max-width: 768px) {
+        .mutex-table {
+            display: none;
+        }
+        
+        .mutex-timeline {
+            display: block;
+        }
+        
+        .timeline-item {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border-left: 4px solid #475569;
+            border-radius: 0 8px 8px 0;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .timeline-item.active {
+            border-left-color: #f59e0b;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+        }
+        
+        .timeline-item:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .timeline-user {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+        
+        .timeline-action {
+            flex-shrink: 0;
+        }
+        
+        .timeline-dates {
+            display: grid;
+            gap: 8px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        
+        .timeline-date-row {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .timeline-date-label {
+            font-weight: 500;
+            color: #cbd5e1;
+            min-width: 80px;
+        }
+        
+        .timeline-footer {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(100, 116, 139, 0.3);
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        
+        .timeline-footer-label {
+            font-weight: 500;
+            color: #cbd5e1;
+        }
+        
+        .active-badge {
+            display: inline-block;
+            background: #f59e0b;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .mutex-table {
+            display: block;
+        }
+        
+        .mutex-timeline {
+            display: none;
+        }
+    }
+</style>
+{% endblock extra_css %}
 
 {% block right_panel %}
 
@@ -9,10 +113,10 @@
     <div class="p-6 space-y-6">
 
         <!-- Page header -->
-        <div class="mb-16 block">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
 
             <!-- Left: Title -->
-            <div class="mb-4 sm:mb-0 w-fit block float-left">
+            <div>
                 <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
                     Project's Edition History
                 </h1>
@@ -21,52 +125,115 @@
             {% csrf_token %}
 
             <!-- Right: Actions -->
-            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2 w-fit block float-right">
-
-                <!-- New button -->
+            <div class="flex justify-start sm:justify-end">
                 {% if project.mutex_owner %}
                     {% if project.mutex_owner == user or is_project_admin %}
-                        <button class="btn btn_unlock bg-rose-500 hover:bg-rose-600 text-white" title="Stop Project Edition">
-                    {% else %}
-                        <button class="btn bg-slate-600 text-white" disabled title="Somebody else is currently editing">
-                    {% endif %}
-                {% else %}
-                    {% if has_write_access %}
-                        <button id="btn_lock_project" class="btn bg-indigo-500 hover:bg-indigo-600 text-white" title="Enable Project Edition">
-                    {% else %}
-                        <button class="btn bg-slate-600 text-white" disabled title="You cannot edit this project">
-                    {% endif %}
-                {% endif %}
-
-                <svg class="w-4 h-4 stroke-current opacity-100 shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                    <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
-                    <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
-                    <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
-                </svg>
-
-                {% if project.mutex_owner %}
-                    {% if project.mutex_owner == user or is_project_admin %}
-                        <span class="hidden xs:block ml-2">Stop Project Edition</span>
-                    {% else %}
-                        <span class="hidden xs:block ml-2">Somebody else is currently editing</span>
-                    {% endif %}
-                {% else %}
-                    {% if has_write_access %}
-                        <span class="hidden xs:block ml-2">Enable Project Edition</span>
-                    {% else %}
-                        <span class="hidden xs:block ml-2">You cannot edit this project</span>
-                    {% endif %}
-                {% endif %}
-                
+                <button class="btn btn_unlock bg-rose-500 hover:bg-rose-600 text-white w-full sm:w-auto">
+                    <svg class="w-4 h-4 stroke-current opacity-100 shrink-0" stroke-width="2" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+                        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+                        <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+                    </svg>
+                    <span class="ml-2">Stop Project Edition</span>
                 </button>
-
+                    {% else %}
+                <button class="btn bg-slate-600 text-white w-full sm:w-auto" disabled>
+                    <svg class="w-4 h-4 stroke-current opacity-100 shrink-0" stroke-width="2" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+                        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+                        <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+                    </svg>
+                    <span class="ml-2">Locked by Someone Else</span>
+                </button>
+                    {% endif %}
+                {% else %}
+                    {% if has_write_access %}
+                <button id="btn_lock_project" class="btn bg-indigo-500 hover:bg-indigo-600 text-white w-full sm:w-auto">
+                    <svg class="w-4 h-4 stroke-current opacity-100 shrink-0" stroke-width="2" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+                        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+                        <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+                    </svg>
+                    <span class="ml-2">Enable Project Edition</span>
+                </button>
+                    {% else %}
+                <button class="btn bg-slate-600 text-white w-full sm:w-auto" disabled>
+                    <svg class="w-4 h-4 stroke-current opacity-100 shrink-0" stroke-width="2" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+                        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+                        <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+                    </svg>
+                    <span class="ml-2">No Edit Access</span>
+                </button>
+                    {% endif %}
+                {% endif %}
             </div>
 
         </div>
 
-        <!-- Table -->
-        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <!-- Mobile Timeline View -->
+        <div class="mutex-timeline">
+            <div class="p-4">
+                {% for mutex in mutexes|slice:":5" %}
+                <div class="timeline-item {% if mutex.is_active %}active{% endif %}">
+                    <div class="timeline-header">
+                        <div style="flex: 1;">
+                            <div class="timeline-user">{{ mutex.user.email }}</div>
+                            {% if mutex.is_active %}
+                            <span class="active-badge">Currently Editing</span>
+                            {% endif %}
+                        </div>
+                        <div class="timeline-action">
+                            {% if mutex.is_active %}
+                                {% if mutex.user == user or is_project_admin %}
+                                <a href="#" class="btn_unlock">
+                                    <svg class="stroke-current h-8 w-8 text-rose-500 inline" viewBox="0 0 24 24" stroke-width="1.5" fill="none">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <path d="M5 11m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" />
+                                        <path d="M12 16m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+                                        <path d="M8 11v-5a4 4 0 0 1 8 0" />
+                                    </svg>
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="timeline-dates">
+                        <div class="timeline-date-row">
+                            <span class="timeline-date-label">Locked:</span>
+                            <span>{{ mutex.creation_date|date:"Y/m/d H:i" }}</span>
+                        </div>
+                        <div class="timeline-date-row">
+                            <span class="timeline-date-label">Modified:</span>
+                            <span>{{ mutex.modified_date|date:"Y/m/d H:i" }}</span>
+                        </div>
+                    </div>
+                    {% if mutex.closing_user or mutex.closing_comment %}
+                    <div class="timeline-footer">
+                        {% if mutex.closing_user %}
+                        <div><span class="timeline-footer-label">Unlocked by:</span> {{ mutex.closing_user.email }}</div>
+                        {% endif %}
+                        {% if mutex.closing_comment %}
+                        <div style="margin-top: 4px;"><span class="timeline-footer-label">Comment:</span> {{ mutex.closing_comment }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% if mutexes|length > 5 %}
+                <div class="text-center text-slate-400 text-sm mt-4 p-4 bg-slate-700/30 rounded-lg">
+                    Showing last 5 entries. View on desktop for full history ({{ mutexes|length }} total).
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="mutex-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
 
             <div>
 

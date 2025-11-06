@@ -1,7 +1,29 @@
 {% extends "pages/user/base.html" %}
 {% load static %}
 
-{% load countries %}
+{% block extra_css %}
+{{ block.super }}
+
+<style>
+    /* Mobile Responsive Styles for Auth Token Page */
+    @media (max-width: 640px) {
+        /* Make the text-right section stack better */
+        .text-right {
+            text-align: left !important;
+        }
+
+        .text-right h2 {
+            font-size: 0.875rem;
+            margin-bottom: 1rem !important;
+        }
+
+        .text-right button {
+            width: 100%;
+            margin-left: 0 !important;
+        }
+    }
+</style>
+{% endblock extra_css %}
 
 {% block right_panel %}
 <!-- Panel -->

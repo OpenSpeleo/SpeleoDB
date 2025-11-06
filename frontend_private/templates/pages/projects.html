@@ -5,6 +5,98 @@
 {% load set_var %}
 {% load str_format %}
 
+{% block extra_css %}
+<style>
+    /* Mobile card layout for projects */
+    @media (max-width: 768px) {
+        .projects-table {
+            display: none;
+        }
+        
+        .projects-cards {
+            display: block;
+        }
+        
+        .project-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .project-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .project-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .project-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            flex: 1;
+            margin-right: 12px;
+        }
+        
+        .project-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .project-card-body {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .project-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .project-card-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        
+        .project-card-value {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+            text-align: right;
+        }
+        
+        .project-card-badge {
+            text-align: right;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .projects-table {
+            display: block;
+        }
+        
+        .projects-cards {
+            display: none;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
 {% block content %}
 <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
@@ -31,31 +123,118 @@
             <!-- Right: Actions -->
             <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
 
-                <!-- New button -->
-                <button class="btn bg-sky-500 hover:bg-sky-600 text-white mr-4">
+                <!-- Unlock All button -->
+                {% csrf_token %}
+                <button id="btn_release_all_locks" class="btn bg-sky-500 hover:bg-sky-600 text-white mr-4">
                     <svg class="w-4 h-4 stroke-current opacity-50 shrink-0" fill="none"  stroke-width="2" viewBox="2 2 20 20">
                         <path d="M3 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" />
                         <path d="M9 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
                         <path d="M13 11v-4a4 4 0 1 1 8 0v4" />
-                      </svg>
-                    {% csrf_token %}
-                    <a id="btn_release_all_locks" class="hidden xs:block ml-2">Unlock All My Projects</a>
+                    </svg>
+                    <span class="ml-2">Unlock All</span>
                 </button>
 
-                <!-- New button -->
-                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                <!-- Create Project button -->
+                <a href="{% url 'private:project_new' %}" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
                     <svg class="w-4 h-4 fill-current opacity-50 shrink-0" viewBox="0 0 16 16">
                         <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
                     </svg>
-                    <a href="{% url 'private:project_new' %}" class="hidden xs:block ml-2">New Project</a>
-                </button>
+                    <span class="ml-2">Create Project</span>
+                </a>
 
             </div>
 
         </div>
 
-        <!-- Table -->
-        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <!-- Mobile Cards View -->
+        <div class="projects-cards">
+            <div class="p-4">
+                {% for permission in filtered_permissions %}
+                <div class="project-card">
+                    <div class="project-card-header">
+                        <div class="project-card-title">{{ permission.project.name }}</div>
+                        <div class="project-card-actions">
+                            {% if permission.project.active_mutex %}
+                            {% if permission.project.mutex_owner == user or permission.level_label == "ADMIN" %}
+                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded-full cursor-pointer">
+                                <img class="btn-unlock" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ permission.project.id }}" width="28" height="28" alt="Unlock">
+                            </div>
+                            {% endif %}
+                            {% endif %}
+                            <a href="{% url 'private:project_details' project_id=permission.project.id %}" class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition">
+                                <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="View">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-card-body">
+                        <div class="project-card-row">
+                            <span class="project-card-label">Country</span>
+                            <span class="project-card-value">
+                                {% get_country permission.project.country as country %}
+                                {{ country.name }}
+                            </span>
+                        </div>
+                        <div class="project-card-row">
+                            <span class="project-card-label">Collaborators</span>
+                            <span class="project-card-value">{{ permission.project.collaborator_count }}</span>
+                        </div>
+                        <div class="project-card-row">
+                            <span class="project-card-label">Revisions</span>
+                            <span class="project-card-value" id="async_revision_{{ forloop.counter0 }}">
+                                <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{permission.project.id}}"
+                                class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner.svg' %}">
+                            </span>
+                        </div>
+                        <div class="project-card-row">
+                            <span class="project-card-label">Permission</span>
+                            <div class="project-card-badge">
+                                {% if permission.level_label == "WEB_VIEWER" %}
+                                    {% set bg_color = 'bg-pastel-grey' %}
+                                {% elif permission.level_label == "READ_ONLY" %}
+                                    {% set bg_color = 'bg-pastel-beige' %}
+                                {% elif permission.level_label == "READ_AND_WRITE" %}
+                                    {% set bg_color = 'bg-pastel-navy' %}
+                                {% elif permission.level_label == "ADMIN" %}
+                                    {% set bg_color = 'bg-pastel-orange' %}
+                                {% else %}
+                                    {% set bg_color = '' %}
+                                {% endif %}
+                                <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 {{ bg_color }}">
+                                    {{ permission.level_label|normalize }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="project-card-row">
+                            <span class="project-card-label">Last Edit</span>
+                            <span class="project-card-value">{{ permission.project.modified_date|date:"Y/m/d" }}</span>
+                        </div>
+                        {% if permission.project.mutex_owner %}
+                        <div class="project-card-row">
+                            <span class="project-card-label">Current Editor</span>
+                            <span class="project-card-value" style="font-size: 13px;">{{ permission.project.mutex_owner.email }}</span>
+                        </div>
+                        <div class="project-card-row">
+                            <span class="project-card-label">Editing Since</span>
+                            <span class="project-card-value">{{ permission.project.mutex_dt|date:"Y/m/d" }}</span>
+                        </div>
+                        {% endif %}
+                        {% if permission.project.latitude and permission.project.longitude %}
+                        <div class="project-card-row">
+                            <span class="project-card-label">GPS Coordinates</span>
+                            <a href="https://www.google.com/maps/place/{{permission.project.latitude}},{{permission.project.longitude}}"
+                            target="_blank" class="text-sky-400 hover:text-sky-300 text-sm">
+                                View on Map
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="projects-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
 
             <div>
 

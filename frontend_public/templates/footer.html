@@ -9,9 +9,9 @@
 
             <!-- 1st block -->
             <div class="sm:col-span-12 lg:col-span-4 order-1 lg:order-none">
-                <div class="h-full flex flex-col sm:flex-row lg:flex-col justify-between">
-                    <div class="mb-4 sm:mb-0">
-                        <div class="mb-4">
+                <div class="h-full flex flex-col sm:flex-row lg:flex-col justify-between text-center lg:text-left">
+                    <div class="mb-6 sm:mb-0">
+                        <div class="mb-6 flex justify-center lg:justify-start">
                             <!-- Logo -->
                             <a class="inline-flex" href="{% url 'home' %}" aria-label="SpeleoDB">
                                 <img src="{% static 'media/logo.svg' %}" style="height:65px" alt="SpeleoDB">
@@ -23,11 +23,11 @@
             </div>
 
             <!-- Blocks -->
-            <div class="grid sm:grid-cols-12 md:col-span-8 text-center">
+            <div class="grid sm:grid-cols-12 gap-8 md:col-span-8 text-center">
 
                 <!-- #1 Sub block -->
-                <div class="sm:col-span-6 md:col-span-4">
-                    <h6 class="text-sm text-slate-50 font-medium mb-2">SpeleoDB</h6>
+                <div class="sm:col-span-6 md:col-span-4 mb-6 sm:mb-0">
+                    <h6 class="text-sm text-slate-50 font-medium mb-4">SpeleoDB</h6>
                     <ul class="text-sm space-y-2">
                         <li>
                             <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" href="{% url 'about' %}">About</a>
@@ -42,8 +42,8 @@
                 </div>
 
                 <!-- 3rd block -->
-                <div class="sm:col-span-6 md:col-span-4">
-                    <h6 class="text-sm text-slate-50 font-medium mb-2">Resources</h6>
+                <div class="sm:col-span-6 md:col-span-4 mb-6 sm:mb-0">
+                    <h6 class="text-sm text-slate-50 font-medium mb-4">Resources</h6>
                     <ul class="text-sm space-y-2">
                         <li>
                             <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" target="_blank" href="https://github.com/OpenSpeleo/SpeleoDB">Contribute to SpeleoDB</a>
@@ -55,8 +55,8 @@
                 </div>
 
                 <!-- 4th block -->
-                <div class="sm:col-span-6 md:col-span-4">
-                    <h6 class="text-sm text-slate-50 font-medium mb-2">Legals</h6>
+                <div class="sm:col-span-6 md:col-span-4 mb-6 sm:mb-0">
+                    <h6 class="text-sm text-slate-50 font-medium mb-4">Legals</h6>
                     <ul class="text-sm space-y-2">
                         <li>
                             <a class="text-slate-400 hover:text-slate-200 transition duration-150 ease-in-out" href="{% url 'terms_and_conditions' %}">Terms & Conditions</a>

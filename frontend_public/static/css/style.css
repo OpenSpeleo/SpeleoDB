@@ -2021,6 +2021,11 @@ input[type="search"]::-webkit-search-results-decoration {
   margin-bottom: -0.5rem;
 }
 
+.my-4 {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
 .my-6 {
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;

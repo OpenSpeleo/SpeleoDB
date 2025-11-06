@@ -1,8 +1,85 @@
 {% extends "pages/team/base.html" %}
 {% load static %}
 
-{% load countries %}
 {% load set_var %}
+
+{% block extra_css %}
+{{ block.super }}
+
+<style>
+    /* Mobile card layout for team memberships */
+    @media (max-width: 768px) {
+        .memberships-table {
+            display: none;
+        }
+        
+        .memberships-cards {
+            display: block;
+        }
+        
+        .membership-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .membership-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .membership-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .membership-card-user {
+            flex: 1;
+        }
+        
+        .membership-card-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+        
+        .membership-card-email {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        
+        .membership-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .membership-card-body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .memberships-table {
+            display: block;
+        }
+        
+        .memberships-cards {
+            display: none;
+        }
+    }
+</style>
+{% endblock extra_css %}
 
 {% block right_panel %}
 
@@ -12,36 +89,97 @@
     <div class="p-6 space-y-6">
 
         <!-- Page header -->
-        <div class="mb-16 block">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
 
             <!-- Left: Title -->
-            <div class="mb-4 sm:mb-0 w-fit block float-left">
+            <div>
                 <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
                     Team's Memberships
                 </h1>
             </div>
 
             <!-- Right: Actions -->
-            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2 w-fit block float-right">
-
-                <!-- New button -->
+            <div class="flex justify-start sm:justify-end">
+                <!-- Add Member button -->
                 {% if not is_team_leader %}
-                    <button class="btn bg-slate-600 text-white" disabled>
-                {% else %}
-                    <button id="btn_open_add_user" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
-                {% endif %}
+                <button class="btn bg-slate-600 text-white w-full sm:w-auto" disabled>
                     <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24" viewBox="0 0 16 16">
                         <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
-                      </svg>
-                    <span class="hidden xs:block ml-2">Add Team Member</span>
+                    </svg>
+                    <span class="ml-2">Add Team Member</span>
                 </button>
-
+                {% else %}
+                <button id="btn_open_add_user" class="btn bg-indigo-500 hover:bg-indigo-600 text-white w-full sm:w-auto">
+                    <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24" viewBox="0 0 16 16">
+                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+                    </svg>
+                    <span class="ml-2">Add Team Member</span>
+                </button>
+                {% endif %}
             </div>
 
         </div>
 
-        <!-- Table -->
-        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <!-- Mobile Cards View -->
+        <div class="memberships-cards">
+            <div class="p-4">
+                {% for membership in memberships %}
+                <div class="membership-card">
+                    <div class="membership-card-header">
+                        <div class="membership-card-user">
+                            <div class="membership-card-name">{{ membership.user.name }}</div>
+                            <div class="membership-card-email">{{ membership.user.email }}</div>
+                        </div>
+                        <div class="membership-card-actions">
+                            {% if membership.user != user and is_team_leader %}
+                                {% set can_edit = True %}
+                            {% else %}
+                                {% set can_edit = False %}
+                            {% endif %}
+                            <!-- Edit Button -->
+                            <span class="{% if can_edit %}cursor-pointer btn_open_edit_membership{% endif %}" 
+                                  {% if can_edit %}data-user="{{membership.user.email}}" data-role="{{membership.role_label}}"{% endif %}>
+                                <svg class="stroke-current h-8 w-8 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline" 
+                                     viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                    <path d="M13.5 6.5l4 4" />
+                                </svg>
+                            </span>
+                            <!-- Delete Button -->
+                            <span class="{% if can_edit %}cursor-pointer btn_delete_membership{% endif %}" 
+                                  {% if can_edit %}data-user="{{membership.user.email}}"{% endif %}>
+                                <svg class="stroke-current h-8 w-8 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline" 
+                                     viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                    <path d="M18 6l-12 12" />
+                                    <path d="M6 6l12 12" />
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="membership-card-body">
+                        {% if membership.role_label == "MEMBER" %}
+                            <div class="inline-flex font-medium bg-pastel-purple rounded-full text-white text-center px-3 py-1 text-base">
+                                Member
+                            </div>
+                        {% elif membership.role_label == "LEADER" %}
+                            <div class="inline-flex font-medium bg-pastel-orange text-white rounded-full text-center px-3 py-1 text-base">
+                                Leader
+                            </div>
+                        {% else %}
+                            <div class="inline-flex font-medium bg-rose-500/30 text-rose-400 rounded-full text-center px-3 py-1 text-base">
+                                Unknown
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="memberships-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
 
             <div>
 
@@ -259,6 +397,7 @@
             if ($("#membership_modal").is(":visible")) {
                 $("#membership_modal").hide();
             }
+            return false; // prevent default
         });
 
         $("body").click(function() {
@@ -282,7 +421,8 @@
             $("#membership_modal_header").text("Who would you like to add 🙌 ?");
             $("#membership_modal").css('display', 'flex');
             $("#user").prop("readonly", false);
-            attachUserAutocomplete($("#user"), $("#user_suggestions"), "{% url 'api:v1:user-autocomplete' %}");
+            attachUserAutocomplete($("#user"), $("#user_suggestions"));
+            return false; // prevent default
         });
 
         /* ------------------------------------------------------------------------- */
@@ -298,6 +438,7 @@
             $("#membership_modal").css('display', 'flex');
             $("#user").val($(this).data("user")).prop("readonly", true);
             $("#role").val($(this).data("role"));
+            return false; // prevent default
         });
 
         /* ------------------------------------------------------------------------- */

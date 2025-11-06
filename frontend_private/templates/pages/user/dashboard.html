@@ -3,6 +3,25 @@
 
 {% load countries %}
 
+{% block extra_css %}
+{{ block.super }}
+
+<style>
+    /* Mobile Responsive Styles for Dashboard Page */
+    @media (max-width: 640px) {
+        /* Make form sections stack better */
+        .flex.flex-wrap {
+            flex-direction: column;
+        }
+
+        .flex.flex-wrap .mr-2 {
+            margin-right: 0 !important;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
 {% block right_panel %}
 <!-- Panel -->
 <div class="grow">

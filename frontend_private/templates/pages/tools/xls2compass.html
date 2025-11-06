@@ -1,8 +1,8 @@
 {% extends "pages/tools/base.html" %}
 {% load static %}
-{% load countries %}
 
 {% block extra_css %}
+{{ block.super }}
 
 {% if debug %}
 <link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}" rel="stylesheet">
@@ -152,6 +152,49 @@
         font-size: 14px;
         min-width: 200px;
         font-family: monospace;
+    }
+    
+    /* Mobile responsive styles */
+    @media (max-width: 768px) {
+        .form-controls {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 16px;
+        }
+        
+        .form-group {
+            width: 100%;
+        }
+        
+        .form-group.flex-1 {
+            flex: none;
+            width: 100%;
+        }
+        
+        .date-input,
+        .text-input {
+            min-width: 100%;
+            width: 100%;
+        }
+        
+        .controls {
+            flex-wrap: wrap;
+        }
+        
+        .controls button {
+            flex: 1 1 calc(50% - 4px);
+            min-width: 120px;
+        }
+        
+        table {
+            font-size: 12px;
+        }
+        
+        thead th,
+        tbody td {
+            padding: 4px;
+            font-size: 11px;
+        }
     }
 
     .date-input.invalid-date {

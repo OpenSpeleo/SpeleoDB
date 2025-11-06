@@ -1,6 +1,41 @@
 {% extends "pages/user/base.html" %}
 {% load static %}
 
+{% block extra_css %}
+{{ block.super }}
+
+<style>
+    /* Mobile Responsive Styles for Feedback Page */
+    @media (max-width: 640px) {
+        /* Make the rating scale work better on small screens */
+        .w-full.max-w-xl {
+            max-width: 100% !important;
+        }
+
+        /* Make the rating dots slightly smaller on very small screens */
+        .feedback_score {
+            width: 10px !important;
+            height: 10px !important;
+        }
+
+        /* Stack the labels under the rating scale */
+        .w-full.flex.justify-between.text-sm {
+            font-size: 11px;
+        }
+
+        /* Make the feedback text smaller on mobile */
+        section h3 {
+            font-size: 1.125rem !important;
+        }
+
+        /* Adjust textarea on mobile */
+        textarea.form-textarea {
+            font-size: 14px;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
 {% block right_panel %}
 <!-- Panel -->
 <div class="grow">

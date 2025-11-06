@@ -1,8 +1,9 @@
 {% extends "pages/tools/base.html" %}
-{% load static %}
-{% load countries %}
+{% load static % }
 
 {% block extra_css %}
+{{ block.super }}
+
 <style>
     button.tool-action {
         padding: 6px 10px;
@@ -136,6 +137,54 @@
     .date-input.invalid-date {
         border: 2px solid #dc2626;
         background: #fef2f2;
+    }
+    
+    /* Mobile responsive styles */
+    @media (max-width: 768px) {
+        .form-controls {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 16px;
+        }
+        
+        .form-group {
+            width: 100%;
+        }
+        
+        .form-group.flex-1 {
+            flex: none;
+            width: 100%;
+        }
+        
+        .form-group.text-center {
+            text-align: left;
+        }
+        
+        .date-input,
+        .text-input {
+            min-width: 100%;
+            width: 100%;
+        }
+        
+        .controls {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .controls button {
+            flex: 1 1 calc(50% - 4px);
+            min-width: 120px;
+        }
+        
+        table {
+            font-size: 12px;
+        }
+        
+        thead th,
+        tbody td {
+            padding: 4px;
+            font-size: 11px;
+        }
     }
 
     /* Toggle Switch for Units */

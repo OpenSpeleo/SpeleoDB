@@ -1,9 +1,80 @@
 {% extends "pages/project/base.html" %}
 {% load static %}
 
-{% load countries %}
 {% load set_var %}
 {% load str_format %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    /* Mobile card layout for team permissions */
+    @media (max-width: 768px) {
+        .permissions-table {
+            display: none;
+        }
+        
+        .permissions-cards {
+            display: block;
+        }
+        
+        .permission-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .permission-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .permission-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .permission-card-team {
+            flex: 1;
+        }
+        
+        .permission-card-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+        
+        .permission-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .permission-card-body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .permissions-table {
+            display: block;
+        }
+        
+        .permissions-cards {
+            display: none;
+        }
+    }
+</style>
+{% endblock extra_css %}
 
 {% block right_panel %}
 
@@ -13,46 +84,96 @@
     <div class="p-6 space-y-6">
 
         <!-- Page header -->
-        <div class="mb-16 block">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
 
             <!-- Left: Title -->
-            <div class="mb-4 sm:mb-0 w-fit block float-left">
+            <div>
                 <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
                     Project's Team Permissions
                 </h1>
             </div>
 
             <!-- Right: Actions -->
-            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2 w-fit block float-right">
-
-                <!-- New button -->
+            <div class="flex justify-start sm:justify-end">
+                <!-- Grant Access button -->
                 {% if not is_project_admin or not available_teams %}
-                <button class="btn bg-slate-600 text-white" disabled>
-                    {% else %}
-                    <button id="btn_open_add_team" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
-                        {% endif %}
-                        <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24"
-                            viewBox="666.09 614.6 26.01 25.9">
-                            <path
-                                d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z">
-                            </path>
-                            <path
-                                d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z">
-                            </path>
-                        </svg>
-                        {% if available_teams %}
-                        <span class="hidden xs:block ml-2">Grant Access</span>
-                        {% else %}
-                        <span class="hidden xs:block ml-2">No Additional Team Available</span>
-                        {% endif %}
-                    </button>
-
+                <button class="btn bg-slate-600 text-white w-full sm:w-auto" disabled>
+                    <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24" viewBox="666.09 614.6 26.01 25.9">
+                        <path d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z"></path>
+                        <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z"></path>
+                    </svg>
+                    <span class="ml-2">{% if available_teams %}Grant Access{% else %}No Additional Team Available{% endif %}</span>
+                </button>
+                {% else %}
+                <button id="btn_open_add_team" class="btn bg-indigo-500 hover:bg-indigo-600 text-white w-full sm:w-auto">
+                    <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24" viewBox="666.09 614.6 26.01 25.9">
+                        <path d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z"></path>
+                        <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z"></path>
+                    </svg>
+                    <span class="ml-2">Grant Access</span>
+                </button>
+                {% endif %}
             </div>
 
         </div>
 
-        <!-- Table -->
-        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <!-- Mobile Cards View -->
+        <div class="permissions-cards">
+            <div class="p-4">
+                {% for permission in permissions %}
+                <div class="permission-card">
+                    <div class="permission-card-header">
+                        <div class="permission-card-team">
+                            <div class="permission-card-name">
+                                <a href="{% url 'private:team_memberships' team_id=permission.target.id %}" class="text-indigo-400 hover:text-indigo-300 underline">
+                                    {{ permission.target.name }}
+                                </a>
+                            </div>
+                        </div>
+                        <div class="permission-card-actions">
+                            <!-- Edit Button -->
+                            <span class="{% if is_project_admin %}cursor-pointer btn_open_edit_perm{% endif %}" 
+                                  {% if is_project_admin %}data-team-name="{{permission.target.name}}" data-team="{{permission.target.id}}" data-level="{{permission.level_label}}"{% endif %}>
+                                <svg class="stroke-current h-8 w-8 {% if is_project_admin %}text-amber-500{% else %}text-slate-500{% endif %} inline" 
+                                     viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                    <path d="M13.5 6.5l4 4" />
+                                </svg>
+                            </span>
+                            <!-- Delete Button -->
+                            <span class="{% if is_project_admin %}cursor-pointer btn_delete_perm{% endif %}" 
+                                  {% if is_project_admin %}data-team="{{permission.target.id}}"{% endif %}>
+                                <svg class="stroke-current h-8 w-8 {% if is_project_admin %}text-rose-500{% else %}text-slate-500{% endif %} inline" 
+                                     viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                    <path d="M18 6l-12 12" />
+                                    <path d="M6 6l12 12" />
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="permission-card-body">
+                        {% if permission.level_label == "WEB_VIEWER" %}
+                            {% set bg_color = 'bg-pastel-grey' %}
+                        {% elif permission.level_label == "READ_ONLY" %}
+                            {% set bg_color = 'bg-pastel-beige' %}
+                        {% elif permission.level_label == "READ_AND_WRITE" %}
+                            {% set bg_color = 'bg-pastel-navy' %}
+                        {% else %}
+                            {% set bg_color = '' %}
+                        {% endif %}
+                        <div class="inline-flex font-medium {{ bg_color }} rounded-full text-center px-3 py-1 text-base">
+                            {{permission.level_label|normalize}}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="permissions-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
 
             <div>
 
@@ -197,7 +318,7 @@
         /* --------------------------- ADDING PERMISSION --------------------------- */
         /* ------------------------------------------------------------------------- */
 
-        $("#btn_open_add_team").click(function () {
+        $(document).on('click', '#btn_open_add_team', function () {
             var form = $("#permission_form");
             form[0].reset();
             form.data("method", "POST");
@@ -205,13 +326,14 @@
             $("#permission_modal_header").text("What team would you like to add 🙌 ?");
             $("#permission_modal").css('display', 'flex');
             unlockSelect("#team");
+            return false;
         });
 
         /* ------------------------------------------------------------------------- */
         /* --------------------------- EDITING PERMISSION -------------------------- */
         /* ------------------------------------------------------------------------- */
 
-        $(".btn_open_edit_perm").click(function () {
+        $(document).on('click', '.btn_open_edit_perm', function () {
             var form = $("#permission_form");
             form[0].reset();
             form.data("method", "PUT");
@@ -231,6 +353,7 @@
             $("#level").val(access_level);
 
             lockSelect("#team");
+            return false;
         });
 
         /* ------------------------------------------------------------------------- */
@@ -288,7 +411,7 @@
         /* -------------------------- REMOVING PERMISSION -------------------------- */
         /* ------------------------------------------------------------------------- */
 
-        $(".btn_delete_perm").click(function () {
+        $(document).on('click', '.btn_delete_perm', function () {
             var $this = $(this);
 
             // Check if the icon is already disabled

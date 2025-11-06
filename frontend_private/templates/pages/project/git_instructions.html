@@ -1,9 +1,9 @@
 {% extends "pages/project/base.html" %}
 {% load static %}
 
-{% load countries %}
-
 {% block extra_css %}
+{{ block.super }}
+
 {% if debug %}
 <link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}" rel="stylesheet">
 <link href="{% static 'private/css/vendors/prism-line-numbers.min.css' %}" rel="stylesheet">

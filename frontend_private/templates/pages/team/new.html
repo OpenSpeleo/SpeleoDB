@@ -39,7 +39,7 @@
                                 <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
                                     <div class="w-full">
                                         <label class="block text-sm font-medium mb-1" for="name">Team Name:<span class="text-rose-600"> *</span></label>
-                                        <input id="name" name="name" class="form-input max-w-full w-128" type="text" />
+                                        <input id="name" name="name" class="form-input w-full md:w-128" type="text" />
                                     </div>
                                 </div>
                             </section>
@@ -49,17 +49,17 @@
                                 <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
                                     <div class="w-full">
                                         <label class="block text-sm font-medium mb-1" for="description">Description:<span class="text-rose-600"> *</span></label>
-                                        <textarea id="description" name="description" class="form-textarea  max-w-full w-128 focus:border-slate-300" rows="4"></textarea>
+                                        <textarea id="description" name="description" class="form-textarea w-full md:w-128 focus:border-slate-300" rows="4"></textarea>
                                     </div>
                                 </div>
                             </section>
 
                             <!-- Country -->
                             <section>
-                                <div class="flex flex-wrap mt-5">
-                                    <div class="mr-2">
+                                <div class="mt-5">
+                                    <div class="w-full max-w-full">
                                         <label class="block text-sm font-medium mb-1" for="country">Country:<span class="text-rose-600"> *</span></label>
-                                        <select id="country" name="country" class="form-select max-w-full w-128">
+                                        <select id="country" name="country" class="form-select w-full text-base" style="max-width: 100%;">
                                             <option disabled selected value>Select an option...</option>
                                         {% get_countries as countries %}
                                         {% for country in countries %}
@@ -75,9 +75,9 @@
                         <!-- Panel footer -->
                         <footer>
                             <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-                                <div class="flex self-end">
-                                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:teams' %}">Cancel</a>
-                                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+                                <div class="flex flex-col sm:flex-row gap-4 sm:self-end">
+                                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300 w-full sm:w-auto" href="{% url 'private:teams' %}">Cancel</a>
+                                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white w-full sm:w-auto shadow-lg">Save Changes</button>
                                 </div>
                             </div>
                         </footer>
