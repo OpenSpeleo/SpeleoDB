@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import os
 import uuid
 from io import BytesIO
 from pathlib import Path
@@ -11,6 +12,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Self
 
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.validators import MaxValueValidator
@@ -118,7 +120,23 @@ class StationResourceType(models.TextChoices):
 
 
 def get_station_resource_path(instance: StationResource, filename: str) -> str:
-    return f"{instance.station.project.id}/{instance.station.id}/resources/{uuid.uuid4().hex}_{filename}"  # noqa: E501
+    ext = Path(filename).suffix[1:]
+
+    # Use Redis cache to share a short-lived random key between main file and miniature
+    cache_key = f"station_resource:{instance.id}:upload_key"
+    if not (filekey := cache.get(cache_key)):
+        filekey = os.urandom(6).hex()
+        # Short TTL; just long enough for both uploads in a single save cycle
+        cache.set(cache_key, filekey, timeout=600)
+
+    # Preserve '_thumb' suffix for miniature filenames
+    thumb_suffix = "_thumb" if "_thumb" in filename else ""
+
+    return (
+        f"{instance.station.project.id}/"
+        f"{instance.station.id}/"
+        f"resources/{filekey}{thumb_suffix}.{ext}"
+    )
 
 
 class StationResource(models.Model):
@@ -159,6 +177,7 @@ class StationResource(models.Model):
         upload_to=get_station_resource_path,
         blank=True,
         null=True,
+        max_length=255,
         storage=AttachmentStorage(),  # type: ignore[no-untyped-call]
         validators=[AttachmentValidator()],
     )
@@ -166,9 +185,10 @@ class StationResource(models.Model):
     # Miniature/thumbnail storage
     miniature = models.ImageField(
         upload_to=get_station_resource_path,
-        storage=AttachmentStorage(),  # type: ignore[no-untyped-call]
-        null=True,
         blank=True,
+        null=True,
+        max_length=255,
+        storage=AttachmentStorage(),  # type: ignore[no-untyped-call]
         help_text="Thumbnail/preview image for the resource",
     )
 
@@ -262,6 +282,9 @@ class StationResource(models.Model):
                 ) from e
 
         super().save()
+        # Clear the temporary upload key so future uploads get a fresh key
+        with contextlib.suppress(Exception):
+            cache.delete(f"station_resource:{self.id}:upload_key")
 
     if TYPE_CHECKING:
         # Type hints for Django's auto-generated methods
