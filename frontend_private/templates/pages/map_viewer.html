@@ -212,6 +212,11 @@
         transform: scale(1);
     }
 
+    /* Ensure station modal overlays map markers (which may use high z-index) */
+    #station-modal {
+        z-index: 2001 !important;
+    }
+
     /* Station Resource Cards */
     .resource-card {
         background: rgba(51, 65, 85, 0.8);
@@ -1029,6 +1034,132 @@
             box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
         }
     }
+    /* Hide non-color-mode header buttons globally */
+    #legend-toggle-button,
+    #station-manager-button,
+    button[onclick="openPOIManager()"],
+    button[onclick="showContextMenuHelp()"],
+    button[onclick="window.location.reload()"] {
+        display: none !important;
+    }
+
+    /* Make the color mode button span the content width (matches map width) */
+    #page-actions {
+        grid-template-columns: 1fr;
+    }
+    #color-mode-button {
+        display: block;
+        width: 100%;
+        justify-content: center;
+        justify-self: stretch;
+    }
+
+    /* Shrink the depth scale legend to avoid overlap */
+    #depth-scale-fixed {
+        transform: scale(0.85);
+        transform-origin: bottom left;
+    }
+    #depth-scale-fixed #depth-scale-gradient {
+        width: 120px !important;
+        height: 8px !important;
+    }
+    #depth-scale-fixed span {
+        font-size: 10px !important;
+    }
+
+    /* Mobile optimizations - keep desktop unchanged */
+    @media (max-width: 640px) {
+        /* Use a dropdown for station tabs on mobile to avoid overflow */
+        #station-modal-tabs {
+            display: none !important;
+        }
+        #station-tab-select {
+            display: block !important;
+            width: 100%;
+        }
+        /* Mobile fallback height; JS will override for exact fit-to-bottom */
+        #map {
+            height: 90dvh;
+            min-height: 90dvh;
+        }
+
+        /* Convert project panel to a bottom sheet on mobile */
+        #project-panel {
+            left: 0 !important;
+            right: 0 !important;
+            top: auto !important;
+            bottom: calc(env(safe-area-inset-bottom) + 0px) !important;
+            max-width: none !important;
+            width: 100% !important;
+            max-height: 60vh !important;
+            border-top-left-radius: 12px !important;
+            border-top-right-radius: 12px !important;
+        }
+
+        /* Ensure the list within the panel scrolls appropriately */
+        #project-list {
+            max-height: 40vh !important;
+        }
+
+        /* Minimized panel as a centered pill near the bottom */
+        #project-panel-minimized {
+            left: 50% !important;
+            transform: translateX(-50%);
+            top: auto !important;
+            bottom: calc(env(safe-area-inset-bottom) + 16px) !important;
+        }
+
+        /* Move legend to the top-right and constrain width */
+        #map-legend {
+            top: 16px !important;
+            right: 16px !important;
+            bottom: auto !important;
+            max-width: 85vw !important;
+        }
+
+        /* Temporarily hide complex UI on mobile per request */
+        #project-panel,
+        #project-panel-minimized {
+            display: none !important;
+        }
+
+        /* Station Manager modal: fullscreen and scrollable on mobile */
+        #station-manager-modal {
+            align-items: stretch !important;
+            justify-content: stretch !important;
+            padding: 0 !important;
+        }
+        #station-manager-modal > div {
+            width: 100% !important;
+            max-width: none !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+        }
+        /* Sticky modal header */
+        #station-manager-modal .border-b {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background-color: #0f172a;
+        }
+        /* Scrollable modal body */
+        #station-manager-modal .flex-1 {
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Ensure dropdown stretches nicely in header */
+        #station-tab-select {
+            flex: 1 1 auto;
+        }
+
+        /* Hide Station Manager button on mobile (modal remains available if opened contextually) */
+        #station-manager-button {
+            display: none !important;
+        }
+    }
 </style>
 {% endblock extra_css %}
 
@@ -1047,7 +1178,7 @@
             </div>
 
             <!-- Right: Actions -->
-            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+            <div id="page-actions" class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
 
                 <!-- Color Mode Toggle: button-sized, explicit label -->
                 <button id="color-mode-button" class="btn bg-slate-700 hover:bg-slate-600 text-white flex items-center gap-2" type="button">
@@ -1104,7 +1235,7 @@
         </div>
         <!-- Table -->
         <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700 relative">
-            <div id='map' style='width: 100%; min-height: 600px; display: block;'></div>
+            <div id='map' style='width: 100%; min-height: 500px; display: block;'></div>
 
             <!-- Loading Overlay -->
             <div id="loading-overlay" class="loading-overlay">
@@ -1220,10 +1351,17 @@
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
                     <div class="flex flex-col">
                         <!-- Modal Header -->
-                        <div class="flex items-center justify-between p-6 border-b border-slate-600 flex-shrink-0">
-                            <div class="flex items-center space-x-4">
+                        <div id="station-modal-header" class="flex items-start justify-between p-6 border-b border-slate-600 flex-shrink-0">
+                            <div class="flex-1">
                                 <h2 id="station-modal-title" class="text-xl font-semibold text-white">Station Details</h2>
-                                <div id="station-modal-tabs" class="flex space-x-1 bg-slate-700 rounded-lg p-1">
+                                <div class="mt-3">
+                                    <select id="station-tab-select" class="bg-slate-700 text-white rounded-lg p-2 w-full">
+                                        <option value="details">Details</option>
+                                        <option value="resources">Resources</option>
+                                        <option value="add-resource">Add Resource</option>
+                                    </select>
+                                </div>
+                                <div id="station-modal-tabs" class="hidden">
                                     <button class="tab-btn active" data-tab="details">Details</button>
                                     <button class="tab-btn" data-tab="resources">Resources</button>
                                     <button class="tab-btn" data-tab="add-resource">Add Resource</button>
@@ -1237,7 +1375,7 @@
                         </div>
 
                         <!-- Modal Content -->
-                        <div class="flex-1 min-h-0">
+                        <div class="flex-1 min-h-[100dvh]">
                             <div id="station-modal-content" class="h-full">
                                 <!-- Content will be loaded dynamically -->
                             </div>
@@ -4402,6 +4540,8 @@
         const stationModal = document.getElementById('station-modal');
         if (stationModal) {
             stationModal.classList.add('hidden');
+            // Ensure inline display doesn't override hidden class
+            stationModal.style.display = 'none';
         }
         // Open station manager modal
         openStationManager();
@@ -4420,6 +4560,9 @@
             return;
         }
 
+        // Clear any lingering inline display from previous flows
+        try { modal.style.removeProperty('display'); } catch (e) { modal.style.display = ''; }
+
         // Store the newly created state for later use
         window.currentStationIsNew = isNewlyCreated;
 
@@ -4434,7 +4577,31 @@
         // Show tabs
         const tabsContainer = document.getElementById('station-modal-tabs');
         if (tabsContainer) {
-            tabsContainer.style.display = 'flex';
+            tabsContainer.style.display = 'none';
+        }
+
+        // Ensure tab select is present and scoped to the modal header only
+        const modalHeader = document.getElementById('station-modal-header');
+        let tabSelect = document.getElementById('station-tab-select');
+        if (modalHeader) {
+            // If the select exists but is not inside the modal header, remove the stray copy
+            if (tabSelect && !modalHeader.contains(tabSelect)) {
+                try { tabSelect.remove(); } catch (e) {}
+                tabSelect = null;
+            }
+            // If missing, recreate it in the modal header
+            if (!tabSelect) {
+                const container = modalHeader.querySelector('div.mt-3') || modalHeader;
+                const newSelect = document.createElement('select');
+                newSelect.id = 'station-tab-select';
+                newSelect.className = 'bg-slate-700 text-white rounded-lg p-2 w-full';
+                newSelect.innerHTML = `
+                    <option value="details">Details</option>
+                    <option value="resources">Resources</option>
+                    <option value="add-resource">Add Resource</option>
+                `;
+                container.appendChild(newSelect);
+            }
         }
 
         // Update title - add back button if we have a station manager modal open
@@ -4522,6 +4689,9 @@
                 }
             });
         });
+
+        // Setup mobile dropdown mirror
+        setupTabSelect();
     }
 
     function switchTab(tabName) {
@@ -4532,6 +4702,12 @@
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tabName);
         });
+
+        // Update mobile dropdown if present
+        const selectEl = document.getElementById('station-tab-select');
+        if (selectEl && selectEl.value !== tabName) {
+            selectEl.value = tabName;
+        }
 
         // Load tab content
         // If trying to open Add Resource tab without write access, show warning and stay on resources
@@ -4571,6 +4747,20 @@
             default:
                 console.error(`❌ Unknown tab: ${tabName}`);
         }
+    }
+
+    function setupTabSelect() {
+        const selectEl = document.getElementById('station-tab-select');
+        if (!selectEl) return;
+        // Set the current value to active tab or default to details
+        selectEl.value = (typeof activeTab === 'string' && activeTab) ? activeTab : 'details';
+        // Replace any existing listener
+        const newSelect = selectEl.cloneNode(true);
+        selectEl.parentNode.replaceChild(newSelect, selectEl);
+        newSelect.addEventListener('change', (e) => {
+            const tab = e.target.value;
+            if (tab) switchTab(tab);
+        });
     }
 
     // Tab Content Functions
@@ -4936,13 +5126,11 @@
                 <div class="tab-content active">
                     <div class="space-y-8">
                         <div class="bg-slate-700/70 rounded-xl border border-slate-600/50 overflow-hidden">
-                            <div class="flex justify-between items-start bg-slate-800/30 p-6">
-                                <div class="flex-1">
-                                    <h3 class="text-2xl font-bold text-white">${station.name}</h3>
-                                </div>
-                                <div class="flex space-x-3 ml-6">
-                                    <button ${hasWriteAccess ? `onclick="editStation('${station.id}')"` : ''} class="btn-secondary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'}>✏️ Edit</button>
-                                    ${hasProjectAdminAccess(projectId) ? `<button onclick="deleteStation('${station.id}', '${projectId}')" class="btn-danger text-sm">🗑️ Delete</button>` : `<button class="btn-danger text-sm opacity-50 cursor-not-allowed" disabled>🗑️ Delete</button>`}
+                            <div class="bg-slate-800/30 p-6">
+                                <h3 class="text-2xl font-bold text-white">${station.name}</h3>
+                                <div class="grid grid-cols-2 gap-3 mt-4">
+                                    <button ${hasWriteAccess ? `onclick="editStation('${station.id}')"` : ''} class="btn-secondary text-sm w-full ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'}>✏️ Edit</button>
+                                    ${hasProjectAdminAccess(projectId) ? `<button onclick="deleteStation('${station.id}', '${projectId}')" class="btn-danger text-sm w-full">🗑️ Delete</button>` : `<button class="btn-danger text-sm w-full opacity-50 cursor-not-allowed" disabled>🗑️ Delete</button>`}
                                 </div>
                             </div>
                             
@@ -4970,17 +5158,7 @@
                                 </div>
                             </div>
                             
-                            <div class="bg-slate-700/40 p-8">
-                                <h4 class="text-lg font-semibold text-white mb-4">Quick Actions</h4>
-                                <div class="flex" style="gap: 12px;">
-                                    <button ${hasWriteAccess ? `onclick="quickAddResource('note')"` : ''} class="btn-primary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'} style="flex: 0 0 calc((100% - 48px) / 5);">📝 Note</button>
-                                    <button ${hasWriteAccess ? `onclick="quickAddResource('document')"` : ''} class="btn-primary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'} style="flex: 0 0 calc((100% - 48px) / 5);">📄 Document</button>
-                                    <button ${hasWriteAccess ? `onclick="quickAddResource('sketch')"` : ''} class="btn-primary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'} style="flex: 0 0 calc((100% - 48px) / 5);">✏️ Sketch</button>
-                                    <button ${hasWriteAccess ? `onclick="quickAddResource('photo')"` : ''} class="btn-primary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'} style="flex: 0 0 calc((100% - 48px) / 5);">📷 Photo</button>
-                                    <button ${hasWriteAccess ? `onclick="quickAddResource('video')"` : ''} class="btn-primary text-sm ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'} style="flex: 0 0 calc((100% - 48px) / 5);">🎥 Video</button>
-                                </div>
-                                ${hasWriteAccess ? '' : '<p class="text-amber-300 text-sm mt-3">You have read access and cannot modify this station.</p>'}
-                            </div>
+                            <!-- Quick Actions section removed per request -->
                         </div>
                     </div>
                 </div>
@@ -7311,6 +7489,14 @@
         const stationModal = document.getElementById('station-modal');
         if (stationModal) {
             stationModal.classList.add('hidden');
+            // Forcefully hide modal to avoid inline display overriding Tailwind's hidden class
+            stationModal.style.display = 'none';
+            
+            // Defensive cleanup: ensure any stray tab select outside the modal is removed
+            const tabSelect = document.getElementById('station-tab-select');
+            if (tabSelect && !stationModal.contains(tabSelect)) {
+                try { tabSelect.remove(); } catch (e) {}
+            }
             
             // Reset ALL state
             currentStationId = null;
@@ -7906,7 +8092,8 @@
         const rect = mapElement.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
         const mapTop = rect.top;
-        const newHeight = Math.max(viewportHeight - mapTop - 20, 600);
+        const isMobile = window.innerWidth <= 640;
+        const newHeight = isMobile ? (viewportHeight - mapTop) : Math.max(viewportHeight - mapTop - 20, 600);
         mapElement.style.height = newHeight + 'px';
     }
     if (!mapboxgl.supported()) {
@@ -7936,6 +8123,8 @@
 
         // Add navigation controls
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        // Add fullscreen toggle (desktop and mobile)
+        map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
 
         // Add dynamic scale control with both metric and imperial units
         map.addControl(new mapboxgl.ScaleControl({
@@ -9075,21 +9264,48 @@
                         hideLoadingOverlay();
                     }, 100); // Faster loading overlay hide
 
-                    // Fit the map to the FIRST project bounds only with smooth animation
-                    if (!firstDatasetBounds.isEmpty()) {
-                        console.log('Fitting map to first project bounds:', firstDatasetBounds);
-                        console.log(`Zooming to: ${validResults[0].projectName} (${validResults[0].projectId})`);
+                        // Fit the map to the FIRST project bounds only with smooth animation
+                        if (!firstDatasetBounds.isEmpty()) {
+                            console.log('Fitting map to first project bounds:', firstDatasetBounds);
+                            console.log(`Zooming to: ${validResults[0].projectName} (${validResults[0].projectId})`);
 
-                        // Wait for loading overlay to start hiding before starting zoom
-                        setTimeout(() => {
-                            map.fitBounds(firstDatasetBounds, {
-                                padding: 200, // Increased padding for wider view
-                                maxZoom: 11,  // Limit zoom to show ~100km² area (zoom 11 ≈ 10km x 10km area)
-                                duration: 6000, // 6 second smooth animation (very cinematic)
-                                essential: true // Animation will complete even if user interacts
+                            // Ensure container height is correct and map is resized, especially on mobile
+                            try { setMapHeight(); } catch (e) {}
+                            try { map.resize(); } catch (e) {}
+
+                            const isMobileScreen = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+                            const paddingPx = isMobileScreen ? 20 : 200;
+                            const maxZoomLevel = isMobileScreen ? 15 : 11;
+                            const animDurationMs = isMobileScreen ? 1500 : 6000;
+
+                            // Wait until the map is idle so fitBounds computes with the final size
+                            map.once('idle', () => {
+                                // Small defer to ensure CSS transitions/layout complete
+                                setTimeout(() => {
+                                    try {
+                                        map.fitBounds(firstDatasetBounds, {
+                                            padding: paddingPx,
+                                            maxZoom: maxZoomLevel,
+                                            duration: animDurationMs,
+                                            essential: true
+                                        });
+                                    } catch (e) {
+                                        console.warn('fitBounds failed, retrying after resize:', e);
+                                        try { map.resize(); } catch (e2) {}
+                                        setTimeout(() => {
+                                            try {
+                                                map.fitBounds(firstDatasetBounds, {
+                                                    padding: paddingPx,
+                                                    maxZoom: maxZoomLevel,
+                                                    duration: animDurationMs,
+                                                    essential: true
+                                                });
+                                            } catch (e3) {}
+                                        }, 150);
+                                    }
+                                }, 100);
                             });
-                        }, 800); // Start zoom after loading overlay transition
-                    } else {
+                        } else {
                         console.log('No valid bounds found in first project, staying at world view');
                         // Keep the world view if no valid data
                     }
