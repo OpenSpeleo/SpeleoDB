@@ -180,8 +180,8 @@
                         </div>
                         <div class="project-card-row">
                             <span class="project-card-label">Revisions</span>
-                            <span class="project-card-value" id="async_revision_{{ forloop.counter0 }}">
-                                <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{permission.project.id}}"
+                            <span class="project-card-value" id="async_revision_mobile_{{ permission.project.id }}">
+                                <img data-id="async_revision_mobile_{{ permission.project.id }}" data-project_id="{{permission.project.id}}"
                                 class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner.svg' %}">
                             </span>
                         </div>
@@ -297,8 +297,8 @@
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
-                                        <div class="text-center" id="async_revision_{{ forloop.counter0 }}">
-                                            <img data-id="async_revision_{{ forloop.counter0 }}" data-project_id="{{permission.project.id}}"
+                                        <div class="text-center" id="async_revision_desktop_{{ permission.project.id }}">
+                                            <img data-id="async_revision_desktop_{{ permission.project.id }}" data-project_id="{{permission.project.id}}"
                                             class="async_revision inline-flex filter-indigo w-6" src="{% static 'private/media/spinner.svg' %}">
                                         </div>
                                     </td>
@@ -510,10 +510,12 @@ $( document ).ready(function() {
                 }
                 else {
                     console.log("ERROR: " + data.error);
+                    target_div.html("-");
                 }
             },
             error: function (textStatus, errorThrown) {
                 console.log("ERROR: " + textStatus + " & " + errorThrown);
+                target_div.html("-");
                 return null;
             }
         });
