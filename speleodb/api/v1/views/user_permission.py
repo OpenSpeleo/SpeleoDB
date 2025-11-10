@@ -129,8 +129,10 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
 
         perm_data = self._process_request_data(request=request, data=request.data)
 
+        target_user: User = perm_data["user"]
         permission, created = UserPermission.objects.get_or_create(
-            project=project, target=perm_data["user"]
+            project=project,
+            target=target_user,
         )
 
         if not created:
@@ -138,7 +140,7 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
                 return ErrorResponse(
                     {
                         "error": (
-                            f"A permission for this user: `{perm_data['user']}` "
+                            f"A permission for this user: `{target_user}` "
                             "already exist."
                         )
                     },
@@ -154,6 +156,8 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             permission.level = perm_data["level"]
 
         permission.save()
+
+        target_user.void_permission_cache()
 
         permission_serializer = UserPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
@@ -183,9 +187,10 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             )
 
         try:
+            target_user: User = perm_data["user"]
             permission = UserPermission.objects.get(
                 project=project,
-                target=perm_data["user"],
+                target=target_user,
                 is_active=True,
             )
 
@@ -193,8 +198,7 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             return ErrorResponse(
                 {
                     "error": (
-                        f"A permission for this user: `{perm_data['user']}` "
-                        "does not exist."
+                        f"A permission for this user: `{target_user}` does not exist."
                     )
                 },
                 status=status.HTTP_404_NOT_FOUND,
@@ -202,6 +206,8 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
 
         permission.level = perm_data["level"]
         permission.save()
+
+        target_user.void_permission_cache()
 
         permission_serializer = UserPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
@@ -231,10 +237,11 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        target_user: User = perm_data["user"]
         try:
             permission = UserPermission.objects.get(
                 project=project,
-                target=perm_data["user"],
+                target=target_user,
                 is_active=True,
             )
 
@@ -242,8 +249,7 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             return ErrorResponse(
                 {
                     "error": (
-                        f"A permission for this user: `{perm_data['user']}` "
-                        "does not exist."
+                        f"A permission for this user: `{target_user}` does not exist."
                     )
                 },
                 status=status.HTTP_404_NOT_FOUND,
@@ -254,6 +260,8 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
 
         # Refresh the `modified_date` field
         project.save()
+
+        target_user.void_permission_cache()
 
         return SuccessResponse(
             {

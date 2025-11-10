@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from rest_framework.request import Request
     from rest_framework.response import Response
 
+    from speleodb.users.models import SurveyTeam
+
 
 class ProjectTeamPermissionListApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
@@ -112,8 +114,10 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
         perm_data = serializer.validated_data
 
         project = self.get_object()
+        target_team: SurveyTeam = perm_data["team"]
         permission, created = TeamPermission.objects.get_or_create(
-            project=project, target=perm_data["team"]
+            project=project,
+            target=target_team,
         )
 
         if not created:
@@ -141,6 +145,10 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
         # Refresh the `modified_date` field
         project.save()
 
+        # Recurively void permission cache for all team members
+        for membership in target_team.get_all_memberships():
+            membership.user.void_permission_cache()
+
         permission_serializer = TeamPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
 
@@ -164,20 +172,24 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        team = serializer.validated_data["team"]
+        target_team: SurveyTeam = serializer.validated_data["team"]
         access_level = serializer.validated_data["level"]
 
         project = self.get_object()
         try:
             permission = TeamPermission.objects.get(
                 project=project,
-                target=team,
+                target=target_team,
                 is_active=True,
             )
 
         except ObjectDoesNotExist:
             return ErrorResponse(
-                {"error": (f"A permission for this team: `{team}` does not exist.")},
+                {
+                    "error": (
+                        f"A permission for this team: `{target_team}` does not exist."
+                    )
+                },
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -186,6 +198,10 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
 
         # Refresh the `modified_date` field
         project.save()
+
+        # Recurively void permission cache for all team members
+        for membership in target_team.get_all_memberships():
+            membership.user.void_permission_cache()
 
         permission_serializer = TeamPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
@@ -208,18 +224,22 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        team = serializer.validated_data["team"]
+        target_team: SurveyTeam = serializer.validated_data["team"]
         project = self.get_object()
         try:
             permission = TeamPermission.objects.get(
                 project=project,
-                target=team,
+                target=target_team,
                 is_active=True,
             )
 
         except ObjectDoesNotExist:
             return ErrorResponse(
-                {"error": (f"A permission for this team: `{team}` does not exist.")},
+                {
+                    "error": (
+                        f"A permission for this team: `{target_team}` does not exist."
+                    )
+                },
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -229,6 +249,10 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
 
         # Refresh the `modified_date` field
         project.save()
+
+        # Recurively void permission cache for all team members
+        for membership in target_team.get_all_memberships():
+            membership.user.void_permission_cache()
 
         project_serializer = ProjectSerializer(project, context={"user": user})
 

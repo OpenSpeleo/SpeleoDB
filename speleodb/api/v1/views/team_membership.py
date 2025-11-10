@@ -19,6 +19,7 @@ from speleodb.api.v1.serializers import UserRequestSerializer
 from speleodb.api.v1.serializers import UserRequestWithTeamRoleSerializer
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
@@ -70,8 +71,10 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
             )
 
         team: SurveyTeam = self.get_object()
+        target_user: User = serializer.validated_data["user"]
         membership, created = SurveyTeamMembership.objects.get_or_create(
-            team=team, user=serializer.validated_data["user"]
+            team=team,
+            user=target_user,
         )
 
         if not created:
@@ -79,8 +82,7 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
                 return ErrorResponse(
                     {
                         "error": (
-                            "A membership for this user: "
-                            f"`{serializer.validated_data['user']}` already exist."
+                            f"Membership for this user: `{target_user}` already exists."
                         )
                     },
                     status=status.HTTP_400_BAD_REQUEST,
@@ -99,6 +101,7 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
         team.save()
 
         team.void_membership_cache()
+        target_user.void_permission_cache()
 
         membership_serializer = SurveyTeamMembershipSerializer(membership)
         team_serializer = SurveyTeamSerializer(team, context={"user": user})
@@ -125,9 +128,10 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
 
         team: SurveyTeam = self.get_object()
         try:
+            target_user: User = serializer.validated_data["user"]
             membership = SurveyTeamMembership.objects.get(
                 team=team,
-                user=serializer.validated_data["user"],
+                user=target_user,
             )
         except ObjectDoesNotExist:
             return ErrorResponse(
@@ -160,6 +164,7 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
         team.save()
 
         team.void_membership_cache()
+        target_user.void_permission_cache()
 
         membership_serializer = SurveyTeamMembershipSerializer(membership)
         team_serializer = SurveyTeamSerializer(team, context={"user": user})
@@ -185,8 +190,9 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
 
         team: SurveyTeam = self.get_object()
         try:
+            target_user: User = serializer.validated_data["user"]
             membership = SurveyTeamMembership.objects.get(
-                team=team, user=serializer.validated_data["user"], is_active=True
+                team=team, user=target_user, is_active=True
             )
         except ObjectDoesNotExist:
             return ErrorResponse(
@@ -205,8 +211,8 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
 
         # Refresh the `modified_date` field
         team.save()
-
         team.void_membership_cache()
+        target_user.void_permission_cache()
 
         team_serializer = SurveyTeamSerializer(team, context={"user": user})
 
