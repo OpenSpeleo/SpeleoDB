@@ -78,12 +78,9 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
         ]:
             # For updates, only validate if file is being changed
             if self.instance and not file_field:
+                with contextlib.suppress(KeyError):
+                    del attrs["file"]
                 return attrs
-
-            if not file_field:
-                raise serializers.ValidationError(
-                    f"Resource type '{resource_type}' requires a file."
-                )
 
             # Validate file size (max 5MBs)
             if file_field:

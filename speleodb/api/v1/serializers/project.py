@@ -82,8 +82,8 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
 
         return super().to_internal_value(data)
 
-    def validate(self, attrs: Any) -> Any:
-        created_by = attrs.get("created_by", None)
+    def validate(self, attrs: dict[str, str]) -> dict[str, str]:
+        created_by = attrs.get("created_by")
 
         if self.instance is None and created_by is None:
             raise serializers.ValidationError(

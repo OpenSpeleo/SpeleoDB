@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
@@ -19,7 +17,7 @@ class AuthTokenSerializer(serializers.Serializer[Token]):
         required=True,
     )
 
-    def validate(self, attrs: Any) -> Any:
+    def validate(self, attrs: dict[str, str]) -> dict[str, str]:
         email = attrs.get("email")
         password = attrs.get("password")
 
@@ -40,5 +38,6 @@ class AuthTokenSerializer(serializers.Serializer[Token]):
             msg = 'Must include "email" and "password".'
             raise serializers.ValidationError(msg, code="authorization")
 
-        attrs["user"] = user
+        attrs["user"] = user  # type: ignore[assignment]
+
         return attrs

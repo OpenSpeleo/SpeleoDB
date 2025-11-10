@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import uuid
+from pathlib import Path
 
 from django.db import models
 
@@ -15,7 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 def get_log_entry_path(instance: LogEntry, filename: str) -> str:
-    return f"{instance.station.project.id}/{instance.station.id}/logs/{uuid.uuid4().hex}_{filename}"  # noqa: E501
+    ext = Path(filename).suffix[1:]
+
+    return (
+        f"{instance.station.project.id}/{instance.station.id}/logs/"
+        f"{os.urandom(6).hex()}.{ext}"
+    )
 
 
 class LogEntry(models.Model):
