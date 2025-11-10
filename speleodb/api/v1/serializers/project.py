@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+from decimal import InvalidOperation
 from typing import Any
 
 from django_countries import countries
@@ -39,21 +41,6 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
         model = Project
         fields = "__all__"
 
-    def to_internal_value(self, data: Any) -> Any:
-        latitude = data.get("latitude", None)
-        longitude = data.get("longitude", None)
-
-        if (
-            latitude is not None
-            and latitude != ""
-            and longitude is not None
-            and longitude != ""
-        ):
-            data["latitude"] = format_coordinate(latitude)
-            data["longitude"] = format_coordinate(longitude)
-
-        return super().to_internal_value(data)
-
     def to_representation(self, instance: Project) -> dict[str, Any]:
         """Ensure coordinates are rounded to 7 decimal places."""
         data = super().to_representation(instance)
@@ -76,9 +63,26 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
 
         return data
 
+    def to_internal_value(self, data: dict[str, Any]) -> Any:
+        """Override to round coordinates before validation."""
+
+        # Data is immutable - need to copy
+        data = data.copy()
+
+        # Round coordinates if they exist in the data
+        if "latitude" in data and data["latitude"] is not None:
+            with contextlib.suppress(ValueError, TypeError, InvalidOperation):
+                # Let the field validation handle the error
+                data["latitude"] = format_coordinate(data["latitude"])
+
+        if "longitude" in data and data["longitude"] is not None:
+            with contextlib.suppress(ValueError, TypeError, InvalidOperation):
+                # Let the field validation handle the error
+                data["longitude"] = format_coordinate(data["longitude"])
+
+        return super().to_internal_value(data)
+
     def validate(self, attrs: Any) -> Any:
-        latitude = attrs.get("latitude", None)
-        longitude = attrs.get("longitude", None)
         created_by = attrs.get("created_by", None)
 
         if self.instance is None and created_by is None:
@@ -89,9 +93,11 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
         if self.instance is not None and "created_by" in attrs:
             raise serializers.ValidationError("`created_by` cannot be updated.")
 
-        if (longitude is None) != (latitude is None) or (longitude != "") != (
-            latitude != ""
-        ):
+        # Guarantee that even a None value ends up `""`
+        latitude = attrs.get("latitude", "") or ""
+        longitude = attrs.get("longitude", "") or ""
+
+        if (longitude == "") != (latitude == ""):
             raise serializers.ValidationError(
                 "`latitude` and `longitude` must be simultaneously specified or empty"
             )
@@ -136,13 +142,13 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
             # Unsaved object
             return None
 
-        if obj.active_mutex is None:
+        if (active_mtx := obj.active_mutex()) is None:
             return None
 
         return {
-            "user": obj.active_mutex.user.email,
-            "creation_date": obj.active_mutex.creation_date,
-            "modified_date": obj.active_mutex.modified_date,
+            "user": active_mtx.user.email,
+            "creation_date": active_mtx.creation_date,
+            "modified_date": active_mtx.modified_date,
         }
 
     def get_n_commits(self, obj: Project) -> int | None:

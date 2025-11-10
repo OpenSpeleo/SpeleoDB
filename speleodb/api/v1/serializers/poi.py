@@ -36,10 +36,14 @@ class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
         request = self.context.get("request")
         if request and hasattr(request, "user") and request.user.is_authenticated:
             validated_data["user"] = request.user
+
         return super().create(validated_data)
 
-    def to_internal_value(self, data: Any) -> Any:
+    def to_internal_value(self, data: dict[str, Any]) -> Any:
         """Override to round coordinates before validation."""
+
+        # Data is immutable - need to copy
+        data = data.copy()
 
         # Round coordinates if they exist in the data
         if "latitude" in data and data["latitude"] is not None:
@@ -53,14 +57,6 @@ class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
                 data["longitude"] = format_coordinate(data["longitude"])
 
         return super().to_internal_value(data)
-
-    # def validate_latitude(self, value: str | float) -> float:
-    #     """Ensure latitude is rounded to 7 decimal places."""
-    #     return format_coordinate(value)
-
-    # def validate_longitude(self, value: str | float) -> float:
-    #     """Ensure longitude is rounded to 7 decimal places."""
-    #     return format_coordinate(value)
 
     def to_representation(self, instance: PointOfInterest) -> dict[str, Any]:
         """Ensure coordinates are rounded to 7 decimal places."""
