@@ -13,7 +13,7 @@ dependencies = [
     "python-dotenv==1.2.1", # https://github.com/theskumar/python-dotenv
     "pytz==2025.2",         # https://github.com/stub42/pytz
     "timeago==1.0.16",      # https://github.com/hustcc/timeago
-    "wrapt==2.0.0",        # https://github.com/GrahamDumpleton/wrapt
+    "wrapt==2.0.1",        # https://github.com/GrahamDumpleton/wrapt
 
     # Redis
     # ------------------------------------------------------------------------------
@@ -24,11 +24,11 @@ dependencies = [
     # Media Processing
     # ------------------------------------------------------------------------------
     "av==16.0.1",            # https://github.com/PyAV-Org/PyAV
-    "imageio==2.37.0",       # https://github.com/imageio/imageio
+    "imageio==2.37.2",       # https://github.com/imageio/imageio
     "imageio-ffmpeg==0.6.0", # https://github.com/imageio/imageio-ffmpeg
     "Pillow==12.0.0",        # https://github.com/python-pillow/Pillow
     "pillow-heif==1.1.1",    # https://github.com/bigcat88/pillow_heif
-    "PyMuPDF==1.26.5",       # https://github.com/pymupdf/PyMuPDF
+    "PyMuPDF==1.26.6",       # https://github.com/pymupdf/PyMuPDF
 
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
@@ -51,7 +51,7 @@ dependencies = [
     "Collectfasta==3.3.1",         # https://github.com/jasongi/collectfasta
     "django==5.2.8",               # https://www.djangoproject.com/
     "django-allauth==65.13.0",     # https://github.com/pennersr/django-allauth
-    "django-countries==7.6.1",     # https://github.com/SmileyChris/django-countries/
+    "django-countries==8.0.0",     # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",  # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.12.0",      # https://github.com/joke2k/django-environ
     "django-hijack==3.7.4",        # https://github.com/django-hijack/django-hijack/
@@ -67,8 +67,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.40.64", # https://github.com/boto/botocore
-    "boto3==1.40.64",    # https://github.com/boto/boto3
+    "botocore==1.40.69", # https://github.com/boto/botocore
+    "boto3==1.40.69",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -95,7 +95,7 @@ local = [
     "mypy==1.18.2",         # https://github.com/python/mypy
     "parameterized==0.9.0", # https://github.com/wolever/parameterized
     "pytest-sugar==1.1.1",  # https://github.com/Frozenball/pytest-sugar
-    "pytest==8.4.2",        # https://github.com/pytest-dev/pytest
+    "pytest==9.0.0",        # https://github.com/pytest-dev/pytest
 
     # Typing
     # ------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ local = [
     "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
     "types-cachetools==6.2.0.20251022",                   # https://github.com/python/typeshed
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
-    "types-pytz==2025.2.0.20250809",                      # https://github.com/python/typeshed
+    "types-pytz==2025.2.0.20251108",                      # https://github.com/python/typeshed
 
     # Django Testing
     # ------------------------------------------------------------------------------
@@ -113,10 +113,10 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.14.3",      # https://github.com/astral-sh/ruff
-    "coverage==7.11.0",  # https://github.com/nedbat/coveragepy
+    "ruff==0.14.4",      # https://github.com/astral-sh/ruff
+    "coverage==7.11.3",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
-    "pre-commit==4.3.0", # https://github.com/pre-commit/pre-commit
+    "pre-commit==4.4.0", # https://github.com/pre-commit/pre-commit
 
     # Django
     # ------------------------------------------------------------------------------
