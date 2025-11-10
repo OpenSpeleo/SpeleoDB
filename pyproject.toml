@@ -104,7 +104,7 @@ local = [
     "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
     "types-cachetools==6.2.0.20251022",                   # https://github.com/python/typeshed
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
-    "types-pytz==2025.2.0.20250809",                      # https://github.com/python/typeshed
+    "types-pytz==2025.2.0.20251108",                      # https://github.com/python/typeshed
 
     # Django Testing
     # ------------------------------------------------------------------------------
