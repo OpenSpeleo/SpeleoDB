@@ -35,6 +35,7 @@ class LogEntryApiView(GenericAPIView[Station], SDBAPIViewMixin):
         StationUserHasWriteAccess | (IsReadOnly & StationUserHasReadAccess)
     ]
     lookup_field = "id"
+    serializer_class = LogEntrySerializer  # type: ignore[assignment]
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station = self.get_object()

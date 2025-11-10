@@ -46,7 +46,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        z-index: 1000;
+        z-index: 100;
         backdrop-filter: blur(4px);
         transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
     }
@@ -214,7 +214,11 @@
 
     /* Ensure station modal overlays map markers (which may use high z-index) */
     #station-modal {
-        z-index: 2001 !important;
+        z-index: 10 !important;
+    }
+
+    #station-modal-container {
+        max-height: 85dvh;
     }
 
     /* Station Resource Cards */
@@ -256,7 +260,7 @@
         transform: scale(1.3); /* Bigger scale for smaller dots */
         background: #f97316; /* Darker vibrant orange on hover */
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-        z-index: 1000;
+        z-index: 10;
     }
 
     /* Resource-based coloring removed; stations use a single style */
@@ -277,7 +281,7 @@
         transform: scale(1.3);
         background: #2563eb; /* Darker blue on hover */
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-        z-index: 1000;
+        z-index: 10;
     }
 
     /* Form Styles */
@@ -425,6 +429,8 @@
 
     .tab-content.active {
         display: block;
+        max-height: 68dvh;
+        margin-bottom: 0.5rem;
     }
 
     /* Ensure modal scales properly on smaller screens */
@@ -500,6 +506,168 @@
         border-radius: 6px;
     }
 
+    /* Scientific Journal Styles (Log Entries) */
+    .journal-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .journal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: rgba(51, 65, 85, 0.45);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 10px;
+    }
+    .journal-title-text {
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 18px;
+        letter-spacing: 0.2px;
+    }
+    .journal-entries {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .journal-entry {
+        position: relative;
+        padding: 18px 18px 16px 22px;
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.75), rgba(30, 41, 59, 0.7));
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 12px;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+        transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+    .journal-entry::before {
+        content: "";
+        position: absolute;
+        left: 10px;
+        top: 12px;
+        bottom: 12px;
+        width: 2px;
+        background: linear-gradient(180deg, #94a3b8, #38bdf8);
+        opacity: 0.6;
+        border-radius: 2px;
+    }
+    .journal-entry:hover {
+        transform: translateY(-1px);
+        border-color: rgba(56, 189, 248, 0.35);
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.82), rgba(30, 41, 59, 0.78));
+    }
+    .journal-entry-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .journal-entry-title {
+        color: #e2e8f0;
+        font-family: ui-serif, Georgia, 'Times New Roman', Times, serif;
+        font-size: 17px;
+        line-height: 1.35;
+        font-weight: 600;
+        margin: 0 0 6px 0;
+    }
+    .journal-entry-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #cbd5e1;
+        font-size: 12px;
+        opacity: 0.9;
+    }
+    .journal-dot {
+        width: 4px;
+        height: 4px;
+        background: #94a3b8;
+        border-radius: 50%;
+        opacity: 0.8;
+    }
+    .journal-entry-body {
+        color: #cbd5e1;
+        font-size: 14px;
+        line-height: 1.6;
+        margin-top: 4px;
+        white-space: pre-line;
+    }
+    .journal-attachment {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px dashed rgba(56, 189, 248, 0.35);
+        color: #bae6fd;
+        font-size: 12px;
+    }
+    .journal-attachment svg {
+        width: 16px;
+        height: 16px;
+    }
+    .journal-skeleton {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .journal-skeleton .row {
+        height: 64px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, rgba(100,116,139,0.18), rgba(148,163,184,0.15), rgba(100,116,139,0.18));
+        background-size: 200% 100%;
+        animation: shimmer 1.2s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+        0% { background-position: 0% 0%; }
+        100% { background-position: -200% 0%; }
+    }
+    @media (max-width: 640px) {
+        .journal-entry {
+            padding: 14px 14px 14px 18px;
+        }
+        .journal-entry-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+        }
+        .journal-entry-title {
+            font-size: 16px;
+        }
+        .journal-entry-meta {
+            font-size: 11px;
+        }
+    }
+
+    /* Log Entry Modal - mobile adjustments */
+    @media (max-width: 640px) {
+        #log-entry-modal {
+            align-items: stretch !important;
+            justify-content: stretch !important;
+            padding: 0 !important;
+        }
+        #log-entry-modal > div {
+            width: 100% !important;
+            max-width: none !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+        }
+        #log-entry-modal .border-b {
+            position: sticky;
+            top: 0;
+            z-index: 120;
+            background-color: #0f172a;
+        }
+        #log-entry-modal .flex-1 {
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    }
+
     .video-preview {
         position: relative;
         cursor: pointer;
@@ -533,7 +701,7 @@
         display: none;
         align-items: center;
         justify-content: center;
-        z-index: 10002;
+        z-index: 1000;
         cursor: zoom-out;
         padding: 20px;
     }
@@ -783,7 +951,7 @@
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         padding: 8px 0;
         min-width: 200px;
-        z-index: 10000;
+        z-index: 100;
         display: none;
     }
     /* Drag Confirmation Modal */
@@ -798,7 +966,7 @@
         display: none;
         align-items: center;
         justify-content: center;
-        z-index: 10001;
+        z-index: 100;
         animation: fadeIn 0.2s ease-out;
     }
 
@@ -1034,14 +1202,6 @@
             box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
         }
     }
-    /* Hide non-color-mode header buttons globally */
-    #legend-toggle-button,
-    #station-manager-button,
-    button[onclick="openPOIManager()"],
-    button[onclick="showContextMenuHelp()"],
-    button[onclick="window.location.reload()"] {
-        display: none !important;
-    }
 
     /* Make the color mode button span the content width (matches map width) */
     #page-actions {
@@ -1069,10 +1229,21 @@
 
     /* Mobile optimizations - keep desktop unchanged */
     @media (max-width: 640px) {
+
+        /* Hide non-color-mode header buttons globally */
+        #legend-toggle-button,
+        #station-manager-button,
+        #poi-manager-button,
+        #context-menu-help-button,
+        #refresh-button {
+            display: none !important;
+        }
+
         /* Use a dropdown for station tabs on mobile to avoid overflow */
         #station-modal-tabs {
             display: none !important;
         }
+
         #station-tab-select {
             display: block !important;
             width: 100%;
@@ -1141,7 +1312,7 @@
         #station-manager-modal .border-b {
             position: sticky;
             top: 0;
-            z-index: 2;
+            z-index: 100;
             background-color: #0f172a;
         }
         /* Scrollable modal body */
@@ -1199,7 +1370,7 @@
                 </button>
 
                 <!-- POI Management button -->
-                <button onclick="openPOIManager()" class="btn bg-blue-500 hover:bg-blue-600 text-white">
+                <button id="poi-manager-button" onclick="openPOIManager()" class="btn bg-blue-500 hover:bg-blue-600 text-white">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"></path>
                         <path d="M12 11.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"></path>
@@ -1216,7 +1387,7 @@
                 </button>
 
                 <!-- Context Menu Help -->
-                <button onclick="showContextMenuHelp()" class="btn bg-sky-500 hover:bg-sky-600 text-white">
+                <button id="context-menu-help-button" onclick="showContextMenuHelp()" class="btn bg-sky-500 hover:bg-sky-600 text-white">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
@@ -1224,7 +1395,7 @@
                 </button>
 
                 <!-- Refresh button -->
-                <button onclick="window.location.reload()" class="btn bg-gray-500 hover:bg-gray-600 text-white">
+                <button id="refresh-button" onclick="window.location.reload()" class="btn bg-gray-500 hover:bg-gray-600 text-white">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
@@ -1245,7 +1416,8 @@
             </div>
             
             <!-- Floating Project List Panel -->
-            <div id="project-panel" class="absolute top-4 left-4 bg-slate-800/95 backdrop-blur-sm border-2 border-gray-500 rounded-lg shadow-xl p-4 max-w-xs z-10" style="display: none; min-width: 200px;">
+            <div id="project-panel" class="absolute top-4 left-4 bg-slate-800/95 backdrop-blur-sm border-2 border-gray-300 rounded-lg shadow-xl p-4 max-w-xs z-10" style="display: none; min-width: 200px;">
+ 
                 <div class="flex justify-between items-center mb-3">
                     <h3 class="text-white font-semibold text-sm">Active Projects</h3>
                     <button id="panel-toggle" class="text-slate-400 hover:text-white transition-colors" title="Minimize">
@@ -1260,7 +1432,7 @@
             </div>
             
             <!-- Minimized Project Panel -->
-            <div id="project-panel-minimized" class="absolute top-4 left-4 bg-slate-800/95 backdrop-blur-sm border-2 border-gray-500 rounded-lg shadow-xl p-3 z-10" style="display: none;">
+            <div id="project-panel-minimized" class="absolute top-4 left-4 bg-slate-800/95 backdrop-blur-sm border-2 border-gray-300 rounded-lg shadow-xl p-3 z-10" style="display: none;">
                 <button id="panel-expand" class="text-white hover:text-sky-400 transition-colors flex items-center space-x-2" title="Expand">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -1285,7 +1457,7 @@
 
                         <!-- Modal Content -->
                         <div class="flex-1 min-h-0">
-                            <div id="station-manager-content" class="h-full">
+                            <div id="station-manager-content">
                                 <!-- Station Manager content will be loaded here -->
                             </div>
                         </div>
@@ -1309,7 +1481,7 @@
 
                         <!-- Modal Content -->
                         <div class="flex-1 min-h-0">
-                            <div id="poi-manager-content" class="h-full">
+                            <div id="poi-manager-content">
                                 <!-- POI Manager content will be loaded here -->
                             </div>
                         </div>
@@ -1347,8 +1519,8 @@
             </div>
             
             <!-- Station Details Modal -->
-            <div id="station-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
-                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
+            <div id="station-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center mt-8 p-4 overflow-y-auto">
+                <div id="station-modal-container" class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
                     <div class="flex flex-col">
                         <!-- Modal Header -->
                         <div id="station-modal-header" class="flex items-start justify-between p-6 border-b border-slate-600 flex-shrink-0">
@@ -1357,12 +1529,14 @@
                                 <div class="mt-3">
                                     <select id="station-tab-select" class="bg-slate-700 text-white rounded-lg p-2 w-full">
                                         <option value="details">Details</option>
+                                        <option value="logs">Scientific Log</option>
                                         <option value="resources">Resources</option>
                                         <option value="add-resource">Add Resource</option>
                                     </select>
                                 </div>
                                 <div id="station-modal-tabs" class="hidden">
                                     <button class="tab-btn active" data-tab="details">Details</button>
+                                    <button class="tab-btn" data-tab="logs">Scientific Log</button>
                                     <button class="tab-btn" data-tab="resources">Resources</button>
                                     <button class="tab-btn" data-tab="add-resource">Add Resource</button>
                                 </div>
@@ -1375,8 +1549,8 @@
                         </div>
 
                         <!-- Modal Content -->
-                        <div class="flex-1 min-h-[100dvh]">
-                            <div id="station-modal-content" class="h-full">
+                        <div class="flex-1">
+                            <div id="station-modal-content">
                                 <!-- Content will be loaded dynamically -->
                             </div>
                         </div>
@@ -1452,6 +1626,174 @@
                                 Close
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log Entry Creation Modal -->
+            <div id="log-entry-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl my-8 flex flex-col">
+                    <div class="flex items-center justify-between p-6 border-b border-slate-600">
+                        <h3 class="text-lg font-semibold text-white">New Journal Entry</h3>
+                        <button onclick="closeLogEntryModal()" class="text-slate-400 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 p-6">
+                        <form id="log-entry-form" class="space-y-4">
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Title <span class="text-red-400">*</span></label>
+                                <input id="log-title" type="text" class="form-input" placeholder="Concise scientific title..." required>
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Notes <span class="text-red-400">*</span></label>
+                                <textarea id="log-notes" class="form-input form-textarea" rows="6" placeholder="Observations, measurements, methods, interpretation..." required></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Attachment (optional)</label>
+                                <div id="log-file-input-container" class="file-upload-area">
+                                    <div class="text-center">
+                                        <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                        </svg>
+                                        <p class="text-slate-300 text-sm mb-2">Click to select file or drag and drop</p>
+                                        <input id="log-attachment" type="file" class="hidden" accept="image/*,video/*,.pdf,.csv,.txt,.doc,.docx">
+                                        <p class="text-slate-400 text-xs">Max file size: 5MB • Images, videos, documents accepted</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-end gap-3 pt-2">
+                                <button type="button" onclick="closeLogEntryModal()" class="btn-secondary">Cancel</button>
+                                <button id="log-submit-btn" type="submit" class="btn-primary">
+                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Submit Entry
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log Entry Success Modal -->
+            <div id="log-entry-success-modal" class="drag-confirm-modal">
+                <div class="drag-confirm-content">
+                    <div class="drag-confirm-header">
+                        <div class="drag-confirm-icon" style="background: linear-gradient(135deg, #10b981, #059669);">✅</div>
+                        <h3 class="drag-confirm-title">Journal Entry Submitted</h3>
+                        <button onclick="closeLogEntryStatusModal('success')" class="drag-confirm-close">
+                            <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="drag-confirm-body">
+                        <p class="drag-confirm-message">
+                            Your journal entry has been recorded successfully.
+                        </p>
+                    </div>
+                    <div class="drag-confirm-actions">
+                        <button class="drag-confirm-btn drag-confirm-btn-confirm" onclick="closeLogEntryStatusModal('success')">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log Entry Error Modal -->
+            <div id="log-entry-error-modal" class="drag-confirm-modal">
+                <div class="drag-confirm-content">
+                    <div class="drag-confirm-header">
+                        <div class="drag-confirm-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">⚠️</div>
+                        <h3 class="drag-confirm-title">Submission Failed</h3>
+                        <button onclick="closeLogEntryStatusModal('error')" class="drag-confirm-close">
+                            <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="drag-confirm-body">
+                        <p class="drag-confirm-message">
+                            We couldn't submit your entry. Please review the form and try again.
+                        </p>
+                    </div>
+                    <div class="drag-confirm-actions">
+                        <button class="drag-confirm-btn drag-confirm-btn-confirm" onclick="closeLogEntryStatusModal('error')">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log Delete Confirmation Modal -->
+            <div id="log-delete-confirm-modal" class="drag-confirm-modal">
+                <div class="drag-confirm-content">
+                    <div class="drag-confirm-header">
+                        <div class="drag-confirm-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">🗑️</div>
+                        <h3 class="drag-confirm-title">Delete Log Entry</h3>
+                        <button onclick="closeDeleteLogConfirm()" class="drag-confirm-close">
+                            <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="drag-confirm-body">
+                        <p class="drag-confirm-message" id="log-delete-confirm-message">
+                            Are you sure you want to delete this log entry?
+                        </p>
+                        <div class="drag-confirm-details" id="log-delete-confirm-details"></div>
+                    </div>
+                    <div class="drag-confirm-actions">
+                        <button type="button" class="drag-confirm-btn drag-confirm-btn-cancel" onclick="closeDeleteLogConfirm()">
+                            No
+                        </button>
+                        <button type="button" class="drag-confirm-btn drag-confirm-btn-danger" onclick="confirmDeleteLog()">
+                            Yes
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Log Edit Modal -->
+            <div id="log-edit-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl my-8 flex flex-col">
+                    <div class="flex items-center justify-between p-6 border-b border-slate-600">
+                        <h3 class="text-lg font-semibold text-white">Edit Journal Entry</h3>
+                        <button onclick="closeLogEditModal()" class="text-slate-400 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 p-6">
+                        <form id="log-edit-form" class="space-y-4">
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Title <span class="text-red-400">*</span></label>
+                                <input id="log-title" type="text" class="form-input" placeholder="Concise scientific title..." required>
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Notes <span class="text-red-400">*</span></label>
+                                <textarea id="log-notes" class="form-input form-textarea" rows="6" placeholder="Observations, measurements, methods, interpretation..." required></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Replace attachment (optional)</label>
+                                <div id="log-file-input-container" class="file-upload-area">
+                                    <div class="text-center">
+                                        <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m3-3v12"></path>
+                                        </svg>
+                                        <p class="text-slate-300 text-sm mb-2">Click to select file or drag and drop</p>
+                                        <input id="log-attachment" type="file" class="hidden" accept="image/*,video/*,.pdf,.csv,.txt,.doc,.docx">
+                                        <p class="text-slate-400 text-xs">Max file size: 5MB • Images, videos, documents accepted</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-end gap-3 pt-2">
+                                <button type="button" onclick="closeLogEditModal()" class="btn-secondary">Cancel</button>
+                                <button id="log-edit-submit-btn" type="submit" class="btn-primary">
+                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -1922,37 +2264,6 @@
     let allStations = new Map(); // Track all stations (demo + API) by ID for easy access
     let poiMarkers = []; // Track POI markers
     let allPOIs = new Map(); // Track all POIs by ID for easy access
-
-    // Test function to force legend visible
-    window.testLegend = function () {
-        const el = document.getElementById('map-legend');
-        if (el) {
-            // Force all styles to ensure visibility
-            el.style.cssText = 'position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: block !important; max-width: 320px !important; z-index: 5 !important; opacity: 1 !important; visibility: visible !important;';
-            console.log('Legend forced visible with all styles');
-            console.log('Element:', el);
-            console.log('Computed styles:', window.getComputedStyle(el));
-            console.log('Bounding rect:', el.getBoundingClientRect());
-        } else {
-            console.error('Legend element not found!');
-        }
-    }
-
-    // Function to move legend to body and ensure visibility
-    window.fixLegend = function () {
-        const el = document.getElementById('map-legend');
-        if (el) {
-            // Move to body if not already there
-            if (el.parentElement !== document.body) {
-                document.body.appendChild(el);
-                console.log('Moved legend to body');
-            }
-
-            // Force visible
-            el.style.cssText = 'position: fixed !important; bottom: 40px !important; right: 20px !important; background-color: #0f172a !important; border: 2px solid #475569 !important; border-radius: 8px !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; padding: 16px !important; display: block !important; max-width: 320px !important; z-index: 5 !important; opacity: 1 !important; visibility: visible !important;';
-            console.log('Legend fixed and visible');
-        }
-    }
 
     // Function to fly to a station on the map
     window.goToStation = function (stationId, latitude, longitude) {
@@ -2470,7 +2781,7 @@
 
         element.style.cssText = `
             pointer-events: none;
-            z-index: 1000;
+            z-index: 5;
         `;
 
         snapIndicator = new mapboxgl.Marker(element)
@@ -3146,7 +3457,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            z-index: 10001;
+            z-index: 100;
             box-shadow: 0 8px 24px rgba(0,0,0,0.3);
             animation: slideIn 0.3s ease-out;
             max-width: 400px;
@@ -3654,7 +3965,7 @@
                 border-radius: 8px;
                 font-size: 14px;
                 font-weight: 500;
-                z-index: 10001;
+                z-index: 100;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             `;
             document.body.appendChild(notification);
@@ -4570,7 +4881,6 @@
         const modalContent = document.getElementById('station-modal-content');
         if (modalContent) {
             modalContent.innerHTML = '';
-            modalContent.className = 'h-full';
             modalContent.style.cssText = '';
         }
 
@@ -4597,6 +4907,7 @@
                 newSelect.className = 'bg-slate-700 text-white rounded-lg p-2 w-full';
                 newSelect.innerHTML = `
                     <option value="details">Details</option>
+                    <option value="logs">Scientific Log</option>
                     <option value="resources">Resources</option>
                     <option value="add-resource">Add Resource</option>
                 `;
@@ -4726,6 +5037,30 @@
                     showStationDetailsEmpty();
                 }
                 break;
+            case 'logs':
+                if (currentStationId) {
+                    console.log(`📑 Loading scientific log entries for station: ${currentStationId}`);
+                    loadStationLogEntries(currentStationId, currentProjectId);
+                } else {
+                    console.log(`📑 Showing empty scientific log`);
+                    const content = document.getElementById('station-modal-content');
+                    if (content) {
+                        content.innerHTML = `
+                            <div class="tab-content active">
+                                <div class="flex items-center justify-center min-h-[300px]">
+                                    <div class="text-center">
+                                        <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                        </svg>
+                                        <h3 class="text-white text-lg font-medium mb-2">Scientific Log</h3>
+                                        <p class="text-slate-400">Select a station to view scientific log entries.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                break;
             case 'resources':
                 if (currentStationId) {
                     console.log(`📑 Loading resources for station: ${currentStationId}`);
@@ -4768,7 +5103,7 @@
         const content = document.getElementById('station-modal-content');
         content.innerHTML = `
             <div class="tab-content active">
-                <div class="flex items-center justify-center h-full min-h-[300px]">
+                <div class="flex items-center justify-center min-h-[300px]">
                     <div class="text-center">
                         <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
@@ -4781,6 +5116,553 @@
                 </div>
             </div>
         `;
+    }
+
+    // Scientific Log Tab - Real AJAX + Renderer
+    async function fetchStationLogEntries(stationId) {
+        try {
+            const url = (typeof Urls !== 'undefined' && Urls["api:v1:station-logs"])
+                ? Urls["api:v1:station-logs"](stationId)
+                : `/api/v1/stations/${stationId}/logs/`;
+            const resp = await fetch(url, { credentials: 'same-origin' });
+            if (!resp.ok) {
+                let message = `Failed to load log entries (${resp.status})`;
+                try {
+                    const data = await resp.json();
+                    if (data && data.errors) {
+                        message = Object.values(data.errors).flat().join('; ');
+                    }
+                } catch (_) {}
+                if (typeof showNotification === 'function') {
+                    showNotification('error', message);
+                }
+                return [];
+            }
+            const data = await resp.json();
+            if (data && Array.isArray(data.data)) return data.data;
+            if (Array.isArray(data)) return data;
+            return [];
+        } catch (err) {
+            console.error('Error fetching station logs:', err);
+            if (typeof showNotification === 'function') {
+                showNotification('error', 'Network error while loading log entries');
+            }
+            return [];
+        }
+    }
+
+    function formatJournalDate(isoString) {
+        try {
+            const d = new Date(isoString);
+            return d.toLocaleString(undefined, {
+                year: 'numeric', month: 'short', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+        } catch (e) {
+            return isoString;
+        }
+    }
+
+    function filenameFromUrl(url) {
+        if (!url) return 'Open';
+        try {
+            const u = new URL(url, window.location.origin);
+            const path = u.pathname || '';
+            const base = path.substring(path.lastIndexOf('/') + 1);
+            return base || 'Open';
+        } catch (_) {
+            const noQuery = String(url).split('?')[0];
+            const base = noQuery.split('/').pop();
+            return base || 'Open';
+        }
+    }
+
+    function loadStationLogEntries(stationId, projectId) {
+        const modalContent = document.getElementById('station-modal-content');
+        if (!modalContent) return;
+
+        // Header + skeleton
+        modalContent.innerHTML = `
+            <div class="tab-content active">
+                <div class="space-y-4">
+                    <div class="flex items-center justify-end">
+                        ${hasProjectWriteAccess && hasProjectWriteAccess(projectId) ? `
+                            <button onclick="openLogEntryModal('${stationId}', '${projectId}')" class="btn-primary w-full sm:w-auto">
+                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                New Journal Entry
+                            </button>
+                        ` : `
+                            <button class="btn-primary w-full sm:w-auto opacity-50 cursor-not-allowed" title="You need write access" disabled>
+                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                New Journal Entry
+                            </button>
+                        `}
+                    </div>
+                    <div>
+                        <div class="journal-skeleton">
+                            <div class="row"></div>
+                            <div class="row"></div>
+                            <div class="row"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        fetchStationLogEntries(stationId).then((entries) => {
+            if (!Array.isArray(entries)) entries = [];
+            const listHtml = entries.map((e) => `
+                <article class="journal-entry" data-log-id="${e.id}">
+                    <header class="journal-entry-header">
+                        <h4 class="journal-entry-title">${e.title}</h4>
+                        <div class="journal-entry-meta">
+                            <span>${formatJournalDate(e.creation_date)}</span>
+                            <span class="journal-dot"></span>
+                            <span>${e.created_by}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${hasProjectWriteAccess(currentProjectId) ? `
+                                <button class="text-slate-300 hover:text-white" title="Edit entry"
+                                        onclick="openLogEditModal('${e.id}', '${stationId}', '${projectId}', ${JSON.stringify({title: e.title || '', notes: e.notes || ''}).replace(/"/g, '&quot;')})">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </button>
+                            ` : `
+                                <button class="text-slate-500 opacity-50 cursor-not-allowed" title="You need write access" disabled>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </button>
+                            `}
+                            ${hasProjectAdminAccess(currentProjectId) ? `
+                                <button class="text-red-400 hover:text-red-300" title="Delete entry"
+                                        onclick="openDeleteLogConfirm('${e.id}', '${stationId}', '${projectId}', '${e.creation_date}', '${(e.title || '').replace(/'/g, '\\&#39;')}', '${(e.created_by || '').replace(/'/g, '\\&#39;')}')">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            ` : `
+                                <button class="text-red-400 opacity-50 cursor-not-allowed" title="Only admins can delete" disabled>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            `}
+                        </div>
+                    </header>
+                    <div class="journal-entry-body">${(e.notes || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+                    ${e.attachment ? `
+                        <div class="journal-attachment">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79V7a2 2 0 00-2-2h-5.79a2 2 0 00-1.42.59l-7.2 7.2a5 5 0 007.07 7.07l6.36-6.36"></path>
+                            </svg>
+                            <span class="uppercase tracking-wide text-xs font-semibold">ATTACHMENT</span>
+                            <span class="text-sky-200">•</span>
+                            <a href="${e.attachment}" target="_blank" class="underline decoration-sky-400 hover:text-white">${filenameFromUrl(e.attachment)}</a>
+                        </div>
+                    ` : ``}
+                </article>
+            `).join('');
+
+            modalContent.innerHTML = `
+                <div class="tab-content active">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-end">
+                            ${hasProjectWriteAccess && hasProjectWriteAccess(projectId) ? `
+                                <button onclick="openLogEntryModal('${stationId}', '${projectId}')" class="btn-primary w-full sm:w-auto">
+                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    New Journal Entry
+                                </button>
+                            ` : `
+                                <button class="btn-primary w-full sm:w-auto opacity-50 cursor-not-allowed" title="You need write access" disabled>
+                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    New Journal Entry
+                                </button>
+                            `}
+                        </div>
+                        <div>
+                            ${entries.length ? `
+                                <div class="journal-container">
+                                    <div class="journal-entries">
+                                        ${listHtml}
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="text-center py-12">
+                                    <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    <h3 class="text-white text-lg font-medium mb-2">No Log Entries Yet</h3>
+                                    <p class="text-slate-400">Record scientific observations, measurements, and notes for this station.</p>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // Log Entry Modal Handlers and Fake Submission
+    function openLogEntryModal(stationId, projectId) {
+        const modal = document.getElementById('log-entry-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        const form = document.getElementById('log-entry-form');
+        if (!form) return;
+        // Reset form
+        form.reset();
+        const submitBtn = document.getElementById('log-submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+        }
+
+        // Remove previous listeners by cloning
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        newForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            submitLogEntryForm(stationId, projectId, newForm);
+        });
+
+        // Setup file upload area interactions
+        const fileContainer = newForm.querySelector('#log-file-input-container');
+        if (fileContainer) {
+            const fileInput = fileContainer.querySelector('#log-attachment');
+            // Reset display each open
+            resetLogFileDisplay(fileContainer);
+            fileContainer.addEventListener('click', () => fileInput.click());
+            fileContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileContainer.classList.add('dragover');
+            });
+            fileContainer.addEventListener('dragleave', () => {
+                fileContainer.classList.remove('dragover');
+            });
+            fileContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileContainer.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                    fileInput.files = files;
+                    updateLogFileDisplay(fileContainer, files[0]);
+                }
+            });
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    updateLogFileDisplay(fileContainer, e.target.files[0]);
+                } else {
+                    resetLogFileDisplay(fileContainer);
+                }
+            });
+        }
+    }
+
+    function closeLogEntryModal() {
+        const modal = document.getElementById('log-entry-modal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    function closeLogEntryStatusModal(type) {
+        const el = document.getElementById(type === 'success' ? 'log-entry-success-modal' : 'log-entry-error-modal');
+        if (!el) return;
+        el.style.display = 'none';
+    }
+
+    function openLogEditModal(logId, stationId, projectId, initial) {
+        const modal = document.getElementById('log-edit-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        const form = document.getElementById('log-edit-form');
+        if (!form) return;
+        // Prefill
+        form.querySelector('#log-title').value = (initial && initial.title) || '';
+        form.querySelector('#log-notes').value = (initial && initial.notes) || '';
+
+        const submitBtn = document.getElementById('log-edit-submit-btn');
+        if (submitBtn) submitBtn.disabled = false;
+
+        // Remove previous listeners by cloning
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        // Setup file area
+        const fileContainer = newForm.querySelector('#log-file-input-container');
+        if (fileContainer) {
+            const fileInput = fileContainer.querySelector('#log-attachment');
+            resetLogFileDisplay(fileContainer);
+            fileContainer.addEventListener('click', () => fileInput.click());
+            fileContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileContainer.classList.add('dragover');
+            });
+            fileContainer.addEventListener('dragleave', () => {
+                fileContainer.classList.remove('dragover');
+            });
+            fileContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileContainer.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                    fileInput.files = files;
+                    updateLogFileDisplay(fileContainer, files[0]);
+                }
+            });
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    updateLogFileDisplay(fileContainer, e.target.files[0]);
+                } else {
+                    resetLogFileDisplay(fileContainer);
+                }
+            });
+        }
+
+        newForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            submitLogEditForm(logId, stationId, projectId, newForm);
+        });
+    }
+
+    function closeLogEditModal() {
+        const modal = document.getElementById('log-edit-modal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    async function submitLogEditForm(logId, stationId, projectId, formEl) {
+        const title = formEl.querySelector('#log-title')?.value?.trim();
+        const notes = formEl.querySelector('#log-notes')?.value?.trim();
+        const fileInput = formEl.querySelector('#log-attachment');
+
+        if (!title || !notes) {
+            if (typeof showNotification === 'function') {
+                showNotification('error', 'Please provide a title and notes.');
+            }
+            return;
+        }
+
+        const submitBtn = document.getElementById('log-edit-submit-btn');
+        if (submitBtn) submitBtn.disabled = true;
+
+        const hasNewFile = fileInput && fileInput.files && fileInput.files[0];
+        const url = (typeof Urls !== 'undefined' && Urls["api:v1:log-detail"])
+            ? Urls["api:v1:log-detail"](logId)
+            : `/api/v1/logs/${logId}/`;
+
+        try {
+            let resp;
+            if (hasNewFile) {
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('notes', notes || '');
+                formData.append('attachment', fileInput.files[0]);
+                resp = await fetch(url, {
+                    method: 'PATCH',
+                    headers: {'X-CSRFToken': getCSRFToken()},
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+            } else {
+                const body = JSON.stringify({ title, notes: notes || '' });
+                resp = await fetch(url, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body,
+                    credentials: 'same-origin'
+                });
+            }
+
+            if (!resp.ok) {
+                let message = `Failed to update entry (${resp.status})`;
+                try {
+                    const data = await resp.json();
+                    if (data && data.errors) {
+                        message = Object.values(data.errors).flat().join('; ');
+                    }
+                } catch (_) {}
+                if (typeof showNotification === 'function') {
+                    showNotification('error', message);
+                }
+                if (submitBtn) submitBtn.disabled = false;
+                return;
+            }
+
+            closeLogEditModal();
+            if (typeof showNotification === 'function') {
+                showNotification('success', 'Journal entry updated');
+            }
+            if (typeof activeTab === 'string' && activeTab === 'logs') {
+                loadStationLogEntries(stationId, projectId);
+            }
+        } catch (error) {
+            console.error('Error updating log entry:', error);
+            if (typeof showNotification === 'function') {
+                showNotification('error', 'Network error while updating entry');
+            }
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    }
+
+    async function deleteLogEntry(logId, stationId, projectId) {
+        if (!hasProjectAdminAccess || !hasProjectAdminAccess(projectId)) {
+            if (typeof showNotification === 'function') {
+                showNotification('warning', 'Only admins can delete');
+            }
+            return;
+        }
+        const url = (typeof Urls !== 'undefined' && Urls["api:v1:log-detail"])
+            ? Urls["api:v1:log-detail"](logId)
+            : `/api/v1/logs/${logId}/`;
+        try {
+            const resp = await fetch(url, {
+                method: 'DELETE',
+                headers: {'X-CSRFToken': getCSRFToken()},
+                credentials: 'same-origin'
+            });
+            if (!resp.ok) {
+                let message = `Failed to delete entry (${resp.status})`;
+                try {
+                    const data = await resp.json();
+                    if (data && data.errors) {
+                        message = Object.values(data.errors).flat().join('; ');
+                    }
+                } catch (_) {}
+                if (typeof showNotification === 'function') {
+                    showNotification('error', message);
+                }
+                return;
+            }
+            if (typeof showNotification === 'function') {
+                showNotification('success', 'Journal entry deleted');
+            }
+            if (typeof activeTab === 'string' && activeTab === 'logs') {
+                loadStationLogEntries(stationId, projectId);
+            }
+        } catch (error) {
+            console.error('Error deleting log entry:', error);
+            if (typeof showNotification === 'function') {
+                showNotification('error', 'Network error while deleting entry');
+            }
+        }
+    }
+
+    // Delete confirmation flow for log entries
+    function openDeleteLogConfirm(logId, stationId, projectId, isoDate, title, author) {
+        window.pendingDeleteLog = { logId, stationId, projectId };
+        const msg = document.getElementById('log-delete-confirm-message');
+        const details = document.getElementById('log-delete-confirm-details');
+        if (msg) {
+            const dateStr = formatJournalDate(isoDate);
+            msg.textContent = `Are you sure you want to delete this log entry ?`;
+        }
+        if (details) {
+            details.innerHTML = `
+                <div class="text-slate-300 text-sm">
+                    <div><span class="text-slate-400">Title:</span> <span class="text-white">${(title || '').replace(/</g,'&lt;')}</span></div>
+                    <div><span class="text-slate-400">Date:</span> <span class="text-white">${formatJournalDate(isoDate)}</span></div>
+                    <div><span class="text-slate-400">By:</span> <span class="text-white">${(author || '').replace(/</g,'&lt;')}</span></div>
+                </div>
+            `;
+        }
+        const modal = document.getElementById('log-delete-confirm-modal');
+        if (modal) modal.style.display = 'flex';
+    }
+    function closeDeleteLogConfirm() {
+        const modal = document.getElementById('log-delete-confirm-modal');
+        if (modal) modal.style.display = 'none';
+        window.pendingDeleteLog = null;
+    }
+    function confirmDeleteLog() {
+        const pending = window.pendingDeleteLog;
+        if (!pending) return closeDeleteLogConfirm();
+        closeDeleteLogConfirm();
+        deleteLogEntry(pending.logId, pending.stationId, pending.projectId);
+    }
+    async function submitLogEntryForm(stationId, projectId, formEl) {
+        const title = formEl.querySelector('#log-title')?.value?.trim();
+        const notes = formEl.querySelector('#log-notes')?.value?.trim();
+        const fileInput = formEl.querySelector('#log-attachment');
+
+        if (!title || !notes) {
+            showNotification && showNotification('error', 'Please provide a title and notes.');
+            return;
+        }
+
+        const submitBtn = document.getElementById('log-submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+        }
+
+        // Build form data for multipart upload
+        const formData = new FormData();
+        formData.append('title', title);
+        if (notes) formData.append('notes', notes);
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            formData.append('attachment', fileInput.files[0]);
+        }
+
+        try {
+            const url = (typeof Urls !== 'undefined' && Urls["api:v1:station-logs"])
+                ? Urls["api:v1:station-logs"](stationId)
+                : `/api/v1/stations/${stationId}/logs/`;
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCSRFToken()},
+                body: formData,
+                credentials: 'same-origin'
+            });
+
+            if (!resp.ok) {
+                let message = `Failed to submit entry (${resp.status})`;
+                try {
+                    const data = await resp.json();
+                    if (data && data.errors) {
+                        message = Object.values(data.errors).flat().join('; ');
+                    }
+                } catch (_) {}
+                if (typeof showNotification === 'function') {
+                    showNotification('error', message);
+                }
+                const err = document.getElementById('log-entry-error-modal');
+                if (err) err.style.display = 'flex';
+                if (submitBtn) submitBtn.disabled = false;
+                return;
+            }
+
+            // Success
+            closeLogEntryModal();
+            const success = document.getElementById('log-entry-success-modal');
+            if (success) success.style.display = 'flex';
+            if (typeof activeTab === 'string' && activeTab === 'logs') {
+                loadStationLogEntries(stationId, projectId);
+            }
+        } catch (error) {
+            console.error('Error submitting log entry:', error);
+            if (typeof showNotification === 'function') {
+                showNotification('error', 'Network error while submitting entry');
+            }
+            const err = document.getElementById('log-entry-error-modal');
+            if (err) err.style.display = 'flex';
+            if (submitBtn) submitBtn.disabled = false;
+        }
     }
 
     // Load Station Manager Content
@@ -4999,7 +5881,7 @@
         const content = document.getElementById('station-modal-content');
         content.innerHTML = `
             <div class="tab-content active">
-                <div class="flex items-center justify-center h-full min-h-[300px]">
+                <div class="flex items-center justify-center min-h-[300px]">
                     <div class="text-center">
                         <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
@@ -5074,12 +5956,12 @@
             // Station not found
             console.error(`Station ${stationId} not found in API`);
             document.getElementById('station-modal-content').innerHTML =
-                '<div class="tab-content active"><div class="flex items-center justify-center h-full min-h-[300px]"><div class="text-center text-red-400">Station not found</div></div></div>';
+                '<div class="tab-content active"><div class="flex items-center justify-center min-h-[300px]"><div class="text-center text-red-400">Station not found</div></div></div>';
 
         } catch (error) {
             console.error('Error loading station details:', error);
             document.getElementById('station-modal-content').innerHTML =
-                '<div class="tab-content active"><div class="flex items-center justify-center h-full min-h-[300px]"><div class="text-center text-red-400">Error loading station details</div></div></div>';
+                '<div class="tab-content active"><div class="flex items-center justify-center min-h-[300px]"><div class="text-center text-red-400">Error loading station details</div></div></div>';
         }
     }
     function displayStationDetails(station, projectId) {
@@ -5374,6 +6256,16 @@
                             <h3 class="text-xl font-semibold text-white">Add Resource to ${station.name}</h3>
                         </div>
                         
+                        <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                            <h4 class="text-blue-300 font-semibold mb-2">💡 Tips</h4>
+                            <ul class="text-blue-200 text-sm space-y-1">
+                                <li>• Photos and videos help document visual features</li>
+                                <li>• Sketches are great for quick diagrams or maps</li>
+                                <li>• Notes can capture detailed observations</li>
+                                <li>• All resources are automatically associated with this station</li>
+                            </ul>
+                        </div>
+                        
                         <div class="bg-slate-700/70 p-6 rounded-xl border border-slate-600/50">
                             <form id="resource-form" enctype="multipart/form-data" class="space-y-4">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -5437,16 +6329,6 @@
                                 </div>
                             </form>
                         </div>
-                        
-                        <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                            <h4 class="text-blue-300 font-semibold mb-2">💡 Tips</h4>
-                            <ul class="text-blue-200 text-sm space-y-1">
-                                <li>• Photos and videos help document visual features</li>
-                                <li>• Sketches are great for quick diagrams or maps</li>
-                                <li>• Notes can capture detailed observations</li>
-                                <li>• All resources are automatically associated with this station</li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
             `;
@@ -5459,7 +6341,7 @@
         const content = document.getElementById('station-modal-content');
         content.innerHTML = `
             <div class="tab-content active">
-                <div class="flex items-center justify-center h-full min-h-[300px]">
+                <div class="flex items-center justify-center min-h-[300px]">
                     <div class="text-center">
                         <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -6120,7 +7002,7 @@
         const instructionOverlay = document.createElement('div');
         instructionOverlay.id = 'location-picker-overlay';
         instructionOverlay.innerHTML = `
-            <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; 
+            <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; 
                         background: rgba(51, 65, 85, 0.98); border: 2px solid #38bdf8; border-radius: 12px; 
                         padding: 20px 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
                 <h3 style="color: #38bdf8; margin: 0 0 8px 0; font-size: 18px; font-weight: 600;">
@@ -7166,6 +8048,86 @@
         }
     }
 
+    // File display helpers for Log Entry modal (independent of resource type)
+    function updateLogFileDisplay(fileContainer, file) {
+        const textDiv = fileContainer.querySelector('.text-center');
+        if (!textDiv) return;
+
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            const maxSizeMB = (maxSize / (1024 * 1024)).toFixed(0);
+            if (typeof showNotification === 'function') {
+                showNotification('error', `File size cannot exceed ${maxSizeMB}MB. Your file is ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
+            }
+            resetLogFileDisplay(fileContainer);
+            return;
+        }
+
+        // Keep the designated input
+        const fileInput = textDiv.querySelector('#log-attachment') || fileContainer.querySelector('#log-attachment');
+        // Clear center then rebuild preview rows
+        textDiv.innerHTML = '';
+
+        const svg = document.createElement('svg');
+        svg.className = 'w-12 h-12 text-green-400 mx-auto mb-3';
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+
+        const statusP = document.createElement('p');
+        statusP.className = 'text-green-400 font-medium text-sm mb-1';
+        statusP.textContent = 'File Selected!';
+
+        const nameP = document.createElement('p');
+        nameP.className = 'text-slate-300 text-sm';
+        nameP.textContent = file.name;
+
+        const sizeStr = file.size < 1024 * 1024
+            ? (file.size / 1024).toFixed(1) + ' KB'
+            : (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+        const sizeP = document.createElement('p');
+        sizeP.className = 'text-slate-400 text-xs';
+        sizeP.textContent = `${sizeStr} • ${file.type || 'Unknown type'}`;
+
+        const changeP = document.createElement('p');
+        changeP.className = 'text-sky-400 text-xs mt-2 cursor-pointer hover:text-sky-300';
+        changeP.textContent = 'Click to change file';
+        changeP.onclick = () => fileContainer.click();
+
+        // Append
+        textDiv.appendChild(svg);
+        textDiv.appendChild(statusP);
+        textDiv.appendChild(nameP);
+        textDiv.appendChild(sizeP);
+        if (fileInput) {
+            textDiv.appendChild(fileInput); // ensure input remains in DOM
+        }
+        textDiv.appendChild(changeP);
+
+        // Success border
+        fileContainer.classList.add('border-green-500');
+        fileContainer.classList.remove('border-slate-600', 'border-red-500');
+    }
+
+    function resetLogFileDisplay(fileContainer) {
+        const textDiv = fileContainer.querySelector('.text-center');
+        if (!textDiv) return;
+        const fileInput = fileContainer.querySelector('#log-attachment');
+        textDiv.innerHTML = `
+            <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <p class="text-slate-300 text-sm mb-2">Click to select file or drag and drop</p>
+            <p class="text-slate-400 text-xs">Max file size: 5MB • Images, videos, documents accepted</p>
+        `;
+        if (fileInput) {
+            textDiv.appendChild(fileInput);
+            fileInput.value = '';
+        }
+        fileContainer.classList.remove('border-green-500', 'border-red-500');
+        fileContainer.classList.add('border-slate-600');
+    }
     // Sketch Operations System - stores drawing as operations for undo/redo
     class SketchOperations {
         constructor(canvas, ctx) {
@@ -7508,7 +8470,6 @@
             const modalContent = document.getElementById('station-modal-content');
             if (modalContent) {
                 modalContent.innerHTML = '';
-                modalContent.className = 'h-full';
                 modalContent.style.cssText = '';
             }
             
