@@ -13,7 +13,7 @@ dependencies = [
     "python-dotenv==1.2.1", # https://github.com/theskumar/python-dotenv
     "pytz==2025.2",         # https://github.com/stub42/pytz
     "timeago==1.0.16",      # https://github.com/hustcc/timeago
-    "wrapt==2.0.0",        # https://github.com/GrahamDumpleton/wrapt
+    "wrapt==2.0.1",        # https://github.com/GrahamDumpleton/wrapt
 
     # Redis
     # ------------------------------------------------------------------------------
