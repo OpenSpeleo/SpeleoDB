@@ -565,7 +565,6 @@
     }
     .journal-entry-title {
         color: #e2e8f0;
-        font-family: ui-serif, Georgia, 'Times New Roman', Times, serif;
         font-size: 17px;
         line-height: 1.35;
         font-weight: 600;
@@ -2366,6 +2365,29 @@
             .find(row => row.startsWith('csrftoken='))
             ?.split('=')[1];
         return cookieValue || '{{ csrf_token }}';
+    }
+
+    // Persist project visibility preferences in localStorage
+    const VISIBILITY_PREFS_STORAGE_KEY = 'speleo_project_visibility';
+    function loadProjectVisibilityPrefs() {
+        try {
+            const raw = window.localStorage.getItem(VISIBILITY_PREFS_STORAGE_KEY);
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return (parsed && typeof parsed === 'object') ? parsed : {};
+        } catch (e) {
+            return {};
+        }
+    }
+    function saveProjectVisibilityPref(projectId, isVisible) {
+        try {
+            const key = String(projectId);
+            const prefs = loadProjectVisibilityPrefs();
+            prefs[key] = !!isVisible;
+            window.localStorage.setItem(VISIBILITY_PREFS_STORAGE_KEY, JSON.stringify(prefs));
+        } catch (e) {
+            // Ignore storage errors (e.g., private mode)
+        }
     }
 
     // Function to toggle layer visibility for a project
@@ -10052,6 +10074,7 @@
                             });
 
                         // Create buttons for sorted projects
+                        const visibilityPrefs = loadProjectVisibilityPrefs();
                         sortedProjects.forEach(([projectId, projectData]) => {
                             const buttonContainer = document.createElement('div');
                             buttonContainer.className = 'project-button';
@@ -10088,7 +10111,10 @@
 
                             const toggleInput = document.createElement('input');
                             toggleInput.type = 'checkbox';
-                            toggleInput.checked = true; // Default to visible
+                            // Default to visible if no preference exists
+                            const savedPref = visibilityPrefs.hasOwnProperty(String(projectId)) ? visibilityPrefs[String(projectId)] : undefined;
+                            const initialVisible = (savedPref === undefined) ? true : !!savedPref;
+                            toggleInput.checked = initialVisible;
 
                             const toggleSlider = document.createElement('span');
                             toggleSlider.className = 'toggle-slider';
@@ -10101,6 +10127,7 @@
                             toggleInput.addEventListener('change', (e) => {
                                 const isVisible = e.target.checked;
                                 toggleProjectVisibility(projectId, isVisible);
+                                saveProjectVisibilityPref(projectId, isVisible);
                             });
 
                             toggleContainer.appendChild(toggleInput);
@@ -10111,6 +10138,9 @@
                             buttonContainer.appendChild(toggleContainer);
 
                             projectListDiv.appendChild(buttonContainer);
+
+                            // Apply initial visibility to map layers and markers
+                            toggleProjectVisibility(projectId, initialVisible);
                         });
 
                         // Expose project map globally for color updates and show the panel
