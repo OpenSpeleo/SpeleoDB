@@ -144,7 +144,7 @@ class User(AbstractUser):
 
         return filter_permissions_by_best([*user_permissions, *team_permissions])
 
-    @cached(cache=TTLCache(maxsize=100, ttl=30))
+    @cached(cache=TTLCache(maxsize=100, ttl=300))
     def _fetch_permissions(
         self, project: Project | None = None
     ) -> tuple[QuerySet[UserPermission], QuerySet[TeamPermission]]:
@@ -170,7 +170,7 @@ class User(AbstractUser):
 
         return user_permissions, team_permissions
 
-    @cached(cache=TTLCache(maxsize=100, ttl=30))
+    @cached(cache=TTLCache(maxsize=100, ttl=300))
     def get_best_permission(self, project: Project) -> TeamPermission | UserPermission:
         try:
             user_permissions, team_permissions = self._fetch_permissions(project)
@@ -186,3 +186,7 @@ class User(AbstractUser):
 
     def has_beta_access(self) -> bool:
         return self.is_beta_tester or self.is_superuser or self.is_staff
+
+    def void_permission_cache(self) -> None:
+        self._fetch_permissions.cache_clear()
+        self.get_best_permission.cache_clear()

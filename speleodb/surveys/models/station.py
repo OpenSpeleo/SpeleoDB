@@ -69,6 +69,8 @@ class Station(models.Model):
     latitude = models.DecimalField(
         max_digits=10,
         decimal_places=7,
+        null=False,
+        blank=False,
         help_text="Station latitude coordinate",
         validators=[MinValueValidator(-90), MaxValueValidator(90)],
     )
@@ -76,6 +78,8 @@ class Station(models.Model):
     longitude = models.DecimalField(
         max_digits=10,
         decimal_places=7,
+        null=False,
+        blank=False,
         help_text="Station longitude coordinate",
         validators=[MinValueValidator(-180), MaxValueValidator(180)],
     )

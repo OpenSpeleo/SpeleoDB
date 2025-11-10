@@ -215,7 +215,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             self.user.email,
         )
 
-        mutex: Mutex | None = self.project.active_mutex
+        mutex: Mutex | None = self.project.active_mutex()
         assert mutex is not None
 
         assert mutex.is_active

@@ -129,7 +129,7 @@ class ProjectUploadView(_BaseProjectView):
             return redirect(reverse("private:projects"))
 
         # Redirect users who don't own the mutex
-        mutex = data["project"].active_mutex
+        mutex = data["project"].active_mutex()
         if mutex is None or mutex.user != request.user:
             return redirect(
                 reverse(

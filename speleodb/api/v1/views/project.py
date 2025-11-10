@@ -101,6 +101,8 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
         for perm in project.permissions:
             perm.deactivate(deactivated_by=user)
 
+        user.void_permission_cache()
+
         return SuccessResponse({"id": str(project.id)})
 
 
@@ -135,9 +137,7 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
             if serializer.is_valid():
                 serializer.save()
 
-                # void permission caches
-                user._fetch_permissions.cache_clear()  # noqa: SLF001
-                user.get_best_permission.cache_clear()
+                user.void_permission_cache()
 
                 return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 

@@ -37,6 +37,8 @@ class PointOfInterest(models.Model):
     latitude = models.DecimalField(
         max_digits=10,
         decimal_places=7,
+        null=False,
+        blank=False,
         help_text="POI latitude coordinate",
         validators=[MinValueValidator(-90), MaxValueValidator(90)],
     )
@@ -44,6 +46,8 @@ class PointOfInterest(models.Model):
     longitude = models.DecimalField(
         max_digits=10,
         decimal_places=7,
+        null=False,
+        blank=False,
         help_text="POI longitude coordinate",
         validators=[MinValueValidator(-180), MaxValueValidator(180)],
     )

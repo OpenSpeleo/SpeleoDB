@@ -280,7 +280,7 @@ class WriteServiceView(RWServiceView):
 
         # Check for active mutex
         if (
-            mutex := self.get_object().active_mutex
+            mutex := self.get_object().active_mutex()
         ) is None or mutex.user != request.user:
             return generate_git_error_response(
                 "You did not lock the project - Impossible to push",

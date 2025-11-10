@@ -51,7 +51,7 @@ class SurveyTeam(models.Model):
     def __str__(self) -> str:
         return str(self.name)
 
-    @cached(cache=TTLCache(maxsize=100, ttl=30))
+    @cached(cache=TTLCache(maxsize=100, ttl=300))
     def get_membership(self, user: User) -> SurveyTeamMembership:
         return self.rel_team_memberships.get(user=user, is_active=True)
 
@@ -79,6 +79,9 @@ class SurveyTeam(models.Model):
             )
         except ObjectDoesNotExist:
             return False
+
+    def void_membership_cache(self) -> None:
+        self.get_membership.cache_clear()
 
 
 class SurveyTeamMembershipRole(BaseIntegerChoices):

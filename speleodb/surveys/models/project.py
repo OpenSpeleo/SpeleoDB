@@ -127,33 +127,29 @@ class Project(models.Model):
     def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__}: {self.name} "
-            f"[{'LOCKED' if self.active_mutex is not None else 'UNLOCKED'}]> "
+            f"[{'LOCKED' if self.active_mutex() is not None else 'UNLOCKED'}]> "
         )
 
     def __str__(self) -> str:
         return self.name
 
-    @cached(cache=TTLCache(maxsize=1, ttl=30))
-    def _cached_active_mutex(self) -> Mutex | None:
+    @cached(cache=TTLCache(maxsize=1, ttl=300))
+    def active_mutex(self) -> Mutex | None:
         try:
             return self.rel_mutexes.filter(is_active=True).select_related("user")[0]
         except IndexError:
             return None
 
     @property
-    def active_mutex(self) -> Mutex | None:
-        return self._cached_active_mutex()
-
-    @property
     def mutex_owner(self) -> User | None:
-        if (active_mutex := self._cached_active_mutex()) is None:
+        if (active_mutex := self.active_mutex()) is None:
             return None
 
         return active_mutex.user
 
     @property
     def mutex_dt(self) -> datetime.datetime | None:
-        if (active_mutex := self.active_mutex) is None:
+        if (active_mutex := self.active_mutex()) is None:
             return None
         return active_mutex.modified_date
 
@@ -163,8 +159,7 @@ class Project(models.Model):
 
         # if the user is already the mutex_owner, just refresh the mutex_dt
         # => re-acquire mutex
-        active_mutex = self.active_mutex
-        if active_mutex is not None:
+        if (active_mutex := self.active_mutex()) is not None:
             if active_mutex.user != user:
                 raise ValidationError(
                     "Another user already is currently editing this file: "
@@ -178,11 +173,10 @@ class Project(models.Model):
 
             _ = Mutex.objects.create(project=self, user=user)
 
-        # Void `active_mutex` cache
-        self._cached_active_mutex.cache_clear()
+        self.void_mutex_cache()
 
     def release_mutex(self, user: User, comment: str = "") -> None:
-        if (active_mutex := self.active_mutex) is None:
+        if (active_mutex := self.active_mutex()) is None:
             # if nobody owns the project, returns without error.
             return
 
@@ -192,8 +186,7 @@ class Project(models.Model):
         # AutoSave in the background
         active_mutex.release_mutex(user=user, comment=comment)
 
-        # Void `active_mutex` cache
-        self._cached_active_mutex.cache_clear()
+        self.void_mutex_cache()
 
     def get_best_permission(self, user: User) -> TeamPermission | UserPermission:
         return user.get_best_permission(project=self)
@@ -350,3 +343,6 @@ class Project(models.Model):
         """Refresh the GeoJSON data for this project."""
         # This method will be implemented by the refresh_project_geojson task
         # to populate the geojson field
+
+    def void_mutex_cache(self) -> None:
+        self.active_mutex.cache_clear()
