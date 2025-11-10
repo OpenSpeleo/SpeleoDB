@@ -28,7 +28,7 @@ dependencies = [
     "imageio-ffmpeg==0.6.0", # https://github.com/imageio/imageio-ffmpeg
     "Pillow==12.0.0",        # https://github.com/python-pillow/Pillow
     "pillow-heif==1.1.1",    # https://github.com/bigcat88/pillow_heif
-    "PyMuPDF==1.26.5",       # https://github.com/pymupdf/PyMuPDF
+    "PyMuPDF==1.26.6",       # https://github.com/pymupdf/PyMuPDF
 
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
