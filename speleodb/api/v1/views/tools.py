@@ -194,6 +194,12 @@ class ToolDMP2JSON(APIView):
 
             uploaded_file = request.FILES["file"]
 
+            if uploaded_file.size == 0:
+                return ErrorResponse(
+                    {"error": "The uploaded file is empty"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             # Validate file extension
             if not uploaded_file.name.lower().endswith(".dmp"):
                 return ErrorResponse(
@@ -219,7 +225,10 @@ class ToolDMP2JSON(APIView):
                 if isinstance(exc, PydanticValidationError)
                 else str(exc)
             )
-            return ErrorResponse({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse(
+                {"error": f"The DMP file seems invalid: {error}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         except Exception as exc:
             logger.exception("Error converting DMP to JSON")
