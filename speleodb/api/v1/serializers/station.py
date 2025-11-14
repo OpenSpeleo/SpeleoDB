@@ -12,11 +12,7 @@ from rest_framework import serializers
 from speleodb.surveys.models import Station
 from speleodb.surveys.models import StationResource
 from speleodb.surveys.models.station import StationResourceType
-
-
-def format_coordinate(value: Any) -> float:
-    """Format a coordinate value to 7 decimal places"""
-    return round(float(value), 7)
+from speleodb.utils.gps_utils import format_coordinate
 
 
 class StationResourceSerializer(serializers.ModelSerializer[StationResource]):

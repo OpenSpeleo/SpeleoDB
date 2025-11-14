@@ -9,18 +9,18 @@ from typing import Any
 from django_countries import countries
 from rest_framework import serializers
 
+# from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError
+
 from speleodb.surveys.models import GeoJSON
 from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import UserPermission
 from speleodb.users.models import User
 from speleodb.utils.exceptions import NotAuthorizedError
+from speleodb.utils.gps_utils import format_coordinate
+from speleodb.utils.gps_utils import maybe_convert_dms_to_decimal
 from speleodb.utils.serializer_fields import CustomChoiceField
-
-
-def format_coordinate(value: Any) -> float:
-    """Format a coordinate value to 7 decimal places"""
-    return round(float(value), 7)
 
 
 class ProjectSerializer(serializers.ModelSerializer[Project]):
@@ -69,16 +69,45 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
         # Data is immutable - need to copy
         data = data.copy()
 
-        # Round coordinates if they exist in the data
-        if "latitude" in data and data["latitude"] is not None:
-            with contextlib.suppress(ValueError, TypeError, InvalidOperation):
-                # Let the field validation handle the error
-                data["latitude"] = format_coordinate(data["latitude"])
+        if latitude := data.get("latitude", ""):
+            if isinstance(latitude, str):
+                # Remove both degree and white space
+                latitude = latitude.strip(" °")
 
-        if "longitude" in data and data["longitude"] is not None:
+                if any(quadrant in latitude.upper() for quadrant in ["E", "W"]):
+                    raise ValidationError(
+                        {
+                            "latitude": [
+                                f"Invalid quadrant received: `{latitude}`. [N, S] only"
+                            ]
+                        }
+                    )
+
+                latitude = maybe_convert_dms_to_decimal(latitude)
+
             with contextlib.suppress(ValueError, TypeError, InvalidOperation):
                 # Let the field validation handle the error
-                data["longitude"] = format_coordinate(data["longitude"])
+                data["latitude"] = format_coordinate(latitude)
+
+        if longitude := data.get("longitude", ""):
+            if isinstance(longitude, str):
+                # Remove both degree and white space
+                longitude = longitude.strip(" °")
+
+                if any(quadrant in longitude.upper() for quadrant in ["N", "S"]):
+                    raise ValidationError(
+                        {
+                            "longitude": [
+                                f"Invalid quadrant received: `{longitude}`. [E, W] only"
+                            ]
+                        }
+                    )
+
+                longitude = maybe_convert_dms_to_decimal(longitude)
+
+            with contextlib.suppress(ValueError, TypeError, InvalidOperation):
+                # Let the field validation handle the error
+                data["longitude"] = format_coordinate(longitude)
 
         return super().to_internal_value(data)
 
