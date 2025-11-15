@@ -2107,6 +2107,10 @@ span.flatpickr-weekday {
   margin-top: 4rem;
 }
 
+.-mt-2 {
+  margin-top: -0.5rem;
+}
+
 .mt-2 {
   margin-top: 0.5rem;
 }
@@ -2759,6 +2763,10 @@ span.flatpickr-weekday {
 
 .gap-2 {
   gap: 0.5rem;
+}
+
+.gap-3 {
+  gap: 0.75rem;
 }
 
 .gap-4 {

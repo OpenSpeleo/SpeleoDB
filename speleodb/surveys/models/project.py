@@ -22,7 +22,6 @@ from django_countries.fields import CountryField
 
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabManager
-from speleodb.surveys.models import PermissionLevel
 from speleodb.utils.django_base_models import BaseIntegerChoices
 from speleodb.utils.exceptions import ProjectNotFound
 
@@ -111,6 +110,11 @@ class Project(models.Model):
         blank=False,
         null=False,
         default=Visibility.PRIVATE,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Is Active",
     )
 
     class Meta:
@@ -244,9 +248,13 @@ class Project(models.Model):
         return direct_user_ids.union(team_user_ids).count()
 
     def has_write_access(self, user: User) -> bool:
+        from speleodb.surveys.models import PermissionLevel  # noqa: PLC0415
+
         return user.get_best_permission(self).level >= PermissionLevel.READ_AND_WRITE
 
     def has_admin_access(self, user: User) -> bool:
+        from speleodb.surveys.models import PermissionLevel  # noqa: PLC0415
+
         try:
             return self.get_user_permission(user=user).level >= PermissionLevel.ADMIN
         except ObjectDoesNotExist:

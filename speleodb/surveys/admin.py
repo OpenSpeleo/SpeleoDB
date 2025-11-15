@@ -4,22 +4,21 @@
 
 from __future__ import annotations
 
-import uuid
 from typing import TYPE_CHECKING
 from typing import Any
 
 from django import forms
 from django.contrib import admin
-from django.contrib import messages
 from django.db import models
 from django.db.models import F
 from django.db.models import QuerySet
-from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import GeoJSON
 from speleodb.surveys.models import LogEntry
 from speleodb.surveys.models import Mutex
+from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import PluginRelease
 from speleodb.surveys.models import PointOfInterest
 from speleodb.surveys.models import Project
@@ -152,24 +151,38 @@ class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             return f"{obj.coordinates[1]:.7f}, {obj.coordinates[0]:.7f}"
         return "-"
 
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: PointOfInterest,
+        form: forms.ModelForm[PointOfInterest],
+        change: bool,
+    ) -> None:
+        # Auto-populate user field when creating a new point of interest
+        if not change:  # Only on creation, not on edit
+            obj.user = request.user  # type: ignore[assignment]
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
+        "name",
         "country",
         "created_by",
+        "is_active",
+        "admin_count",
         "creation_date",
+        "modified_date",
         "fork_from",
         "latitude",
         "longitude",
-        "modified_date",
-        "name",
         "short_description",
     )
     ordering = ("name",)
     readonly_fields = ("created_by", "creation_date", "modified_date")
 
-    list_filter = [ProjectCountryFilter]
+    list_filter = [ProjectCountryFilter, "created_by", "is_active"]
 
     @admin.display(description="Description")
     def short_description(self, obj: Project) -> str:
@@ -180,6 +193,26 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             return desc
 
         return ""
+
+    @admin.display(description="Admins")
+    def admin_count(self, obj: Project) -> int:
+        """Display the number of data collection fields defined."""
+        return obj.rel_user_permissions.filter(
+            level=PermissionLevel.ADMIN,
+            is_active=True,
+        ).count()
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: Project,
+        form: forms.ModelForm[Project],
+        change: bool,
+    ) -> None:
+        # Auto-populate created_by field when creating a new project
+        if not change:  # Only on creation, not on edit
+            obj.created_by = request.user.email  # type: ignore[union-attr]
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(PublicAnnoucement)
@@ -221,7 +254,7 @@ class PublicAnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "style": "width: 28rem; font-family: monospace; font-size: 0.9rem;",
             }
         )
-        form.base_fields["uuid"].help_text = format_html(
+        form.base_fields["uuid"].help_text = mark_safe(
             '<input type="submit" value="Regenerate UUID" name="_regenerate_uuid">'
         )
         return form
@@ -344,6 +377,18 @@ class StationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         """Display the number of resources for this station."""
         return obj.resources.count()
 
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: Station,
+        form: forms.ModelForm[Station],
+        change: bool,
+    ) -> None:
+        # Auto-populate created_by field when creating a new station
+        if not change:  # Only on creation, not on edit
+            obj.created_by = request.user.email  # type: ignore[union-attr]
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(StationResource)
 class StationResourceAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
@@ -406,13 +451,15 @@ class StationResourceAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
 
     def save_model(
-        self, request: HttpRequest, obj: PublicAnnoucement, form: Any, change: Any
+        self,
+        request: HttpRequest,
+        obj: StationResource,
+        form: forms.ModelForm[StationResource],
+        change: bool,
     ) -> None:
-        if "_regenerate_uuid" in request.POST:
-            obj.uuid = uuid.uuid4()
-            self.message_user(
-                request, "UUID has been regenerated.", level=messages.SUCCESS
-            )
+        # Auto-populate created_by field when creating a new station resource
+        if not change:  # Only on creation, not on edit
+            obj.created_by = request.user.email  # type: ignore[union-attr]
         super().save_model(request, obj, form, change)
 
 
@@ -475,3 +522,15 @@ class LogEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         ("Attachment", {"fields": ("attachment",)}),
         ("Timestamps", {"fields": ("creation_date", "modified_date")}),
     )
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: LogEntry,
+        form: forms.ModelForm[LogEntry],
+        change: bool,
+    ) -> None:
+        # Auto-populate created_by field when creating a new log entry
+        if not change:  # Only on creation, not on edit
+            obj.created_by = request.user.email  # type: ignore[union-attr]
+        super().save_model(request, obj, form, change)

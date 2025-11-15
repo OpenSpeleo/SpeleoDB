@@ -18,6 +18,7 @@ from speleodb.surveys.models import Project
 from speleodb.surveys.models import TeamPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
+from speleodb.utils.exceptions import NotAuthorizedError
 
 if TYPE_CHECKING:
     from django.http import HttpResponse
@@ -91,13 +92,14 @@ class _BaseProjectView(AuthenticatedTemplateView):
         # Check if user only has WEB_VIEWER access
         try:
             best_permission = project.get_best_permission(user)
+
             if best_permission.level == PermissionLevel.WEB_VIEWER:
                 # User only has WEB_VIEWER access, which is not allowed for these views
                 raise PermissionError("Insufficient permissions")
 
-        except ObjectDoesNotExist as e:
+        except (ObjectDoesNotExist, NotAuthorizedError) as e:
             # User has no permissions at all
-            raise PermissionError("No permissions") from e
+            raise PermissionError("No permissions for the user found") from e
 
         return {
             "project": project,
@@ -118,15 +120,14 @@ class ProjectUploadView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-            data["limit_individual_filesize"] = (
-                settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
-            )
-            data["limit_total_filesize"] = (
-                settings.DJANGO_UPLOAD_TOTAL_FILESIZE_MB_LIMIT
-            )
-            data["limit_number_files"] = settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT
         except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
+
+        data["limit_individual_filesize"] = (
+            settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
+        )
+        data["limit_total_filesize"] = settings.DJANGO_UPLOAD_TOTAL_FILESIZE_MB_LIMIT
+        data["limit_number_files"] = settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT
 
         # Redirect users who don't own the mutex
         mutex = data["project"].active_mutex()

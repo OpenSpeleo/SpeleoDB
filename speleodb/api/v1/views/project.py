@@ -53,6 +53,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
             return SuccessResponse(
                 {"project": serializer.data, "history": project.commit_history}
             )
+
         except GitlabError:
             logger.exception("There has been a problem accessing gitlab")
             return ErrorResponse(
@@ -100,6 +101,9 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
         project = self.get_object()
         for perm in project.permissions:
             perm.deactivate(deactivated_by=user)
+
+        project.is_active = False
+        project.save()
 
         user.void_permission_cache()
 
