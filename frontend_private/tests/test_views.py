@@ -17,8 +17,8 @@ from speleodb.api.v1.tests.base_testcase import BaseUserTestCaseMixin
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
-from speleodb.api.v1.tests.factories import UserPermissionFactory
-from speleodb.surveys.models import PermissionLevel
+from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
+from speleodb.common.enums import PermissionLevel
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.tests.factories import UserFactory
@@ -169,7 +169,7 @@ class ProjectViewsTest(BaseProjectTestCaseMixin, BaseTestCase):
             case None:
                 # somebody has acquired the lock
                 user = UserFactory.create()
-                _ = UserPermissionFactory(
+                _ = UserProjectPermissionFactory(
                     target=user,
                     level=PermissionLevel.READ_AND_WRITE,
                     project=self.project,

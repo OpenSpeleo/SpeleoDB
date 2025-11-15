@@ -13,9 +13,9 @@ from django.urls import reverse
 from rest_framework.authtoken.models import Token
 
 from frontend_private.views.base import AuthenticatedTemplateView
-from speleodb.surveys.models import PermissionLevel
+from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import TeamPermission
+from speleodb.surveys.models import TeamProjectPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 from speleodb.utils.exceptions import NotAuthorizedError
@@ -207,7 +207,7 @@ class ProjectUserPermissionsView(_BaseProjectView):
 
         # Scanning through all the team memberships to collect users who get
         # project access via team permission.
-        team_permissions: list[TeamPermission] = data["project"].team_permissions
+        team_permissions: list[TeamProjectPermission] = data["project"].team_permissions
 
         filtered_team_permissions = [
             UserAccessLevel(

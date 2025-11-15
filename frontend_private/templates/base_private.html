@@ -331,6 +331,36 @@
                                 </a>
                             </li>
 
+                            <hr class="mt-5 mb-5" style="border-color: rgb(255 255 255 / 30%); border-style: dotted;">
+
+                            <!-- My Experiments -->
+                            {% if request.url_name|is_in_list:"experiments,experiment_new,experiment_details,experiment_danger_zone,experiment_gis_integration" %}
+                            {% set stroke_color = 'indigo' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:experiments' %}">
+                            {% else %}
+                            {% set stroke_color = 'slate' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:experiments' %}">
+                            {% endif %}
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="4.5 2.5 16 19">
+                                                <path d="M5 21h14"></path>
+                                                <path d="M6 18h2"></path>
+                                                <path d="M7 18v3"></path>
+                                                <path d="M9 11l3 3l6 -6l-3 -3z"></path>
+                                                <path d="M10.5 12.5l-1.5 1.5"></path>
+                                                <path d="M17 3l3 3"></path>
+                                                <path d="M12 21a6 6 0 0 0 3.715 -10.712"></path>
+                                            </svg>
+
+                                            <span class="text-sm font-medium ml-3 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">My Experiments</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+
                             <!-- My Survey Map -->
                             {% if request.url_name == 'map_viewer' %}
                             {% set stroke_color = 'indigo' %}

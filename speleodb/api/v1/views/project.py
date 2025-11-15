@@ -14,15 +14,15 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import UserHasAdminAccess
-from speleodb.api.v1.permissions import UserHasReadAccess
-from speleodb.api.v1.permissions import UserHasWebViewerAccess
-from speleodb.api.v1.permissions import UserHasWriteAccess
+from speleodb.api.v1.permissions import ProjectUserHasAdminAccess
+from speleodb.api.v1.permissions import ProjectUserHasReadAccess
+from speleodb.api.v1.permissions import ProjectUserHasWebViewerAccess
+from speleodb.api.v1.permissions import ProjectUserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import ProjectWithGeoJsonSerializer
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import ProjectGeoJSON
 from speleodb.git_engine.gitlab_manager import GitlabError
-from speleodb.surveys.models import GeoJSON
-from speleodb.surveys.models import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.utils.api_decorators import method_permission_classes
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [UserHasReadAccess]
+    permission_classes = [ProjectUserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -61,7 +61,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @method_permission_classes((UserHasWriteAccess,))
+    @method_permission_classes((ProjectUserHasWriteAccess,))
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         project = self.get_object()
@@ -76,7 +76,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    @method_permission_classes((UserHasWriteAccess,))
+    @method_permission_classes((ProjectUserHasWriteAccess,))
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         project = self.get_object()
@@ -91,7 +91,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    @method_permission_classes((UserHasAdminAccess,))
+    @method_permission_classes((ProjectUserHasAdminAccess,))
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Note: We only delete the permissions, rendering the project invisible to the
         # users. After 30 days, the project gets automatically deleted by a cronjob.
@@ -160,7 +160,7 @@ class ProjectAllGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
     """API view that returns raw GeoJSON data for a project."""
 
     queryset = Project.objects.all()
-    permission_classes = [UserHasWebViewerAccess]
+    permission_classes = [ProjectUserHasWebViewerAccess]
     serializer_class = ProjectWithGeoJsonSerializer
 
     def get_queryset(self) -> QuerySet[Project]:
@@ -169,7 +169,7 @@ class ProjectAllGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
         user_projects = [perm.project for perm in user.permissions]
 
         geojson_prefetch = Prefetch(
-            "rel_geojsons", queryset=GeoJSON.objects.order_by("-commit_date")
+            "rel_geojsons", queryset=ProjectGeoJSON.objects.order_by("-commit_date")
         )
 
         return Project.objects.filter(
@@ -204,7 +204,7 @@ class ProjectGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
     """API view that returns raw GeoJSON data for a project."""
 
     queryset = Project.objects.all()
-    permission_classes = [UserHasWebViewerAccess]
+    permission_classes = [ProjectUserHasWebViewerAccess]
     serializer_class = ProjectWithGeoJsonSerializer
     lookup_field = "id"
 

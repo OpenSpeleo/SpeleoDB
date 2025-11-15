@@ -7,31 +7,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from django import forms
 from django.contrib import admin
-from django.db import models
 from django.db.models import F
 from django.db.models import QuerySet
-from django.utils.safestring import mark_safe
 
+from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import Format
-from speleodb.surveys.models import GeoJSON
-from speleodb.surveys.models import LogEntry
-from speleodb.surveys.models import Mutex
-from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import PluginRelease
-from speleodb.surveys.models import PointOfInterest
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import PublicAnnoucement
-from speleodb.surveys.models import Station
-from speleodb.surveys.models import StationResource
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
-from speleodb.utils.admin_filters import GeoJSONProjectFilter
+from speleodb.surveys.models import ProjectMutex
+from speleodb.surveys.models import TeamProjectPermission
+from speleodb.surveys.models import UserProjectPermission
 from speleodb.utils.admin_filters import ProjectCountryFilter
-from speleodb.utils.admin_filters import StationProjectFilter
 
 if TYPE_CHECKING:
+    from django import forms
     from django.http import HttpRequest
 
 
@@ -56,7 +45,7 @@ class FormatAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         obj.save(_from_admin=True)
 
 
-@admin.register(Mutex)
+@admin.register(ProjectMutex)
 class MutexAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "project",
@@ -79,8 +68,8 @@ class MutexAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return qs.annotate(project_name=F("project__name"))  # type: ignore[no-any-return]
 
 
-@admin.register(TeamPermission)
-@admin.register(UserPermission)
+@admin.register(TeamProjectPermission)
+@admin.register(UserProjectPermission)
 class PermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "project",
@@ -92,76 +81,6 @@ class PermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
     ordering = ("project",)
     list_filter = ["is_active", "level"]
-
-
-@admin.register(PointOfInterest)
-class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "name",
-        "description_preview",
-        "latitude",
-        "longitude",
-        "user",
-        "creation_date",
-        "modified_date",
-    )
-    ordering = ("name",)
-    list_filter = ["creation_date", "modified_date"]
-    search_fields = ["name", "description"]
-    readonly_fields = ("id", "coordinates", "creation_date", "modified_date", "user")
-
-    fieldsets = (
-        ("Basic Information", {"fields": ("name", "description")}),
-        (
-            "Location",
-            {
-                "fields": ("latitude", "longitude", "coordinates"),
-                "description": "GPS coordinates for the Point of Interest",
-            },
-        ),
-        (
-            "Metadata",
-            {
-                "fields": (
-                    "id",
-                    "user",
-                    "creation_date",
-                    "modified_date",
-                ),
-                "classes": ("collapse",),
-            },
-        ),
-    )
-
-    @admin.display(description="Description")
-    def description_preview(self, obj: PointOfInterest) -> str:
-        """Show a preview of the description in the list view."""
-        if obj.description:
-            return (
-                obj.description[:50] + "..."
-                if len(obj.description) > 50  # noqa: PLR2004
-                else obj.description
-            )
-        return "-"
-
-    @admin.display(description="Coordinates (Lat, Lon)")
-    def coordinates(self, obj: PointOfInterest) -> str:
-        """Display coordinates in a readable format."""
-        if obj.coordinates:
-            return f"{obj.coordinates[1]:.7f}, {obj.coordinates[0]:.7f}"
-        return "-"
-
-    def save_model(
-        self,
-        request: HttpRequest,
-        obj: PointOfInterest,
-        form: forms.ModelForm[PointOfInterest],
-        change: bool,
-    ) -> None:
-        # Auto-populate user field when creating a new point of interest
-        if not change:  # Only on creation, not on edit
-            obj.user = request.user  # type: ignore[assignment]
-        super().save_model(request, obj, form, change)
 
 
 @admin.register(Project)
@@ -210,327 +129,6 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         change: bool,
     ) -> None:
         # Auto-populate created_by field when creating a new project
-        if not change:  # Only on creation, not on edit
-            obj.created_by = request.user.email  # type: ignore[union-attr]
-        super().save_model(request, obj, form, change)
-
-
-@admin.register(PublicAnnoucement)
-class PublicAnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "id",
-        "title",
-        "is_active",
-        "software",
-        "version",
-        "creation_date",
-        "modified_date",
-        "expiracy_date",
-    )
-
-    ordering = ("-creation_date",)
-    list_filter = ["is_active", "software", "version"]
-
-    formfield_overrides = {
-        models.TextField: {
-            "widget": forms.Textarea(
-                attrs={"cols": 100, "rows": 20, "style": "font-family: monospace;"}
-            )
-        },
-    }
-
-    def get_form(  # type: ignore[override]
-        self,
-        request: HttpRequest,
-        obj: PublicAnnoucement | None = None,
-        **kwargs: Any,
-    ) -> type[forms.ModelForm[PublicAnnoucement]]:
-        form = super().get_form(request, obj, **kwargs)
-
-        # Disable UUID field and add regenerate button help_text
-        form.base_fields["uuid"].disabled = True
-        form.base_fields["uuid"].widget.attrs.update(
-            {
-                "style": "width: 28rem; font-family: monospace; font-size: 0.9rem;",
-            }
-        )
-        form.base_fields["uuid"].help_text = mark_safe(
-            '<input type="submit" value="Regenerate UUID" name="_regenerate_uuid">'
-        )
-        return form
-
-
-@admin.register(PluginRelease)
-class PluginReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "id",
-        "plugin_version",
-        "software",
-        "min_software_version",
-        "max_software_version",
-        "operating_system",
-        "creation_date",
-        "modified_date",
-    )
-
-    ordering = ("-creation_date",)
-    list_filter = ["software", "operating_system", "plugin_version"]
-
-    formfield_overrides = {
-        models.TextField: {
-            "widget": forms.Textarea(
-                attrs={"cols": 100, "rows": 20, "style": "font-family: monospace;"}
-            )
-        },
-    }
-
-    def get_form(  # type: ignore[override]
-        self,
-        request: HttpRequest,
-        obj: PluginRelease | None = None,
-        **kwargs: Any,
-    ) -> type[forms.ModelForm[PluginRelease]]:
-        form = super().get_form(request, obj, **kwargs)
-
-        form.base_fields["sha256_hash"].widget.attrs.update(
-            {
-                "style": "width: 36rem; font-family: monospace; font-size: 0.9rem;",
-            }
-        )
-
-        form.base_fields["download_url"].widget.attrs.update(
-            {
-                "style": "width: 80rem; font-family: monospace; font-size: 0.9rem;",
-            }
-        )
-
-        return form
-
-
-class StationResourceInline(admin.TabularInline):  # type: ignore[type-arg]
-    """Inline admin for StationResource to be displayed within Station admin."""
-
-    model = StationResource
-    extra = 0
-    fields = (
-        "resource_type",
-        "title",
-        "file",
-        "created_by",
-        "creation_date",
-        "modified_date",
-    )
-    readonly_fields = ("created_by", "creation_date", "modified_date", "created_by")
-    ordering = ("-modified_date",)
-
-
-@admin.register(Station)
-class StationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "name",
-        "project",
-        "latitude",
-        "longitude",
-        "created_by",
-        "creation_date",
-        "modified_date",
-        "resource_count",
-    )
-    ordering = ("project", "name")
-    list_filter = [StationProjectFilter, "creation_date"]
-    search_fields = ["name", "description", "project__name"]
-    readonly_fields = (
-        "id",
-        "created_by",
-        "creation_date",
-        "modified_date",
-        "resource_count",
-    )
-    inlines = [StationResourceInline]
-
-    fieldsets = (
-        ("Basic Information", {"fields": ("project", "name", "description")}),
-        (
-            "Location",
-            {
-                "fields": ("latitude", "longitude"),
-                "description": "GPS coordinates for the station location",
-            },
-        ),
-        (
-            "Metadata",
-            {
-                "fields": (
-                    "id",
-                    "created_by",
-                    "creation_date",
-                    "modified_date",
-                    "resource_count",
-                ),
-                "classes": ("collapse",),
-            },
-        ),
-    )
-
-    @admin.display(description="Resources")
-    def resource_count(self, obj: Station) -> int:
-        """Display the number of resources for this station."""
-        return obj.resources.count()
-
-    def save_model(
-        self,
-        request: HttpRequest,
-        obj: Station,
-        form: forms.ModelForm[Station],
-        change: bool,
-    ) -> None:
-        # Auto-populate created_by field when creating a new station
-        if not change:  # Only on creation, not on edit
-            obj.created_by = request.user.email  # type: ignore[union-attr]
-        super().save_model(request, obj, form, change)
-
-
-@admin.register(StationResource)
-class StationResourceAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "title",
-        "station",
-        "resource_type",
-        "created_by",
-        "creation_date",
-        "has_file",
-        "has_text_content",
-    )
-    ordering = ("station", "-modified_date")
-    list_filter = ["resource_type", "creation_date", "modified_date"]
-    search_fields = ["title", "description", "station__name", "text_content"]
-    readonly_fields = (
-        "id",
-        "created_by",
-        "creation_date",
-        "modified_date",
-        "is_file_based",
-        "is_text_based",
-    )
-
-    @admin.display(
-        description="Has File",
-        boolean=True,
-    )
-    def has_file(self, obj: StationResource) -> bool:
-        """Check if resource has a file attached."""
-        return bool(obj.file)
-
-    @admin.display(
-        description="Has Text",
-        boolean=True,
-    )
-    def has_text_content(self, obj: StationResource) -> bool:
-        """Check if resource has text content."""
-        return bool(obj.text_content)
-
-    fieldsets = (
-        (
-            "Station Information",
-            {"fields": ("station", "resource_type", "title", "description")},
-        ),
-        ("Content", {"fields": ("file", "text_content")}),
-        (
-            "Metadata",
-            {
-                "fields": (
-                    "id",
-                    "created_by",
-                    "creation_date",
-                    "modified_date",
-                    "is_file_based",
-                    "is_text_based",
-                )
-            },
-        ),
-    )
-
-    def save_model(
-        self,
-        request: HttpRequest,
-        obj: StationResource,
-        form: forms.ModelForm[StationResource],
-        change: bool,
-    ) -> None:
-        # Auto-populate created_by field when creating a new station resource
-        if not change:  # Only on creation, not on edit
-            obj.created_by = request.user.email  # type: ignore[union-attr]
-        super().save_model(request, obj, form, change)
-
-
-@admin.register(GeoJSON)
-class GeoJSONAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "project",
-        "commit_sha",
-        "commit_date",
-        "creation_date",
-        "modified_date",
-    )
-
-    readonly_fields = (
-        "creation_date",
-        "modified_date",
-    )
-
-    fields = (
-        "project",
-        "commit_sha",
-        "commit_date",
-        "file",
-        "creation_date",
-        "modified_date",
-    )
-    list_filter = [GeoJSONProjectFilter, "commit_date"]
-
-    def has_change_permission(
-        self, request: HttpRequest, obj: GeoJSON | None = None
-    ) -> bool:
-        # Immutable: no edits after creation
-        if obj is not None:
-            return False
-        return super().has_change_permission(request, obj)
-
-
-@admin.register(LogEntry)
-class LogEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "id",
-        "station",
-        "created_by",
-        "title",
-        "creation_date",
-        "modified_date",
-    )
-    list_filter = ("station", "creation_date", "modified_date")
-    search_fields = (
-        "title",
-        "notes",
-        "created_by",
-        "station__name",
-        "station__project__name",
-    )
-    readonly_fields = ("created_by", "creation_date", "modified_date")
-    ordering = ("-creation_date",)
-    fieldsets = (
-        (None, {"fields": ("station", "created_by", "title", "notes")}),
-        ("Attachment", {"fields": ("attachment",)}),
-        ("Timestamps", {"fields": ("creation_date", "modified_date")}),
-    )
-
-    def save_model(
-        self,
-        request: HttpRequest,
-        obj: LogEntry,
-        form: forms.ModelForm[LogEntry],
-        change: bool,
-    ) -> None:
-        # Auto-populate created_by field when creating a new log entry
         if not change:  # Only on creation, not on edit
             obj.created_by = request.user.email  # type: ignore[union-attr]
         super().save_model(request, obj, form, change)

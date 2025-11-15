@@ -15,9 +15,9 @@ from django.contrib import admin
 from django.db.models import Model
 from django_countries import countries
 
-from speleodb.surveys.models import GeoJSON
+from speleodb.gis.models import ProjectGeoJSON
+from speleodb.gis.models import Station
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import Station
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import User
 
@@ -145,7 +145,7 @@ class StationProjectFilter(BaseProjectFilter[Station]):
         )
 
 
-class GeoJSONProjectFilter(BaseProjectFilter[GeoJSON]):
+class GeoJSONProjectFilter(BaseProjectFilter[ProjectGeoJSON]):
     """Custom filter that shows only countries actually used by users."""
 
     def get_used_projects(self) -> list[Project]:

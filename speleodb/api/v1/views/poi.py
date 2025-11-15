@@ -12,7 +12,7 @@ from rest_framework.generics import GenericAPIView
 from speleodb.api.v1.permissions import POIOwnershipPermission
 from speleodb.api.v1.serializers.poi import PointOfInterestGeoJSONSerializer
 from speleodb.api.v1.serializers.poi import PointOfInterestSerializer
-from speleodb.surveys.models import PointOfInterest
+from speleodb.gis.models import PointOfInterest
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse

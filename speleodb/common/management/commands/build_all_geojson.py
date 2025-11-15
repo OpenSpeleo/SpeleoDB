@@ -16,7 +16,7 @@ from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import ArianeInterface
 
-from speleodb.surveys.models import GeoJSON
+from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
 
 if TYPE_CHECKING:
@@ -41,7 +41,7 @@ class Command(BaseCommand):
 
                 for commit in git_repo.commits:
                     # Download all the geojson files for each commit
-                    if GeoJSON.objects.filter(
+                    if ProjectGeoJSON.objects.filter(
                         project=project, commit_sha=commit.hexsha
                     ).exists():
                         logger.info(
@@ -79,7 +79,7 @@ class Command(BaseCommand):
                                         content_type="application/geo+json",
                                     )
 
-                                    GeoJSON.objects.create(
+                                    ProjectGeoJSON.objects.create(
                                         project=project,
                                         commit_sha=commit.hexsha,
                                         commit_date=commit.date_dt,

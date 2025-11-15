@@ -14,8 +14,8 @@ from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.api.v1.tests.utils import is_valid_git_sha
+from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import Format
-from speleodb.surveys.models import PermissionLevel
 from speleodb.utils.test_utils import named_product
 
 BASE_DIR = pathlib.Path(__file__).parent / "artifacts"

@@ -1,3 +1,9 @@
+from frontend_private.views.experiments import ExperimentDangerZoneView
+from frontend_private.views.experiments import ExperimentDetailsView
+from frontend_private.views.experiments import ExperimentGISView
+from frontend_private.views.experiments import ExperimentListingView
+from frontend_private.views.experiments import ExperimentUserPermissionsView
+from frontend_private.views.experiments import NewExperimentView
 from frontend_private.views.map import MapViewerView
 from frontend_private.views.project import NewProjectView
 from frontend_private.views.project import ProjectDangerZoneView
@@ -28,8 +34,14 @@ from frontend_private.views.user import PreferencesView
 __all__ = [
     "AuthTokenView",
     "DashboardView",
+    "ExperimentDangerZoneView",
+    "ExperimentDetailsView",
+    "ExperimentGISView",
+    "ExperimentListingView",
+    "ExperimentUserPermissionsView",
     "FeedbackView",
     "MapViewerView",
+    "NewExperimentView",
     "NewProjectView",
     "NewTeamView",
     "PassWordView",

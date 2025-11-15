@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from django.db import models
 
-from speleodb.surveys.models.permission_lvl import PermissionLevel
+from speleodb.common.enums import PermissionLevel
 from speleodb.users.models import User
 
 if TYPE_CHECKING:

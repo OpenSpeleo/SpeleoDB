@@ -1,0 +1,308 @@
+{% extends "base_private.html" %}
+{% load static %}
+
+{% load countries %}
+{% load set_var %}
+{% load str_format %}
+
+{% block extra_css %}
+<style>
+    /* Mobile card layout for experiments */
+    @media (max-width: 768px) {
+        .experiments-table {
+            display: none;
+        }
+        
+        .experiments-cards {
+            display: block;
+        }
+        
+        .experiment-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .experiment-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .experiment-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .experiment-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            flex: 1;
+            margin-right: 12px;
+        }
+        
+        .experiment-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .experiment-card-body {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .experiment-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .experiment-card-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        
+        .experiment-card-value {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+            text-align: right;
+        }
+        
+        .experiment-card-badge {
+            text-align: right;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .experiments-table {
+            display: block;
+        }
+        
+        .experiments-cards {
+            display: none;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+
+        <!-- Page header -->
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+
+            <!-- Left: Title -->
+            <div class="mb-4 sm:mb-0">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
+                    My Scientific Experiments
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chart-dots-3 inline h-10" viewBox="0 0 24 24">
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M5 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M16 15m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M18 6m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M6 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M9 17l5 -1.5" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M6.5 8.5l7.81 5.37" />
+                        <path class="stroke-current stroke-width-1 text-indigo-400" d="M7 7l8 -1" />
+                      </svg>
+                </h1>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+
+                <!-- Create Project button -->
+                <a href="{% url 'private:experiment_new' %}" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                    <svg class="w-4 h-4 fill-current opacity-50 shrink-0" viewBox="0 0 16 16">
+                        <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                    </svg>
+                    <span class="ml-2">Create Experiment</span>
+                </a>
+
+            </div>
+
+        </div>
+
+        <!-- Mobile Cards View -->
+        <div class="experiments-cards">
+            <div class="p-4">
+                {% for experiment_perm in experiment_perms %}
+                <div class="experiment-card">
+                    <div class="experiment-card-header">
+                        <div class="experiment-card-title">{{ experiment_perm.experiment.name }}</div>
+                        <div class="experiment-card-actions">
+                            <a href="{% url 'private:experiment_details' experiment_id=experiment_perm.experiment.id %}" class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition">
+                                <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="View">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="experiment-card-body">
+                        <div class="experiment-card-row">
+                            <span class="experiment-card-label">Code</span>
+                            <span class="experiment-card-value">
+                                {{ experiment_perm.experiment.code }}
+                            </span>
+                        </div>
+                        <div class="experiment-card-row">
+                            <span class="experiment-card-label">Collaborators</span>
+                            <span class="experiment-card-value">{{ experiment_perm.experiment.collaborator_count }}</span>
+                        </div>
+                        <div class="experiment-card-row">
+                            <span class="experiment-card-label">Created By</span>
+                            <span class="experiment-card-value">
+                                {{ experiment_perm.experiment.created_by }}
+                            </span>
+                        </div>
+                        <div class="experiment-card-row">
+                            <span class="experiment-card-label">Permission</span>
+                            <div class="experiment-card-badge">
+                                {% if experiment_perm.level_label == "READ_ONLY" %}
+                                    {% set bg_color = 'bg-pastel-beige' %}
+                                {% elif experiment_perm.level_label == "READ_AND_WRITE" %}
+                                    {% set bg_color = 'bg-pastel-navy' %}
+                                {% elif experiment_perm.level_label == "ADMIN" %}
+                                    {% set bg_color = 'bg-pastel-orange' %}
+                                {% else %}
+                                    {% set bg_color = '' %}
+                                {% endif %}
+                                <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 {{ bg_color }}">
+                                    {{ experiment_perm.level_label|normalize }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="experiment-card-row">
+                            <span class="experiment-card-label">Start Date</span>
+                            <span class="experiment-card-value">{{ experiment_perm.experiment.start_date|date:"Y/m/d" }}</span>
+                        </div>
+                        <div class="experiment-card-row">
+                            <span class="experiment-card-label">End Date</span>
+                            <span class="experiment-card-value">{{ experiment_perm.experiment.end_date|date:"Y/m/d" }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="experiments-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+
+            <div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full text-slate-300">
+                        <!-- Table header -->
+                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                            <tr>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
+                                    <div class="font-semibold text-center">Experiment Name</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Code</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Collaborators</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Created By</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Permission</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Start Date</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">End Date</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                </th>
+                            </tr>
+                        </thead>
+                        <!-- Table body -->
+                        <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
+                            {% for experiment_perm in experiment_perms %}
+                                <!-- Row -->
+                                <tr>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
+                                        <div class="text-center">
+                                            <div class="font-medium text-slate-100">{{ experiment_perm.experiment.name }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="text-center">{{ experiment_perm.experiment.code }}</div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="text-center">{{ experiment_perm.experiment.collaborator_count }}</div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="text-center">{{ experiment_perm.experiment.created_by }}</div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="text-center">
+                                            {% if experiment_perm.level_label == "READ_ONLY" %}
+                                                {% set bg_color = 'bg-pastel-beige' %}
+                                            {% elif experiment_perm.level_label == "READ_AND_WRITE" %}
+                                                {% set bg_color = 'bg-pastel-navy' %}
+                                            {% elif experiment_perm.level_label == "ADMIN" %}
+                                                {% set bg_color = 'bg-pastel-orange' %}
+                                            {% else %}
+                                                {% set bg_color = '' %}
+                                            {% endif %}
+                                            <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 {{ bg_color }}">
+                                                {{ experiment_perm.level_label|normalize }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="text-center">
+                                            {{ experiment_perm.experiment.start_date|date:"Y/m/d" }}
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="text-center">
+                                            {{ experiment_perm.experiment.end_date|date:"Y/m/d" }}
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="flex items-center text-slate-800">
+                                            {% set margin_left = '52' %} <!-- 40 + 12 -->
+                                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3" style="margin-left: {{ margin_left }}px;">
+                                                <a href="{% url 'private:experiment_details' experiment_id=experiment_perm.experiment.id %}">
+                                                    <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="Icon Open">
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+{% include 'snippets/modal_confirmation_mass_unlock.html' %}
+{% include 'snippets/modal_confirmation_unlock.html' %}
+
+{% endblock content %}

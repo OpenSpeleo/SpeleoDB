@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from django.urls import URLPattern
     from django.urls import URLResolver
 
-resource_urlpatterns: list[URLPattern | URLResolver] = [
+urlpatterns: list[URLPattern | URLResolver] = [
     path(
         "<uuid:id>/",
         StationResourceSpecificApiView.as_view(),

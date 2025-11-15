@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import UserHasWriteAccess
+from speleodb.api.v1.permissions import ProjectUserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class ProjectAcquireApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [UserHasWriteAccess]
+    permission_classes = [ProjectUserHasWriteAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -55,7 +55,7 @@ class ProjectAcquireApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
 class ProjectReleaseApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [UserHasWriteAccess]
+    permission_classes = [ProjectUserHasWriteAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 

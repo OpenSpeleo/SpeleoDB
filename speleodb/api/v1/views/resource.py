@@ -16,8 +16,8 @@ from speleodb.api.v1.permissions import StationUserHasAdminAccess
 from speleodb.api.v1.permissions import StationUserHasReadAccess
 from speleodb.api.v1.permissions import StationUserHasWriteAccess
 from speleodb.api.v1.serializers.station import StationResourceSerializer
-from speleodb.surveys.models import Station
-from speleodb.surveys.models import StationResource
+from speleodb.gis.models import Station
+from speleodb.gis.models import StationResource
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse

@@ -5,40 +5,20 @@
 
 from __future__ import annotations
 
-# Plugin / App related Models
-from speleodb.surveys.models.annoucement import PublicAnnoucement
-from speleodb.surveys.models.plugin_release import PluginRelease
-
 # Project Related Models
 from speleodb.surveys.models.project import Project
 from speleodb.surveys.models.format import Format
-from speleodb.surveys.models.geojson import GeoJSON
-from speleodb.surveys.models.mutex import Mutex
+from speleodb.surveys.models.mutex import ProjectMutex
 
 # Permission Related Models
-from speleodb.surveys.models.permission_lvl import PermissionLevel
-from speleodb.surveys.models.permission_team import TeamPermission
-from speleodb.surveys.models.permission_user import UserPermission
-
-# GIS Models
-from speleodb.surveys.models.point_of_interest import PointOfInterest
-from speleodb.surveys.models.station import Station
-from speleodb.surveys.models.station import StationResource
-from speleodb.surveys.models.log_entry import LogEntry
+from speleodb.surveys.models.permission_team import TeamProjectPermission
+from speleodb.surveys.models.permission_user import UserProjectPermission
 
 
 __all__ = [
     "Format",
-    "GeoJSON",
-    "LogEntry",
-    "Mutex",
-    "PermissionLevel",
-    "PluginRelease",
-    "PointOfInterest",
     "Project",
-    "PublicAnnoucement",
-    "Station",
-    "StationResource",
-    "TeamPermission",
-    "UserPermission",
+    "ProjectMutex",
+    "TeamProjectPermission",
+    "UserProjectPermission",
 ]

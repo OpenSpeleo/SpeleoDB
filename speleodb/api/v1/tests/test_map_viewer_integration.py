@@ -22,11 +22,11 @@ from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
-from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import Station
-from speleodb.surveys.models import StationResource
-from speleodb.surveys.models import UserPermission
-from speleodb.surveys.models.station import StationResourceType
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import Station
+from speleodb.gis.models import StationResource
+from speleodb.gis.models.station import StationResourceType
+from speleodb.surveys.models import UserProjectPermission
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.test_utils import named_product
 
@@ -599,7 +599,7 @@ class TestMapViewerWithFixtures(TransactionTestCase):
         self.auth = f"Token {self.token.key}"
 
         # Create user permission
-        UserPermission.objects.create(
+        UserProjectPermission.objects.create(
             target=self.user, project=self.project, level=PermissionLevel.READ_AND_WRITE
         )
 

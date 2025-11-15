@@ -11,7 +11,7 @@ import environ
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 
-# APPS_DIR = BASE_DIR / "speleodb"
+APPS_DIR = BASE_DIR / "speleodb"
 
 env = environ.Env()
 
@@ -161,6 +161,8 @@ LOCAL_APPS = [
     "speleodb.git_proxy",
     # Object Apps
     "speleodb.common",
+    "speleodb.gis",
+    "speleodb.plugins",
     "speleodb.surveys",
     "speleodb.users",
     # HTML Apps
@@ -366,7 +368,7 @@ TEMPLATES = [
         # https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-TEMPLATES-BACKEND
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         # https://docs.djangoproject.com/en/dev/ref/settings/#dirs
-        # "DIRS": [str(APPS_DIR / "templates")],
+        "DIRS": [str(APPS_DIR / "templates")],
         # https://docs.djangoproject.com/en/dev/ref/settings/#app-dirs
         "APP_DIRS": True,
         "OPTIONS": {

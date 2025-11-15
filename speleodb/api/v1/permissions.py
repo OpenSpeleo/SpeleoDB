@@ -8,12 +8,15 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from rest_framework.exceptions import NotAuthenticated
 
-from speleodb.surveys.models import LogEntry
-from speleodb.surveys.models import PermissionLevel
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import Experiment
+from speleodb.gis.models import ExperimentRecord
+from speleodb.gis.models import ExperimentUserPermission
+from speleodb.gis.models import LogEntry
+from speleodb.gis.models import PointOfInterest
+from speleodb.gis.models import Station
+from speleodb.gis.models import StationResource
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import Station
-from speleodb.surveys.models import StationResource
-from speleodb.surveys.models.point_of_interest import PointOfInterest
 from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.utils.exceptions import NotAuthorizedError
 
@@ -23,6 +26,8 @@ if TYPE_CHECKING:
 
     from speleodb.users.models.team import SurveyTeam
     from speleodb.utils.requests import AuthenticatedDRFRequest
+
+# ================ PROJECT PERMISSIONS ================ #
 
 
 class BaseProjectAccessLevel(permissions.BasePermission):
@@ -47,6 +52,25 @@ class BaseProjectAccessLevel(permissions.BasePermission):
             )
         except NotAuthorizedError:
             return False
+
+
+class ProjectUserHasAdminAccess(BaseProjectAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
+
+
+class ProjectUserHasWriteAccess(BaseProjectAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
+
+
+class ProjectUserHasReadAccess(BaseProjectAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
+
+
+class ProjectUserHasWebViewerAccess(BaseProjectAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.WEB_VIEWER
+
+
+# ================ STATION PERMISSIONS ================ #
 
 
 class BaseStationAccessLevel(permissions.BasePermission):
@@ -97,23 +121,6 @@ class BaseStationAccessLevel(permissions.BasePermission):
             return False
 
 
-class UserHasAdminAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
-
-
-class UserHasWriteAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
-
-
-class UserHasReadAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
-
-
-class UserHasWebViewerAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.WEB_VIEWER
-
-
-# Station-specific permission classes
 class StationUserHasAdminAccess(BaseStationAccessLevel):
     MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
 
@@ -128,6 +135,71 @@ class StationUserHasReadAccess(BaseStationAccessLevel):
 
 class StationUserHasWebViewerAccess(BaseStationAccessLevel):
     MIN_ACCESS_LEVEL = PermissionLevel.WEB_VIEWER
+
+
+# ================ EXPERIMENT PERMISSIONS ================ #
+
+
+class BaseExperimentAccessLevel(permissions.BasePermission):
+    """Base permission class for Experiment objects that checks permissions on the
+    experiment."""
+
+    MIN_ACCESS_LEVEL: int
+
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
+
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: Experiment | ExperimentRecord,
+    ) -> bool:
+        experiment: Experiment
+        match obj:
+            case Experiment():
+                # Try station.project for StationResource objects
+                experiment = obj
+
+            case ExperimentRecord():
+                # Try station.project for StationResource objects
+                experiment = obj.experiment
+
+            case _:
+                raise TypeError(
+                    f"Unknown `type` received: {type(obj)}. Expected: Experiment"
+                )
+
+        try:
+            return (
+                ExperimentUserPermission.objects.get(
+                    user=request.user,
+                    experiment=experiment,
+                    is_active=True,
+                ).level
+                >= self.MIN_ACCESS_LEVEL
+            )
+
+        except ObjectDoesNotExist:
+            return False
+
+
+class ExperimentUserHasAdminAccess(BaseExperimentAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
+
+
+class ExperimentUserHasWriteAccess(BaseExperimentAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
+
+
+class ExperimentUserHasReadAccess(BaseExperimentAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
+
+
+# ================ TEAM PERMISSIONS ================ #
 
 
 class BaseTeamAccessLevel(permissions.BasePermission):
@@ -158,6 +230,9 @@ class UserHasLeaderAccess(BaseTeamAccessLevel):
 
 class UserHasMemberAccess(BaseTeamAccessLevel):
     MIN_ACCESS_LEVEL = SurveyTeamMembershipRole.MEMBER
+
+
+# ================ MISC ================ #
 
 
 class IsReadOnly(permissions.BasePermission):

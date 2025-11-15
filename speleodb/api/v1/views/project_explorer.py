@@ -11,7 +11,7 @@ from gitdb.exc import BadName as GitRevBadName
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import UserHasReadAccess
+from speleodb.api.v1.permissions import ProjectUserHasReadAccess
 from speleodb.api.v1.serializers import GitCommitListSerializer
 from speleodb.api.v1.serializers import GitCommitSerializer
 from speleodb.api.v1.serializers import GitFileListSerializer
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [UserHasReadAccess]
+    permission_classes = [ProjectUserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -77,7 +77,7 @@ class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
 class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [UserHasReadAccess]
+    permission_classes = [ProjectUserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 

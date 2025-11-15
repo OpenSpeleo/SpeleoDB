@@ -9,7 +9,7 @@ import pytest
 
 from speleodb.api.v1.serializers.poi import PointOfInterestGeoJSONSerializer
 from speleodb.api.v1.serializers.poi import PointOfInterestSerializer
-from speleodb.surveys.models import PointOfInterest
+from speleodb.gis.models import PointOfInterest
 from speleodb.users.models import User
 
 

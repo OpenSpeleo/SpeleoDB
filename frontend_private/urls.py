@@ -10,8 +10,14 @@ from django.urls import path
 import speleodb.utils.url_converters  # noqa: F401  # Necessary to import the converters
 from frontend_private.views import AuthTokenView
 from frontend_private.views import DashboardView
+from frontend_private.views import ExperimentDangerZoneView
+from frontend_private.views import ExperimentDetailsView
+from frontend_private.views import ExperimentGISView
+from frontend_private.views import ExperimentListingView
+from frontend_private.views import ExperimentUserPermissionsView
 from frontend_private.views import FeedbackView
 from frontend_private.views import MapViewerView
+from frontend_private.views import NewExperimentView
 from frontend_private.views import NewProjectView
 from frontend_private.views import NewTeamView
 from frontend_private.views import PassWordView
@@ -77,6 +83,25 @@ project_patterns: list[URLPattern | URLResolver] = [
     ),
 ]
 
+experiment_patterns = [
+    path("", ExperimentDetailsView.as_view(), name="experiment_details"),
+    path(
+        "danger_zone/",
+        ExperimentDangerZoneView.as_view(),
+        name="experiment_danger_zone",
+    ),
+    path(
+        "permissions/",
+        ExperimentUserPermissionsView.as_view(),
+        name="experiment_user_permissions",
+    ),
+    path(
+        "gis/",
+        ExperimentGISView.as_view(),
+        name="experiment_gis_integration",
+    ),
+]
+
 team_urls: list[URLPattern] = [
     path("", TeamDetailsView.as_view(), name="team_details"),
     path(
@@ -106,6 +131,10 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("projects/", ProjectListingView.as_view(), name="projects"),
     path("project/new/", NewProjectView.as_view(), name="project_new"),
     path("project/<uuid:project_id>/", include(project_patterns)),
+    # Experiments URLs
+    path("experiments/", ExperimentListingView.as_view(), name="experiments"),
+    path("experiment/new/", NewExperimentView.as_view(), name="experiment_new"),
+    path("experiment/<uuid:experiment_id>/", include(experiment_patterns)),
     # Map Viewer URLs
     path("map_viewer/", MapViewerView.as_view(), name="map_viewer"),
     # Tool URLs

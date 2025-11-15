@@ -456,6 +456,42 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/experiment_records/<uuid:id>/",
+        "module": "speleodb.api.v1.views.experiment.ExperimentRecordSpecificApiView",
+        "name": "api:v1:experiment-records-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/experiments/",
+        "module": "speleodb.api.v1.views.experiment.ExperimentApiView",
+        "name": "api:v1:experiments",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/experiments/<uuid:id>/",
+        "module": "speleodb.api.v1.views.experiment.ExperimentSpecificApiView",
+        "name": "api:v1:experiment-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/experiments/<uuid:id>/permission/detail/",
+        "module": "speleodb.api.v1.views.user_experiment_permission.ExperimentUserPermissionSpecificApiView",
+        "name": "api:v1:experiment-user-permissions-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/experiments/<uuid:id>/permissions/",
+        "module": "speleodb.api.v1.views.user_experiment_permission.ExperimentUserPermissionListApiView",
+        "name": "api:v1:experiment-user-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis/experiment/<gis_token>/",
+        "module": "speleodb.api.v1.views.experiment.ExperimentGISApiView",
+        "name": "api:v1:gis:experiment",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/logs/<uuid:id>/",
         "module": "speleodb.api.v1.views.log_entry.LogEntrySpecificApiView",
         "name": "api:v1:log-detail",
@@ -535,25 +571,25 @@
     },
     {
         "url": "/api/v1/projects/<uuid:id>/permission/team/detail/",
-        "module": "speleodb.api.v1.views.team_permission.ProjectTeamPermissionSpecificApiView",
+        "module": "speleodb.api.v1.views.team_project_permission.ProjectTeamPermissionSpecificApiView",
         "name": "api:v1:project-team-permissions-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/permission/user/detail/",
-        "module": "speleodb.api.v1.views.user_permission.ProjectUserPermissionSpecificApiView",
+        "module": "speleodb.api.v1.views.user_project_permission.ProjectUserPermissionSpecificApiView",
         "name": "api:v1:project-user-permissions-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/permissions/team/",
-        "module": "speleodb.api.v1.views.team_permission.ProjectTeamPermissionListApiView",
+        "module": "speleodb.api.v1.views.team_project_permission.ProjectTeamPermissionListApiView",
         "name": "api:v1:project-team-permissions",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/permissions/user/",
-        "module": "speleodb.api.v1.views.user_permission.ProjectUserPermissionListApiView",
+        "module": "speleodb.api.v1.views.user_project_permission.ProjectUserPermissionListApiView",
         "name": "api:v1:project-user-permissions",
         "decorators": ""
     },
@@ -609,6 +645,12 @@
         "url": "/api/v1/stations/<uuid:id>/",
         "module": "speleodb.api.v1.views.station.StationSpecificApiView",
         "name": "api:v1:station-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/<uuid:id>/experiment/<uuid:exp_id>/records/",
+        "module": "speleodb.api.v1.views.experiment.ExperimentRecordApiView",
+        "name": "api:v1:experiment-records",
         "decorators": ""
     },
     {
@@ -771,6 +813,42 @@
         "url": "/private/auth-token/",
         "module": "frontend_private.views.user.AuthTokenView",
         "name": "private:user_authtoken",
+        "decorators": ""
+    },
+    {
+        "url": "/private/experiment/<uuid:experiment_id>/",
+        "module": "frontend_private.views.experiments.ExperimentDetailsView",
+        "name": "private:experiment_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/experiment/<uuid:experiment_id>/danger_zone/",
+        "module": "frontend_private.views.experiments.ExperimentDangerZoneView",
+        "name": "private:experiment_danger_zone",
+        "decorators": ""
+    },
+    {
+        "url": "/private/experiment/<uuid:experiment_id>/gis/",
+        "module": "frontend_private.views.experiments.ExperimentGISView",
+        "name": "private:experiment_gis_integration",
+        "decorators": ""
+    },
+    {
+        "url": "/private/experiment/<uuid:experiment_id>/permissions/",
+        "module": "frontend_private.views.experiments.ExperimentUserPermissionsView",
+        "name": "private:experiment_user_permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/experiment/new/",
+        "module": "frontend_private.views.experiments.NewExperimentView",
+        "name": "private:experiment_new",
+        "decorators": ""
+    },
+    {
+        "url": "/private/experiments/",
+        "module": "frontend_private.views.experiments.ExperimentListingView",
+        "name": "private:experiments",
         "decorators": ""
     },
     {

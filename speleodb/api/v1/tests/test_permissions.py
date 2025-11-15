@@ -8,7 +8,7 @@ from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
-from speleodb.surveys.models import PermissionLevel
+from speleodb.common.enums import PermissionLevel
 
 
 class TestPermissionsApiView(BaseAPIProjectTestCase):

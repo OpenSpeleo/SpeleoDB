@@ -8,7 +8,7 @@ from typing import Any
 
 from rest_framework import serializers
 
-from speleodb.surveys.models import PointOfInterest
+from speleodb.gis.models import PointOfInterest
 from speleodb.utils.gps_utils import format_coordinate
 
 

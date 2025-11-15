@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 from itertools import cycle
+from typing import TYPE_CHECKING
 
 from django.urls import reverse
 from rest_framework import status
@@ -12,12 +13,14 @@ from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
-from speleodb.api.v1.tests.factories import TeamPermissionFactory
-from speleodb.api.v1.tests.factories import UserPermissionFactory
-from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
+from speleodb.api.v1.tests.factories import TeamProjectPermissionFactory
+from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
+from speleodb.common.enums import PermissionLevel
 from speleodb.users.models import SurveyTeamMembershipRole
+
+if TYPE_CHECKING:
+    from speleodb.surveys.models import TeamProjectPermission
+    from speleodb.surveys.models import UserProjectPermission
 
 
 class TestProjectInteraction(BaseAPITestCase):
@@ -31,14 +34,14 @@ class TestProjectInteraction(BaseAPITestCase):
 
         perm_level_iter = cycle(PermissionLevel.values_no_admin)
 
-        perm_lvls: list[UserPermission | TeamPermission] = []
+        perm_lvls: list[UserProjectPermission | TeamProjectPermission] = []
 
         for project_id in range(self.PROJECT_COUNT):
             # spread equally some projects with user and team access
             project = ProjectFactory.create(created_by=self.user.email)
             if project_id % 2 == 0:
                 perm_lvls.append(
-                    UserPermissionFactory(  # type: ignore[arg-type]
+                    UserProjectPermissionFactory(  # type: ignore[arg-type]
                         target=self.user,
                         level=next(perm_level_iter),
                         project=project,
@@ -60,7 +63,7 @@ class TestProjectInteraction(BaseAPITestCase):
 
                 # Give the newly created permission to the project
                 perm_lvls.append(
-                    TeamPermissionFactory(  # type: ignore[arg-type]
+                    TeamProjectPermissionFactory(  # type: ignore[arg-type]
                         target=team,
                         level=perm_level,
                         project=project,

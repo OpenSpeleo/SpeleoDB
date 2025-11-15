@@ -12,6 +12,6 @@ if TYPE_CHECKING:
     from django.urls import URLPattern
     from django.urls import URLResolver
 
-log_entry_urlpatterns: list[URLPattern | URLResolver] = [
+urlpatterns: list[URLPattern | URLResolver] = [
     path("<uuid:id>/", LogEntrySpecificApiView.as_view(), name="log-detail"),
 ]

@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
-from speleodb.surveys.models.station import StationResource
-from speleodb.surveys.models.station import StationResourceType
+from speleodb.gis.models.station import StationResourceType
 from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from speleodb.gis.models import StationResource
 
 
 @pytest.mark.django_db

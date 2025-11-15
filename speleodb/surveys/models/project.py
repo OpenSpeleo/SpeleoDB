@@ -28,23 +28,28 @@ from speleodb.utils.exceptions import ProjectNotFound
 if TYPE_CHECKING:
     import datetime
 
+    from speleodb.gis.models import ProjectGeoJSON
+    from speleodb.gis.models import Station
     from speleodb.surveys.models import Format
-    from speleodb.surveys.models import GeoJSON
-    from speleodb.surveys.models import Mutex
-    from speleodb.surveys.models import Station
-    from speleodb.surveys.models import TeamPermission
-    from speleodb.surveys.models import UserPermission
+    from speleodb.surveys.models import ProjectMutex
+    from speleodb.surveys.models import TeamProjectPermission
+    from speleodb.surveys.models import UserProjectPermission
     from speleodb.users.models import SurveyTeam
     from speleodb.users.models import User
+
+
+class ProjectVisibility(BaseIntegerChoices):
+    PRIVATE = (0, "PRIVATE")
+    PUBLIC = (1, "PUBLIC")
 
 
 class Project(models.Model):
     # type checking
     rel_formats: models.QuerySet[Format]
-    rel_geojsons: models.QuerySet[GeoJSON]
-    rel_mutexes: models.QuerySet[Mutex]
-    rel_user_permissions: models.QuerySet[UserPermission]
-    rel_team_permissions: models.QuerySet[TeamPermission]
+    rel_geojsons: models.QuerySet[ProjectGeoJSON]
+    rel_mutexes: models.QuerySet[ProjectMutex]
+    rel_user_permissions: models.QuerySet[UserProjectPermission]
+    rel_team_permissions: models.QuerySet[TeamProjectPermission]
     rel_stations: models.QuerySet[Station]
 
     # Automatic fields
@@ -101,15 +106,11 @@ class Project(models.Model):
         validators=[MinValueValidator(-180), MaxValueValidator(180)],
     )
 
-    class Visibility(BaseIntegerChoices):
-        PRIVATE = (0, "PRIVATE")
-        PUBLIC = (1, "PUBLIC")
-
     visibility = models.IntegerField(
-        choices=Visibility.choices,
+        choices=ProjectVisibility.choices,
         blank=False,
         null=False,
-        default=Visibility.PRIVATE,
+        default=ProjectVisibility.PRIVATE,
     )
 
     is_active = models.BooleanField(
@@ -138,7 +139,7 @@ class Project(models.Model):
         return self.name
 
     @cached(cache=TTLCache(maxsize=1, ttl=300))
-    def active_mutex(self) -> Mutex | None:
+    def active_mutex(self) -> ProjectMutex | None:
         try:
             return self.rel_mutexes.filter(is_active=True).select_related("user")[0]
         except IndexError:
@@ -173,9 +174,9 @@ class Project(models.Model):
             active_mutex.save()
 
         else:
-            from speleodb.surveys.models import Mutex  # noqa: PLC0415
+            from speleodb.surveys.models import ProjectMutex  # noqa: PLC0415
 
-            _ = Mutex.objects.create(project=self, user=user)
+            _ = ProjectMutex.objects.create(project=self, user=user)
 
         self.void_mutex_cache()
 
@@ -192,17 +193,19 @@ class Project(models.Model):
 
         self.void_mutex_cache()
 
-    def get_best_permission(self, user: User) -> TeamPermission | UserPermission:
+    def get_best_permission(
+        self, user: User
+    ) -> TeamProjectPermission | UserProjectPermission:
         return user.get_best_permission(project=self)
 
-    def get_user_permission(self, user: User) -> UserPermission:
+    def get_user_permission(self, user: User) -> UserProjectPermission:
         return self.rel_user_permissions.get(target=user, is_active=True)
 
-    def get_team_permission(self, team: SurveyTeam) -> TeamPermission:
+    def get_team_permission(self, team: SurveyTeam) -> TeamProjectPermission:
         return self.rel_team_permissions.get(target=team, is_active=True)
 
     @property
-    def user_permissions(self) -> models.QuerySet[UserPermission]:
+    def user_permissions(self) -> models.QuerySet[UserProjectPermission]:
         return (
             self.rel_user_permissions.filter(is_active=True)
             .select_related("target")
@@ -210,7 +213,7 @@ class Project(models.Model):
         )
 
     @property
-    def team_permissions(self) -> models.QuerySet[TeamPermission]:
+    def team_permissions(self) -> models.QuerySet[TeamProjectPermission]:
         return (
             self.rel_team_permissions.filter(is_active=True)
             .select_related("target")
@@ -218,7 +221,7 @@ class Project(models.Model):
         )
 
     @property
-    def permissions(self) -> chain[TeamPermission | UserPermission]:
+    def permissions(self) -> chain[TeamProjectPermission | UserProjectPermission]:
         return chain(self.user_permissions, self.team_permissions)
 
     @property
@@ -231,10 +234,10 @@ class Project(models.Model):
 
     @property
     def collaborator_count(self) -> int:
-        from speleodb.surveys.models import UserPermission  # noqa: PLC0415
+        from speleodb.surveys.models import UserProjectPermission  # noqa: PLC0415
         from speleodb.users.models import SurveyTeamMembership  # noqa: PLC0415
 
-        direct_user_ids = UserPermission.objects.filter(
+        direct_user_ids = UserProjectPermission.objects.filter(
             project=self,
             is_active=True,
         ).values_list("target", flat=True)
@@ -248,12 +251,12 @@ class Project(models.Model):
         return direct_user_ids.union(team_user_ids).count()
 
     def has_write_access(self, user: User) -> bool:
-        from speleodb.surveys.models import PermissionLevel  # noqa: PLC0415
+        from speleodb.common.enums import PermissionLevel  # noqa: PLC0415
 
         return user.get_best_permission(self).level >= PermissionLevel.READ_AND_WRITE
 
     def has_admin_access(self, user: User) -> bool:
-        from speleodb.surveys.models import PermissionLevel  # noqa: PLC0415
+        from speleodb.common.enums import PermissionLevel  # noqa: PLC0415
 
         try:
             return self.get_user_permission(user=user).level >= PermissionLevel.ADMIN

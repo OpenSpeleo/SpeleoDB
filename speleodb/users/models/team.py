@@ -17,7 +17,7 @@ from speleodb.utils.django_base_models import BaseIntegerChoices
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise
 
-    from speleodb.surveys.models import TeamPermission
+    from speleodb.surveys.models import TeamProjectPermission
 
 
 class SurveyTeam(models.Model):
@@ -27,7 +27,7 @@ class SurveyTeam(models.Model):
     """
 
     rel_team_memberships: models.QuerySet[SurveyTeamMembership]
-    rel_permissions: models.QuerySet[TeamPermission]
+    rel_permissions: models.QuerySet[TeamProjectPermission]
 
     id = models.UUIDField(
         default=uuid.uuid4,

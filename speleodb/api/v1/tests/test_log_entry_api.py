@@ -18,9 +18,9 @@ from speleodb.api.v1.tests.file_utils import create_test_image
 from speleodb.api.v1.tests.file_utils import create_test_text_file
 from speleodb.api.v1.tests.file_utils import create_test_video
 from speleodb.api.v1.tests.file_utils import sha256_from_url
-from speleodb.surveys.models import LogEntry
-from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import Station
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import LogEntry
+from speleodb.gis.models import Station
 from speleodb.utils.test_utils import named_product
 
 

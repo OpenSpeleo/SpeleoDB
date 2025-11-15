@@ -8,7 +8,7 @@ from speleodb.surveys.models import Project
 from speleodb.users.models import User
 
 
-class Mutex(models.Model):
+class ProjectMutex(models.Model):
     project = models.ForeignKey(
         Project,
         related_name="rel_mutexes",

@@ -9,7 +9,7 @@ from rest_framework import permissions
 from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v1.serializers import PublicAnnoucementSerializer
-from speleodb.surveys.models import PublicAnnoucement
+from speleodb.plugins.models import PublicAnnoucement
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import SuccessResponse
 

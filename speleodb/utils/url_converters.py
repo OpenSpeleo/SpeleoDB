@@ -74,3 +74,10 @@ class DownloadFormatsConverter(BaseChoicesConverter):
 @register_converter("upload_format")
 class UploadFormatsConverter(BaseChoicesConverter):
     choices = Format.FileFormat.upload_choices
+
+
+@register_converter("gis_token")
+class GisTokenConverter(BaseRegexConverter):
+    @property
+    def regex(self) -> str:
+        return r"[0-9a-fA-F]{40}"

@@ -6,7 +6,7 @@ from typing import Any
 
 from rest_framework import serializers
 
-from speleodb.surveys.models import LogEntry
+from speleodb.gis.models import LogEntry
 
 
 class LogEntrySerializer(serializers.ModelSerializer[LogEntry]):

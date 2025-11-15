@@ -2,7 +2,7 @@
 
 import django.core.validators
 import django.db.models.deletion
-import speleodb.surveys.models.geojson
+import speleodb.gis.models.project_geojson
 import speleodb.utils.storages
 import speleodb.utils.validators
 from django.db import migrations, models
@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
             name='GeoJSON',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file', models.FileField(storage=speleodb.utils.storages.GeoJSONStorage(), upload_to=speleodb.surveys.models.geojson.get_geojson_upload_path, validators=[speleodb.utils.validators.GeoJsonValidator()])),
+                ('file', models.FileField(storage=speleodb.utils.storages.GeoJSONStorage(), upload_to=speleodb.gis.models.project_geojson.get_geojson_upload_path, validators=[speleodb.utils.validators.GeoJsonValidator()])),
                 ('commit_sha', models.CharField(max_length=40, unique=True, validators=[django.core.validators.RegexValidator(message='Enter a valid sha1 value', regex='^[0-9a-f]{40}$')])),
                 ('creation_date', models.DateTimeField(auto_now_add=True)),
                 ('modified_date', models.DateTimeField(auto_now=True)),

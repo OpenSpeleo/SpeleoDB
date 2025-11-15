@@ -19,8 +19,8 @@ from rest_framework import status
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import TokenFactory
-from speleodb.surveys.models import GeoJSON
-from speleodb.surveys.models import PermissionLevel
+from speleodb.gis.models import ProjectGeoJSON
+from speleodb.common.enums import PermissionLevel
 from speleodb.utils.test_utils import named_product
 
 
@@ -88,7 +88,7 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         """Test that the endpoint properly loads geojson field."""
         commit_sha = sha1_hash()
         # Set some test GeoJSON data
-        GeoJSON.objects.create(
+        ProjectGeoJSON.objects.create(
             project=self.project,
             commit_sha=commit_sha,
             commit_date=timezone.now(),
@@ -118,7 +118,7 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         for _ in range(2):
             commit_sha = sha1_hash()
             # Avoid touching S3 storage; set the expected upload name directly
-            GeoJSON.objects.create(
+            ProjectGeoJSON.objects.create(
                 project=self.project,
                 commit_sha=commit_sha,
                 commit_date=timezone.now(),
@@ -144,7 +144,7 @@ class TestProjectGeoJsonApiView(BaseAPIProjectTestCase):
         # Prepare one stored file using the storage + upload_to
         commit_sha = sha1_hash()
 
-        GeoJSON.objects.create(
+        ProjectGeoJSON.objects.create(
             project=self.project,
             commit_sha=commit_sha,
             commit_date=timezone.now(),

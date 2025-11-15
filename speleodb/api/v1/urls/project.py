@@ -22,10 +22,18 @@ from speleodb.api.v1.views.project_explorer import ProjectGitExplorerApiView
 from speleodb.api.v1.views.project_explorer import ProjectRevisionsApiView
 from speleodb.api.v1.views.station import ProjectStationsApiView
 from speleodb.api.v1.views.station import ProjectStationsGeoJSONView
-from speleodb.api.v1.views.team_permission import ProjectTeamPermissionListApiView
-from speleodb.api.v1.views.team_permission import ProjectTeamPermissionSpecificApiView
-from speleodb.api.v1.views.user_permission import ProjectUserPermissionListApiView
-from speleodb.api.v1.views.user_permission import ProjectUserPermissionSpecificApiView
+from speleodb.api.v1.views.team_project_permission import (
+    ProjectTeamPermissionListApiView,
+)
+from speleodb.api.v1.views.team_project_permission import (
+    ProjectTeamPermissionSpecificApiView,
+)
+from speleodb.api.v1.views.user_project_permission import (
+    ProjectUserPermissionListApiView,
+)
+from speleodb.api.v1.views.user_project_permission import (
+    ProjectUserPermissionSpecificApiView,
+)
 
 project_base_urlpatterns: list[URLPattern] = [
     path("", ProjectSpecificApiView.as_view(), name="project-detail"),

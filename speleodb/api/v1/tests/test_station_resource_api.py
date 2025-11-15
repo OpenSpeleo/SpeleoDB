@@ -20,10 +20,10 @@ from speleodb.api.v1.tests.factories import NoteStationResourceFactory
 from speleodb.api.v1.tests.factories import PhotoStationResourceFactory
 from speleodb.api.v1.tests.factories import SketchStationResourceFactory
 from speleodb.api.v1.tests.factories import StationFactory
-from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import Station
-from speleodb.surveys.models import StationResource
-from speleodb.surveys.models.station import StationResourceType
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import Station
+from speleodb.gis.models import StationResource
+from speleodb.gis.models.station import StationResourceType
 from speleodb.utils.test_utils import named_product
 
 

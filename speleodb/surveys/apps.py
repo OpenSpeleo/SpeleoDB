@@ -14,4 +14,4 @@ class SurveysConfig(AppConfig):
 
     def ready(self) -> None:
         with contextlib.suppress(ImportError):
-            import speleodb.users.signals  # type: ignore  # noqa: F401, PGH003, PLC0415
+            import speleodb.surveys.signals  # noqa: F401, PLC0415

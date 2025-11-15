@@ -9,7 +9,7 @@ from speleodb.surveys.models.permission_base import BasePermissionModel
 from speleodb.users.models import User
 
 
-class UserPermission(BasePermissionModel):
+class UserProjectPermission(BasePermissionModel):
     target = models.ForeignKey(
         User,
         related_name="rel_permissions",
@@ -27,6 +27,11 @@ class UserPermission(BasePermissionModel):
     )
 
     class Meta:
-        verbose_name = "User Permission"
-        verbose_name_plural = "User Permissions"
+        verbose_name = "Project - User Permission"
+        verbose_name_plural = "Project - User Permissions"
         unique_together = ("target", "project")
+        indexes = [
+            models.Index(fields=["target", "is_active"]),
+            models.Index(fields=["project", "is_active"]),
+            models.Index(fields=["target", "project", "is_active"]),
+        ]

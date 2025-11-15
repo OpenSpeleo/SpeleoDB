@@ -51,3 +51,7 @@ class ErrorResponse(Response):
 
 class NoWrapResponse(Response):
     pass
+
+
+class GISResponse(Response):
+    pass

@@ -1,0 +1,369 @@
+{% load static %}
+<style>
+.experiment-field-builder {
+    max-width: 1200px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.exp-container {
+    background: var(--darkened-bg, #f9fafb);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #e5e7eb);
+}
+.exp-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--body-fg, #374151);
+    margin-bottom: 12px;
+}
+.exp-mandatory-field {
+    background: var(--darkened-bg, #f3f4f6);
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--selected-bg, #79aec8);
+    color: var(--body-fg, #333);
+}
+.exp-mandatory-badge {
+    background: var(--selected-bg, #6366f1);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-left: 8px;
+}
+.exp-field-type {
+    color: var(--body-quiet-color, #6b7280);
+    font-size: 13px;
+}
+.exp-add-btn {
+    background: var(--button-bg, #417690);
+    color: var(--button-fg, white);
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+}
+.exp-add-btn:hover {
+    background: var(--button-hover-bg, #205067);
+}
+.exp-no-fields {
+    text-align: center;
+    padding: 40px;
+    color: var(--body-quiet-color, #999);
+    border: 2px dashed var(--border-color, #ccc);
+    border-radius: 6px;
+    background: var(--body-bg, white);
+}
+.exp-field-item {
+    background: var(--body-bg, white);
+    padding: 16px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 6px;
+}
+.exp-field-item label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--body-fg, #374151);
+    margin-bottom: 4px;
+}
+.exp-field-item input[type="text"],
+.exp-field-item select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    font-size: 13px;
+    background: var(--body-bg, white);
+    color: var(--body-fg, #333);
+}
+.exp-field-item input[type="text"]:focus,
+.exp-field-item select:focus {
+    outline: none;
+    border-color: var(--selected-bg, #417690);
+}
+.exp-remove-btn {
+    background: var(--delete-button-bg, #ba2121);
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.exp-remove-btn:hover {
+    background: var(--delete-button-hover-bg, #a41515);
+}
+.exp-required {
+    color: var(--error-fg, #ba2121);
+}
+</style>
+
+<div class="experiment-field-builder">
+    <!-- Hidden textarea for actual form submission -->
+    <textarea name="{{ widget.name }}" id="{{ widget.attrs.id }}" style="display: none;">{{ widget.value|default:"[]" }}</textarea>
+    
+    <div class="exp-container">
+        <!-- Mandatory Fields Display -->
+        <div style="margin-bottom: 24px;">
+            <h3 class="exp-section-title">
+                Mandatory Fields (Non-editable)
+            </h3>
+            
+            <div class="exp-mandatory-field">
+                <strong>1. Measurement Date</strong> <span class="exp-required" style="color: #dc2626; font-weight: bold; font-size: 1.1em;">*</span>
+                <span class="exp-mandatory-badge">SYSTEM FIELD</span>
+                <br>
+                <span class="exp-field-type">Type: date</span>
+            </div>
+            
+            <div class="exp-mandatory-field">
+                <strong>2. Submitter Email</strong> <span class="exp-required" style="color: #dc2626; font-weight: bold; font-size: 1.1em;">*</span>
+                <span class="exp-mandatory-badge">SYSTEM FIELD</span>
+                <br>
+                <span class="exp-field-type">Type: text</span>
+            </div>
+        </div>
+
+        <!-- Custom Fields Section -->
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h3 class="exp-section-title">
+                    Custom Fields
+                </h3>
+                <button type="button" id="add-field-btn" class="exp-add-btn">
+                    + Add Field
+                </button>
+            </div>
+            <div style="background: var(--darkened-bg, #fff3cd); border-left: 3px solid var(--selected-bg, #ffc107); padding: 10px 12px; margin-bottom: 12px; border-radius: 4px; font-size: 12px; color: var(--body-fg, #856404);">
+                <strong>⚠️ Important:</strong> Once saved, fields become <strong>immutable</strong>. You can only <strong>add new fields</strong>, never remove or modify existing ones. This ensures data integrity for all collected measurements.
+            </div>
+            
+            <div id="custom-fields-container" style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- Custom fields will be added here -->
+            </div>
+            
+            <div id="no-fields-msg" class="exp-no-fields">
+                No custom fields yet. Click "Add Field" to create one.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    let fieldCounter = 0;
+    const textarea = document.getElementById('{{ widget.attrs.id }}');
+    const container = document.getElementById('custom-fields-container');
+    const noFieldsMsg = document.getElementById('no-fields-msg');
+    const addBtn = document.getElementById('add-field-btn');
+
+    // Mandatory field slugs (must match MandatoryFieldSlug enum)
+    const MANDATORY_SLUGS = ['measurement_date', 'submitter_email'];
+    
+    function isMandatorySlug(slug) {
+        return MANDATORY_SLUGS.includes(slug);
+    }
+
+    // Load existing fields
+    function loadExistingFields() {
+        try {
+            const data = JSON.parse(textarea.value || '{}');
+            // Filter out mandatory fields and load custom ones
+            // Mandatory fields are identified by slug, not a 'mandatory' property
+            for (const [slug, fieldData] of Object.entries(data)) {
+                if (!isMandatorySlug(slug)) {
+                    addFieldElement(fieldData, slug, true); // true = existing field (immutable)
+                }
+            }
+            updateNoFieldsMsg();
+        } catch (e) {
+            console.error('Error parsing existing fields:', e);
+        }
+    }
+
+    // Update visibility of "no fields" message
+    function updateNoFieldsMsg() {
+        if (container.children.length === 0) {
+            noFieldsMsg.style.display = 'block';
+        } else {
+            noFieldsMsg.style.display = 'none';
+        }
+    }
+
+    // Save fields to textarea
+    // Note: Slug generation and hashing are done server-side by the model's save() method
+    function saveFields() {
+        let existingData = {};
+        const fields = {};
+        
+        // Load existing fields from textarea to preserve slugs and hashes
+        try {
+            existingData = JSON.parse(textarea.value || '{}');
+            // Preserve mandatory fields and their slugs/hashes (identified by slug, not 'mandatory' property)
+            for (const slug of MANDATORY_SLUGS) {
+                if (existingData[slug]) {
+                    fields[slug] = existingData[slug];
+                }
+            }
+        } catch (e) {
+            // If no existing data, fields object stays empty
+        }
+        
+        // Process each field div
+        for (const fieldDiv of Array.from(container.children)) {
+            const isExisting = fieldDiv.dataset.isExisting === 'true';
+            const existingSlug = fieldDiv.dataset.slug;
+            
+            const nameInput = fieldDiv.querySelector('.field-name');
+            const typeSelect = fieldDiv.querySelector('.field-type');
+            const requiredCheck = fieldDiv.querySelector('.field-required');
+            const optionsInput = fieldDiv.querySelector('.field-options');
+            
+            // Skip fields without a valid type selected
+            if (!typeSelect.value || !nameInput.value.trim()) {
+                continue;
+            }
+            
+            const fieldData = {
+                name: nameInput.value.trim(),
+                type: typeSelect.value,
+                required: requiredCheck.checked
+            };
+            
+            if (typeSelect.value === 'select' && optionsInput && optionsInput.value) {
+                fieldData.options = optionsInput.value.split(',').map(o => o.trim()).filter(o => o);
+            }
+            
+            if (isExisting && existingSlug && existingData[existingSlug]) {
+                // Preserve existing slug and hash (immutable)
+                // Backend will verify hash matches
+                fields[existingSlug] = Object.assign({}, existingData[existingSlug], fieldData);
+            } else {
+                // New field - use temporary slug for JSON structure
+                // Backend model's save() method must process temp slugs and generate proper slugs/hashes
+                const tempSlug = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                fields[tempSlug] = fieldData;
+            }
+        }
+        
+        textarea.value = JSON.stringify(fields, null, 2);
+    }
+
+    // Create field element
+    function addFieldElement(existingField = null, existingSlug = null, isExisting = false) {
+        fieldCounter++;
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'exp-field-item';
+        fieldDiv.dataset.isExisting = isExisting;
+        if (existingSlug) {
+            fieldDiv.dataset.slug = existingSlug;
+        }
+        
+        const name = existingField?.name || '';
+        const type = existingField?.type || 'text';
+        const required = existingField?.required || false;
+        const options = existingField?.options?.join(', ') || '';
+        
+        // Lock icon for existing fields
+        const lockIcon = isExisting ? '🔒 ' : '';
+        const disabledAttr = isExisting ? 'disabled' : '';
+        const readonlyAttr = isExisting ? 'readonly' : '';
+        const lockedClass = isExisting ? 'style="opacity: 0.7;"' : '';
+        
+        const slugDisplay = existingSlug ? `<code style="font-family: monospace; background: var(--darkened-bg, #e5e7eb); padding: 2px 6px; border-radius: 3px; font-size: 11px;">Slug: ${existingSlug}</code>` : '';
+        
+        fieldDiv.innerHTML = `
+            ${isExisting ? '<div style="background: var(--selected-bg, #79aec8); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-bottom: 8px; display: inline-block;">🔒 IMMUTABLE FIELD - Cannot be modified or removed ' + slugDisplay + '</div>' : ''}
+            <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: start;" ${lockedClass}>
+                <div>
+                    <label>
+                        ${lockIcon}Field Name <span class="exp-required">*</span>
+                    </label>
+                    <input type="text" class="field-name" value="${name}" 
+                           placeholder="e.g., Water Quality, pH Level"
+                           ${readonlyAttr}>
+                    ${!isExisting ? '<div style="font-size: 11px; color: var(--body-quiet-color, #999); margin-top: 2px;">Slug will be auto-generated</div>' : ''}
+                </div>
+                
+                <div>
+                    <label>
+                        ${lockIcon}Field Type <span class="exp-required">*</span>
+                    </label>
+                    <select class="field-type" ${disabledAttr} ${!isExisting ? 'required' : ''}>
+                        ${isExisting 
+                            ? '' 
+                            : '<option value="" selected disabled>Select a value</option>'
+                        }
+                        <option value="text" ${type === 'text' ? 'selected' : ''}>Text</option>
+                        <option value="number" ${type === 'number' ? 'selected' : ''}>Number</option>
+                        <option value="date" ${type === 'date' ? 'selected' : ''}>Date</option>
+                        <option value="boolean" ${type === 'boolean' ? 'selected' : ''}>Yes/No</option>
+                        <option value="select" ${type === 'select' ? 'selected' : ''}>Multiple Choices</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 8px; align-items: end; padding-top: 24px;">
+                    <label style="display: flex; align-items: center; font-size: 13px; white-space: nowrap; color: var(--body-fg, #333);">
+                        <input type="checkbox" class="field-required" ${required ? 'checked' : ''} 
+                               ${disabledAttr} style="margin-right: 4px;">
+                        Required
+                    </label>
+                    ${isExisting 
+                        ? '<span style="color: var(--body-quiet-color, #999); font-size: 12px; padding: 8px 12px;">🔒 Locked</span>' 
+                        : '<button type="button" class="remove-btn exp-remove-btn">✕ Remove</button>'
+                    }
+                </div>
+            </div>
+            
+            <div class="options-container" style="margin-top: 12px; ${type === 'select' ? '' : 'display: none;'}">
+                <label>
+                    ${lockIcon}Options (comma-separated)
+                </label>
+                <input type="text" class="field-options" value="${options}" 
+                       placeholder="e.g., Low, Medium, High"
+                       ${readonlyAttr}>
+            </div>
+        `;
+        
+        container.appendChild(fieldDiv);
+        
+        // Event listeners only for new fields
+        if (!isExisting) {
+            const removeBtn = fieldDiv.querySelector('.remove-btn');
+            removeBtn.addEventListener('click', () => {
+                fieldDiv.remove();
+                updateNoFieldsMsg();
+                saveFields();
+            });
+            
+            const typeSelect = fieldDiv.querySelector('.field-type');
+            const optionsContainer = fieldDiv.querySelector('.options-container');
+            typeSelect.addEventListener('change', (e) => {
+                optionsContainer.style.display = e.target.value === 'select' ? 'block' : 'none';
+                saveFields();
+            });
+            
+            // Auto-save on changes
+            fieldDiv.querySelectorAll('input, select').forEach(el => {
+                el.addEventListener('change', saveFields);
+                el.addEventListener('input', saveFields);
+            });
+        }
+    }
+
+    // Add field button
+    addBtn.addEventListener('click', () => {
+        addFieldElement();
+        updateNoFieldsMsg();
+        saveFields();
+    });
+
+    // Initialize
+    loadExistingFields();
+})();
+</script>
+

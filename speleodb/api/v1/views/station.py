@@ -15,16 +15,16 @@ from speleodb.api.v1.permissions import IsObjectCreation
 from speleodb.api.v1.permissions import IsObjectDeletion
 from speleodb.api.v1.permissions import IsObjectEdition
 from speleodb.api.v1.permissions import IsReadOnly
+from speleodb.api.v1.permissions import ProjectUserHasReadAccess
 from speleodb.api.v1.permissions import StationUserHasAdminAccess
 from speleodb.api.v1.permissions import StationUserHasReadAccess
 from speleodb.api.v1.permissions import StationUserHasWriteAccess
-from speleodb.api.v1.permissions import UserHasReadAccess
 from speleodb.api.v1.serializers.station import StationGeoJSONSerializer
 from speleodb.api.v1.serializers.station import StationSerializer
 from speleodb.api.v1.serializers.station import StationWithResourcesSerializer
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import Station
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import Station
-from speleodb.surveys.models.permission_lvl import PermissionLevel
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
@@ -100,9 +100,11 @@ class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
 
         return SuccessResponse(serializer.data)
 
-    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    def _modify_obj(
+        self, request: Request, partial: bool, *args: Any, **kwargs: Any
+    ) -> Response:
         station = self.get_object()
-        serializer = StationSerializer(station, data=request.data)
+        serializer = StationSerializer(station, data=request.data, partial=partial)
         if serializer.is_valid():
             serializer.save()
             return SuccessResponse(serializer.data)
@@ -110,17 +112,12 @@ class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
+
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return self._modify_obj(request=request, partial=False, **kwargs)
 
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        station = self.get_object()
-        serializer = StationSerializer(station, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return SuccessResponse(serializer.data)
-
-        return ErrorResponse(
-            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-        )
+        return self._modify_obj(request=request, partial=True, **kwargs)
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station = self.get_object()
@@ -198,7 +195,7 @@ class ProjectStationsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixin):
     """
 
     queryset = Project.objects.all()
-    permission_classes = [UserHasReadAccess]
+    permission_classes = [ProjectUserHasReadAccess]
     lookup_field = "id"
     serializer_class = StationGeoJSONSerializer  # type: ignore[assignment]
 

@@ -10,8 +10,8 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 
 from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import UserPermissionFactory
-from speleodb.surveys.models import PermissionLevel
+from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
+from speleodb.common.enums import PermissionLevel
 from speleodb.users.tests.factories import UserFactory
 
 
@@ -29,22 +29,22 @@ class TestWebViewerRestrictions(TestCase):
         self.project_admin = ProjectFactory.create(created_by=self.user.email)
 
         # Create permissions
-        UserPermissionFactory.create(
+        UserProjectPermissionFactory.create(
             target=self.user,
             project=self.project_webviewer,
             level=PermissionLevel.WEB_VIEWER,
         )
-        UserPermissionFactory.create(
+        UserProjectPermissionFactory.create(
             target=self.user,
             project=self.project_readonly,
             level=PermissionLevel.READ_ONLY,
         )
-        UserPermissionFactory.create(
+        UserProjectPermissionFactory.create(
             target=self.user,
             project=self.project_readwrite,
             level=PermissionLevel.READ_AND_WRITE,
         )
-        UserPermissionFactory.create(
+        UserProjectPermissionFactory.create(
             target=self.user,
             project=self.project_admin,
             level=PermissionLevel.ADMIN,

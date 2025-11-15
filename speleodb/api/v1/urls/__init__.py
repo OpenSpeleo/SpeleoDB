@@ -7,11 +7,16 @@ from django.urls import URLResolver
 from django.urls import include
 from django.urls import path
 
-from speleodb.api.v1.urls.log_entry import log_entry_urlpatterns
+from speleodb.api.v1.urls.experiment import urlpatterns as experiment_urlpatterns
+from speleodb.api.v1.urls.experiment_records import (
+    urlpatterns as experiment_record_urlpatterns,
+)
+from speleodb.api.v1.urls.gis import urlpatterns as gis_urlpatterns
+from speleodb.api.v1.urls.log_entry import urlpatterns as log_entry_urlpatterns
 from speleodb.api.v1.urls.poi import urlpatterns as poi_urlpatterns
 from speleodb.api.v1.urls.project import urlpatterns as project_urlpatterns
-from speleodb.api.v1.urls.resource import resource_urlpatterns
-from speleodb.api.v1.urls.station import station_urlpatterns
+from speleodb.api.v1.urls.resource import urlpatterns as resource_urlpatterns
+from speleodb.api.v1.urls.station import urlpatterns as station_urlpatterns
 from speleodb.api.v1.urls.team import urlpatterns as team_urlpatterns
 from speleodb.api.v1.urls.tools import urlpatterns as tool_urlpatterns
 from speleodb.api.v1.urls.user import urlpatterns as user_urlpatterns
@@ -31,6 +36,9 @@ urlpatterns: list[URLResolver | URLPattern] = [
         PluginReleasesApiView.as_view(),
         name="plugin-releases",
     ),
+    path("experiments/", include(experiment_urlpatterns)),
+    path("experiment_records/", include(experiment_record_urlpatterns)),
+    path("gis/", include((gis_urlpatterns, "gis"), namespace="gis")),
     path("logs/", include(log_entry_urlpatterns)),
     path("points_of_interest/", include(poi_urlpatterns)),
     path("projects/", include(project_urlpatterns)),

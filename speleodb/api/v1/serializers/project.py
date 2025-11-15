@@ -12,10 +12,11 @@ from rest_framework import serializers
 # from django.core.exceptions import ValidationError
 from rest_framework.exceptions import ValidationError
 
-from speleodb.surveys.models import GeoJSON
-from speleodb.surveys.models import PermissionLevel
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import UserPermission
+from speleodb.surveys.models import UserProjectPermission
+from speleodb.surveys.models.project import ProjectVisibility
 from speleodb.users.models import User
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.gps_utils import format_coordinate
@@ -26,8 +27,8 @@ from speleodb.utils.serializer_fields import CustomChoiceField
 class ProjectSerializer(serializers.ModelSerializer[Project]):
     country = CustomChoiceField(choices=list(countries))
     visibility = CustomChoiceField(
-        choices=Project.Visibility,  # type: ignore[arg-type]
-        default=Project.Visibility.PRIVATE,
+        choices=ProjectVisibility,  # type: ignore[arg-type]
+        default=ProjectVisibility.PRIVATE,
     )
 
     permission = serializers.SerializerMethodField()
@@ -137,7 +138,7 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
         project = super().create(validated_data)
 
         # assign an ADMIN permission to the creator
-        _ = UserPermission.objects.create(
+        _ = UserProjectPermission.objects.create(
             project=project,
             target=User.objects.get(email=validated_data["created_by"]),
             level=PermissionLevel.ADMIN,
@@ -188,12 +189,12 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
         return None
 
 
-class ProjectGeoJSONFileSerializer(serializers.ModelSerializer[GeoJSON]):
+class ProjectGeoJSONFileSerializer(serializers.ModelSerializer[ProjectGeoJSON]):
     date = serializers.DateTimeField(source="commit_date")
     url = serializers.CharField(source="get_signed_download_url", read_only=True)
 
     class Meta:
-        model = GeoJSON
+        model = ProjectGeoJSON
         fields = ["commit_sha", "date", "url"]
         read_only_fields = ["__all__"]
 

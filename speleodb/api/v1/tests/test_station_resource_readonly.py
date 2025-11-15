@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -10,11 +12,13 @@ from rest_framework.test import APIClient
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
-from speleodb.api.v1.tests.factories import UserPermissionFactory
-from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import StationResource
-from speleodb.surveys.models.station import StationResourceType
+from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models.station import StationResourceType
 from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from speleodb.gis.models import StationResource
 
 
 @pytest.mark.django_db
@@ -27,7 +31,7 @@ class TestStationResourceReadOnlyFields:
         self.user = UserFactory.create()
         self.project = ProjectFactory(created_by=self.user.email)
         # Give user write permission
-        self.permission = UserPermissionFactory(
+        self.permission = UserProjectPermissionFactory(
             target=self.user,
             project=self.project,
             level=PermissionLevel.READ_AND_WRITE,

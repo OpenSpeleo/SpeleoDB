@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from django.db import models
 
+from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models.permission_base import BasePermissionModel
-from speleodb.surveys.models.permission_lvl import PermissionLevel
 from speleodb.users.models import SurveyTeam
 
 
-class TeamPermission(BasePermissionModel):
+class TeamProjectPermission(BasePermissionModel):
     target = models.ForeignKey(
         SurveyTeam,
         related_name="rel_permissions",
@@ -28,12 +28,17 @@ class TeamPermission(BasePermissionModel):
     )
 
     class Meta:
-        verbose_name = "Team Permission"
-        verbose_name_plural = "Team Permissions"
+        verbose_name = "Project - Team Permission"
+        verbose_name_plural = "Project - Team Permissions"
         unique_together = ("target", "project")
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(level__in=PermissionLevel.values_no_admin),
                 name="%(app_label)s_%(class)s_level_is_valid",
             )
+        ]
+        indexes = [
+            models.Index(fields=["target", "is_active"]),
+            models.Index(fields=["project", "is_active"]),
+            models.Index(fields=["target", "project", "is_active"]),
         ]

@@ -13,11 +13,11 @@ from rest_framework import status
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import StationFactory
-from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models.station import StationResourceType
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models.station import StationResourceType
 
 if TYPE_CHECKING:
-    from speleodb.surveys.models.station import Station
+    from speleodb.gis.models import Station
 
 
 def get_video_file() -> SimpleUploadedFile:

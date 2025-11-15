@@ -9,9 +9,9 @@ from typing import Any
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
-from speleodb.surveys.models import Station
-from speleodb.surveys.models import StationResource
-from speleodb.surveys.models.station import StationResourceType
+from speleodb.gis.models import Station
+from speleodb.gis.models import StationResource
+from speleodb.gis.models.station import StationResourceType
 from speleodb.utils.gps_utils import format_coordinate
 
 

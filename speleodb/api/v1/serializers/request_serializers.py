@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
-from speleodb.surveys.models import PermissionLevel
+from speleodb.common.enums import PermissionLevel
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.models import User

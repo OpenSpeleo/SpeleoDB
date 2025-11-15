@@ -15,18 +15,22 @@ from factory import Faker
 from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
-from speleodb.surveys.models import LogEntry
-from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import PluginRelease
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import Experiment
+from speleodb.gis.models import ExperimentUserPermission
+from speleodb.gis.models import LogEntry
+from speleodb.gis.models import Station
+from speleodb.gis.models import StationResource
+from speleodb.gis.models.experiment import FieldType
+from speleodb.gis.models.experiment import MandatoryFieldSlug
+from speleodb.gis.models.station import StationResourceType
+from speleodb.plugins.models import PluginRelease
+from speleodb.plugins.models import PublicAnnoucement
+from speleodb.plugins.models.platform_base import OperatingSystemEnum
+from speleodb.plugins.models.platform_base import SurveyPlatformEnum
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import PublicAnnoucement
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
-from speleodb.surveys.models.platform_base import OperatingSystemEnum
-from speleodb.surveys.models.platform_base import SurveyPlatformEnum
-from speleodb.surveys.models.station import Station
-from speleodb.surveys.models.station import StationResource
-from speleodb.surveys.models.station import StationResourceType
+from speleodb.surveys.models import TeamProjectPermission
+from speleodb.surveys.models import UserProjectPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import SurveyTeamMembershipRole
@@ -80,22 +84,22 @@ class ProjectFactory(DjangoModelFactory[Project]):
         model = Project
 
 
-class UserPermissionFactory(DjangoModelFactory[UserPermission]):
+class UserProjectPermissionFactory(DjangoModelFactory[UserProjectPermission]):
     level = PermissionLevel.READ_AND_WRITE
     target: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
     project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
 
     class Meta:
-        model = UserPermission
+        model = UserProjectPermission
 
 
-class TeamPermissionFactory(DjangoModelFactory[TeamPermission]):
+class TeamProjectPermissionFactory(DjangoModelFactory[TeamProjectPermission]):
     level = PermissionLevel.READ_AND_WRITE
     target: SurveyTeam = factory.SubFactory(SurveyTeamFactory)  # type: ignore[assignment]
     project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
 
     class Meta:
-        model = TeamPermission
+        model = TeamProjectPermission
 
 
 class PublicAnnoucementFactory(DjangoModelFactory[PublicAnnoucement]):
@@ -418,3 +422,38 @@ class LogEntryFactory(DjangoModelFactory[LogEntry]):
     title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
     notes: str = factory.Faker("text", max_nb_chars=300)  # type: ignore[assignment]
     # text_content: str = ""
+
+
+class ExperimentFactory(DjangoModelFactory[Experiment]):
+    """Factory for creating Experiment instances."""
+
+    class Meta:
+        model = Experiment
+
+    name: str = Faker("sentence", nb_words=3)  # type: ignore[assignment]
+    code: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda obj: f"EXP-{random.randint(1000, 9999)}"
+    )
+    description: str = Faker("text", max_nb_chars=200)  # type: ignore[assignment]
+    created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+    experiment_fields: dict[str, Any] = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: {
+            **MandatoryFieldSlug.get_mandatory_fields(),
+            "ph_level": {
+                "name": "pH Level",
+                "type": FieldType.NUMBER.value,
+                "required": False,
+            },
+        }
+    )
+
+
+class UserExperimentPermissionFactory(DjangoModelFactory[ExperimentUserPermission]):
+    level = PermissionLevel.READ_AND_WRITE
+    user: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
+    experiment: Experiment = factory.SubFactory(ExperimentFactory)  # type: ignore[assignment]
+
+    class Meta:
+        model = ExperimentUserPermission

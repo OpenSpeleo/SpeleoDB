@@ -1,0 +1,291 @@
+{% extends "pages/experiment/base.html" %}
+{% load static %}
+
+{% block right_panel %}
+<div class="grow">
+
+    <!-- Panel body -->
+    <div class="p-6 space-y-6">
+        <div class="flex flex-col items-center justify-center min-h-[60vh]">
+            <!-- Icon -->
+            <div class="mb-6">
+                <svg class="w-24 h-24 mx-auto text-slate-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+            
+            <!-- Title -->
+            <h2 class="text-3xl text-slate-100 font-bold mb-4">GIS Integration</h2>
+
+            <!-- Message -->
+            <p class="text-lg text-slate-200 w-full text-center my-6">
+                Use this URL to access experiment data in GeoJSON format for GIS integration.
+            </p>
+            
+            <!-- API URL -->
+            <div class="w-full mb-6">
+                <label class="block text-sm font-medium text-slate-300 mb-2">API Endpoint URL</label>
+                <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 overflow-x-auto relative group">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+                        <code id="api-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
+                            {{ request.scheme }}://{{ request.get_host }}{% url 'api:v1:gis:experiment' gis_token=experiment.gis_token %}
+                        </code>
+                        <button 
+                            id="copy-btn"
+                            type="button"
+                            class="w-full md:w-auto md:flex-shrink-0 px-4 py-2.5 md:px-3 md:py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                        >
+                            <svg id="copy-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <span id="copy-text">Copy</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Warning -->
+            <div class="w-full mb-6">
+                <div class="bg-orange-900/30 border border-orange-600/50 rounded-lg p-4">
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-orange-200 mb-1">Security Warning</p>
+                                <p class="text-sm text-orange-300/90 mb-3">
+                                    Sharing this link gives access to the entire dataset collected in the experiment. 
+                                    This should be considered private and kept safe like a password.
+                                </p>
+                                <p class="text-sm text-orange-300/90">
+                                    If this secure token link was compromised or shared unintentionally, you can refresh it to invalidate the old link and generate a new one.
+                                </p>
+                            </div>
+                        </div>
+                        <!-- Refresh Token Form -->
+                        <form method="post" id="refresh-token-form" class="w-full">
+                            {% csrf_token %}
+                            <button 
+                                type="submit"
+                                name="_refresh_token"
+                                class="w-full md:w-auto px-4 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white rounded-md text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-slate-800"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                <span>Refresh Token</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Refresh Token Confirmation Modal -->
+<div id="refresh-token-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-slate-800 rounded-xl shadow-2xl border border-orange-600/30 w-full max-w-md">
+        <div class="p-6">
+            <!-- Icon -->
+            <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-orange-500/10 rounded-full">
+                <svg class="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            
+            <!-- Title -->
+            <h3 class="text-xl font-semibold text-white text-center mb-3">Refresh GIS Token?</h3>
+            
+            <!-- Content -->
+            <div class="mb-6">
+                <p class="text-slate-300 text-center mb-4">
+                    Are you sure you want to refresh the GIS token?
+                </p>
+                <div class="bg-orange-900/20 border border-orange-600/30 rounded-lg p-4">
+                    <p class="text-orange-200 text-sm font-medium mb-2">
+                        ⚠️ Warning
+                    </p>
+                    <p class="text-orange-300/90 text-sm">
+                        Existing GIS integrations using this URL will become invalid and will need to be updated with the new URL.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="flex items-center justify-end gap-3">
+                <button 
+                    type="button" 
+                    id="refresh-token-cancel"
+                    class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200"
+                >
+                    Cancel
+                </button>
+                <button 
+                    type="button" 
+                    id="refresh-token-confirm"
+                    class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-md text-sm font-semibold transition-colors duration-200 flex items-center gap-2"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh Token
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+$(window).on('load', function() {
+    'use strict';
+    
+    // ============================================
+    // Copy to Clipboard Functionality
+    // ============================================
+    var $copyBtn = $('#copy-btn');
+    var $copyText = $('#copy-text');
+    var $copyIcon = $('#copy-icon');
+    var $apiUrl = $('#api-url');
+    
+    var copyIconCheckmark = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />';
+    var copyIconDefault = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />';
+    
+    function resetCopyButton() {
+        $copyText.text('Copy');
+        $copyBtn.removeClass('bg-green-600 hover:bg-green-700')
+                .addClass('bg-slate-700 hover:bg-slate-600');
+        $copyIcon.html(copyIconDefault);
+    }
+    
+    function showCopySuccess() {
+        $copyText.text('Copied!');
+        $copyBtn.removeClass('bg-slate-700 hover:bg-slate-600')
+                .addClass('bg-green-600 hover:bg-green-700');
+        $copyIcon.html(copyIconCheckmark);
+        
+        setTimeout(resetCopyButton, 2000);
+    }
+    
+    function copyToClipboardFallback(url) {
+        var $textArea = $('<textarea>')
+            .val(url)
+            .css({
+                position: 'fixed',
+                opacity: '0',
+                left: '-9999px'
+            })
+            .appendTo('body');
+        
+        $textArea[0].select();
+        $textArea[0].setSelectionRange(0, 99999); // For mobile devices
+        
+        try {
+            var successful = document.execCommand('copy');
+            if (successful) {
+                showCopySuccess();
+            } else {
+                $copyText.text('Failed');
+                setTimeout(resetCopyButton, 2000);
+            }
+        } catch (err) {
+            $copyText.text('Failed');
+            setTimeout(resetCopyButton, 2000);
+        }
+        
+        $textArea.remove();
+    }
+    
+    $copyBtn.on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var url = $apiUrl.text().trim();
+        
+        if (!url) {
+            return;
+        }
+        
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url)
+                .then(function() {
+                    showCopySuccess();
+                })
+                .catch(function() {
+                    copyToClipboardFallback(url);
+                });
+        } else {
+            copyToClipboardFallback(url);
+        }
+    });
+    
+    // ============================================
+    // Refresh Token Modal Functionality
+    // ============================================
+    var $refreshForm = $('#refresh-token-form');
+    var $modal = $('#refresh-token-modal');
+    var $cancelBtn = $('#refresh-token-cancel');
+    var $confirmBtn = $('#refresh-token-confirm');
+    var shouldSubmit = false;
+    
+    function showModal() {
+        $modal.css('display', 'flex');
+        $('body').css('overflow', 'hidden');
+    }
+    
+    function hideModal() {
+        $modal.hide();
+        $('body').css('overflow', '');
+    }
+    
+    function submitForm() {
+        shouldSubmit = true;
+        
+        var $tempSubmit = $('<button>', {
+            type: 'submit',
+            name: '_refresh_token',
+            css: { display: 'none' }
+        });
+        
+        $refreshForm.append($tempSubmit);
+        $tempSubmit.trigger('click');
+    }
+    
+    // Show modal on form submit
+    $refreshForm.on('submit', function(e) {
+        if (!shouldSubmit) {
+            e.preventDefault();
+            showModal();
+        }
+        shouldSubmit = false;
+    });
+    
+    // Cancel button
+    $cancelBtn.on('click', hideModal);
+    
+    // Confirm button
+    $confirmBtn.on('click', function() {
+        hideModal();
+        setTimeout(submitForm, 100);
+    });
+    
+    // Close modal when clicking outside
+    $modal.on('click', function(e) {
+        if ($(e.target).is($modal)) {
+            hideModal();
+        }
+    });
+    
+    // Close modal on Escape key
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape' && $modal.is(':visible')) {
+            hideModal();
+        }
+    });
+});
+</script>
+{% endblock inline_extra_js %}

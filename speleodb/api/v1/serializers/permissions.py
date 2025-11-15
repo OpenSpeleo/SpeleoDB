@@ -2,35 +2,66 @@
 
 from __future__ import annotations
 
+from django.db.models import QuerySet
 from rest_framework import serializers
 
-from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import TeamPermission
-from speleodb.surveys.models import UserPermission
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import ExperimentUserPermission
+from speleodb.surveys.models import TeamProjectPermission
+from speleodb.surveys.models import UserProjectPermission
 from speleodb.utils.serializer_fields import CustomChoiceField
 
 
-class UserPermissionSerializer(serializers.ModelSerializer[UserPermission]):
-    user = serializers.PrimaryKeyRelatedField(read_only=True, source="target")  # type: ignore[var-annotated]
-    level = CustomChoiceField(choices=[x for x, _ in PermissionLevel.choices])
+class ProjectUserPermissionSerializer(
+    serializers.ModelSerializer[UserProjectPermission]
+):
+    user = serializers.SlugRelatedField(
+        read_only=True,
+        source="target",
+        slug_field="email",
+    )  # type: ignore[var-annotated]
+    level = CustomChoiceField(PermissionLevel.choices)
 
     class Meta:
         fields = ("user", "level", "creation_date", "modified_date")
-        model = UserPermission
+        model = UserProjectPermission
 
 
-class TeamPermissionSerializer(serializers.ModelSerializer[TeamPermission]):
+class ProjectTeamPermissionSerializer(
+    serializers.ModelSerializer[TeamProjectPermission]
+):
     team = serializers.PrimaryKeyRelatedField(read_only=True, source="target")  # type: ignore[var-annotated]
-    level = CustomChoiceField(choices=[x for x, _ in PermissionLevel.choices_no_admin])
+    level = CustomChoiceField(PermissionLevel.choices_no_admin)
 
     class Meta:
         fields = ("team", "level", "creation_date", "modified_date")
-        model = TeamPermission
+        model = TeamProjectPermission
 
 
-class UserPermissionListSerializer(serializers.ListSerializer[UserPermission]):
-    child = UserPermissionSerializer()
+class ProjectUserPermissionListSerializer(
+    serializers.ListSerializer[UserProjectPermission]
+):
+    child = ProjectUserPermissionSerializer()
 
 
-class TeamPermissionListSerializer(serializers.ListSerializer[TeamPermission]):
-    child = TeamPermissionSerializer()
+class ProjectTeamPermissionListSerializer(
+    serializers.ListSerializer[TeamProjectPermission]
+):
+    child = ProjectTeamPermissionSerializer()
+
+
+class ExperimentUserPermissionSerializer(
+    serializers.ModelSerializer[ExperimentUserPermission]
+):
+    user = serializers.SlugRelatedField(read_only=True, slug_field="email")  # type: ignore[var-annotated]
+    level = CustomChoiceField(PermissionLevel.choices_no_webviewer)
+
+    class Meta:
+        fields = ("user", "level", "creation_date", "modified_date")
+        model = ExperimentUserPermission
+
+
+class ExperimentUserPermissionListSerializer(
+    serializers.ListSerializer[QuerySet[ExperimentUserPermission]]
+):
+    child = ExperimentUserPermissionSerializer()

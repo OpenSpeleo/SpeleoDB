@@ -13,11 +13,10 @@ from rest_framework.test import APIClient
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
-from speleodb.api.v1.tests.factories import TeamPermissionFactory
+from speleodb.api.v1.tests.factories import TeamProjectPermissionFactory
 from speleodb.api.v1.tests.factories import TokenFactory
-from speleodb.api.v1.tests.factories import UserPermissionFactory
-from speleodb.surveys.models import PermissionLevel
-from speleodb.surveys.models import Project
+from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
+from speleodb.common.enums import PermissionLevel
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.models import User
@@ -25,6 +24,8 @@ from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
     from rest_framework.authtoken.models import Token
+
+    from speleodb.surveys.models import Project
 
 
 class PermissionType(Enum):
@@ -77,7 +78,7 @@ class BaseProjectTestCaseMixin(BaseUserTestCaseMixin):
                 # UserPermission.objects.update_or_create(
                 #     target=self.user, project=self.project, defaults={"level": level}
                 # )
-                _ = UserPermissionFactory(
+                _ = UserProjectPermissionFactory(
                     target=self.user, level=level, project=self.project
                 )
 
@@ -95,7 +96,7 @@ class BaseProjectTestCaseMixin(BaseUserTestCaseMixin):
                 )
 
                 # Give the newly created permission to the project
-                _ = TeamPermissionFactory.create(
+                _ = TeamProjectPermissionFactory.create(
                     target=team,
                     level=level,
                     project=self.project,

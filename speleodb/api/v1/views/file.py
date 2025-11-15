@@ -31,16 +31,16 @@ from openspeleo_lib.interfaces import ArianeInterface
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import UserHasReadAccess
-from speleodb.api.v1.permissions import UserHasWriteAccess
+from speleodb.api.v1.permissions import ProjectUserHasReadAccess
+from speleodb.api.v1.permissions import ProjectUserHasWriteAccess
 from speleodb.api.v1.permissions import UserOwnsProjectMutex
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import UploadSerializer
+from speleodb.gis.models import ProjectGeoJSON
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors.auto_selector import AutoSelector
 from speleodb.surveys.models import Format
-from speleodb.surveys.models import GeoJSON
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import FileRejectedError
@@ -99,7 +99,7 @@ def handle_exception(
 
 class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [UserHasWriteAccess, UserOwnsProjectMutex]
+    permission_classes = [ProjectUserHasWriteAccess, UserOwnsProjectMutex]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -317,7 +317,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
                                 try:
                                     with transaction.atomic():
-                                        GeoJSON.objects.create(
+                                        ProjectGeoJSON.objects.create(
                                             project=project,
                                             commit_sha=hexsha,
                                             commit_date=timezone.now(),
@@ -418,7 +418,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
 class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [UserHasReadAccess]
+    permission_classes = [ProjectUserHasReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
     lookup_field = "id"
@@ -521,7 +521,7 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
 
 class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [UserHasReadAccess]
+    permission_classes = [ProjectUserHasReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
     lookup_field = "id"

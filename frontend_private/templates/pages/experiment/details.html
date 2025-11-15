@@ -1,0 +1,435 @@
+{% extends "pages/experiment/base.html" %}
+{% load static %}
+
+{% block right_panel %}
+<div class="grow">
+
+    <form id="experiment_details_form" autocomplete="off">
+
+        <fieldset {% if not has_write_access %}disabled{% endif %}>
+
+        {% csrf_token %}
+
+        <!-- Panel body -->
+        <div class="p-6 space-y-6">
+            <h2 class="text-2xl text-slate-100 font-bold mb-5">Experiment Settings</h2>
+
+            <!-- Experiment Name -->
+            <section>
+                <div class="flex flex-wrap mt-5 gap-4">
+                    <div class="w-full lg:flex-1">
+                        <label class="block text-sm font-medium mb-1" for="name">Experiment Name:<span class="text-rose-600"> *</span></label>
+                        <input id="name" name="name" class="form-input max-w-full w-full" type="text" value="{{ experiment.name }}" />
+                    </div>
+                    
+                    <div class="w-full lg:flex-1">
+                        <div class="flex flex-wrap gap-4">
+                            <div class="w-full lg:flex-1">
+                                <label class="block text-sm font-medium mb-1" for="code">Experiment Code:</label>
+                                <input id="code" name="code" class="form-input max-w-full w-full" type="text" placeholder="[Optional]" value="{% if experiment.code %}{{ experiment.code }}{% endif %}" />
+                            </div>
+                            <div class="w-full lg:flex-1">
+                                <label class="block text-sm font-medium mb-1" for="start_date">Start Date</label>
+                                <input type="date" id="start_date" name="start_date" class="form-input max-w-full w-full" value="{% if experiment.start_date %}{{ experiment.start_date|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                            <div class="w-full lg:flex-1">
+                                <label class="block text-sm font-medium mb-1" for="end_date">End Date</label>
+                                <input type="date" id="end_date" name="end_date" class="form-input max-w-full w-full" value="{% if experiment.end_date %}{{ experiment.end_date|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Description -->
+            <section>
+                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                    <div class="w-full">
+                        <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                        <textarea id="description" name="description" class="form-textarea max-w-full w-full focus:border-slate-300" rows="4">{% if experiment.description %}{{ experiment.description }}{% endif %}</textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Collection Fields -->
+            <section>
+                <div class="mt-5">
+                    <h3 class="text-lg font-semibold text-slate-100 mb-4">Data Collection Fields</h3>
+                    <p class="text-sm text-slate-400 mb-4">Fields defined for data collection at each station. Existing fields cannot be modified, but you can add new ones.</p>
+                    
+                    <!-- Existing Fields (Read-only) -->
+                    {% if experiment.experiment_fields %}
+                    <div class="space-y-3 mb-6">
+                        <h4 class="text-sm font-medium text-slate-300 mb-3">Existing Fields (Read-only)</h4>
+                        
+                        {% for slug, field_data in experiment.experiment_fields.items %}
+                        <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-slate-600">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                <div class="flex-1">
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Field Name</label>
+                                    <input type="text" value="{{ field_data.name }}" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Field Type</label>
+                                    <input type="text" value="{{ field_data.type|title }}" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
+                                </div>
+                                <div class="flex items-center mt-5 sm:mt-0">
+                                    <label class="flex items-center cursor-not-allowed opacity-60">
+                                        <input type="checkbox" {% if field_data.required %}checked{% endif %} disabled class="form-checkbox" />
+                                        <span class="text-sm ml-2 text-slate-400">Required</span>
+                                    </label>
+                                </div>
+                            </div>
+                            {% if field_data.options %}
+                            <div class="mt-3 pt-3 border-t border-slate-600">
+                                <label class="block text-xs font-medium text-slate-400 mb-2">Options</label>
+                                <div class="flex flex-wrap gap-2">
+                                    {% for option in field_data.options %}
+                                    <span class="inline-flex items-center px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
+                                        {{ option }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Custom Fields (New fields can be added) -->
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-sm font-medium text-slate-300">Add New Custom Fields</h4>
+                            <button type="button" id="add_field_btn" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                                <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" viewBox="0 0 16 16">
+                                    <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                                </svg>
+                                Add Field
+                            </button>
+                        </div>
+                        
+                        <div id="custom_fields_container" class="space-y-3">
+                            <!-- New custom fields will be added here dynamically -->
+                        </div>
+
+                        <div id="no_fields_message" class="text-center py-8 text-slate-500 border-2 border-dashed border-slate-600 rounded-lg">
+                            No new fields to add. Click "Add Field" to create one.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Panel footer -->
+        <footer>
+            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+                <div class="flex self-end">
+                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:experiments' %}">Cancel</a>
+                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+                </div>
+            </div>
+        </footer>
+
+        </fieldset>
+
+    </form>
+
+    {% include 'snippets/modal_success.html' %}
+    {% include 'snippets/modal_error.html' %}
+
+</div>
+{% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+
+    $(window).on('load', function() {
+
+        let fieldCounter = 0;
+
+        // Toggle no fields message visibility
+        function toggleNoFieldsMessage() {
+            const customFieldsContainer = $('#custom_fields_container');
+            const noFieldsMessage = $('#no_fields_message');
+            
+            if (customFieldsContainer.children().length === 0) {
+                noFieldsMessage.show();
+            } else {
+                noFieldsMessage.hide();
+            }
+        }
+
+        // Function to create a new field element (same as new.html)
+        function createFieldElement(fieldId) {
+            return `
+                <div class="bg-slate-700 rounded-lg p-4 border border-slate-600 field-item" data-field-id="${fieldId}">
+                    <div class="flex flex-col gap-3">
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Field Name<span class="text-rose-600"> *</span></label>
+                                <input type="text" 
+                                       class="form-input w-full field-name" 
+                                       placeholder="e.g., pH Level, Water Hardness" 
+                                       required />
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex flex-col sm:flex-row gap-3">
+                                    <div class="flex-1">
+                                        <label class="block text-xs font-medium text-slate-400 mb-1">Field Type<span class="text-rose-600"> *</span></label>
+                                        <select class="form-select w-full field-type" required>
+                                            <option value="" selected disabled>Select a value</option>
+                                            <option value="text">Text</option>
+                                            <option value="number">Number</option>
+                                            <option value="date">Date</option>
+                                            <option value="boolean">Yes/No</option>
+                                            <option value="select">Multiple Choices</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex-1">
+                                        <label class="block text-xs font-medium text-slate-400 mb-1">Field is Required</label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" class="form-checkbox field-required" />
+                                            <span class="text-sm ml-2 text-slate-300">Required</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Options section for Multiple Choices -->
+                        <div class="field-options-container hidden">
+                            <label class="block text-xs font-medium text-slate-400 mb-2">Available Options</label>
+                            <div class="flex gap-2 mb-2">
+                                <input type="text" 
+                                       class="form-input flex-1 field-option-input text-sm" 
+                                       placeholder="Type an option and press Enter or comma" />
+                            </div>
+                            <div class="flex flex-wrap gap-2 field-tags-container min-h-[2rem]">
+                                <!-- Tags will be added here -->
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button type="button" 
+                                    class="btn-sm bg-rose-500 hover:bg-rose-600 text-white remove-field-btn"
+                                    data-field-id="${fieldId}">
+                                <svg class="w-4 h-4 fill-current shrink-0 inline-block mr-1" viewBox="0 0 16 16">
+                                    <path d="M5 7h6v2H5V7zm7-4H4v2h8V3zM6 12h4v2H6v-2z" />
+                                </svg>
+                                Remove Field
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add field button click handler
+        $('#add_field_btn').click(function(e) {
+            e.preventDefault();
+            fieldCounter++;
+            const fieldElement = createFieldElement(fieldCounter);
+            $('#custom_fields_container').append(fieldElement);
+            toggleNoFieldsMessage();
+        });
+
+        // Remove field button click handler (delegated)
+        $(document).on('click', '.remove-field-btn', function(e) {
+            e.preventDefault();
+            const fieldId = $(this).data('field-id');
+            $(`.field-item[data-field-id="${fieldId}"]`).remove();
+            toggleNoFieldsMessage();
+        });
+
+        // Show/hide options input when field type changes
+        $(document).on('change', '.field-type', function() {
+            const container = $(this).closest('.field-item');
+            const optionsContainer = container.find('.field-options-container');
+            
+            if ($(this).val() === 'select') {
+                optionsContainer.removeClass('hidden');
+            } else {
+                optionsContainer.addClass('hidden');
+            }
+        });
+
+        // Function to create a tag element
+        function createTag(text, container) {
+            const tag = $(`
+                <span class="inline-flex items-center gap-1 px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
+                    <span class="tag-text">${text}</span>
+                    <button type="button" class="remove-tag hover:text-rose-400 transition-colors">
+                        <svg class="w-3 h-3 fill-current" viewBox="0 0 16 16">
+                            <path d="M12.72 3.293a1 1 0 00-1.415 0L8 6.586 4.695 3.293a1 1 0 00-1.414 1.414L6.586 8l-3.305 3.305a1 1 0 101.414 1.414L8 9.414l3.305 3.305a1 1 0 001.414-1.414L9.414 8l3.305-3.293a1 1 0 000-1.414z"/>
+                        </svg>
+                    </button>
+                </span>
+            `);
+            container.append(tag);
+        }
+
+        // Handle option input (comma or Enter key)
+        $(document).on('keydown', '.field-option-input', function(e) {
+            const input = $(this);
+            const value = input.val().trim();
+            const container = input.closest('.field-options-container').find('.field-tags-container');
+            
+            // On comma or Enter
+            if (e.key === ',' || e.key === 'Enter') {
+                e.preventDefault();
+                
+                // Get value before comma (if comma was pressed)
+                let optionValue = value;
+                if (e.key === ',') {
+                    optionValue = value.slice(0, -1).trim();
+                }
+                
+                if (optionValue && optionValue !== ',') {
+                    // Check if tag already exists
+                    let exists = false;
+                    container.find('.tag-text').each(function() {
+                        if ($(this).text() === optionValue) {
+                            exists = true;
+                        }
+                    });
+                    
+                    if (!exists) {
+                        createTag(optionValue, container);
+                    }
+                    input.val('');
+                }
+            }
+        });
+
+        // Handle comma in input value (for paste operations)
+        $(document).on('input', '.field-option-input', function(e) {
+            const input = $(this);
+            const value = input.val();
+            const container = input.closest('.field-options-container').find('.field-tags-container');
+            
+            if (value.includes(',')) {
+                const parts = value.split(',').map(p => p.trim()).filter(p => p);
+                
+                parts.forEach(part => {
+                    // Check if tag already exists
+                    let exists = false;
+                    container.find('.tag-text').each(function() {
+                        if ($(this).text() === part) {
+                            exists = true;
+                        }
+                    });
+                    
+                    if (!exists) {
+                        createTag(part, container);
+                    }
+                });
+                
+                input.val('');
+            }
+        });
+
+        // Remove tag
+        $(document).on('click', '.remove-tag', function(e) {
+            e.preventDefault();
+            $(this).closest('span').remove();
+        });
+
+        // Collect new custom fields data (only new fields, not existing ones)
+        function collectNewCustomFields() {
+            const fields = [];
+            
+            // Only collect new custom fields (not existing ones)
+            $('.field-item').each(function() {
+                const fieldName = $(this).find('.field-name').val().trim();
+                const fieldType = $(this).find('.field-type').val();
+                const fieldRequired = $(this).find('.field-required').is(':checked');
+                
+                // Validate that both name and type are provided
+                if (fieldName && fieldType) {
+                    const fieldData = {
+                        name: fieldName,
+                        type: fieldType,
+                        required: fieldRequired
+                    };
+                    
+                    // If field type is select, collect options from tags
+                    if (fieldType === 'select') {
+                        const options = [];
+                        $(this).find('.field-tags-container .tag-text').each(function() {
+                            options.push($(this).text());
+                        });
+                        fieldData.options = options;
+                    }
+                    
+                    fields.push(fieldData);
+                }
+            });
+            
+            return fields;
+        }
+
+        // Initialize
+        toggleNoFieldsMessage();
+
+        $("body").click(function() {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+
+        $('#btn_submit').click(function (e) {
+            e.preventDefault();
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+            let experiment_details_form = document.getElementById('experiment_details_form');
+            var formData = new FormData(experiment_details_form);
+            
+            // Convert to object
+            var dataObject = Object.fromEntries(formData);
+            
+            // Collect new custom fields (if any)
+            const newFields = collectNewCustomFields();
+            if (newFields.length > 0) {
+                // TODO: When API is ready, merge new fields with existing experiment_fields
+                // For now, we'll just send the new fields
+                // The backend should handle merging with existing fields
+                dataObject.experiment_fields = newFields;
+            }
+
+            $.ajax({
+                url: "{% url 'api:v1:experiment-detail' id=experiment.id %}",
+                method: "PUT",
+                data: JSON.stringify(dataObject),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The experiment has been updated.");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function(){
+                        // Refresh the page
+                        window.location.reload();
+                    }, 2000);
+                },
+                error: function (data) {
+                    {% include 'snippets/ajax_error_modal_management.js' %}
+                }
+            });
+            return false; // prevent default
+        });
+
+    });
+</script>
+{% endblock inline_extra_js %}

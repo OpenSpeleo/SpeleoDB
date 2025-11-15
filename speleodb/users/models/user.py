@@ -23,19 +23,20 @@ if TYPE_CHECKING:
     from django.db.models import QuerySet
     from django_stubs_ext import StrOrPromise
 
-    from speleodb.surveys.models import Mutex
+    from speleodb.gis.models import ExperimentUserPermission
+    from speleodb.gis.models import Station
+    from speleodb.gis.models import StationResource
     from speleodb.surveys.models import Project
-    from speleodb.surveys.models import Station
-    from speleodb.surveys.models import StationResource
-    from speleodb.surveys.models import TeamPermission
-    from speleodb.surveys.models import UserPermission
+    from speleodb.surveys.models import ProjectMutex
+    from speleodb.surveys.models import TeamProjectPermission
+    from speleodb.surveys.models import UserProjectPermission
+    from speleodb.users.models import SurveyTeam
     from speleodb.users.models import SurveyTeamMembership
-    from speleodb.users.models.team import SurveyTeam
 
 
 def filter_permissions_by_best(
-    permissions: list[UserPermission | TeamPermission],
-) -> list[UserPermission | TeamPermission]:
+    permissions: list[UserProjectPermission | TeamProjectPermission],
+) -> list[UserProjectPermission | TeamProjectPermission]:
     """
     A user can have access to a project by name or from N teams.
     This function keep the "best access level" for each project
@@ -66,11 +67,12 @@ class User(AbstractUser):
     """
 
     # FK Keys
-    rel_mutexes: models.QuerySet[Mutex]
-    rel_permissions: models.QuerySet[UserPermission]
-    rel_team_memberships: models.QuerySet[SurveyTeamMembership]
+    rel_experiment_permissions: models.QuerySet[ExperimentUserPermission]
+    rel_mutexes: models.QuerySet[ProjectMutex]
+    rel_permissions: models.QuerySet[UserProjectPermission]
     rel_stations_created: models.QuerySet[Station]
     rel_station_resources_created: models.QuerySet[StationResource]
+    rel_team_memberships: models.QuerySet[SurveyTeamMembership]
 
     id = models.AutoField(primary_key=True)  # Explicitly declared for typing
 
@@ -136,7 +138,7 @@ class User(AbstractUser):
         ]
 
     @property
-    def permissions(self) -> list[TeamPermission | UserPermission]:
+    def permissions(self) -> list[TeamProjectPermission | UserProjectPermission]:
         """Returns a sorted list of `TeamPermission` or `UserPermission` by project
         name. The method finds the best permission (user or team) for each project."""
 
@@ -147,8 +149,8 @@ class User(AbstractUser):
     @cached(cache=TTLCache(maxsize=100, ttl=300))
     def _fetch_permissions(
         self, project: Project | None = None
-    ) -> tuple[QuerySet[UserPermission], QuerySet[TeamPermission]]:
-        from speleodb.surveys.models import TeamPermission  # noqa: PLC0415
+    ) -> tuple[QuerySet[UserProjectPermission], QuerySet[TeamProjectPermission]]:
+        from speleodb.surveys.models import TeamProjectPermission  # noqa: PLC0415
 
         project_filter = {"project": project} if project else {}
 
@@ -161,7 +163,7 @@ class User(AbstractUser):
 
         # -------------------------- TEAM PERMISSIONS -------------------------- #
 
-        team_permissions = TeamPermission.objects.filter(
+        team_permissions = TeamProjectPermission.objects.filter(
             target__rel_team_memberships__user=self,
             target__rel_team_memberships__is_active=True,
             is_active=True,
@@ -171,7 +173,9 @@ class User(AbstractUser):
         return user_permissions, team_permissions
 
     @cached(cache=TTLCache(maxsize=100, ttl=300))
-    def get_best_permission(self, project: Project) -> TeamPermission | UserPermission:
+    def get_best_permission(
+        self, project: Project
+    ) -> TeamProjectPermission | UserProjectPermission:
         try:
             user_permissions, team_permissions = self._fetch_permissions(project)
             return filter_permissions_by_best([*user_permissions, *team_permissions])[0]
@@ -181,7 +185,7 @@ class User(AbstractUser):
             ) from e
 
     @property
-    def active_mutexes(self) -> models.QuerySet[Mutex]:
+    def active_mutexes(self) -> models.QuerySet[ProjectMutex]:
         return self.rel_mutexes.filter(is_active=True)
 
     def has_beta_access(self) -> bool:

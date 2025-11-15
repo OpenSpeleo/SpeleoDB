@@ -226,3 +226,27 @@
 #station-manager-button {
     width: 10rem;
 }
+
+/* Forms */
+
+/* Fix for select elements appearing as read-only */
+.form-select:not(:disabled) {
+    background-color: rgb(15 23 42 / 0.3);
+    border-color: rgb(107 114 128);
+    cursor: pointer;
+}
+
+/* Fix for checkbox elements appearing as read-only */
+.form-checkbox:not(:disabled) {
+    background-color: rgb(15 23 42 / 0.3);
+    border-color: rgb(136 143 153);
+    cursor: pointer;
+}
+
+/* Style calendar picker icon to match text color */
+input[type='date'].form-input::-webkit-calendar-picker-indicator,
+input[type='datetime-local'].form-input::-webkit-calendar-picker-indicator,
+input.form-input[type='date']::-webkit-calendar-picker-indicator,
+input.form-input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    filter: invert(1) !important;
+}

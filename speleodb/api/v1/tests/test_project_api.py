@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
@@ -16,9 +17,11 @@ from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.utils import is_subset
-from speleodb.surveys.models import Mutex
-from speleodb.surveys.models import PermissionLevel
+from speleodb.common.enums import PermissionLevel
 from speleodb.utils.test_utils import named_product
+
+if TYPE_CHECKING:
+    from speleodb.surveys.models import ProjectMutex
 
 
 @parameterized_class(
@@ -215,7 +218,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             self.user.email,
         )
 
-        mutex: Mutex | None = self.project.active_mutex()
+        mutex: ProjectMutex | None = self.project.active_mutex()
         assert mutex is not None
 
         assert mutex.is_active

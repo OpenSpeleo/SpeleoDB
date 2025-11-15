@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 
 from rest_framework import serializers
 
-from speleodb.surveys.models import PluginRelease
-from speleodb.surveys.models.platform_base import OperatingSystemEnum
-from speleodb.surveys.models.platform_base import SurveyPlatformEnum
+from speleodb.plugins.models import PluginRelease
+from speleodb.plugins.models.platform_base import OperatingSystemEnum
+from speleodb.plugins.models.platform_base import SurveyPlatformEnum
 
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise
