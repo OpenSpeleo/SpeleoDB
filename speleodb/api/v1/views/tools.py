@@ -20,13 +20,13 @@ from mnemo_lib.constants import SurveyDirection
 from mnemo_lib.models import DMPFile
 from pydantic import BaseModel
 from pydantic import Field
-from pydantic import PastDate
 from pydantic import ValidationError as PydanticValidationError
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.views import APIView
 
 from speleodb.api.v1.views.tmp_utils import SurveyData
+from speleodb.utils.pydantic_utils import NotFutureDate  # noqa: TC001
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import ErrorResponse
 
@@ -251,7 +251,7 @@ class ToolDMP2JSON(APIView):
 class DMPDoctorQuery(BaseModel):
     fix_dmp: bool
 
-    survey_date: PastDate | None
+    survey_date: NotFutureDate | None
 
     length_scaling: Annotated[float, Field(gt=0)]
 

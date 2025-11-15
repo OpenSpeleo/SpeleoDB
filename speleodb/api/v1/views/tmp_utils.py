@@ -13,9 +13,10 @@ from compass_lib.enums import ShotFlag
 from openspeleo_lib.geo_utils import decimal_year
 from pydantic import BaseModel
 from pydantic import Field
-from pydantic import PastDate
 from pydantic import field_validator
 from pydantic import model_validator
+
+from speleodb.utils.pydantic_utils import NotFutureDate  # noqa: TC001
 
 if TYPE_CHECKING:
     from typing import Any
@@ -93,7 +94,7 @@ class CompassShot(BaseModel):
 
 
 class DeclinationObj(BaseModel):
-    survey_date: PastDate
+    survey_date: NotFutureDate
     latitude: Annotated[float, Field(ge=-90.0, le=90.0)]
     longitude: Annotated[float, Field(ge=-180.0, le=180.0)]
 
@@ -111,7 +112,7 @@ class DeclinationObj(BaseModel):
 class SurveyData(BaseModel):
     cave_name: Annotated[str, Field(min_length=1, max_length=64)]
     survey_name: Annotated[str, Field(min_length=1, max_length=64)]
-    survey_date: PastDate
+    survey_date: NotFutureDate
 
     survey_team: Annotated[list[str], Field(min_length=0)]
 
