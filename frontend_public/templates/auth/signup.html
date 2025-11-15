@@ -61,6 +61,11 @@
           <input id="password2" name="password2" class="form-input w-full" placeholder="Password (again)" type="password" autocomplete="on" required />
       </div>
 
+      <div>
+          <label class="block text-sm text-slate-300 font-medium mb-1" for="cave_marker">Anti-Robot:<br>What's the name of the cave marker indicating a jump ?<span class="text-rose-500">*</span></label>
+          <input id="cave_marker" name="cave_marker" class="form-input w-full" type="text" placeholder="A***w" required />
+      </div>
+
   </div>
   <div class="mt-6">
       <button class="btn text-sm text-white bg-purple-500 hover:bg-purple-600 w-full shadow-sm group" type="submit" id="btn_submit">
@@ -73,6 +78,30 @@
   <div class="text-sm text-slate-400">
       Already have an account? <a class="font-medium text-purple-500 hover:text-purple-400 transition duration-150 ease-in-out" href="{% url 'account_login' %}">Sign in</a>
   </div>
+</div>
+
+<!-- Cave Diver Verification Modal -->
+<div id="cave_diver_modal" class="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4 sm:px-6" style="display: none; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;">
+    <div class="bg-slate-800 rounded-lg shadow-xl overflow-auto max-w-md w-full border border-slate-600">
+        <div class="p-6">
+            <!-- Modal header -->
+            <div class="mb-4 text-center">
+                <div class="text-xl font-semibold text-slate-100">
+                    Access Restricted
+                </div>
+            </div>
+            <!-- Modal content -->
+            <div class="text-sm text-slate-300 mb-6 text-center">
+                <p>You're not a cave diver.</p>
+            </div>
+            <!-- Modal footer -->
+            <div class="flex justify-center">
+                <button id="cave_diver_modal_close" class="btn-sm bg-purple-500 hover:bg-purple-600 text-white w-32">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock user_form %}
@@ -94,6 +123,16 @@
 
             $("#error_div").hide();
             $("#success_div").hide();
+
+            // Verify cave_marker is "ARROW" (case-insensitive)
+            var cave_marker = $("#cave_marker").val().trim().toUpperCase();
+            if (cave_marker !== "ARROW") {
+                $("#cave_diver_modal").show();
+                return false;
+            }
+
+            // Remove cave_marker from formData before sending
+            formData.delete('cave_marker');
 
             $.ajax({
                 url: "{% url 'headless:browser:account:signup' %}",
@@ -155,6 +194,18 @@
                 }
             });
             return false; // prevent default
+        });
+
+        // Close modal handler
+        $('#cave_diver_modal_close').click(function () {
+            $("#cave_diver_modal").hide();
+        });
+
+        // Close modal when clicking outside
+        $(window).click(function (event) {
+            if ($(event.target).is('#cave_diver_modal')) {
+                $("#cave_diver_modal").hide();
+            }
         });
 
     });
