@@ -95,10 +95,6 @@ ROOT_URLCONF = "config.urls"
 # https://docs.djangoproject.com/en/dev/ref/settings/#wsgi-application
 WSGI_APPLICATION = "config.wsgi.application"
 
-# CollectFasta S3 CollectStatic
-COLLECTFASTA_STRATEGY = "collectfasta.strategies.boto3.Boto3Strategy"
-COLLECTFASTA_THREADS = 20
-
 # APPS
 # ------------------------------------------------------------------------------
 DJANGO_APPS = [
@@ -108,8 +104,6 @@ DJANGO_APPS = [
     "django.contrib.sites",
     "django.contrib.messages",
     "django.contrib.sitemaps",
-    # Note: 'collectfasta' must come before 'django.contrib.staticfiles' in INSTALLED_APPS.
-    "collectfasta",
     "django.contrib.staticfiles",
     # "django.contrib.humanize", # Handy template tags
     "django.contrib.admin",
