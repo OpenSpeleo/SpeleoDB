@@ -6,6 +6,8 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from speleodb.gis.models import Experiment
+from speleodb.gis.models.experiment import ExperimentFieldDefinition
+from speleodb.gis.models.experiment import ExperimentFieldsDict
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldSlug
 
@@ -367,7 +369,8 @@ class TestExperimentModel:
             experiment.full_clean()
 
         assert "experiment_fields" in exc_info.value.message_dict
-        assert "missing required keys" in str(exc_info.value.message_dict)
+        # Pydantic error message format: "type: Field required"
+        assert "Field required" in str(exc_info.value.message_dict)
 
     def test_invalid_field_type(self) -> None:
         """Test that invalid field types raise validation error."""
@@ -388,7 +391,8 @@ class TestExperimentModel:
             experiment.full_clean()
 
         assert "experiment_fields" in exc_info.value.message_dict
-        assert "invalid type" in str(exc_info.value.message_dict)
+        # Pydantic error message format includes "Invalid field type"
+        assert "Invalid field type" in str(exc_info.value.message_dict)
 
     def test_options_only_for_select_type(self) -> None:
         """Test that options are only valid for select type fields."""
@@ -410,7 +414,10 @@ class TestExperimentModel:
             experiment.full_clean()
 
         assert "experiment_fields" in exc_info.value.message_dict
-        assert "Options are only valid" in str(exc_info.value.message_dict)
+        # Pydantic error message format: "Field 'options' is only valid for 'select'
+        # type fields"
+        assert "options" in str(exc_info.value.message_dict).lower()
+        assert "select" in str(exc_info.value.message_dict).lower()
 
     def test_slug_generation_uniqueness(self) -> None:
         """Test that slug generation handles collisions correctly."""
@@ -509,3 +516,107 @@ class TestExperimentModel:
         # Fields should remain unchanged
         experiment.refresh_from_db()
         assert experiment.experiment_fields == original_fields
+
+    def test_rootmodel_direct_validation(self) -> None:
+        """Test that RootModel validates dict directly without wrapper."""
+        fields_dict = {
+            "test_field": {
+                "name": "Test Field",
+                "type": FieldType.TEXT.value,
+                "required": False,
+            }
+        }
+
+        # Should validate directly without {"root": ...} wrapper
+        fields_model = ExperimentFieldsDict.model_validate(fields_dict)
+        assert "test_field" in fields_model.root
+        assert fields_model.root["test_field"].name == "Test Field"
+
+    def test_validation_with_temp_slugs(self) -> None:
+        """Test that validation excludes temp slugs (they're processed in save())."""
+        experiment = Experiment(
+            name="Test Experiment",
+            created_by="test@example.com",
+            experiment_fields={
+                "test_field": {
+                    "name": "Test Field",
+                    "type": FieldType.TEXT.value,
+                    "required": False,
+                },
+                "temp_123": {
+                    "name": "Water Quality",
+                    "type": FieldType.TEXT.value,
+                    "required": False,
+                },
+            },
+        )
+
+        # Should validate successfully (temp slugs are excluded from validation)
+        experiment.full_clean()
+        experiment.save()
+
+        # After save, temp slugs should be processed into proper slugs
+        experiment.refresh_from_db()
+        assert "test_field" in experiment.experiment_fields
+        # temp_123 should have been converted to "water_quality" slug
+        assert "water_quality" in experiment.experiment_fields
+        assert "temp_123" not in experiment.experiment_fields
+
+    def test_validation_with_invalid_field_type(self) -> None:
+        """Test that validation raises error for invalid field types."""
+        experiment = Experiment(
+            name="Test Experiment",
+            created_by="test@example.com",
+            experiment_fields="not a dict",
+        )
+
+        # Should raise ValidationError for non-dict
+        with pytest.raises(ValidationError) as exc_info:
+            experiment.full_clean()
+
+        assert "experiment_fields" in exc_info.value.message_dict
+
+    def test_validation_with_none_fields(self) -> None:
+        """Test that validation handles None fields gracefully."""
+        experiment = Experiment(
+            name="Test Experiment",
+            created_by="test@example.com",
+            experiment_fields=None,
+        )
+
+        # Should handle None and validate successfully (treated as empty dict)
+        experiment.full_clean()
+        experiment.save()
+
+        # Fields should be empty dict after save
+        experiment.refresh_from_db()
+        assert experiment.experiment_fields == {}
+
+    def test_model_dump_serialization(self) -> None:
+        """Test that model_dump() works correctly for serialization."""
+
+        field_def = ExperimentFieldDefinition(
+            name="Test Field",
+            type=FieldType.TEXT,
+            required=True,
+        )
+
+        # Should serialize correctly
+        dumped = field_def.model_dump(mode="json", exclude_none=True)
+        assert dumped["name"] == "Test Field"
+        assert dumped["type"] == FieldType.TEXT.value
+        assert dumped["required"] is True
+        assert "options" not in dumped  # Should be excluded when None
+
+    def test_model_dump_with_options(self) -> None:
+        """Test that model_dump() includes options when present."""
+
+        field_def = ExperimentFieldDefinition(
+            name="Quality",
+            type=FieldType.SELECT,
+            required=False,
+            options=["Good", "Fair", "Poor"],
+        )
+
+        dumped = field_def.model_dump(mode="json", exclude_none=True)
+        assert dumped["options"] == ["Good", "Fair", "Poor"]

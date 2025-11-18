@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from pydantic import ValidationError as PydanticValidationError
 from rest_framework import serializers
 
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
-from speleodb.gis.models.experiment import FieldType
+from speleodb.gis.models.experiment import ExperimentFieldDefinition
 from speleodb.gis.models.experiment import MandatoryFieldSlug
 from speleodb.users.models import User
 
@@ -66,6 +67,81 @@ class ExperimentSerializer(serializers.ModelSerializer[Experiment]):
 
         return super().to_internal_value(data)  # type: ignore[no-any-return]
 
+    def _validate_and_parse_field(
+        self, field_data: dict[str, Any], field_name: str
+    ) -> ExperimentFieldDefinition:
+        """Validate and parse a single field using Pydantic."""
+        if not isinstance(field_data, dict):
+            raise serializers.ValidationError(
+                {
+                    "experiment_fields": [
+                        "Each field must be a dictionary with 'name', 'type', and "
+                        "'required' keys."
+                    ]
+                }
+            )
+
+        try:
+            return ExperimentFieldDefinition(**field_data)
+        except PydanticValidationError as e:
+            # Convert Pydantic errors to DRF format
+            errors = []
+            for error in e.errors():
+                field_path = " -> ".join(str(loc) for loc in error["loc"])
+                error_msg = error["msg"]
+                if field_path == "root":
+                    errors.append(error_msg)
+                else:
+                    errors.append(f"{field_path}: {error_msg}")
+            error_msg = f"Field '{field_name}': {', '.join(errors)}"
+            raise serializers.ValidationError({"experiment_fields": [error_msg]}) from e
+        except (ValueError, TypeError) as e:
+            raise serializers.ValidationError(
+                {"experiment_fields": [f"Field '{field_name}': {str(e)!s}"]}
+            ) from e
+
+    def _process_mandatory_field(
+        self,
+        field_def: ExperimentFieldDefinition,
+        processed_fields: dict[str, dict[str, Any]],
+    ) -> bool:
+        """Process a mandatory field by name match. Returns True if processed."""
+        mandatory_fields = MandatoryFieldSlug.get_mandatory_fields()
+        for mandatory_slug, mandatory_data in mandatory_fields.items():
+            if mandatory_data["name"] == field_def.name:
+                if mandatory_slug in processed_fields:
+                    processed_fields[mandatory_slug] = field_def.model_dump(
+                        mode="json", exclude_none=True
+                    )
+                return True
+        return False
+
+    def _process_custom_field(
+        self,
+        field_def: ExperimentFieldDefinition,
+        field_name: str,
+        processed_fields: dict[str, dict[str, Any]],
+        existing_slugs: set[str],
+    ) -> None:
+        """Process a custom (non-mandatory) field, generating a unique slug."""
+        # Check both existing_slugs and processed_fields keys to ensure uniqueness
+        all_existing_slugs = existing_slugs.copy()
+        all_existing_slugs.update(processed_fields.keys())
+        slug = Experiment.generate_unique_slug(field_name, all_existing_slugs)
+        existing_slugs.add(slug)
+        processed_fields[slug] = field_def.model_dump(mode="json", exclude_none=True)
+
+    def _ensure_mandatory_fields_present(
+        self, processed_fields: dict[str, dict[str, Any]]
+    ) -> None:
+        """Ensure all mandatory fields are present in processed_fields."""
+        for (
+            mandatory_slug,
+            mandatory_data,
+        ) in MandatoryFieldSlug.get_mandatory_fields().items():
+            if mandatory_slug not in processed_fields:
+                processed_fields[mandatory_slug] = mandatory_data
+
     def _convert_fields_list_to_dict(
         self, value: list[dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
@@ -98,6 +174,7 @@ class ExperimentSerializer(serializers.ModelSerializer[Experiment]):
 
         # Process each field from the array
         for field_data in value:
+            # Validate field_data is a dict before processing
             if not isinstance(field_data, dict):
                 raise serializers.ValidationError(
                     {
@@ -112,104 +189,17 @@ class ExperimentSerializer(serializers.ModelSerializer[Experiment]):
             if not field_name:
                 continue  # Skip empty fields
 
-            field_type = field_data.get("type", "")
-            field_required = field_data.get("required", False)
-            field_options = field_data.get("options", [])
+            # Validate and parse field using Pydantic
+            field_def = self._validate_and_parse_field(field_data, field_name)
 
-            # Validate field type
-            if not field_type:
-                raise serializers.ValidationError(
-                    {
-                        "experiment_fields": [
-                            f"Field '{field_name}' is missing required 'type' field."
-                        ]
-                    }
+            # Process mandatory or custom field
+            if not self._process_mandatory_field(field_def, processed_fields):
+                self._process_custom_field(
+                    field_def, field_name, processed_fields, existing_slugs
                 )
 
-            if not FieldType.is_valid(field_type):
-                valid_types = FieldType.get_all_types()
-                raise serializers.ValidationError(
-                    {
-                        "experiment_fields": [
-                            f"Invalid field type '{field_type}' for field "
-                            f"'{field_name}'. Valid types: {', '.join(valid_types)}"
-                        ]
-                    }
-                )
-
-            # Check if this is a mandatory field (by name match)
-            # Only check against mandatory field slugs, not all processed fields
-            is_mandatory = False
-            mandatory_fields = MandatoryFieldSlug.get_mandatory_fields()
-            for mandatory_slug, mandatory_data in mandatory_fields.items():
-                if mandatory_data["name"] == field_name:
-                    is_mandatory = True
-                    # Update mandatory field with provided data
-                    # (if it exists in processed_fields)
-                    if mandatory_slug in processed_fields:
-                        processed_fields[mandatory_slug] = {
-                            "name": field_name,
-                            "type": field_type,
-                            "required": field_required,
-                        }
-                    break
-
-            if not is_mandatory:
-                # Generate slug for custom field
-                # Check both existing_slugs and processed_fields keys to ensure
-                # uniqueness. This is critical for handling duplicate field names -
-                # we need to check all slugs that have been generated so far
-                # (in both the set and dict)
-                all_existing_slugs = existing_slugs.copy()
-                all_existing_slugs.update(processed_fields.keys())
-                slug = Experiment.generate_unique_slug(field_name, all_existing_slugs)
-                # Add the new slug to existing_slugs immediately so next
-                # iteration sees it
-                existing_slugs.add(slug)
-
-                # IMPORTANT: Always add the field with its unique slug as the key
-                # This allows multiple fields with the same name but different slugs
-                # (e.g., ph_level and ph_level_1 for duplicate "pH Level" fields)
-
-                # Build field data
-                processed_field_data = {
-                    "name": field_name,
-                    "type": field_type,
-                    "required": field_required,
-                }
-
-                # Add options if field type is select
-                if field_type == FieldType.SELECT.value:
-                    if not field_options:
-                        raise serializers.ValidationError(
-                            {
-                                "experiment_fields": [
-                                    f"Field '{field_name}' is of type 'select' but "
-                                    "has no options."
-                                ]
-                            }
-                        )
-                    processed_field_data["options"] = field_options
-                elif field_options:
-                    raise serializers.ValidationError(
-                        {
-                            "experiment_fields": [
-                                f"Field '{field_name}' has options but type is "
-                                f"'{field_type}'. Options are only valid for "
-                                "'select' type fields."
-                            ]
-                        }
-                    )
-
-                processed_fields[slug] = processed_field_data
-
-        # Ensure all mandatory fields are present (in case frontend didn't send them)
-        for (
-            mandatory_slug,
-            mandatory_data,
-        ) in MandatoryFieldSlug.get_mandatory_fields().items():
-            if mandatory_slug not in processed_fields:
-                processed_fields[mandatory_slug] = mandatory_data
+        # Ensure all mandatory fields are present
+        self._ensure_mandatory_fields_present(processed_fields)
 
         return processed_fields
 

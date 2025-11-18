@@ -49,19 +49,10 @@ class _BaseExperimentView(AuthenticatedTemplateView):
     def get_experiment_data(self, user: User, experiment_id: str) -> dict[str, Any]:
         experiment = Experiment.objects.get(id=experiment_id)
 
-        # Check if user only has WEB_VIEWER access
-        # try:
-        #     best_permission = experiment.get_best_permission(user)
-        #     if best_permission.level == PermissionLevel.WEB_VIEWER:
-        #         # User only has WEB_VIEWER access,
-        #         # which is not allowed for these views
-        #         raise PermissionError("Insufficient permissions")
-
-        # except ObjectDoesNotExist as e:
-        #     # User has no permissions at all
-        #     raise PermissionError("No permissions") from e
         user_perm = ExperimentUserPermission.objects.get(
-            user=user, experiment=experiment, is_active=True
+            user=user,
+            experiment=experiment,
+            is_active=True,
         )
 
         return {
@@ -69,7 +60,7 @@ class _BaseExperimentView(AuthenticatedTemplateView):
             # "is_experiment_admin": best_permission.level == PermissionLevel.ADMIN,
             "is_experiment_admin": user_perm.level == PermissionLevel.ADMIN,
             # "has_write_access": best_permission.level >= PermissionLevel.READ_AND_WRITE,  # noqa: E501
-            "has_write_access": user_perm.level == PermissionLevel.READ_AND_WRITE,
+            "has_write_access": user_perm.level >= PermissionLevel.READ_AND_WRITE,
         }
 
 
@@ -159,7 +150,16 @@ class ExperimentGISView(_BaseExperimentView):
         except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:experiments"))
 
+        # Only allow admins to refresh the token
         if "_refresh_token" in request.POST:
+            if not data.get("is_experiment_admin", False):
+                # Redirect back without refreshing if user is not admin
+                return redirect(
+                    reverse(
+                        "private:experiment_gis_integration",
+                        kwargs={"experiment_id": experiment_id},
+                    )
+                )
             experiment = data["experiment"]
             experiment.refresh_gis_token()
 

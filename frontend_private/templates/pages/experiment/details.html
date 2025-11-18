@@ -12,7 +12,7 @@
 
         <!-- Panel body -->
         <div class="p-6 space-y-6">
-            <h2 class="text-2xl text-slate-100 font-bold mb-5">Experiment Settings</h2>
+            <h2 class="text-2xl text-slate-100 font-bold mb-5">Experiment Settings: {{ has_write_access }}</h2>
 
             <!-- Experiment Name -->
             <section>
@@ -98,6 +98,7 @@
                     {% endif %}
 
                     <!-- Custom Fields (New fields can be added) -->
+                     {% if has_write_access %}
                     <div>
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="text-sm font-medium text-slate-300">Add New Custom Fields</h4>
@@ -117,6 +118,7 @@
                             No new fields to add. Click "Add Field" to create one.
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </section>
 

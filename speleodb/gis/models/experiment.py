@@ -11,6 +11,7 @@ import os
 import re
 import uuid
 from typing import TYPE_CHECKING
+from typing import Annotated
 from typing import Any
 
 from django.core.exceptions import ValidationError
@@ -18,10 +19,17 @@ from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import Q
 from django.utils.text import slugify
+from pydantic import BaseModel
+from pydantic import BeforeValidator
+from pydantic import Field
+from pydantic import RootModel
+from pydantic import ValidationError as PydanticValidationError
+from pydantic import model_validator
 
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
 from speleodb.users.models import User
+from speleodb.utils.pydantic_utils import pydantic_to_django_validation_error
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -99,6 +107,93 @@ class MandatoryFieldSlug(enum.Enum):
 
 def _generate_random_token() -> str:
     return binascii.hexlify(os.urandom(20)).decode()
+
+
+class ExperimentFieldDefinition(BaseModel):
+    """Pydantic model for a single field definition in experiment_fields."""
+
+    name: Annotated[str, Field(min_length=1, description="Field display name")]
+    type: Annotated[FieldType, Field(description="Field type")]
+    required: Annotated[
+        bool, Field(default=False, description="Whether field is required")
+    ]
+    options: Annotated[
+        list[str] | None,
+        Field(default=None, description="Options for SELECT type fields"),
+    ] = None
+
+    @model_validator(mode="after")
+    def validate_options_for_select(self) -> ExperimentFieldDefinition:
+        """Validate that options are only present for SELECT type fields."""
+        if self.options is not None and self.type != FieldType.SELECT:
+            raise ValueError(
+                f"Field 'options' is only valid for '{FieldType.SELECT.value}' type "
+                "fields"
+            )
+        if self.type == FieldType.SELECT and not self.options:
+            raise ValueError(
+                f"Field type '{FieldType.SELECT.value}' requires 'options' to be "
+                "provided"
+            )
+        return self
+
+
+def _validate_and_parse_fields_dict(
+    v: dict[str, Any],
+) -> dict[str, ExperimentFieldDefinition]:
+    """
+    Validate slug format and parse field data, converting string types to FieldType
+    enum.
+    """
+    if not isinstance(v, dict):
+        raise TypeError("Experiment fields must be a dictionary")
+
+    processed_data: dict[str, ExperimentFieldDefinition] = {}
+    for slug, field_data in v.items():
+        # Skip temp slugs - they'll be processed in save()
+        if slug.startswith("temp_"):
+            processed_data[slug] = ExperimentFieldDefinition(**field_data)
+            continue
+
+        # Validate slug format
+        if not re.match(r"^[a-z][a-z0-9_]*$", slug):
+            raise ValueError(
+                f"Invalid slug '{slug}'. Slugs must start with a letter "
+                "and contain only lowercase letters, numbers, and underscores."
+            )
+
+        # Convert type string to FieldType enum if needed
+        if isinstance(field_data, dict) and "type" in field_data:
+            _field_data = field_data.copy()
+            if isinstance(_field_data["type"], str):
+                try:
+                    _field_data["type"] = FieldType(_field_data["type"])
+                except ValueError as e:
+                    valid_types = FieldType.get_all_types()
+                    raise ValueError(
+                        f"Invalid field type '{_field_data['type']}'. "
+                        f"Valid types: {', '.join(valid_types)}"
+                    ) from e
+        else:
+            _field_data = field_data
+
+        processed_data[slug] = ExperimentFieldDefinition.model_validate(_field_data)
+
+    return processed_data
+
+
+class ExperimentFieldsDict(RootModel[dict[str, ExperimentFieldDefinition]]):
+    """
+    Pydantic RootModel for the experiment_fields dictionary structure.
+
+    RootModel allows us to work directly with the dict without a 'root' wrapper.
+    Access the dict via .root property, or use model_dump() for serialization.
+    """
+
+    root: Annotated[
+        dict[str, ExperimentFieldDefinition],
+        BeforeValidator(_validate_and_parse_fields_dict),
+    ] = Field(default_factory=dict)
 
 
 class Experiment(models.Model):
@@ -189,6 +284,10 @@ class Experiment(models.Model):
         **kwargs: Any,
     ) -> None:
         """Override save to enforce field immutability and process temporary slugs."""
+        # Ensure experiment_fields is never None (convert to empty dict)
+        # JSONField doesn't allow NULL, so we normalize None to {}
+        if self.experiment_fields is None:
+            self.experiment_fields = {}
         # Process temporary slugs before validation
         self._process_temporary_slugs()
 
@@ -258,22 +357,25 @@ class Experiment(models.Model):
 
         return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
-    def _validate_experiment_fields_structure(self) -> None:
+    def _parse_fields_dict(
+        self, fields: Any, exclude_temp: bool = True
+    ) -> ExperimentFieldsDict:
         """
-        Validate that experiment_fields follows the correct structure:
-        {
-            "field_slug": {
-                "name": "Verbose Name",
-                "type": "field_type",
-                "required": bool,
-                "options": [...],  # optional, only for select type
-            }
-        }
+        Parse and validate fields dict using Pydantic RootModel.
 
-        Mandatory fields are identified by their slug (from MandatoryFieldSlug enum),
-        not by a 'mandatory' property in the field data.
+        Args:
+            fields: The fields dictionary to parse (will be validated)
+            exclude_temp: If True, exclude temp slugs from validation
+
+        Returns:
+            ExperimentFieldsDict instance
+
+        Raises:
+            ValidationError: If fields structure is invalid (not a dict or
+                invalid structure)
         """
-        fields = self.experiment_fields
+        if fields is None:
+            fields = {}
 
         if not isinstance(fields, dict):
             raise ValidationError(
@@ -284,76 +386,33 @@ class Experiment(models.Model):
                 }
             )
 
-        required_keys = {"name", "type", "required"}
+        # Skip validation for temp slugs - they'll be processed in save()
+        fields_to_validate = (
+            {k: v for k, v in fields.items() if not k.startswith("temp_")}
+            if exclude_temp
+            else fields
+        )
 
-        for slug, field_data in fields.items():
-            # Skip temp slugs - they'll be processed in save()
-            if slug.startswith("temp_"):
-                continue
+        try:
+            return ExperimentFieldsDict.model_validate(fields_to_validate)
+        except PydanticValidationError as e:
+            raise pydantic_to_django_validation_error(e) from e
+        except ValueError as e:
+            raise ValidationError({"experiment_fields": [str(e)]}) from e
 
-            # Validate slug format
-            if not re.match(r"^[a-z][a-z0-9_]*$", slug):
-                raise ValidationError(
-                    {
-                        "experiment_fields": [
-                            f"Invalid slug '{slug}'. Slugs must start with a "
-                            "letter and contain only lowercase letters, "
-                            "numbers, and underscores."
-                        ]
-                    }
-                )
+    def _validate_experiment_fields_structure(self) -> None:
+        """
+        Validate that experiment_fields follows the correct structure using Pydantic.
 
-            # Validate field data is a dict
-            if not isinstance(field_data, dict):
-                raise ValidationError(
-                    {
-                        "experiment_fields": [
-                            f"Field '{slug}' must be a dictionary with field "
-                            "properties."
-                        ]
-                    }
-                )
-
-            # Check required keys
-            missing_keys = required_keys - set(field_data.keys())
-            if missing_keys:
-                raise ValidationError(
-                    {
-                        "experiment_fields": [
-                            f"Field '{slug}' is missing required keys: "
-                            f"{', '.join(missing_keys)}"
-                        ]
-                    }
-                )
-
-            # Validate field type using enum
-            if not FieldType.is_valid(field_data["type"]):
-                valid_types = FieldType.get_all_types()
-                raise ValidationError(
-                    {
-                        "experiment_fields": [
-                            f"Field '{slug}' has invalid type '{field_data['type']}'. "
-                            f"Valid types: {', '.join(valid_types)}"
-                        ]
-                    }
-                )
-
-            # Validate options only present for select type
-            if "options" in field_data and field_data["type"] != FieldType.SELECT.value:
-                raise ValidationError(
-                    {
-                        "experiment_fields": [
-                            f"Field '{slug}' has 'options' but type is "
-                            f"'{field_data['type']}'. Options are only valid "
-                            f"for '{FieldType.SELECT.value}' type fields."
-                        ]
-                    }
-                )
+        Mandatory fields are identified by their slug (from MandatoryFieldSlug enum),
+        not by a 'mandatory' property in the field data.
+        """
+        self._parse_fields_dict(self.experiment_fields, exclude_temp=True)
 
     def _validate_experiment_fields_immutability(self) -> None:
         """
         Validate that existing experiment fields are never removed or modified.
-        Only new fields can be added. Compares field data directly.
+        Only new fields can be added. Uses Pydantic models for comparison.
         """
         if not self.pk:
             # New instance, no validation needed
@@ -362,50 +421,41 @@ class Experiment(models.Model):
         try:
             # Get the existing instance from database
             old_instance = Experiment.objects.get(pk=self.pk)
-            old_fields = old_instance.experiment_fields or {}
-            new_fields = self.experiment_fields or {}
+            old_fields = self._parse_fields_dict(
+                old_instance.experiment_fields, exclude_temp=False
+            )
+            new_fields = self._parse_fields_dict(
+                self.experiment_fields, exclude_temp=False
+            )
 
-            # Check that all old slugs still exist
-            old_slugs = set(old_fields.keys())
-            new_slugs = set(new_fields.keys())
-            removed_slugs = old_slugs - new_slugs
-
+            # Check removals
+            removed_slugs = set(old_fields.root.keys()) - set(new_fields.root.keys())
             if removed_slugs:
-                field_names = [old_fields[slug]["name"] for slug in removed_slugs]
+                field_names = [old_fields.root[slug].name for slug in removed_slugs]
                 raise ValidationError(
                     {
                         "experiment_fields": [
-                            f"Cannot remove existing fields: "
-                            f"{', '.join(field_names)}. Fields are immutable "
-                            "once created to maintain data integrity."
+                            f"Cannot remove existing fields: {', '.join(field_names)}. "
+                            "Fields are immutable once created to maintain data "
+                            "integrity."
                         ]
                     }
                 )
 
-            # Check that existing fields haven't been modified (direct comparison)
-            modified_fields = []
-            for slug in old_slugs:
-                if slug in new_fields:
-                    # Create copies without hash for comparison
-                    # (in case old data has hash)
-                    old_data = {
-                        k: v for k, v in old_fields[slug].items() if k != "hash"
-                    }
-                    new_data = {
-                        k: v for k, v in new_fields[slug].items() if k != "hash"
-                    }
-
-                    if old_data != new_data:
-                        field_name = old_fields[slug].get("name", slug)
-                        modified_fields.append(field_name)
-
+            # Check modifications - Pydantic models are comparable
+            modified_fields = [
+                old_fields.root[slug].name
+                for slug in old_fields.root
+                if slug in new_fields.root
+                and old_fields.root[slug] != new_fields.root[slug]
+            ]
             if modified_fields:
                 raise ValidationError(
                     {
                         "experiment_fields": [
-                            f"Cannot modify existing fields: "
-                            f"{', '.join(modified_fields)}. Fields are immutable "
-                            "once created. You can only add new fields."
+                            "Cannot modify existing fields: "
+                            f"{', '.join(modified_fields)}. Fields are immutable once "
+                            "created. You can only add new fields."
                         ]
                     }
                 )
