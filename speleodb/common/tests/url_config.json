@@ -492,6 +492,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gis/projects/",
+        "module": "speleodb.api.v1.views.project.ProjectGISGeoJsonApiView",
+        "name": "api:v1:gis:projects",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/logs/<uuid:id>/",
         "module": "speleodb.api.v1.views.log_entry.LogEntrySpecificApiView",
         "name": "api:v1:log-detail",

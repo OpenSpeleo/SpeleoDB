@@ -7,8 +7,10 @@ import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
+import orjson
 from django.db.models import Prefetch
 from django.db.utils import IntegrityError
+from django.http import StreamingHttpResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
@@ -30,6 +32,8 @@ from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from rest_framework.compat import QuerySet
     from rest_framework.request import Request
     from rest_framework.response import Response
@@ -229,3 +233,46 @@ class ProjectGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
         serializer = self.get_serializer(project)
 
         return SuccessResponse(serializer.data)
+
+
+class ProjectGISGeoJsonApiView(GenericAPIView[Project], SDBAPIViewMixin):
+    """API view that returns raw GeoJSON data for a project."""
+
+    queryset = Project.objects.all()
+    permission_classes = [ProjectUserHasWebViewerAccess]
+    serializer_class = ProjectWithGeoJsonSerializer
+
+    def get_queryset(self) -> QuerySet[Project]:
+        """Restrict projects to those the current user has access to."""
+        user = self.get_user()
+        user_projects = [perm.project for perm in user.permissions]
+
+        geojson_prefetch = Prefetch(
+            "rel_geojsons", queryset=ProjectGeoJSON.objects.order_by("-commit_date")
+        )
+
+        return Project.objects.filter(
+            id__in=[project.id for project in user_projects]
+        ).prefetch_related(geojson_prefetch)
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> StreamingHttpResponse:
+        projects = self.get_queryset()
+
+        geojson_objs: list[ProjectGeoJSON] = [
+            objs[0] for project in projects if (objs := project.rel_geojsons.all())
+        ]
+
+        def generator() -> Generator[str]:
+            yield '{"type":"FeatureCollection","features":['
+            first = True
+            for geo in geojson_objs:
+                with geo.file.open("rb") as f:
+                    data = orjson.loads(f.read())
+                    for feature in data.get("features", []):
+                        if not first:
+                            yield ","
+                        yield orjson.dumps(feature).decode("utf-8")
+                        first = False
+            yield "]}"
+
+        return StreamingHttpResponse(generator(), content_type="application/geo+json")
