@@ -476,6 +476,16 @@
         background: #38bdf8;
     }
 
+    /* Desktop: Show buttons, hide dropdown */
+    #station-modal-tabs {
+        display: flex;
+        gap: 8px;
+    }
+
+    #station-tab-select {
+        display: none;
+    }
+
     .tab-content {
         display: none;
         padding: 24px;
@@ -1583,20 +1593,22 @@
                             <div class="flex-1">
                                 <h2 id="station-modal-title" class="text-xl font-semibold text-white">Station Details</h2>
                                 <div class="mt-3">
+                                    <!-- Mobile: Dropdown -->
                                     <select id="station-tab-select" class="bg-slate-700 text-white rounded-lg p-2 w-full">
-                                        <option value="details">Details</option>
-                                        <option value="logs">Changelog</option>
-                                        <option value="experiments">Experiments</option>
+                                        <option value="details">Station Details</option>
+                                        <option value="logs">Journal Entries</option>
+                                        <option value="experiments">Experiment Data</option>
                                         <option value="resources">Resources</option>
                                         <option value="add-resource">Add Resource</option>
                                     </select>
-                                </div>
-                                <div id="station-modal-tabs" class="hidden">
-                                    <button class="tab-btn active" data-tab="details">Details</button>
-                                    <button class="tab-btn" data-tab="logs">Changelog</button>
-                                    <button class="tab-btn" data-tab="experiments">Experiments</button>
-                                    <button class="tab-btn" data-tab="resources">Resources</button>
-                                    <button class="tab-btn" data-tab="add-resource">Add Resource</button>
+                                    <!-- Desktop: Button Tabs -->
+                                    <div id="station-modal-tabs">
+                                        <button class="tab-btn active" data-tab="details">Station Details</button>
+                                        <button class="tab-btn" data-tab="logs">Journal Entries</button>
+                                        <button class="tab-btn" data-tab="experiments">Experiment Data</button>
+                                        <button class="tab-btn" data-tab="resources">Resources</button>
+                                        <button class="tab-btn" data-tab="add-resource">Add Resource</button>
+                                    </div>
                                 </div>
                             </div>
                             <button id="station-modal-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
@@ -4412,7 +4424,6 @@
                 map.on('mousedown', layerId, (e) => {
                     // Only start dragging on left-click (button 0), not right-click (button 2)
                     if (e.originalEvent.button !== 0) return;
-                    e.preventDefault();
 
                     if (e.features.length > 0) {
                         const feature = e.features[0];
@@ -4428,6 +4439,10 @@
                             stationData: feature.properties,
                             originalColor: feature.properties.color
                         };
+
+                        // Temporarily disable map panning to allow our drag logic or click to work
+                        // This prevents map panning from interfering, but still allows click events to fire
+                        map.dragPan.disable();
 
                         console.log(`🖱️ Mouse down on station: ${draggedStation.stationName}`);
                     }
@@ -4481,7 +4496,7 @@
                 });
 
                 map.on('mouseup', (e) => {
-                    if (draggedStation) {
+                    if (draggedStation && mouseDownPoint) {
                         if (isDragging && hasMoved) {
                             // This was a drag - handle the drop
                             isDragging = false;
@@ -4502,15 +4517,21 @@
                             // Handle the drop (draggedStation will be cleared by confirm/cancel)
                             handleStationDrop();
                             
-                            // Reset drag state only (keep draggedStation for modal)
+                            // Reset drag state (keep draggedStation for modal)
+                            // Clear mouseDownPoint to prevent this handler from running again
                             mouseDownPoint = null;
                             hasMoved = false;
-                        } else {
-                            // This was a click - restore original state and let click handler open modal
+                        } else if (!isDragging) {
+                            // This was a click (no drag started) - restore original state and let click handler open modal
                             if (draggedStation.originalColor) {
                                 updateStationColor(sourceId, draggedStation.stationId, draggedStation.originalColor);
                             }
                             console.log(`🖱️ Click detected (no drag) on station: ${draggedStation.stationName}`);
+                            
+                            // Re-enable map interactions for clicks
+                            map.dragPan.enable();
+                            map.doubleClickZoom.enable();
+                            map.getCanvas().style.cursor = '';
                             
                             // Clean up for click (not a drag)
                             draggedStation = null;
@@ -4578,7 +4599,11 @@
     }
 
     function showDragConfirmModal(snapResult) {
-        if (!draggedStation) return;
+        
+        if (!draggedStation) {
+            console.error('❌ No draggedStation in showDragConfirmModal');
+            return;
+        }
 
         // Get station name from the stored station data
         const stationName = draggedStation.stationData?.name || 'Station';
@@ -4633,7 +4658,11 @@
     }
 
     async function confirmStationMove() {
-        if (!draggedStation || !window.pendingSnapResult) return;
+        
+        if (!draggedStation || !window.pendingSnapResult) {
+            console.error('❌ Missing draggedStation or pendingSnapResult - aborting');
+            return;
+        }
 
         const snapResult = window.pendingSnapResult;
         const finalCoords = snapResult.coordinates;
@@ -4709,7 +4738,11 @@
     }
 
     function cancelStationMove() {
-        if (!draggedStation) return;
+        
+        if (!draggedStation) {
+            console.error('❌ No draggedStation - aborting');
+            return;
+        }
 
         // Revert to original position in the layer
         const sourceId = `stations-source-${draggedStation.projectId}`;
@@ -4729,6 +4762,7 @@
         if (draggedStation) {
             hideSnapIndicator();
             draggedStation = null;
+            console.log('   draggedStation cleared');
         }
     }
 
@@ -5067,12 +5101,6 @@
             modalContent.style.cssText = '';
         }
 
-        // Show tabs
-        const tabsContainer = document.getElementById('station-modal-tabs');
-        if (tabsContainer) {
-            tabsContainer.style.display = 'none';
-        }
-
         // Ensure tab select is present and scoped to the modal header only
         const modalHeader = document.getElementById('station-modal-header');
         let tabSelect = document.getElementById('station-tab-select');
@@ -5089,9 +5117,9 @@
                 newSelect.id = 'station-tab-select';
                 newSelect.className = 'bg-slate-700 text-white rounded-lg p-2 w-full';
                 newSelect.innerHTML = `
-                    <option value="details">Details</option>
-                    <option value="logs">Changelog</option>
-                    <option value="experiments">Experiments</option>
+                    <option value="details">Station Details</option>
+                    <option value="logs">Journal Entries</option>
+                    <option value="experiments">Experiment Data</option>
                     <option value="resources">Resources</option>
                     <option value="add-resource">Add Resource</option>
                 `;
@@ -5236,7 +5264,7 @@
                                         <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                         </svg>
-                                        <h3 class="text-white text-lg font-medium mb-2">Changelog</h3>
+                                        <h3 class="text-white text-lg font-medium mb-2">Journal Entries</h3>
                                         <p class="text-slate-400">Select a station to view the station changelog entries.</p>
                                     </div>
                                 </div>
@@ -5311,7 +5339,7 @@
         `;
     }
 
-    // Changelog Tab - Real AJAX + Renderer
+    // Journal Entries Tab - Real AJAX + Renderer
     async function fetchStationLogEntries(stationId) {
         try {
             const url = (typeof Urls !== 'undefined' && Urls["api:v1:station-logs"])
@@ -5494,8 +5522,8 @@
                                     <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                     </svg>
-                                    <h3 class="text-white text-lg font-medium mb-2">No Log Entries Yet</h3>
-                                    <p class="text-slate-400">Record scientific observations, measurements, and notes for this station.</p>
+                                    <h3 class="text-white text-lg font-medium mb-2">No Journal Entries Yet</h3>
+                                    <p class="text-slate-400">Record scientific observations, measurements, archeological finds, biological observations and notes for this station.</p>
                                 </div>
                             `}
                         </div>
@@ -9880,12 +9908,6 @@
                 titleElement.innerHTML = '';
             }
             
-            // Show tabs (in case they were hidden)
-            const tabsContainer = document.getElementById('station-modal-tabs');
-            if (tabsContainer) {
-                tabsContainer.style.display = '';
-            }
-            
             // Clean up any lingering event listeners
             document.removeEventListener('keydown', handleEditKeyboard);
             window.currentEditingStation = null;
@@ -10946,9 +10968,6 @@
                                 }
 
                                 console.log(`✅ Project ${projectId} GeoJSON data loaded successfully!`);
-                                console.log(`   Features: ${geojsonData.features.length}`);
-                                console.log(`   Feature types:`, geojsonData.features.map(f => f.geometry?.type).filter(Boolean));
-
                                 return {
                                     data: geojsonData,
                                     index,
@@ -10962,6 +10981,7 @@
                         return null; // Return null for failed requests
                     });
             });
+            
             // Wait for all project GeoJSON data to load
             Promise.all(fetchPromises)
                 .then(results => {
