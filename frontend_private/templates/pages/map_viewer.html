@@ -2296,10 +2296,10 @@
                     <h4 style="color: white; font-size: 12px; font-weight: 600; margin-bottom: 8px;">Point of Interest Markers</h4>
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div style="display: flex; align-items: center; justify-content: center;">
-                            <div style="width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.12); background: #00D8FF;"></div>
+                            <span style="font-size: 16px; color: #3b82f6; text-shadow: 0 0 3px #ffffff, 0 0 3px #ffffff;">▼</span>
                         </div>
                         <div>
-                            <div style="color: #00D8FF; font-weight: 500; font-size: 14px;">Point of Interest</div>
+                            <div style="color: #3b82f6; font-weight: 500; font-size: 14px;">Point of Interest</div>
                         </div>
                     </div>
                 </div>
@@ -2371,10 +2371,10 @@
         }
     }
     let allProjectLayers = new Map(); // Track all layer IDs for each project
-    let stationMarkers = new Map(); // Track station markers for each project
+    // Note: Stations are now rendered as circle layers (stations-{projectId}), not individual markers
     let currentProjectId = null; // Track currently selected project for station creation
     let allStations = new Map(); // Track all stations (demo + API) by ID for easy access
-    let poiMarkers = []; // Track POI markers
+    // Note: POIs are now rendered as a symbol layer (pois-layer), not individual markers
     let allPOIs = new Map(); // Track all POIs by ID for easy access
 
     // Function to fly to a station on the map
@@ -2430,13 +2430,7 @@
             bearing: 0
         });
 
-        // Highlight the POI marker
-        const marker = poiMarkers.find(m => m.poiId === poiId);
-        if (marker) {
-            const element = marker.getElement();
-            element.classList.add('highlight');
-            setTimeout(() => element.classList.remove('highlight'), 3000);
-        }
+        // Note: POI highlighting removed since POIs are now symbol layers, not DOM markers
     }
 
     // Setup legend toggle button
@@ -2524,29 +2518,12 @@
             });
         }
 
-        // Toggle station markers
-        if (stationMarkers.has(projectId)) {
-            const markers = stationMarkers.get(projectId);
-            const currentZoom = map.getZoom();
-            const shouldShowStations = currentZoom >= 14; // Respect zoom threshold
-
-            markers.forEach(marker => {
-                if (isVisible && shouldShowStations) {
-                    // Show marker if project is visible AND we're zoomed in enough
-                    if (!marker.addedToMap) {
-                        marker.addTo(map);
-                        marker.addedToMap = true;
-                    }
-                } else {
-                    // Hide marker if project is hidden OR we're zoomed out
-                    if (marker.addedToMap) {
-                        marker.remove();
-                        marker.addedToMap = false;
-                    }
-                }
-            });
-
-            console.log(`Toggled ${markers.length} station markers for project ${projectId}`);
+        // Toggle station layer
+        const stationLayerId = `stations-${projectId}`;
+        if (map.getLayer(stationLayerId)) {
+            const visibility = isVisible ? 'visible' : 'none';
+            map.setLayoutProperty(stationLayerId, 'visibility', visibility);
+            console.log(`Set ${stationLayerId} visibility to ${visibility}`);
         }
 
         // Update state
@@ -2940,52 +2917,9 @@
         console.log('   Has station-marker class:', clickedElement?.classList?.contains('station-marker'));
         console.log('   Has poi-marker class:', clickedElement?.classList?.contains('poi-marker'));
 
-        // Check if we clicked on a station marker
+        // Stations and POIs are now handled by layer click handlers, no need to check DOM elements
         let clickedStation = null;
-        if (clickedElement && clickedElement.classList && clickedElement.classList.contains('station-marker')) {
-            console.log('   Looking for matching marker...');
-
-            // Find the station from the marker
-            let foundMatch = false;
-            stationMarkers.forEach((markers, projectId) => {
-                if (!foundMatch) {
-                    markers.forEach(marker => {
-                        if (!foundMatch && marker.getElement() === clickedElement) {
-                            foundMatch = true;
-                            clickedStation = {
-                                id: marker.stationId,
-                                name: marker.stationName,
-                                projectId: projectId,
-                                marker: marker
-                            };
-                            console.log(`   ✅ Found station: ${clickedStation.name} (${clickedStation.id})`);
-                        }
-                    });
-                }
-            });
-
-            if (!foundMatch) {
-                console.warn('   ⚠️ Could not find marker in stationMarkers Map');
-            }
-        }
-
-        // Check if we clicked on a POI marker
         let clickedPOI = null;
-        if (clickedElement && clickedElement.classList && clickedElement.classList.contains('poi-marker')) {
-            console.log('   Looking for matching POI marker...');
-
-            // Find the POI from the marker
-            poiMarkers.forEach(marker => {
-                if (marker.getElement() === clickedElement) {
-                    clickedPOI = {
-                        id: marker.poiId,
-                        name: marker.poiName,
-                        marker: marker
-                    };
-                    console.log(`   ✅ Found POI: ${clickedPOI.name} (${clickedPOI.id})`);
-                }
-            });
-        }
 
         // Query features at this point
         const features = map.queryRenderedFeatures(point);
@@ -3180,10 +3114,10 @@
 
         console.log(`🖱️ showContextMenuForStation: ${stationData.name}`);
 
-        // Get the station's actual coordinates
+        // Get the station's actual coordinates from allStations
         const station = allStations.get(stationData.id);
-        const stationLat = (station?.latitude || stationData.marker.getLngLat().lat).toFixed(7);
-        const stationLng = (station?.longitude || stationData.marker.getLngLat().lng).toFixed(7);
+        const stationLat = station?.latitude?.toFixed(7) || 'N/A';
+        const stationLng = station?.longitude?.toFixed(7) || 'N/A';
 
         let menuHTML = `
                         <div class="context-menu-item" onclick="copyCoordinates()">
@@ -3233,17 +3167,17 @@
     function showContextMenuForPOI(x, y, poiData) {
         const menu = document.getElementById('context-menu');
 
-        console.log(`🖱️ showContextMenuForPOI: ${poiData.name}`);
+        console.log(`🖱️ showContextMenuForPOI: ${poiData.name || poiData.id}`);
 
         // Get the POI's actual coordinates
         const poi = allPOIs.get(poiData.id);
-        const poiLat = (poi?.latitude || poiData.marker.getLngLat().lat).toFixed(7);
-        const poiLng = (poi?.longitude || poiData.marker.getLngLat().lng).toFixed(7);
+        const poiLat = poi?.latitude?.toFixed(7) || 'N/A';
+        const poiLng = poi?.longitude?.toFixed(7) || 'N/A';
 
         // Store in context menu data
         contextMenuData = {
             point: { clientX: x, clientY: y },
-            lngLat: poiData.marker.getLngLat(),
+            lngLat: poi ? { lat: poi.latitude, lng: poi.longitude } : null,
             features: [],
             lineFeatures: [],
             clickedPOI: poiData
@@ -3425,7 +3359,7 @@
         hideContextMenu();
     }
 
-    function deletePOIFromContextMenu() {
+    window.deletePOIFromContextMenu = function() {
         console.log('🗑️ deletePOIFromContextMenu called');
 
         if (!contextMenuData || !contextMenuData.clickedPOI) {
@@ -3804,25 +3738,23 @@
     }
 
     function displayPOIsOnMap(poiData) {
-        // Remove existing POI markers
-        poiMarkers.forEach(marker => {
-            if (marker.addedToMap) {
-                marker.remove();
-            }
-        });
-        poiMarkers = [];
+        // Remove existing POI layer and source if they exist
+        if (map.getLayer('pois-layer')) {
+            map.removeLayer('pois-layer');
+        }
+        if (map.getSource('pois-source')) {
+            map.removeSource('pois-source');
+        }
 
-        // Clear old POIs from global map
+        // Clear old POIs from global map and rebuild
         allPOIs.clear();
 
-        const currentZoom = map.getZoom();
-
         if (poiData.features && poiData.features.length > 0) {
+            // Store POIs in global map for easy access
             poiData.features.forEach(feature => {
                 const coordinates = feature.geometry.coordinates;
                 const properties = feature.properties;
-
-                // Store POI in global map for easy access
+                
                 allPOIs.set(properties.id, {
                     ...properties,
                     latitude: Number(coordinates[1]),
@@ -3834,138 +3766,189 @@
                     created_by: properties.created_by || 'Unknown',
                     creation_date: properties.creation_date || new Date().toISOString()
                 });
+            });
 
-                // Create POI marker with push pin SVG (like 📌 emoji)
-                const markerElement = document.createElement('div');
-                markerElement.className = 'poi-marker';
-                markerElement.title = `Point of Interest: ${properties.name}`;
-                markerElement.innerHTML = `
-                    <svg viewBox="0 0 24 32" fill="none">
-                        <!-- Pin body (gray) -->
-                        <path d="M12 14 L12 30" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round"/>
-                        <!-- Pin head (red circle with white border) -->
-                        <circle cx="12" cy="8" r="6.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/>
-                        <!-- Inner shadow/highlight -->
-                        <circle cx="12" cy="8" r="4" fill="#dc2626" opacity="0.6"/>
-                    </svg>
-                `;
+            // Add POI GeoJSON as a source
+            map.addSource('pois-source', {
+                type: 'geojson',
+                data: poiData
+            });
 
-                // Add drag cursor if user has write access
-                markerElement.style.cursor = 'grab';
-
-                const marker = new mapboxgl.Marker({
-                    element: markerElement,
-                    draggable: true,
-                    anchor: 'bottom' // Pin points to location
-                })
-                    .setLngLat(coordinates);
-
-                // Store POI ID with the marker for easy reference
-                marker.poiId = properties.id;
-                marker.poiName = properties.name;
-
-                // Only add to map if zoomed in enough
-                marker.addedToMap = false;
-                if (currentZoom >= 14) {
-                    marker.addTo(map);
-                    marker.addedToMap = true;
+            // Add symbol layer for POIs with simple marker (same approach as stars)
+            map.addLayer({
+                id: 'pois-layer',
+                type: 'symbol',
+                source: 'pois-source',
+                minzoom: 14,
+                layout: {
+                    'text-field': '▼',  // Triangle pointing up (simple Unicode character like stars)
+                    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                    'text-size': ['interpolate', ['linear'], ['zoom'], 14, 20, 18, 28],
+                    'text-allow-overlap': true,
+                    'text-ignore-placement': true
+                },
+                paint: {
+                    'text-color': '#3b82f6',
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 2,
+                    'text-halo-blur': 0.5
                 }
+            });
 
-                // Add hover handlers for color change
-                markerElement.addEventListener('mouseenter', () => {
-                    const circle = markerElement.querySelector('circle');
-                    if (circle) circle.setAttribute('fill', '#dc2626'); // Darker red on hover
-                });
-                
-                markerElement.addEventListener('mouseleave', () => {
-                    const circle = markerElement.querySelector('circle');
-                    if (circle) circle.setAttribute('fill', '#ef4444'); // Original red
-                });
+            // Add click handler for POI layer
+            map.on('click', 'pois-layer', (e) => {
+                if (e.features.length > 0) {
+                    const feature = e.features[0];
+                    const poiId = feature.properties.id;
+                    const poiName = feature.properties.name;
+                    console.log(`🖱️ POI clicked: ${poiName} (${poiId})`);
+                    openPOIModal(poiId);
+                }
+            });
 
-                // Add click handler for POI
-                markerElement.addEventListener('click', (e) => {
-                    console.log(`🖱️ POI clicked: ${properties.name} (${properties.id})`);
-                    openPOIModal(properties.id);
-                });
-
-                // Add right-click handler for POI
-                markerElement.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log(`🖱️ Right-click on POI marker: ${properties.name}`);
+            // Add right-click handler for POI layer
+            map.on('contextmenu', 'pois-layer', (e) => {
+                e.preventDefault();
+                if (e.features.length > 0) {
+                    const feature = e.features[0];
+                    const poiId = feature.properties.id;
+                    const poiName = feature.properties.name;
+                    console.log(`🖱️ Right-click on POI: ${poiName}`);
 
                     // Store in context menu data
                     contextMenuData = {
-                        point: { clientX: e.clientX, clientY: e.clientY },
-                        lngLat: marker.getLngLat(),
+                        point: e.point,
+                        lngLat: e.lngLat,
                         features: [],
                         lineFeatures: [],
                         clickedPOI: {
-                            id: properties.id,
-                            name: properties.name,
-                            marker: marker
+                            id: poiId,
+                            name: poiName,
+                            coordinates: feature.geometry.coordinates
                         }
                     };
 
                     // Show context menu for POI
-                    showContextMenuForPOI(e.clientX, e.clientY, {
-                        id: properties.id,
-                        name: properties.name,
-                        marker: marker
+                    showContextMenuForPOI(e.originalEvent.clientX, e.originalEvent.clientY, {
+                        id: poiId,
+                        name: poiName
                     });
-                });
-
-                let draggedPOI = null;
-
-                marker.on('dragstart', () => {
-                    draggedPOI = {
-                        poiId: properties.id,
-                        marker: marker,
-                        originalCoords: coordinates,
-                        poiData: properties
-                    };
-                    markerElement.style.transition = 'none';
-                    markerElement.style.cursor = 'grabbing';
-                    markerElement.style.transform = 'scale(1.1)';
-                    markerElement.style.zIndex = '1001';
-                    markerElement.style.filter = 'drop-shadow(0 6px 20px rgba(0, 0, 0, 0.6))';
-                    // Change color during drag
-                    const circle = markerElement.querySelector('circle');
-                    if (circle) circle.setAttribute('fill', '#fbbf24'); // Amber color while dragging
-                    console.log(`🫳 Started dragging POI: ${properties.name}`);
-                });
-
-                marker.on('dragend', () => {
-                    if (draggedPOI) {
-                        const newCoords = marker.getLngLat();
-                        console.log(`🫳 Dropped POI at: ${newCoords.lat.toFixed(6)}, ${newCoords.lng.toFixed(6)}`);
-
-                        // Show confirmation modal for POI move
-                        showPOIDragConfirmModal(draggedPOI, newCoords);
-                    }
-                });
-
-                poiMarkers.push(marker);
+                }
             });
-        }
 
-        console.log(`Added ${poiMarkers.length} POI markers to map`);
+            // Change cursor on hover
+            map.on('mouseenter', 'pois-layer', () => {
+                map.getCanvas().style.cursor = 'grab';
+            });
+
+            map.on('mouseleave', 'pois-layer', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+            // Implement drag & drop for POI layer
+            let draggedPOI = null;
+            let isDragging = false;
+            let hasMoved = false;
+            let mouseDownPoint = null;
+            const DRAG_THRESHOLD = 3; // pixels
+
+            map.on('mousedown', 'pois-layer', (e) => {
+                // Only start dragging on left-click (button 0), not right-click (button 2)
+                if (e.originalEvent.button !== 0) return;
+                
+                // Prevent default map drag
+                e.preventDefault();
+                
+                if (e.features.length > 0) {
+                    const feature = e.features[0];
+                    hasMoved = false;
+                    mouseDownPoint = e.point;
+                    
+                    draggedPOI = {
+                        poiId: feature.properties.id,
+                        poiName: feature.properties.name,
+                        originalCoords: feature.geometry.coordinates.slice(),
+                        poiData: feature.properties
+                    };
+                    
+                    console.log(`🖱️ Mouse down on POI: ${draggedPOI.poiName}`);
+                }
+            });
+
+            map.on('mousemove', (e) => {
+                if (draggedPOI && mouseDownPoint) {
+                    // Calculate distance moved
+                    const dx = e.point.x - mouseDownPoint.x;
+                    const dy = e.point.y - mouseDownPoint.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // Start dragging only if moved beyond threshold
+                    if (!isDragging && distance > DRAG_THRESHOLD) {
+                        isDragging = true;
+                        hasMoved = true;
+                        map.getCanvas().style.cursor = 'grabbing';
+                        map.dragPan.disable();
+                        map.doubleClickZoom.disable();
+                        console.log(`🫳 Started dragging POI: ${draggedPOI.poiName}`);
+                    }
+
+                    if (isDragging) {
+                        // Update the POI coordinates in real-time
+                        const coords = [e.lngLat.lng, e.lngLat.lat];
+                        
+                        // Get the current source data
+                        const source = map.getSource('pois-source');
+                        const data = source._data;
+                        
+                        // Find and update the dragged POI
+                        const featureIndex = data.features.findIndex(f => f.properties.id === draggedPOI.poiId);
+                        if (featureIndex !== -1) {
+                            data.features[featureIndex].geometry.coordinates = coords;
+                            source.setData(data);
+                        }
+                    }
+                }
+            });
+
+            map.on('mouseup', (e) => {
+                if (draggedPOI) {
+                    if (isDragging && hasMoved) {
+                        // This was a drag - handle the drop
+                        isDragging = false;
+                        
+                        console.log(`🫳 Dropped POI at: ${e.lngLat.lat.toFixed(6)}, ${e.lngLat.lng.toFixed(6)}`);
+                        
+                        // Re-enable map interactions
+                        map.dragPan.enable();
+                        map.doubleClickZoom.enable();
+                        map.getCanvas().style.cursor = '';
+                        
+                        // Show confirmation modal for POI move
+                        showPOIDragConfirmModal(draggedPOI, e.lngLat);
+                        
+                        // Reset drag state only (keep draggedPOI for modal)
+                        mouseDownPoint = null;
+                        hasMoved = false;
+                    } else {
+                        // This was a click - restore original state and let click handler open modal
+                        console.log(`🖱️ Click detected (no drag) on POI: ${draggedPOI.poiName}`);
+                        
+                        // Clean up for click (not a drag)
+                        draggedPOI = null;
+                        mouseDownPoint = null;
+                        hasMoved = false;
+                    }
+                }
+            });
+
+            console.log(`✅ Added ${poiData.features.length} POIs as symbol layer with drag support`);
+        }
     }
 
-    // Update POI visibility based on zoom
+    // Update POI visibility based on zoom (now handled by layer minzoom property)
     window.updatePOIVisibility = function () {
-        const currentZoom = map.getZoom();
-        const shouldShowPOIs = currentZoom >= 14;
-
-        poiMarkers.forEach(marker => {
-            if (shouldShowPOIs && !marker.addedToMap) {
-                marker.addTo(map);
-                marker.addedToMap = true;
-            } else if (!shouldShowPOIs && marker.addedToMap) {
-                marker.remove();
-                marker.addedToMap = false;
-            }
-        });
+        // POI visibility is now controlled by the layer's minzoom property (14)
+        // No manual updates needed
     };
 
     // Check current zoom and station visibility
@@ -3993,13 +3976,7 @@
             const zoomNeeded = 14 - currentZoom;
             console.log(`💡 Zoom in ${zoomNeeded.toFixed(1)} more levels to see stations`);
         } else {
-            let onMapCount = 0;
-            stationMarkers.forEach((markers) => {
-                markers.forEach(marker => {
-                    if (marker.addedToMap) onMapCount++;
-                });
-            });
-            console.log(`✅ Showing ${onMapCount} station markers on map`);
+            console.log(`✅ Station layers are visible (managed by MapBox layer minzoom)`);
         }
 
         return {
@@ -4021,66 +3998,32 @@
             console.log(`  Project ${projectId}: ${isVisible ? 'VISIBLE ✅' : 'HIDDEN ❌'}`);
         });
 
-        // Check station markers
-        console.log('\n📍 Station Markers by Project:');
-        let totalMarkers = 0;
-        let visibleMarkers = 0;
-
-        stationMarkers.forEach((markers, projectId) => {
-            const projectVisible = projectLayerStates.get(projectId) !== false;
-            let projectVisibleCount = 0;
-
-            markers.forEach(marker => {
-                totalMarkers++;
-                if (marker.addedToMap) {
-                    visibleMarkers++;
-                    projectVisibleCount++;
-                }
-            });
-
-            console.log(`  Project ${projectId}: ${markers.length} markers total, ${projectVisibleCount} on map`);
-            console.log(`    - Project state: ${projectVisible ? 'VISIBLE' : 'HIDDEN'}`);
-            console.log(`    - Expected on map: ${projectVisible && map.getZoom() >= 14 ? markers.length : 0}`);
-
-            // Check for inconsistencies
-            if (!projectVisible && projectVisibleCount > 0) {
-                console.error(`    ⚠️ INCONSISTENCY: Project is hidden but ${projectVisibleCount} markers are visible!`);
-            } else if (projectVisible && map.getZoom() >= 14 && projectVisibleCount < markers.length) {
-                console.warn(`    ⚠️ MISSING: ${markers.length - projectVisibleCount} markers should be visible but aren't`);
+        // Check station layers
+        console.log('\n📍 Station Layers by Project:');
+        projectLayerStates.forEach((isVisible, projectId) => {
+            const stationLayerId = `stations-${projectId}`;
+            const layerExists = map.getLayer(stationLayerId);
+            
+            if (layerExists) {
+                const visibility = map.getLayoutProperty(stationLayerId, 'visibility') || 'visible';
+                console.log(`  Project ${projectId}: Layer exists, visibility: ${visibility}`);
+                console.log(`    - Project state: ${isVisible ? 'VISIBLE' : 'HIDDEN'}`);
+                console.log(`    - Zoom: ${map.getZoom().toFixed(1)} (min: 14)`);
+            } else {
+                console.log(`  Project ${projectId}: No station layer found`);
             }
         });
 
-        console.log(`\n📊 Summary: ${visibleMarkers}/${totalMarkers} markers visible`);
+        console.log(`\n📊 Station layers are now managed by MapBox natively`);
         console.log(`🔍 Current zoom: ${map.getZoom().toFixed(1)}`);
-
-        return { totalMarkers, visibleMarkers };
     };
 
     // Force refresh station visibility
     window.refreshStationVisibility = function () {
         console.log('🔄 Forcing station visibility refresh...');
-
-        const currentZoom = map.getZoom();
-        const shouldShowStations = currentZoom >= 14;
-
-        stationMarkers.forEach((markers, projectId) => {
-            const projectIsVisible = projectLayerStates.get(projectId) !== false;
-            console.log(`  Refreshing project ${projectId} (visible: ${projectIsVisible})`);
-
-            markers.forEach(marker => {
-                const shouldBeVisible = shouldShowStations && projectIsVisible;
-
-                if (shouldBeVisible && !marker.addedToMap) {
-                    marker.addTo(map);
-                    marker.addedToMap = true;
-                } else if (!shouldBeVisible && marker.addedToMap) {
-                    marker.remove();
-                    marker.addedToMap = false;
-                }
-            });
-        });
-
-        console.log('✅ Station visibility refreshed');
+        console.log('✅ Station layers are automatically managed by MapBox (minzoom: 14)');
+        
+        // Debug current state
         window.debugStationVisibility();
     };
     function copyCoordinates() {
@@ -4337,13 +4280,15 @@
     }
 
     function displayStationsOnMap(projectId, stationData) {
-        // Remove existing station markers for this project
-        if (stationMarkers.has(projectId)) {
-            stationMarkers.get(projectId).forEach(marker => {
-                if (marker.addedToMap) {
-                    marker.remove();
-                }
-            });
+        const layerId = `stations-${projectId}`;
+        const sourceId = `stations-source-${projectId}`;
+        
+        // Remove existing station layer and source for this project
+        if (map.getLayer(layerId)) {
+            map.removeLayer(layerId);
+        }
+        if (map.getSource(sourceId)) {
+            map.removeSource(sourceId);
         }
 
         // Clear old stations from global map for this project
@@ -4353,9 +4298,7 @@
             }
         }
 
-        const markers = [];
         const hasWriteAccess = hasProjectWriteAccess(projectId);
-
         const currentZoom = map.getZoom();
 
         if (stationData.features && stationData.features.length > 0) {
@@ -4379,166 +4322,255 @@
                     tag: properties.tag || null
                 });
 
-                // Create station marker - ALWAYS starts hidden
-                const markerElement = document.createElement('div');
-                markerElement.className = 'station-marker';
-                markerElement.title = `Station: ${properties.name}${properties.is_demo ? ' (Demo)' : ''}`;
-
-                // Set marker color based on tag, or default
-                const markerColor = properties.tag ? properties.tag.color : '#fb923c';
-                markerElement.style.background = markerColor;
-
-                // Add demo indicator if it's a demo station
-                if (properties.is_demo) {
-                    markerElement.style.border = '2px dashed #ffffff';
-                    markerElement.setAttribute('data-demo', 'true');
+                // Set color in properties for data-driven styling
+                if (!feature.properties.color) {
+                    feature.properties.color = properties.tag ? properties.tag.color : '#fb923c';
                 }
+            });
 
-                // Station is created hidden - no visible class added
+            // Add GeoJSON source for stations
+            map.addSource(sourceId, {
+                type: 'geojson',
+                data: stationData
+            });
 
-                // Add drag cursor if user has write access
-                markerElement.style.cursor = hasWriteAccess ? 'grab' : 'pointer';
-
-                const marker = new mapboxgl.Marker({
-                    element: markerElement,
-                    draggable: hasWriteAccess
-                })
-                    .setLngLat(coordinates);
-
-                // Store station ID with the marker for easy reference
-                marker.stationId = properties.id;
-                marker.stationName = properties.name;
-
-                // Only add to map if zoomed in enough AND project is visible
-                marker.addedToMap = false;
-                const projectIsVisible = projectLayerStates.get(projectId) !== false;
-                if (currentZoom >= 14 && projectIsVisible) {
-                    marker.addTo(map);
-                    marker.addedToMap = true;
+            // Add circle layer for stations with data-driven color
+            const projectIsVisible = projectLayerStates.get(projectId) !== false;
+            map.addLayer({
+                id: layerId,
+                type: 'circle',
+                source: sourceId,
+                minzoom: 14,
+                layout: {
+                    'visibility': projectIsVisible ? 'visible' : 'none'
+                },
+                paint: {
+                    'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 5, 18, 8],
+                    'circle-color': ['get', 'color'], // Data-driven color from properties
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff',
+                    'circle-opacity': 1
                 }
+            });
 
-                // Add click handler for station
-                markerElement.addEventListener('click', (e) => {
-                    if (!draggedStation) { // Only open modal if not dragging
-                        console.log(`🖱️ Station clicked: ${properties.name} (${properties.id})`);
-                        console.log(`   Project: ${projectId}`);
-                        console.log(`   Properties:`, properties);
-                        openStationModal(properties.id, projectId);
+            // Add click handler for stations
+            map.on('click', layerId, (e) => {
+                if (!draggedStation && e.features.length > 0) {
+                    const feature = e.features[0];
+                    const stationId = feature.properties.id;
+                    const stationName = feature.properties.name;
+                    console.log(`🖱️ Station clicked: ${stationName} (${stationId})`);
+                    console.log(`   Project: ${projectId}`);
+                    openStationModal(stationId, projectId);
+                }
+            });
+
+            // Add right-click handler for stations
+            map.on('contextmenu', layerId, (e) => {
+                e.preventDefault();
+                if (e.features.length > 0) {
+                    const feature = e.features[0];
+                    const stationId = feature.properties.id;
+                    const stationName = feature.properties.name;
+                    console.log(`🖱️ Right-click on station: ${stationName}`);
+
+                    const stationData = {
+                        id: stationId,
+                        name: stationName,
+                        projectId: projectId
+                    };
+
+                    // Store in context menu data
+                    contextMenuData = {
+                        point: e.point,
+                        lngLat: e.lngLat,
+                        features: [],
+                        lineFeatures: [],
+                        clickedStation: stationData
+                    };
+
+                    showContextMenuForStation(e.originalEvent.clientX, e.originalEvent.clientY, stationData);
+                }
+            });
+
+            // Change cursor on hover
+            map.on('mouseenter', layerId, () => {
+                map.getCanvas().style.cursor = hasWriteAccess ? 'grab' : 'pointer';
+            });
+
+            map.on('mouseleave', layerId, () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+            // Implement drag & drop for stations with snap functionality (if has write access)
+            if (hasWriteAccess) {
+                let isDragging = false;
+                let hasMoved = false;
+                let mouseDownPoint = null;
+                const DRAG_THRESHOLD = 3; // pixels
+
+                map.on('mousedown', layerId, (e) => {
+                    // Only start dragging on left-click (button 0), not right-click (button 2)
+                    if (e.originalEvent.button !== 0) return;
+                    e.preventDefault();
+
+                    if (e.features.length > 0) {
+                        const feature = e.features[0];
+                        hasMoved = false;
+                        mouseDownPoint = e.point;
+
+                        draggedStation = {
+                            stationId: feature.properties.id,
+                            stationName: feature.properties.name,
+                            projectId: projectId,
+                            originalCoords: feature.geometry.coordinates.slice(),
+                            currentSnapResult: null,
+                            stationData: feature.properties,
+                            originalColor: feature.properties.color
+                        };
+
+                        console.log(`🖱️ Mouse down on station: ${draggedStation.stationName}`);
                     }
                 });
 
-                // Add right-click handler for station - create closure
-                (function (currentMarker, currentProjectId, currentProperties) {
-                    markerElement.addEventListener('contextmenu', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log(`🖱️ Right-click on station marker: ${currentProperties.name}`);
-                        console.log('   Marker element:', markerElement);
-                        console.log('   Marker stationId:', currentMarker.stationId);
-                        console.log('   Project ID:', currentProjectId);
+                map.on('mousemove', (e) => {
+                    if (draggedStation && mouseDownPoint) {
+                        // Calculate distance moved
+                        const dx = e.point.x - mouseDownPoint.x;
+                        const dy = e.point.y - mouseDownPoint.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
 
-                        // Pass station data directly instead of relying on finding it later
-                        const stationData = {
-                            id: currentProperties.id,
-                            name: currentProperties.name,
-                            projectId: currentProjectId,
-                            marker: currentMarker
-                        };
+                        // Start dragging only if moved beyond threshold
+                        if (!isDragging && distance > DRAG_THRESHOLD) {
+                            isDragging = true;
+                            hasMoved = true;
+                            map.getCanvas().style.cursor = 'grabbing';
+                            map.dragPan.disable();
+                            map.doubleClickZoom.disable();
+                            console.log(`🫳 Started dragging station: ${draggedStation.stationName}`);
+                        }
 
-                        // Store in context menu data directly
-                        contextMenuData = {
-                            point: { clientX: e.clientX, clientY: e.clientY },
-                            lngLat: currentMarker.getLngLat(),
-                            features: [],
-                            lineFeatures: [],
-                            clickedStation: stationData
-                        };
+                        if (isDragging) {
+                            const coords = [e.lngLat.lng, e.lngLat.lat];
 
-                        // Show context menu
-                        showContextMenuForStation(e.clientX, e.clientY, stationData);
-                    });
-                })(marker, projectId, properties);
-
-                // Add drag handlers if user has write access
-                if (hasWriteAccess) {
-                    marker.on('dragstart', () => {
-                        draggedStation = {
-                            stationId: properties.id,
-                            projectId: projectId,
-                            marker: marker,
-                            originalCoords: coordinates,
-                            currentSnapResult: null,
-                            stationData: properties  // Store station data for API stations
-                        };
-                        // Instant drag feedback (no laggy transitions)
-                        markerElement.style.transition = 'none';
-                        markerElement.style.cursor = 'grabbing';
-                        markerElement.style.transform = 'scale(1.1)';
-                        markerElement.style.zIndex = '1001';
-                        markerElement.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
-                        console.log(`🫳 Started dragging station: ${properties.name}`);
-                    });
-
-                    marker.on('drag', () => {
-                        if (draggedStation) {
-                            const currentCoords = marker.getLngLat();
-                            console.log(`🫳 Dragging to: [${currentCoords.lat.toFixed(6)}, ${currentCoords.lng.toFixed(6)}]`);
-
-                            const snapResult = findMagneticSnapPoint([currentCoords.lng, currentCoords.lat], null); // Check all projects for dragging
+                            // Check for snap
+                            const snapResult = findMagneticSnapPoint(coords, projectId);
 
                             if (snapResult.snapped) {
-                                // INSTANT snap to position (no smooth animation)
-                                marker.setLngLat(snapResult.coordinates);
-                                showSnapIndicator(snapResult.coordinates, true); // Show lock indicator
-
-                                // Sharp visual feedback: instant color change
-                                markerElement.style.transition = 'none'; // Remove transitions for instant feedback
-                                markerElement.style.background = '#10b981'; // Bright green when locked
-                                markerElement.style.borderColor = '#ffffff';
-                                markerElement.style.boxShadow = '0 0 25px rgba(16, 185, 129, 1), 0 0 10px rgba(255, 255, 255, 0.5)'; // Strong glow
-                                markerElement.style.transform = 'scale(1.1)'; // Slightly larger when snapped
-
-                                // Store the snapped result for the drop handler
+                                // Snap to the line
+                                showSnapIndicator(snapResult.coordinates, true);
                                 draggedStation.currentSnapResult = snapResult;
+
+                                // Update station color to green when snapped
+                                updateStationColor(sourceId, draggedStation.stationId, '#10b981');
+
+                                // Update position to snapped coords
+                                updateStationPosition(sourceId, draggedStation.stationId, snapResult.coordinates);
                             } else {
                                 hideSnapIndicator();
-
-                                // Instant restore to drag state
-                                markerElement.style.transition = 'none'; // No transitions
-                                markerElement.style.background = '#f59e0b';
-                                markerElement.style.borderColor = '#ffffff';
-                                markerElement.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)'; // Just drag shadow
-                                markerElement.style.transform = 'scale(1.1)'; // Keep drag scale
-
                                 draggedStation.currentSnapResult = null;
+
+                                // Update station color to amber when dragging
+                                updateStationColor(sourceId, draggedStation.stationId, '#f59e0b');
+
+                                // Update position
+                                updateStationPosition(sourceId, draggedStation.stationId, coords);
                             }
                         }
-                    });
+                    }
+                });
 
-                    marker.on('dragend', () => {
-                        if (draggedStation) {
+                map.on('mouseup', (e) => {
+                    if (draggedStation) {
+                        if (isDragging && hasMoved) {
+                            // This was a drag - handle the drop
+                            isDragging = false;
+
+                            // Re-enable map interactions
+                            map.dragPan.enable();
+                            map.doubleClickZoom.enable();
+                            map.getCanvas().style.cursor = '';
+
+                            // IMMEDIATELY restore original color for instant visual feedback
+                            if (draggedStation.originalColor) {
+                                updateStationColor(sourceId, draggedStation.stationId, draggedStation.originalColor);
+                            }
+                            hideSnapIndicator();
+
+                            console.log(`🫳 Dropped station at: ${e.lngLat.lat.toFixed(6)}, ${e.lngLat.lng.toFixed(6)}`);
+
+                            // Handle the drop (draggedStation will be cleared by confirm/cancel)
                             handleStationDrop();
+                            
+                            // Reset drag state only (keep draggedStation for modal)
+                            mouseDownPoint = null;
+                            hasMoved = false;
+                        } else {
+                            // This was a click - restore original state and let click handler open modal
+                            if (draggedStation.originalColor) {
+                                updateStationColor(sourceId, draggedStation.stationId, draggedStation.originalColor);
+                            }
+                            console.log(`🖱️ Click detected (no drag) on station: ${draggedStation.stationName}`);
+                            
+                            // Clean up for click (not a drag)
+                            draggedStation = null;
+                            mouseDownPoint = null;
+                            hasMoved = false;
                         }
-                    });
-                }
+                    }
+                });
+            }
 
-                markers.push(marker);
-            });
+            console.log(`✅ Added ${stationData.features.length} stations as circle layer for project ${projectId}`);
         }
+    }
 
-        stationMarkers.set(projectId, markers);
-        console.log(`Added ${markers.length} station markers for project ${projectId}`);
+    // Helper function to update station position in the layer
+    function updateStationPosition(sourceId, stationId, newCoords) {
+        const source = map.getSource(sourceId);
+        if (!source) return;
+
+        const data = source._data;
+        const featureIndex = data.features.findIndex(f => f.properties.id === stationId);
+
+        if (featureIndex !== -1) {
+            data.features[featureIndex].geometry.coordinates = newCoords;
+            source.setData(data);
+        }
+    }
+
+    // Helper function to update station color in the layer
+    function updateStationColor(sourceId, stationId, color) {
+        const source = map.getSource(sourceId);
+        if (!source) return;
+
+        const data = source._data;
+        const featureIndex = data.features.findIndex(f => f.properties.id === stationId);
+
+        if (featureIndex !== -1) {
+            data.features[featureIndex].properties.color = color;
+            source.setData(data);
+        }
     }
 
     // Handle station drop with beautiful confirmation modal
     function handleStationDrop() {
         if (!draggedStation) return;
 
-        // Use the snap result from the drag handler, or calculate if not available
+        // Use the snap result from the drag handler (already calculated during drag)
         let snapResult = draggedStation.currentSnapResult;
         if (!snapResult) {
-            const newCoords = draggedStation.marker.getLngLat();
-            snapResult = findMagneticSnapPoint([newCoords.lng, newCoords.lat], null); // Check all projects
+            // If no snap result, get current position from layer
+            const sourceId = `stations-source-${draggedStation.projectId}`;
+            const source = map.getSource(sourceId);
+            if (source) {
+                const data = source._data;
+                const feature = data.features.find(f => f.properties.id === draggedStation.stationId);
+                if (feature) {
+                    const coords = feature.geometry.coordinates;
+                    snapResult = findMagneticSnapPoint(coords, null); // Check all projects
+                }
+            }
         }
 
         // Show beautiful confirmation modal
@@ -4638,8 +4670,8 @@
                 updatedInfo.coordinates = [finalCoords[0], finalCoords[1], 0];
             }
 
-            // Update marker position to final snapped coordinates
-            draggedStation.marker.setLngLat(finalCoords);
+            // Station position is already updated in the layer during drag
+            // It will be refreshed with refreshStationsAfterChange below
 
             // Log success
             console.log(`✅ Moved station "${stationName}" to ${finalCoords[1].toFixed(6)}, ${finalCoords[0].toFixed(6)}`);
@@ -4662,8 +4694,10 @@
             console.error('Error updating station position:', error);
             showNotification('error', `Failed to save new position: ${error.message}`);
 
-            // Revert marker to original position on error
-            draggedStation.marker.setLngLat(draggedStation.originalCoords);
+            // Revert station to original position in layer on error
+            const sourceId = `stations-source-${draggedStation.projectId}`;
+            updateStationPosition(sourceId, draggedStation.stationId, draggedStation.originalCoords);
+            updateStationColor(sourceId, draggedStation.stationId, draggedStation.originalColor);
         } finally {
             // Hide loading overlay
             hideStationLoadingOverlay(loadingOverlay);
@@ -4677,8 +4711,13 @@
     function cancelStationMove() {
         if (!draggedStation) return;
 
-        // Revert to original position
-        draggedStation.marker.setLngLat(draggedStation.originalCoords);
+        // Revert to original position in the layer
+        const sourceId = `stations-source-${draggedStation.projectId}`;
+        updateStationPosition(sourceId, draggedStation.stationId, draggedStation.originalCoords);
+        
+        // Restore original color
+        updateStationColor(sourceId, draggedStation.stationId, draggedStation.originalColor);
+        
         console.log(`↩️ Reverted station move`);
 
         // Clean up
@@ -4689,19 +4728,6 @@
     function cleanupStationDrag() {
         if (draggedStation) {
             hideSnapIndicator();
-            const element = draggedStation.marker.getElement();
-
-            // Restore transitions for smooth hover effects
-            element.style.transition = 'all 0.2s ease';
-            element.style.cursor = 'grab';
-            element.style.transform = '';
-            element.style.zIndex = '';
-            element.style.boxShadow = '';
-
-            // Restore original marker colors
-            element.style.background = '#f59e0b';
-            element.style.borderColor = '#ffffff';
-
             draggedStation = null;
         }
     }
@@ -4901,7 +4927,7 @@
     window.confirmPOIMove = async function () {
         if (!pendingPOIDrag) return;
 
-        const { poiId, newCoords, marker, poiData } = pendingPOIDrag;
+        const { poiId, newCoords, poiData } = pendingPOIDrag;
         const poiName = poiData?.name || 'Point of Interest';
 
         // Hide modal
@@ -4942,8 +4968,7 @@
                     updatedInfo.coordinates = [newCoords[0], newCoords[1], 0];
                 }
 
-                // Update marker position
-                marker.setLngLat(newCoords);
+                // POI position is already updated in the layer (from drag), no need to update marker
 
                 console.log(`✅ Moved POI "${poiName}" to ${newCoords[1].toFixed(6)}, ${newCoords[0].toFixed(6)}`);
                 showNotification('success', 'Point of Interest moved successfully!');
@@ -4962,14 +4987,13 @@
             console.error('Error updating POI position:', error);
             showNotification('error', `Failed to move Point of Interest: ${error.message}`);
 
-            // Revert marker to original position
-            marker.setLngLat(pendingPOIDrag.originalCoords);
+            // Revert POI to original position in layer
+            revertPOIPosition(poiId, pendingPOIDrag.originalCoords);
         } finally {
             // Hide loading overlay
             hideStationLoadingOverlay(loadingOverlay);
 
             // Clean up
-            cleanupPOIDrag();
             pendingPOIDrag = null;
         }
     }
@@ -4977,32 +5001,26 @@
     window.cancelPOIMove = function () {
         if (!pendingPOIDrag) return;
 
-        // Revert to original position
-        pendingPOIDrag.marker.setLngLat(pendingPOIDrag.originalCoords);
+        // Revert to original position in the layer
+        revertPOIPosition(pendingPOIDrag.poiId, pendingPOIDrag.originalCoords);
         console.log(`↩️ Reverted POI move`);
-
-        // Clean up
-        cleanupPOIDrag();
 
         // Hide modal
         document.getElementById('poi-drag-confirm-modal').style.display = 'none';
         pendingPOIDrag = null;
     }
 
-    function cleanupPOIDrag() {
-        if (pendingPOIDrag && pendingPOIDrag.marker) {
-            const element = pendingPOIDrag.marker.getElement();
-
-            // Restore transitions for smooth hover effects
-            element.style.transition = 'all 0.2s ease';
-            
-            // Restore original POI color
-            const circle = element.querySelector('circle');
-            if (circle) circle.setAttribute('fill', '#ef4444');
-            element.style.cursor = 'grab';
-            element.style.transform = '';
-            element.style.zIndex = '';
-            element.style.filter = '';
+    // Helper function to revert POI position in the layer
+    function revertPOIPosition(poiId, originalCoords) {
+        const source = map.getSource('pois-source');
+        if (!source) return;
+        
+        const data = source._data;
+        const featureIndex = data.features.findIndex(f => f.properties.id === poiId);
+        
+        if (featureIndex !== -1) {
+            data.features[featureIndex].geometry.coordinates = originalCoords;
+            source.setData(data);
         }
     }
 
@@ -7422,18 +7440,12 @@
         const station = allStations.get(stationId);
         if (!station || !station.projectId) return;
         
-        const markers = stationMarkers.get(station.projectId);
-        if (!markers) return;
-        
-        const marker = markers.find(m => m.stationId === stationId);
-        if (!marker) return;
-        
         // Use the tag's color if available, otherwise default
         const color = station.tag ? station.tag.color : '#fb923c';
-        const element = marker.getElement();
-        if (element) {
-            element.style.background = color;
-        }
+        
+        // Update the color in the station layer
+        const sourceId = `stations-source-${station.projectId}`;
+        updateStationColor(sourceId, stationId, color);
     }
     
     // Refresh station tag in modal
@@ -8542,13 +8554,11 @@
             // Update the global map
             allStations.set(stationId, stationData);
 
-            // Update marker position if coordinates changed
-            const markers = stationMarkers.get(originalProjectId);
-            if (markers) {
-                const marker = markers.find(m => m.stationId === stationId);
-                if (marker) {
-                    marker.setLngLat([Number(updateData.longitude), Number(updateData.latitude)]);
-                }
+            // Update station position in layer if coordinates changed
+            if (updateData.longitude !== undefined && updateData.latitude !== undefined) {
+                const sourceId = `stations-source-${originalProjectId}`;
+                const newCoords = [Number(updateData.longitude), Number(updateData.latitude)];
+                updateStationPosition(sourceId, stationId, newCoords);
             }
 
             // Show success notification
@@ -8681,50 +8691,24 @@
                 console.log(`🗑️ Removed from allStations map`);
             }
 
-            // Find and remove the marker from the map
-            console.log(`🔍 Looking for markers in project ${projectId}`);
-            if (stationMarkers.has(projectId)) {
-                const markers = stationMarkers.get(projectId);
-                console.log(`🔍 Found ${markers.length} markers in project`);
-
-                // Debug: log all marker IDs
-                markers.forEach((m, i) => {
-                    console.log(`  Marker ${i}: stationId=${m.stationId}, name=${m.stationName}`);
-                });
-
-                const markerIndex = markers.findIndex(m => m.stationId === stationId);
-                console.log(`🔍 Marker index: ${markerIndex}`);
-
-                if (markerIndex !== -1) {
-                    const marker = markers[markerIndex];
-                    console.log(`🗑️ Found marker to remove, addedToMap: ${marker.addedToMap}`);
-
-                    // Always try to remove the marker
-                    try {
-                        marker.remove();
-                        console.log(`🗑️ Marker removed from map`);
-                    } catch (e) {
-                        console.error(`❌ Error removing marker:`, e);
-                    }
-
-                    markers.splice(markerIndex, 1);
-                    console.log(`🗑️ Removed marker from array, remaining: ${markers.length}`);
+            // Remove station from the layer
+            console.log(`🗑️ Removing station from layer for project ${projectId}`);
+            const sourceId = `stations-source-${projectId}`;
+            const source = map.getSource(sourceId);
+            
+            if (source) {
+                const data = source._data;
+                const featureIndex = data.features.findIndex(f => f.properties.id === stationId);
+                
+                if (featureIndex !== -1) {
+                    data.features.splice(featureIndex, 1);
+                    source.setData(data);
+                    console.log(`🗑️ Station removed from layer, remaining: ${data.features.length}`);
                 } else {
-                    console.warn(`⚠️ Could not find marker with stationId ${stationId}`);
-                    // Try alternative search by name
-                    const markerByName = markers.findIndex(m => m.stationName === stationName);
-                    if (markerByName !== -1) {
-                        console.log(`🔍 Found marker by name instead`);
-                        try {
-                            markers[markerByName].remove();
-                        } catch (e) {
-                            console.error(`❌ Error removing marker by name:`, e);
-                        }
-                        markers.splice(markerByName, 1);
-                    }
+                    console.warn(`⚠️ Could not find station ${stationId} in layer`);
                 }
             } else {
-                console.warn(`⚠️ No markers found for project ${projectId}`);
+                console.warn(`⚠️ No station layer found for project ${projectId}`);
             }
 
             // Close the modal
@@ -10548,23 +10532,9 @@
                 const currentZoom = map.getZoom();
                 const shouldShowStations = currentZoom >= STATION_MIN_ZOOM;
 
-                // Add or remove markers from map based on zoom AND project visibility
-                stationMarkers.forEach((markers, projectId) => {
-                    // Check if the project is visible
-                    const projectIsVisible = projectLayerStates.get(projectId) !== false;
-
-                    markers.forEach(marker => {
-                        if (shouldShowStations && projectIsVisible && !marker.addedToMap) {
-                            // Show marker if zoomed in AND project is visible
-                            marker.addTo(map);
-                            marker.addedToMap = true;
-                        } else if ((!shouldShowStations || !projectIsVisible) && marker.addedToMap) {
-                            // Hide marker if zoomed out OR project is hidden
-                            marker.remove();
-                            marker.addedToMap = false;
-                        }
-                    });
-                });
+                // Station visibility is now handled by layer minzoom (14)
+                // This function only needs to handle project visibility toggles
+                // Layers are automatically shown/hidden by MapBox based on minzoom
 
                 // Also update POI visibility
                 updatePOIVisibility();
@@ -10576,9 +10546,9 @@
                     const area = Math.pow(2, 15 - currentZoom); // Rough area in km²
                     console.log(`🔍 Zoom ${currentZoom.toFixed(1)} - Area ~${area.toFixed(2)} km² - Stations: ${shouldShowStations ? 'VISIBLE ✅' : 'HIDDEN ❌'}`);
                     if (shouldShowStations) {
-                        console.log('📍 Station markers are now visible (zoomed in to roughly 2-3 km²)');
+                        console.log('📍 Station layers are now visible (zoomed in to roughly 2-3 km²)');
                     } else {
-                        console.log('📍 Station markers hidden (zoom in to level 14+ to see them)');
+                        console.log('📍 Station layers hidden (zoom in to level 14+ to see them)');
                     }
                 }
             };
