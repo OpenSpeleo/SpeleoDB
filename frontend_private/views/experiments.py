@@ -195,3 +195,24 @@ class ExperimentUserPermissionsView(_BaseExperimentView):
         ).prefetch_related("user")
 
         return super().get(request, *args, **data, **kwargs)
+
+
+class ExperimentDataViewerView(_BaseExperimentView):
+    template_name = "pages/experiment/data_viewer.html"
+
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        experiment_id: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
+        try:
+            data = self.get_experiment_data(
+                user=request.user,
+                experiment_id=experiment_id,
+            )
+        except (ObjectDoesNotExist, PermissionError):
+            return redirect(reverse("private:experiments"))
+
+        return super().get(request, *args, **data, **kwargs)

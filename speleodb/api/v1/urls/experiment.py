@@ -8,6 +8,7 @@ from django.urls import include
 from django.urls import path
 
 from speleodb.api.v1.views.experiment import ExperimentApiView
+from speleodb.api.v1.views.experiment import ExperimentExportExcelApiView
 from speleodb.api.v1.views.experiment import ExperimentSpecificApiView
 from speleodb.api.v1.views.user_experiment_permission import (
     ExperimentUserPermissionListApiView,
@@ -18,6 +19,12 @@ from speleodb.api.v1.views.user_experiment_permission import (
 
 experiment_urlpatterns: list[URLPattern] = [
     path("", ExperimentSpecificApiView.as_view(), name="experiment-detail"),
+    # --------- DATA EXPORT --------- #
+    path(
+        "export/excel/",
+        ExperimentExportExcelApiView.as_view(),
+        name="experiment-export-excel",
+    ),
     # --------- USER PERMISSIONS --------- #
     path(
         "permissions/",

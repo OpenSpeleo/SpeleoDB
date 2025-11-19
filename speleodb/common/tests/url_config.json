@@ -474,6 +474,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/experiments/<uuid:id>/export/excel/",
+        "module": "speleodb.api.v1.views.experiment.ExperimentExportExcelApiView",
+        "name": "api:v1:experiment-export-excel",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/experiments/<uuid:id>/permission/detail/",
         "module": "speleodb.api.v1.views.user_experiment_permission.ExperimentUserPermissionSpecificApiView",
         "name": "api:v1:experiment-user-permissions-detail",
@@ -843,6 +849,12 @@
         "url": "/private/experiment/<uuid:experiment_id>/danger_zone/",
         "module": "frontend_private.views.experiments.ExperimentDangerZoneView",
         "name": "private:experiment_danger_zone",
+        "decorators": ""
+    },
+    {
+        "url": "/private/experiment/<uuid:experiment_id>/data_viewer/",
+        "module": "frontend_private.views.experiments.ExperimentDataViewerView",
+        "name": "private:experiment_data_viewer",
         "decorators": ""
     },
     {

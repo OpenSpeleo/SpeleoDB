@@ -151,7 +151,6 @@ class ExperimentSerializer(serializers.ModelSerializer[Experiment]):
         Input format (from frontend):
         [
             {"name": "Measurement Date", "type": "date", "required": true},
-            {"name": "Submitter Email", "type": "text", "required": true},
             {"name": "pH Level", "type": "number", "required": false, "options": [...]},
             ...
         ]
@@ -159,7 +158,6 @@ class ExperimentSerializer(serializers.ModelSerializer[Experiment]):
         Output format (for model):
         {
             "measurement_date": {"name": "Measurement Date", "type": "date", "required": true},
-            "submitter_email": {"name": "Submitter Email", "type": "text", "required": true},
             "ph_level": {"name": "pH Level", "type": "number", "required": false, "options": [...]},
             ...
         }
@@ -413,7 +411,7 @@ class ExperimentRecordGISSerializer(serializers.Serializer[ExperimentRecord]):
                 ],
             },
             "properties": {
-                "id": str(instance.id),
+                "station_name": instance.station.name,
                 "created_by": instance.created_by,
                 **instance.data,
             },

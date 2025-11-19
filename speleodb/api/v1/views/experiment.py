@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import io
+import json
 import logging
 import re
 from typing import TYPE_CHECKING
 from typing import Any
 
+import xlsxwriter
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils import timezone
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -29,6 +33,7 @@ from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import Station
 from speleodb.utils.api_mixin import SDBAPIViewMixin
+from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import GISResponse
 from speleodb.utils.response import SuccessResponse
@@ -36,6 +41,7 @@ from speleodb.utils.response import SuccessResponse
 if TYPE_CHECKING:
     from typing import Any
 
+    from django.http import FileResponse
     from rest_framework.request import Request
 
 logger = logging.getLogger(__name__)
@@ -467,8 +473,164 @@ class ExperimentGISApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
         experiment = self.get_object()
 
         serializer = self.get_serializer(
-            ExperimentRecord.objects.filter(experiment=experiment),
+            ExperimentRecord.objects.filter(experiment=experiment).order_by(
+                "-creation_date"
+            ),
             many=True,
         )
 
         return GISResponse({"type": "FeatureCollection", "features": serializer.data})
+
+
+class ExperimentExportExcelApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
+    """
+    Export experiment data to Excel format.
+    """
+
+    queryset = Experiment.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = "id"
+    serializer_class = ExperimentRecordSerializer  # type: ignore[assignment]
+
+    def get(  # noqa: PLR0915
+        self, request: Request, *args: Any, **kwargs: Any
+    ) -> Response | FileResponse:
+        user = self.get_user()
+        experiment = self.get_object()
+
+        # Check if user has read access
+        try:
+            ExperimentUserPermission.objects.get(
+                user=user,
+                experiment=experiment,
+                is_active=True,
+            )
+        except ExperimentUserPermission.DoesNotExist:
+            return ErrorResponse(
+                {"error": "You do not have permission to access this experiment"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Get all records for this experiment
+        records = (
+            ExperimentRecord.objects.filter(experiment=experiment)
+            .select_related("station")
+            .order_by("creation_date")
+        )
+
+        # Create Excel file in memory
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
+        worksheet = workbook.add_worksheet("Experiment Data")
+
+        # Define formats
+        header_format = workbook.add_format(
+            {
+                "bold": True,
+                "bg_color": "#4F46E5",
+                "font_color": "white",
+                "border": 1,
+                "align": "center",
+                "valign": "vcenter",
+            }
+        )
+
+        cell_format = workbook.add_format({"border": 1, "valign": "top"})
+
+        # Build headers from experiment fields
+        headers = [
+            "Station Name",
+            "Longitude",
+            "Latitude",
+        ]
+
+        # Add Measurement Date (mandatory field) before Recorded By
+        field_definitions = experiment.experiment_fields or {}
+        if "measurement_date" in field_definitions:
+            headers.append(
+                field_definitions["measurement_date"].get("name", "Measurement Date")
+            )
+
+        # Add Recorded By
+        headers.append("Recorded By")
+
+        # Add other custom fields (excluding measurement_date which is already added)
+        field_slugs = [
+            slug
+            for slug in field_definitions
+            if slug not in ["measurement_date", "submitter_email"]
+        ]
+        field_names = [
+            field_definitions[slug].get("name", slug) for slug in field_slugs
+        ]
+        headers.extend(field_names)
+
+        # Write headers
+        for col_num, header in enumerate(headers):
+            worksheet.write(0, col_num, header, header_format)
+            # Auto-adjust column width based on header length
+            worksheet.set_column(col_num, col_num, max(len(header) + 2, 12))
+
+        # Write data rows
+        row_num = 1
+        for record in records:
+            col_num = 0
+
+            # Station Name
+            worksheet.write(row_num, col_num, record.station.name, cell_format)
+            col_num += 1
+
+            # Longitude
+            if record.station.longitude is not None:
+                worksheet.write(row_num, col_num, record.station.longitude, cell_format)
+            else:
+                worksheet.write(row_num, col_num, "", cell_format)
+            col_num += 1
+
+            # Latitude
+            if record.station.latitude is not None:
+                worksheet.write(row_num, col_num, record.station.latitude, cell_format)
+            else:
+                worksheet.write(row_num, col_num, "", cell_format)
+            col_num += 1
+
+            # Measurement Date (mandatory field, comes before Recorded By)
+            record_data = record.data or {}
+            if "measurement_date" in field_definitions:
+                value = record_data.get("measurement_date", "")
+                if value is None:
+                    value = ""
+                worksheet.write(row_num, col_num, str(value), cell_format)
+                col_num += 1
+
+            # Recorded By (created_by)
+            worksheet.write(row_num, col_num, record.created_by, cell_format)
+            col_num += 1
+
+            # Other custom fields data (measurement_date already handled)
+            for field_slug in field_slugs:
+                value = record_data.get(field_slug, "")
+
+                match value:
+                    case None:
+                        value = ""
+
+                    case list() | dict():
+                        # Convert complex types to JSON string
+                        value = json.dumps(value)
+
+                worksheet.write(row_num, col_num, str(value), cell_format)
+                col_num += 1
+
+            row_num += 1
+
+        # Close workbook
+        workbook.close()
+        output.seek(0)
+
+        # Generate filename with timestamp
+        timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+        experiment_name = experiment.name.replace(" ", "_")
+        filename = f"{experiment_name}_data_{timestamp}.xlsx"
+
+        return DownloadResponseFromBlob(obj=output, filename=filename, attachment=True)

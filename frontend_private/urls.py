@@ -11,6 +11,7 @@ import speleodb.utils.url_converters  # noqa: F401  # Necessary to import the co
 from frontend_private.views import AuthTokenView
 from frontend_private.views import DashboardView
 from frontend_private.views import ExperimentDangerZoneView
+from frontend_private.views import ExperimentDataViewerView
 from frontend_private.views import ExperimentDetailsView
 from frontend_private.views import ExperimentGISView
 from frontend_private.views import ExperimentListingView
@@ -104,6 +105,11 @@ experiment_patterns = [
         "gis/",
         ExperimentGISView.as_view(),
         name="experiment_gis_integration",
+    ),
+    path(
+        "data_viewer/",
+        ExperimentDataViewerView.as_view(),
+        name="experiment_data_viewer",
     ),
 ]
 

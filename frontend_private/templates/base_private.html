@@ -334,7 +334,7 @@
                             <hr class="mt-5 mb-5" style="border-color: rgb(255 255 255 / 30%); border-style: dotted;">
 
                             <!-- My Experiments -->
-                            {% if request.url_name|is_in_list:"experiments,experiment_new,experiment_details,experiment_danger_zone,experiment_gis_integration,experiment_user_permissions" %}
+                            {% if request.url_name|is_in_list:"experiments,experiment_new,experiment_details,experiment_danger_zone,experiment_gis_integration,experiment_user_permissions,experiment_data_viewer" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:experiments' %}">

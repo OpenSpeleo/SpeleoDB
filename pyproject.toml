@@ -22,6 +22,10 @@ dependencies = [
     "hiredis==3.3.0",      # https://github.com/redis/hiredis-py
     "redis==7.0.1",        # https://github.com/redis/redis-py
 
+    # Data Processing & Writing
+    # ------------------------------------------------------------------------------
+    "xlsxwriter==3.2.9", # https://github.com/jmcnamara/XlsxWriter
+
     # Media Processing
     # ------------------------------------------------------------------------------
     "av==16.0.1",            # https://github.com/PyAV-Org/PyAV

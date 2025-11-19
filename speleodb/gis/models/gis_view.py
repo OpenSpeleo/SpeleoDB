@@ -216,6 +216,7 @@ class GISViewProject(models.Model):
     commit_sha = models.CharField(
         max_length=40,
         blank=True,
+        default="",
         help_text="Specific commit SHA (40 hex chars). Leave empty if using latest.",
     )
 
