@@ -2511,7 +2511,6 @@
 
     // Function to toggle layer visibility for a project
     function toggleProjectVisibility(projectId, isVisible) {
-        console.log(`Toggling project ${projectId} visibility to: ${isVisible}`);
 
         // Toggle survey lines/polygons
         if (allProjectLayers.has(projectId)) {
@@ -2522,7 +2521,6 @@
                 try {
                     if (map.getLayer(layerId)) {
                         map.setLayoutProperty(layerId, 'visibility', visibility);
-                        console.log(`Set ${layerId} visibility to ${visibility}`);
                     }
                 } catch (error) {
                     console.warn(`Failed to toggle visibility for layer ${layerId}:`, error);
@@ -3727,7 +3725,6 @@
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('📦 POI API Response:', data);
 
                 if (data.success && data.data) {
                     const poiData = data.data;
@@ -4220,7 +4217,6 @@
                     throw new Error(`All-stations GeoJSON failed with status ${response.status}`);
                 }
                 const payload = await response.json();
-                console.log('📦 All-stations GeoJSON payload:', payload);
                 if (!payload || payload.success !== true || !payload.data || payload.data.type !== 'FeatureCollection' || !Array.isArray(payload.data.features)) {
                     throw new Error('Invalid all-stations GeoJSON payload');
                 }
@@ -10985,13 +10981,8 @@
             // Wait for all project GeoJSON data to load
             Promise.all(fetchPromises)
                 .then(results => {
-                    console.log('🔍 Promise.all results:', results);
-                    console.log(`📊 Total API calls: ${results.length}`);
-                    console.log(`❌ Null results: ${results.filter(r => r === null).length}`);
-
                     // Filter out null results (projects with no/invalid GeoJSON data)
                     const validResults = results.filter(result => result !== null);
-                    console.log(`✅ Valid results: ${validResults.length}`);
 
                     // Update the global projects array to only contain projects with valid GeoJSON
                     // This ensures all subsequent code only sees projects with actual survey data
