@@ -1585,7 +1585,7 @@
                                 <div class="mt-3">
                                     <select id="station-tab-select" class="bg-slate-700 text-white rounded-lg p-2 w-full">
                                         <option value="details">Details</option>
-                                        <option value="logs">Scientific Log</option>
+                                        <option value="logs">Changelog</option>
                                         <option value="experiments">Experiments</option>
                                         <option value="resources">Resources</option>
                                         <option value="add-resource">Add Resource</option>
@@ -1593,7 +1593,7 @@
                                 </div>
                                 <div id="station-modal-tabs" class="hidden">
                                     <button class="tab-btn active" data-tab="details">Details</button>
-                                    <button class="tab-btn" data-tab="logs">Scientific Log</button>
+                                    <button class="tab-btn" data-tab="logs">Changelog</button>
                                     <button class="tab-btn" data-tab="experiments">Experiments</button>
                                     <button class="tab-btn" data-tab="resources">Resources</button>
                                     <button class="tab-btn" data-tab="add-resource">Add Resource</button>
@@ -5072,7 +5072,7 @@
                 newSelect.className = 'bg-slate-700 text-white rounded-lg p-2 w-full';
                 newSelect.innerHTML = `
                     <option value="details">Details</option>
-                    <option value="logs">Scientific Log</option>
+                    <option value="logs">Changelog</option>
                     <option value="experiments">Experiments</option>
                     <option value="resources">Resources</option>
                     <option value="add-resource">Add Resource</option>
@@ -5218,8 +5218,8 @@
                                         <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                         </svg>
-                                        <h3 class="text-white text-lg font-medium mb-2">Scientific Log</h3>
-                                        <p class="text-slate-400">Select a station to view scientific log entries.</p>
+                                        <h3 class="text-white text-lg font-medium mb-2">Changelog</h3>
+                                        <p class="text-slate-400">Select a station to view the station changelog entries.</p>
                                     </div>
                                 </div>
                             </div>
@@ -5293,7 +5293,7 @@
         `;
     }
 
-    // Scientific Log Tab - Real AJAX + Renderer
+    // Changelog Tab - Real AJAX + Renderer
     async function fetchStationLogEntries(stationId) {
         try {
             const url = (typeof Urls !== 'undefined' && Urls["api:v1:station-logs"])
