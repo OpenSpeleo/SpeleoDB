@@ -2,7 +2,7 @@
 
 import django.core.validators
 import django.db.models.deletion
-import speleodb.gis.models.experiment
+import speleodb.gis.models.utils
 import speleodb.gis.models.log_entry
 import speleodb.gis.models.station
 import speleodb.utils.storages
@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
                 ('end_date', models.DateField(blank=True, null=True)),
                 ('creation_date', models.DateTimeField(auto_now_add=True)),
                 ('modified_date', models.DateTimeField(auto_now=True)),
-                ('gis_token', models.CharField(default=speleodb.gis.models.experiment._generate_random_token, max_length=40, unique=True, verbose_name='GIS Token')),
+                ('gis_token', models.CharField(default=speleodb.gis.models.utils.generate_random_token, max_length=40, unique=True, verbose_name='GIS Token')),
             ],
             options={
                 'ordering': ['-creation_date'],

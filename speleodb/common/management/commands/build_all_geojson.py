@@ -35,7 +35,7 @@ class Command(BaseCommand):
         for project in Project.objects.filter(exclude_geojson=False):
             logger.info("")
             logger.info("-" * 60)
-            logger.info(f"Processing Project: {project.id}")
+            logger.info(f"Processing Project: {project.id} ~ {project.name}")
             try:
                 git_repo = project.git_repo  # load the git project
 
@@ -70,8 +70,25 @@ class Command(BaseCommand):
                                 logger.info(f"Saved {file.path} to {tmp_file}")
 
                                 with contextlib.suppress(NoKnownAnchorError):
-                                    survey: Survey = ArianeInterface.from_file(tmp_file)
-                                    geojson_data = survey_to_geojson(survey)
+                                    try:
+                                        survey: Survey = ArianeInterface.from_file(
+                                            tmp_file
+                                        )
+                                    except OSError:
+                                        logger.error(  # noqa: TRY400
+                                            f"Error processing file {file.path} in "
+                                            f"commit {commit.hexsha} - Not a valid TML"
+                                        )
+                                        continue
+
+                                    try:
+                                        geojson_data = survey_to_geojson(survey)
+                                    except Exception:
+                                        logger.error(  # noqa: TRY400
+                                            f"Error processing file {file.path} in "
+                                            f"commit {commit.hexsha} - Not a valid TML"
+                                        )
+                                        continue
 
                                     geojson_f = SimpleUploadedFile(
                                         "test.geojson",  # filename
@@ -81,6 +98,9 @@ class Command(BaseCommand):
 
                                     ProjectGeoJSON.objects.create(
                                         project=project,
+                                        commit_author_name=commit.author.name,
+                                        commit_author_email=commit.author.email,
+                                        commit_message=commit.message,
                                         commit_sha=commit.hexsha,
                                         commit_date=commit.date_dt,
                                         file=geojson_f,

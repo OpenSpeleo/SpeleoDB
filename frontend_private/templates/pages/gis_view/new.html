@@ -1,0 +1,468 @@
+{% extends "base_private.html" %}
+{% load static %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+
+        <!-- Page header -->
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+
+            <!-- Left: Title -->
+            <div class="mb-4 sm:mb-0">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
+                    Create a New GIS View
+                </h1>
+            </div>
+
+        </div>
+
+        <!-- GIS View Form -->
+        <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
+            <div class="flex flex-col md:flex-row md:-mr-px">
+                <div class="grow">
+
+                    <form id="new_gis_view_form" autocomplete="off">
+
+                        {% csrf_token %}
+
+                        <!-- Panel body -->
+                        <div class="p-6 space-y-6">
+
+                            <!-- Basic Information -->
+                            <section>
+                                <h3 class="text-lg font-semibold text-slate-100 mb-4">Basic Information</h3>
+                                
+                                <!-- Name -->
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium mb-1" for="name">
+                                        Name:<span class="text-rose-600"> *</span>
+                                    </label>
+                                    <input id="name" name="name" class="form-input w-full" type="text" placeholder="e.g., Yucatan Cenotes 2024" required />
+                                </div>
+
+                                <!-- Description -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                                    <textarea id="description" name="description" class="form-textarea w-full focus:border-slate-300" rows="4" placeholder="Describe what this view contains..."></textarea>
+                                </div>
+                            </section>
+
+                            <!-- Projects Section -->
+                            <section>
+                                <div class="mt-5">
+                                    <h3 class="text-lg font-semibold text-slate-100 mb-4">Select Projects</h3>
+                                    <p class="text-sm text-slate-400 mb-4">Add one or more projects to include in this GIS view. You can only add projects you have access to.</p>
+                                    
+                                    <div>
+                                        <div class="flex justify-between items-center mb-3">
+                                            <h4 class="text-sm font-medium text-slate-300">Projects</h4>
+                                            <button type="button" id="add_project_btn" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                                                <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" viewBox="0 0 16 16">
+                                                    <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                                                </svg>
+                                                Add Project
+                                            </button>
+                                        </div>
+                                        
+                                        <div id="projects_container" class="space-y-3">
+                                            <!-- Project rows will be added here dynamically -->
+                                        </div>
+
+                                        <div id="no_projects_message" class="text-center py-8 text-slate-500 border-2 border-dashed border-slate-600 rounded-lg">
+                                            No projects added yet. Click "Add Project" to begin.
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                        </div>
+
+                        <!-- Panel footer -->
+                        <footer>
+                            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+                                <div class="flex self-end">
+                                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:gis_views' %}">Cancel</a>
+                                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Create GIS View</button>
+                                </div>
+                            </div>
+                        </footer>
+
+                    </form>
+
+                    {% include 'snippets/modal_success.html' %}
+                    {% include 'snippets/modal_error.html' %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock content %}
+
+{% block extra_js %}
+<script src="{% url 'url_reverse.js' %}"></script>
+{% endblock extra_js %}
+
+{% block inline_extra_js %}
+<script>
+
+    $(window).on('load', function() {
+
+        let projectCounter = 0;
+        let availableProjects = [];
+        const usedProjectIds = new Set();
+
+        // Get CSRF token from cookie
+        function getCSRFToken() {
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            return cookieValue || '{{ csrf_token }}';
+        }
+
+        // Load user's accessible projects
+        async function loadUserProjects() {
+            try {
+                const response = await fetch(
+                    "{% url 'api:v1:projects' %}", 
+                    {
+                        headers: {
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        credentials: 'same-origin'
+                    }
+                );
+                const data = await response.json();
+                if (data.success) {
+                    availableProjects = data.data;
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+            }
+        }
+
+        // Toggle no projects message visibility
+        function toggleNoProjectsMessage() {
+            const container = $('#projects_container');
+            const message = $('#no_projects_message');
+            
+            if (container.children().length === 0) {
+                message.show();
+            } else {
+                message.hide();
+            }
+        }
+
+        // Get available projects for dropdown (excluding already selected)
+        function getAvailableProjectsForDropdown(currentProjectId = null) {
+            return availableProjects.filter(p => 
+                !usedProjectIds.has(p.id) || p.id === currentProjectId
+            );
+        }
+
+        // Function to create a new project row
+        function createProjectElement(projectId) {
+            const availProjects = getAvailableProjectsForDropdown();
+            
+            const projectOptions = availProjects.map(p => 
+                `<option value="${p.id}">${p.name}</option>`
+            ).join('');
+
+            return `
+                <div class="bg-slate-700 rounded-lg p-4 border border-slate-600 project-item" data-project-id="${projectId}">
+                    <div class="flex flex-col gap-4">
+                        <!-- Project Selection -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">
+                                Project<span class="text-rose-600"> *</span>
+                            </label>
+                            <select class="form-select w-full project-select" required>
+                                <option value="">Select a project...</option>
+                                ${projectOptions}
+                            </select>
+                        </div>
+                        
+                        <!-- Commit Mode Selection -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2">Commit Selection</label>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="commit_mode_${projectId}" value="latest" class="form-radio commit-mode-radio" checked />
+                                    <span class="text-sm ml-2 text-slate-300">Always Latest</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="commit_mode_${projectId}" value="specific" class="form-radio commit-mode-radio" />
+                                    <span class="text-sm ml-2 text-slate-300">Specific Commit</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Commit SHA Selection (hidden by default) -->
+                        <div class="commit-sha-container hidden">
+                            <label class="block text-xs font-medium text-slate-400 mb-1">
+                                Commit<span class="text-rose-600"> *</span>
+                            </label>
+                            <select class="form-select w-full commit-sha-select">
+                                <option value="">Loading commits...</option>
+                            </select>
+                            <p class="text-xs text-slate-500 mt-1">Select a commit from the project history</p>
+                        </div>
+                        
+                        <!-- Remove Button -->
+                        <div class="flex justify-end">
+                            <button type="button" 
+                                    class="btn-sm bg-rose-500 hover:bg-rose-600 text-white remove-project-btn"
+                                    data-project-id="${projectId}">
+                                <svg class="w-4 h-4 fill-current shrink-0 inline-block mr-1" viewBox="0 0 16 16">
+                                    <path d="M5 7h6v2H5V7z" />
+                                </svg>
+                                Remove Project
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add project button click handler
+        $('#add_project_btn').click(function(e) {
+            e.preventDefault();
+            
+            const availProjects = getAvailableProjectsForDropdown();
+            if (availProjects.length === 0) {
+                $("#modal_error_txt").html("No more projects available to add. You've either added all your projects or you don't have access to any projects.");
+                $("#modal_error").css('display', 'flex');
+                return;
+            }
+            
+            projectCounter++;
+            const projectElement = createProjectElement(projectCounter);
+            $('#projects_container').append(projectElement);
+            toggleNoProjectsMessage();
+        });
+
+        // Remove project button click handler (delegated)
+        $(document).on('click', '.remove-project-btn', function(e) {
+            e.preventDefault();
+            const projectId = $(this).data('project-id');
+            const container = $(`.project-item[data-project-id="${projectId}"]`);
+            const selectedProjectId = container.find('.project-select').val();
+            
+            if (selectedProjectId) {
+                usedProjectIds.delete(selectedProjectId);
+            }
+            
+            container.remove();
+            toggleNoProjectsMessage();
+        });
+
+        // Load commits for a project (only commits with GeoJSON)
+        async function loadCommitsForProject(projectId, selectElement) {
+            selectElement.html('<option value="">Loading commits...</option>');
+            selectElement.prop('disabled', true);
+            
+            try {
+                    
+                const response = await fetch(
+                    Urls["api:v1:project-geojson-commits"](projectId),     
+                    {
+                        headers: {
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        credentials: 'same-origin'
+                    }
+            );
+                const data = await response.json();
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    // Clear and populate dropdown
+                    selectElement.html('<option value="">Select a commit...</option>');
+                    
+                    // data is already sorted by commit_date descending
+                    data.data.forEach(commit => {
+                        // Format: [date] author: message - sha[:8]
+                        const date = commit.commit_date.split('T')[0]; // Get just the date part (YYYY-MM-DD)
+                        const commitSha = commit.commit_sha;
+                        const shortSha = commitSha.substring(0, 8);
+                        const author = commit.commit_author_name || 'Unknown';
+                        const message = (commit.commit_message || 'No message').split('\n')[0]; // First line only
+                        
+                        // Truncate message if too long
+                        const truncatedMessage = message.length > 50 ? message.substring(0, 50) + '...' : message;
+                        
+                        const optionText = `[${date}] ${author}: ${truncatedMessage} - ${shortSha}`;
+                        
+                        selectElement.append($('<option>', {
+                            value: commitSha,
+                            text: optionText
+                        }));
+                    });
+                    
+                    selectElement.prop('disabled', false);
+                } else {
+                    selectElement.html('<option value="">No GeoJSON commits available</option>');
+                    selectElement.prop('disabled', true);
+                }
+            } catch (error) {
+                console.error('Error loading commits:', error);
+                selectElement.html('<option value="">Error loading commits</option>');
+                selectElement.prop('disabled', true);
+            }
+        }
+
+        // Track project selection changes
+        $(document).on('change', '.project-select', function() {
+            const container = $(this).closest('.project-item');
+            const oldProjectId = container.data('selected-project-id');
+            const newProjectId = $(this).val();
+            
+            // Remove old ID from used set
+            if (oldProjectId) {
+                usedProjectIds.delete(oldProjectId);
+            }
+            
+            // Add new ID to used set
+            if (newProjectId) {
+                usedProjectIds.add(newProjectId);
+                container.data('selected-project-id', newProjectId);
+                
+                // If specific commit mode is selected, load commits
+                const isSpecific = container.find('input[value="specific"]').is(':checked');
+                if (isSpecific) {
+                    const commitSelect = container.find('.commit-sha-select');
+                    loadCommitsForProject(newProjectId, commitSelect);
+                }
+            }
+        });
+
+        // Show/hide commit SHA input based on mode selection
+        $(document).on('change', '.commit-mode-radio', function() {
+            const container = $(this).closest('.project-item');
+            const shaContainer = container.find('.commit-sha-container');
+            const shaSelect = container.find('.commit-sha-select');
+            
+            if ($(this).val() === 'specific') {
+                shaContainer.removeClass('hidden');
+                shaSelect.prop('required', true);
+                
+                // Load commits if project is selected
+                const projectId = container.find('.project-select').val();
+                if (projectId) {
+                    loadCommitsForProject(projectId, shaSelect);
+                }
+            } else {
+                shaContainer.addClass('hidden');
+                shaSelect.prop('required', false);
+            }
+        });
+
+        // Collect form data
+        function collectFormData() {
+            const projects = [];
+            
+            $('.project-item').each(function() {
+                const projectId = $(this).find('.project-select').val();
+                const useLatest = $(this).find('input[value="latest"]').is(':checked');
+                const commitSha = $(this).find('.commit-sha-select').val();
+                
+                if (projectId) {
+                    projects.push({
+                        project_id: projectId,
+                        use_latest: useLatest,
+                        commit_sha: useLatest ? null : (commitSha || null)
+                    });
+                }
+            });
+            
+            return {
+                name: $('#name').val().trim(),
+                description: $('#description').val().trim(),
+                projects: projects
+            };
+        }
+
+        // Initialize
+        loadUserProjects();
+        toggleNoProjectsMessage();
+
+        $("body").click(function() {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+
+        $('#btn_submit').click(function (e) {
+            e.preventDefault();
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            // Collect form data
+            const formData = collectFormData();
+
+            // Validation
+            if (!formData.name) {
+                $("#modal_error_txt").html("Please enter a name for the GIS view.");
+                $("#modal_error").css('display', 'flex');
+                return false;
+            }
+
+            if (formData.projects.length === 0) {
+                $("#modal_error_txt").html("Please add at least one project to the GIS view.");
+                $("#modal_error").css('display', 'flex');
+                return false;
+            }
+
+            // Check that specific commit mode has commit selected
+            let hasInvalidCommit = false;
+            $('.project-item').each(function() {
+                const useLatest = $(this).find('input[value="latest"]').is(':checked');
+                const commitSha = $(this).find('.commit-sha-select').val();
+                
+                if (!useLatest && !commitSha) {
+                    hasInvalidCommit = true;
+                }
+            });
+
+            if (hasInvalidCommit) {
+                $("#modal_error_txt").html("Projects with 'Specific Commit' mode must have a commit selected.");
+                $("#modal_error").css('display', 'flex');
+                return false;
+            }
+
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+            $.ajax({
+                url: "{% url 'api:v1:gis-views' %}",
+                method: "POST",
+                data: JSON.stringify(formData),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The GIS view has been created successfully.");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function(){
+                        window.location.href = Urls['private:gis_view_details'](data["data"]["id"]);
+                    }, 2000);
+                },
+                error: function (data) {
+                    {% include 'snippets/ajax_error_modal_management.js' %}
+                }
+            });
+            return false;
+        });
+
+    });
+</script>
+{% endblock inline_extra_js %}
+

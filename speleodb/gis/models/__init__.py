@@ -6,6 +6,10 @@
 # Project Related Models
 from speleodb.gis.models.project_geojson import ProjectGeoJSON
 
+# GIS View Models
+from speleodb.gis.models.gis_view import GISView
+from speleodb.gis.models.gis_view import GISViewProject
+
 # GIS Models
 from speleodb.gis.models.point_of_interest import PointOfInterest
 from speleodb.gis.models.station import Station
@@ -21,6 +25,8 @@ __all__ = [
     "Experiment",
     "ExperimentRecord",
     "ExperimentUserPermission",
+    "GISView",
+    "GISViewProject",
     "LogEntry",
     "PointOfInterest",
     "ProjectGeoJSON",

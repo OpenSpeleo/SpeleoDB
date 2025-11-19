@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 from typing import Any
 
 import boto3
@@ -9,9 +10,11 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
-from speleodb.api.v1.tests.test_project_geojson_api import sha1_hash
+from speleodb.api.v1.tests.test_project_geojson_commits_api import sha1_hash
 from speleodb.gis.models import ProjectGeoJSON
-from speleodb.surveys.models import Project
+
+if TYPE_CHECKING:
+    from speleodb.surveys.models import Project
 
 
 def make_uploaded(name: str, payload: dict[str, Any]) -> SimpleUploadedFile:
@@ -33,6 +36,9 @@ class TestGeoJSONModel:
         obj = ProjectGeoJSON(
             project=project,
             commit_sha=commit_sha1,
+            commit_author_name="John Doe",
+            commit_author_email="john.doe@example.com",
+            commit_message="Initial commit",
             commit_date=timezone.now(),
             file=upload,
         )
@@ -47,6 +53,9 @@ class TestGeoJSONModel:
         obj = ProjectGeoJSON(
             project=project,
             commit_sha=sha1_hash(),
+            commit_author_name="John Doe",
+            commit_author_email="john.doe@example.com",
+            commit_message="Initial commit",
             commit_date=timezone.now(),
             file=upload,
         )
@@ -64,6 +73,9 @@ class TestGeoJSONModel:
         obj = ProjectGeoJSON(
             project=project,
             commit_sha=sha1_hash(),
+            commit_author_name="John Doe",
+            commit_author_email="john.doe@example.com",
+            commit_message="Initial commit",
             commit_date=timezone.now(),
             file=upload,
         )
@@ -81,6 +93,9 @@ class TestGeoJSONModel:
         obj = ProjectGeoJSON(
             project=project,
             commit_sha=sha1_hash(),
+            commit_author_name="John Doe",
+            commit_author_email="john.doe@example.com",
+            commit_message="Initial commit",
             commit_date=timezone.now(),
             file=upload,
         )

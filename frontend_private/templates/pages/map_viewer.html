@@ -2212,10 +2212,12 @@
     </div>
 </main>
 {% endblock content %}
+
 {% block extra_js %}
 <script src="{% url 'url_reverse.js' %}"></script>
 <script src='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js'></script>
 {% endblock extra_js %}
+
 {% block inline_extra_js %}
 <script src="{% static 'private/js/poi_functions.js' %}"></script>
 <script>
@@ -10377,19 +10379,18 @@
                             return null;
                         }
 
-                        const files = projectMeta.geojson_files || [];
-                        if (!Array.isArray(files) || files.length === 0) {
-                            console.log(`Project ${projectId} has no geojson_files, skipping`);
+                        const geojson_file_url = projectMeta.geojson_file || null;
+                        if (!geojson_file_url) {
+                            console.log(`Project ${projectId} has no geojson_file, skipping`);
                             return null;
                         }
 
-                        const attemptFetch = (fileList) => {
-                            const latest = fileList[0]; // already sorted by -creation_date on backend
-                            if (!latest || !latest.url) {
+                        const attemptFetch = (fileUrl) => {
+                            if (!fileUrl || typeof fileUrl !== 'string') {
                                 console.log(`Project ${projectId} latest file missing URL, skipping`);
                                 return Promise.resolve(null);
                             }
-                            return fetch(latest.url, { method: 'GET', mode: 'cors' })
+                            return fetch(fileUrl, { method: 'GET', mode: 'cors' })
                                 .then(resp => {
                                     if (!resp.ok) {
                                         throw new Error(`S3 GET failed: ${resp.status}`);
@@ -10399,7 +10400,7 @@
                         };
 
                         // Try S3 fetch; on failure, skip (no per-project API retries)
-                        return attemptFetch(files)
+                        return attemptFetch(geojson_file_url)
                             .catch(err => {
                                 console.warn(`S3 fetch failed for project ${projectId}, skipping`, err);
                                 return null;

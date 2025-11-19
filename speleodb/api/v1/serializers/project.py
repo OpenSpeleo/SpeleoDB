@@ -195,28 +195,34 @@ class ProjectGeoJSONFileSerializer(serializers.ModelSerializer[ProjectGeoJSON]):
 
     class Meta:
         model = ProjectGeoJSON
-        fields = ["commit_sha", "date", "url"]
+        fields = [
+            "commit_author_name",
+            "commit_author_email",
+            "commit_date",
+            "commit_message",
+            "commit_sha",
+            "date",
+            "url",
+        ]
         read_only_fields = ["__all__"]
 
 
 class ProjectWithGeoJsonSerializer(ProjectSerializer):
-    geojson_files = serializers.SerializerMethodField()
+    geojson_file = serializers.SerializerMethodField()
 
     class Meta(ProjectSerializer.Meta):
         read_only_fields = ["__all__"]
 
-    def get_geojson_files(self, obj: Project) -> dict[str, str]:
+    def get_geojson_file(self, obj: Project) -> str | None:
         """
         Retrieve geojson files from serializer context.
         Expect the context to have a 'geojson_files' key containing
         a queryset or list of GeoJson instances.
         """
-        if hasattr(obj, "_geojson_files"):
-            geojson_qs = obj._geojson_files  # noqa: SLF001  # type: ignore[attr-defined]
 
-        else:
-            geojson_qs = obj.rel_geojsons
+        try:
+            geojson_obj = obj.rel_geojsons.order_by("-commit_date")[0]
+            return geojson_obj.get_signed_download_url()
 
-        return ProjectGeoJSONFileSerializer(
-            geojson_qs, many=True, context=self.context
-        ).data
+        except IndexError:
+            return None

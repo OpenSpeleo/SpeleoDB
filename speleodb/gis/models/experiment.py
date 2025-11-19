@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import binascii
 import enum
 import hashlib
 import json
 import logging
-import os
 import re
 import uuid
 from typing import TYPE_CHECKING
@@ -28,6 +26,7 @@ from pydantic import model_validator
 
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
+from speleodb.gis.models.utils import generate_random_token
 from speleodb.users.models import User
 from speleodb.utils.pydantic_utils import pydantic_to_django_validation_error
 
@@ -103,10 +102,6 @@ class MandatoryFieldSlug(enum.Enum):
                 "required": True,
             },
         }
-
-
-def _generate_random_token() -> str:
-    return binascii.hexlify(os.urandom(20)).decode()
 
 
 class ExperimentFieldDefinition(BaseModel):
@@ -249,7 +244,7 @@ class Experiment(models.Model):
         unique=True,
         blank=False,
         null=False,
-        default=_generate_random_token,
+        default=generate_random_token,
     )
 
     class Meta:
@@ -305,7 +300,7 @@ class Experiment(models.Model):
         )
 
     def refresh_gis_token(self) -> None:
-        self.gis_token = _generate_random_token()
+        self.gis_token = generate_random_token()
         self.save()
 
     @property

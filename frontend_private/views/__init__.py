@@ -4,6 +4,11 @@ from frontend_private.views.experiments import ExperimentGISView
 from frontend_private.views.experiments import ExperimentListingView
 from frontend_private.views.experiments import ExperimentUserPermissionsView
 from frontend_private.views.experiments import NewExperimentView
+from frontend_private.views.gis_views import GISViewDangerZoneView
+from frontend_private.views.gis_views import GISViewDetailsView
+from frontend_private.views.gis_views import GISViewGISIntegrationView
+from frontend_private.views.gis_views import GISViewListingView
+from frontend_private.views.gis_views import NewGISViewView
 from frontend_private.views.map import MapViewerView
 from frontend_private.views.project import NewProjectView
 from frontend_private.views.project import ProjectDangerZoneView
@@ -40,8 +45,13 @@ __all__ = [
     "ExperimentListingView",
     "ExperimentUserPermissionsView",
     "FeedbackView",
+    "GISViewDangerZoneView",
+    "GISViewDetailsView",
+    "GISViewGISIntegrationView",
+    "GISViewListingView",
     "MapViewerView",
     "NewExperimentView",
+    "NewGISViewView",
     "NewProjectView",
     "NewTeamView",
     "PassWordView",

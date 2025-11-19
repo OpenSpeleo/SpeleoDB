@@ -492,6 +492,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gis/view/<gis_token>/",
+        "module": "speleodb.api.v1.views.gis_view.GISViewDataApiView",
+        "name": "api:v1:gis:gis-view-data",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/logs/<uuid:id>/",
         "module": "speleodb.api.v1.views.log_entry.LogEntrySpecificApiView",
         "name": "api:v1:log-detail",
@@ -559,8 +565,8 @@
     },
     {
         "url": "/api/v1/projects/<uuid:id>/geojson/",
-        "module": "speleodb.api.v1.views.project.ProjectGeoJsonApiView",
-        "name": "api:v1:project-geojson",
+        "module": "speleodb.api.v1.views.project_geojson.ProjectGeoJsonCommitsApiView",
+        "name": "api:v1:project-geojson-commits",
         "decorators": ""
     },
     {
@@ -625,7 +631,7 @@
     },
     {
         "url": "/api/v1/projects/geojson/",
-        "module": "speleodb.api.v1.views.project.ProjectAllGeoJsonApiView",
+        "module": "speleodb.api.v1.views.project_geojson.ProjectAllProjectGeoJsonApiView",
         "name": "api:v1:all-projects-geojson",
         "decorators": ""
     },
@@ -735,6 +741,18 @@
         "url": "/api/v1/user/autocomplete/",
         "module": "speleodb.api.v1.views.user.UserAutocompleteView",
         "name": "api:v1:user-autocomplete",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/user/gis_views/",
+        "module": "speleodb.api.v1.views.gis_view_management.GISViewManagementListApiView",
+        "name": "api:v1:gis-views",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/user/gis_views/<uuid:id>/",
+        "module": "speleodb.api.v1.views.gis_view_management.GISViewManagementDetailApiView",
+        "name": "api:v1:gis-view-detail",
         "decorators": ""
     },
     {
@@ -855,6 +873,36 @@
         "url": "/private/feedback/",
         "module": "frontend_private.views.user.FeedbackView",
         "name": "private:user_feedback",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis_view/<uuid:gis_view_id>/",
+        "module": "frontend_private.views.gis_views.GISViewDetailsView",
+        "name": "private:gis_view_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis_view/<uuid:gis_view_id>/danger_zone/",
+        "module": "frontend_private.views.gis_views.GISViewDangerZoneView",
+        "name": "private:gis_view_danger_zone",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis_view/<uuid:gis_view_id>/gis/",
+        "module": "frontend_private.views.gis_views.GISViewGISIntegrationView",
+        "name": "private:gis_view_gis_integration",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis_view/new/",
+        "module": "frontend_private.views.gis_views.NewGISViewView",
+        "name": "private:gis_view_new",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis_views/",
+        "module": "frontend_private.views.gis_views.GISViewListingView",
+        "name": "private:gis_views",
         "decorators": ""
     },
     {

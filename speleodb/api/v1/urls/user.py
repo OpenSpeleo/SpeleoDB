@@ -5,6 +5,8 @@ from __future__ import annotations
 from django.urls import URLPattern
 from django.urls import path
 
+from speleodb.api.v1.views.gis_view_management import GISViewManagementDetailApiView
+from speleodb.api.v1.views.gis_view_management import GISViewManagementListApiView
 from speleodb.api.v1.views.user import ReleaseAllUserLocksView
 from speleodb.api.v1.views.user import UserAuthTokenView
 from speleodb.api.v1.views.user import UserAutocompleteView
@@ -21,4 +23,11 @@ urlpatterns: list[URLPattern] = [
         name="release-all-locks",
     ),
     path("autocomplete/", UserAutocompleteView.as_view(), name="user-autocomplete"),
+    # GIS View Management
+    path("gis_views/", GISViewManagementListApiView.as_view(), name="gis-views"),
+    path(
+        "gis_views/<uuid:id>/",
+        GISViewManagementDetailApiView.as_view(),
+        name="gis-view-detail",
+    ),
 ]

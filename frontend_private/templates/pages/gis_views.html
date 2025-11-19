@@ -1,0 +1,270 @@
+{% extends "base_private.html" %}
+{% load static %}
+
+{% load set_var %}
+
+{% block extra_css %}
+<style>
+    /* Mobile card layout for GIS views */
+    @media (max-width: 768px) {
+        .gisviews-table {
+            display: none;
+        }
+        
+        .gisviews-cards {
+            display: block;
+        }
+        
+        .gisview-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .gisview-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .gisview-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .gisview-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            flex: 1;
+            margin-right: 12px;
+        }
+        
+        .gisview-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .gisview-card-body {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .gisview-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .gisview-card-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        
+        .gisview-card-value {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+            text-align: right;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .gisviews-table {
+            display: block;
+        }
+        
+        .gisviews-cards {
+            display: none;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+
+        <!-- Page header -->
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+
+            <!-- Left: Title -->
+            <div class="mb-4 sm:mb-0">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">My GIS Views</h1>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+                <!-- Create New GIS View button -->
+                <a href="{% url 'private:gis_view_new' %}" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                    <svg class="w-4 h-4 fill-current opacity-50 shrink-0" viewBox="0 0 16 16">
+                        <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                    </svg>
+                    <span class="hidden xs:block ml-2">Create New GIS View</span>
+                </a>
+            </div>
+
+        </div>
+
+        <!-- GIS Views Table (Desktop) -->
+        <div class="gisviews-table">
+            <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-700 relative">
+                <div>
+                    <!-- Table -->
+                    <div class="overflow-x-auto">
+                        <table class="table-auto w-full">
+                            <!-- Table header -->
+                            <thead class="text-xs font-semibold uppercase text-slate-500 bg-slate-700 border-b border-slate-700">
+                                <tr>
+                                    <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="font-semibold text-left">Name</div>
+                                    </th>
+                                    <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="font-semibold text-left">Description</div>
+                                    </th>
+                                    <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="font-semibold text-center">Projects</div>
+                                    </th>
+                                    <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="font-semibold text-left">Modified</div>
+                                    </th>
+                                    <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                        <div class="font-semibold text-center">Actions</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <!-- Table body -->
+                            <tbody class="text-sm divide-y divide-slate-700">
+                                {% if gis_views %}
+                                    {% for gis_view in gis_views %}
+                                    <tr>
+                                        <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                            <div class="font-medium text-slate-100">{{ gis_view.name }}</div>
+                                        </td>
+                                        <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                            <div class="text-slate-100">
+                                                {% if gis_view.description|length > 50 %}
+                                                    {{ gis_view.description|slice:":50" }}...
+                                                {% else %}
+                                                    {{ gis_view.description|default:"-" }}
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                            <div class="text-center">
+                                                <span class="inline-flex font-medium bg-indigo-500/20 text-indigo-400 rounded-full text-center px-2.5 py-0.5">
+                                                    {{ gis_view.rel_view_projects.count }}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                            <div class="text-slate-100">{{ gis_view.modified_date|date:"Y-m-d H:i" }}</div>
+                                        </td>
+                                        <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap w-px">
+                                            <div class="flex items-center justify-center gap-2">
+                                                <a href="{% url 'private:gis_view_details' gis_view_id=gis_view.id %}" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                                                    <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block" viewBox="0 0 16 16">
+                                                        <path d="M11.7.3c-.4-.4-1-.4-1.4 0l-10 10c-.2.2-.3.4-.3.7v4c0 .6.4 1 1 1h4c.3 0 .5-.1.7-.3l10-10c.4-.4.4-1 0-1.4l-4-4zM4.6 14H2v-2.6l6-6L10.6 8l-6 6zM12 6.6L9.4 4 11 2.4 13.6 5 12 6.6z" />
+                                                    </svg>
+                                                    <span class="ml-1">View</span>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="6" class="px-2 first:pl-5 last:pr-5 py-12 whitespace-nowrap text-center">
+                                            <div class="text-slate-500">
+                                                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                                </svg>
+                                                <p class="text-lg mb-4">No GIS Views Yet</p>
+                                                <a href="{% url 'private:gis_view_new' %}" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                                                    Create Your First GIS View
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GIS Views Cards (Mobile) -->
+        <div class="gisviews-cards">
+            {% if gis_views %}
+                {% for gis_view in gis_views %}
+                <div class="gisview-card">
+                    <div class="gisview-card-header">
+                        <div class="gisview-card-title">{{ gis_view.name }}</div>
+                        <div class="gisview-card-actions">
+                            <a href="{% url 'private:gis_view_details' gis_view_id=gis_view.id %}" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                                View
+                            </a>
+                        </div>
+                    </div>
+                    <div class="gisview-card-body">
+                        {% if gis_view.description %}
+                        <div class="gisview-card-row">
+                            <span class="gisview-card-label">Description:</span>
+                            <span class="gisview-card-value">
+                                {% if gis_view.description|length > 30 %}
+                                    {{ gis_view.description|slice:":30" }}...
+                                {% else %}
+                                    {{ gis_view.description }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+                        <div class="gisview-card-row">
+                            <span class="gisview-card-label">Projects:</span>
+                            <span class="gisview-card-value">
+                                <span class="inline-flex font-medium bg-indigo-500/20 text-indigo-400 rounded-full px-2.5 py-0.5">
+                                    {{ gis_view.rel_view_projects.count }}
+                                </span>
+                            </span>
+                        </div>
+                        <div class="gisview-card-row">
+                            <span class="gisview-card-label">Modified:</span>
+                            <span class="gisview-card-value">{{ gis_view.modified_date|date:"Y-m-d H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <!-- Empty State -->
+                <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-700 p-12 text-center">
+                    <svg class="w-24 h-24 mx-auto mb-6 text-slate-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                    </svg>
+                    <h3 class="text-2xl text-slate-100 font-bold mb-4">No GIS Views Yet</h3>
+                    <p class="text-slate-400 mb-6">Create your first GIS view to share project GeoJSON data with external tools.</p>
+                    <a href="{% url 'private:gis_view_new' %}" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                        <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" viewBox="0 0 16 16">
+                            <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                        </svg>
+                        Create Your First GIS View
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</main>
+{% endblock content %}
+

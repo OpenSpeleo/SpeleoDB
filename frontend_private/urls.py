@@ -16,8 +16,13 @@ from frontend_private.views import ExperimentGISView
 from frontend_private.views import ExperimentListingView
 from frontend_private.views import ExperimentUserPermissionsView
 from frontend_private.views import FeedbackView
+from frontend_private.views import GISViewDangerZoneView
+from frontend_private.views import GISViewDetailsView
+from frontend_private.views import GISViewGISIntegrationView
+from frontend_private.views import GISViewListingView
 from frontend_private.views import MapViewerView
 from frontend_private.views import NewExperimentView
+from frontend_private.views import NewGISViewView
 from frontend_private.views import NewProjectView
 from frontend_private.views import NewTeamView
 from frontend_private.views import PassWordView
@@ -102,6 +107,20 @@ experiment_patterns = [
     ),
 ]
 
+gis_view_patterns: list[URLPattern] = [
+    path("", GISViewDetailsView.as_view(), name="gis_view_details"),
+    path(
+        "gis/",
+        GISViewGISIntegrationView.as_view(),
+        name="gis_view_gis_integration",
+    ),
+    path(
+        "danger_zone/",
+        GISViewDangerZoneView.as_view(),
+        name="gis_view_danger_zone",
+    ),
+]
+
 team_urls: list[URLPattern] = [
     path("", TeamDetailsView.as_view(), name="team_details"),
     path(
@@ -135,6 +154,10 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("experiments/", ExperimentListingView.as_view(), name="experiments"),
     path("experiment/new/", NewExperimentView.as_view(), name="experiment_new"),
     path("experiment/<uuid:experiment_id>/", include(experiment_patterns)),
+    # GIS Views URLs
+    path("gis_views/", GISViewListingView.as_view(), name="gis_views"),
+    path("gis_view/new/", NewGISViewView.as_view(), name="gis_view_new"),
+    path("gis_view/<uuid:gis_view_id>/", include(gis_view_patterns)),
     # Map Viewer URLs
     path("map_viewer/", MapViewerView.as_view(), name="map_viewer"),
     # Tool URLs

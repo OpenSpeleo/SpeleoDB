@@ -14,12 +14,12 @@ from speleodb.api.v1.views.file import FileDownloadView
 from speleodb.api.v1.views.file import FileUploadView
 from speleodb.api.v1.views.mutex import ProjectAcquireApiView
 from speleodb.api.v1.views.mutex import ProjectReleaseApiView
-from speleodb.api.v1.views.project import ProjectAllGeoJsonApiView
 from speleodb.api.v1.views.project import ProjectApiView
-from speleodb.api.v1.views.project import ProjectGeoJsonApiView
 from speleodb.api.v1.views.project import ProjectSpecificApiView
 from speleodb.api.v1.views.project_explorer import ProjectGitExplorerApiView
 from speleodb.api.v1.views.project_explorer import ProjectRevisionsApiView
+from speleodb.api.v1.views.project_geojson import ProjectAllProjectGeoJsonApiView
+from speleodb.api.v1.views.project_geojson import ProjectGeoJsonCommitsApiView
 from speleodb.api.v1.views.station import ProjectStationsApiView
 from speleodb.api.v1.views.station import ProjectStationsGeoJSONView
 from speleodb.api.v1.views.team_project_permission import (
@@ -40,8 +40,8 @@ project_base_urlpatterns: list[URLPattern] = [
     # GeoJSON API
     path(
         "geojson/",
-        ProjectGeoJsonApiView.as_view(),
-        name="project-geojson",
+        ProjectGeoJsonCommitsApiView.as_view(),
+        name="project-geojson-commits",
     ),
     # =============================== GIT VIEW ============================== #
     path(
@@ -126,6 +126,10 @@ project_base_urlpatterns: list[URLPattern] = [
 urlpatterns: list[URLPattern | URLResolver] = [
     path("", ProjectApiView.as_view(), name="projects"),
     # GeoJSON API
-    path("geojson/", ProjectAllGeoJsonApiView.as_view(), name="all-projects-geojson"),
+    path(
+        "geojson/",
+        ProjectAllProjectGeoJsonApiView.as_view(),
+        name="all-projects-geojson",
+    ),
     path("<uuid:id>/", include(project_base_urlpatterns)),
 ]

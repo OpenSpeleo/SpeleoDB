@@ -52,10 +52,3 @@ class TestPermissionsApiView(BaseAPIProjectTestCase):
             headers={"authorization": auth},
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
-
-        # But WEB_VIEWER CAN access GeoJSON
-        response = self.client.get(
-            reverse("api:v1:project-geojson", kwargs={"id": self.project.id}),
-            headers={"authorization": auth},
-        )
-        assert response.status_code == status.HTTP_200_OK

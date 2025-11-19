@@ -7,7 +7,6 @@ from django.test import TestCase
 from django.urls import reverse
 from parameterized.parameterized import parameterized
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
@@ -125,16 +124,3 @@ class TestWebViewerRestrictions(TestCase):
         assert response.status_code == status.HTTP_200_OK
         assert "project" in response.context
         assert response.context["project"].id == project.id
-
-    def test_webviewer_can_still_access_geojson_api(self) -> None:
-        """Test that WEBVIEWER users can still access the GeoJSON API."""
-
-        token, _ = Token.objects.get_or_create(user=self.user)
-
-        url = reverse(
-            "api:v1:project-geojson",
-            kwargs={"id": self.project_webviewer.id},
-        )
-        response = self.client.get(url, headers={"authorization": f"Token {token.key}"})
-
-        assert response.status_code == status.HTTP_200_OK

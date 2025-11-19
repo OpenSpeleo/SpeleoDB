@@ -282,7 +282,8 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     with timed_section("GIT Commit and Push"):
                         # Finally commit the project - None if project not dirty
                         hexsha: str | None = project.commit_and_push_project(
-                            message=commit_message, author=user
+                            message=commit_message,
+                            author=user,
                         )
 
                     if hexsha is None:
@@ -319,6 +320,9 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                     with transaction.atomic():
                                         ProjectGeoJSON.objects.create(
                                             project=project,
+                                            commit_author_name=user.name,
+                                            commit_author_email=user.email,
+                                            commit_message=commit_message,
                                             commit_sha=hexsha,
                                             commit_date=timezone.now(),
                                             file=geojson_f,

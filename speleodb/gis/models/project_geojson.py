@@ -43,6 +43,26 @@ class ProjectGeoJSON(models.Model):
         validators=[GeoJsonValidator()],
     )
 
+    commit_author_name = models.CharField(
+        "Name of User",
+        blank=False,
+        null=False,
+        max_length=255,
+    )
+
+    commit_author_email = models.EmailField(
+        "email address",
+        blank=False,
+        null=False,
+    )
+
+    commit_message = models.CharField(
+        "commit message",
+        blank=False,
+        null=False,
+        max_length=1024,
+    )
+
     commit_sha = models.CharField(
         max_length=40,
         unique=True,

@@ -8,6 +8,10 @@ from speleodb.api.v1.serializers.experiment import ExperimentRecordGISSerializer
 from speleodb.api.v1.serializers.experiment import ExperimentRecordSerializer
 from speleodb.api.v1.serializers.experiment import ExperimentSerializer
 from speleodb.api.v1.serializers.file import UploadSerializer
+from speleodb.api.v1.serializers.gis_view import GISViewCreateUpdateSerializer
+from speleodb.api.v1.serializers.gis_view import GISViewProjectInputSerializer
+from speleodb.api.v1.serializers.gis_view import GISViewProjectSerializer
+from speleodb.api.v1.serializers.gis_view import GISViewSerializer
 from speleodb.api.v1.serializers.git import GitCommitListSerializer
 from speleodb.api.v1.serializers.git import GitCommitSerializer
 from speleodb.api.v1.serializers.git import GitFileListSerializer
@@ -25,6 +29,9 @@ from speleodb.api.v1.serializers.plugin_release import PluginReleaseSerializer
 from speleodb.api.v1.serializers.project import ProjectGeoJSONFileSerializer
 from speleodb.api.v1.serializers.project import ProjectSerializer
 from speleodb.api.v1.serializers.project import ProjectWithGeoJsonSerializer
+from speleodb.api.v1.serializers.project_geojson_commit import (
+    ProjectGeoJSONCommitSerializer,
+)
 from speleodb.api.v1.serializers.request_serializers import TeamRequestSerializer
 from speleodb.api.v1.serializers.request_serializers import (
     TeamRequestWithProjectLevelSerializer,
@@ -46,12 +53,18 @@ __all__ = [
     "ExperimentSerializer",
     "ExperimentUserPermissionListSerializer",
     "ExperimentUserPermissionSerializer",
+    "GISViewCreateUpdateSerializer",
+    "GISViewDataSerializer",
+    "GISViewProjectInputSerializer",
+    "GISViewProjectSerializer",
+    "GISViewSerializer",
     "GitCommitListSerializer",
     "GitCommitSerializer",
     "GitFileListSerializer",
     "GitFileSerializer",
     "PasswordChangeSerializer",
     "PluginReleaseSerializer",
+    "ProjectGeoJSONCommitSerializer",
     "ProjectGeoJSONFileSerializer",
     "ProjectSerializer",
     "ProjectTeamPermissionListSerializer",

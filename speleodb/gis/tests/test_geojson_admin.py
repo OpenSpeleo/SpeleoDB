@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
-from speleodb.api.v1.tests.test_project_geojson_api import sha1_hash
+from speleodb.api.v1.tests.test_project_geojson_commits_api import sha1_hash
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
@@ -39,9 +39,10 @@ def project(db: None, user: User) -> Project:
 @pytest.mark.django_db
 def test_admin_create_geojson(admin_client: Any, project: Project) -> None:
     url = reverse("admin:gis_projectgeojson_add")
-    valid = json.dumps({"type": "FeatureCollection", "features": []}).encode()
-    upload = SimpleUploadedFile(
-        "map.geojson", valid, content_type="application/geo+json"
+    file = SimpleUploadedFile(
+        "map.geojson",
+        json.dumps({"type": "FeatureCollection", "features": []}).encode(),
+        content_type="application/geo+json",
     )
 
     commit_sha = sha1_hash()
@@ -51,10 +52,13 @@ def test_admin_create_geojson(admin_client: Any, project: Project) -> None:
         data={
             "project": str(project.id),
             "commit_sha": commit_sha,
+            "commit_author_name": "John Doe",
+            "commit_author_email": "john.doe@example.com",
+            "commit_message": "Initial commit",
             # The admin split up in 2 fields the datetime input
             "commit_date_0": timezone.now().date().strftime("%Y-%m-%d"),
             "commit_date_1": timezone.now().date().strftime("%H:%m:%S"),
-            "file": upload,
+            "file": file,
         },
         follow=True,
     )
@@ -71,6 +75,9 @@ def test_admin_view_form(admin_client: Any, project: Project) -> None:
         project=project,
         commit_sha=sha1_hash(),
         commit_date=timezone.now(),
+        commit_author_name="John Doe",
+        commit_author_email="john.doe@example.com",
+        commit_message="Initial commit",
         file=SimpleUploadedFile(
             "map.geojson",
             json.dumps({"type": "FeatureCollection", "features": []}).encode(),
