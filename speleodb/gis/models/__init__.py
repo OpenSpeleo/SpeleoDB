@@ -12,6 +12,7 @@ from speleodb.gis.models.gis_view import GISViewProject
 
 # GIS Models
 from speleodb.gis.models.point_of_interest import PointOfInterest
+from speleodb.gis.models.station_tag import StationTag
 from speleodb.gis.models.station import Station
 from speleodb.gis.models.station import StationResource
 
@@ -32,4 +33,5 @@ __all__ = [
     "ProjectGeoJSON",
     "Station",
     "StationResource",
+    "StationTag",
 ]

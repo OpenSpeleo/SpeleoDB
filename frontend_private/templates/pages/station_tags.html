@@ -1,0 +1,750 @@
+{% extends "base_private.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Mobile card layout for station tags */
+    @media (max-width: 768px) {
+        .tags-table {
+            display: none;
+        }
+        
+        .tags-cards {
+            display: block;
+        }
+        
+        .tag-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .tag-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .tag-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .tag-card-title {
+            flex: 1;
+            margin-right: 12px;
+        }
+        
+        .tag-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .tag-card-body {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .tag-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .tag-card-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        
+        .tag-card-value {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+            text-align: right;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .tags-table {
+            display: block;
+        }
+        
+        .tags-cards {
+            display: none;
+        }
+    }
+
+    .color-swatch {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .tag-color-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .tag-color-picker-option {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tag-color-picker-option:hover {
+        transform: scale(1.1);
+        border-color: white;
+    }
+
+    .tag-color-picker-option.selected {
+        border-color: white;
+        box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+
+        {% csrf_token %}
+
+        <!-- Page header -->
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+
+            <!-- Left: Title -->
+            <div class="mb-4 sm:mb-0">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
+                    Station Tag Editor
+                    <svg class="inline h-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path class="stroke-current text-indigo-400" stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                        <path class="stroke-current text-indigo-400" stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+                    </svg>
+                </h1>
+                <p class="text-slate-400 mt-2">Manage tags to organize and categorize your stations</p>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+                <button id="btn-create-tag" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                    <svg class="w-4 h-4 fill-current opacity-50 shrink-0" viewBox="0 0 16 16">
+                        <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                    </svg>
+                    <span class="ml-2">Create New Tag</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Mobile Cards View -->
+        <div class="tags-cards">
+            <div id="tags-cards-container" class="p-4">
+                <!-- Loading state -->
+                <div class="text-center py-12 text-slate-400">
+                    <svg class="w-12 h-12 mx-auto mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <p>Loading tags...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="tags-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+            <div>
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full text-slate-300">
+                        <!-- Table header -->
+                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                            <tr>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">#</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-left">Tag Name</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Color</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Stations</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Created</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                </th>
+                            </tr>
+                        </thead>
+                        <!-- Table body -->
+                        <tbody id="tags-table-body" class="text-sm divide-y divide-slate-200 divide-slate-700">
+                            <!-- Loading state -->
+                            <tr>
+                                <td colspan="6" class="px-2 py-8 text-center text-slate-400">
+                                    <svg class="w-12 h-12 mx-auto mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    <p>Loading tags...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<!-- Edit/Create Tag Modal -->
+<div id="edit-tag-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+    <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
+        <!-- Modal header -->
+        <div class="px-6 py-4 border-b border-slate-700">
+            <div class="flex items-center justify-between">
+                <h3 id="edit-modal-title" class="text-xl font-semibold text-slate-100">Edit Tag</h3>
+                <button class="btn-close-edit-modal text-slate-400 hover:text-slate-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal body -->
+        <form id="edit-tag-form">
+            <input type="hidden" id="edit-tag-id" name="tag_id" value="">
+            
+            <div class="px-6 py-4 space-y-4">
+                <!-- Tag Name -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2" for="edit-tag-name">
+                        Tag Name <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" id="edit-tag-name" name="name" required
+                           class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" 
+                           placeholder="e.g., Active, Completed, High Priority">
+                </div>
+
+                    <!-- Color -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">
+                            Color <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="tag-color-picker-grid" id="edit-tag-color-picker">
+                            <!-- Colors will be populated by JavaScript -->
+                        </div>
+                        <input type="hidden" id="edit-tag-color" name="color" required>
+                        
+                        <!-- Custom Color Picker -->
+                        <div class="mt-4 flex items-center gap-3 flex-wrap">
+                            <label class="text-sm text-slate-400">Or pick a custom color:</label>
+                            <input type="color" id="custom-color-input" 
+                                   value="#ef4444"
+                                   onchange="useCustomColor()"
+                                   class="h-10 w-20 rounded cursor-pointer border border-slate-600"
+                                   title="Pick custom color">
+                        </div>
+                    </div>
+            </div>
+
+            <!-- Modal footer -->
+            <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+                <button type="button" class="btn-close-edit-modal px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
+                    <span id="edit-submit-text">Save Changes</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Tag Confirmation Modal -->
+<div id="delete-tag-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+    <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
+        <!-- Modal header -->
+        <div class="px-6 py-4 border-b border-slate-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-semibold text-slate-100">Delete Tag</h3>
+                <button class="btn-close-delete-modal text-slate-400 hover:text-slate-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal body -->
+        <div class="px-6 py-4">
+            <input type="hidden" id="delete-tag-id" value="">
+            
+            <div class="flex items-start space-x-4">
+                <div class="flex-shrink-0">
+                    <svg class="w-12 h-12 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <p class="text-slate-300 text-lg font-medium mb-2">Are you sure you want to delete this tag?</p>
+                    <div id="delete-tag-info" class="mb-3"></div>
+                    <p class="text-slate-400 text-sm">
+                        This will remove the tag from <span id="delete-tag-station-count" class="font-semibold">0</span> station(s). This action cannot be undone.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal footer -->
+        <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+            <button type="button" class="btn-close-delete-modal px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                Cancel
+            </button>
+            <button type="button" id="btn-confirm-delete" class="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
+                Delete Tag
+            </button>
+        </div>
+    </div>
+</div>
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+
+{% endblock content %}
+
+{% block extra_js %}
+<script src="{% url 'url_reverse.js' %}"></script>
+{% endblock extra_js %}
+
+{% block inline_extra_js %}
+<script>
+$(document).ready(function() {
+    // Global variables
+    let allTags = [];
+    const predefinedColors = [
+        "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16",
+        "#22c55e", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9",
+        "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#d946ef",
+        "#ec4899", "#f43f5e", "#fb7185", "#fb923c", "#facc15"
+    ];
+
+    // Utility: Get CSRF Token
+    function getCSRFToken() {
+        return $('input[name^=csrfmiddlewaretoken]').val();
+    }
+
+    // Load all tags
+    function loadTags() {
+        $.ajax({
+            url: '/api/v1/station_tags/',
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    allTags = response.data;
+                    renderTags();
+                } else {
+                    $("#modal_error_txt").text("Failed to load tags");
+                    $("#modal_error").css('display', 'flex');
+                }
+            },
+            error: function() {
+                $("#modal_error_txt").text("Error loading tags");
+                $("#modal_error").css('display', 'flex');
+            }
+        });
+    }
+
+    // Render tags in table and cards
+    function renderTags() {
+        const tableBody = $('#tags-table-body');
+        const cardsContainer = $('#tags-cards-container');
+
+        if (allTags.length === 0) {
+            tableBody.html(`
+                <tr>
+                    <td colspan="6" class="px-2 py-8 text-center text-slate-400">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                        </svg>
+                        <p class="text-lg font-medium">No tags yet</p>
+                        <p class="text-sm mt-1">Create your first tag to start organizing stations</p>
+                    </td>
+                </tr>
+            `);
+            cardsContainer.html(`
+                <div class="text-center py-12 text-slate-400">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                    <p class="text-lg font-medium">No tags yet</p>
+                    <p class="text-sm mt-1">Create your first tag to start organizing stations</p>
+                </div>
+            `);
+            return;
+        }
+
+        // Render table rows
+        let tableHtml = '';
+        allTags.forEach((tag, index) => {
+            tableHtml += `
+                <tr>
+                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                        <div class="text-center font-medium text-slate-100">${index + 1}</div>
+                    </td>
+                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                        <div class="font-medium text-slate-100">${tag.name}</div>
+                    </td>
+                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="color-swatch" style="background-color: ${tag.color}"></span>
+                            <code class="text-xs text-slate-400">${tag.color}</code>
+                        </div>
+                    </td>
+                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                        <div class="text-center">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-700">
+                                ${tag.station_count || 0}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                        <div class="text-center text-slate-400 text-xs">
+                            ${new Date(tag.creation_date).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')}
+                        </div>
+                    </td>
+                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                        <div class="flex items-center justify-center gap-2">
+                            <!-- Edit Button -->
+                            <button class="btn-edit-tag cursor-pointer" data-tag-id="${tag.id}">
+                                <svg class="h-6 w-6 stroke-current text-amber-500 hover:text-amber-400" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                    <path d="M13.5 6.5l4 4" />
+                                </svg>
+                            </button>
+                            <!-- Delete Button -->
+                            <button class="btn-delete-tag cursor-pointer" data-tag-id="${tag.id}">
+                                <svg class="h-6 w-6 stroke-current text-rose-500 hover:text-rose-400" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M18 6l-12 12" />
+                                    <path d="M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        tableBody.html(tableHtml);
+
+        // Render mobile cards
+        let cardsHtml = '';
+        allTags.forEach(tag => {
+            cardsHtml += `
+                <div class="tag-card">
+                    <div class="tag-card-header">
+                        <div class="tag-card-title flex items-center gap-3">
+                            <span class="color-swatch" style="background-color: ${tag.color}"></span>
+                            <div>
+                                <div class="text-lg font-semibold text-slate-100">${tag.name}</div>
+                                <div class="text-xs text-slate-400">${tag.station_count || 0} station${(tag.station_count || 0) !== 1 ? 's' : ''}</div>
+                            </div>
+                        </div>
+                        <div class="tag-card-actions">
+                            <button class="btn-edit-tag w-10 h-10 shrink-0 flex items-center justify-center bg-amber-600 hover:bg-amber-500 rounded-full transition" data-tag-id="${tag.id}">
+                                <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor">
+                                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                    <path d="M13.5 6.5l4 4" />
+                                </svg>
+                            </button>
+                            <button class="btn-delete-tag w-10 h-10 shrink-0 flex items-center justify-center bg-rose-600 hover:bg-rose-500 rounded-full transition" data-tag-id="${tag.id}">
+                                <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor">
+                                    <path d="M18 6l-12 12" />
+                                    <path d="M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="tag-card-body">
+                        <div class="tag-card-row">
+                            <span class="tag-card-label">Color</span>
+                            <span class="tag-card-value"><code>${tag.color}</code></span>
+                        </div>
+                        <div class="tag-card-row">
+                            <span class="tag-card-label">Created</span>
+                            <span class="tag-card-value">${new Date(tag.creation_date).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        cardsContainer.html(cardsHtml);
+
+        // Attach event handlers
+        attachEventHandlers();
+    }
+
+    // Attach event handlers to dynamically created elements
+    function attachEventHandlers() {
+        $('.btn-edit-tag').off('click').on('click', function() {
+            const tagId = $(this).data('tag-id');
+            openEditModal(tagId);
+        });
+
+        $('.btn-delete-tag').off('click').on('click', function() {
+            const tagId = $(this).data('tag-id');
+            openDeleteModal(tagId);
+        });
+    }
+
+    // Open create tag modal
+    $('#btn-create-tag').click(function() {
+        $('#edit-tag-form')[0].reset();
+        $('#edit-tag-id').val('');
+        $('#edit-modal-title').text('Create New Tag');
+        $('#edit-submit-text').text('Create Tag');
+        
+        populateColorPicker(null);
+        
+        $('#edit-tag-modal').css('display', 'flex').removeClass('hidden');
+        return false;
+    });
+
+    // Open edit tag modal
+    function openEditModal(tagId) {
+        const tag = allTags.find(t => t.id === tagId);
+        if (!tag) return;
+
+        $('#edit-tag-id').val(tag.id);
+        $('#edit-tag-name').val(tag.name);
+        $('#edit-tag-color').val(tag.color);
+        $('#edit-modal-title').text('Edit Tag');
+        $('#edit-submit-text').text('Save Changes');
+        
+        populateColorPicker(tag.color);
+        
+        $('#edit-tag-modal').css('display', 'flex').removeClass('hidden');
+    }
+
+    // Close edit modal
+    $('.btn-close-edit-modal').click(function() {
+        $('#edit-tag-modal').css('display', 'none').addClass('hidden');
+    });
+
+    // Populate color picker
+    function populateColorPicker(selectedColor) {
+        const picker = $('#edit-tag-color-picker');
+        let html = '';
+        
+        // Normalize selected color for comparison (case-insensitive)
+        const normalizedSelected = selectedColor ? selectedColor.toUpperCase() : null;
+        
+        predefinedColors.forEach(color => {
+            const isSelected = color.toUpperCase() === normalizedSelected ? 'selected' : '';
+            html += `
+                <div class="tag-color-picker-option ${isSelected}" 
+                     style="background-color: ${color}" 
+                     data-color="${color}" 
+                     title="${color}"></div>
+            `;
+        });
+        
+        picker.html(html);
+
+        // Attach click handlers
+        $('.tag-color-picker-option').off('click').on('click', function() {
+            const color = $(this).data('color');
+            selectColor(color);
+        });
+
+        // Set initial color
+        if (selectedColor) {
+            $('#edit-tag-color').val(selectedColor);
+            $('#custom-color-input').val(selectedColor);
+        } else {
+            selectColor(predefinedColors[0]);
+        }
+    }
+
+    // Select color
+    function selectColor(color) {
+        $('#edit-tag-color').val(color);
+        $('.tag-color-picker-option').removeClass('selected');
+        // Case-insensitive color matching
+        $('.tag-color-picker-option').each(function() {
+            if ($(this).data('color').toUpperCase() === color.toUpperCase()) {
+                $(this).addClass('selected');
+            }
+        });
+        // Update custom color input to match
+        $('#custom-color-input').val(color);
+    }
+
+    // Use custom color from color picker (auto-triggered on change)
+    window.useCustomColor = function() {
+        const customColorInput = document.getElementById('custom-color-input');
+        if (!customColorInput) {
+            console.error('Custom color input not found');
+            return;
+        }
+        
+        const customColor = customColorInput.value.toUpperCase();
+        console.log('Custom color selected:', customColor);
+        
+        $('#edit-tag-color').val(customColor);
+        $('.tag-color-picker-option').removeClass('selected');
+    };
+
+    // Handle form submission (create or edit)
+    $('#edit-tag-form').submit(function(e) {
+        e.preventDefault();
+
+        const tagId = $('#edit-tag-id').val();
+        const name = $('#edit-tag-name').val().trim();
+        const color = $('#edit-tag-color').val();
+
+        console.log('Submitting tag form:', { tagId, name, color });
+
+        if (!name) {
+            $("#modal_error_txt").text("Please enter a tag name");
+            $("#modal_error").css('display', 'flex');
+            return false;
+        }
+
+        if (!color) {
+            $("#modal_error_txt").text("Please select a color");
+            $("#modal_error").css('display', 'flex');
+            return false;
+        }
+        
+        // Validate hex color format
+        if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+            $("#modal_error_txt").text("Invalid color format. Please use hex format (#RRGGBB)");
+            $("#modal_error").css('display', 'flex');
+            return false;
+        }
+
+        const url = tagId ? `/api/v1/station_tags/${tagId}/` : '/api/v1/station_tags/';
+        const method = tagId ? 'PUT' : 'POST';
+
+        $.ajax({
+            url: url,
+            method: method,
+            data: JSON.stringify({ name: name, color: color }),
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
+            },
+            success: function(response) {
+                $("#modal_success_txt").text(tagId ? "Tag updated successfully!" : "Tag created successfully!");
+                $("#modal_success").css('display', 'flex');
+                
+                $('#edit-tag-modal').css('display', 'none').addClass('hidden');
+                
+                setTimeout(function() {
+                    loadTags();
+                }, 500);
+            },
+            error: function(xhr) {
+                let errorMessage = "Failed to save tag";
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                $("#modal_error_txt").text(errorMessage);
+                $("#modal_error").css('display', 'flex');
+            }
+        });
+
+        return false;
+    });
+
+    // Open delete confirmation modal
+    function openDeleteModal(tagId) {
+        const tag = allTags.find(t => t.id === tagId);
+        if (!tag) return;
+
+        $('#delete-tag-id').val(tag.id);
+        $('#delete-tag-info').html(`
+            <div class="flex items-center gap-2 bg-slate-700/50 rounded-lg p-3">
+                <span class="color-swatch" style="background-color: ${tag.color}"></span>
+                <span class="text-slate-100 font-medium">${tag.name}</span>
+            </div>
+        `);
+        $('#delete-tag-station-count').text(tag.station_count || 0);
+        
+        $('#delete-tag-modal').css('display', 'flex').removeClass('hidden');
+    }
+
+    // Close delete modal
+    $('.btn-close-delete-modal').click(function() {
+        $('#delete-tag-modal').css('display', 'none').addClass('hidden');
+    });
+
+    // Handle delete confirmation
+    $('#btn-confirm-delete').click(function() {
+        const tagId = $('#delete-tag-id').val();
+        if (!tagId) return;
+
+        $.ajax({
+            url: `/api/v1/station_tags/${tagId}/`,
+            method: 'DELETE',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
+            },
+            success: function() {
+                $("#modal_success_txt").text("Tag deleted successfully!");
+                $("#modal_success").css('display', 'flex');
+                
+                $('#delete-tag-modal').css('display', 'none').addClass('hidden');
+                
+                setTimeout(function() {
+                    loadTags();
+                }, 500);
+            },
+            error: function(xhr) {
+                let errorMessage = "Failed to delete tag";
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                $("#modal_error_txt").text(errorMessage);
+                $("#modal_error").css('display', 'flex');
+            }
+        });
+    });
+
+    // Modal backdrop click handlers
+    $("body").click(function() {
+        if ($("#modal_success").is(":visible")) {
+            $("#modal_success").hide();
+        }
+        if ($("#modal_error").is(":visible")) {
+            $("#modal_error").hide();
+        }
+    });
+
+    // Load tags on page load
+    loadTags();
+});
+</script>
+{% endblock inline_extra_js %}
+

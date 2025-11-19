@@ -19,6 +19,7 @@ from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from speleodb.gis.models import StationTag
 from speleodb.utils.document_processing import DocumentProcessor
 from speleodb.utils.image_processing import ImageProcessor
 from speleodb.utils.storages import AttachmentStorage
@@ -95,6 +96,14 @@ class Station(models.Model):
 
     creation_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
+
+    tag = models.ForeignKey(
+        StationTag,
+        related_name="stations",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         verbose_name = "Station"

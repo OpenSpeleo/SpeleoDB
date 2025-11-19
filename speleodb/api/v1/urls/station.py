@@ -13,6 +13,7 @@ from speleodb.api.v1.views.resource import StationResourceApiView
 from speleodb.api.v1.views.station import StationsApiView
 from speleodb.api.v1.views.station import StationsGeoJSONApiView
 from speleodb.api.v1.views.station import StationSpecificApiView
+from speleodb.api.v1.views.station_tag import StationTagsManageApiView
 
 if TYPE_CHECKING:
     from django.urls import URLPattern
@@ -27,6 +28,7 @@ station_urlpatterns: list[URLPattern] = [
         name="station-resources",
     ),
     path("logs/", LogEntryApiView.as_view(), name="station-logs"),
+    path("tags/", StationTagsManageApiView.as_view(), name="station-tags-manage"),
     path(
         "experiment/<uuid:exp_id>/records/",
         ExperimentRecordApiView.as_view(),

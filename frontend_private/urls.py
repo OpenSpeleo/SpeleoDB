@@ -38,6 +38,7 @@ from frontend_private.views import ProjectRevisionHistoryView
 from frontend_private.views import ProjectTeamPermissionsView
 from frontend_private.views import ProjectUploadView
 from frontend_private.views import ProjectUserPermissionsView
+from frontend_private.views import StationTagsView
 from frontend_private.views import TeamDangerZoneView
 from frontend_private.views import TeamDetailsView
 from frontend_private.views import TeamListingView
@@ -148,6 +149,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("feedback/", FeedbackView.as_view(), name="user_feedback"),
     path("password/", PassWordView.as_view(), name="user_password"),
     path("preferences/", PreferencesView.as_view(), name="user_preferences"),
+    path("station_tags/", StationTagsView.as_view(), name="station_tags"),
     # Teams URLs
     path("teams/", TeamListingView.as_view(), name="teams"),
     path("team/new/", NewTeamView.as_view(), name="team_new"),

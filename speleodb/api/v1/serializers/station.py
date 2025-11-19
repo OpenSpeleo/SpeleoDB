@@ -109,6 +109,9 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
 class StationSerializer(serializers.ModelSerializer[Station]):
     """Serializer for creating stations."""
 
+    # Override tag field to return nested representation
+    tag = serializers.SerializerMethodField()
+
     class Meta:
         model = Station
         fields = "__all__"
@@ -119,7 +122,22 @@ class StationSerializer(serializers.ModelSerializer[Station]):
             "creation_date",
             "modified_date",
             "project",
+            "tag",
         ]
+
+    def get_tag(self, obj: Station) -> dict[str, Any] | None:
+        """Get tag as a dictionary."""
+        # Handle case where obj is validated_data dict (during error handling)
+        if isinstance(obj, dict):
+            return None
+
+        if obj.tag:
+            return {
+                "id": str(obj.tag.id),
+                "name": obj.tag.name,
+                "color": obj.tag.color,
+            }
+        return None
 
     def to_internal_value(self, data: dict[str, Any]) -> Any:
         """Override to round coordinates before validation."""
@@ -174,10 +192,20 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
             "creation_date",
             "modified_date",
             "project",
+            "tag",
         ]
 
     def to_representation(self, instance: Station) -> dict[str, Any]:
         """Convert to GeoJSON Feature format."""
+        # Get tag details if exists
+        tag = None
+        if instance.tag:
+            tag = {
+                "id": str(instance.tag.id),
+                "name": instance.tag.name,
+                "color": instance.tag.color,
+            }
+
         return {
             "type": "Feature",
             "geometry": {
@@ -192,5 +220,6 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
                 "creation_date": instance.creation_date.isoformat(),
                 "modified_date": instance.modified_date.isoformat(),
                 "project": str(instance.project.id),
+                "tag": tag,
             },
         }

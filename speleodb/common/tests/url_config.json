@@ -648,6 +648,24 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/station_tags/",
+        "module": "speleodb.api.v1.views.station_tag.StationTagsApiView",
+        "name": "api:v1:station-tags",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/station_tags/<uuid:id>/",
+        "module": "speleodb.api.v1.views.station_tag.StationTagSpecificApiView",
+        "name": "api:v1:station-tag-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/station_tags/colors/",
+        "module": "speleodb.api.v1.views.station_tag.StationTagColorsApiView",
+        "name": "api:v1:station-tag-colors",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/stations/",
         "module": "speleodb.api.v1.views.station.StationsApiView",
         "name": "api:v1:stations",
@@ -675,6 +693,12 @@
         "url": "/api/v1/stations/<uuid:id>/resources/",
         "module": "speleodb.api.v1.views.resource.StationResourceApiView",
         "name": "api:v1:station-resources",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/<uuid:id>/tags/",
+        "module": "speleodb.api.v1.views.station_tag.StationTagsManageApiView",
+        "name": "api:v1:station-tags-manage",
         "decorators": ""
     },
     {
@@ -999,6 +1023,12 @@
         "url": "/private/projects/",
         "module": "frontend_private.views.project.ProjectListingView",
         "name": "private:projects",
+        "decorators": ""
+    },
+    {
+        "url": "/private/station_tags/",
+        "module": "frontend_private.views.user.StationTagsView",
+        "name": "private:station_tags",
         "decorators": ""
     },
     {

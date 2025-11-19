@@ -263,24 +263,81 @@
         z-index: 10;
     }
 
+    /* Tag styles */
+    .station-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: white;
+        margin: 2px;
+        transition: all 0.2s;
+    }
+
+    .station-tag:hover {
+        transform: scale(1.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .station-tag .remove-tag {
+        margin-left: 6px;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+        font-size: 1rem;
+    }
+
+    .station-tag .remove-tag:hover {
+        opacity: 1;
+    }
+
+    .tag-color-picker {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .tag-color-option {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tag-color-option:hover {
+        transform: scale(1.1);
+        border-color: white;
+    }
+
+    .tag-color-option.selected {
+        border-color: white;
+        box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+    }
+
     /* Resource-based coloring removed; stations use a single style */
 
-    /* POI Marker Styles */
+    /* POI Marker Styles - Push Pin Shape */
     .poi-marker {
-        width: 12px;
-        height: 12px;
-        background: #00D8FF; /* Blue */
-        border: 2px solid #ffffff;
-        border-radius: 50%;
+        width: 18px;
+        height: 22px;
         cursor: pointer;
         transition: all 0.15s ease-out;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+    }
+    
+    .poi-marker svg {
+        width: 100%;
+        height: 100%;
     }
     
     .poi-marker:hover {
-        transform: scale(1.3);
-        background: #2563eb; /* Darker blue on hover */
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        transform: scale(1.25);
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
         z-index: 10;
     }
 
@@ -965,7 +1022,7 @@
         display: none;
         align-items: center;
         justify-content: center;
-        z-index: 100;
+        z-index: 9999;
         animation: fadeIn 0.2s ease-out;
     }
 
@@ -1555,6 +1612,53 @@
                                 <!-- Content will be loaded dynamically -->
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tag Creation Modal -->
+            <div id="tag-creation-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
+                    <div class="flex items-center justify-between p-6 border-b border-slate-600">
+                        <h2 class="text-xl font-semibold text-white">Create New Tag</h2>
+                        <button onclick="closeTagCreationModal()" class="text-slate-400 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Tag Name</label>
+                            <input type="text" id="new-tag-name" 
+                                   class="w-full bg-slate-700 text-white rounded-lg p-2 border border-slate-600 focus:border-sky-500 focus:outline-none" 
+                                   placeholder="e.g., Active, Completed, High Priority">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Color</label>
+                            <div class="tag-color-picker" id="tag-color-picker">
+                                <!-- Colors will be populated dynamically -->
+                            </div>
+                            <input type="hidden" id="new-tag-color" value="">
+                            
+                            <!-- Custom Color Picker -->
+                            <div class="mt-4 flex items-center gap-3 flex-wrap">
+                                <label class="text-sm text-slate-400">Or pick a custom color:</label>
+                                <input type="color" id="new-tag-custom-color" 
+                                       value="#ef4444"
+                                       onchange="useCustomColorForNewTag()"
+                                       class="h-10 w-20 rounded cursor-pointer border border-slate-600"
+                                       title="Pick custom color">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 p-6 border-t border-slate-600">
+                        <button onclick="closeTagCreationModal()" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                            Cancel
+                        </button>
+                        <button onclick="createNewTag()" class="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors">
+                            Create Tag
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2252,6 +2356,11 @@
     // Global variables for layer management
     let map;
     let projectLayerStates = new Map(); // Track visibility state for each project
+    
+    // Global variables for tag management
+    let userTags = []; // Store all user's tags
+    let tagColors = []; // Store predefined colors
+    let currentStationForTagging = null; // Track which station is being tagged
 
     // Helper: is a project currently visible?
     function isProjectVisible(projectId) {
@@ -3726,17 +3835,28 @@
                     creation_date: properties.creation_date || new Date().toISOString()
                 });
 
-                // Create POI marker
+                // Create POI marker with push pin SVG (like 📌 emoji)
                 const markerElement = document.createElement('div');
                 markerElement.className = 'poi-marker';
                 markerElement.title = `Point of Interest: ${properties.name}`;
+                markerElement.innerHTML = `
+                    <svg viewBox="0 0 24 32" fill="none">
+                        <!-- Pin body (gray) -->
+                        <path d="M12 14 L12 30" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round"/>
+                        <!-- Pin head (red circle with white border) -->
+                        <circle cx="12" cy="8" r="6.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/>
+                        <!-- Inner shadow/highlight -->
+                        <circle cx="12" cy="8" r="4" fill="#dc2626" opacity="0.6"/>
+                    </svg>
+                `;
 
                 // Add drag cursor if user has write access
                 markerElement.style.cursor = 'grab';
 
                 const marker = new mapboxgl.Marker({
                     element: markerElement,
-                    draggable: true
+                    draggable: true,
+                    anchor: 'bottom' // Pin points to location
                 })
                     .setLngLat(coordinates);
 
@@ -3750,6 +3870,17 @@
                     marker.addTo(map);
                     marker.addedToMap = true;
                 }
+
+                // Add hover handlers for color change
+                markerElement.addEventListener('mouseenter', () => {
+                    const circle = markerElement.querySelector('circle');
+                    if (circle) circle.setAttribute('fill', '#dc2626'); // Darker red on hover
+                });
+                
+                markerElement.addEventListener('mouseleave', () => {
+                    const circle = markerElement.querySelector('circle');
+                    if (circle) circle.setAttribute('fill', '#ef4444'); // Original red
+                });
 
                 // Add click handler for POI
                 markerElement.addEventListener('click', (e) => {
@@ -3797,7 +3928,10 @@
                     markerElement.style.cursor = 'grabbing';
                     markerElement.style.transform = 'scale(1.1)';
                     markerElement.style.zIndex = '1001';
-                    markerElement.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
+                    markerElement.style.filter = 'drop-shadow(0 6px 20px rgba(0, 0, 0, 0.6))';
+                    // Change color during drag
+                    const circle = markerElement.querySelector('circle');
+                    if (circle) circle.setAttribute('fill', '#fbbf24'); // Amber color while dragging
                     console.log(`🫳 Started dragging POI: ${properties.name}`);
                 });
 
@@ -4241,13 +4375,18 @@
                     description: properties.description || '',
                     created_by: properties.created_by || properties.created_by || 'Unknown',
                     creation_date: properties.creation_date || properties.created_at || new Date().toISOString(),
-                    is_demo: properties.is_demo || false
+                    is_demo: properties.is_demo || false,
+                    tag: properties.tag || null
                 });
 
                 // Create station marker - ALWAYS starts hidden
                 const markerElement = document.createElement('div');
                 markerElement.className = 'station-marker';
                 markerElement.title = `Station: ${properties.name}${properties.is_demo ? ' (Demo)' : ''}`;
+
+                // Set marker color based on tag, or default
+                const markerColor = properties.tag ? properties.tag.color : '#fb923c';
+                markerElement.style.background = markerColor;
 
                 // Add demo indicator if it's a demo station
                 if (properties.is_demo) {
@@ -4856,14 +4995,14 @@
 
             // Restore transitions for smooth hover effects
             element.style.transition = 'all 0.2s ease';
+            
+            // Restore original POI color
+            const circle = element.querySelector('circle');
+            if (circle) circle.setAttribute('fill', '#ef4444');
             element.style.cursor = 'grab';
             element.style.transform = '';
             element.style.zIndex = '';
-            element.style.boxShadow = '';
-
-            // Restore original marker colors
-            element.style.background = '#00D8FF';
-            element.style.borderColor = '#ffffff';
+            element.style.filter = '';
         }
     }
 
@@ -5778,13 +5917,23 @@
                     `;
 
                 projectStations.forEach(station => {
+                    // Get tag color for marker or use default
+                    const markerColor = (station.tag && station.tag.color) ? station.tag.color : '#fb923c';
+                    
                     html += `
                             <div class="bg-slate-700/50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center space-x-3 flex-1 cursor-pointer" onclick="document.getElementById('station-manager-modal').classList.add('hidden'); openStationModal('${station.id}', '${projectId}');">
-                                        <div class="w-3 h-3 rounded-full border-2 border-white shadow-md flex-shrink-0" style="background: #fb923c;"></div>
-                                        <div>
-                                            <h5 class="text-white font-medium">${station.name}</h5>
+                                        <div class="w-3 h-3 rounded-full border-2 border-white shadow-md flex-shrink-0" style="background: ${markerColor};"></div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <h5 class="text-white font-medium">${station.name}</h5>
+                                                ${station.tag && station.tag.name && station.tag.color ? `
+                                                    <span class="station-tag text-xs" style="background-color: ${station.tag.color}; padding: 2px 8px;">
+                                                        ${station.tag.name}
+                                                    </span>
+                                                ` : ''}
+                                            </div>
                                             <p class="text-xs text-slate-400">
                                                 ${Number(station.latitude).toFixed(5)}, ${Number(station.longitude).toFixed(5)}
                                                 ${station.snapped_to_line ? `• <span class="text-sky-400">📍 ${station.snapped_to_line}</span>` : ''}
@@ -5877,8 +6026,13 @@
                         <div class="bg-slate-700/50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center space-x-3 flex-1 cursor-pointer" onclick="document.getElementById('poi-manager-modal').classList.add('hidden'); openPOIModal('${poi.id}');">
-                                    <div class="w-3 h-3 rounded-full border-2 border-white shadow-md flex-shrink-0" 
-                                        style="background: #00D8FF;"></div>
+                                    <div class="w-4 h-5 flex-shrink-0">
+                                        <svg viewBox="0 0 24 32" fill="none">
+                                            <path d="M12 14 L12 30" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round"/>
+                                            <circle cx="12" cy="8" r="6.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/>
+                                            <circle cx="12" cy="8" r="4" fill="#dc2626" opacity="0.6"/>
+                                        </svg>
+                                    </div>
                                     <div>
                                         <h5 class="text-white font-medium">${poi.name}</h5>
                                         <p class="text-xs text-slate-400">
@@ -6791,29 +6945,37 @@
                 const data = await response.json();
                 if (data.success && data.data) {
                     const station = data.data;
+                    console.log('📦 Station detail API response:', station);
+                    console.log('🏷️ Tag from API:', station.tag);
 
                     // Update the allStations map with the complete data
                     const existingStation = allStations.get(stationId);
                     if (existingStation) {
                         // Merge with existing data to preserve projectId and other fields
-                        allStations.set(stationId, {
+                        const mergedStation = {
                             ...existingStation,
                             ...station,
                             latitude: Number(station.latitude || existingStation.latitude),
                             longitude: Number(station.longitude || existingStation.longitude),
                             projectId: existingStation.projectId // Preserve the projectId from map data
-                        });
+                        };
+                        allStations.set(stationId, mergedStation);
+                        console.log('✅ Updated allStations entry:', mergedStation);
                     } else {
                         // If not in map, add it
-                        allStations.set(stationId, {
+                        const newStation = {
                             ...station,
                             latitude: Number(station.latitude),
                             longitude: Number(station.longitude),
                             projectId: projectId
-                        });
+                        };
+                        allStations.set(stationId, newStation);
+                        console.log('✅ Added new allStations entry:', newStation);
                     }
 
-                    displayStationDetails(station, projectId);
+                    // Use the updated station from allStations for display
+                    const displayStation = allStations.get(stationId);
+                    displayStationDetails(displayStation, projectId);
 
                     return;
                 }
@@ -6885,6 +7047,45 @@
                             <div class="p-8 space-y-6">
                             ${station.description ? `<p class="text-slate-300 text-lg leading-relaxed bg-slate-800/30 p-4 rounded-lg border">${station.description}</p>` : ''}
                             
+                            <!-- Tag Section -->
+                            ${hasWriteAccess ? `
+                            <div class="bg-slate-800/30 p-4 rounded-lg border border-slate-600/50">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="text-white font-semibold flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                        </svg>
+                                        Tag
+                                    </h4>
+                                    <button onclick="openTagSelector('${station.id}')" class="text-xs px-3 py-1 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors">
+                                        ${(station.tag && station.tag.name) ? 'Change Tag' : '+ Add Tag'}
+                                    </button>
+                                </div>
+                                <div id="station-tag-${station.id}" class="flex gap-2 min-h-[32px]">
+                                    ${(station.tag && station.tag.name && station.tag.color) ? `
+                                        <span class="station-tag" style="background-color: ${station.tag.color}">
+                                            ${station.tag.name}
+                                            <span class="remove-tag" onclick="removeTagFromStation('${station.id}')">×</span>
+                                        </span>
+                                    ` : '<span class="text-slate-400 text-sm">No tag assigned</span>'}
+                                </div>
+                            </div>
+                            ` : (station.tag && station.tag.name && station.tag.color) ? `
+                            <div class="bg-slate-800/30 p-4 rounded-lg border border-slate-600/50">
+                                <h4 class="text-white font-semibold mb-3 flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                    </svg>
+                                    Tag
+                                </h4>
+                                <div>
+                                    <span class="station-tag" style="background-color: ${station.tag.color}">
+                                        ${station.tag.name}
+                                    </span>
+                                </div>
+                            </div>
+                            ` : ''}
+                            
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm bg-slate-800/20 rounded-lg p-4">
                                 <div>
                                     <p class="text-slate-300">
@@ -6915,6 +7116,356 @@
             `;
     }
 
+    // ===================== TAG MANAGEMENT FUNCTIONS =====================
+    
+    // Load user's tags from API
+    async function loadUserTags() {
+        try {
+            const response = await fetch('/api/v1/station_tags/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            if (response.ok) {
+                const data = await response.json();
+                userTags = data.data || [];
+                console.log(`✅ Loaded ${userTags.length} user tags`);
+            }
+        } catch (error) {
+            console.error('Error loading user tags:', error);
+        }
+    }
+    
+    // Load predefined colors
+    async function loadTagColors() {
+        try {
+            const response = await fetch('/api/v1/station_tags/colors/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            if (response.ok) {
+                const data = await response.json();
+                tagColors = data.data.colors || [];
+                console.log(`✅ Loaded ${tagColors.length} tag colors`);
+            }
+        } catch (error) {
+            console.error('Error loading tag colors:', error);
+        }
+    }
+    
+    // Open tag selector modal
+    window.openTagSelector = async function(stationId) {
+        currentStationForTagging = stationId;
+        const station = allStations.get(stationId);
+        if (!station) return;
+        
+        // Build tag selector UI - show all tags
+        const currentTagId = station.tag ? station.tag.id : null;
+        
+        const html = `
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" id="tag-selector-overlay">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
+                    <div class="flex items-center justify-between p-6 border-b border-slate-600">
+                        <h3 class="text-lg font-semibold text-white">${station.tag ? 'Change Station Tag' : 'Add Tag to Station'}</h3>
+                        <button onclick="closeTagSelector()" class="text-slate-400 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="p-6 max-h-96 overflow-y-auto">
+                        ${userTags.length > 0 ? `
+                            <div class="space-y-2">
+                                ${userTags.map(tag => `
+                                    <button onclick="setStationTag('${stationId}', '${tag.id}')" 
+                                            class="w-full text-left px-4 py-2 rounded-lg ${currentTagId === tag.id ? 'bg-sky-600' : 'bg-slate-700'} hover:bg-slate-600 transition-colors flex items-center justify-between">
+                                        <span class="station-tag" style="background-color: ${tag.color}">${tag.name}</span>
+                                        ${currentTagId === tag.id ? '<span class="text-white text-sm">✓ Current</span>' : ''}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        ` : '<p class="text-slate-400 text-center">No tags available. Create one below!</p>'}
+                    </div>
+                    <div class="flex justify-between items-center p-6 border-t border-slate-600">
+                        <button onclick="openTagCreationModal()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
+                            + Create New Tag
+                        </button>
+                        <button onclick="closeTagSelector()" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', html);
+    };
+    
+    // Close tag selector
+    window.closeTagSelector = function() {
+        const overlay = document.getElementById('tag-selector-overlay');
+        if (overlay) overlay.remove();
+    };
+    
+    // Open tag creation modal
+    window.openTagCreationModal = async function() {
+        closeTagSelector();
+        
+        // Ensure colors are loaded
+        if (tagColors.length === 0) {
+            await loadTagColors();
+        }
+        
+        // If still no colors, use fallback
+        if (tagColors.length === 0) {
+            tagColors = [
+                "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16",
+                "#22c55e", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9",
+                "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#d946ef",
+                "#ec4899", "#f43f5e", "#fb7185", "#fb923c", "#facc15"
+            ];
+        }
+        
+        const modal = document.getElementById('tag-creation-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            
+            // Populate color picker
+            const picker = document.getElementById('tag-color-picker');
+            if (picker) {
+                picker.innerHTML = tagColors.map(color => `
+                    <div class="tag-color-option" 
+                         style="background-color: ${color}" 
+                         data-color="${color}"
+                         onclick="selectTagColor('${color}')" 
+                         title="${color}"></div>
+                `).join('');
+                
+                // Auto-select first color
+                selectTagColor(tagColors[0]);
+            }
+        }
+    };
+    
+    // Close tag creation modal
+    window.closeTagCreationModal = function() {
+        const modal = document.getElementById('tag-creation-modal');
+        if (modal) modal.classList.add('hidden');
+        document.getElementById('new-tag-name').value = '';
+        document.getElementById('new-tag-color').value = '';
+    };
+    
+    // Select a color for new tag
+    window.selectTagColor = function(color) {
+        document.getElementById('new-tag-color').value = color;
+        document.querySelectorAll('.tag-color-option').forEach(opt => {
+            opt.classList.remove('selected');
+            // Compare using data-color attribute for reliable matching
+            if (opt.getAttribute('data-color') === color) {
+                opt.classList.add('selected');
+            }
+        });
+        // Update custom color input to match
+        const customInput = document.getElementById('new-tag-custom-color');
+        if (customInput) customInput.value = color;
+    };
+    
+    // Use custom color from color picker (auto-triggered on change)
+    window.useCustomColorForNewTag = function() {
+        const customColorInput = document.getElementById('new-tag-custom-color');
+        if (!customColorInput) {
+            console.error('Custom color input not found');
+            return;
+        }
+        
+        const customColor = customColorInput.value.toUpperCase();
+        console.log('Custom color auto-applied:', customColor);
+        
+        document.getElementById('new-tag-color').value = customColor;
+        document.querySelectorAll('.tag-color-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+    };
+    
+    // Create a new tag
+    window.createNewTag = async function() {
+        const name = document.getElementById('new-tag-name').value.trim();
+        const color = document.getElementById('new-tag-color').value;
+        
+        if (!name) {
+            showNotification('error', 'Please enter a tag name');
+            return;
+        }
+        
+        if (!color) {
+            showNotification('error', 'Please select a color');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/v1/station_tags/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ name, color })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                const newTag = data.data;
+                userTags.push(newTag);
+                showNotification('success', `Tag "${name}" created successfully`);
+                closeTagCreationModal();
+                
+                // If we're tagging a station, reopen the tag selector
+                if (currentStationForTagging) {
+                    openTagSelector(currentStationForTagging);
+                }
+            } else {
+                const error = await response.json();
+                showNotification('error', error.error || 'Failed to create tag');
+            }
+        } catch (error) {
+            console.error('Error creating tag:', error);
+            showNotification('error', 'Failed to create tag');
+        }
+    };
+    
+    // Set tag on station
+    window.setStationTag = async function(stationId, tagId) {
+        try {
+            const response = await fetch(`/api/v1/stations/${stationId}/tags/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ tag_id: tagId })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Tag set API response:', data);
+                const station = allStations.get(stationId);
+                if (station) {
+                    // data.data is the tag object
+                    station.tag = data.data;
+                    console.log('✅ Updated station.tag:', station.tag);
+                    
+                    // Update marker color
+                    updateStationMarkerColor(stationId);
+                    
+                    // Refresh tag display in modal
+                    refreshStationTag(stationId);
+                    
+                    // Also update the button text
+                    const addTagBtn = document.querySelector(`button[onclick="openTagSelector('${stationId}')"]`);
+                    if (addTagBtn) {
+                        addTagBtn.textContent = 'Change Tag';
+                    }
+                }
+                showNotification('success', 'Tag set on station');
+                closeTagSelector();
+            } else {
+                const errorData = await response.json();
+                console.error('❌ Tag set API error:', errorData);
+                showNotification('error', errorData.error || 'Failed to set tag');
+            }
+        } catch (error) {
+            console.error('Error setting tag:', error);
+            showNotification('error', 'Failed to set tag');
+        }
+    };
+    
+    // Remove tag from station
+    window.removeTagFromStation = async function(stationId) {
+        try {
+            const response = await fetch(`/api/v1/stations/${stationId}/tags/`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (response.ok) {
+                const station = allStations.get(stationId);
+                if (station) {
+                    station.tag = null;
+                    updateStationMarkerColor(stationId);
+                    refreshStationTag(stationId);
+                }
+                showNotification('success', 'Tag removed from station');
+            } else {
+                showNotification('error', 'Failed to remove tag');
+            }
+        } catch (error) {
+            console.error('Error removing tag:', error);
+            showNotification('error', 'Failed to remove tag');
+        }
+    };
+    
+    // Update station marker color based on tag
+    function updateStationMarkerColor(stationId) {
+        const station = allStations.get(stationId);
+        if (!station || !station.projectId) return;
+        
+        const markers = stationMarkers.get(station.projectId);
+        if (!markers) return;
+        
+        const marker = markers.find(m => m.stationId === stationId);
+        if (!marker) return;
+        
+        // Use the tag's color if available, otherwise default
+        const color = station.tag ? station.tag.color : '#fb923c';
+        const element = marker.getElement();
+        if (element) {
+            element.style.background = color;
+        }
+    }
+    
+    // Refresh station tag in modal
+    function refreshStationTag(stationId) {
+        const tagContainer = document.getElementById(`station-tag-${stationId}`);
+        if (!tagContainer) {
+            console.log('⚠️ Tag container not found for station:', stationId);
+            return;
+        }
+        
+        const station = allStations.get(stationId);
+        if (!station) {
+            console.log('⚠️ Station not found in allStations:', stationId);
+            return;
+        }
+        
+        console.log('🔄 Refreshing tag display for station:', stationId, 'tag:', station.tag);
+        
+        if (station.tag && station.tag.name && station.tag.color) {
+            tagContainer.innerHTML = `
+                <span class="station-tag" style="background-color: ${station.tag.color}">
+                    ${station.tag.name}
+                    <span class="remove-tag" onclick="removeTagFromStation('${stationId}')">×</span>
+                </span>
+            `;
+        } else {
+            tagContainer.innerHTML = '<span class="text-slate-400 text-sm">No tag assigned</span>';
+        }
+    }
+    
+    // ===================== END TAG MANAGEMENT FUNCTIONS =====================
+    
     // Helper function for resource previews
     function getResourcePreview(resource) {
         switch (resource.resource_type) {
@@ -9912,6 +10463,10 @@
     window.returnToStationManager = returnToStationManager;
 
     mapboxgl.accessToken = "{{ mapbox_api_token }}";
+
+    // Load tags on page initialization
+    loadUserTags();
+    loadTagColors();
 
     // Simple function to set map height
     function setMapHeight() {

@@ -57,3 +57,7 @@ class FeedbackView(AuthenticatedTemplateView):
 
 class PreferencesView(AuthenticatedTemplateView):
     template_name = "pages/user/preferences.html"
+
+
+class StationTagsView(AuthenticatedTemplateView):
+    template_name = "pages/station_tags.html"

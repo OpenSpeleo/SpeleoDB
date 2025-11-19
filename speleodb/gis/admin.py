@@ -25,6 +25,7 @@ from speleodb.gis.models import PointOfInterest
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
+from speleodb.gis.models import StationTag
 from speleodb.gis.models.experiment import MandatoryFieldSlug
 from speleodb.utils.admin_filters import GeoJSONProjectFilter
 from speleodb.utils.admin_filters import StationProjectFilter
@@ -131,9 +132,10 @@ class StationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "creation_date",
         "modified_date",
         "resource_count",
+        "tag_display",
     )
     ordering = ("project", "name")
-    list_filter = [StationProjectFilter, "creation_date"]
+    list_filter = [StationProjectFilter, "creation_date", "tag"]
     search_fields = ["name", "description", "project__name"]
     readonly_fields = (
         "id",
@@ -151,6 +153,13 @@ class StationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             {
                 "fields": ("latitude", "longitude"),
                 "description": "GPS coordinates for the station location",
+            },
+        ),
+        (
+            "Tag",
+            {
+                "fields": ("tag",),
+                "description": "Assign a tag to categorize and organize this station",
             },
         ),
         (
@@ -172,6 +181,18 @@ class StationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def resource_count(self, obj: Station) -> int:
         """Display the number of resources for this station."""
         return obj.resources.count()
+
+    @admin.display(description="Tag")
+    def tag_display(self, obj: Station) -> str:
+        """Display the tag assigned to this station."""
+        if obj.tag:
+            return format_html(
+                '<span style="background-color: {}; color: white; padding: 2px 8px; '
+                'border-radius: 4px; font-size: 0.875rem;">{}</span>',
+                obj.tag.color,
+                obj.tag.name,
+            )
+        return "-"
 
     def save_model(
         self,
@@ -257,6 +278,64 @@ class StationResourceAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if not change:  # Only on creation, not on edit
             obj.created_by = request.user.email  # type: ignore[union-attr]
         super().save_model(request, obj, form, change)
+
+
+@admin.register(StationTag)
+class StationTagAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "name",
+        "color_preview",
+        "user",
+        "station_count",
+        "creation_date",
+        "modified_date",
+    )
+    ordering = ("user", "name")
+    list_filter = ["user", "creation_date"]
+    search_fields = ["name", "color", "user__email"]
+    readonly_fields = (
+        "id",
+        "creation_date",
+        "modified_date",
+        "station_count",
+        "color_preview",
+    )
+
+    fieldsets = (
+        ("Tag Information", {"fields": ("name", "color", "color_preview", "user")}),
+        (
+            "Metadata",
+            {
+                "fields": (
+                    "id",
+                    "creation_date",
+                    "modified_date",
+                    "station_count",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    @admin.display(description="Color")
+    def color_preview(self, obj: StationTag) -> str:
+        """Display a color preview swatch."""
+        if obj and obj.color:
+            return format_html(
+                '<div style="display: inline-flex; align-items: center; gap: 8px;">'
+                '<span style="display: inline-block; width: 24px; height: 24px; '
+                'background-color: {}; border: 1px solid #ccc; border-radius: 4px;">'
+                '</span><code style="font-family: monospace;">{}</code>'
+                "</div>",
+                obj.color,
+                obj.color,
+            )
+        return "-"
+
+    @admin.display(description="Stations")
+    def station_count(self, obj: StationTag) -> int:
+        """Display the number of stations with this tag."""
+        return obj.stations.count()
 
 
 @admin.register(ProjectGeoJSON)

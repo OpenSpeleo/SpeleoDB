@@ -383,6 +383,28 @@
                                 </a>
                             </li>
 
+                            <!-- Station Tag Editor -->
+                            {% if request.url_name == 'station_tags' %}
+                            {% set stroke_color = 'indigo' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:station_tags' %}">
+                            {% else %}
+                            {% set stroke_color = 'slate' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:station_tags' %}">
+                            {% endif %}
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                            </svg>
+
+                                            <span class="text-sm font-medium ml-3 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Station Tag Editor</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+
                             <!-- My Survey Map -->
                             {% if request.url_name == 'map_viewer' %}
                             {% set stroke_color = 'indigo' %}

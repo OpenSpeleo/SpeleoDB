@@ -12,7 +12,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('gis', '0006_gisview_gisviewproject_gisview_projects_and_more'),
-        ('surveys', '0018_project_permissions_indexes'),
     ]
 
     operations = [
