@@ -203,3 +203,12 @@ class ExplorerMember(PersonBase):
         verbose_name = "Explorer Board Member"
         verbose_name_plural = "Explorer Advisory Board"
         ordering = [F("order").asc(nulls_last=True), "full_name"]
+
+
+class ScientificMember(PersonBase):
+    """Scientific Advisory Board members."""
+
+    class Meta:
+        verbose_name = "Scientific Board Member"
+        verbose_name_plural = "Scientific Advisory Board"
+        ordering = [F("order").asc(nulls_last=True), "full_name"]

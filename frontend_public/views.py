@@ -16,6 +16,7 @@ from django.views.generic import TemplateView
 
 from frontend_public.models import BoardMember
 from frontend_public.models import ExplorerMember
+from frontend_public.models import ScientificMember
 from frontend_public.models import TechnicalMember
 
 if TYPE_CHECKING:
@@ -119,5 +120,6 @@ class PeoplePageView(TemplateView):
         context["board_members"] = BoardMember.objects.all()
         context["technical_members"] = TechnicalMember.objects.all()
         context["explorer_members"] = ExplorerMember.objects.all()
+        context["scientific_members"] = ScientificMember.objects.all()
 
         return context

@@ -9,10 +9,13 @@ from django.utils.html import format_html
 
 from frontend_public.models import BoardMember
 from frontend_public.models import ExplorerMember
+from frontend_public.models import ScientificMember
 from frontend_public.models import TechnicalMember
 
 if TYPE_CHECKING:
-    type AbstractPerson = BoardMember | TechnicalMember | ExplorerMember
+    type AbstractPerson = (
+        BoardMember | TechnicalMember | ExplorerMember | ScientificMember
+    )
 
 
 class PersonAdminBase(admin.ModelAdmin):  # type: ignore[type-arg]
@@ -114,3 +117,8 @@ class TechnicalMemberAdmin(PersonAdminBase):
 @admin.register(ExplorerMember)
 class ExplorerMemberAdmin(PersonAdminBase):
     """Admin for Explorer Advisory Board members."""
+
+
+@admin.register(ScientificMember)
+class ScientificMemberAdmin(PersonAdminBase):
+    """Admin for Scientific Advisory Board members."""

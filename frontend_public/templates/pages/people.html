@@ -245,6 +245,73 @@
     </section>
     {% endif %}
 
+    {% if scientific_members %}
+    <!-- Scientific Advisory Board -->
+    <section class="relative overflow-visible">
+
+        <!-- Dynamic gradient backgrounds extending beyond boundaries -->
+        <div class="absolute inset-0 pointer-events-none -z-10" aria-hidden="true">
+            <!-- Centered gradient -->
+            <div class="absolute -top-48 left-1/2 -translate-x-1/2 w-[1400px] h-[1100px]">
+                <div class="absolute inset-0 translate-z-0 bg-gradient-to-b from-indigo-500/40 via-purple-500/30 to-purple-600/20 rounded-full blur-3xl"></div>
+            </div>
+            <!-- Purple overlay -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px]">
+                <div class="absolute inset-0 translate-z-0 bg-purple-500/30 rounded-full blur-2xl"></div>
+            </div>
+        </div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="py-12 md:py-20">
+
+                <!-- Section header -->
+                <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
+                    <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Scientific Advisory Board</h2>
+                    <p class="text-lg text-slate-200">
+                        Researchers & Scientific Experts guiding the integration of science-focused features into our platform to enhance cave exploration and data analysis.
+                    </p>
+                </div>
+
+                <!-- Team members grid with dynamic layout -->
+                <div class="grid {{ scientific_members|length|get_grid_class }} gap-6 lg:gap-8">
+                    
+                    {% for person in scientific_members %}
+                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
+                        <div class="flex flex-col text-slate-300 items-center text-center">
+                            {% if person.photo %}
+                            <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
+                                 src="{{ person.get_photo_url }}" 
+                                 alt="{{ person.full_name }}" />
+                            {% else %}
+                            <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
+                                <span class="text-2xl font-bold">{{ person.full_name|first }}</span>
+                            </div>
+                            {% endif %}
+                            <h3 class="text-xl font-bold text-slate-100 mb-1">{{ person.full_name }}</h3>
+                            <p class="text-sm font-bold mb-3">{{ person.title }}</p>
+                            <p class="text-sm mb-4 text-justify">
+                                {{ person.description|linebreaksbr }}
+                            </p>
+                            {% if person.has_link %}
+                            <div class="flex items-center space-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
+                                <a href="{{ person.link_target }}" target="_blank" rel="noopener">
+                                    <span class="underline">{{ person.link_name }}</span>
+                                    <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
     {% include "pages/call_to_action.html" %}
 
 {% endblock %} 
