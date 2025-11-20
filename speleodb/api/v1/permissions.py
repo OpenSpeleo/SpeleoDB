@@ -12,6 +12,7 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
+from speleodb.gis.models import GISView
 from speleodb.gis.models import LogEntry
 from speleodb.gis.models import PointOfInterest
 from speleodb.gis.models import Station
@@ -68,6 +69,30 @@ class ProjectUserHasReadAccess(BaseProjectAccessLevel):
 
 class ProjectUserHasWebViewerAccess(BaseProjectAccessLevel):
     MIN_ACCESS_LEVEL = PermissionLevel.WEB_VIEWER
+
+
+# ================ Mutex ================ #
+
+
+class UserOwnsProjectMutex(permissions.BasePermission):
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
+
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: Project,
+    ) -> bool:
+        mutex = obj.active_mutex()
+
+        if mutex is None:
+            return False
+
+        return mutex.user.id == request.user.id
 
 
 # ================ STATION PERMISSIONS ================ #
@@ -232,6 +257,66 @@ class UserHasMemberAccess(BaseTeamAccessLevel):
     MIN_ACCESS_LEVEL = SurveyTeamMembershipRole.MEMBER
 
 
+# ================ POI ================ #
+
+
+class POIOwnershipPermission(permissions.BasePermission):
+    """
+    Permission class specifically for POI ownership.
+    - Users can only see/modify their own POIs
+    - No sharing or public access to POIs
+    """
+
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
+
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: PointOfInterest,
+    ) -> bool:
+        """Users can only access POIs they created."""
+        # Check if the object has a created_by field and if it matches the user
+        if not isinstance(obj, PointOfInterest):
+            raise TypeError(f"Expected a `PointOfInterest` object, got {type(obj)}")
+
+        return obj.user == request.user
+
+
+# ================ GISView ================ #
+
+
+class GISViewOwnershipPermission(permissions.BasePermission):
+    """
+    Permission class specifically for POI ownership.
+    - Users can only see/modify their own POIs
+    - No sharing or public access to POIs
+    """
+
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
+
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: GISView,
+    ) -> bool:
+        """Users can only access POIs they created."""
+        # Check if the object has a created_by field and if it matches the user
+        if not isinstance(obj, GISView):
+            raise TypeError(f"Expected a `GISView` object, got {type(obj)}")
+
+        return obj.owner == request.user
+
+
 # ================ MISC ================ #
 
 
@@ -265,51 +350,3 @@ class IsObjectDeletion(permissions.BasePermission):
             return request.method in ["DELETE"]
 
         raise NotAuthenticated("Authentication credentials were not provided.")
-
-
-class UserOwnsProjectMutex(permissions.BasePermission):
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        if request.user and request.user.is_authenticated:
-            return True
-
-        raise NotAuthenticated("Authentication credentials were not provided.")
-
-    def has_object_permission(
-        self,
-        request: AuthenticatedDRFRequest,  # type: ignore[override]
-        view: APIView,
-        obj: Project,
-    ) -> bool:
-        mutex = obj.active_mutex()
-
-        if mutex is None:
-            return False
-
-        return mutex.user.id == request.user.id
-
-
-class POIOwnershipPermission(permissions.BasePermission):
-    """
-    Permission class specifically for POI ownership.
-    - Users can only see/modify their own POIs
-    - No sharing or public access to POIs
-    """
-
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        if request.user and request.user.is_authenticated:
-            return True
-
-        raise NotAuthenticated("Authentication credentials were not provided.")
-
-    def has_object_permission(
-        self,
-        request: AuthenticatedDRFRequest,  # type: ignore[override]
-        view: APIView,
-        obj: PointOfInterest,
-    ) -> bool:
-        """Users can only access POIs they created."""
-        # Check if the object has a created_by field and if it matches the user
-        if not isinstance(obj, PointOfInterest):
-            raise TypeError(f"Expected a `PointOfInterest` object, got {type(obj)}")
-
-        return obj.user == request.user

@@ -498,9 +498,21 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gis/projects/<user_token:key>/",
+        "module": "speleodb.api.v1.views.project_geojson.ProjectAllProjectGeoJsonGISApiView",
+        "name": "api:v1:gis:user-projects",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/gis/view/<gis_token>/",
-        "module": "speleodb.api.v1.views.gis_view.GISViewDataApiView",
+        "module": "speleodb.api.v1.views.gis_view.GISViewGeoJSONGISApiView",
         "name": "api:v1:gis:gis-view-data",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis_view/<uuid:id>/",
+        "module": "speleodb.api.v1.views.gis_view.GISViewDataApiView",
+        "name": "api:v1:gis-view-data",
         "decorators": ""
     },
     {

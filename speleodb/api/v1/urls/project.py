@@ -131,5 +131,6 @@ urlpatterns: list[URLPattern | URLResolver] = [
         ProjectAllProjectGeoJsonApiView.as_view(),
         name="all-projects-geojson",
     ),
+    # Project Specific URLs
     path("<uuid:id>/", include(project_base_urlpatterns)),
 ]

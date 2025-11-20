@@ -77,7 +77,8 @@ class UploadFormatsConverter(BaseChoicesConverter):
 
 
 @register_converter("gis_token")
-class GisTokenConverter(BaseRegexConverter):
+@register_converter("user_token")
+class TokenConverter(BaseRegexConverter):
     @property
     def regex(self) -> str:
         return r"[0-9a-fA-F]{40}"

@@ -464,7 +464,6 @@ class ExperimentGISApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
     """
 
     queryset = Experiment.objects.all()
-    # permission_classes = [permissions.IsAuthenticated]
     permission_classes = [permissions.AllowAny]
     lookup_field = "gis_token"
     serializer_class = ExperimentRecordGISSerializer  # type: ignore[assignment]

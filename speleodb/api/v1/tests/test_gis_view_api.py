@@ -181,12 +181,14 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         )
 
         assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["success"] is True
-        assert "geojson_files" in data["data"]
-        assert len(data["data"]["geojson_files"]) == 1
-        assert "url" in data["data"]["geojson_files"][0]
-        assert data["data"]["view_name"] == "Test View"
+
+        # read all chunks
+        body = b"".join(response.streaming_content)  # type: ignore[attr-defined]
+
+        data = orjson.loads(body)  # or response.json() manually
+
+        assert data["type"] == "FeatureCollection"
+        assert len(data["features"]) > 0
 
     def test_public_access_with_invalid_token(self) -> None:
         """Test that invalid token returns 404."""
@@ -194,7 +196,8 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         fake_token = "0" * 40
 
         response = client.get(
-            reverse("api:v1:gis:gis-view-data", kwargs={"gis_token": fake_token})
+            reverse("api:v1:gis:gis-view-data", kwargs={"gis_token": fake_token}),
+            headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -226,10 +229,9 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         client = self.client_class()
         response = client.get(
-            reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": gis_view.gis_token}
-            )
-            + "?expires_in=7200"
+            reverse("api:v1:gis-view-data", kwargs={"id": gis_view.id})
+            + "?expires_in=7200",
+            headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -275,9 +277,8 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         client = self.client_class()
         response = client.get(
-            reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": gis_view.gis_token}
-            )
+            reverse("api:v1:gis-view-data", kwargs={"id": gis_view.id}),
+            headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -331,9 +332,8 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         client = self.client_class()
         response = client.get(
-            reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": gis_view.gis_token}
-            )
+            reverse("api:v1:gis-view-data", kwargs={"id": gis_view.id}),
+            headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -349,9 +349,8 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         client = self.client_class()
         response = client.get(
-            reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": gis_view.gis_token}
-            )
+            reverse("api:v1:gis-view-data", kwargs={"id": gis_view.id}),
+            headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -396,9 +395,8 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         client = self.client_class()
         response = client.get(
-            reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": gis_view.gis_token}
-            )
+            reverse("api:v1:gis-view-data", kwargs={"id": gis_view.id}),
+            headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -435,9 +433,8 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         client = self.client_class()
         response = client.get(
-            reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": gis_view.gis_token}
-            )
+            reverse("api:v1:gis-view-data", kwargs={"id": gis_view.id}),
+            headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -502,20 +499,18 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         # Test with very small expiration (should be clamped to 60)
         response = client.get(
-            reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": gis_view.gis_token}
-            )
-            + "?expires_in=1"
+            reverse("api:v1:gis-view-data", kwargs={"id": gis_view.id})
+            + "?expires_in=1",
+            headers={"authorization": self.auth},
         )
         assert response.status_code == status.HTTP_200_OK
         assert len(response.json()["data"]["geojson_files"]) == 1
 
         # Test with very large expiration (should be clamped to 86400)
         response = client.get(
-            reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": gis_view.gis_token}
-            )
-            + "?expires_in=999999"
+            reverse("api:v1:gis-view-data", kwargs={"id": gis_view.id})
+            + "?expires_in=999999",
+            headers={"authorization": self.auth},
         )
         assert response.status_code == status.HTTP_200_OK
         assert len(response.json()["data"]["geojson_files"]) == 1
@@ -530,9 +525,8 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         client = self.client_class()
         response = client.get(
-            reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": gis_view.gis_token}
-            )
+            reverse("api:v1:gis-view-data", kwargs={"id": gis_view.id}),
+            headers={"authorization": self.auth},
         )
 
         assert response.status_code == status.HTTP_200_OK

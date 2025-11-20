@@ -122,7 +122,7 @@ class GISView(models.Model):
         self.gis_token = generate_random_token()
         self.save(update_fields=["gis_token", "modified_date"])
 
-    def get_geojson_urls(self, expires_in: int = 3600) -> list[dict[str, Any]]:
+    def get_view_geojson_data(self) -> list[dict[str, Any]]:
         """
         Get all GeoJSON signed URLs for projects in this view.
 
@@ -148,49 +148,82 @@ class GISView(models.Model):
         results = []
 
         for view_project in view_projects:
-            project = view_project.project
-            geojson = None
+            project: Project = view_project.project
+
+            geojson: ProjectGeoJSON
 
             # Get the appropriate GeoJSON
             if view_project.use_latest:
-                # Use prefetched data (already ordered by -creation_date)
-                geojsons = list(project.rel_geojsons.all())
-                if not geojsons:
+                try:
+                    geojson = project.rel_geojsons.all()[0]
+                except IndexError:
                     continue
-                geojson = geojsons[0]  # First is latest
+
             elif view_project.commit_sha:
                 # Find in prefetched data
-                geojsons = list(project.rel_geojsons.all())
-                geojson = next(
-                    (g for g in geojsons if g.commit_sha == view_project.commit_sha),
-                    None,
-                )
-                if not geojson:
+                try:
+                    geojson = project.rel_geojsons.filter(
+                        commit_sha=view_project.commit_sha
+                    )[0]
+                except IndexError:
                     continue
+
             else:
-                # Neither use_latest nor commit_sha - skip
+                logger.error(
+                    "GISViewProject %s has neither use_latest nor commit_sha set",
+                    view_project.id,
+                )
                 continue
 
+            results.append(
+                {
+                    "project_id": str(project.id),
+                    "project_name": project.name,
+                    "commit_sha": geojson.commit_sha,
+                    "commit_date": geojson.commit_date.isoformat(),
+                    "project_geojson": geojson,
+                    "use_latest": view_project.use_latest,
+                }
+            )
+
+        return results
+
+    def get_geojson_urls(self, expires_in: int = 3600) -> list[dict[str, Any]]:
+        """
+        Get all GeoJSON signed URLs for projects in this view.
+
+        Uses optimized prefetch to avoid N+1 queries.
+
+        Args:
+            expires_in: URL expiration time in seconds (default: 1 hour)
+
+        Returns:
+            List of dicts containing project info and signed URLs
+        """
+
+        data = self.get_view_geojson_data()
+
+        result = []
+
+        for geojson_data in data:
             try:
-                results.append(
-                    {
-                        "project_id": str(project.id),
-                        "project_name": project.name,
-                        "commit_sha": geojson.commit_sha,
-                        "commit_date": geojson.commit_date.isoformat(),
-                        "url": geojson.get_signed_download_url(expires_in=expires_in),
-                        "use_latest": view_project.use_latest,
-                    }
+                geojson_data["url"] = (
+                    geojson_data.pop("project_geojson").get_signed_download_url(
+                        expires_in=expires_in
+                    ),
                 )
+
             except (ValidationError, Exception):  # noqa: BLE001
                 logger.exception(
                     "Error generating signed URL for project %s in view %s",
-                    project.id,
+                    geojson_data["project_id"],
                     self.id,
                 )
                 continue
 
-        return results
+            result.append(geojson_data)
+
+        return result
 
 
 class GISViewProject(models.Model):
@@ -200,6 +233,8 @@ class GISViewProject(models.Model):
     Represents the configuration for a single project within a GIS view,
     specifying either a specific commit SHA or using the latest commit.
     """
+
+    id: int
 
     gis_view = models.ForeignKey(
         GISView,

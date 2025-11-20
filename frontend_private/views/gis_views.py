@@ -8,6 +8,7 @@ from typing import Any
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
 from django.urls import reverse
+from rest_framework.authtoken.models import Token
 
 from frontend_private.views.base import AuthenticatedTemplateView
 from speleodb.gis.models import GISView
@@ -39,6 +40,11 @@ class GISViewListingView(AuthenticatedTemplateView):
             .prefetch_related("rel_view_projects__project")
             .order_by("-modified_date")
         )
+
+        # Get or create user token for Personal GIS View
+        user_token, _ = Token.objects.get_or_create(user=request.user)
+
+        context["user_token"] = user_token
 
         return self.render_to_response(context)
 

@@ -10,41 +10,37 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.v1.permissions import GISViewOwnershipPermission
 from speleodb.api.v1.serializers.gis_view import GISViewDataSerializer
+from speleodb.api.v1.views.utils import project_geojsons_to_proxied_response
 from speleodb.gis.models import GISView
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
+    from typing import Any
+
+    from django.http import StreamingHttpResponse
     from rest_framework.request import Request
     from rest_framework.response import Response
+
+    from speleodb.gis.models import ProjectGeoJSON
 
 logger = logging.getLogger(__name__)
 
 
 class GISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
     """
-    Public read-only endpoint to retrieve GeoJSON URLs for a GIS view.
+    Private read-only endpoint to retrieve GISView data.
 
-    This endpoint is accessible via token without authentication.
-    Returns signed URLs to GeoJSON files for all projects in the view.
-
-    Pattern: Similar to ExperimentGISApiView
-    Usage: External GIS tools (QGIS, ArcGIS, etc.)
-
-    Endpoint: GET /api/v1/gis/view/<token>/
     Query params:
         - expires_in: URL expiration in seconds (default: 3600, max: 86400)
     """
 
     queryset = GISView.objects.all()
-    permission_classes = [permissions.AllowAny]
-    lookup_field = "gis_token"
-
-    def get_queryset(self) -> Any:
-        """Only return active views with prefetched relations."""
-        return GISView.objects.prefetch_related("rel_view_projects__project")
+    permission_classes = [GISViewOwnershipPermission]
+    lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Return GeoJSON signed URLs for the view."""
@@ -60,12 +56,48 @@ class GISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
         # Use serializer with expires_in in context
         try:
             serializer = GISViewDataSerializer(
-                gis_view, context={"expires_in": expires_in}
+                gis_view,
+                context={"expires_in": expires_in},
             )
             return SuccessResponse(serializer.data)
+
         except Exception:
             logger.exception("Error generating GeoJSON URLs for view %s", gis_view.id)
             return ErrorResponse(
                 {"error": "Failed to generate GeoJSON URLs"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class GISViewGeoJSONGISApiView(GenericAPIView[GISView], SDBAPIViewMixin):
+    """
+    Public read-only endpoint to retrieve GeoJSON URLs for a GIS view.
+
+    This endpoint is accessible via token without authentication.
+    Returns signed URLs to GeoJSON files for all projects in the view.
+
+    Pattern: Similar to ExperimentGISApiView
+    Usage: External GIS tools (QGIS, ArcGIS, etc.)
+
+    Endpoint: GET /api/v1/gis/view/<token>/
+    """
+
+    queryset = GISView.objects.all()
+    permission_classes = [permissions.AllowAny]
+    lookup_field = "gis_token"
+
+    def get(
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
+    ) -> StreamingHttpResponse:
+        """Return GeoJSON signed URLs for the view."""
+
+        gis_view = self.get_object()
+
+        project_geojsons: list[ProjectGeoJSON] = [
+            data["project_geojson"] for data in gis_view.get_view_geojson_data()
+        ]
+
+        return project_geojsons_to_proxied_response(project_geojsons)
