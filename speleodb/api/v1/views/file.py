@@ -6,6 +6,7 @@ import contextlib
 import logging
 import pathlib
 import random
+import re
 import string
 import tempfile
 from collections import defaultdict
@@ -138,16 +139,18 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                         {"error": "Uploaded file(s) `artifact` is/are missing."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
-                commit_message = request.data.get("message", None)
 
                 # Verify the commit message is not empty
-                if commit_message is None or commit_message == "":
+                if not (commit_message := request.data.get("message", "")):
                     data = {
                         "error": (
                             f"Empty or no `message` received: `{commit_message}`."
                         )
                     }
                     return ErrorResponse(data, status=status.HTTP_400_BAD_REQUEST)
+
+                # Remove front and back `\n\r and spaces and in the middle`
+                commit_message = re.sub(r"(?:\s*\n\s*)+", ". ", commit_message.strip())
 
                 # Verify there's at least one file
                 if not files:

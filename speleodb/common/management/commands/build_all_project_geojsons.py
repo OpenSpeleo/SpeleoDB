@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
@@ -32,7 +33,9 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args: Any, **kwargs: Any) -> None:
-        for project in Project.objects.filter(exclude_geojson=False):
+        for project in Project.objects.filter(exclude_geojson=False).order_by(
+            "-modified_date"
+        ):
             logger.info("")
             logger.info("-" * 60)
             logger.info(f"Processing Project: {project.id} ~ {project.name}")
@@ -96,11 +99,17 @@ class Command(BaseCommand):
                                         content_type="application/geo+json",
                                     )
 
+                                    commit_message = re.sub(
+                                        r"(?:\s*\n\s*)+",
+                                        ". ",
+                                        str(commit.message).strip(),
+                                    )
+
                                     ProjectGeoJSON.objects.create(
                                         project=project,
                                         commit_author_name=commit.author.name,
                                         commit_author_email=commit.author.email,
-                                        commit_message=commit.message,
+                                        commit_message=commit_message,
                                         commit_sha=commit.hexsha,
                                         commit_date=commit.date_dt,
                                         file=geojson_f,
