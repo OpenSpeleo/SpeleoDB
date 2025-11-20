@@ -8,26 +8,15 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.db.models import Prefetch
-from django.db.utils import IntegrityError
-from drf_spectacular.utils import extend_schema
-from rest_framework import permissions
-from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import ProjectUserHasAdminAccess
 from speleodb.api.v1.permissions import ProjectUserHasReadAccess
 from speleodb.api.v1.permissions import ProjectUserHasWebViewerAccess
-from speleodb.api.v1.permissions import ProjectUserHasWriteAccess
 from speleodb.api.v1.serializers import ProjectGeoJSONCommitSerializer
-from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import ProjectWithGeoJsonSerializer
-from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import ProjectGeoJSON
-from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
-from speleodb.utils.api_decorators import method_permission_classes
 from speleodb.utils.api_mixin import SDBAPIViewMixin
-from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:

@@ -80,6 +80,11 @@ class ProjectGeoJSON(models.Model):
     class Meta:
         verbose_name = "Project GeoJSON"
         verbose_name_plural = "Project GeoJSONs"
+        indexes = [
+            models.Index(fields=["project"]),
+            models.Index(fields=["commit_date"]),
+        ]
+        ordering = ["-commit_date"]
 
     def __str__(self) -> str:
         return f"[ProjectGeoJSON] {self.project.name} @ {self.commit_sha[:8]}"
