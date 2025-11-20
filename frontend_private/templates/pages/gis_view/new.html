@@ -239,7 +239,7 @@
             
             projectCounter++;
             const projectElement = createProjectElement(projectCounter);
-            $('#projects_container').append(projectElement);
+            $('#projects_container').prepend(projectElement);
             toggleNoProjectsMessage();
         });
 
@@ -371,7 +371,7 @@
                     projects.push({
                         project_id: projectId,
                         use_latest: useLatest,
-                        commit_sha: useLatest ? null : (commitSha || null)
+                        commit_sha: useLatest ? "" : (commitSha || "")
                     });
                 }
             });
