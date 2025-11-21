@@ -629,7 +629,7 @@ class ExperimentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             # Redirect to the change page to show the updated token
             return redirect(
                 reverse(
-                    "admin:surveys_experiment_change",
+                    "admin:gis_experiment_change",
                     args=[obj.pk],
                 )
             )
