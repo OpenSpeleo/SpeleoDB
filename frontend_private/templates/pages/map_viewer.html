@@ -6181,58 +6181,41 @@
     }
 
     function sortExperimentFields(fields) {
+        // Mandatory field UUIDs (matching backend MandatoryFieldUuid)
+        const MANDATORY_FIELD_UUIDS = {
+            MEASUREMENT_DATE: '00000000-0000-0000-0000-000000000001',
+            SUBMITTER_EMAIL: '00000000-0000-0000-0000-000000000002'
+        };
+        
         // Handle both array and object formats
         let fieldsArray = [];
         
         if (Array.isArray(fields)) {
-            // API returns array format
+            // API returns array format with 'id' field
             fieldsArray = fields.map(field => ({
-                slug: field.slug,
+                id: field.id,
                 ...field
             }));
         } else if (fields && typeof fields === 'object') {
-            // Convert object format to array
-            fieldsArray = Object.entries(fields).map(([slug, field]) => ({
-                slug: slug,
+            // Convert object format to array (UUID-keyed dict)
+            fieldsArray = Object.entries(fields).map(([uuid, field]) => ({
+                id: uuid,
                 ...field
             }));
         }
         
-        // Always put measurement_date first, submitter_email second
-        const sortedFields = [];
-        const processedSlugs = new Set();
-        const remainingFields = [];
-
-        // Add mandatory fields first in order
-        for (const slug of ['measurement_date', 'submitter_email']) {
-            const field = fieldsArray.find(f => f.slug === slug);
-            if (field) {
-                sortedFields.push(field);
-                processedSlugs.add(slug);
-            }
-        }
-
-        // Collect remaining fields (excluding mandatory ones)
-        for (const field of fieldsArray) {
-            if (!processedSlugs.has(field.slug)) {
-                remainingFields.push(field);
-            }
-        }
-
-        // Sort remaining fields by name alphabetically
-        remainingFields.sort((a, b) => {
-            const nameA = (a.name || '').toLowerCase();
-            const nameB = (b.name || '').toLowerCase();
-            return nameA.localeCompare(nameB);
+        // Sort fields by their 'order' property
+        // The backend now includes an 'order' field that reflects user-defined ordering
+        fieldsArray.sort((a, b) => {
+            const orderA = a.order !== undefined ? a.order : 999;
+            const orderB = b.order !== undefined ? b.order : 999;
+            return orderA - orderB;
         });
-
-        // Add sorted remaining fields
-        sortedFields.push(...remainingFields);
-
-        return sortedFields;
+        
+        return fieldsArray;
     }
 
-    function validateExperimentField(value, fieldType, required, fieldSlug = '') {
+    function validateExperimentField(value, fieldType, required, fieldId = '') {
         if (required && (value === null || value === undefined || value === '')) {
             return { valid: false, message: 'This field is required' };
         }
@@ -6252,8 +6235,9 @@
                 if (isNaN(date.getTime())) {
                     return { valid: false, message: 'Must be a valid date' };
                 }
-                // For measurement_date, ensure it's not in the future
-                if (fieldSlug === 'measurement_date') {
+                // For measurement_date (UUID: 00...001), ensure it's not in the future
+                const MEASUREMENT_DATE_UUID = '00000000-0000-0000-0000-000000000001';
+                if (fieldId === MEASUREMENT_DATE_UUID) {
                     const today = new Date();
                     today.setHours(23, 59, 59, 999); // End of today
                     if (date > today) {
@@ -6315,16 +6299,13 @@
                             // Extract the nested data object - API returns field values in row.data
                             // submitter_email comes from row.created_by, not row.data
                             const rowData = row.data || {};
+                            const SUBMITTER_EMAIL_UUID = '00000000-0000-0000-0000-000000000002';
+                            
                             return `
                             <tr class="hover:bg-slate-700/30 transition-colors">
                                 ${sortedFields.map(field => {
-                                    // submitter_email is stored as created_by at the top level
-                                    let value;
-                                    if (field.slug === 'submitter_email') {
-                                        value = row.created_by;
-                                    } else {
-                                        value = rowData[field.slug];
-                                    }
+                                    // submitter_email (UUID: 00...002) is stored as created_by at the top level
+                                    let value = rowData[field.id];
                                     
                                     let displayValue = '';
                                     if (value === null || value === undefined) {
@@ -6575,21 +6556,24 @@
                         </div>
                         <form id="experiment-row-form" class="p-6 space-y-6">
                             ${sortedFields.map(field => {
+                                const SUBMITTER_EMAIL_UUID = '00000000-0000-0000-0000-000000000002';
+                                const MEASUREMENT_DATE_UUID = '00000000-0000-0000-0000-000000000001';
+                                
                                 // Skip submitter_email field - it's auto-filled
-                                if (field.slug === 'submitter_email') {
+                                if (field.id === SUBMITTER_EMAIL_UUID) {
                                     return '';
                                 }
                                 
                                 let inputHtml = '';
-                                const fieldId = `field-${field.slug}`;
-                                const isRequired = field.required || ['measurement_date'].includes(field.slug);
+                                const fieldId = `field-${field.id}`;
+                                const isRequired = field.required;
 
                                 switch (field.type) {
                                     case 'number':
                                         inputHtml = `
                                             <input type="number" 
                                                    id="${fieldId}" 
-                                                   name="${field.slug}" 
+                                                   name="${field.id}" 
                                                    step="any"
                                                    ${isRequired ? 'required' : ''}
                                                    class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
@@ -6600,11 +6584,11 @@
                                         // Get today's date in YYYY-MM-DD format
                                         const today = new Date().toISOString().split('T')[0];
                                         // Limit measurement_date to today or earlier
-                                        const maxDate = field.slug === 'measurement_date' ? today : '';
+                                        const maxDate = field.id === MEASUREMENT_DATE_UUID ? today : '';
                                         inputHtml = `
                                             <input type="date" 
                                                    id="${fieldId}" 
-                                                   name="${field.slug}" 
+                                                   name="${field.id}" 
                                                    ${isRequired ? 'required' : ''}
                                                    ${maxDate ? `max="${maxDate}"` : ''}
                                                    class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-transparent">
@@ -6613,7 +6597,7 @@
                                     case 'boolean':
                                         inputHtml = `
                                             <select id="${fieldId}" 
-                                                    name="${field.slug}" 
+                                                    name="${field.id}" 
                                                     ${isRequired ? 'required' : ''}
                                                     class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-transparent">
                                                 <option value="">-- Select --</option>
@@ -6626,7 +6610,7 @@
                                         const options = field.options || [];
                                         inputHtml = `
                                             <select id="${fieldId}" 
-                                                    name="${field.slug}" 
+                                                    name="${field.id}" 
                                                     ${isRequired ? 'required' : ''}
                                                     class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-transparent">
                                                 <option value="">-- Select --</option>
@@ -6640,7 +6624,7 @@
                                         inputHtml = `
                                             <input type="text" 
                                                    id="${fieldId}" 
-                                                   name="${field.slug}" 
+                                                   name="${field.id}" 
                                                    ${isRequired ? 'required' : ''}
                                                    class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                                                    placeholder="Enter ${field.name.toLowerCase()}">
@@ -6690,19 +6674,21 @@
             const sortedFieldsForValidation = sortExperimentFields(experiment.experiment_fields || {});
 
             // Real-time validation
+            const SUBMITTER_EMAIL_UUID = '00000000-0000-0000-0000-000000000002';
+            
             sortedFieldsForValidation.forEach(field => {
                 // Skip submitter_email - it's auto-filled and not in the form
-                if (field.slug === 'submitter_email') {
+                if (field.id === SUBMITTER_EMAIL_UUID) {
                     return;
                 }
                 
-                const input = document.getElementById(`field-${field.slug}`);
-                const errorDiv = document.getElementById(`field-${field.slug}-error`);
+                const input = document.getElementById(`field-${field.id}`);
+                const errorDiv = document.getElementById(`field-${field.id}-error`);
                 if (input && errorDiv) {
                     input.addEventListener('blur', () => {
                         const value = input.value;
-                        const isRequired = field.required || ['measurement_date'].includes(field.slug);
-                        const validation = validateExperimentField(value, field.type, isRequired, field.slug);
+                        const isRequired = field.required;
+                        const validation = validateExperimentField(value, field.type, isRequired, field.id);
                         if (!validation.valid) {
                             errorDiv.textContent = validation.message;
                             errorDiv.classList.remove('hidden');
@@ -6726,15 +6712,15 @@
                 let isValid = true;
                 sortedFieldsForValidation.forEach(field => {
                     // Skip submitter_email - it's auto-filled and not in the form
-                    if (field.slug === 'submitter_email') {
+                    if (field.id === SUBMITTER_EMAIL_UUID) {
                         return;
                     }
                     
-                    const input = document.getElementById(`field-${field.slug}`);
-                    const errorDiv = document.getElementById(`field-${field.slug}-error`);
-                    const isRequired = field.required || ['measurement_date'].includes(field.slug);
+                    const input = document.getElementById(`field-${field.id}`);
+                    const errorDiv = document.getElementById(`field-${field.id}-error`);
+                    const isRequired = field.required;
                     const value = input ? input.value : '';
-                    const validation = validateExperimentField(value, field.type, isRequired, field.slug);
+                    const validation = validateExperimentField(value, field.type, isRequired, field.id);
                     
                     if (!validation.valid) {
                         isValid = false;
@@ -6766,17 +6752,17 @@
                 
                 sortedFieldsForValidation.forEach(field => {
                     // Skip submitter_email - already handled above
-                    if (field.slug === 'submitter_email') {
+                    if (field.id === SUBMITTER_EMAIL_UUID) {
                         return;
                     }
                     
-                    const value = formData.get(field.slug);
+                    const value = formData.get(field.id);
                     if (field.type === 'number' && value !== '') {
-                        rowData[field.slug] = parseFloat(value);
+                        rowData[field.id] = parseFloat(value);
                     } else if (field.type === 'boolean' && value !== '') {
-                        rowData[field.slug] = value === 'true';
+                        rowData[field.id] = value === 'true';
                     } else if (value !== '') {
-                        rowData[field.slug] = value;
+                        rowData[field.id] = value;
                     }
                 });
 

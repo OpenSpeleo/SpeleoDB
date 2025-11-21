@@ -25,10 +25,10 @@
      * Toggle visibility of "no fields" message
      */
     function toggleNoFieldsMessage() {
-        const customFieldsContainer = $('#custom_fields_container');
         const noFieldsMessage = $('#no_fields_message');
+        const newFieldsCount = $('.field-item').length;
 
-        if (customFieldsContainer.children().length === 0) {
+        if (newFieldsCount === 0) {
             noFieldsMessage.show();
         } else {
             noFieldsMessage.hide();
@@ -60,62 +60,65 @@
     function createFieldElement(fieldId) {
         return `
             <div class="bg-slate-700 rounded-lg p-4 border border-slate-600 field-item" data-field-id="${fieldId}">
-                <div class="flex flex-col gap-3">
-                    <div class="flex flex-col sm:flex-row gap-3">
-                        <div class="flex-1">
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Field Name<span class="text-rose-600"> *</span></label>
-                            <input type="text" 
-                                   class="form-input w-full field-name" 
-                                   placeholder="e.g., pH Level, Water Hardness" 
-                                   required />
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex flex-col sm:flex-row gap-3">
-                                <div class="flex-1">
-                                    <label class="block text-xs font-medium text-slate-400 mb-1">Field Type<span class="text-rose-600"> *</span></label>
-                                    <select class="form-select w-full field-type" required>
-                                        <option value="" selected disabled>Select a value</option>
-                                        <option value="text">Text</option>
-                                        <option value="number">Number</option>
-                                        <option value="date">Date</option>
-                                        <option value="boolean">Yes/No</option>
-                                        <option value="select">Multiple Choices</option>
-                                    </select>
-                                </div>
-                                <div class="flex-1">
-                                    <label class="block text-xs font-medium text-slate-400 mb-1">Field is Required</label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" class="form-checkbox field-required" />
-                                        <span class="text-sm ml-2 text-slate-300">Required</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <!-- Drag Handle -->
+                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 flex-shrink-0" title="Drag to reorder">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+                        </svg>
                     </div>
-                    
-                    <!-- Options section for Multiple Choices -->
-                    <div class="field-options-container hidden">
-                        <label class="block text-xs font-medium text-slate-400 mb-2">Available Options</label>
-                        <div class="flex gap-2 mb-2">
-                            <input type="text" 
-                                   class="form-input flex-1 field-option-input text-sm" 
-                                   placeholder="Type an option and press Enter or comma" />
-                        </div>
-                        <div class="flex flex-wrap gap-2 field-tags-container min-h-[2rem]">
-                            <!-- Tags will be added here -->
-                        </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-slate-400 mb-1">
+                            Field Name 
+                            <span class="text-emerald-400">✏️ New Field</span>
+                            <span class="text-rose-600"> *</span>
+                        </label>
+                        <input type="text" 
+                               class="form-input w-full field-name" 
+                               placeholder="e.g., pH Level, Water Hardness" 
+                               required />
                     </div>
-                    
-                    <div class="flex justify-end">
-                        <button type="button" 
-                                class="btn-sm bg-rose-500 hover:bg-rose-600 text-white remove-field-btn"
-                                data-field-id="${fieldId}">
-                            <svg class="w-4 h-4 fill-current shrink-0 inline-block mr-1" viewBox="0 0 16 16">
-                                <path d="M5 7h6v2H5V7zm7-4H4v2h8V3zM6 12h4v2H6v-2z" />
-                            </svg>
-                            Remove Field
-                        </button>
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Field Type<span class="text-rose-600"> *</span></label>
+                        <select class="form-select w-full field-type" required>
+                            <option value="" selected disabled>Select a value</option>
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="date">Date</option>
+                            <option value="boolean">Yes/No</option>
+                            <option value="select">Multiple Choices</option>
+                        </select>
                     </div>
+                    <div class="flex items-center mt-5 sm:mt-0">
+                        <label class="flex items-center">
+                            <input type="checkbox" class="form-checkbox field-required" />
+                            <span class="text-sm ml-2 text-slate-300">Required</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Options section for Multiple Choices -->
+                <div class="field-options-container hidden mt-3 pt-3 border-t border-slate-600">
+                    <label class="block text-xs font-medium text-slate-400 mb-2">Available Options</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" 
+                               class="form-input flex-1 field-option-input text-sm" 
+                               placeholder="Type an option and press Enter or comma" />
+                    </div>
+                    <div class="flex flex-wrap gap-2 field-tags-container min-h-[2rem]">
+                        <!-- Tags will be added here -->
+                    </div>
+                </div>
+                
+                <div class="flex justify-end mt-3 pt-3 border-t border-slate-600">
+                    <button type="button" 
+                            class="btn-sm bg-rose-500 hover:bg-rose-600 text-white remove-field-btn"
+                            data-field-id="${fieldId}">
+                        <svg class="w-4 h-4 fill-current shrink-0 inline-block mr-1" viewBox="0 0 16 16">
+                            <path d="M5 7h6v2H5V7zm7-4H4v2h8V3zM6 12h4v2H6v-2z" />
+                        </svg>
+                        Remove Field
+                    </button>
                 </div>
             </div>
         `;
@@ -123,19 +126,26 @@
 
     /**
      * Check for duplicate field names (case-insensitive)
-     * Also checks against existing fields (for edit mode)
-     * Returns array of duplicate field IDs
+     * Checks both existing fields (editable names) and new fields
+     * Returns array of duplicate field IDs/identifiers
      */
     function checkDuplicateFieldNames() {
-        const fieldNames = new Map(); // Map of lowercase name -> array of field IDs
+        const fieldNames = new Map(); // Map of lowercase name -> array of identifiers
         const duplicates = new Set();
-        const existingNames = new Set();
 
-        // Collect existing field names (read-only fields in edit mode)
+        // Collect existing field names (NOW EDITABLE - get from input!)
         $('.existing-field-item').each(function () {
-            const existingName = $(this).data('field-name');
-            if (existingName) {
-                existingNames.add(toTitleCase(existingName).toLowerCase());
+            const fieldId = $(this).data('field-id');
+            const editedName = $(this).find('.existing-field-name').val().trim();
+            
+            if (editedName) {
+                const normalizedName = toTitleCase(editedName);
+                const lowerName = normalizedName.toLowerCase();
+
+                if (!fieldNames.has(lowerName)) {
+                    fieldNames.set(lowerName, []);
+                }
+                fieldNames.get(lowerName).push(`existing-${fieldId}`);
             }
         });
 
@@ -148,22 +158,17 @@
                 const normalizedName = toTitleCase(fieldName);
                 const lowerName = normalizedName.toLowerCase();
 
-                // Check against existing fields
-                if (existingNames.has(lowerName)) {
-                    duplicates.add(fieldId);
-                }
-
                 if (!fieldNames.has(lowerName)) {
                     fieldNames.set(lowerName, []);
                 }
-                fieldNames.get(lowerName).push(fieldId);
+                fieldNames.get(lowerName).push(`new-${fieldId}`);
             }
         });
 
-        // Find duplicates among new fields
-        fieldNames.forEach((fieldIds, name) => {
-            if (fieldIds.length > 1) {
-                fieldIds.forEach(id => duplicates.add(id));
+        // Find duplicates
+        fieldNames.forEach((identifiers, name) => {
+            if (identifiers.length > 1) {
+                identifiers.forEach(id => duplicates.add(id));
             }
         });
 
@@ -172,15 +177,25 @@
 
     /**
      * Highlight duplicate fields with error styling
+     * Handles both existing fields (editable) and new fields
      */
-    function highlightDuplicateFields(duplicateIds) {
+    function highlightDuplicateFields(duplicateIdentifiers) {
         // Clear all previous errors
-        $('.field-name').removeClass('border-rose-500 hover:border-rose-500 border-2');
+        $('.field-name, .existing-field-name').removeClass('border-rose-500 hover:border-rose-500 border-2');
 
         // Highlight duplicates
-        duplicateIds.forEach(fieldId => {
-            $(`.field-item[data-field-id="${fieldId}"] .field-name`)
-                .addClass('border-rose-500 hover:border-rose-500 border-2');
+        duplicateIdentifiers.forEach(identifier => {
+            if (identifier.startsWith('existing-')) {
+                // Existing field - highlight by field ID
+                const fieldId = identifier.replace('existing-', '');
+                $(`.existing-field-item[data-field-id="${fieldId}"] .existing-field-name`)
+                    .addClass('border-rose-500 hover:border-rose-500 border-2');
+            } else if (identifier.startsWith('new-')) {
+                // New field - highlight by field ID
+                const fieldId = identifier.replace('new-', '');
+                $(`.field-item[data-field-id="${fieldId}"] .field-name`)
+                    .addClass('border-rose-500 hover:border-rose-500 border-2');
+            }
         });
     }
 
@@ -202,6 +217,48 @@
     }
 
     /**
+     * Validate that all new fields have required properties (name and type)
+     * Returns { isValid: boolean, errorMessage: string }
+     */
+    function validateFieldsComplete() {
+        let hasErrors = false;
+        let errorFields = [];
+
+        // Clear previous error highlighting
+        $('.field-name, .field-type').removeClass('border-rose-500 hover:border-rose-500 border-2');
+
+        // Check each new field
+        $('.field-item').each(function() {
+            const $field = $(this);
+            const fieldName = $field.find('.field-name').val().trim();
+            const fieldType = $field.find('.field-type').val();
+
+            // Check if name is missing
+            if (!fieldName) {
+                $field.find('.field-name').addClass('border-rose-500 hover:border-rose-500 border-2');
+                hasErrors = true;
+                errorFields.push('missing name');
+            }
+
+            // Check if type is missing
+            if (!fieldType) {
+                $field.find('.field-type').addClass('border-rose-500 hover:border-rose-500 border-2');
+                hasErrors = true;
+                errorFields.push('missing type');
+            }
+        });
+
+        if (hasErrors) {
+            return {
+                isValid: false,
+                errorMessage: 'Some fields are incomplete. Please provide both a name and type for all new fields.'
+            };
+        }
+
+        return { isValid: true, errorMessage: '' };
+    }
+
+    /**
      * Initialize all event handlers for experiment fields
      */
     function initializeExperimentFields() {
@@ -210,7 +267,8 @@
             e.preventDefault();
             fieldCounter++;
             const fieldElement = createFieldElement(fieldCounter);
-            $('#custom_fields_container').append(fieldElement);
+            // Append to the main sortable container (not the nested container)
+            $('#all_fields_container').append(fieldElement);
             toggleNoFieldsMessage();
         });
 
@@ -224,8 +282,23 @@
             validateUniqueFieldNames();
         });
 
-        // Titleize field name on blur and validate uniqueness
+        // Titleize field name on blur and validate uniqueness (for NEW fields)
         $(document).on('blur', '.field-name', function () {
+            const input = $(this);
+            const value = input.val().trim();
+
+            if (value) {
+                // Apply Title Case
+                const titleCased = toTitleCase(value);
+                input.val(titleCased);
+
+                // Validate uniqueness
+                validateUniqueFieldNames();
+            }
+        });
+
+        // Titleize existing field name on blur and validate uniqueness (for EXISTING fields)
+        $(document).on('blur', '.existing-field-name', function () {
             const input = $(this);
             const value = input.val().trim();
 
@@ -331,7 +404,8 @@
     window.ExperimentFields = {
         initialize: initializeExperimentFields,
         toTitleCase: toTitleCase,
-        validateUniqueFieldNames: validateUniqueFieldNames
+        validateUniqueFieldNames: validateUniqueFieldNames,
+        validateFieldsComplete: validateFieldsComplete
     };
 
 })(jQuery);

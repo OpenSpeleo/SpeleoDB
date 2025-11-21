@@ -160,6 +160,7 @@ $(window).on('load', function() {
     let gridColumnApi = null;
     const experimentId = "{{ experiment.id }}";
     const gisToken = "{{ experiment.gis_token }}";
+    let experimentFields = null; // Will store field definitions with order and names
     
     // ============================================
     // Data Loading
@@ -167,6 +168,28 @@ $(window).on('load', function() {
     async function loadExperimentData() {
         try {
             showLoading();
+            
+            // First, fetch experiment details to get field definitions
+            const experimentUrl = (typeof Urls !== 'undefined' && Urls["api:v1:experiment-detail"])
+                ? Urls["api:v1:experiment-detail"](experimentId)
+                : `/api/v1/experiments/${experimentId}/`;
+            const experimentResponse = await fetch(experimentUrl, { credentials: 'same-origin' });
+            
+            if (!experimentResponse.ok) {
+                throw new Error(`Failed to fetch experiment details: ${experimentResponse.status}`);
+            }
+            
+            const experimentData = await experimentResponse.json();
+            experimentFields = experimentData.data?.experiment_fields || experimentData.experiment_fields || [];
+            
+            // Sort fields by order parameter
+            if (Array.isArray(experimentFields)) {
+                experimentFields.sort((a, b) => {
+                    const orderA = a.order !== undefined ? a.order : 999;
+                    const orderB = b.order !== undefined ? b.order : 999;
+                    return orderA - orderB;
+                });
+            }
             
             // Fetch GeoJSON data from the API
             const apiUrl = "{{ request.scheme }}://{{ request.get_host }}{% url 'api:v1:gis-ogc:experiment' gis_token=experiment.gis_token %}";
@@ -208,34 +231,41 @@ $(window).on('load', function() {
             const geometry = feature.geometry || {};
             const coordinates = geometry.coordinates || [];
             
-            // Build row object with standard fields in order
+            // Build row object with standard fields first
             const row = {
+                'Project Name': props.project_name || '',
+                'Project ID': props.project_id || '',
+                'Station ID': props.station_id || '',
                 'Station Name': props.station_name || '',
                 'Longitude': coordinates[0] || '',
                 'Latitude': coordinates[1] || '',
             };
             
-            // Add Measurement Date (mandatory field) before Recorded By
-            if ('measurement_date' in props) {
-                row['Measurement Date'] = formatValue(props.measurement_date);
+            // Add experiment fields in the order defined by experiment_fields
+            if (experimentFields && Array.isArray(experimentFields)) {
+                experimentFields.forEach(field => {
+                    const fieldId = field.id;
+                    const fieldName = field.name;
+                    
+                    // Get value by field UUID from properties
+                    if (fieldId in props) {
+                        row[fieldName] = formatValue(props[fieldId]);
+                    }
+                });
+            } else {
+                // Fallback: if experimentFields not loaded, add all remaining properties
+                const skipFields = ['id', 'station_name', 'station_id', 'project_name', 'project_id', 'created_by'];
+                
+                Object.keys(props).forEach(key => {
+                    if (!skipFields.includes(key)) {
+                        // Format field name: flow -> Flow
+                        const fieldName = key
+                            .replace(/_/g, ' ')
+                            .replace(/\b\w/g, l => l.toUpperCase());
+                        row[fieldName] = formatValue(props[key]);
+                    }
+                });
             }
-            
-            // Add Recorded By
-            row['Recorded By'] = props.created_by || '';
-            
-            // Add all other custom field data from properties
-            // Skip: id, station_name, created_by, measurement_date (already added)
-            const skipFields = ['id', 'station_name', 'created_by', 'measurement_date'];
-            
-            Object.keys(props).forEach(key => {
-                if (!skipFields.includes(key)) {
-                    // Format field name: flow -> Flow
-                    const fieldName = key
-                        .replace(/_/g, ' ')
-                        .replace(/\b\w/g, l => l.toUpperCase());
-                    row[fieldName] = formatValue(props[key]);
-                }
-            });
             
             rows.push(row);
         });

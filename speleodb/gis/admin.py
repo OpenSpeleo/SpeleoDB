@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -26,7 +27,6 @@ from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationTag
-from speleodb.gis.models.experiment import MandatoryFieldSlug
 from speleodb.utils.admin_filters import GeoJSONProjectFilter
 from speleodb.utils.admin_filters import StationProjectFilter
 
@@ -420,18 +420,6 @@ class LogEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         super().save_model(request, obj, form, change)
 
 
-class ExperimentFieldWidget(forms.Textarea):
-    """Custom widget for managing experiment fields with a better UI."""
-
-    template_name = "admin/experiment_field_widget.html"
-
-    def __init__(self, attrs: dict[str, Any] | None = None) -> None:
-        default_attrs = {"style": "display: none;"}  # Hide the raw textarea
-        if attrs:
-            default_attrs.update(attrs)
-        super().__init__(default_attrs)
-
-
 class ExperimentAdminForm(forms.ModelForm):  # type: ignore[type-arg]
     """Custom form for Experiment with enhanced field management."""
 
@@ -445,11 +433,9 @@ class ExperimentAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             "is_active",
             "start_date",
             "end_date",
-            "experiment_fields",
         ]
-        widgets = {
-            "experiment_fields": ExperimentFieldWidget(),
-        }
+        # Note: experiment_fields is now read-only, not editable in admin
+        # Use the API to modify experiment fields
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -462,7 +448,6 @@ class ExperimentAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             "is_active",
             "start_date",
             "end_date",
-            "experiment_fields",
         ]
 
         # Reorder fields dict
@@ -494,8 +479,7 @@ class ExperimentAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             "id",
             "creation_date",
             "modified_date",
-            "experiment_fields",  # Has custom widget with its own labeling
-            "formatted_experiment_fields",  # Computed field
+            "raw_experiment_fields_json",  # Computed field
         }
 
         for field_name, field in self.fields.items():
@@ -542,7 +526,7 @@ class ExperimentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "created_by",
         "creation_date",
         "modified_date",
-        "formatted_experiment_fields",
+        "raw_experiment_fields_json",
         "gis_token_with_refresh",
     )
     ordering = ("-creation_date",)
@@ -562,15 +546,6 @@ class ExperimentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             },
         ),
         (
-            "Data Collection Fields",
-            {
-                "fields": ("experiment_fields",),
-                "description": (
-                    "Define the fields that will be collected for each station"
-                ),
-            },
-        ),
-        (
             "Metadata",
             {
                 "fields": (
@@ -578,9 +553,8 @@ class ExperimentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     "gis_token_with_refresh",
                     "creation_date",
                     "modified_date",
-                    "formatted_experiment_fields",
+                    "raw_experiment_fields_json",
                 ),
-                "classes": ("collapse",),
             },
         ),
     )
@@ -592,87 +566,36 @@ class ExperimentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             return len(obj.experiment_fields)
         return 0
 
-    @admin.display(description="Field Definitions (Preview)")
-    def formatted_experiment_fields(self, obj: Experiment) -> str:
-        """Display experiment fields in a formatted, human-readable way."""
+    @admin.display(description="Raw JSON (Read-Only)")
+    def raw_experiment_fields_json(self, obj: Experiment) -> str:
+        """Display raw experiment_fields JSON in a formatted, read-only way."""
         if not obj.experiment_fields:
             return mark_safe(
                 '<em style="color: var(--body-quiet-color);">No fields defined</em>'
             )
 
-        html_parts = ['<div style="font-family: monospace; font-size: 0.9rem;">']
+        # Format JSON with indentation
+        formatted_json = json.dumps(obj.experiment_fields, indent=2, sort_keys=False)
 
-        for idx, (slug, field_data) in enumerate(obj.experiment_fields.items(), 1):
-            name = field_data.get("name", "Unnamed")
-            field_type = field_data.get("type", "unknown")
-            required = field_data.get("required", False)
-            # Check if field is mandatory using enum (not a 'mandatory' property)
-            is_mandatory = MandatoryFieldSlug.is_mandatory(slug)
-            options = field_data.get("options", [])
+        # Wrap in a styled pre block for proper formatting
+        html = (
+            '<pre style="'
+            "background: var(--darkened-bg); "
+            "color: var(--body-fg); "
+            "padding: 12px; "
+            "border: 1px solid var(--border-color); "
+            "border-radius: 4px; "
+            "font-family: monospace; "
+            "font-size: 0.85rem; "
+            "overflow-x: auto; "
+            "max-height: 400px; "
+            "overflow-y: auto;"
+            '">'
+            f"{formatted_json}"
+            "</pre>"
+        )
 
-            # Build field display
-            # Red asterisk for mandatory (system) fields
-            mandatory_indicator = (
-                '<span style="color: #dc2626; font-weight: bold; font-size: 1.1em;">*</span>'  # noqa: E501
-                if is_mandatory
-                else ""
-            )
-            # Required badge for data collection requirement
-            required_badge = (
-                '<span style="color: #dc2626; font-weight: bold; margin-left: 4px;">(Required)</span>'  # noqa: E501
-                if required and not is_mandatory
-                else ""
-            )
-            # Optional indicator for custom fields that are not required
-            optional_indicator = (
-                '<span style="color: var(--body-quiet-color); font-size: 0.9em; margin-left: 4px;">(Optional)</span>'  # noqa: E501
-                if not required and not is_mandatory
-                else ""
-            )
-            mandatory_badge = (
-                '<span style="background: #6366f1; color: white; padding: 2px 6px; '
-                'border-radius: 3px; font-size: 0.75rem; margin-left: 6px;">SYSTEM FIELD</span>'  # noqa: E501
-                if is_mandatory
-                else ""
-            )
-
-            html_parts.append(
-                '<div style="margin-bottom: 8px; padding: 8px; '
-                "background: var(--body-bg); border: 1px solid var(--border-color); "
-                f"border-left: 3px solid {'#6366f1' if is_mandatory else '#10b981'};"
-                'border-radius: 3px;">'
-            )
-            html_parts.append(
-                f'<strong style="color: var(--body-fg);">{idx}. {name}</strong>'
-                f"{mandatory_indicator}{required_badge}"
-                f"{optional_indicator}{mandatory_badge}"
-                '<code style="background: var(--darkened-bg); '
-                "color: var(--body-fg); padding: 2px 6px; "
-                "border-radius: 3px; font-size: 0.7rem; margin-left: 8px; "
-                f'border: 1px solid var(--border-color);">{slug}</code><br>'
-            )
-            html_parts.append(
-                '<span style="color: var(--body-quiet-color);">Type:</span> '
-                '<code style="background: var(--darkened-bg); color: var(--body-fg); '
-                "padding: 2px 6px; border-radius: 3px; "
-                'border: 1px solid var(--border-color);">'
-                f"{field_type}</code>"
-            )
-
-            if options:
-                options_str = ", ".join(options[:5])  # Show first 5 options
-                if len(options) > 5:  # noqa: PLR2004
-                    options_str += f" ... (+{len(options) - 5} more)"
-                html_parts.append(
-                    f'<br><span style="color: var(--body-quiet-color);">Options: </span>'  # noqa: E501
-                    f'<span style="color: #10b981;">{options_str}</span>'
-                )
-
-            html_parts.append("</div>")
-
-        html_parts.append("</div>")
-
-        return mark_safe("".join(html_parts))  # noqa: S308
+        return mark_safe(html)  # noqa: S308
 
     @admin.display(description="GIS Token")
     def gis_token_with_refresh(self, obj: Experiment) -> str:
@@ -731,19 +654,17 @@ class ExperimentRecordAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "id",
         "experiment",
         "station",
-        "created_by",
         "creation_date",
         "modified_date",
         "data",
     ]
     ordering = ("-modified_date",)
-    list_filter = ["created_by", "experiment", "creation_date", "modified_date"]
+    list_filter = ["experiment", "creation_date", "modified_date"]
     search_fields = ["name", "description", "experiment"]
     readonly_fields = (
         "id",
         "experiment",
         "station",
-        "created_by",
         "creation_date",
         "modified_date",
     )

@@ -22,7 +22,7 @@ from speleodb.gis.models import LogEntry
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models.experiment import FieldType
-from speleodb.gis.models.experiment import MandatoryFieldSlug
+from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.gis.models.station import StationResourceType
 from speleodb.plugins.models import PluginRelease
 from speleodb.plugins.models import PublicAnnoucement
@@ -440,11 +440,12 @@ class ExperimentFactory(DjangoModelFactory[Experiment]):
     )
     experiment_fields: dict[str, Any] = factory.LazyAttribute(  # type: ignore[assignment]
         lambda _: {
-            **MandatoryFieldSlug.get_mandatory_fields(),
-            "ph_level": {
-                "name": "pH Level",
+            **MandatoryFieldUuid.get_mandatory_fields(),
+            Experiment.generate_field_uuid(): {
+                "name": "Ph Level",
                 "type": FieldType.NUMBER.value,
                 "required": False,
+                "order": 2,
             },
         }
     )

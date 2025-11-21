@@ -32,6 +32,7 @@ from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import Station
+from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import ErrorResponse
@@ -166,7 +167,10 @@ class ExperimentApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 
-        data = request.data
+        # Create a mutable copy of request.data
+        data = (
+            request.data.copy() if hasattr(request.data, "copy") else dict(request.data)
+        )
         data["created_by"] = user.email
 
         serializer = self.get_serializer(data=data)
@@ -413,12 +417,14 @@ class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
                         status=status.HTTP_403_FORBIDDEN,
                     )
 
+                data = request.data.copy()
+                data[MandatoryFieldUuid.SUBMITTER_EMAIL.value] = user.email
+
                 serializer = self.get_serializer(
                     data={
-                        "created_by": user.email,
                         "experiment": experiment_or_response.id,
                         "station": station.id,
-                        "data": request.data,
+                        "data": data,
                     }
                 )
 
@@ -538,30 +544,26 @@ class ExperimentExportExcelApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
 
         # Build headers from experiment fields
         headers = [
+            "Project Name",
+            "Project ID",
+            "Station ID",
             "Station Name",
             "Longitude",
             "Latitude",
         ]
 
-        # Add Measurement Date (mandatory field) before Recorded By
+        # Sort ALL experiment fields by order (including mandatory fields)
         field_definitions = experiment.experiment_fields or {}
-        if "measurement_date" in field_definitions:
-            headers.append(
-                field_definitions["measurement_date"].get("name", "Measurement Date")
-            )
 
-        # Add Recorded By
-        headers.append("Recorded By")
+        # Convert field_definitions to list and sort by order
+        all_fields = [
+            (field_uuid, field_data)
+            for field_uuid, field_data in field_definitions.items()
+        ]
+        all_fields.sort(key=lambda x: x[1].get("order", 999))
 
-        # Add other custom fields (excluding measurement_date which is already added)
-        field_slugs = [
-            slug
-            for slug in field_definitions
-            if slug not in ["measurement_date", "submitter_email"]
-        ]
-        field_names = [
-            field_definitions[slug].get("name", slug) for slug in field_slugs
-        ]
+        field_uuids = [field_uuid for field_uuid, _ in all_fields]
+        field_names = [field_data.get("name", "") for _, field_data in all_fields]
         headers.extend(field_names)
 
         # Write headers
@@ -574,6 +576,20 @@ class ExperimentExportExcelApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
         row_num = 1
         for record in records:
             col_num = 0
+
+            # Project Name
+            worksheet.write(row_num, col_num, record.station.project.name, cell_format)
+            col_num += 1
+
+            # Project ID
+            worksheet.write(
+                row_num, col_num, str(record.station.project.id), cell_format
+            )
+            col_num += 1
+
+            # Station ID
+            worksheet.write(row_num, col_num, str(record.station.id), cell_format)
+            col_num += 1
 
             # Station Name
             worksheet.write(row_num, col_num, record.station.name, cell_format)
@@ -593,22 +609,10 @@ class ExperimentExportExcelApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
                 worksheet.write(row_num, col_num, "", cell_format)
             col_num += 1
 
-            # Measurement Date (mandatory field, comes before Recorded By)
+            # All experiment fields (sorted by order, including mandatory fields)
             record_data = record.data or {}
-            if "measurement_date" in field_definitions:
-                value = record_data.get("measurement_date", "")
-                if value is None:
-                    value = ""
-                worksheet.write(row_num, col_num, str(value), cell_format)
-                col_num += 1
-
-            # Recorded By (created_by)
-            worksheet.write(row_num, col_num, record.created_by, cell_format)
-            col_num += 1
-
-            # Other custom fields data (measurement_date already handled)
-            for field_slug in field_slugs:
-                value = record_data.get(field_slug, "")
+            for field_uuid in field_uuids:
+                value = record_data.get(field_uuid, "")
 
                 match value:
                     case None:

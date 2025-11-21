@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -13,6 +14,7 @@ from frontend_private.views.base import AuthenticatedTemplateView
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
+from speleodb.gis.models.experiment import MandatoryFieldUuid
 
 if TYPE_CHECKING:
     from django.http import HttpResponse
@@ -55,12 +57,28 @@ class _BaseExperimentView(AuthenticatedTemplateView):
             is_active=True,
         )
 
+        # Prepare experiment fields with JSON-serialized options for template
+        # Sort by order for display
+        experiment_fields_with_json = {}
+        if experiment.experiment_fields:
+            # Use get_sorted_fields() helper method
+            sorted_fields = experiment.get_sorted_fields()
+            for field_id, field_data in sorted_fields:
+                field_copy = field_data.copy()
+                # Serialize options as JSON string for data attribute
+                if field_copy.get("options"):
+                    field_copy["options_json"] = json.dumps(field_copy["options"])
+                # Dict preserves insertion order in Python 3.7+
+                experiment_fields_with_json[field_id] = field_copy
+
         return {
             "experiment": experiment,
+            "experiment_fields_with_json": experiment_fields_with_json,
             # "is_experiment_admin": best_permission.level == PermissionLevel.ADMIN,
             "is_experiment_admin": user_perm.level == PermissionLevel.ADMIN,
             # "has_write_access": best_permission.level >= PermissionLevel.READ_AND_WRITE,  # noqa: E501
             "has_write_access": user_perm.level >= PermissionLevel.READ_AND_WRITE,
+            "mandatory_field_uuids": MandatoryFieldUuid.get_all_uuids(),
         }
 
 

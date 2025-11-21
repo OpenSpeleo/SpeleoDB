@@ -55,51 +55,135 @@
             <section>
                 <div class="mt-5">
                     <h3 class="text-lg font-semibold text-slate-100 mb-4">Data Collection Fields</h3>
-                    <p class="text-sm text-slate-400 mb-4">Fields defined for data collection at each station. Existing fields cannot be modified, but you can add new ones.</p>
+                    <p class="text-sm text-slate-400 mb-4">Drag and drop to reorder fields. Existing fields cannot be modified, but you can add new ones.</p>
                     
-                    <!-- Existing Fields (Read-only) -->
-                    {% if experiment.experiment_fields %}
-                    <div class="space-y-3 mb-6">
-                        <h4 class="text-sm font-medium text-slate-300 mb-3">Existing Fields (Read-only)</h4>
+                    <!-- All Fields Container (Sortable) -->
+                    <div id="all_fields_container" class="space-y-3 mb-6">
+                        {% if experiment_fields_with_json %}
+                        <h4 class="text-sm font-medium text-slate-300 mb-3">Existing Fields 
+                            <span class="text-xs text-slate-400 font-normal ml-2">(Drag to reorder • Name editable • Type & Required immutable)</span>
+                        </h4>
                         
-                        {% for slug, field_data in experiment.experiment_fields.items %}
-                        <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-slate-600 existing-field-item" data-field-name="{{ field_data.name }}">
-                            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-                                <div class="flex-1">
-                                    <label class="block text-xs font-medium text-slate-400 mb-1">Field Name</label>
-                                    <input type="text" value="{{ field_data.name }}" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
+                        {% for field_id, field_data in experiment_fields_with_json.items %}
+                        {% if field_id in mandatory_field_uuids %}
+                            <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-amber-600 border-opacity-50 existing-field-item" 
+                                 data-field-id="{{ field_id }}"
+                                 data-field-type="{{ field_data.type }}"
+                                 data-field-required="{{ field_data.required|lower }}"
+                                 {% if field_data.options_json %}data-field-options='{{ field_data.options_json }}'{% endif %}>
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                    <!-- Drag Handle -->
+                                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 flex-shrink-0" title="Drag to reorder">
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <label class="block text-xs font-medium text-slate-400 mb-1">
+                                            Field Name 
+                                            <span class="text-amber-400">🔒 Mandatory - Not Editable</span>
+                                        </label>
+                                        <input type="text" 
+                                               value="{{ field_data.name }}" 
+                                               class="existing-field-name form-input w-full bg-slate-600 opacity-60 cursor-not-allowed"
+                                               disabled
+                                               placeholder="Enter field name" />
+                                    </div>
+                                    <div class="flex-1">
+                                        <label class="block text-xs font-medium text-slate-400 mb-1">
+                                            Field Type 
+                                            <span class="text-slate-500">🔒 Immutable</span>
+                                        </label>
+                                        <input type="text" value="{{ field_data.type|title }}" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
+                                    </div>
+                                    <div class="flex items-center mt-5 sm:mt-0">
+                                        <label class="flex items-center cursor-not-allowed opacity-60">
+                                            <input type="checkbox" {% if field_data.required %}checked{% endif %} disabled class="form-checkbox" />
+                                            <span class="text-sm ml-2 text-slate-400">Required 🔒</span>
+                                        </label>
+                                    </div>
                                 </div>
-                                <div class="flex-1">
-                                    <label class="block text-xs font-medium text-slate-400 mb-1">Field Type</label>
-                                    <input type="text" value="{{ field_data.type|title }}" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
-                                </div>
-                                <div class="flex items-center mt-5 sm:mt-0">
-                                    <label class="flex items-center cursor-not-allowed opacity-60">
-                                        <input type="checkbox" {% if field_data.required %}checked{% endif %} disabled class="form-checkbox" />
-                                        <span class="text-sm ml-2 text-slate-400">Required</span>
+                                {% if field_data.options %}
+                                <div class="mt-3 pt-3 border-t border-slate-600">
+                                    <label class="block text-xs font-medium text-slate-400 mb-2">
+                                        Options 
+                                        <span class="text-slate-500 text-xs">🔒 Immutable</span>
                                     </label>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% for option in field_data.options %}
+                                        <span class="inline-flex items-center px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
+                                            {{ option }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
                                 </div>
+                                {% endif %}
                             </div>
-                            {% if field_data.options %}
-                            <div class="mt-3 pt-3 border-t border-slate-600">
-                                <label class="block text-xs font-medium text-slate-400 mb-2">Options</label>
-                                <div class="flex flex-wrap gap-2">
-                                    {% for option in field_data.options %}
-                                    <span class="inline-flex items-center px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
-                                        {{ option }}
-                                    </span>
-                                    {% endfor %}
+                        {% else %}
+                            <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-slate-600 existing-field-item" 
+                                 data-field-id="{{ field_id }}"
+                                 data-field-type="{{ field_data.type }}"
+                                 data-field-required="{{ field_data.required|lower }}"
+                                 {% if field_data.options_json %}data-field-options='{{ field_data.options_json }}'{% endif %}>
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                    <!-- Drag Handle -->
+                                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 flex-shrink-0" title="Drag to reorder">
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <label class="block text-xs font-medium text-slate-400 mb-1">
+                                            Field Name 
+                                            <span class="text-emerald-400">✏️ Editable</span>
+                                        </label>
+                                        <input type="text" 
+                                               value="{{ field_data.name }}" 
+                                               class="existing-field-name form-input w-full {% if not has_write_access %}bg-slate-600 opacity-60 cursor-not-allowed{% endif %}"
+                                               {% if not has_write_access %}disabled{% endif %}
+                                               placeholder="Enter field name" />
+                                    </div>
+                                    <div class="flex-1">
+                                        <label class="block text-xs font-medium text-slate-400 mb-1">
+                                            Field Type 
+                                            <span class="text-slate-500">🔒 Immutable</span>
+                                        </label>
+                                        <input type="text" value="{{ field_data.type|title }}" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
+                                    </div>
+                                    <div class="flex items-center mt-5 sm:mt-0">
+                                        <label class="flex items-center cursor-not-allowed opacity-60">
+                                            <input type="checkbox" {% if field_data.required %}checked{% endif %} disabled class="form-checkbox" />
+                                            <span class="text-sm ml-2 text-slate-400">Required 🔒</span>
+                                        </label>
+                                    </div>
                                 </div>
+                                {% if field_data.options %}
+                                <div class="mt-3 pt-3 border-t border-slate-600">
+                                    <label class="block text-xs font-medium text-slate-400 mb-2">
+                                        Options 
+                                        <span class="text-slate-500 text-xs">🔒 Immutable</span>
+                                    </label>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% for option in field_data.options %}
+                                        <span class="inline-flex items-center px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
+                                            {{ option }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
-                            {% endif %}
-                        </div>
+                        {% endif %}
                         {% endfor %}
+                        {% endif %}
+                        
+                        <!-- New custom fields will be dynamically added here via JavaScript -->
                     </div>
-                    {% endif %}
+                    <!-- End of all_fields_container -->
 
-                    <!-- Custom Fields (New fields can be added) -->
-                     {% if has_write_access %}
-                    <div>
+                    <!-- Add Field Button and Message -->
+                    {% if has_write_access %}
+                    <div class="mt-4">
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="text-sm font-medium text-slate-300">Add New Custom Fields</h4>
                             <button type="button" id="add_field_btn" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
@@ -110,10 +194,6 @@
                             </button>
                         </div>
                         
-                        <div id="custom_fields_container" class="space-y-3">
-                            <!-- New custom fields will be added here dynamically -->
-                        </div>
-
                         <div id="no_fields_message" class="text-center py-8 text-slate-500 border-2 border-dashed border-slate-600 rounded-lg">
                             No new fields to add. Click "Add Field" to create one.
                         </div>
@@ -144,7 +224,40 @@
 </div>
 {% endblock right_panel %}
 
+{% block extra_css %}
+<style>
+    /* Drag and drop styles */
+    .sortable-ghost {
+        opacity: 0.4;
+        background: #334155;
+    }
+    
+    .sortable-drag {
+        opacity: 1;
+        cursor: grabbing !important;
+    }
+    
+    .sortable-fallback {
+        opacity: 0.8;
+        background: #1e293b;
+        border: 2px dashed #6366f1 !important;
+    }
+</style>
+{% endblock extra_css %}
+
 {% block extra_js %}
+
+{% if debug %}
+<script src="{% static 'private/js/vendors/Sortable.min.js' %}"></script>
+{% else %}
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js" 
+    integrity="sha512-csIng5zcB+XpulRUa+ev1zKo7zRNGpEaVfNB9On1no9KYTEY/rLGAEEpvgdw6nim1WdTuihZY1eqZ31K7/fZjw==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+{% endif %}
+
 <script src="{% static 'private/js/experiment-fields.js' %}"></script>
 {% endblock extra_js %}
 
@@ -154,35 +267,97 @@
         // Initialize common experiment fields functionality
         ExperimentFields.initialize();
 
-        // Collect new custom fields data (details.html specific)
-        // Only collects new fields, not existing ones
-        function collectNewCustomFields() {
+        // Initialize drag and drop for field reordering
+        const allFieldsContainer = document.getElementById('all_fields_container');
+        if (allFieldsContainer) {
+            Sortable.create(allFieldsContainer, {
+                animation: 150,
+                handle: '.drag-handle',
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                forceFallback: true,
+                fallbackClass: 'sortable-fallback',
+                draggable: '.existing-field-item, .field-item' // Only field elements are draggable, not headers
+            });
+        }
+
+        // Collect ALL fields in order (details.html specific)
+        // Includes existing fields (with editable names) and new fields
+        // IMPORTANT: Iterate through DOM children in actual order to respect drag & drop
+        function collectAllFields() {
             const fields = [];
             
-            // Only collect new custom fields (not existing ones)
-            $('.field-item').each(function() {
-                const fieldName = $(this).find('.field-name').val().trim();
-                const fieldType = $(this).find('.field-type').val();
-                const fieldRequired = $(this).find('.field-required').is(':checked');
+            // Iterate through all children of the sortable container in DOM order
+            $('#all_fields_container').children().each(function() {
+                const $element = $(this);
                 
-                // Validate that both name and type are provided
-                if (fieldName && fieldType) {
+                // Skip non-field elements (like headers)
+                if (!$element.hasClass('existing-field-item') && !$element.hasClass('field-item')) {
+                    return true; // continue to next element
+                }
+                
+                // Check if this is an existing field
+                if ($element.hasClass('existing-field-item')) {
+                    const fieldId = $element.data('field-id');
+                    const fieldType = $element.data('field-type');
+                    const fieldRequired = $element.data('field-required');
+                    const fieldOptions = $element.data('field-options');
+                    
+                    // Get edited name from input field (not from data attribute!)
+                    const editedName = $element.find('.existing-field-name').val().trim();
+                    
+                    if (!editedName) {
+                        console.warn('Empty field name for field:', fieldId);
+                        return true; // Skip this field
+                    }
+                    
                     const fieldData = {
-                        name: ExperimentFields.toTitleCase(fieldName),
+                        id: fieldId,  // Include ID for existing fields
+                        name: editedName,  // Use edited name from input
                         type: fieldType,
-                        required: fieldRequired
+                        required: fieldRequired === 'true' || fieldRequired === true
                     };
                     
-                    // If field type is select, collect options from tags
-                    if (fieldType === 'select') {
-                        const options = [];
-                        $(this).find('.field-tags-container .tag-text').each(function() {
-                            options.push($(this).text());
-                        });
-                        fieldData.options = options;
+                    // Add options if present (may be JSON string from data attribute)
+                    if (fieldOptions) {
+                        try {
+                            const parsedOptions = typeof fieldOptions === 'string' ? JSON.parse(fieldOptions) : fieldOptions;
+                            if (Array.isArray(parsedOptions) && parsedOptions.length > 0) {
+                                fieldData.options = parsedOptions;
+                            }
+                        } catch (e) {
+                            console.warn('Failed to parse field options:', e);
+                        }
                     }
                     
                     fields.push(fieldData);
+                }
+                // Check if this is a new custom field
+                else if ($element.hasClass('field-item')) {
+                    const fieldName = $element.find('.field-name').val().trim();
+                    const fieldType = $element.find('.field-type').val();
+                    const fieldRequired = $element.find('.field-required').is(':checked');
+                    
+                    // Validate that both name and type are provided
+                    if (fieldName && fieldType) {
+                        const fieldData = {
+                            // No ID = new field, backend will generate
+                            name: fieldName,  // Backend applies titlecase
+                            type: fieldType,
+                            required: fieldRequired
+                        };
+                        
+                        // If field type is select, collect options from tags
+                        if (fieldType === 'select') {
+                            const options = [];
+                            $element.find('.field-tags-container .tag-text').each(function() {
+                                options.push($(this).text());
+                            });
+                            fieldData.options = options;
+                        }
+                        
+                        fields.push(fieldData);
+                    }
                 }
             });
             
@@ -195,6 +370,14 @@
 
             $("#error_div").hide();
             $("#success_div").hide();
+
+            // Validate that all fields are complete (have name and type)
+            const completenessValidation = ExperimentFields.validateFieldsComplete();
+            if (!completenessValidation.isValid) {
+                $("#modal_error_txt").html(completenessValidation.errorMessage);
+                $("#modal_error").css('display', 'flex');
+                return false;
+            }
 
             // Validate unique field names
             if (!ExperimentFields.validateUniqueFieldNames()) {
@@ -210,11 +393,12 @@
             // Convert to object
             var dataObject = Object.fromEntries(formData);
             
-            // Collect new custom fields (if any)
-            const newFields = collectNewCustomFields();
-            if (newFields.length > 0) {
-                // Backend handles merging with existing fields
-                dataObject.experiment_fields = newFields;
+            // Collect ALL fields (existing + new) in order
+            // Array position determines order
+            const allFields = collectAllFields();
+            if (allFields.length > 0) {
+                // Send complete array - backend validates all IDs are present
+                dataObject.experiment_fields = allFields;
             }
 
             $.ajax({

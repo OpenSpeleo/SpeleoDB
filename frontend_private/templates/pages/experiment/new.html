@@ -78,17 +78,28 @@
                             <section>
                                 <div class="mt-5">
                                     <h3 class="text-lg font-semibold text-slate-100 mb-4">Data Collection Fields</h3>
-                                    <p class="text-sm text-slate-400 mb-4">Define the fields that will be tracked for each station in this experiment.</p>
+                                    <p class="text-sm text-slate-400 mb-4">Drag and drop to reorder fields. Define the fields that will be tracked for each station in this experiment.</p>
                                     
-                                    <!-- Mandatory Fields -->
-                                    <div class="space-y-3 mb-6">
-                                        <h4 class="text-sm font-medium text-slate-300 mb-3">Mandatory Fields (non-editable)</h4>
+                                    <!-- All Fields Container (Sortable) -->
+                                    <div id="all_fields_container" class="space-y-3 mb-6">
+                                        <h4 class="text-sm font-medium text-slate-300 mb-3">All Fields 
+                                            <span class="text-xs text-slate-400 font-normal ml-2">(Drag to reorder • Mandatory fields in amber)</span>
+                                        </h4>
                                         
-                                        <!-- Date Field -->
-                                        <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-slate-600">
+                                        <!-- Measurement Date (Mandatory) -->
+                                        <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-amber-600 border-opacity-50 mandatory-field-item" data-field-name="Measurement Date" data-field-type="date" data-field-required="true">
                                             <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                                <!-- Drag Handle -->
+                                                <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 flex-shrink-0" title="Drag to reorder">
+                                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+                                                    </svg>
+                                                </div>
                                                 <div class="flex-1">
-                                                    <label class="block text-xs font-medium text-slate-400 mb-1">Field Name</label>
+                                                    <label class="block text-xs font-medium text-slate-400 mb-1">
+                                                        Field Name 
+                                                        <span class="text-amber-400">🔒 Mandatory</span>
+                                                    </label>
                                                     <input type="text" value="Measurement Date" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
                                                 </div>
                                                 <div class="flex-1">
@@ -104,11 +115,20 @@
                                             </div>
                                         </div>
 
-                                        <!-- Submitter Field -->
-                                        <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-slate-600">
+                                        <!-- Submitter Email (Mandatory) -->
+                                        <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-amber-600 border-opacity-50 mandatory-field-item" data-field-name="Submitter Email" data-field-type="text" data-field-required="true">
                                             <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                                <!-- Drag Handle -->
+                                                <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 flex-shrink-0" title="Drag to reorder">
+                                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+                                                    </svg>
+                                                </div>
                                                 <div class="flex-1">
-                                                    <label class="block text-xs font-medium text-slate-400 mb-1">Field Name</label>
+                                                    <label class="block text-xs font-medium text-slate-400 mb-1">
+                                                        Field Name 
+                                                        <span class="text-amber-400">🔒 Mandatory</span>
+                                                    </label>
                                                     <input type="text" value="Submitter Email" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
                                                 </div>
                                                 <div class="flex-1">
@@ -123,12 +143,15 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        
+                                        <!-- New custom fields will be dynamically added here via JavaScript -->
                                     </div>
+                                    <!-- End of all_fields_container -->
 
-                                    <!-- Custom Fields -->
-                                    <div>
+                                    <!-- Add Field Button and Message -->
+                                    <div class="mt-4">
                                         <div class="flex justify-between items-center mb-3">
-                                            <h4 class="text-sm font-medium text-slate-300">Custom Fields</h4>
+                                            <h4 class="text-sm font-medium text-slate-300">Add Custom Fields</h4>
                                             <button type="button" id="add_field_btn" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
                                                 <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" viewBox="0 0 16 16">
                                                     <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
@@ -137,10 +160,6 @@
                                             </button>
                                         </div>
                                         
-                                        <div id="custom_fields_container" class="space-y-3">
-                                            <!-- Custom fields will be added here dynamically -->
-                                        </div>
-
                                         <div id="no_fields_message" class="text-center py-8 text-slate-500 border-2 border-dashed border-slate-600 rounded-lg">
                                             No custom fields yet. Click "Add Field" to create one.
                                         </div>
@@ -172,8 +191,41 @@
 </main>
 {% endblock content %}
 
+{% block extra_css %}
+<style>
+    /* Drag and drop styles */
+    .sortable-ghost {
+        opacity: 0.4;
+        background: #334155;
+    }
+    
+    .sortable-drag {
+        opacity: 1;
+        cursor: grabbing !important;
+    }
+    
+    .sortable-fallback {
+        opacity: 0.8;
+        background: #1e293b;
+        border: 2px dashed #6366f1 !important;
+    }
+</style>
+{% endblock extra_css %}
+
 {% block extra_js %}
 <script src="{% url 'url_reverse.js' %}"></script>
+
+{% if debug %}
+<script src="{% static 'private/js/vendors/Sortable.min.js' %}"></script>
+{% else %}
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js" 
+    integrity="sha512-csIng5zcB+XpulRUa+ev1zKo7zRNGpEaVfNB9On1no9KYTEY/rLGAEEpvgdw6nim1WdTuihZY1eqZ31K7/fZjw==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+{% endif %}
+
 <script src="{% static 'private/js/experiment-fields.js' %}"></script>
 {% endblock extra_js %}
 
@@ -183,49 +235,71 @@
         // Initialize common experiment fields functionality
         ExperimentFields.initialize();
 
-        // Collect custom fields data (new.html specific)
-        // Note: Slug generation and hashing are done server-side by the serializer
-        // Mandatory fields are identified by their slug, not a 'mandatory' property
+        // Initialize drag and drop for field reordering
+        const allFieldsContainer = document.getElementById('all_fields_container');
+        if (allFieldsContainer) {
+            Sortable.create(allFieldsContainer, {
+                animation: 150,
+                handle: '.drag-handle',
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                forceFallback: true,
+                fallbackClass: 'sortable-fallback',
+                draggable: '.mandatory-field-item, .field-item' // Only field elements are draggable, not headers
+            });
+        }
+
+        // Collect ALL fields data in DOM order (new.html specific)
+        // Note: UUIDs and order are auto-generated server-side
+        // Mandatory fields are identified by their name matching
         function collectCustomFields() {
             const fields = [];
             
-            // Add mandatory fields (server will generate slugs and hashes)
-            // These correspond to MandatoryFieldSlug enum values
-            fields.push({
-                name: 'Measurement Date',
-                type: 'date',
-                required: true
-            });
-            
-            fields.push({
-                name: 'Submitter Email',
-                type: 'text',
-                required: true
-            });
-            
-            // Add custom fields
-            $('.field-item').each(function() {
-                const fieldName = $(this).find('.field-name').val().trim();
-                const fieldType = $(this).find('.field-type').val();
-                const fieldRequired = $(this).find('.field-required').is(':checked');
+            // Iterate through all children of the sortable container in DOM order
+            $('#all_fields_container').children().each(function() {
+                const $element = $(this);
                 
-                if (fieldName) {
-                    const fieldData = {
-                        name: ExperimentFields.toTitleCase(fieldName),
+                // Skip non-field elements (like headers)
+                if (!$element.hasClass('mandatory-field-item') && !$element.hasClass('field-item')) {
+                    return true; // continue to next element
+                }
+                
+                // Check if this is a mandatory field
+                if ($element.hasClass('mandatory-field-item')) {
+                    const fieldName = $element.data('field-name');
+                    const fieldType = $element.data('field-type');
+                    const fieldRequired = $element.data('field-required');
+                    
+                    fields.push({
+                        name: fieldName,
                         type: fieldType,
                         required: fieldRequired
-                    };
+                    });
+                }
+                // Check if this is a custom field
+                else if ($element.hasClass('field-item')) {
+                    const fieldName = $element.find('.field-name').val().trim();
+                    const fieldType = $element.find('.field-type').val();
+                    const fieldRequired = $element.find('.field-required').is(':checked');
                     
-                    // If field type is select, collect options from tags
-                    if (fieldType === 'select') {
-                        const options = [];
-                        $(this).find('.field-tags-container .tag-text').each(function() {
-                            options.push($(this).text());
-                        });
-                        fieldData.options = options;
+                    if (fieldName && fieldType) {
+                        const fieldData = {
+                            name: fieldName,  // Backend applies titlecase automatically
+                            type: fieldType,
+                            required: fieldRequired
+                        };
+                        
+                        // If field type is select, collect options from tags
+                        if (fieldType === 'select') {
+                            const options = [];
+                            $element.find('.field-tags-container .tag-text').each(function() {
+                                options.push($(this).text());
+                            });
+                            fieldData.options = options;
+                        }
+                        
+                        fields.push(fieldData);
                     }
-                    
-                    fields.push(fieldData);
                 }
             });
             
@@ -238,6 +312,14 @@
 
             $("#error_div").hide();
             $("#success_div").hide();
+
+            // Validate that all fields are complete (have name and type)
+            const completenessValidation = ExperimentFields.validateFieldsComplete();
+            if (!completenessValidation.isValid) {
+                $("#modal_error_txt").html(completenessValidation.errorMessage);
+                $("#modal_error").css('display', 'flex');
+                return false;
+            }
 
             // Validate unique field names
             if (!ExperimentFields.validateUniqueFieldNames()) {

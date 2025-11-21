@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import re
 import uuid
 from typing import TYPE_CHECKING
 
@@ -138,7 +139,7 @@ class TestExperimentAPI(BaseAPITestCase):
             "experiment_fields": [
                 {"name": "Measurement Date", "type": "date", "required": True},
                 {"name": "Submitter Email", "type": "text", "required": True},
-                {"name": "pH Level", "type": "number", "required": False},
+                {"name": "Ph Level", "type": "number", "required": False},
             ],
         }
 
@@ -165,8 +166,17 @@ class TestExperimentAPI(BaseAPITestCase):
         experiment = Experiment.objects.get(id=response_data["id"])
         assert experiment.name == "New Experiment"
         assert isinstance(experiment.experiment_fields, dict)
-        assert "measurement_date" in experiment.experiment_fields
-        assert "ph_level" in experiment.experiment_fields
+        assert "00000000-0000-0000-0000-000000000001" in experiment.experiment_fields
+        # Find Ph Level field by name
+        ph_uuid = next(
+            (
+                k
+                for k, v in experiment.experiment_fields.items()
+                if v["name"] == "Ph Level"
+            ),
+            None,
+        )
+        assert ph_uuid is not None
 
     def test_post_create_experiment_with_select_field(self) -> None:
         """Test POST endpoint with select field type."""
@@ -179,6 +189,7 @@ class TestExperimentAPI(BaseAPITestCase):
                     "name": "Quality",
                     "type": "select",
                     "required": True,
+                    "order": 2,
                     "options": ["Excellent", "Good", "Fair", "Poor"],
                 },
             ],
@@ -268,9 +279,10 @@ class TestExperimentAPI(BaseAPITestCase):
             "experiment_fields": [
                 {"name": "Measurement Date", "type": "date", "required": True},
                 {
-                    "name": "pH Level",
+                    "name": "Ph Level",
                     "type": "number",
                     "required": False,
+                    "order": 1,
                     "options": ["1", "2", "3"],
                 },
             ],
@@ -413,6 +425,7 @@ class TestExperimentAPIFuzzy:
                 "name": f"Test {field_type}",
                 "type": field_type,
                 "required": False,
+                "order": 2,
             }
 
             # Add options for select type
@@ -439,7 +452,7 @@ class TestExperimentAPIFuzzy:
 
     def test_fuzzy_many_fields(self, user: User) -> None:
         """Test serializer handles many fields."""
-        fields: list[dict[str, str | bool]] = [
+        fields: list[dict[str, str | bool | int]] = [
             {"name": "Measurement Date", "type": "date", "required": True},
             {"name": "Submitter Email", "type": "text", "required": True},
         ]
@@ -447,10 +460,11 @@ class TestExperimentAPIFuzzy:
         # Add 100 custom fields
         for i in range(100):
             field_type = random.choice(FieldType.get_all_types())
-            field: dict[str, str | bool | list[str]] = {
+            field: dict[str, str | bool | int | list[str]] = {
                 "name": f"Field {i}",
                 "type": field_type,
                 "required": random.choice([True, False]),
+                "order": i + 2,
             }
             # Add options for select type
             if field_type == FieldType.SELECT.value:
@@ -478,12 +492,13 @@ class TestExperimentAPIFuzzy:
             "experiment_fields": [
                 {"name": "Measurement Date", "type": "date", "required": True},
                 {"name": "Submitter Email", "type": "text", "required": True},
-                {"name": "pH Niveau", "type": "number", "required": False},  # French
+                {"name": "Ph Niveau", "type": "number", "required": False},  # French
                 {"name": "温度", "type": "number", "required": False},  # Chinese
                 {
                     "name": "температура",
                     "type": "number",
                     "required": False,
+                    "order": 4,
                 },  # Cyrillic
             ],
         }
@@ -519,21 +534,26 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
 
     def test_get_experiment_detail(self) -> None:
         """Test GET endpoint retrieves a specific experiment."""
+        ph_uuid = Experiment.generate_field_uuid()
+
         experiment_fields = {
-            "measurement_date": {
+            "00000000-0000-0000-0000-000000000001": {
                 "name": "Measurement Date",
                 "type": FieldType.DATE.value,
                 "required": True,
+                "order": 0,
             },
-            "submitter_email": {
+            "00000000-0000-0000-0000-000000000002": {
                 "name": "Submitter Email",
                 "type": FieldType.TEXT.value,
                 "required": True,
+                "order": 1,
             },
-            "ph_level": {
-                "name": "pH Level",
+            ph_uuid: {
+                "name": "Ph Level",
                 "type": FieldType.NUMBER.value,
                 "required": False,
+                "order": 2,
             },
         }
         experiment = ExperimentFactory.create(
@@ -649,21 +669,26 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
 
     def test_put_add_new_fields(self) -> None:
         """Test PUT endpoint can add new fields to existing experiment."""
+        ph_uuid = Experiment.generate_field_uuid()
+
         experiment_fields = {
-            "measurement_date": {
+            "00000000-0000-0000-0000-000000000001": {
                 "name": "Measurement Date",
                 "type": FieldType.DATE.value,
                 "required": True,
+                "order": 0,
             },
-            "submitter_email": {
+            "00000000-0000-0000-0000-000000000002": {
                 "name": "Submitter Email",
                 "type": FieldType.TEXT.value,
                 "required": True,
+                "order": 1,
             },
-            "ph_level": {
-                "name": "pH Level",
+            ph_uuid: {
+                "name": "Ph Level",
                 "type": FieldType.NUMBER.value,
                 "required": False,
+                "order": 2,
             },
         }
 
@@ -689,6 +714,7 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
                     "name": "Quality Rating",
                     "type": "select",
                     "required": True,
+                    "order": 4,
                     "options": ["Excellent", "Good", "Fair"],
                 },
             ],
@@ -708,7 +734,7 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
         assert len(response_data["experiment_fields"]) == 5  # noqa: PLR2004
 
         field_names = [f["name"] for f in response_data["experiment_fields"]]
-        assert "pH Level" in field_names  # Original field preserved
+        assert "Ph Level" in field_names  # Original field preserved
         assert "Water Temperature" in field_names  # New field added
         assert "Quality Rating" in field_names  # New field added
 
@@ -718,21 +744,26 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
 
     def test_put_cannot_modify_existing_field(self) -> None:
         """Test PUT endpoint cannot modify existing field properties."""
+        ph_uuid = Experiment.generate_field_uuid()
+
         experiment_fields = {
-            "measurement_date": {
+            "00000000-0000-0000-0000-000000000001": {
                 "name": "Measurement Date",
                 "type": FieldType.DATE.value,
                 "required": True,
+                "order": 0,
             },
-            "submitter_email": {
+            "00000000-0000-0000-0000-000000000002": {
                 "name": "Submitter Email",
                 "type": FieldType.TEXT.value,
                 "required": True,
+                "order": 1,
             },
-            "ph_level": {
-                "name": "pH Level",
+            ph_uuid: {
+                "name": "Ph Level",
                 "type": FieldType.NUMBER.value,
                 "required": False,
+                "order": 2,
             },
         }
 
@@ -753,7 +784,12 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
         data = {
             "name": "Test Experiment",
             "experiment_fields": [
-                {"name": "pH Level", "type": "text", "required": False},  # Changed type
+                {
+                    "id": ph_uuid,
+                    "name": "Ph Level",
+                    "type": "text",
+                    "required": False,
+                },  # Changed type
             ],
         }
 
@@ -775,21 +811,26 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
 
     def test_put_cannot_remove_existing_field(self) -> None:
         """Test PUT endpoint cannot remove existing fields."""
+        ph_uuid = Experiment.generate_field_uuid()
+
         experiment_fields = {
-            "measurement_date": {
+            "00000000-0000-0000-0000-000000000001": {
                 "name": "Measurement Date",
                 "type": FieldType.DATE.value,
                 "required": True,
+                "order": 0,
             },
-            "submitter_email": {
+            "00000000-0000-0000-0000-000000000002": {
                 "name": "Submitter Email",
                 "type": FieldType.TEXT.value,
                 "required": True,
+                "order": 1,
             },
-            "ph_level": {
-                "name": "pH Level",
+            ph_uuid: {
+                "name": "Ph Level",
                 "type": FieldType.NUMBER.value,
                 "required": False,
+                "order": 2,
             },
         }
 
@@ -806,13 +847,23 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
             level=PermissionLevel.READ_AND_WRITE,
         )
 
-        # Try to remove ph_level field (only send 2 fields instead of 3)
+        # Try to remove ph_level field (only send mandatory fields, omit ph_uuid)
         data = {
             "name": "Test Experiment",
             "experiment_fields": [
-                {"name": "Measurement Date", "type": "date", "required": True},
-                {"name": "Submitter Email", "type": "text", "required": True},
-                # ph_level intentionally omitted
+                {
+                    "uuid": "00000000-0000-0000-0000-000000000001",
+                    "name": "Measurement Date",
+                    "type": "date",
+                    "required": True,
+                },
+                {
+                    "uuid": "00000000-0000-0000-0000-000000000002",
+                    "name": "Submitter Email",
+                    "type": "text",
+                    "required": True,
+                },
+                # ph_uuid intentionally omitted - should trigger removal error
             ],
         }
 
@@ -870,15 +921,17 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
     def test_patch_add_new_fields(self) -> None:
         """Test PATCH endpoint can add new fields."""
         experiment_fields = {
-            "measurement_date": {
+            "00000000-0000-0000-0000-000000000001": {
                 "name": "Measurement Date",
                 "type": FieldType.DATE.value,
                 "required": True,
+                "order": 0,
             },
-            "submitter_email": {
+            "00000000-0000-0000-0000-000000000002": {
                 "name": "Submitter Email",
                 "type": FieldType.TEXT.value,
                 "required": True,
+                "order": 1,
             },
         }
         experiment = ExperimentFactory.create(
@@ -921,21 +974,26 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
 
     def test_patch_cannot_modify_existing_field(self) -> None:
         """Test PATCH endpoint cannot modify existing field."""
+        ph_uuid = Experiment.generate_field_uuid()
+
         experiment_fields = {
-            "measurement_date": {
+            "00000000-0000-0000-0000-000000000001": {
                 "name": "Measurement Date",
                 "type": FieldType.DATE.value,
                 "required": True,
+                "order": 0,
             },
-            "submitter_email": {
+            "00000000-0000-0000-0000-000000000002": {
                 "name": "Submitter Email",
                 "type": FieldType.TEXT.value,
                 "required": True,
+                "order": 1,
             },
-            "ph_level": {
-                "name": "pH Level",
+            ph_uuid: {
+                "name": "Ph Level",
                 "type": FieldType.NUMBER.value,
                 "required": False,
+                "order": 2,
             },
         }
 
@@ -955,7 +1013,12 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
         # Try to modify existing field via PATCH
         data = {
             "experiment_fields": [
-                {"name": "pH Level", "type": "text", "required": True},  # Changed
+                {
+                    "id": ph_uuid,
+                    "name": "Ph Level",
+                    "type": "text",
+                    "required": True,
+                },  # Changed type
             ],
         }
 
@@ -1021,21 +1084,26 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
 
     def test_delete_preserves_experiment_fields(self) -> None:
         """Test DELETE preserves experiment fields when deactivating."""
+        ph_uuid = Experiment.generate_field_uuid()
+
         experiment_fields = {
-            "measurement_date": {
+            "00000000-0000-0000-0000-000000000001": {
                 "name": "Measurement Date",
                 "type": FieldType.DATE.value,
                 "required": True,
+                "order": 0,
             },
-            "submitter_email": {
+            "00000000-0000-0000-0000-000000000002": {
                 "name": "Submitter Email",
                 "type": FieldType.TEXT.value,
                 "required": True,
+                "order": 1,
             },
-            "ph_level": {
-                "name": "pH Level",
+            ph_uuid: {
+                "name": "Ph Level",
                 "type": FieldType.NUMBER.value,
                 "required": False,
+                "order": 2,
             },
         }
 
@@ -1062,7 +1130,7 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
         # Verify fields are preserved
         experiment.refresh_from_db()
         assert len(experiment.experiment_fields) == 3  # noqa: PLR2004
-        assert "ph_level" in experiment.experiment_fields
+        assert ph_uuid in experiment.experiment_fields
 
     def test_put_invalid_field_type(self) -> None:
         """Test PUT endpoint rejects invalid field type."""
@@ -1512,3 +1580,921 @@ class TestExperimentSpecificAPI(BaseAPITestCase):
             or "start_date must be provided" in str(err).lower()
             for err in errors["end_date"]
         )
+
+
+@pytest.mark.django_db
+class TestExperimentFieldNameEditing(BaseAPITestCase):
+    """Test cases for editing field names via API."""
+
+    def test_patch_edit_field_name(self) -> None:
+        """Test PATCH endpoint can edit field name."""
+        ph_uuid = Experiment.generate_field_uuid()
+
+        experiment_fields = {
+            "00000000-0000-0000-0000-000000000001": {
+                "name": "Measurement Date",
+                "type": FieldType.DATE.value,
+                "required": True,
+                "order": 0,
+            },
+            "00000000-0000-0000-0000-000000000002": {
+                "name": "Submitter Email",
+                "type": FieldType.TEXT.value,
+                "required": True,
+                "order": 1,
+            },
+            ph_uuid: {
+                "name": "Original Name",
+                "type": FieldType.NUMBER.value,
+                "required": False,
+                "order": 2,
+            },
+        }
+
+        experiment = ExperimentFactory.create(
+            name="Test Experiment",
+            experiment_fields=experiment_fields,
+            created_by=self.user.email,
+        )
+
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        # Edit field name
+        data = {
+            "experiment_fields": [
+                {
+                    "id": ph_uuid,
+                    "name": "Edited Name",
+                    "type": "number",
+                    "required": False,
+                },
+            ],
+        }
+
+        response = self.client.patch(
+            reverse("api:v1:experiment-detail", kwargs={"id": experiment.id}),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()["data"]
+
+        # Find the field and verify name was changed
+        edited_field = next(
+            (f for f in response_data["experiment_fields"] if f["id"] == ph_uuid), None
+        )
+        assert edited_field is not None
+        assert edited_field["name"] == "Edited Name"
+
+        # Verify in database
+        experiment.refresh_from_db()
+        assert experiment.experiment_fields[ph_uuid]["name"] == "Edited Name"
+
+    def test_patch_edit_field_name_enforces_titlecase(self) -> None:
+        """Test that edited field names are converted to titlecase."""
+        ph_uuid = Experiment.generate_field_uuid()
+
+        experiment_fields = {
+            "00000000-0000-0000-0000-000000000001": {
+                "name": "Measurement Date",
+                "type": FieldType.DATE.value,
+                "required": True,
+                "order": 0,
+            },
+            "00000000-0000-0000-0000-000000000002": {
+                "name": "Submitter Email",
+                "type": FieldType.TEXT.value,
+                "required": True,
+                "order": 1,
+            },
+            ph_uuid: {
+                "name": "Original",
+                "type": FieldType.NUMBER.value,
+                "required": False,
+                "order": 2,
+            },
+        }
+
+        experiment = ExperimentFactory.create(
+            name="Test Experiment",
+            experiment_fields=experiment_fields,
+            created_by=self.user.email,
+        )
+
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        # Edit field name with lowercase
+        data = {
+            "experiment_fields": [
+                {
+                    "id": ph_uuid,
+                    "name": "new lowercase name",
+                    "type": "number",
+                    "required": False,
+                },
+            ],
+        }
+
+        response = self.client.patch(
+            reverse("api:v1:experiment-detail", kwargs={"id": experiment.id}),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()["data"]
+
+        # Find the field and verify name was titlecased
+        edited_field = next(
+            (f for f in response_data["experiment_fields"] if f["id"] == ph_uuid), None
+        )
+        assert edited_field is not None
+        assert edited_field["name"] == "New Lowercase Name"
+
+    def test_patch_edit_name_to_duplicate_rejected(self) -> None:
+        """Test that editing a name to duplicate another is rejected."""
+        uuid1 = Experiment.generate_field_uuid()
+        uuid2 = Experiment.generate_field_uuid()
+
+        experiment_fields = {
+            "00000000-0000-0000-0000-000000000001": {
+                "name": "Measurement Date",
+                "type": FieldType.DATE.value,
+                "required": True,
+                "order": 0,
+            },
+            "00000000-0000-0000-0000-000000000002": {
+                "name": "Submitter Email",
+                "type": FieldType.TEXT.value,
+                "required": True,
+                "order": 1,
+            },
+            uuid1: {
+                "name": "Water Quality",
+                "type": FieldType.NUMBER.value,
+                "required": False,
+                "order": 2,
+            },
+            uuid2: {
+                "name": "Temperature",
+                "type": FieldType.NUMBER.value,
+                "required": False,
+                "order": 3,
+            },
+        }
+
+        experiment = ExperimentFactory.create(
+            name="Test Experiment",
+            experiment_fields=experiment_fields,
+            created_by=self.user.email,
+        )
+
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        # Try to edit uuid2's name to match uuid1
+        data = {
+            "experiment_fields": [
+                {
+                    "id": uuid2,
+                    "name": "Water Quality",
+                    "type": "number",
+                    "required": False,
+                },
+            ],
+        }
+
+        response = self.client.patch(
+            reverse("api:v1:experiment-detail", kwargs={"id": experiment.id}),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "errors" in response.json()
+        errors = response.json()["errors"]
+        assert "experiment_fields" in errors
+        assert "not unique" in str(errors).lower()
+
+
+@pytest.mark.django_db
+class TestExperimentFieldOrdering(BaseAPITestCase):
+    """Test cases for field ordering functionality."""
+
+    def test_patch_reorder_fields(self) -> None:
+        """Test PATCH endpoint can reorder fields."""
+        uuid1 = Experiment.generate_field_uuid()
+        uuid2 = Experiment.generate_field_uuid()
+
+        experiment_fields = {
+            "00000000-0000-0000-0000-000000000001": {
+                "name": "Measurement Date",
+                "type": FieldType.DATE.value,
+                "required": True,
+                "order": 0,
+            },
+            "00000000-0000-0000-0000-000000000002": {
+                "name": "Submitter Email",
+                "type": FieldType.TEXT.value,
+                "required": True,
+                "order": 1,
+            },
+            uuid1: {
+                "name": "Field A",
+                "type": FieldType.TEXT.value,
+                "required": False,
+                "order": 2,
+            },
+            uuid2: {
+                "name": "Field B",
+                "type": FieldType.TEXT.value,
+                "required": False,
+                "order": 3,
+            },
+        }
+
+        experiment = ExperimentFactory.create(
+            name="Test Experiment",
+            experiment_fields=experiment_fields,
+            created_by=self.user.email,
+        )
+
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        # Swap order of Field A and Field B by changing their position in array
+        # Position in array = order (no explicit order field)
+        data = {
+            "experiment_fields": [
+                {
+                    "id": "00000000-0000-0000-0000-000000000001",
+                    "name": "Measurement Date",
+                    "type": "date",
+                    "required": True,
+                },
+                {
+                    "id": "00000000-0000-0000-0000-000000000002",
+                    "name": "Submitter Email",
+                    "type": "text",
+                    "required": True,
+                },
+                {
+                    "id": uuid2,
+                    "name": "Field B",
+                    "type": "text",
+                    "required": False,
+                },  # Now position 2
+                {
+                    "id": uuid1,
+                    "name": "Field A",
+                    "type": "text",
+                    "required": False,
+                },  # Now position 3
+            ],
+        }
+
+        response = self.client.patch(
+            reverse("api:v1:experiment-detail", kwargs={"id": experiment.id}),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()["data"]
+
+        # Verify order changed and fields are sorted
+        field_names = [f["name"] for f in response_data["experiment_fields"]]
+        # Should be:
+        # Measurement Date (0), Submitter Email (1), Field B (5), Field A (10)
+        assert field_names == [
+            "Measurement Date",
+            "Submitter Email",
+            "Field B",
+            "Field A",
+        ]
+
+    def test_post_fields_without_order_auto_assigns(self) -> None:
+        """Test that fields without order get auto-assigned values."""
+        data = {
+            "name": "Test Experiment",
+            "experiment_fields": [
+                {
+                    "name": "Measurement Date",
+                    "type": "date",
+                    "required": True,
+                },  # No order
+                {
+                    "name": "Submitter Email",
+                    "type": "text",
+                    "required": True,
+                },  # No order
+                {"name": "Custom Field", "type": "text", "required": False},  # No order
+            ],
+        }
+
+        response = self.client.post(
+            reverse("api:v1:experiments"),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        response_data = response.json()["data"]
+
+        # All fields should have order assigned
+        for field in response_data["experiment_fields"]:
+            assert "order" in field
+            assert isinstance(field["order"], int)
+            assert field["order"] >= 0
+
+    def test_patch_only_order_without_other_changes(self) -> None:
+        """Test PATCH can update only order without changing other properties."""
+        ph_uuid = Experiment.generate_field_uuid()
+
+        experiment_fields = {
+            "00000000-0000-0000-0000-000000000001": {
+                "name": "Measurement Date",
+                "type": FieldType.DATE.value,
+                "required": True,
+                "order": 0,
+            },
+            "00000000-0000-0000-0000-000000000002": {
+                "name": "Submitter Email",
+                "type": FieldType.TEXT.value,
+                "required": True,
+                "order": 1,
+            },
+            ph_uuid: {
+                "name": "Ph Level",
+                "type": FieldType.NUMBER.value,
+                "required": False,
+                "order": 2,
+            },
+        }
+
+        experiment = ExperimentFactory.create(
+            name="Test Experiment",
+            experiment_fields=experiment_fields,
+            created_by=self.user.email,
+        )
+
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        # Update only order (by changing position in array)
+        # Put ph_uuid field at the end of the array to give it a higher order
+        data = {
+            "experiment_fields": [
+                {
+                    "id": "00000000-0000-0000-0000-000000000001",
+                    "name": "Measurement Date",
+                    "type": "date",
+                    "required": True,
+                },
+                {
+                    "id": "00000000-0000-0000-0000-000000000002",
+                    "name": "Submitter Email",
+                    "type": "text",
+                    "required": True,
+                },
+                {
+                    "id": ph_uuid,
+                    "name": "Ph Level",
+                    "type": "number",
+                    "required": False,
+                },  # Position 2 = order 2
+            ],
+        }
+
+        response = self.client.patch(
+            reverse("api:v1:experiment-detail", kwargs={"id": experiment.id}),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()["data"]
+
+        # Find the field and verify it's in the correct position
+        field = next(
+            (f for f in response_data["experiment_fields"] if f["id"] == ph_uuid), None
+        )
+        assert field is not None
+        # Order is implicit from position - ph_uuid should be at position 2
+        # (after 2 mandatory fields)
+        assert field["name"] == "Ph Level"
+        assert field["type"] == "number"
+        assert field["required"] is False
+        # Verify it's at expected position in array
+        field_index = response_data["experiment_fields"].index(field)
+        assert field_index == 2  # Position 2 = order 2  # noqa: PLR2004
+
+
+@pytest.mark.django_db
+class TestExperimentFieldUuidSystem(BaseAPITestCase):
+    """Test cases for UUID-based field system."""
+
+    def test_get_response_includes_uuids(self) -> None:
+        """Test that GET response includes UUID for each field."""
+        experiment = ExperimentFactory.create(created_by=self.user.email)
+
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_ONLY,
+        )
+
+        response = self.client.get(
+            reverse("api:v1:experiment-detail", kwargs={"id": experiment.id}),
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()["data"]
+
+        # Every field should have a UUID
+        for field in response_data["experiment_fields"]:
+            assert "id" in field
+            # UUID should be valid format
+            uuid_pattern = (
+                r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            )
+            assert re.match(uuid_pattern, field["id"], re.IGNORECASE)
+
+    def test_mandatory_fields_have_fixed_uuids(self) -> None:
+        """Test that mandatory fields always have the same UUIDs."""
+        exp1 = ExperimentFactory.create(name="Experiment 1", created_by=self.user.email)
+        exp2 = ExperimentFactory.create(name="Experiment 2", created_by=self.user.email)
+
+        # Both should have same mandatory UUIDs
+        assert "00000000-0000-0000-0000-000000000001" in exp1.experiment_fields
+        assert "00000000-0000-0000-0000-000000000002" in exp1.experiment_fields
+        assert "00000000-0000-0000-0000-000000000001" in exp2.experiment_fields
+        assert "00000000-0000-0000-0000-000000000002" in exp2.experiment_fields
+
+    def test_custom_fields_have_unique_uuids(self) -> None:
+        """Test that custom fields get unique UUIDs."""
+        data = {
+            "name": "Test Experiment",
+            "experiment_fields": [
+                {"name": "Measurement Date", "type": "date", "required": True},
+                {"name": "Submitter Email", "type": "text", "required": True},
+                {"name": "Field A", "type": "text", "required": False},
+                {"name": "Field B", "type": "text", "required": False},
+            ],
+        }
+
+        response = self.client.post(
+            reverse("api:v1:experiments"),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        response_data = response.json()["data"]
+
+        # Collect all UUIDs
+        uuids = [f["id"] for f in response_data["experiment_fields"]]
+
+        # All UUIDs should be unique
+        assert len(uuids) == len(set(uuids))
+
+    def test_uuid_immutable_via_api(self) -> None:
+        """Test that UUID cannot be changed via API."""
+        ph_uuid = Experiment.generate_field_uuid()
+        new_uuid = Experiment.generate_field_uuid()
+
+        experiment_fields = {
+            "00000000-0000-0000-0000-000000000001": {
+                "name": "Measurement Date",
+                "type": FieldType.DATE.value,
+                "required": True,
+                "order": 0,
+            },
+            "00000000-0000-0000-0000-000000000002": {
+                "name": "Submitter Email",
+                "type": FieldType.TEXT.value,
+                "required": True,
+                "order": 1,
+            },
+            ph_uuid: {
+                "name": "Ph Level",
+                "type": FieldType.NUMBER.value,
+                "required": False,
+                "order": 2,
+            },
+        }
+
+        experiment = ExperimentFactory.create(
+            name="Test Experiment",
+            experiment_fields=experiment_fields,
+            created_by=self.user.email,
+        )
+
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        # Try to provide a field with the new UUID but same name
+        # This should be treated as adding a new field, not changing UUID
+        data = {
+            "experiment_fields": [
+                {
+                    "uuid": new_uuid,
+                    "name": "Ph Level",
+                    "type": "number",
+                    "required": False,
+                },
+            ],
+        }
+
+        response = self.client.patch(
+            reverse("api:v1:experiment-detail", kwargs={"id": experiment.id}),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        # Should reject due to duplicate name
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "not unique" in str(response.json()).lower()
+
+
+@pytest.mark.django_db
+class TestExperimentFieldEdgeCases(BaseAPITestCase):
+    """Test edge cases and complex scenarios for experiment fields."""
+
+    def test_very_long_field_name(self) -> None:
+        """Test that very long field names are handled correctly."""
+        long_name = "A" * 500  # Very long name
+
+        data = {
+            "name": "Test Experiment",
+            "experiment_fields": [
+                {"name": "Measurement Date", "type": "date", "required": True},
+                {"name": "Submitter Email", "type": "text", "required": True},
+                {"name": long_name, "type": "text", "required": False},
+            ],
+        }
+
+        response = self.client.post(
+            reverse("api:v1:experiments"),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        response_data = response.json()["data"]
+
+        # Find field with long name (titlecased)
+        long_field = next(
+            (f for f in response_data["experiment_fields"] if len(f["name"]) > 400),  # noqa: PLR2004
+            None,
+        )
+        assert long_field is not None
+
+    def test_unicode_field_names_preserved(self) -> None:
+        """Test that unicode characters in names are preserved and titlecased."""
+        data = {
+            "name": "Test Experiment",
+            "experiment_fields": [
+                {"name": "Measurement Date", "type": "date", "required": True},
+                {"name": "Submitter Email", "type": "text", "required": True},
+                {"name": "温度 测量", "type": "number", "required": False},  # Chinese
+                {
+                    "name": "température eau",
+                    "type": "number",
+                    "required": False,
+                },  # French
+            ],
+        }
+
+        response = self.client.post(
+            reverse("api:v1:experiments"),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        response_data = response.json()["data"]
+
+        field_names = [f["name"] for f in response_data["experiment_fields"]]
+        # Titlecase should be applied (though Chinese doesn't have case)
+        assert "温度 测量" in field_names
+        assert "Température Eau" in field_names
+
+    def test_special_characters_in_field_names(self) -> None:
+        """Test that special characters in names are handled."""
+        data = {
+            "name": "Test Experiment",
+            "experiment_fields": [
+                {"name": "Measurement Date", "type": "date", "required": True},
+                {"name": "Submitter Email", "type": "text", "required": True},
+                {"name": "pH (water)", "type": "number", "required": False},
+                {"name": "Temperature [°C]", "type": "number", "required": False},
+            ],
+        }
+
+        response = self.client.post(
+            reverse("api:v1:experiments"),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        response_data = response.json()["data"]
+
+        field_names = [f["name"] for f in response_data["experiment_fields"]]
+        assert "Ph (Water)" in field_names
+        assert "Temperature [°C]" in field_names
+
+    def test_edit_name_with_name_only_field(self) -> None:
+        """Test editing only name while keeping UUID, type, required, order."""
+        ph_uuid = Experiment.generate_field_uuid()
+
+        experiment_fields = {
+            "00000000-0000-0000-0000-000000000001": {
+                "name": "Measurement Date",
+                "type": FieldType.DATE.value,
+                "required": True,
+                "order": 0,
+            },
+            "00000000-0000-0000-0000-000000000002": {
+                "name": "Submitter Email",
+                "type": FieldType.TEXT.value,
+                "required": True,
+                "order": 1,
+            },
+            ph_uuid: {
+                "name": "Old Name",
+                "type": FieldType.NUMBER.value,
+                "required": False,
+                "order": 2,
+            },
+        }
+
+        experiment = ExperimentFactory.create(
+            name="Test Experiment",
+            experiment_fields=experiment_fields,
+            created_by=self.user.email,
+        )
+
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        # Edit only the name
+        data = {
+            "experiment_fields": [
+                {
+                    "id": ph_uuid,
+                    "name": "brand new name",
+                    "type": "number",
+                    "required": False,
+                },
+            ],
+        }
+
+        response = self.client.patch(
+            reverse("api:v1:experiment-detail", kwargs={"id": experiment.id}),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()["data"]
+
+        # Verify name changed and titlecased
+        field = next(
+            (f for f in response_data["experiment_fields"] if f["id"] == ph_uuid), None
+        )
+        assert field is not None
+        assert field["name"] == "Brand New Name"
+        assert field["type"] == "number"
+        assert field["required"] is False
+        # Order is implicit - no order field in response
+
+    def test_multiple_field_edits_in_single_request(self) -> None:
+        """Test editing multiple fields' names and orders in one request."""
+        uuid1 = Experiment.generate_field_uuid()
+        uuid2 = Experiment.generate_field_uuid()
+        uuid3 = Experiment.generate_field_uuid()
+
+        experiment_fields = {
+            "00000000-0000-0000-0000-000000000001": {
+                "name": "Measurement Date",
+                "type": FieldType.DATE.value,
+                "required": True,
+                "order": 0,
+            },
+            "00000000-0000-0000-0000-000000000002": {
+                "name": "Submitter Email",
+                "type": FieldType.TEXT.value,
+                "required": True,
+                "order": 1,
+            },
+            uuid1: {
+                "name": "Field A",
+                "type": FieldType.TEXT.value,
+                "required": False,
+                "order": 2,
+            },
+            uuid2: {
+                "name": "Field B",
+                "type": FieldType.TEXT.value,
+                "required": False,
+                "order": 3,
+            },
+            uuid3: {
+                "name": "Field C",
+                "type": FieldType.TEXT.value,
+                "required": False,
+                "order": 4,
+            },
+        }
+
+        experiment = ExperimentFactory.create(
+            name="Test Experiment",
+            experiment_fields=experiment_fields,
+            created_by=self.user.email,
+        )
+
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        # Edit multiple fields (names and reorder by changing array positions)
+        data = {
+            "experiment_fields": [
+                {
+                    "id": "00000000-0000-0000-0000-000000000001",
+                    "name": "Measurement Date",
+                    "type": "date",
+                    "required": True,
+                },
+                {
+                    "id": "00000000-0000-0000-0000-000000000002",
+                    "name": "Submitter Email",
+                    "type": "text",
+                    "required": True,
+                },
+                {
+                    "id": uuid2,
+                    "name": "Renamed B",
+                    "type": "text",
+                    "required": False,
+                },  # Position 2
+                {
+                    "id": uuid3,
+                    "name": "Renamed C",
+                    "type": "text",
+                    "required": False,
+                },  # Position 3
+                {
+                    "id": uuid1,
+                    "name": "Renamed A",
+                    "type": "text",
+                    "required": False,
+                },  # Position 4 (moved to end)
+            ],
+        }
+
+        response = self.client.patch(
+            reverse("api:v1:experiment-detail", kwargs={"id": experiment.id}),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()["data"]
+
+        # Verify all names changed and fields are in correct positions
+        fields = response_data["experiment_fields"]
+        assert fields[2]["id"] == uuid2
+        assert fields[2]["name"] == "Renamed B"
+
+        assert fields[3]["id"] == uuid3
+        assert fields[3]["name"] == "Renamed C"
+
+        assert fields[4]["id"] == uuid1
+        assert fields[4]["name"] == "Renamed A"
+
+    def test_add_and_edit_in_same_request(self) -> None:
+        """Test adding new field and editing existing field in same request."""
+        uuid1 = Experiment.generate_field_uuid()
+
+        experiment_fields = {
+            "00000000-0000-0000-0000-000000000001": {
+                "name": "Measurement Date",
+                "type": FieldType.DATE.value,
+                "required": True,
+                "order": 0,
+            },
+            "00000000-0000-0000-0000-000000000002": {
+                "name": "Submitter Email",
+                "type": FieldType.TEXT.value,
+                "required": True,
+                "order": 1,
+            },
+            uuid1: {
+                "name": "Existing Field",
+                "type": FieldType.TEXT.value,
+                "required": False,
+                "order": 2,
+            },
+        }
+
+        experiment = ExperimentFactory.create(
+            name="Test Experiment",
+            experiment_fields=experiment_fields,
+            created_by=self.user.email,
+        )
+
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        # Edit existing field and add new field
+        # Must include ALL existing fields
+        data = {
+            "experiment_fields": [
+                {
+                    "id": "00000000-0000-0000-0000-000000000001",
+                    "name": "Measurement Date",
+                    "type": "date",
+                    "required": True,
+                },
+                {
+                    "id": "00000000-0000-0000-0000-000000000002",
+                    "name": "Submitter Email",
+                    "type": "text",
+                    "required": True,
+                },
+                {
+                    "name": "Brand New Field",
+                    "type": "number",
+                    "required": False,
+                },  # Position 2 (new field)
+                {
+                    "id": uuid1,
+                    "name": "Edited Field",
+                    "type": "text",
+                    "required": False,
+                },  # Position 3 (edited name)
+            ],
+        }
+
+        response = self.client.patch(
+            reverse("api:v1:experiment-detail", kwargs={"id": experiment.id}),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()["data"]
+
+        # Should have 4 fields total
+        assert len(response_data["experiment_fields"]) == 4  # noqa: PLR2004
+
+        field_names = [f["name"] for f in response_data["experiment_fields"]]
+        assert "Edited Field" in field_names
+        assert "Brand New Field" in field_names
