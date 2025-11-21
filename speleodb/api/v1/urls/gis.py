@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from django.conf import settings
 from django.urls import URLPattern
 from django.urls import URLResolver
 from django.urls import path
@@ -49,10 +48,3 @@ urlpatterns: list[URLPattern | URLResolver] = [
         name="user-collection-items",
     ),
 ]
-
-if settings.DEBUG:
-    # Need to add the following because of automatic slash appending
-    urlpatterns += [
-        path("view/<gis_token>/", OGCGISViewDataApiView.as_view()),
-        path("user/<user_token:key>/", OGCGISUserProjectsApiView.as_view()),
-    ]

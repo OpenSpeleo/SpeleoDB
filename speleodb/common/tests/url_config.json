@@ -504,12 +504,6 @@
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis-ogc/user/<user_token:key>/",
-        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserProjectsApiView",
-        "name": "",
-        "decorators": ""
-    },
-    {
         "url": "/api/v1/gis-ogc/user/<user_token:key>/<gitsha:commit_sha>",
         "module": "speleodb.api.v1.views.project_geojson.OGCGISUserCollectionApiView",
         "name": "api:v1:gis-ogc:user-collection",
@@ -525,12 +519,6 @@
         "url": "/api/v1/gis-ogc/view/<gis_token>",
         "module": "speleodb.api.v1.views.gis_view.OGCGISViewDataApiView",
         "name": "api:v1:gis-ogc:view-data",
-        "decorators": ""
-    },
-    {
-        "url": "/api/v1/gis-ogc/view/<gis_token>/",
-        "module": "speleodb.api.v1.views.gis_view.OGCGISViewDataApiView",
-        "name": "",
         "decorators": ""
     },
     {

@@ -174,203 +174,16 @@
 
 {% block extra_js %}
 <script src="{% url 'url_reverse.js' %}"></script>
+<script src="{% static 'private/js/experiment-fields.js' %}"></script>
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
 <script>
-
     $(window).on('load', function() {
+        // Initialize common experiment fields functionality
+        ExperimentFields.initialize();
 
-        let fieldCounter = 0;
-
-        // Toggle no fields message visibility
-        function toggleNoFieldsMessage() {
-            const customFieldsContainer = $('#custom_fields_container');
-            const noFieldsMessage = $('#no_fields_message');
-            
-            if (customFieldsContainer.children().length === 0) {
-                noFieldsMessage.show();
-            } else {
-                noFieldsMessage.hide();
-            }
-        }
-
-        // Function to create a new field
-        function createFieldElement(fieldId) {
-            return `
-                <div class="bg-slate-700 rounded-lg p-4 border border-slate-600 field-item" data-field-id="${fieldId}">
-                    <div class="flex flex-col gap-3">
-                        <div class="flex flex-col sm:flex-row gap-3">
-                            <div class="flex-1">
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Field Name<span class="text-rose-600"> *</span></label>
-                                <input type="text" 
-                                       class="form-input w-full field-name" 
-                                       placeholder="e.g., pH Level, Water Hardness" 
-                                       required />
-                            </div>
-                            <div class="flex-1">
-                                <div class="flex flex-col sm:flex-row gap-3">
-                                    <div class="flex-1">
-                                        <label class="block text-xs font-medium text-slate-400 mb-1">Field Type<span class="text-rose-600"> *</span></label>
-                                        <select class="form-select w-full field-type" required>
-                                            <option value="" selected disabled>Select a value</option>
-                                            <option value="text">Text</option>
-                                            <option value="number">Number</option>
-                                            <option value="date">Date</option>
-                                            <option value="boolean">Yes/No</option>
-                                            <option value="select">Multiple Choices</option>
-                                        </select>
-                                    </div>
-                                    <div class="flex-1">
-                                        <label class="block text-xs font-medium text-slate-400 mb-1">Field is Required</label>
-                                        <label class="flex items-center">
-                                            <input type="checkbox" class="form-checkbox field-required" />
-                                            <span class="text-sm ml-2 text-slate-300">Required</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Options section for Multiple Choices -->
-                        <div class="field-options-container hidden">
-                            <label class="block text-xs font-medium text-slate-400 mb-2">Available Options</label>
-                            <div class="flex gap-2 mb-2">
-                                <input type="text" 
-                                       class="form-input flex-1 field-option-input text-sm" 
-                                       placeholder="Type an option and press Enter or comma" />
-                            </div>
-                            <div class="flex flex-wrap gap-2 field-tags-container min-h-[2rem]">
-                                <!-- Tags will be added here -->
-                            </div>
-                        </div>
-                        
-                        <div class="flex justify-end">
-                            <button type="button" 
-                                    class="btn-sm bg-rose-500 hover:bg-rose-600 text-white remove-field-btn"
-                                    data-field-id="${fieldId}">
-                                <svg class="w-4 h-4 fill-current shrink-0 inline-block mr-1" viewBox="0 0 16 16">
-                                    <path d="M5 7h6v2H5V7zm7-4H4v2h8V3zM6 12h4v2H6v-2z" />
-                                </svg>
-                                Remove Field
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Add field button click handler
-        $('#add_field_btn').click(function(e) {
-            e.preventDefault();
-            fieldCounter++;
-            const fieldElement = createFieldElement(fieldCounter);
-            $('#custom_fields_container').append(fieldElement);
-            toggleNoFieldsMessage();
-        });
-
-        // Remove field button click handler (delegated)
-        $(document).on('click', '.remove-field-btn', function(e) {
-            e.preventDefault();
-            const fieldId = $(this).data('field-id');
-            $(`.field-item[data-field-id="${fieldId}"]`).remove();
-            toggleNoFieldsMessage();
-        });
-
-        // Show/hide options input when field type changes
-        $(document).on('change', '.field-type', function() {
-            const container = $(this).closest('.field-item');
-            const optionsContainer = container.find('.field-options-container');
-            
-            if ($(this).val() === 'select') {
-                optionsContainer.removeClass('hidden');
-            } else {
-                optionsContainer.addClass('hidden');
-            }
-        });
-
-        // Function to create a tag element
-        function createTag(text, container) {
-            const tag = $(`
-                <span class="inline-flex items-center gap-1 px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
-                    <span class="tag-text">${text}</span>
-                    <button type="button" class="remove-tag hover:text-rose-400 transition-colors">
-                        <svg class="w-3 h-3 fill-current" viewBox="0 0 16 16">
-                            <path d="M12.72 3.293a1 1 0 00-1.415 0L8 6.586 4.695 3.293a1 1 0 00-1.414 1.414L6.586 8l-3.305 3.305a1 1 0 101.414 1.414L8 9.414l3.305 3.305a1 1 0 001.414-1.414L9.414 8l3.305-3.293a1 1 0 000-1.414z"/>
-                        </svg>
-                    </button>
-                </span>
-            `);
-            container.append(tag);
-        }
-
-        // Handle option input (comma or Enter key)
-        $(document).on('keydown', '.field-option-input', function(e) {
-            const input = $(this);
-            const value = input.val().trim();
-            const container = input.closest('.field-options-container').find('.field-tags-container');
-            
-            // On comma or Enter
-            if (e.key === ',' || e.key === 'Enter') {
-                e.preventDefault();
-                
-                // Get value before comma (if comma was pressed)
-                let optionValue = value;
-                if (e.key === ',') {
-                    optionValue = value.slice(0, -1).trim();
-                }
-                
-                if (optionValue && optionValue !== ',') {
-                    // Check if tag already exists
-                    let exists = false;
-                    container.find('.tag-text').each(function() {
-                        if ($(this).text() === optionValue) {
-                            exists = true;
-                        }
-                    });
-                    
-                    if (!exists) {
-                        createTag(optionValue, container);
-                    }
-                    input.val('');
-                }
-            }
-        });
-
-        // Handle comma in input value (for paste operations)
-        $(document).on('input', '.field-option-input', function(e) {
-            const input = $(this);
-            const value = input.val();
-            const container = input.closest('.field-options-container').find('.field-tags-container');
-            
-            if (value.includes(',')) {
-                const parts = value.split(',').map(p => p.trim()).filter(p => p);
-                
-                parts.forEach(part => {
-                    // Check if tag already exists
-                    let exists = false;
-                    container.find('.tag-text').each(function() {
-                        if ($(this).text() === part) {
-                            exists = true;
-                        }
-                    });
-                    
-                    if (!exists) {
-                        createTag(part, container);
-                    }
-                });
-                
-                input.val('');
-            }
-        });
-
-        // Remove tag
-        $(document).on('click', '.remove-tag', function(e) {
-            e.preventDefault();
-            $(this).closest('span').remove();
-        });
-
-        // Collect custom fields data
+        // Collect custom fields data (new.html specific)
         // Note: Slug generation and hashing are done server-side by the serializer
         // Mandatory fields are identified by their slug, not a 'mandatory' property
         function collectCustomFields() {
@@ -398,7 +211,7 @@
                 
                 if (fieldName) {
                     const fieldData = {
-                        name: fieldName,
+                        name: ExperimentFields.toTitleCase(fieldName),
                         type: fieldType,
                         required: fieldRequired
                     };
@@ -419,23 +232,19 @@
             return fields;
         }
 
-        // Initialize
-        toggleNoFieldsMessage();
-
-        $("body").click(function() {
-            if ($("#modal_success").is(":visible")) {
-                $("#modal_success").hide();
-            }
-            if ($("#modal_error").is(":visible")) {
-                $("#modal_error").hide();
-            }
-        });
-
+        // Form submission handler
         $('#btn_submit').click(function (e) {
             e.preventDefault();
 
             $("#error_div").hide();
             $("#success_div").hide();
+
+            // Validate unique field names
+            if (!ExperimentFields.validateUniqueFieldNames()) {
+                $("#modal_error_txt").html("Duplicate field names detected. Each field must have a unique name. Please check the highlighted fields.");
+                $("#modal_error").css('display', 'flex');
+                return false;
+            }
 
             // Validate that at least custom fields exist
             const customFields = collectCustomFields();
@@ -463,7 +272,6 @@
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("X-CSRFToken", csrftoken);
                     return true;
-
                 },
                 success: function (data) {
                     $("#modal_success_txt").html("The experiment has been created.");
@@ -479,7 +287,6 @@
             });
             return false; // prevent default
         });
-
     });
 </script>
 {% endblock inline_extra_js %}
