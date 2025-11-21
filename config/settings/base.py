@@ -547,7 +547,7 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "SpeleoDB API",
     "DESCRIPTION": "Documentation of API endpoints of SpeleoDB",
     "VERSION": "1.0.0",
-    "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAdminUser"],
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
     "SCHEMA_PATH_PREFIX": "/api/",
     # Resolve naming collisions and custom field mapping for schema generation
     # - Map our custom RelatedField (UserField) to string

@@ -176,19 +176,16 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         client = self.client_class()
         response = client.get(
             reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": gis_view.gis_token}
+                "api:v1:gis-ogc:view-data", kwargs={"gis_token": gis_view.gis_token}
             )
         )
 
         assert response.status_code == status.HTTP_200_OK
 
-        # read all chunks
-        body = b"".join(response.streaming_content)  # type: ignore[attr-defined]
+        data = response.json()
 
-        data = orjson.loads(body)  # or response.json() manually
-
-        assert data["type"] == "FeatureCollection"
-        assert len(data["features"]) > 0
+        assert len(data.get("links", [])) == 4  # noqa: PLR2004
+        assert len(data.get("collections", [])) == 1
 
     def test_public_access_with_invalid_token(self) -> None:
         """Test that invalid token returns 404."""
@@ -196,7 +193,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         fake_token = "0" * 40
 
         response = client.get(
-            reverse("api:v1:gis:gis-view-data", kwargs={"gis_token": fake_token}),
+            reverse("api:v1:gis-ogc:view-data", kwargs={"gis_token": fake_token}),
             headers={"authorization": self.auth},
         )
 

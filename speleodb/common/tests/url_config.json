@@ -492,21 +492,57 @@
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis/experiment/<gis_token>/",
+        "url": "/api/v1/gis-ogc/experiment/<gis_token>/",
         "module": "speleodb.api.v1.views.experiment.ExperimentGISApiView",
-        "name": "api:v1:gis:experiment",
+        "name": "api:v1:gis-ogc:experiment",
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis/projects/<user_token:key>/",
-        "module": "speleodb.api.v1.views.project_geojson.ProjectAllProjectGeoJsonGISApiView",
-        "name": "api:v1:gis:user-projects",
+        "url": "/api/v1/gis-ogc/user/<user_token:key>",
+        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserProjectsApiView",
+        "name": "api:v1:gis-ogc:user-data",
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis/view/<gis_token>/",
-        "module": "speleodb.api.v1.views.gis_view.GISViewGeoJSONGISApiView",
-        "name": "api:v1:gis:gis-view-data",
+        "url": "/api/v1/gis-ogc/user/<user_token:key>/",
+        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserProjectsApiView",
+        "name": "",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/user/<user_token:key>/<gitsha:commit_sha>",
+        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserCollectionApiView",
+        "name": "api:v1:gis-ogc:user-collection",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/user/<user_token:key>/<gitsha:commit_sha>/items",
+        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserCollectionItemApiView",
+        "name": "api:v1:gis-ogc:user-collection-items",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/view/<gis_token>",
+        "module": "speleodb.api.v1.views.gis_view.OGCGISViewDataApiView",
+        "name": "api:v1:gis-ogc:view-data",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/view/<gis_token>/",
+        "module": "speleodb.api.v1.views.gis_view.OGCGISViewDataApiView",
+        "name": "",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/view/<gis_token>/<gitsha:commit_sha>",
+        "module": "speleodb.api.v1.views.gis_view.OGCGISViewCollectionApiView",
+        "name": "api:v1:gis-ogc:view-collection",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/view/<gis_token>/<gitsha:commit_sha>/items",
+        "module": "speleodb.api.v1.views.gis_view.OGCGISViewCollectionItemApiView",
+        "name": "api:v1:gis-ogc:view-collection-items",
         "decorators": ""
     },
     {

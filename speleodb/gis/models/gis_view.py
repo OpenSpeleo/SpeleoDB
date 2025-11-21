@@ -141,7 +141,7 @@ class GISView(models.Model):
         ).prefetch_related(
             Prefetch(
                 "project__rel_geojsons",
-                queryset=ProjectGeoJSON.objects.order_by("-creation_date"),
+                queryset=ProjectGeoJSON.objects.order_by("-commit_date"),
             )
         )
 

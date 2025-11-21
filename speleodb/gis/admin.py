@@ -872,7 +872,8 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         """Display the public API URL for easy copying."""
         if obj and obj.pk and obj.gis_token:
             path = reverse(
-                "api:v1:gis:gis-view-data", kwargs={"gis_token": obj.gis_token}
+                "api:v1:gis-ogc:view-data",
+                kwargs={"gis_token": obj.gis_token},
             )
 
             # Get request from stored instance variable

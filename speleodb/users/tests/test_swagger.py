@@ -19,10 +19,10 @@ def test_swagger_accessible_by_admin(admin_client: Client) -> None:
 
 
 @pytest.mark.django_db
-def test_swagger_ui_not_accessible_by_normal_user(client: Client) -> None:
+def test_swagger_ui_accessible_by_unauthenticated_user(client: Client) -> None:
     url = reverse("api-docs")
     response = client.get(url)
-    assert response.status_code == status.HTTP_403_FORBIDDEN, response.data  # type: ignore[attr-defined]
+    assert response.status_code == status.HTTP_200_OK, response.data  # type: ignore[attr-defined]
 
 
 def test_api_schema_generated_successfully(admin_client: Client) -> None:

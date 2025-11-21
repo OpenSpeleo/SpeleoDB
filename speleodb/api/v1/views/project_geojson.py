@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 import logging
+from io import BytesIO
 from typing import TYPE_CHECKING
+from typing import Any
 
+import orjson
+from django.core.cache import cache
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Prefetch
+from django.http import Http404
+from django.http import StreamingHttpResponse
 from rest_framework import permissions
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import GenericAPIView
@@ -14,16 +21,17 @@ from speleodb.api.v1.permissions import ProjectUserHasReadAccess
 from speleodb.api.v1.permissions import ProjectUserHasWebViewerAccess
 from speleodb.api.v1.serializers import ProjectGeoJSONCommitSerializer
 from speleodb.api.v1.serializers import ProjectWithGeoJsonSerializer
-from speleodb.api.v1.views.utils import project_geojsons_to_proxied_response
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.gis.ogc_models import OGCLayerList
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
+from speleodb.utils.response import GISResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
     from typing import Any
 
-    from django.http import StreamingHttpResponse
     from rest_framework.compat import QuerySet
     from rest_framework.request import Request
     from rest_framework.response import Response
@@ -67,9 +75,7 @@ class ProjectAllProjectGeoJsonApiView(
         return SuccessResponse(serializer.data)
 
 
-class ProjectAllProjectGeoJsonGISApiView(
-    GenericAPIView[Token], BaseUserProjectGeoJsonApiView
-):
+class OGCGISUserProjectsApiView(GenericAPIView[Token], BaseUserProjectGeoJsonApiView):
     """API view that returns raw GeoJSON data for every user's project in a proxied
     fashion for GIS."""
 
@@ -80,7 +86,7 @@ class ProjectAllProjectGeoJsonGISApiView(
     def get_serializer(self, *args: Any, **kwargs: Any) -> BaseSerializer[Token]:
         return super().get_serializer(*args, **kwargs)
 
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> StreamingHttpResponse:
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> GISResponse:
         """Return all accessible projects and their GeoJSON data."""
         token = self.get_object()
         projects = self.get_user_projects(token.user)
@@ -88,7 +94,140 @@ class ProjectAllProjectGeoJsonGISApiView(
         geojson_objs: list[ProjectGeoJSON] = [
             objs[0] for project in projects if (objs := project.rel_geojsons.all())
         ]
-        return project_geojsons_to_proxied_response(geojson_objs)
+
+        data = [
+            {
+                "sha": geojson_obj.commit_sha,
+                "title": geojson_obj.project.name,
+                "description": f"Commit: {geojson_obj.commit_sha}",
+                "url": geojson_obj.get_signed_download_url(expires_in=3600),
+            }
+            for geojson_obj in geojson_objs
+        ]
+
+        ogc_layers: OGCLayerList = OGCLayerList.model_validate({"layers": data})
+
+        return GISResponse(ogc_layers.to_ogc_collections(request=request))
+
+
+class BaseOGCGISViewCollectionApiView(GenericAPIView[Token], SDBAPIViewMixin):
+    queryset = Token.objects.all()
+    permission_classes = [permissions.AllowAny]
+    lookup_field = "key"
+
+    def get_geojson_object(self, commit_sha: str) -> ProjectGeoJSON:
+        user: User = self.get_object().user
+
+        try:
+            project_geojson = ProjectGeoJSON.objects.select_related("project").get(
+                commit_sha=commit_sha
+            )
+        except ProjectGeoJSON.DoesNotExist as e:
+            raise Http404(
+                f"ProjectGeoJSON with commit_sha '{commit_sha}' not found."
+            ) from e
+
+        project: Project = project_geojson.project
+
+        try:
+            _ = user.get_best_permission(project)
+        except ObjectDoesNotExist as e:
+            raise Http404(
+                f"User does not have access to the project '{project}'."
+            ) from e
+
+        return project_geojson
+
+
+class OGCGISUserCollectionApiView(BaseOGCGISViewCollectionApiView):
+    def get(
+        self,
+        request: Request,
+        key: str,
+        commit_sha: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> GISResponse:
+        """Return GeoJSON signed URLs for the view."""
+        project_geojson = self.get_geojson_object(commit_sha=commit_sha)
+
+        return GISResponse(
+            {
+                "id": project_geojson.id,
+                "title": project_geojson.project.name,
+                "description": f"Commit: {project_geojson.commit_sha}",
+                "itemType": "feature",
+                "links": [
+                    {
+                        "href": project_geojson.get_signed_download_url(
+                            expires_in=3600
+                        ),
+                        "rel": "items",
+                        "type": "application/geo+json",
+                        "title": f"{project_geojson.project.name}",
+                    }
+                ],
+            }
+        )
+
+
+class OGCGISUserCollectionItemApiView(BaseOGCGISViewCollectionApiView):
+    def get(
+        self,
+        request: Request,
+        key: str,
+        commit_sha: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> StreamingHttpResponse:
+        project_geojson = self.get_geojson_object(commit_sha=commit_sha)
+
+        buffer = BytesIO()
+
+        cache_key = f"ogc_collections_project_geojson_{project_geojson.commit_sha}"
+        cached_content: bytes | None = cache.get(cache_key)
+
+        if cached_content:
+            buffer.write(cached_content)
+            buffer.seek(0)  # rewind to start
+
+        else:
+
+            def geojson_filter() -> bytes:
+                with project_geojson.file.open("rb") as f:
+                    features = orjson.loads(f.read()).get("features", [])
+
+                    data = {
+                        "type": "FeatureCollection",
+                        "features": [
+                            feature
+                            for feature in features
+                            if feature.get("geometry", {}).get("type") == "LineString"
+                        ],
+                    }
+
+                return orjson.dumps(data)
+
+            data: bytes = geojson_filter()
+            buffer.write(data)
+            buffer.seek(0)  # rewind to start
+
+            # set cache 1 hour
+            cache.set(
+                cache_key,
+                data,
+                timeout=60 * 60,
+            )
+
+        def buffer_stream() -> Generator[bytes, Any]:
+            chunk_size = 4096
+            while chunk := buffer.read(chunk_size):
+                yield chunk
+
+        return StreamingHttpResponse(
+            buffer_stream(),
+            content_type="application/geo+json",
+        )
 
 
 class ProjectGeoJsonCommitsApiView(GenericAPIView[Project], SDBAPIViewMixin):

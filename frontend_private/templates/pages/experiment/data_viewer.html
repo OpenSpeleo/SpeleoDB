@@ -169,7 +169,7 @@ $(window).on('load', function() {
             showLoading();
             
             // Fetch GeoJSON data from the API
-            const apiUrl = "{{ request.scheme }}://{{ request.get_host }}{% url 'api:v1:gis:experiment' gis_token=experiment.gis_token %}";
+            const apiUrl = "{{ request.scheme }}://{{ request.get_host }}{% url 'api:v1:gis-ogc:experiment' gis_token=experiment.gis_token %}";
             const response = await fetch(apiUrl);
             
             if (!response.ok) {

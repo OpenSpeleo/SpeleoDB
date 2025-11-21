@@ -2,27 +2,57 @@
 
 from __future__ import annotations
 
+from django.conf import settings
 from django.urls import URLPattern
 from django.urls import URLResolver
 from django.urls import path
 
 import speleodb.utils.url_converters  # noqa: F401  # Necessary to import the converters
 from speleodb.api.v1.views.experiment import ExperimentGISApiView
-from speleodb.api.v1.views.gis_view import GISViewGeoJSONGISApiView
-from speleodb.api.v1.views.project_geojson import ProjectAllProjectGeoJsonGISApiView
+from speleodb.api.v1.views.gis_view import OGCGISViewCollectionApiView
+from speleodb.api.v1.views.gis_view import OGCGISViewCollectionItemApiView
+from speleodb.api.v1.views.gis_view import OGCGISViewDataApiView
+from speleodb.api.v1.views.project_geojson import OGCGISUserCollectionApiView
+from speleodb.api.v1.views.project_geojson import OGCGISUserCollectionItemApiView
+from speleodb.api.v1.views.project_geojson import OGCGISUserProjectsApiView
 
-app_name = "gis"
+app_name = "gis-ogc"
 
 urlpatterns: list[URLPattern | URLResolver] = [
     path("experiment/<gis_token>/", ExperimentGISApiView.as_view(), name="experiment"),
+    # OGC GIS - View endpoints
+    path("view/<gis_token>", OGCGISViewDataApiView.as_view(), name="view-data"),
     path(
-        "view/<gis_token>/",
-        GISViewGeoJSONGISApiView.as_view(),
-        name="gis-view-data",
+        "view/<gis_token>/<gitsha:commit_sha>",
+        OGCGISViewCollectionApiView.as_view(),
+        name="view-collection",
     ),
     path(
-        "projects/<user_token:key>/",
-        ProjectAllProjectGeoJsonGISApiView.as_view(),
-        name="user-projects",
+        "view/<gis_token>/<gitsha:commit_sha>/items",
+        OGCGISViewCollectionItemApiView.as_view(),
+        name="view-collection-items",
+    ),
+    # OGC GIS - User endpoints
+    path(
+        "user/<user_token:key>",
+        OGCGISUserProjectsApiView.as_view(),
+        name="user-data",
+    ),
+    path(
+        "user/<user_token:key>/<gitsha:commit_sha>",
+        OGCGISUserCollectionApiView.as_view(),
+        name="user-collection",
+    ),
+    path(
+        "user/<user_token:key>/<gitsha:commit_sha>/items",
+        OGCGISUserCollectionItemApiView.as_view(),
+        name="user-collection-items",
     ),
 ]
+
+if settings.DEBUG:
+    # Need to add the following because of automatic slash appending
+    urlpatterns += [
+        path("view/<gis_token>/", OGCGISViewDataApiView.as_view()),
+        path("user/<user_token:key>/", OGCGISUserProjectsApiView.as_view()),
+    ]

@@ -40,7 +40,7 @@ urlpatterns: list[URLResolver | URLPattern] = [
     ),
     path("experiments/", include(experiment_urlpatterns)),
     path("experiment_records/", include(experiment_record_urlpatterns)),
-    path("gis/", include((gis_urlpatterns, "gis"), namespace="gis")),
+    path("gis-ogc/", include((gis_urlpatterns, "gis-ogc"), namespace="gis-ogc")),
     path("gis_view/", include(gis_view_urlpatterns)),
     path("logs/", include(log_entry_urlpatterns)),
     path("points_of_interest/", include(poi_urlpatterns)),
