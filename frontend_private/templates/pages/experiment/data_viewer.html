@@ -1,6 +1,32 @@
 {% extends "pages/experiment/base.html" %}
 {% load static %}
 
+{% block extra_css %}
+<style>
+    /* Custom AG Grid Dark Theme Overrides */
+    .ag-theme-alpine-dark {
+        --ag-background-color: rgb(30, 41, 59);
+        --ag-header-background-color: rgb(51, 65, 85);
+        --ag-odd-row-background-color: rgb(30, 41, 59);
+        --ag-header-foreground-color: rgb(226, 232, 240);
+        --ag-foreground-color: rgb(203, 213, 225);
+        --ag-border-color: rgb(71, 85, 105);
+        --ag-row-hover-color: rgba(99, 102, 241, 0.1);
+        --ag-selected-row-background-color: rgba(99, 102, 241, 0.2);
+        --ag-range-selection-background-color: rgba(99, 102, 241, 0.2);
+        --ag-input-focus-border-color: rgb(99, 102, 241);
+    }
+    
+    .ag-theme-alpine-dark .ag-header-cell-text {
+        font-weight: 600;
+    }
+    
+    .ag-theme-alpine-dark .ag-cell {
+        line-height: 40px;
+    }
+</style>
+{% endblock extra_css %}
+
 {% block right_panel %}
 <div class="grow">
 
@@ -117,38 +143,21 @@
 
 {% block extra_js %}
 <script src="{% url 'url_reverse.js' %}"></script>
+
+{% if debug %}
+<script src="{% static 'private/js/vendors/ag-grid-community.min.js' %}"></script>
+{% else %}
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/ag-grid/34.2.0/ag-grid-community.min.js" 
+    integrity="sha512-Zhgoh+vE3dmd0rcKatRMB9x6xlTo5e7+YHNeenVQ003lt2RDmsoOAxhvE/rAuENdBTZXaR4W00He9S0Gu/1+7w==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+{% endif %}
+
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<!-- AG Grid Community -->
-<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.3/dist/ag-grid-community.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.3/styles/ag-grid.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.3/styles/ag-theme-alpine.css">
-
-<style>
-    /* Custom AG Grid Dark Theme Overrides */
-    .ag-theme-alpine-dark {
-        --ag-background-color: rgb(30, 41, 59);
-        --ag-header-background-color: rgb(51, 65, 85);
-        --ag-odd-row-background-color: rgb(30, 41, 59);
-        --ag-header-foreground-color: rgb(226, 232, 240);
-        --ag-foreground-color: rgb(203, 213, 225);
-        --ag-border-color: rgb(71, 85, 105);
-        --ag-row-hover-color: rgba(99, 102, 241, 0.1);
-        --ag-selected-row-background-color: rgba(99, 102, 241, 0.2);
-        --ag-range-selection-background-color: rgba(99, 102, 241, 0.2);
-        --ag-input-focus-border-color: rgb(99, 102, 241);
-    }
-    
-    .ag-theme-alpine-dark .ag-header-cell-text {
-        font-weight: 600;
-    }
-    
-    .ag-theme-alpine-dark .ag-cell {
-        line-height: 40px;
-    }
-</style>
-
 <script>
 $(window).on('load', function() {
     'use strict';
@@ -170,10 +179,10 @@ $(window).on('load', function() {
             showLoading();
             
             // First, fetch experiment details to get field definitions
-            const experimentUrl = (typeof Urls !== 'undefined' && Urls["api:v1:experiment-detail"])
-                ? Urls["api:v1:experiment-detail"](experimentId)
-                : `/api/v1/experiments/${experimentId}/`;
-            const experimentResponse = await fetch(experimentUrl, { credentials: 'same-origin' });
+            const experimentResponse = await fetch(
+                Urls["api:v1:experiment-detail"](experimentId), 
+                { credentials: 'same-origin' }
+            );
             
             if (!experimentResponse.ok) {
                 throw new Error(`Failed to fetch experiment details: ${experimentResponse.status}`);
@@ -345,14 +354,16 @@ $(window).on('load', function() {
             `);
             
             // Call export API
-            const exportUrl = Urls['api:v1:experiment-export-excel'](experimentId);
-            const response = await fetch(exportUrl, {
-                method: 'GET',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                },
-                credentials: 'same-origin',
-            });
+            const response = await fetch(
+                Urls['api:v1:experiment-export-excel'](experimentId), 
+                {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                    credentials: 'same-origin',
+                }
+            );
             
             if (!response.ok) {
                 throw new Error(`Export failed: ${response.status} ${response.statusText}`);

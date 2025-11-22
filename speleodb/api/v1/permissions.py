@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
@@ -15,6 +16,9 @@ from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import GISView
 from speleodb.gis.models import LogEntry
 from speleodb.gis.models import PointOfInterest
+from speleodb.gis.models import Sensor
+from speleodb.gis.models import SensorFleet
+from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.surveys.models import Project
@@ -221,6 +225,72 @@ class ExperimentUserHasWriteAccess(BaseExperimentAccessLevel):
 
 
 class ExperimentUserHasReadAccess(BaseExperimentAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
+
+
+# ================ SENSOR FLEET PERMISSIONS ================ #
+
+
+class BaseSensorFleetAccessLevel(permissions.BasePermission):
+    """Base permission class for Sensor Fleet objects that checks permissions on the
+    sensor fleet."""
+
+    MIN_ACCESS_LEVEL: int
+
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
+
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: Any,
+    ) -> bool:
+        sensor_fleet: SensorFleet
+        match obj:
+            case SensorFleet():
+                sensor_fleet = obj
+
+            case Sensor():
+                # For sensors, check permission on their fleet
+                sensor_fleet = obj.fleet
+
+            case SensorFleetUserPermission():
+                # For permissions, check on the fleet
+                sensor_fleet = obj.sensor_fleet
+
+            case _:
+                raise TypeError(
+                    f"Unknown `type` received: {type(obj)}. "
+                    "Expected: SensorFleet | Sensor | SensorFleetUserPermission"
+                )
+
+        try:
+            return (
+                SensorFleetUserPermission.objects.get(
+                    user=request.user,
+                    sensor_fleet=sensor_fleet,
+                    is_active=True,
+                ).level
+                >= self.MIN_ACCESS_LEVEL
+            )
+
+        except ObjectDoesNotExist:
+            return False
+
+
+class SensorFleetUserHasAdminAccess(BaseSensorFleetAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
+
+
+class SensorFleetUserHasWriteAccess(BaseSensorFleetAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
+
+
+class SensorFleetUserHasReadAccess(BaseSensorFleetAccessLevel):
     MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
 
 

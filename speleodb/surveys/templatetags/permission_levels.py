@@ -20,5 +20,10 @@ def get_user_experiment_permission_levels() -> list[PermissionLevel]:
 
 
 @register.simple_tag
+def get_sensor_fleet_permission_levels() -> list[PermissionLevel]:
+    return PermissionLevel.members_no_webviewer
+
+
+@register.simple_tag
 def get_team_permission_levels() -> list[PermissionLevel]:
     return PermissionLevel.members_no_admin

@@ -17,6 +17,8 @@ from speleodb.api.v1.urls.log_entry import urlpatterns as log_entry_urlpatterns
 from speleodb.api.v1.urls.poi import urlpatterns as poi_urlpatterns
 from speleodb.api.v1.urls.project import urlpatterns as project_urlpatterns
 from speleodb.api.v1.urls.resource import urlpatterns as resource_urlpatterns
+from speleodb.api.v1.urls.sensor import urlpatterns as sensor_urlpatterns
+from speleodb.api.v1.urls.sensor_fleet import urlpatterns as sensor_fleet_urlpatterns
 from speleodb.api.v1.urls.station import urlpatterns as station_urlpatterns
 from speleodb.api.v1.urls.station_tag import urlpatterns as station_tag_urlpatterns
 from speleodb.api.v1.urls.team import urlpatterns as team_urlpatterns
@@ -46,6 +48,8 @@ urlpatterns: list[URLResolver | URLPattern] = [
     path("points_of_interest/", include(poi_urlpatterns)),
     path("projects/", include(project_urlpatterns)),
     path("resources/", include(resource_urlpatterns)),
+    path("sensor-fleets/", include(sensor_fleet_urlpatterns)),
+    path("sensors/", include(sensor_urlpatterns)),
     path("stations/", include(station_urlpatterns)),
     path("station_tags/", include(station_tag_urlpatterns)),
     path("teams/", include(team_urlpatterns)),

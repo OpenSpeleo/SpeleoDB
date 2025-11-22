@@ -19,6 +19,9 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import LogEntry
+from speleodb.gis.models import Sensor
+from speleodb.gis.models import SensorFleet
+from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models.experiment import FieldType
@@ -458,3 +461,48 @@ class UserExperimentPermissionFactory(DjangoModelFactory[ExperimentUserPermissio
 
     class Meta:
         model = ExperimentUserPermission
+
+
+# ================ SENSOR FLEET FACTORIES ================ #
+
+
+class SensorFleetFactory(DjangoModelFactory[SensorFleet]):
+    """Factory for creating SensorFleet instances."""
+
+    class Meta:
+        model = SensorFleet
+
+    name: str = factory.Sequence(lambda n: f"Fleet {n:03d}")  # type: ignore[assignment]
+    description: str = factory.Faker(  # type: ignore[assignment]
+        "text", max_nb_chars=200
+    )
+    is_active = True
+    created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+
+
+class SensorFactory(DjangoModelFactory[Sensor]):
+    """Factory for creating Sensor instances."""
+
+    class Meta:
+        model = Sensor
+
+    name: str = factory.Sequence(lambda n: f"Sensor {n:03d}")  # type: ignore[assignment]
+    notes: str = factory.Faker("text", max_nb_chars=100)  # type: ignore[assignment]
+    is_functional = True
+    fleet: SensorFleet = factory.SubFactory(SensorFleetFactory)  # type: ignore[assignment]
+    created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+
+
+class SensorFleetUserPermissionFactory(DjangoModelFactory[SensorFleetUserPermission]):
+    """Factory for creating SensorFleetUserPermission instances."""
+
+    class Meta:
+        model = SensorFleetUserPermission
+
+    level = PermissionLevel.READ_AND_WRITE
+    user: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
+    sensor_fleet: SensorFleet = factory.SubFactory(SensorFleetFactory)  # type: ignore[assignment]

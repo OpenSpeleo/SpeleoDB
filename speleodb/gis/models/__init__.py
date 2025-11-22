@@ -22,6 +22,11 @@ from speleodb.gis.models.experiment import ExperimentRecord
 from speleodb.gis.models.experiment import ExperimentUserPermission
 from speleodb.gis.models.log_entry import LogEntry
 
+# Sensor Related Models
+from speleodb.gis.models.sensor import Sensor
+from speleodb.gis.models.sensor import SensorFleet
+from speleodb.gis.models.sensor import SensorFleetUserPermission
+
 __all__ = [
     "Experiment",
     "ExperimentRecord",
@@ -31,6 +36,9 @@ __all__ = [
     "LogEntry",
     "PointOfInterest",
     "ProjectGeoJSON",
+    "Sensor",
+    "SensorFleet",
+    "SensorFleetUserPermission",
     "Station",
     "StationResource",
     "StationTag",

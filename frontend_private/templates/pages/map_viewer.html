@@ -5338,9 +5338,7 @@
     // Journal Entries Tab - Real AJAX + Renderer
     async function fetchStationLogEntries(stationId) {
         try {
-            const url = (typeof Urls !== 'undefined' && Urls["api:v1:station-logs"])
-                ? Urls["api:v1:station-logs"](stationId)
-                : `/api/v1/stations/${stationId}/logs/`;
+            const url = Urls["api:v1:station-logs"](stationId);
             const resp = await fetch(url, { credentials: 'same-origin' });
             if (!resp.ok) {
                 let message = `Failed to load log entries (${resp.status})`;
@@ -5677,9 +5675,7 @@
         if (submitBtn) submitBtn.disabled = true;
 
         const hasNewFile = fileInput && fileInput.files && fileInput.files[0];
-        const url = (typeof Urls !== 'undefined' && Urls["api:v1:log-detail"])
-            ? Urls["api:v1:log-detail"](logId)
-            : `/api/v1/logs/${logId}/`;
+        const url = Urls["api:v1:log-detail"](logId);
 
         try {
             let resp;
@@ -5745,9 +5741,7 @@
             }
             return;
         }
-        const url = (typeof Urls !== 'undefined' && Urls["api:v1:log-detail"])
-            ? Urls["api:v1:log-detail"](logId)
-            : `/api/v1/logs/${logId}/`;
+        const url = Urls["api:v1:log-detail"](logId);
         try {
             const resp = await fetch(url, {
                 method: 'DELETE',
@@ -5837,9 +5831,7 @@
         }
 
         try {
-            const url = (typeof Urls !== 'undefined' && Urls["api:v1:station-logs"])
-                ? Urls["api:v1:station-logs"](stationId)
-                : `/api/v1/stations/${stationId}/logs/`;
+            const url = Urls["api:v1:station-logs"](stationId);
             const resp = await fetch(url, {
                 method: 'POST',
                 headers: {'X-CSRFToken': getCSRFToken()},
@@ -6129,10 +6121,7 @@
 
     async function fetchExperiments() {
         try {
-            const url = (typeof Urls !== 'undefined' && Urls["api:v1:experiments"])
-                ? Urls["api:v1:experiments"]()
-                : `/api/v1/experiments/`;
-            const resp = await fetch(url, { credentials: 'same-origin' });
+            const url = Urls["api:v1:experiments"]();
             if (!resp.ok) {
                 let message = `Failed to load experiments (${resp.status})`;
                 try {
@@ -6161,9 +6150,7 @@
 
     async function fetchExperimentDataRows(stationId, experimentId) {
         try {
-            const url = (typeof Urls !== 'undefined' && Urls["api:v1:experiment-records"])
-                ? Urls["api:v1:experiment-records"](stationId, experimentId)
-                : `/api/v1/stations/${stationId}/experiment/${experimentId}/records/`;
+            const url = Urls["api:v1:experiment-records"](stationId, experimentId);
             const resp = await fetch(url, { credentials: 'same-origin' });
             if (!resp.ok) {
                 console.error(`Failed to fetch experiment records: ${resp.status}`);
@@ -6772,9 +6759,7 @@
                 submitLoading.classList.remove('hidden');
 
                 try {
-                    const url = (typeof Urls !== 'undefined' && Urls["api:v1:experiment-records"])
-                        ? Urls["api:v1:experiment-records"](stationId, experimentId)
-                        : `/api/v1/stations/${stationId}/experiment/${experimentId}/records/`;
+                    const url = Urls["api:v1:experiment-records"](stationId, experimentId);
                     
                     const response = await fetch(url, {
                         method: 'POST',
@@ -6897,9 +6882,7 @@
         closeDeleteExperimentRowModal();
 
         try {
-            const url = (typeof Urls !== 'undefined' && Urls["api:v1:experiment-records-detail"])
-                ? Urls["api:v1:experiment-records-detail"](rowId)
-                : `/api/v1/experiment_records/${rowId}/`;
+            const url = Urls["api:v1:experiment-records-detail"](rowId);
             
             const response = await fetch(url, {
                 method: 'DELETE',
@@ -7149,14 +7132,17 @@
     // Load user's tags from API
     async function loadUserTags() {
         try {
-            const response = await fetch('/api/v1/station_tags/', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const response = await fetch(
+                Urls["api:v1:station-tags"](), 
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin'
+                }
+            );
             if (response.ok) {
                 const data = await response.json();
                 userTags = data.data || [];
@@ -7170,14 +7156,17 @@
     // Load predefined colors
     async function loadTagColors() {
         try {
-            const response = await fetch('/api/v1/station_tags/colors/', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const response = await fetch(
+                Urls["api:v1:station-tag-colors"](), 
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin'
+                }
+            );
             if (response.ok) {
                 const data = await response.json();
                 tagColors = data.data.colors || [];
@@ -7338,15 +7327,18 @@
         }
         
         try {
-            const response = await fetch('/api/v1/station_tags/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({ name, color })
-            });
+            const response = await fetch(
+                Urls["api:v1:station-tags"](), 
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ name, color })
+                }
+            );
             
             if (response.ok) {
                 const data = await response.json();
@@ -7372,15 +7364,18 @@
     // Set tag on station
     window.setStationTag = async function(stationId, tagId) {
         try {
-            const response = await fetch(`/api/v1/stations/${stationId}/tags/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({ tag_id: tagId })
-            });
+            const response = await fetch(
+                Urls["api:v1:station-tags-manage"](stationId), 
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ tag_id: tagId })
+                }
+            );
             
             if (response.ok) {
                 const data = await response.json();
@@ -7419,14 +7414,17 @@
     // Remove tag from station
     window.removeTagFromStation = async function(stationId) {
         try {
-            const response = await fetch(`/api/v1/stations/${stationId}/tags/`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const response = await fetch(
+                Urls["api:v1:station-tags-manage"](stationId), 
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin'
+                }
+            );
             
             if (response.ok) {
                 const station = allStations.get(stationId);

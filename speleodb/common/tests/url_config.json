@@ -684,6 +684,42 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/sensor-fleets/",
+        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetApiView",
+        "name": "api:v1:sensor-fleets",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/",
+        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetSpecificApiView",
+        "name": "api:v1:sensor-fleet-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/permissions/",
+        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetPermissionApiView",
+        "name": "api:v1:sensor-fleet-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/sensors/",
+        "module": "speleodb.api.v1.views.sensor_fleet.SensorApiView",
+        "name": "api:v1:sensor-fleet-sensors",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/sensors/<uuid:id>/",
+        "module": "speleodb.api.v1.views.sensor_fleet.SensorSpecificApiView",
+        "name": "api:v1:sensor-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/sensors/<uuid:id>/toggle-functional/",
+        "module": "speleodb.api.v1.views.sensor_fleet.SensorToggleFunctionalApiView",
+        "name": "api:v1:sensor-toggle-functional",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/station_tags/",
         "module": "speleodb.api.v1.views.station_tag.StationTagsApiView",
         "name": "api:v1:station-tags",
@@ -1059,6 +1095,36 @@
         "url": "/private/projects/",
         "module": "frontend_private.views.project.ProjectListingView",
         "name": "private:projects",
+        "decorators": ""
+    },
+    {
+        "url": "/private/sensor-fleet/<uuid:fleet_id>/",
+        "module": "frontend_private.views.sensor_fleets.SensorFleetDetailsView",
+        "name": "private:sensor_fleet_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/sensor-fleet/<uuid:fleet_id>/danger_zone/",
+        "module": "frontend_private.views.sensor_fleets.SensorFleetDangerZoneView",
+        "name": "private:sensor_fleet_danger_zone",
+        "decorators": ""
+    },
+    {
+        "url": "/private/sensor-fleet/<uuid:fleet_id>/permissions/",
+        "module": "frontend_private.views.sensor_fleets.SensorFleetUserPermissionsView",
+        "name": "private:sensor_fleet_user_permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/sensor-fleet/new/",
+        "module": "frontend_private.views.sensor_fleets.NewSensorFleetView",
+        "name": "private:sensor_fleet_new",
+        "decorators": ""
+    },
+    {
+        "url": "/private/sensor-fleets/",
+        "module": "frontend_private.views.sensor_fleets.SensorFleetListingView",
+        "name": "private:sensor_fleets",
         "decorators": ""
     },
     {

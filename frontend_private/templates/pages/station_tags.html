@@ -355,7 +355,7 @@ $(document).ready(function() {
     // Load all tags
     function loadTags() {
         $.ajax({
-            url: '/api/v1/station_tags/',
+            url: '{% url "api:v1:station-tags" %}',
             method: 'GET',
             dataType: 'json',
             success: function(response) {
@@ -644,7 +644,7 @@ $(document).ready(function() {
             return false;
         }
 
-        const url = tagId ? `/api/v1/station_tags/${tagId}/` : '/api/v1/station_tags/';
+        const url = tagId ? Urls['api:v1:station-tag-detail'](tagId) : "{% url 'api:v1:station-tags' %}";
         const method = tagId ? 'PUT' : 'POST';
 
         $.ajax({
@@ -706,7 +706,7 @@ $(document).ready(function() {
         if (!tagId) return;
 
         $.ajax({
-            url: `/api/v1/station_tags/${tagId}/`,
+            url: Urls['api:v1:station-tag-detail'](tagId),
             method: 'DELETE',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader("X-CSRFToken", getCSRFToken());

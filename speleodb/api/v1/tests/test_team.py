@@ -255,7 +255,7 @@ class TestTeamDelete(BaseAPITestCase):
             headers={"authorization": auth},
         )
 
-        assert response.status_code == status.HTTP_204_NO_CONTENT, response.data
+        assert response.status_code == status.HTTP_200_OK, response.data
 
     @parameterized.expand([SurveyTeamMembershipRole.MEMBER, None])
     def test_delete_error(self, role: SurveyTeamMembershipRole | None) -> None:

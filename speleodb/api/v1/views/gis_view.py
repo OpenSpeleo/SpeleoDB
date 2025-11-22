@@ -86,8 +86,6 @@ class OGCGISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
 
     Pattern: Similar to ExperimentGISApiView
     Usage: External GIS tools (QGIS, ArcGIS, etc.)
-
-    Endpoint: GET /api/v1/gis/view/<token>/
     """
 
     queryset = GISView.objects.all()

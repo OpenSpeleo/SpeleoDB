@@ -24,6 +24,9 @@ from speleodb.gis.models import GISViewProject
 from speleodb.gis.models import LogEntry
 from speleodb.gis.models import PointOfInterest
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.gis.models import Sensor
+from speleodb.gis.models import SensorFleet
+from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationTag
@@ -856,3 +859,243 @@ class GISViewProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if obj.use_latest:
             return "latest"
         return obj.commit_sha[:8] if obj.commit_sha else "N/A"
+
+
+# ========================== SENSOR MODELS ========================== #
+
+
+@admin.register(SensorFleet)
+class SensorFleetAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    """Admin interface for managing Sensor Fleets."""
+
+    list_display = (
+        "name",
+        "created_by",
+        "is_active",
+        "sensor_count",
+        "permission_count",
+        "creation_date",
+        "modified_date",
+    )
+
+    list_filter = (
+        "is_active",
+        "creation_date",
+        "modified_date",
+    )
+
+    search_fields = (
+        "name",
+        "description",
+        "created_by",
+    )
+
+    readonly_fields = (
+        "id",
+        "created_by",
+        "creation_date",
+        "modified_date",
+        "sensor_count",
+        "permission_count",
+    )
+
+    ordering = ("-modified_date",)
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "name",
+                    "description",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Metadata",
+            {
+                "fields": (
+                    "id",
+                    "created_by",
+                    "creation_date",
+                    "modified_date",
+                    "sensor_count",
+                    "permission_count",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    @admin.display(description="Sensors")
+    def sensor_count(self, obj: SensorFleet) -> int:
+        """Display the number of sensors in this fleet."""
+        if obj and obj.pk:
+            return obj.sensors.count()
+        return 0
+
+    @admin.display(description="User Permissions")
+    def permission_count(self, obj: SensorFleet) -> int:
+        """Display the number of user permissions for this fleet."""
+        if obj and obj.pk:
+            return obj.rel_user_permissions.count()
+        return 0
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: SensorFleet,
+        form: forms.ModelForm[SensorFleet],
+        change: bool,
+    ) -> None:
+        # Auto-populate created_by field when creating a new sensor fleet
+        if not change:  # Only on creation, not on edit
+            obj.created_by = request.user.email  # type: ignore[union-attr]
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(Sensor)
+class SensorAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    """Admin interface for managing Sensors."""
+
+    list_display = (
+        "name",
+        "fleet",
+        "is_functional",
+        "created_by",
+        "creation_date",
+        "modified_date",
+    )
+
+    list_filter = (
+        "fleet",
+        "is_functional",
+        "creation_date",
+        "modified_date",
+    )
+
+    search_fields = (
+        "fleet__name",
+        "name",
+        "notes",
+        "created_by",
+    )
+
+    readonly_fields = (
+        "id",
+        "created_by",
+        "creation_date",
+        "modified_date",
+    )
+
+    ordering = ("-modified_date",)
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "name",
+                    "fleet",
+                    "notes",
+                    "is_functional",
+                )
+            },
+        ),
+        (
+            "Metadata",
+            {
+                "fields": (
+                    "id",
+                    "created_by",
+                    "creation_date",
+                    "modified_date",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: Sensor,
+        form: forms.ModelForm[Sensor],
+        change: bool,
+    ) -> None:
+        # Auto-populate created_by field when creating a new sensor
+        if not change:  # Only on creation, not on edit
+            obj.created_by = request.user.email  # type: ignore[union-attr]
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(SensorFleetUserPermission)
+class SensorFleetUserPermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    """Admin interface for managing Sensor Fleet User Permissions."""
+
+    list_display = (
+        "sensor_fleet",
+        "user",
+        "level_display",
+        "is_active",
+        "creation_date",
+        "modified_date",
+    )
+
+    list_filter = (
+        "is_active",
+        "level",
+        "creation_date",
+        "modified_date",
+    )
+
+    search_fields = (
+        "user__email",
+        "sensor_fleet__name",
+    )
+
+    readonly_fields = (
+        "creation_date",
+        "modified_date",
+    )
+
+    ordering = ("sensor_fleet", "user")
+
+    fieldsets = (
+        (
+            "Permission Information",
+            {
+                "fields": (
+                    "sensor_fleet",
+                    "user",
+                    "level",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Deactivation",
+            {
+                "fields": ("deactivated_by",),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Metadata",
+            {
+                "fields": (
+                    "creation_date",
+                    "modified_date",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    @admin.display(description="Permission Level")
+    def level_display(self, obj: SensorFleetUserPermission) -> str:
+        """Display the permission level label."""
+        if obj:
+            return obj.level_label  # type: ignore[return-value]
+        return "-"

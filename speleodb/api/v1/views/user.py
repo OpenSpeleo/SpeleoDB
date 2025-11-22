@@ -148,7 +148,7 @@ class ReleaseAllUserLocksView(GenericAPIView[User], SDBAPIViewMixin):
             mutex.release_mutex(user=user, comment="Batch unlocking")
 
         return SuccessResponse(
-            "All locks have been released", status=status.HTTP_204_NO_CONTENT
+            "All locks have been released", status=status.HTTP_200_OK
         )
 
 

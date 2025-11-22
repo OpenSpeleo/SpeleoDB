@@ -3144,6 +3144,26 @@ span.flatpickr-weekday {
   border-color: rgb(110 231 183 / var(--tw-border-opacity));
 }
 
+.border-emerald-400 {
+  --tw-border-opacity: 1;
+  border-color: rgb(52 211 153 / var(--tw-border-opacity));
+}
+
+.border-emerald-500 {
+  --tw-border-opacity: 1;
+  border-color: rgb(16 185 129 / var(--tw-border-opacity));
+}
+
+.border-emerald-500\/20 {
+  --tw-border-opacity: 0.2;
+  border-color: rgb(16 185 129 / var(--tw-border-opacity));
+}
+
+.border-emerald-500\/30 {
+  --tw-border-opacity: 0.3;
+  border-color: rgb(16 185 129 / var(--tw-border-opacity));
+}
+
 .border-gray-100 {
   --tw-border-opacity: 1;
   border-color: rgb(243 244 246 / var(--tw-border-opacity))
@@ -3216,6 +3236,11 @@ span.flatpickr-weekday {
 
 .border-rose-500 {
   --tw-border-opacity: 1;
+  border-color: rgb(244 63 94 / var(--tw-border-opacity));
+}
+
+.border-rose-500\/30 {
+  --tw-border-opacity: 0.3;
   border-color: rgb(244 63 94 / var(--tw-border-opacity));
 }
 
@@ -3418,6 +3443,11 @@ span.flatpickr-weekday {
   background-color: rgb(16 185 129 / var(--tw-bg-opacity));
 }
 
+.bg-emerald-500\/20 {
+  --tw-bg-opacity: 0.2;
+  background-color: rgb(16 185 129 / var(--tw-bg-opacity));
+}
+
 .bg-emerald-500\/30 {
   --tw-bg-opacity: 0.3;
   background-color: rgb(16 185 129 / var(--tw-bg-opacity));
@@ -3544,6 +3574,16 @@ span.flatpickr-weekday {
 
 .bg-rose-500 {
   --tw-bg-opacity: 1;
+  background-color: rgb(244 63 94 / var(--tw-bg-opacity));
+}
+
+.bg-rose-500\/20 {
+  --tw-bg-opacity: 0.2;
+  background-color: rgb(244 63 94 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-rose-500\/30:hover {
+  --tw-bg-opacity: 0.3;
   background-color: rgb(244 63 94 / var(--tw-bg-opacity));
 }
 
@@ -4460,6 +4500,11 @@ span.flatpickr-weekday {
   color: rgb(167 243 208 / var(--tw-text-opacity));
 }
 
+.text-emerald-300 {
+  --tw-text-opacity: 1;
+  color: rgb(110 231 183 / var(--tw-text-opacity));
+}
+
 .text-emerald-400 {
   --tw-text-opacity: 1;
   color: rgb(52 211 153 / var(--tw-text-opacity));
@@ -5007,6 +5052,11 @@ span.flatpickr-weekday {
   background-color: rgb(99 102 241 / var(--tw-bg-opacity));
 }
 
+.hover\:bg-indigo-500\/30:hover {
+  --tw-bg-opacity: 0.3;
+  background-color: rgb(99 102 241 / var(--tw-bg-opacity));
+}
+
 .hover\:bg-indigo-600:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(79 70 229 / var(--tw-bg-opacity));
@@ -5380,6 +5430,11 @@ span.flatpickr-weekday {
 
 .bg-indigo-500 {
   --tw-bg-opacity: 1;
+  background-color: rgb(99 102 241 / var(--tw-bg-opacity));
+}
+
+.bg-indigo-500\/20 {
+  --tw-bg-opacity: 0.20;
   background-color: rgb(99 102 241 / var(--tw-bg-opacity));
 }
 

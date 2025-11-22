@@ -285,7 +285,7 @@
                             {% endif %}
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="fill-current text-{{stroke_color}}-400 shrink-0 h-6 w-6" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round" viewBox="4.25 2.25 15.5 19.5">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="fill-current text-{{stroke_color}}-400 shrink-0 h-6 w-6" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round" viewBox="4.25 2.25 15.5 19.5">
                                                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                                 <path d="M14 3v4a1 1 0 0 0 1 1h4" />
                                                 <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
@@ -317,6 +317,28 @@
                                                 <path class="fill-current text-{{stroke_color}}-400" d="M19.707 9.292a3.012 3.012 0 00-1.415 1.415L13.286 5.7c-.4.195-.84.298-1.286.3a3 3 0 113-3 2.969 2.969 0 01-.3 1.286l5.007 5.006z" />
                                             </svg>
                                             <span class="text-sm font-medium ml-3 duration-200">My Survey Projects</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+
+                            <!-- Tools -->
+                            {% if 'tool-' in request.url_name %}
+                            {% set stroke_color = 'indigo' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:tool-xls2dmp' %}">
+                            {% else %}
+                            {% set stroke_color = 'slate' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:tool-xls2dmp' %}">
+                            {% endif %}
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400 fill-none" viewBox="2.41 2.41 19.21 19.21">
+                                                <path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5"></path>
+                                            </svg>
+
+                                            <span class="text-sm font-medium ml-3 duration-200">Survey Tools</span>
                                         </div>
                                     </div>
                                 </a>
@@ -364,11 +386,42 @@
                             {% endif %}
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                                             </svg>
 
                                             <span class="text-sm font-medium ml-3 duration-200">My GIS Views</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+
+                            <!-- My GIS Views -->
+                            {% if request.url_name|is_in_list:"sensor_fleets,sensor_fleet_new,sensor_fleet_details,sensor_fleet_danger_zone,sensor_fleet_user_permissions" %}
+                            {% set stroke_color = 'indigo' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:sensor_fleets' %}">
+                            {% else %}
+                            {% set stroke_color = 'slate' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:sensor_fleets' %}">
+                            {% endif %}
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="2.5 2.5 19 19">
+                                                <path d="M5 5m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z"></path>
+                                                <path d="M9 9h6v6h-6z"></path>
+                                                <path d="M3 10h2"></path>
+                                                <path d="M3 14h2"></path>
+                                                <path d="M10 3v2"></path>
+                                                <path d="M14 3v2"></path>
+                                                <path d="M21 10h-2"></path>
+                                                <path d="M21 14h-2"></path>
+                                                <path d="M14 21v-2"></path>
+                                                <path d="M10 21v-2"></path>
+                                            </svg>
+
+                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Sensors</span>
                                         </div>
                                     </div>
                                 </a>
@@ -386,7 +439,7 @@
                             {% endif %}
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                                             </svg>
 
@@ -418,30 +471,6 @@
                                             </svg>
 
                                             <span class="text-sm font-medium ml-3 duration-200">My GIS Survey Map</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <hr class="mt-5 mb-5" style="border-color: rgb(255 255 255 / 30%); border-style: dotted;">
-
-                            <!-- Tools -->
-                            {% if 'tool-' in request.url_name %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:tool-xls2dmp' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:tool-xls2dmp' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400 fill-none" viewBox="2.41 2.41 19.21 19.21">
-                                                <path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5"></path>
-                                            </svg>
-
-                                            <span class="text-sm font-medium ml-3 duration-200">Survey Tools</span>
                                         </div>
                                     </div>
                                 </a>

@@ -25,6 +25,7 @@ from frontend_private.views import MapViewerView
 from frontend_private.views import NewExperimentView
 from frontend_private.views import NewGISViewView
 from frontend_private.views import NewProjectView
+from frontend_private.views import NewSensorFleetView
 from frontend_private.views import NewTeamView
 from frontend_private.views import PassWordView
 from frontend_private.views import PreferencesView
@@ -38,6 +39,10 @@ from frontend_private.views import ProjectRevisionHistoryView
 from frontend_private.views import ProjectTeamPermissionsView
 from frontend_private.views import ProjectUploadView
 from frontend_private.views import ProjectUserPermissionsView
+from frontend_private.views import SensorFleetDangerZoneView
+from frontend_private.views import SensorFleetDetailsView
+from frontend_private.views import SensorFleetListingView
+from frontend_private.views import SensorFleetUserPermissionsView
 from frontend_private.views import StationTagsView
 from frontend_private.views import TeamDangerZoneView
 from frontend_private.views import TeamDetailsView
@@ -114,6 +119,20 @@ experiment_patterns = [
     ),
 ]
 
+sensor_fleet_patterns = [
+    path("", SensorFleetDetailsView.as_view(), name="sensor_fleet_details"),
+    path(
+        "danger_zone/",
+        SensorFleetDangerZoneView.as_view(),
+        name="sensor_fleet_danger_zone",
+    ),
+    path(
+        "permissions/",
+        SensorFleetUserPermissionsView.as_view(),
+        name="sensor_fleet_user_permissions",
+    ),
+]
+
 gis_view_patterns: list[URLPattern] = [
     path("", GISViewDetailsView.as_view(), name="gis_view_details"),
     path(
@@ -162,6 +181,10 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("experiments/", ExperimentListingView.as_view(), name="experiments"),
     path("experiment/new/", NewExperimentView.as_view(), name="experiment_new"),
     path("experiment/<uuid:experiment_id>/", include(experiment_patterns)),
+    # Sensor Fleets URLs
+    path("sensor-fleets/", SensorFleetListingView.as_view(), name="sensor_fleets"),
+    path("sensor-fleet/new/", NewSensorFleetView.as_view(), name="sensor_fleet_new"),
+    path("sensor-fleet/<uuid:fleet_id>/", include(sensor_fleet_patterns)),
     # GIS Views URLs
     path("gis_views/", GISViewListingView.as_view(), name="gis_views"),
     path("gis_view/new/", NewGISViewView.as_view(), name="gis_view_new"),

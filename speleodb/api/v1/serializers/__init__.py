@@ -40,6 +40,10 @@ from speleodb.api.v1.serializers.request_serializers import UserRequestSerialize
 from speleodb.api.v1.serializers.request_serializers import (
     UserRequestWithTeamRoleSerializer,
 )
+from speleodb.api.v1.serializers.sensor_fleet import SensorFleetListSerializer
+from speleodb.api.v1.serializers.sensor_fleet import SensorFleetSerializer
+from speleodb.api.v1.serializers.sensor_fleet import SensorFleetUserPermissionSerializer
+from speleodb.api.v1.serializers.sensor_fleet import SensorSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamListSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamMembershipListSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamMembershipSerializer
@@ -73,6 +77,10 @@ __all__ = [
     "ProjectUserPermissionSerializer",
     "ProjectWithGeoJsonSerializer",
     "PublicAnnoucementSerializer",
+    "SensorFleetListSerializer",
+    "SensorFleetSerializer",
+    "SensorFleetUserPermissionSerializer",
+    "SensorSerializer",
     "SurveyTeamListSerializer",
     "SurveyTeamMembershipListSerializer",
     "SurveyTeamMembershipSerializer",

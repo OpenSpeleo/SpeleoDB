@@ -32,9 +32,6 @@ class GISView(models.Model):
 
     Each view has a unique token that allows unauthenticated access to
     the specified projects and commits via a public API endpoint.
-
-    Management: Django Admin or optional API endpoints
-    Access: Public read-only API at /api/v1/gis/view/<token>/
     """
 
     # Type hints for reverse relations

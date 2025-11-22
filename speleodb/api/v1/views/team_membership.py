@@ -217,10 +217,8 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
         team_serializer = SurveyTeamSerializer(team, context={"user": user})
 
         return SuccessResponse(
-            {
-                "team": team_serializer.data,
-            },
-            status=status.HTTP_204_NO_CONTENT,
+            {"team": team_serializer.data},
+            status=status.HTTP_200_OK,
         )
 
 
