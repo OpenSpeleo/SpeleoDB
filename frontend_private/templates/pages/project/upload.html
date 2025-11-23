@@ -188,7 +188,18 @@
             }
         }
 
+        $('#message').on('input', function() {
+            $(this).removeClass('border-rose-600');
+        });
+
         $('#btn_submit').click(function() {
+          if ($('#message').val().trim() === "") {
+            $("#modal_error_txt").text("The revision title cannot be empty.");
+            $("#modal_error").css('display', 'flex');
+            $('#message').addClass('border-rose-600');
+            return false;
+          }
+
           var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
 
           var formData = new FormData();

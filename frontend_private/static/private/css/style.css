@@ -3239,6 +3239,11 @@ span.flatpickr-weekday {
   border-color: rgb(244 63 94 / var(--tw-border-opacity));
 }
 
+.border-rose-600 {
+  --tw-border-opacity: 1;
+  border-color: rgb(225 29 72 / var(--tw-border-opacity));
+}
+
 .border-rose-500\/30 {
   --tw-border-opacity: 0.3;
   border-color: rgb(244 63 94 / var(--tw-border-opacity));
