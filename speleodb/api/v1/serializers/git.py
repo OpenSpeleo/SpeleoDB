@@ -13,7 +13,7 @@ from frontend_private.templatetags.filter_utils import format_byte_size
 from frontend_private.templatetags.filter_utils import time_struct_since
 from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitFile
-from speleodb.surveys.models import Format
+from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Project
 
 
@@ -73,20 +73,20 @@ class GitCommitSerializer(serializers.Serializer[GitCommit]):
                 obj.authored_date, tz=datetime.UTC
             )
 
-            formats: list[Format.FileFormat] = [
+            formats: list[FileFormat] = [
                 dl_format.raw_format
                 for dl_format in project.formats_downloadable
                 if dl_format.creation_date.replace(microsecond=0) <= commit_date
             ]
 
             # all commits can be downloaded as a zip-file
-            formats.append(Format.FileFormat.DUMP)
+            formats.append(FileFormat.DUMP)
 
             return [
                 {
                     "name": (
                         dl_format.webname
-                        if dl_format != Format.FileFormat.DUMP
+                        if dl_format != FileFormat.DUMP
                         else "Everything (ZIP)"
                     ),
                     "download_url": reverse(

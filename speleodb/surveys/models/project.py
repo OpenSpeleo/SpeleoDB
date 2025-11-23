@@ -342,12 +342,12 @@ class Project(models.Model):
 
     @property
     def formats_downloadable(self) -> list[Format]:
-        from speleodb.surveys.models import Format  # noqa: PLC0415
+        from speleodb.surveys.models import FileFormat  # noqa: PLC0415
 
         return [
             _format
             for _format in self.formats
-            if _format.raw_format not in Format.FileFormat.__excluded_download_formats__
+            if _format.raw_format not in FileFormat.__excluded_download_formats__
         ]
 
     def refresh_geojson(self) -> None:

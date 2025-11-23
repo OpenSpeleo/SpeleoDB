@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from speleodb.processors.base import BaseFileProcessor
-from speleodb.surveys.models import Format
+from speleodb.surveys.models import FileFormat
 
 # ruff: noqa: E501
 
@@ -56,7 +56,7 @@ class SpreadsheetFileProcessor(BaseFileProcessor):
     ]
 
     ALLOWED_MIMETYPES = ["*"]
-    ASSOC_FILEFORMAT = Format.FileFormat.OTHER
+    ASSOC_FILEFORMAT = FileFormat.OTHER
 
     TARGET_FOLDER = "spreadsheets"
     TARGET_SAVE_FILENAME = None

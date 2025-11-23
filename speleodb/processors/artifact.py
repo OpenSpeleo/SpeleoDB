@@ -63,6 +63,7 @@ class Artifact:
 
     def assert_valid(
         self,
+        allowed_fullnames: list[str],
         allowed_extensions: list[str],
         allowed_mimetypes: list[str],
         rejected_extensions: list[str],
@@ -82,7 +83,11 @@ class Artifact:
                 f"this extension is rejected for security reasons."
             )
 
-        if self.extension not in allowed_extensions and "*" not in allowed_extensions:
+        if (
+            self.name not in allowed_fullnames
+            and self.extension not in allowed_extensions
+            and "*" not in allowed_extensions
+        ):
             raise ValidationError(
                 f"Invalid file extension received: `{self.extension}`, "
                 f"expected one of: {allowed_extensions}"

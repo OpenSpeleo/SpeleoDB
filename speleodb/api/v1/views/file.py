@@ -41,6 +41,7 @@ from speleodb.gis.models import ProjectGeoJSON
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors.auto_selector import AutoSelector
+from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -116,13 +117,11 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
         with timed_section("Project Upload"):
             # ~~~~~~~~~~~~~~~~~~~~~~ START of URL Validation ~~~~~~~~~~~~~~~~~~~~ #
             with timed_section("URL Validation"):
-                fileformat_f = Format.FileFormat.from_str(fileformat.upper())
+                fileformat_f = FileFormat.from_str(fileformat.upper())
 
-                if fileformat_f.label.lower() not in Format.FileFormat.upload_choices:
+                if fileformat_f.label.lower() not in FileFormat.upload_choices:
                     msg = f"The format: {fileformat_f} is not supported for upload"
-                    logger.exception(
-                        f"{msg}, expected: {Format.FileFormat.upload_choices}"
-                    )
+                    logger.exception(f"{msg}, expected: {FileFormat.upload_choices}")
                     return ErrorResponse(
                         {"error": msg},
                         status=status.HTTP_400_BAD_REQUEST,
@@ -172,6 +171,20 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                         },
                         status=status.HTTP_400_BAD_REQUEST,
                     )
+
+                # ================== COMPASS ZIP =================== #
+                # Only one file allowed for Compass ZIP uploads
+                if fileformat_f == FileFormat.COMPASS_ZIP:
+                    if len(files) != 1:
+                        return ErrorResponse(
+                            {
+                                "error": (
+                                    "Only one file upload is allowed for "
+                                    "Compass ZIP format."
+                                )
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
 
                 # Verify the total size and each individual file size doesn't exceed the
                 # global limit
@@ -235,6 +248,23 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     uploaded_files: list[pathlib.Path] = []
 
                     for file in files:
+                        if fileformat_f == FileFormat.COMPASS_ZIP:
+                            # Verify .zip extension (case-insensitive)
+                            if not file.name.lower().endswith(".zip"):
+                                return ErrorResponse(
+                                    {
+                                        "error": (
+                                            f"Compass ZIP upload must have a "
+                                            f"'.zip' extension. Got `{file.name}`."
+                                        )
+                                    },
+                                    status=status.HTTP_400_BAD_REQUEST,
+                                )
+
+                            # Change extension from .zip -> .czip
+                            base_name = file.name.rsplit(".", 1)[0]
+                            file.name = f"{base_name}.czip"
+
                         with timed_section(f"File Adding: `{file.name}`"):
                             # maximum retry attempts in case of Git exception
                             with timed_section("Get Upload Processor"):
@@ -256,7 +286,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                     )
 
                             with timed_section("File Management"):
-                                if fileformat_f == Format.FileFormat.AUTO:
+                                if fileformat_f == FileFormat.AUTO:
                                     target_fileformat = processor.ASSOC_FILEFORMAT
                                 else:
                                     target_fileformat = fileformat_f
@@ -440,18 +470,16 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
         **kwargs: Any,
     ) -> Response | FileResponse:
         try:
-            fileformat_f: Format.FileFormat = getattr(
-                Format.FileFormat, fileformat.upper()
-            )
+            fileformat_f: FileFormat = getattr(FileFormat, fileformat.upper())
         except AttributeError:
             return ErrorResponse(
                 {"error": f"The file format requested is not recognized: {fileformat}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if fileformat_f.label.lower() not in Format.FileFormat.download_choices:
+        if fileformat_f.label.lower() not in FileFormat.download_choices:
             msg = f"The format: {fileformat_f} is not supported for download"
-            logger.exception(f"{msg}, expected: {Format.FileFormat.download_choices}")
+            logger.exception(f"{msg}, expected: {FileFormat.download_choices}")
             return ErrorResponse(
                 {"error": msg},
                 status=status.HTTP_400_BAD_REQUEST,

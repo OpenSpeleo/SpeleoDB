@@ -15,7 +15,7 @@ from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.api.v1.tests.utils import is_valid_git_sha
 from speleodb.common.enums import PermissionLevel
-from speleodb.surveys.models import Format
+from speleodb.surveys.models import FileFormat
 from speleodb.utils.test_utils import named_product
 
 BASE_DIR = pathlib.Path(__file__).parent / "artifacts"
@@ -60,9 +60,9 @@ class FileViewTests(BaseAPIProjectTestCase):
         fileformat = None
         match testfile.suffix.lstrip(".").upper():
             case "TML":
-                fileformat = Format.FileFormat.ARIANE_TML
+                fileformat = FileFormat.ARIANE_TML
             case "TMLU":
-                fileformat = Format.FileFormat.ARIANE_TMLU
+                fileformat = FileFormat.ARIANE_TMLU
             case _:
                 raise ValueError(
                     f"Unknown value: `{testfile.suffix.lstrip('.').upper()}`"
@@ -136,9 +136,9 @@ class FileViewTests(BaseAPIProjectTestCase):
         fileformat = None
         match testfile.suffix.lstrip(".").upper():
             case "TML":
-                fileformat = Format.FileFormat.ARIANE_TML
+                fileformat = FileFormat.ARIANE_TML
             case "TMLU":
-                fileformat = Format.FileFormat.ARIANE_TMLU
+                fileformat = FileFormat.ARIANE_TMLU
             case _:
                 raise ValueError(
                     f"Unknown value: `{testfile.suffix.lstrip('.').upper()}`"
@@ -194,9 +194,9 @@ class FileViewTests(BaseAPIProjectTestCase):
         fileformat = None
         match testfile.suffix.lstrip(".").upper():
             case "TML":
-                fileformat = Format.FileFormat.ARIANE_TML
+                fileformat = FileFormat.ARIANE_TML
             case "TMLU":
-                fileformat = Format.FileFormat.ARIANE_TMLU
+                fileformat = FileFormat.ARIANE_TMLU
             case _:
                 raise ValueError(
                     f"Unknown value: `{testfile.suffix.lstrip('.').upper()}`"

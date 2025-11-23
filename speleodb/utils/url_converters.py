@@ -10,7 +10,7 @@ from typing import Any
 
 from django.urls import register_converter as _register_converter
 
-from speleodb.surveys.models import Format
+from speleodb.surveys.models import FileFormat
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -68,12 +68,12 @@ class BaseChoicesConverter(BaseRegexConverter):
 
 @register_converter("download_format")
 class DownloadFormatsConverter(BaseChoicesConverter):
-    choices = Format.FileFormat.download_choices
+    choices = FileFormat.download_choices
 
 
 @register_converter("upload_format")
 class UploadFormatsConverter(BaseChoicesConverter):
-    choices = Format.FileFormat.upload_choices
+    choices = FileFormat.upload_choices
 
 
 @register_converter("gis_token")

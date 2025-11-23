@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitFile
 from speleodb.processors.base import BaseFileProcessor
-from speleodb.surveys.models import Format
+from speleodb.surveys.models import FileFormat
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 class DumpProcessor(BaseFileProcessor):
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.zip"
-    ASSOC_FILEFORMAT = Format.FileFormat.DUMP
+    ASSOC_FILEFORMAT = FileFormat.DUMP
 
     def _generate_or_copy_file_for_download(
         self, commit: GitCommit, target_f: Path

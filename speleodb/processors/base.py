@@ -20,7 +20,7 @@ from speleodb.git_engine.core import GitFile
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.processors.artifact import Artifact
 from speleodb.processors.artifact import UploadedFile
-from speleodb.surveys.models import Format
+from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Project
 from speleodb.utils.timing_ctx import timed_section
 
@@ -28,6 +28,7 @@ from speleodb.utils.timing_ctx import timed_section
 
 
 class BaseFileProcessor:
+    ALLOWED_FULLNAMES: list[str] = []
     ALLOWED_EXTENSIONS: list[str] = ["*"]
     ALLOWED_MIMETYPES: list[str] = ["*"]
 
@@ -99,7 +100,7 @@ class BaseFileProcessor:
         ".psm1",  # PowerShell Module File. Similar risk as PowerShell scripts.
     ]
 
-    ASSOC_FILEFORMAT: Format.FileFormat = Format.FileFormat.OTHER
+    ASSOC_FILEFORMAT: FileFormat = FileFormat.OTHER
 
     TARGET_FOLDER: str | None = "misc"
     TARGET_SAVE_FILENAME: str | None = None
@@ -169,6 +170,7 @@ class BaseFileProcessor:
             artifact = file
 
         artifact.assert_valid(
+            allowed_fullnames=self.ALLOWED_FULLNAMES,
             allowed_extensions=self.ALLOWED_EXTENSIONS,
             allowed_mimetypes=self.ALLOWED_MIMETYPES,
             rejected_extensions=self.REJECTED_EXTENSIONS,

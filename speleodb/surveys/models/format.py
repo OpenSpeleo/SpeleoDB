@@ -16,12 +16,94 @@ from speleodb.utils.django_base_models import BaseIntegerChoices
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise
 
-type ListFileFormats = list["tuple[int, str] | Format.FileFormat"]
+    type ListFileFormats = list[tuple[int, str] | FileFormat]
 
 
 class NoUpdateQuerySet(models.QuerySet["Format"]):
     def update(self, **kwargs: Any) -> int:
         return 0
+
+
+class FileFormat(BaseIntegerChoices):
+    # NOTE: Special values that don't really represent a "file format":
+    # ------------------------------------------------------------------------------
+
+    # - `OTHER`: is a wildchar format. Anything that doesn't fit the other format
+    #   will just be saved as a file without any special treatment.
+    OTHER = (1000, "OTHER")
+
+    # - `AUTO`: not a format. Upload endpoint that automatically detects the format.
+    AUTO = (9998, "AUTO")
+
+    # - `DUMP`: not a format. Download endpoint that packages and returns everything
+    #   as a zipfile.
+    DUMP = (9999, "DUMP")
+
+    # NOTE: Recognized Software Formats that will undergo a special process.
+    # ------------------------------------------------------------------------------
+    # Each software gets a new 10s.
+    # It allows to insert new formats without having to shift everyone.
+    # Hopefully no software uses more than 10 different file formats.
+
+    # Ariane Line
+    ARIANE_TML = (10, "ARIANE_TML")
+    ARIANE_TMLU = (11, "ARIANE_TMLU")
+    ARIANE_AGR = (12, "ARIANE_AGR")
+
+    # Compass
+    COMPASS_ZIP = (20, "COMPASS_ZIP")
+    COMPASS_MANUAL = (21, "COMPASS_MANUAL")
+
+    # Walls
+    WALLS_SRV = (30, "WALLS_SRV")
+    WALLS_WPJ = (31, "WALLS_WPJ")
+
+    # StickMaps
+    STICKMAPS = (40, "STICKMAPS")
+
+    @property
+    def webname(self) -> str:
+        return self.label.replace("_", " ")
+
+    @classmethod
+    def filtered_choices(
+        cls, exclude_vals: ListFileFormats | None = None
+    ) -> list[tuple[int, StrOrPromise]]:
+        exclude_vals = exclude_vals if exclude_vals is not None else []
+
+        return [f for f in cls.choices if f not in exclude_vals]
+
+    @classmethod
+    def filtered_choices_as_str(
+        cls, exclude_vals: ListFileFormats | None = None
+    ) -> list[str]:
+        return [f.lower() for _, f in cls.filtered_choices(exclude_vals=exclude_vals)]
+
+    @classproperty
+    def download_choices(cls) -> list[str]:  # noqa: N805
+        return cls.filtered_choices_as_str(
+            exclude_vals=cls.__excluded_download_formats__
+        )
+
+    @classproperty
+    def upload_choices(cls) -> list[str]:  # noqa: N805
+        return cls.filtered_choices_as_str(exclude_vals=cls.__excluded_upload_formats__)
+
+    @classproperty
+    def db_choices(cls) -> list[tuple[int, StrOrPromise]]:  # noqa: N805
+        return cls.filtered_choices(exclude_vals=cls.__excluded_db_formats__)
+
+    @classproperty
+    def __excluded_download_formats__(cls) -> ListFileFormats:  # noqa: N805
+        return [cls.OTHER, cls.AUTO, cls.COMPASS_MANUAL]
+
+    @classproperty
+    def __excluded_upload_formats__(cls) -> ListFileFormats:  # noqa: N805
+        return [cls.DUMP]
+
+    @classproperty
+    def __excluded_db_formats__(cls) -> ListFileFormats:  # noqa: N805
+        return [cls.DUMP, cls.AUTO]
 
 
 class Format(models.Model):
@@ -32,91 +114,6 @@ class Format(models.Model):
         blank=False,
         null=False,
     )
-
-    class FileFormat(BaseIntegerChoices):
-        # NOTE: Special values that don't really represent a "file format":
-        # ------------------------------------------------------------------------------
-
-        # - `OTHER`: is a wildchar format. Anything that doesn't fit the other format
-        #   will just be saved as a file without any special treatment.
-        OTHER = (1000, "OTHER")
-
-        # - `AUTO`: not a format. Upload endpoint that automatically detects the format.
-        AUTO = (9998, "AUTO")
-
-        # - `DUMP`: not a format. Download endpoint that packages and returns everything
-        #   as a zipfile.
-        DUMP = (9999, "DUMP")
-
-        # NOTE: Recognized Software Formats that will undergo a special process.
-        # ------------------------------------------------------------------------------
-        # Each software gets a new 10s.
-        # It allows to insert new formats without having to shift everyone.
-        # Hopefully no software uses more than 10 different file formats.
-
-        # Ariane Line
-        ARIANE_TML = (10, "ARIANE_TML")
-        ARIANE_TMLU = (11, "ARIANE_TMLU")
-        ARIANE_AGR = (12, "ARIANE_AGR")
-
-        # Compass
-        COMPASS_MAK = (20, "COMPASS_MAK")
-        COMPASS_DAT = (21, "COMPASS_DAT")
-
-        # Walls
-        WALLS_SRV = (30, "WALLS_SRV")
-        WALLS_WPJ = (31, "WALLS_WPJ")
-
-        # StickMaps
-        STICKMAPS = (40, "STICKMAPS")
-
-        @property
-        def webname(self) -> str:
-            return self.label.replace("_", " ")
-
-        @classmethod
-        def filtered_choices(
-            cls, exclude_vals: ListFileFormats | None = None
-        ) -> list[tuple[int, StrOrPromise]]:
-            exclude_vals = exclude_vals if exclude_vals is not None else []
-
-            return [f for f in cls.choices if f not in exclude_vals]
-
-        @classmethod
-        def filtered_choices_as_str(
-            cls, exclude_vals: ListFileFormats | None = None
-        ) -> list[str]:
-            return [
-                f.lower() for _, f in cls.filtered_choices(exclude_vals=exclude_vals)
-            ]
-
-        @classproperty
-        def download_choices(cls) -> list[str]:  # noqa: N805
-            return cls.filtered_choices_as_str(
-                exclude_vals=cls.__excluded_download_formats__
-            )
-
-        @classproperty
-        def upload_choices(cls) -> list[str]:  # noqa: N805
-            return cls.filtered_choices_as_str(
-                exclude_vals=cls.__excluded_upload_formats__
-            )
-
-        @classproperty
-        def db_choices(cls) -> list[tuple[int, StrOrPromise]]:  # noqa: N805
-            return cls.filtered_choices(exclude_vals=cls.__excluded_db_formats__)
-
-        @classproperty
-        def __excluded_download_formats__(cls) -> ListFileFormats:  # noqa: N805
-            return [cls.OTHER, cls.AUTO]
-
-        @classproperty
-        def __excluded_upload_formats__(cls) -> ListFileFormats:  # noqa: N805
-            return [cls.DUMP]
-
-        @classproperty
-        def __excluded_db_formats__(cls) -> ListFileFormats:  # noqa: N805
-            return [cls.DUMP, cls.AUTO]
 
     _format = models.IntegerField(
         choices=FileFormat.db_choices,
@@ -161,7 +158,7 @@ class Format(models.Model):
 
     @property
     def raw_format(self) -> FileFormat:
-        return self.FileFormat(self._format)
+        return FileFormat(self._format)
 
     @property
     def format(self) -> StrOrPromise:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cached_property
 from io import BytesIO
 from pathlib import Path
 from typing import Annotated
@@ -120,3 +121,12 @@ class CompassConfig(BaseModel):
 
             case _:
                 raise TypeError("target must be str, Path, or BytesIO")
+
+    @cached_property
+    def files(self) -> set[str]:
+        return {
+            CompassConfig.__FILENAME__,
+            self.project.mak_file,
+            *self.project.dat_files,
+            *(plt_files if (plt_files := self.project.plt_files) else []),
+        }

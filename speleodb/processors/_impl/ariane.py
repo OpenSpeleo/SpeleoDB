@@ -13,7 +13,7 @@ from mnemo_lib.commands.split import split_dmp_into_sections
 from mnemo_lib.models import DMPFile
 
 from speleodb.processors.base import BaseFileProcessor
-from speleodb.surveys.models import Format
+from speleodb.surveys.models import FileFormat
 from speleodb.utils.timing_ctx import timed_section
 
 if TYPE_CHECKING:
@@ -74,20 +74,20 @@ def calculate_sha1(
     return sha1.hexdigest()
 
 
-class AGRFileProcessor(BaseFileProcessor):
+class ArianeAGRFileProcessor(BaseFileProcessor):
     ALLOWED_EXTENSIONS = [".agr"]
     ALLOWED_MIMETYPES = ["application/octet-stream", "text/plain"]
-    ASSOC_FILEFORMAT = Format.FileFormat.ARIANE_AGR
+    ASSOC_FILEFORMAT = FileFormat.ARIANE_AGR
 
     TARGET_FOLDER = None
     TARGET_SAVE_FILENAME = "project.agr"
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.agr"
 
 
-class DMPFileProcessor(BaseFileProcessor):
+class MnemoDMPFileProcessor(BaseFileProcessor):
     ALLOWED_EXTENSIONS = [".dmp"]
     ALLOWED_MIMETYPES = ["application/octet-stream", "text/plain"]
-    ASSOC_FILEFORMAT = Format.FileFormat.OTHER
+    ASSOC_FILEFORMAT = FileFormat.OTHER
 
     TARGET_FOLDER = "mnemo_DMPs"
     TARGET_SAVE_FILENAME = None
@@ -146,20 +146,20 @@ class DMPFileProcessor(BaseFileProcessor):
         return added_files
 
 
-class TMLFileProcessor(BaseFileProcessor):
+class ArianeTMLFileProcessor(BaseFileProcessor):
     ALLOWED_EXTENSIONS = [".tml"]
     ALLOWED_MIMETYPES = ["application/octet-stream", "application/zip"]
-    ASSOC_FILEFORMAT = Format.FileFormat.ARIANE_TML
+    ASSOC_FILEFORMAT = FileFormat.ARIANE_TML
 
     TARGET_FOLDER = None
     TARGET_SAVE_FILENAME = "project.tml"
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.tml"
 
 
-class TMLUFileProcessor(BaseFileProcessor):
+class ArianeTMLUFileProcessor(BaseFileProcessor):
     ALLOWED_EXTENSIONS = [".tmlu"]
     ALLOWED_MIMETYPES = ["application/octet-stream", "text/plain"]
-    ASSOC_FILEFORMAT = Format.FileFormat.ARIANE_TMLU
+    ASSOC_FILEFORMAT = FileFormat.ARIANE_TMLU
 
     TARGET_FOLDER = None
     TARGET_SAVE_FILENAME = "project.tmlu"

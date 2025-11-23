@@ -13,11 +13,11 @@ from speleodb.processors.auto_selector import AutoSelector
 from speleodb.processors._impl.dump import DumpProcessor
 
 # Survey File Processors
-from speleodb.processors._impl.ariane import AGRFileProcessor
-from speleodb.processors._impl.ariane import TMLFileProcessor
-from speleodb.processors._impl.ariane import TMLUFileProcessor
-from speleodb.processors._impl.compass import DATFileProcessor
-from speleodb.processors._impl.compass import MAKFileProcessor
+from speleodb.processors._impl.ariane import ArianeAGRFileProcessor
+from speleodb.processors._impl.ariane import ArianeTMLFileProcessor
+from speleodb.processors._impl.ariane import ArianeTMLUFileProcessor
+from speleodb.processors._impl.compass import CompassZIPFileProcessor
+from speleodb.processors._impl.compass import CompassManualFileProcessor
 
 # Generic File Formats
 from speleodb.processors._impl.database import DatabaseFileProcessor
@@ -27,17 +27,17 @@ from speleodb.processors._impl.spreadsheet import SpreadsheetFileProcessor
 from speleodb.processors._impl.text import TextFileProcessor
 
 __all__ = [
-    "AGRFileProcessor",
+    "ArianeAGRFileProcessor",
+    "ArianeTMLFileProcessor",
+    "ArianeTMLUFileProcessor",
     "AutoSelector",
     "BaseFileProcessor",
-    "DATFileProcessor",
+    "CompassManualFileProcessor",
+    "CompassZIPFileProcessor",
     "DatabaseFileProcessor",
     "DumpProcessor",
     "GeoDataFileProcessor",
     "ImageFileProcessor",
-    "MAKFileProcessor",
     "SpreadsheetFileProcessor",
-    "TMLFileProcessor",
-    "TMLUFileProcessor",
     "TextFileProcessor",
 ]

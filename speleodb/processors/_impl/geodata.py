@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from speleodb.processors.base import BaseFileProcessor
-from speleodb.surveys.models import Format
+from speleodb.surveys.models import FileFormat
 
 # ruff: noqa: E501
 
@@ -51,7 +51,6 @@ class GeoDataFileProcessor(BaseFileProcessor):
         ".gpx",  # GPS Exchange Format, used for GPS data.
         ".nmea",  # NMEA format, used for GPS data logs.
         ".trk",  # GPS track data format.
-        ".plt",  # OziExplorer track log file.
         #
         # -------------------- Proprietary and specialized formats ------------------- #
         #
@@ -89,7 +88,7 @@ class GeoDataFileProcessor(BaseFileProcessor):
     ]
 
     ALLOWED_MIMETYPES = ["*"]
-    ASSOC_FILEFORMAT = Format.FileFormat.OTHER
+    ASSOC_FILEFORMAT = FileFormat.OTHER
 
     TARGET_FOLDER = "geospatial"
     TARGET_SAVE_FILENAME = None
