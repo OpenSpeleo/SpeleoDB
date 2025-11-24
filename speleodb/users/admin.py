@@ -128,3 +128,17 @@ class SurveyTeamMembershipAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
     ordering = ("team",)
     list_filter = ["is_active", "role"]
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: SurveyTeamMembership,
+        form: Any,
+        change: bool,
+    ) -> None:
+        super().save_model(request, obj, form, change)
+
+        # Refresh the `modified_date` field
+        obj.team.save()
+        obj.team.void_membership_cache()
+        obj.user.void_permission_cache()

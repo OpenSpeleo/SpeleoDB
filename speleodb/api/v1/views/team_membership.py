@@ -99,7 +99,6 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
 
         # Refresh the `modified_date` field
         team.save()
-
         team.void_membership_cache()
         target_user.void_permission_cache()
 
@@ -162,7 +161,6 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
 
         # Refresh the `modified_date` field
         team.save()
-
         team.void_membership_cache()
         target_user.void_permission_cache()
 
