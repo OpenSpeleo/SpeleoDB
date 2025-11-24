@@ -10,6 +10,9 @@ from django.urls import path
 from speleodb.api.v1.views.experiment import ExperimentRecordApiView
 from speleodb.api.v1.views.log_entry import LogEntryApiView
 from speleodb.api.v1.views.resource import StationResourceApiView
+from speleodb.api.v1.views.sensor_fleet import StationSensorInstallApiView
+from speleodb.api.v1.views.sensor_fleet import StationSensorInstallExportExcelApiView
+from speleodb.api.v1.views.sensor_fleet import StationSensorInstallSpecificApiView
 from speleodb.api.v1.views.station import StationsApiView
 from speleodb.api.v1.views.station import StationsGeoJSONApiView
 from speleodb.api.v1.views.station import StationSpecificApiView
@@ -33,6 +36,21 @@ station_urlpatterns: list[URLPattern] = [
         "experiment/<uuid:exp_id>/records/",
         ExperimentRecordApiView.as_view(),
         name="experiment-records",
+    ),
+    path(
+        "sensor-installs/",
+        StationSensorInstallApiView.as_view(),
+        name="station-sensor-installs",
+    ),
+    path(
+        "sensor-installs/export/excel/",
+        StationSensorInstallExportExcelApiView.as_view(),
+        name="station-sensor-installs-export",
+    ),
+    path(
+        "sensor-installs/<uuid:install_id>/",
+        StationSensorInstallSpecificApiView.as_view(),
+        name="station-sensor-install-detail",
     ),
 ]
 

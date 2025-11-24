@@ -1,0 +1,78 @@
+{% extends "pages/sensor_fleet/base.html" %}
+{% load static %}
+
+{% block right_panel %}
+<div class="grow">
+
+    <!-- Panel body -->
+    <div class="p-6 space-y-6">
+        <div class="flex justify-between items-center mb-5">
+            <h2 class="text-2xl text-slate-100 font-bold">Fleet History</h2>
+            <a href="{% url 'private:sensor_fleet_details' fleet_id=sensor_fleet.id %}" class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300">
+                &larr; Back to Details
+            </a>
+        </div>
+
+        <!-- History Table -->
+        <div class="bg-slate-900/20 rounded-lg border border-slate-700 overflow-hidden">
+            <table class="table-auto w-full">
+                <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/40">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Date</th>
+                        <th class="px-4 py-3 text-left">Event</th>
+                        <th class="px-4 py-3 text-left">Sensor</th>
+                        <th class="px-4 py-3 text-left">Station / Project</th>
+                        <th class="px-4 py-3 text-left">User</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm divide-y divide-slate-700">
+                    {% for install in installs %}
+                    <tr>
+                        <td class="px-4 py-3 text-slate-300">
+                            {{ install.date|date:"Y-m-d" }}
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if install.event == 'installed' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                    Installed
+                                </span>
+                            {% elif install.event == 'retrieved' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                    Retrieved
+                                </span>
+                            {% elif install.event == 'lost' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                    Lost
+                                </span>
+                            {% elif install.event == 'abandoned' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                    Abandoned
+                                </span>
+                            {% else %}
+                                <span class="text-slate-400">{{ install.state|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-slate-100 font-medium">
+                            {{ install.sensor.name }}
+                        </td>
+                        <td class="px-4 py-3 text-slate-300">
+                            {{ install.station.name }} <span class="text-slate-500">({{ install.station.project.name }})</span>
+                        </td>
+                        <td class="px-4 py-3 text-slate-400 text-xs">
+                            {{ install.user }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-slate-500">
+                            No history available for this fleet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock right_panel %}

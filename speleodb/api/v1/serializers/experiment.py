@@ -191,7 +191,7 @@ class ExperimentSerializer(serializers.ModelSerializer[Experiment]):
             if mandatory_uuid not in processed_fields:
                 processed_fields[mandatory_uuid] = mandatory_data
 
-    def _convert_fields_list_to_dict(  # noqa: PLR0915
+    def _convert_fields_list_to_dict(
         self, value: list[dict[str, Any]], existing_fields: dict[str, Any] | None = None
     ) -> dict[str, dict[str, Any]]:
         """

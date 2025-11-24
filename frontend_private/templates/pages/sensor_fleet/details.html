@@ -8,136 +8,104 @@
 
         <fieldset {% if not has_write_access %}disabled{% endif %}>
 
-        {% csrf_token %}
+            {% csrf_token %}
 
-        <!-- Panel body -->
-        <div class="p-6 space-y-6">
-            <h2 class="text-2xl text-slate-100 font-bold mb-5">Fleet Settings</h2>
+            <!-- Panel body -->
+            <div class="p-6 space-y-6">
+                <h2 class="text-2xl text-slate-100 font-bold mb-5">Fleet Settings</h2>
 
-            <!-- Fleet Name & Description -->
-            <section>
-                <div class="flex flex-wrap mt-5 gap-4">
-                    <div class="w-full lg:flex-1">
-                        <label class="block text-sm font-medium mb-1" for="name">Fleet Name:<span class="text-rose-600"> *</span></label>
-                        <input id="name" name="name" class="form-input max-w-full w-full" type="text" value="{{ sensor_fleet.name }}" />
+                <!-- Fleet Name & Description -->
+                <section>
+                    <div class="flex flex-wrap mt-5 gap-4">
+                        <div class="w-full lg:flex-1">
+                            <label class="block text-sm font-medium mb-1" for="name">Fleet Name:<span
+                                    class="text-rose-600"> *</span></label>
+                            <input id="name" name="name" class="form-input max-w-full w-full" type="text"
+                                value="{{ sensor_fleet.name }}" />
+                        </div>
                     </div>
-                </div>
 
-                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
-                    <div class="w-full">
-                        <label class="block text-sm font-medium mb-1" for="description">Description:</label>
-                        <textarea id="description" name="description" class="form-textarea max-w-full w-full focus:border-slate-300" rows="4">{% if sensor_fleet.description %}{{ sensor_fleet.description }}{% endif %}</textarea>
+                    <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                        <div class="w-full">
+                            <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                            <textarea id="description" name="description"
+                                class="form-textarea max-w-full w-full focus:border-slate-300"
+                                rows="4">{% if sensor_fleet.description %}{{ sensor_fleet.description }}{% endif %}</textarea>
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- Sensors Management -->
-            <section>
-                <div class="mt-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-slate-100">Sensors in this Fleet</h3>
-                        {% if has_write_access %}
-                        <button type="button" id="add_sensor_btn" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
-                            <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" viewBox="0 0 16 16">
-                                <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                <!-- Sensors Management -->
+                <section>
+                    <div class="mt-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold text-slate-100">Sensors in this Fleet</h3>
+                            <div class="flex gap-2">
+                                <a href="{% url 'api:v1:sensor-fleet-sensors-export' fleet_id=sensor_fleet.id %}"
+                                    class="btn-sm bg-green-500 hover:bg-green-400 text-white border border-slate-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" viewBox="4.5 2.5 15 19">
+                                        <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
+                                        <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path>
+                                        <path d="M8 11h8v7h-8z"></path>
+                                        <path d="M8 15h8"></path>
+                                        <path d="M11 11v7"></path>
+                                    </svg>
+                                    Export to Excel
+                                </a>
+                                {% if has_write_access %}
+                                <button type="button" id="add_sensor_btn"
+                                    class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                                    <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                                    </svg>
+                                    Add Sensor
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Sensors List -->
+                        {% if sensors %}
+                        {% include 'snippets/sensor_table.html' with sensors=sensors table_id='sensors_table' show_actions=True has_write_access=has_write_access show_count=True %}
+                        {% else %}
+                        <div
+                            class="text-center py-12 bg-slate-900/20 rounded-lg border-2 border-dashed border-slate-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-slate-600 mb-3"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            Add Sensor
-                        </button>
+                            <p class="text-slate-500 mb-4">No sensors in this fleet yet</p>
+                            {% if has_write_access %}
+                            <button type="button" id="add_first_sensor_btn"
+                                class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                                <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
+                                    viewBox="0 0 16 16">
+                                    <path
+                                        d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                                </svg>
+                                Add First Sensor
+                            </button>
+                            {% endif %}
+                        </div>
                         {% endif %}
                     </div>
+                </section>
 
-                    <!-- Sensors List -->
-                    {% if sensors %}
-                    <div class="bg-slate-900/20 rounded-lg border border-slate-700 overflow-hidden">
-                        <table class="table-auto w-full">
-                            <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/40">
-                                <tr>
-                                    <th class="px-4 py-3 text-left">Sensor Name</th>
-                                    <th class="px-4 py-3 text-center">Status</th>
-                                    <th class="px-4 py-3 text-left hidden md:table-cell">Notes</th>
-                                    <th class="px-4 py-3 text-center hidden md:table-cell">Modified</th>
-                                    {% if has_write_access %}
-                                    <th class="px-4 py-3 text-center">Actions</th>
-                                    {% endif %}
-                                </tr>
-                            </thead>
-                            <tbody class="text-sm divide-y divide-slate-700" id="sensors_table_body">
-                                {% for sensor in sensors %}
-                                <tr class="sensor-row" data-sensor-id="{{ sensor.id }}">
-                                    <td class="px-4 py-3">
-                                        <div class="font-medium text-slate-100">{{ sensor.name }}</div>
-                                        <div class="text-xs text-slate-400 md:hidden mt-1">{{ sensor.notes|truncatewords:8 }}</div>
-                                    </td>
-                                    <td class="px-4 py-3 text-center">
-                                        {% if sensor.is_functional %}
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                                ✓ Functional
-                                            </span>
-                                        {% else %}
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                                                ✗ Not Functional
-                                            </span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="px-4 py-3 hidden md:table-cell">
-                                        <div class="text-slate-300 text-xs">{{ sensor.notes|truncatewords:15|default:"-" }}</div>
-                                    </td>
-                                    <td class="px-4 py-3 text-center text-slate-400 text-xs hidden md:table-cell">
-                                        {{ sensor.modified_date|date:"Y/m/d H:i" }}
-                                    </td>
-                                    {% if has_write_access %}
-                                    <td class="px-4 py-3">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <button type="button" class="toggle-sensor-btn text-xs px-2 py-1 rounded {% if sensor.is_functional %}bg-rose-500/20 hover:bg-rose-500/30 text-rose-300{% else %}bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300{% endif %}" data-sensor-id="{{ sensor.id }}" data-is-functional="{{ sensor.is_functional|lower }}">
-                                                {% if sensor.is_functional %}Mark Broken{% else %}Mark Fixed{% endif %}
-                                            </button>
-                                            <button type="button" class="edit-sensor-btn text-xs px-2 py-1 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300" data-sensor-id="{{ sensor.id }}">
-                                                Edit
-                                            </button>
-                                            <button type="button" class="delete-sensor-btn text-xs px-2 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300" data-sensor-id="{{ sensor.id }}">
-                                                Delete
-                                            </button>
-                                        </div>
-                                    </td>
-                                    {% endif %}
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="mt-3 text-sm text-slate-400">
-                        Total sensors: <span class="font-semibold text-slate-300" id="sensor_count">{{ sensors|length }}</span>
-                    </div>
-                    {% else %}
-                    <div class="text-center py-12 bg-slate-900/20 rounded-lg border-2 border-dashed border-slate-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-slate-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <p class="text-slate-500 mb-4">No sensors in this fleet yet</p>
-                        {% if has_write_access %}
-                        <button type="button" id="add_first_sensor_btn" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
-                            <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" viewBox="0 0 16 16">
-                                <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
-                            </svg>
-                            Add First Sensor
-                        </button>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-            </section>
-
-        </div>
-
-        <!-- Panel footer -->
-        <footer>
-            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-                <div class="flex self-end">
-                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:sensor_fleets' %}">Cancel</a>
-                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
-                </div>
             </div>
-        </footer>
+
+            <!-- Panel footer -->
+            <footer>
+                <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+                    <div class="flex self-end">
+                        <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
+                            href="{% url 'private:sensor_fleets' %}">Cancel</a>
+                        <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+                    </div>
+                </div>
+            </footer>
 
         </fieldset>
 
@@ -148,7 +116,9 @@
     {% include 'snippets/modal_error.html' %}
 
     <!-- Add/Edit Sensor Modal -->
-    <div id="sensor_modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+    <div id="sensor_modal"
+        class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4"
+        style="display: none;">
         <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
             <!-- Modal header -->
             <div class="px-6 py-4 border-b border-slate-700">
@@ -156,7 +126,8 @@
                     <h3 id="sensor_modal_title" class="text-xl font-semibold text-slate-100">Add Sensor</h3>
                     <button id="sensor_modal_close_x" class="text-slate-400 hover:text-slate-200">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
@@ -170,8 +141,8 @@
                         Sensor Name <span class="text-rose-500">*</span>
                     </label>
                     <input type="text" id="modal_sensor_name" required
-                           class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" 
-                           placeholder="e.g., Flow Meter #023">
+                        class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        placeholder="e.g., Flow Meter #023">
                 </div>
 
                 <!-- Notes -->
@@ -180,17 +151,19 @@
                         Notes
                     </label>
                     <textarea id="modal_sensor_notes" rows="3"
-                              class="form-textarea w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" 
-                              placeholder="Optional notes about this sensor"></textarea>
+                        class="form-textarea w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        placeholder="Optional notes about this sensor"></textarea>
                 </div>
             </div>
 
             <!-- Modal footer -->
             <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
-                <button type="button" id="sensor_modal_cancel" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                <button type="button" id="sensor_modal_cancel"
+                    class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
                     Cancel
                 </button>
-                <button type="button" id="sensor_modal_save" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
+                <button type="button" id="sensor_modal_save"
+                    class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
                     Save Sensor
                 </button>
             </div>
@@ -198,7 +171,9 @@
     </div>
 
     <!-- Delete Sensor Confirmation Modal -->
-    <div id="delete_sensor_modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+    <div id="delete_sensor_modal"
+        class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4"
+        style="display: none;">
         <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
             <!-- Modal header -->
             <div class="px-6 py-4 border-b border-slate-700">
@@ -206,7 +181,8 @@
                     <h3 class="text-xl font-semibold text-slate-100">Delete Sensor</h3>
                     <button id="delete_modal_close_x" class="text-slate-400 hover:text-slate-200">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
@@ -215,15 +191,18 @@
             <!-- Modal body -->
             <div class="px-6 py-4">
                 <input type="hidden" id="delete_sensor_id" value="">
-                
+
                 <div class="flex items-start space-x-4">
                     <div class="flex-shrink-0">
                         <svg class="w-12 h-12 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                            </path>
                         </svg>
                     </div>
                     <div class="flex-1">
-                        <p class="text-slate-300 text-lg font-medium mb-2">Are you sure you want to delete this sensor?</p>
+                        <p class="text-slate-300 text-lg font-medium mb-2">Are you sure you want to delete this sensor?
+                        </p>
                         <p class="text-slate-400 text-sm">
                             This action cannot be undone.
                         </p>
@@ -233,10 +212,12 @@
 
             <!-- Modal footer -->
             <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
-                <button type="button" id="delete_modal_cancel" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                <button type="button" id="delete_modal_cancel"
+                    class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
                     Cancel
                 </button>
-                <button type="button" id="delete_modal_confirm" class="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
+                <button type="button" id="delete_modal_confirm"
+                    class="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
                     Delete Sensor
                 </button>
             </div>
@@ -248,296 +229,313 @@
 
 {% block extra_js %}
 <script src="{% url 'url_reverse.js' %}"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
 <script>
-    $(window).on('load', function() {
+    $(window).on('load', function () {
         let currentSensorId = null; // For edit mode
-        let sensorCounter = {{ sensors|length }};
+        let sensorCounter = {{ sensors| length }};
 
-        // Open modal for adding sensor
-        $('#add_sensor_btn, #add_first_sensor_btn').click(function() {
-            currentSensorId = null;
-            $('#sensor_modal_title').text('Add Sensor');
-            $('#modal_sensor_name').val('');
-            $('#modal_sensor_notes').val('');
-            $('#sensor_modal').css('display', 'flex').removeClass('hidden');
-        });
+    // Initialize DataTables for sortable table
+    {% if sensors %}
+    $('#sensors_table').DataTable({
+        paging: false,
+        searching: false,
+        info: false,
+        order: [[0, 'asc']], // Default sort by sensor name
+        columnDefs: [
+            {% if has_write_access %}
+            { targets: -1, orderable: false }, // Disable sorting on Actions column
+            {% endif %}
+        ],
+    });
+    {% endif %}
 
-        // Open modal for editing sensor
-        $(document).on('click', '.edit-sensor-btn', function() {
-            currentSensorId = $(this).data('sensor-id');
-            const row = $(this).closest('tr');
-            
-            // In real implementation, fetch sensor data
-            console.log('🔍 Fetching sensor:', currentSensorId);
-            
-            $('#sensor_modal_title').text('Edit Sensor');
-            $('#modal_sensor_name').val(row.find('td:first .font-medium').text());
-            $('#modal_sensor_notes').val(''); // Would fetch from API
-            $('#sensor_modal').css('display', 'flex').removeClass('hidden');
-        });
+    // Open modal for adding sensor
+    $('#add_sensor_btn, #add_first_sensor_btn').click(function () {
+        currentSensorId = null;
+        $('#sensor_modal_title').text('Add Sensor');
+        $('#modal_sensor_name').val('');
+        $('#modal_sensor_notes').val('');
+        $('#sensor_modal').css('display', 'flex').removeClass('hidden');
+    });
 
-        // Close modal handlers
-        $('#sensor_modal_cancel, #sensor_modal_close_x').click(function() {
-            $('#sensor_modal').css('display', 'none').addClass('hidden');
-        });
+    // Open modal for editing sensor
+    $(document).on('click', '.edit-sensor-btn', function () {
+        currentSensorId = $(this).data('sensor-id');
+        const row = $(this).closest('tr');
 
-        $('#delete_modal_cancel, #delete_modal_close_x').click(function() {
-            $('#delete_sensor_modal').css('display', 'none').addClass('hidden');
-        });
+        // In real implementation, fetch sensor data
+        console.log('🔍 Fetching sensor:', currentSensorId);
 
-        // Save sensor (Add or Edit)
-        $('#sensor_modal_save').click(function() {
-            const name = $('#modal_sensor_name').val().trim();
-            const notes = $('#modal_sensor_notes').val().trim();
+        $('#sensor_modal_title').text('Edit Sensor');
+        $('#modal_sensor_name').val(row.find('td:first .font-medium').text());
+        $('#modal_sensor_notes').val(''); // Would fetch from API
+        $('#sensor_modal').css('display', 'flex').removeClass('hidden');
+    });
 
-            if (!name) {
-                alert('Sensor name is required');
-                return;
-            }
+    // Close modal handlers
+    $('#sensor_modal_cancel, #sensor_modal_close_x').click(function () {
+        $('#sensor_modal').css('display', 'none').addClass('hidden');
+    });
 
-            const sensorData = {
-                name: name,
-                notes: notes
-            };
+    $('#delete_modal_cancel, #delete_modal_close_x').click(function () {
+        $('#delete_sensor_modal').css('display', 'none').addClass('hidden');
+    });
 
-            // Get CSRF token
-            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
+    // Save sensor (Add or Edit)
+    $('#sensor_modal_save').click(function () {
+        const name = $('#modal_sensor_name').val().trim();
+        const notes = $('#modal_sensor_notes').val().trim();
 
-            if (currentSensorId) {
-                // EDIT MODE - Real API Call
-                console.log('✏️ Updating sensor:', currentSensorId, sensorData);
-                
-                $.ajax({
-                    url: Urls['api:v1:sensor-detail'](currentSensorId),
-                    method: 'PUT',
-                    data: JSON.stringify(sensorData),
-                    contentType: 'application/json; charset=utf-8',
-                    headers: {
-                        'X-CSRFToken': csrftoken
-                    },
-                    success: function(response) {
-                        console.log('✅ Sensor updated successfully:', response);
-                        
-                        $("#modal_success_txt").html("Sensor updated successfully.");
-                        $("#modal_success").css('display', 'flex');
-                        $('#sensor_modal').fadeOut(200);
-                        
-                        setTimeout(() => location.reload(), 2000);
-                    },
-                    error: function(xhr) {
-                        console.error('❌ Error updating sensor:', xhr);
-                        
-                        const response = xhr.responseJSON || {};
-                        let errorMsg = 'Failed to update sensor.';
-                        
-                        if (response.errors && response.errors.name) {
-                            errorMsg = response.errors.name[0];
-                        } else if (response.error) {
-                            errorMsg = response.error;
-                        }
-                        
-                        $("#modal_error_txt").html(errorMsg);
-                        $("#modal_error").css('display', 'flex');
-                    }
-                });
-            } else {
-                // ADD MODE - Real API Call
-                console.log('➕ Adding sensor:', sensorData);
-                
-                $.ajax({
-                    url: "{% url 'api:v1:sensor-fleet-sensors' fleet_id=sensor_fleet.id %}",
-                    method: 'POST',
-                    data: JSON.stringify(sensorData),
-                    contentType: 'application/json; charset=utf-8',
-                    headers: {
-                        'X-CSRFToken': csrftoken
-                    },
-                    success: function(response) {
-                        console.log('✅ Sensor added successfully:', response);
-                        
-                        $("#modal_success_txt").html("Sensor added successfully.");
-                        $("#modal_success").css('display', 'flex');
-                        $('#sensor_modal').fadeOut(200);
-                        
-                        setTimeout(() => location.reload(), 2000);
-                    },
-                    error: function(xhr) {
-                        console.error('❌ Error adding sensor:', xhr);
-                        
-                        const response = xhr.responseJSON || {};
-                        let errorMsg = 'Failed to add sensor.';
-                        
-                        if (response.errors && response.errors.name) {
-                            errorMsg = response.errors.name[0];
-                        } else if (response.error) {
-                            errorMsg = response.error;
-                        }
-                        
-                        $("#modal_error_txt").html(errorMsg);
-                        $("#modal_error").css('display', 'flex');
-                    }
-                });
-            }
-        });
+        if (!name) {
+            alert('Sensor name is required');
+            return;
+        }
 
-        // Toggle sensor functional status
-        $(document).on('click', '.toggle-sensor-btn', function() {
-            const sensorId = $(this).data('sensor-id');
-            const button = $(this);
-            const row = button.closest('tr');
+        const sensorData = {
+            name: name,
+            notes: notes
+        };
 
-            console.log('🔄 Toggling sensor status:', sensorId);
-            
-            // Get CSRF token
-            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
-            
-            // REAL API CALL
+        // Get CSRF token
+        const csrftoken = $('[name=csrfmiddlewaretoken]').val();
+
+        if (currentSensorId) {
+            // EDIT MODE - Real API Call
+            console.log('✏️ Updating sensor:', currentSensorId, sensorData);
+
             $.ajax({
-                url: Urls['api:v1:sensor-toggle-functional'](sensorId),
-                method: 'PATCH',
-                headers: {
-                    'X-CSRFToken': csrftoken
-                },
-                success: function(response) {
-                    console.log('✅ Sensor status toggled:', response);
-                    
-                    // Reload to update UI
-                    location.reload();
-                },
-                error: function(xhr) {
-                    console.error('❌ Error toggling sensor:', xhr);
-                    
-                    const errorMsg = xhr.responseJSON?.error || 'Failed to toggle sensor status.';
-                    $("#modal_error_txt").html(errorMsg);
-                    $("#modal_error").css('display', 'flex');
-                }
-            });
-        });
-
-        // Open delete sensor modal
-        $(document).on('click', '.delete-sensor-btn', function() {
-            const sensorId = $(this).data('sensor-id');
-            const row = $(this).closest('tr');
-            const sensorName = row.find('td:first .font-medium').text();
-            
-            $('#delete_sensor_id').val(sensorId);            
-            $('#delete_sensor_modal').css('display', 'flex').removeClass('hidden');
-        });
-
-        // Confirm delete sensor
-        $('#delete_modal_confirm').click(function() {
-            const sensorId = $('#delete_sensor_id').val();
-            if (!sensorId) return;
-            
-            console.log('🗑️ Deleting sensor:', sensorId);
-            
-            // Get CSRF token
-            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
-            
-            // REAL API CALL
-            $.ajax({
-                url: Urls['api:v1:sensor-detail'](sensorId),
-                method: 'DELETE',
-                headers: {
-                    'X-CSRFToken': csrftoken
-                },
-                success: function(response) {
-                    console.log('✅ Sensor deleted successfully:', response);
-                    
-                    $("#modal_success_txt").html("Sensor deleted successfully.");
-                    $("#modal_success").css('display', 'flex');
-                    $('#delete_sensor_modal').css('display', 'none').addClass('hidden');
-                    
-                    setTimeout(() => location.reload(), 2000);
-                },
-                error: function(xhr) {
-                    console.error('❌ Error deleting sensor:', xhr);
-                    
-                    const errorMsg = xhr.responseJSON?.error || 'Failed to delete sensor.';
-                    $("#modal_error_txt").html(errorMsg);
-                    $("#modal_error").css('display', 'flex');
-                    $('#delete_sensor_modal').css('display', 'none').addClass('hidden');
-                }
-            });
-        });
-
-        // Form submission handler for fleet details
-        $('#btn_submit').click(function (e) {
-            e.preventDefault();
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            const name = $('#name').val().trim();
-            const description = $('#description').val().trim();
-
-            if (!name) {
-                $("#modal_error_txt").html("Fleet name is required.");
-                $("#modal_error").css('display', 'flex');
-                return false;
-            }
-
-            const dataObject = {
-                name: name,
-                description: description
-            };
-
-            console.log('💾 Updating fleet:', '{{ sensor_fleet.id }}', dataObject);
-
-            // Get CSRF token
-            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
-
-            // REAL API CALL
-            $.ajax({
-                url: Urls['api:v1:sensor-fleet-detail']('{{ sensor_fleet.id }}'),
+                url: Urls['api:v1:sensor-detail'](currentSensorId),
                 method: 'PUT',
-                data: JSON.stringify(dataObject),
+                data: JSON.stringify(sensorData),
                 contentType: 'application/json; charset=utf-8',
                 headers: {
                     'X-CSRFToken': csrftoken
                 },
-                success: function(response) {
-                    console.log('✅ Fleet updated successfully:', response);
-                    
-                    $("#modal_success_txt").html("The sensor fleet has been updated.");
-                    $("#modal_success").css('display', 'flex');
+                success: function (response) {
+                    console.log('✅ Sensor updated successfully:', response);
 
-                    window.setTimeout(function(){
-                        window.location.reload();
-                    }, 2000);
+                    $("#modal_success_txt").html("Sensor updated successfully.");
+                    $("#modal_success").css('display', 'flex');
+                    $('#sensor_modal').fadeOut(200);
+
+                    setTimeout(() => location.reload(), 2000);
                 },
-                error: function(xhr) {
-                    console.error('❌ Error updating fleet:', xhr);
-                    
+                error: function (xhr) {
+                    console.error('❌ Error updating sensor:', xhr);
+
                     const response = xhr.responseJSON || {};
-                    let errorMsg = 'Failed to update fleet.';
-                    
-                    if (response.errors) {
-                        if (response.errors.name) {
-                            errorMsg = response.errors.name[0];
-                        } else {
-                            const firstError = Object.values(response.errors)[0];
-                            errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
-                        }
+                    let errorMsg = 'Failed to update sensor.';
+
+                    if (response.errors && response.errors.name) {
+                        errorMsg = response.errors.name[0];
                     } else if (response.error) {
                         errorMsg = response.error;
                     }
-                    
+
                     $("#modal_error_txt").html(errorMsg);
                     $("#modal_error").css('display', 'flex');
                 }
             });
+        } else {
+            // ADD MODE - Real API Call
+            console.log('➕ Adding sensor:', sensorData);
 
+            $.ajax({
+                url: "{% url 'api:v1:sensor-fleet-sensors' fleet_id=sensor_fleet.id %}",
+                method: 'POST',
+                data: JSON.stringify(sensorData),
+                contentType: 'application/json; charset=utf-8',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                success: function (response) {
+                    console.log('✅ Sensor added successfully:', response);
+
+                    $("#modal_success_txt").html("Sensor added successfully.");
+                    $("#modal_success").css('display', 'flex');
+                    $('#sensor_modal').fadeOut(200);
+
+                    setTimeout(() => location.reload(), 2000);
+                },
+                error: function (xhr) {
+                    console.error('❌ Error adding sensor:', xhr);
+
+                    const response = xhr.responseJSON || {};
+                    let errorMsg = 'Failed to add sensor.';
+
+                    if (response.errors && response.errors.name) {
+                        errorMsg = response.errors.name[0];
+                    } else if (response.error) {
+                        errorMsg = response.error;
+                    }
+
+                    $("#modal_error_txt").html(errorMsg);
+                    $("#modal_error").css('display', 'flex');
+                }
+            });
+        }
+    });
+
+    // Toggle sensor functional status
+    $(document).on('click', '.toggle-sensor-btn', function () {
+        const sensorId = $(this).data('sensor-id');
+        const button = $(this);
+        const row = button.closest('tr');
+
+        console.log('🔄 Toggling sensor status:', sensorId);
+
+        // Get CSRF token
+        const csrftoken = $('[name=csrfmiddlewaretoken]').val();
+
+        // REAL API CALL
+        $.ajax({
+            url: Urls['api:v1:sensor-toggle-functional'](sensorId),
+            method: 'PATCH',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            success: function (response) {
+                console.log('✅ Sensor status toggled:', response);
+
+                // Reload to update UI
+                location.reload();
+            },
+            error: function (xhr) {
+                console.error('❌ Error toggling sensor:', xhr);
+
+                const errorMsg = xhr.responseJSON?.error || 'Failed to toggle sensor status.';
+                $("#modal_error_txt").html(errorMsg);
+                $("#modal_error").css('display', 'flex');
+            }
+        });
+    });
+
+    // Open delete sensor modal
+    $(document).on('click', '.delete-sensor-btn', function () {
+        const sensorId = $(this).data('sensor-id');
+        const row = $(this).closest('tr');
+        const sensorName = row.find('td:first .font-medium').text();
+
+        $('#delete_sensor_id').val(sensorId);
+        $('#delete_sensor_modal').css('display', 'flex').removeClass('hidden');
+    });
+
+    // Confirm delete sensor
+    $('#delete_modal_confirm').click(function () {
+        const sensorId = $('#delete_sensor_id').val();
+        if (!sensorId) return;
+
+        console.log('🗑️ Deleting sensor:', sensorId);
+
+        // Get CSRF token
+        const csrftoken = $('[name=csrfmiddlewaretoken]').val();
+
+        // REAL API CALL
+        $.ajax({
+            url: Urls['api:v1:sensor-detail'](sensorId),
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            success: function (response) {
+                console.log('✅ Sensor deleted successfully:', response);
+
+                $("#modal_success_txt").html("Sensor deleted successfully.");
+                $("#modal_success").css('display', 'flex');
+                $('#delete_sensor_modal').css('display', 'none').addClass('hidden');
+
+                setTimeout(() => location.reload(), 2000);
+            },
+            error: function (xhr) {
+                console.error('❌ Error deleting sensor:', xhr);
+
+                const errorMsg = xhr.responseJSON?.error || 'Failed to delete sensor.';
+                $("#modal_error_txt").html(errorMsg);
+                $("#modal_error").css('display', 'flex');
+                $('#delete_sensor_modal').css('display', 'none').addClass('hidden');
+            }
+        });
+    });
+
+    // Form submission handler for fleet details
+    $('#btn_submit').click(function (e) {
+        e.preventDefault();
+
+        $("#error_div").hide();
+        $("#success_div").hide();
+
+        const name = $('#name').val().trim();
+        const description = $('#description').val().trim();
+
+        if (!name) {
+            $("#modal_error_txt").html("Fleet name is required.");
+            $("#modal_error").css('display', 'flex');
             return false;
+        }
+
+        const dataObject = {
+            name: name,
+            description: description
+        };
+
+        console.log('💾 Updating fleet:', '{{ sensor_fleet.id }}', dataObject);
+
+        // Get CSRF token
+        const csrftoken = $('[name=csrfmiddlewaretoken]').val();
+
+        // REAL API CALL
+        $.ajax({
+            url: Urls['api:v1:sensor-fleet-detail']('{{ sensor_fleet.id }}'),
+            method: 'PUT',
+            data: JSON.stringify(dataObject),
+            contentType: 'application/json; charset=utf-8',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            success: function (response) {
+                console.log('✅ Fleet updated successfully:', response);
+
+                $("#modal_success_txt").html("The sensor fleet has been updated.");
+                $("#modal_success").css('display', 'flex');
+
+                window.setTimeout(function () {
+                    window.location.reload();
+                }, 2000);
+            },
+            error: function (xhr) {
+                console.error('❌ Error updating fleet:', xhr);
+
+                const response = xhr.responseJSON || {};
+                let errorMsg = 'Failed to update fleet.';
+
+                if (response.errors) {
+                    if (response.errors.name) {
+                        errorMsg = response.errors.name[0];
+                    } else {
+                        const firstError = Object.values(response.errors)[0];
+                        errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
+                    }
+                } else if (response.error) {
+                    errorMsg = response.error;
+                }
+
+                $("#modal_error_txt").html(errorMsg);
+                $("#modal_error").css('display', 'flex');
+            }
         });
 
-        // Close modal handlers
-        $('#modal_error button, #modal_success button').click(function() {
-            $(this).closest('.fixed').fadeOut(200);
-        });
+        return false;
+    });
+
+    // Close modal handlers
+    $('#modal_error button, #modal_success button').click(function () {
+        $(this).closest('.fixed').fadeOut(200);
+    });
     });
 
 </script>

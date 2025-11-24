@@ -366,6 +366,7 @@ ignore = [
     "TRY300", # Checks for return statements in try blocks.
     "FBT001", # Checks for the use of boolean positional arguments in function definitions,
     # as determined by the presence of a bool type hint.
+    "PLR0915", # Checks for functions that are too long.
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]

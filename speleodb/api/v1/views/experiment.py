@@ -497,7 +497,7 @@ class ExperimentExportExcelApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
     lookup_field = "id"
     serializer_class = ExperimentRecordSerializer  # type: ignore[assignment]
 
-    def get(  # noqa: PLR0915
+    def get(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
         user = self.get_user()

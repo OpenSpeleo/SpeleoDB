@@ -205,7 +205,8 @@ class TestProjectGeoJsonCommitsApiView(BaseAPIProjectTestCase):
     def test_returns_all_commits_no_limit(self) -> None:
         """Test that endpoint returns all commits (no limit like geojson endpoint)."""
         # Create many GeoJSON entries
-        for i in range(25):
+        n_jsons = 25
+        for i in range(n_jsons):
             commit_sha = sha1_hash()
             ProjectGeoJSON.objects.create(
                 project=self.project,
@@ -228,7 +229,7 @@ class TestProjectGeoJsonCommitsApiView(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         # Should return all 25 commits (no limit)
-        assert len(data["data"]) == 25
+        assert len(data["data"]) == n_jsons
 
 
 class TestProjectGeoJsonCommitsPermissions(BaseAPIProjectTestCase):
@@ -339,4 +340,3 @@ class TestProjectGeoJsonCommitsPermissions(BaseAPIProjectTestCase):
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-

@@ -41,8 +41,10 @@ from frontend_private.views import ProjectUploadView
 from frontend_private.views import ProjectUserPermissionsView
 from frontend_private.views import SensorFleetDangerZoneView
 from frontend_private.views import SensorFleetDetailsView
+from frontend_private.views import SensorFleetHistoryView
 from frontend_private.views import SensorFleetListingView
 from frontend_private.views import SensorFleetUserPermissionsView
+from frontend_private.views import SensorFleetWatchlistView
 from frontend_private.views import StationTagsView
 from frontend_private.views import TeamDangerZoneView
 from frontend_private.views import TeamDetailsView
@@ -130,6 +132,16 @@ sensor_fleet_patterns = [
         "permissions/",
         SensorFleetUserPermissionsView.as_view(),
         name="sensor_fleet_user_permissions",
+    ),
+    path(
+        "history/",
+        SensorFleetHistoryView.as_view(),
+        name="sensor_fleet_history",
+    ),
+    path(
+        "watchlist/",
+        SensorFleetWatchlistView.as_view(),
+        name="sensor_fleet_watchlist",
     ),
 ]
 

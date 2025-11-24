@@ -708,6 +708,24 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/sensors/export/",
+        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetExportExcelApiView",
+        "name": "api:v1:sensor-fleet-sensors-export",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/sensors/watchlist/",
+        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetWatchlistApiView",
+        "name": "api:v1:sensor-fleet-watchlist",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/sensors/watchlist/export/",
+        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetWatchlistExportExcelApiView",
+        "name": "api:v1:sensor-fleet-watchlist-export",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/sensors/<uuid:id>/",
         "module": "speleodb.api.v1.views.sensor_fleet.SensorSpecificApiView",
         "name": "api:v1:sensor-detail",
@@ -765,6 +783,24 @@
         "url": "/api/v1/stations/<uuid:id>/resources/",
         "module": "speleodb.api.v1.views.resource.StationResourceApiView",
         "name": "api:v1:station-resources",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/<uuid:id>/sensor-installs/",
+        "module": "speleodb.api.v1.views.sensor_fleet.StationSensorInstallApiView",
+        "name": "api:v1:station-sensor-installs",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/<uuid:id>/sensor-installs/<uuid:install_id>/",
+        "module": "speleodb.api.v1.views.sensor_fleet.StationSensorInstallSpecificApiView",
+        "name": "api:v1:station-sensor-install-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/<uuid:id>/sensor-installs/export/excel/",
+        "module": "speleodb.api.v1.views.sensor_fleet.StationSensorInstallExportExcelApiView",
+        "name": "api:v1:station-sensor-installs-export",
         "decorators": ""
     },
     {
@@ -1110,9 +1146,21 @@
         "decorators": ""
     },
     {
+        "url": "/private/sensor-fleet/<uuid:fleet_id>/history/",
+        "module": "frontend_private.views.sensor_fleets.SensorFleetHistoryView",
+        "name": "private:sensor_fleet_history",
+        "decorators": ""
+    },
+    {
         "url": "/private/sensor-fleet/<uuid:fleet_id>/permissions/",
         "module": "frontend_private.views.sensor_fleets.SensorFleetUserPermissionsView",
         "name": "private:sensor_fleet_user_permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/sensor-fleet/<uuid:fleet_id>/watchlist/",
+        "module": "frontend_private.views.sensor_fleets.SensorFleetWatchlistView",
+        "name": "private:sensor_fleet_watchlist",
         "decorators": ""
     },
     {

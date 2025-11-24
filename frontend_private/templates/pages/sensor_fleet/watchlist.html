@@ -1,0 +1,131 @@
+{% extends "pages/sensor_fleet/base.html" %}
+{% load static %}
+
+{% block right_panel %}
+<div class="grow">
+
+    <form id="watchlist_form" method="GET" autocomplete="off">
+        {% csrf_token %}
+
+        <!-- Panel body -->
+        <div class="p-6 space-y-6">
+            <h2 class="text-2xl text-slate-100 font-bold mb-5">Sensors Watchlist</h2>
+
+            <!-- Time Parameter Control -->
+            <section>
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-sm font-medium mb-1" for="days">
+                            Look ahead (days):<span class="text-rose-600"> *</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <input 
+                                id="days" 
+                                name="days" 
+                                type="number" 
+                                min="0" 
+                                value="{{ days|default:60 }}" 
+                                class="form-input flex-1" 
+                                required />
+                            <button type="submit" id="btn_update_watchlist" 
+                                class="btn bg-indigo-500 hover:bg-indigo-600 text-white whitespace-nowrap">
+                                Update Watchlist
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">
+                            Show sensors expiring within the next N days (default: 60 days / 2 months)
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sensors Watchlist Table -->
+            <section>
+                <div class="mt-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-slate-100">Sensors Due for Retrieval</h3>
+                        <div class="flex gap-2">
+                            <a href="#" id="btn_export_excel"
+                                class="btn-sm bg-green-500 hover:bg-green-400 text-white border border-slate-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" viewBox="4.5 2.5 15 19">
+                                    <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
+                                    <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path>
+                                    <path d="M8 11h8v7h-8z"></path>
+                                    <path d="M8 15h8"></path>
+                                    <path d="M11 11v7"></path>
+                                </svg>
+                                Export to Excel
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Sensors List -->
+                    <div id="sensors_container">
+                        {% include 'snippets/sensor_table.html' with sensors=sensors table_id='watchlist_sensors_table' show_actions=False show_count=True empty_message="No sensors are due for retrieval within the selected time window." %}
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+    </form>
+
+    {% include 'snippets/modal_success.html' %}
+    {% include 'snippets/modal_error.html' %}
+
+</div>
+{% endblock right_panel %}
+
+{% block extra_js %}
+<script src="{% url 'url_reverse.js' %}"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+{% endblock extra_js %}
+
+{% block inline_extra_js %}
+<script>
+    $(window).on('load', function () {
+        let dataTable = null;
+
+        // Initialize DataTables for sortable table
+        // Note: order is empty array to preserve database sorting (by minimum expiry date)
+        dataTable = $('#watchlist_sensors_table').DataTable({
+            paging: false,
+            searching: false,
+            info: false,
+            order: [], // Preserve database order (sorted by minimum expiry date)
+        });
+
+        // Form submission handler - validate before allowing normal form submission
+        $('#watchlist_form').on('submit', function (e) {
+            const days = $('#days').val().trim();
+            
+            if (!days || parseInt(days) < 0) {
+                e.preventDefault();
+                $("#modal_error_txt").html("Please enter a valid number of days (0 or greater).");
+                $("#modal_error").css('display', 'flex');
+                return false;
+            }
+
+            // Show loading state
+            $('#btn_update_watchlist').prop('disabled', true).text('Loading...');
+            
+            // Allow normal form submission - server will handle the rest
+        });
+
+        // Export to Excel button handler
+        $('#btn_export_excel').click(function (e) {
+            e.preventDefault();
+            const days = $('#days').val() || '60';
+            const exportUrl = Urls['api:v1:sensor-fleet-watchlist-export']('{{ sensor_fleet.id }}') + '?days=' + days;
+            window.location.href = exportUrl;
+        });
+
+        // Close modal handlers
+        $('#modal_error button, #modal_success button').click(function () {
+            $(this).closest('.fixed').fadeOut(200);
+        });
+    });
+</script>
+{% endblock inline_extra_js %}
+

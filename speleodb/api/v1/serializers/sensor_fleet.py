@@ -11,6 +11,9 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
+from speleodb.gis.models import SensorInstall
+from speleodb.gis.models import Station
+from speleodb.gis.models.sensor import InstallState
 from speleodb.users.models import User
 
 logger = logging.getLogger(__name__)
@@ -30,6 +33,14 @@ class SensorSerializer(serializers.ModelSerializer[Sensor]):
     fleet_id = serializers.UUIDField(source="fleet.id", read_only=True)
     fleet_name = serializers.CharField(source="fleet.name", read_only=True)
 
+    # Latest install status
+    latest_install_project = serializers.SerializerMethodField()
+    latest_install_lat = serializers.SerializerMethodField()
+    latest_install_long = serializers.SerializerMethodField()
+    latest_install_memory_expiry = serializers.SerializerMethodField()
+    latest_install_battery_expiry = serializers.SerializerMethodField()
+    active_installs = serializers.SerializerMethodField()
+
     class Meta:
         model = Sensor
         fields = "__all__"
@@ -38,6 +49,74 @@ class SensorSerializer(serializers.ModelSerializer[Sensor]):
             "created_by",
             "creation_date",
             "modified_date",
+            "latest_install_project",
+            "latest_install_lat",
+            "latest_install_long",
+            "latest_install_memory_expiry",
+            "latest_install_battery_expiry",
+            "active_installs",
+        ]
+
+    def get_latest_install_project(self, obj: Sensor) -> str | None:
+        """Get the name of the project where the sensor is currently installed."""
+        install = obj.installs.filter(state=InstallState.INSTALLED).first()
+        return install.station.project.name if install else None
+
+    def get_latest_install_lat(self, obj: Sensor) -> float | None:
+        """Get the latitude of the station where the sensor is currently installed."""
+        install = obj.installs.filter(state=InstallState.INSTALLED).first()
+        return float(install.station.latitude) if install else None
+
+    def get_latest_install_long(self, obj: Sensor) -> float | None:
+        """Get the longitude of the station where the sensor is currently installed."""
+        install = obj.installs.filter(state=InstallState.INSTALLED).first()
+        return float(install.station.longitude) if install else None
+
+    def get_latest_install_memory_expiry(self, obj: Sensor) -> str | None:
+        """Get the memory expiry date of the current install."""
+        install = obj.installs.filter(state=InstallState.INSTALLED).first()
+        return (
+            install.expiracy_memory_date.isoformat()
+            if install and install.expiracy_memory_date
+            else None
+        )
+
+    def get_latest_install_battery_expiry(self, obj: Sensor) -> str | None:
+        """Get the battery expiry date of the current install."""
+        install = obj.installs.filter(state=InstallState.INSTALLED).first()
+        return (
+            install.expiracy_battery_date.isoformat()
+            if install and install.expiracy_battery_date
+            else None
+        )
+
+    def get_active_installs(self, obj: Sensor) -> list[dict[str, Any]]:
+        """Get active installs with full details."""
+        installs = obj.installs.filter(state=InstallState.INSTALLED).select_related(  # pyright: ignore[reportAttributeAccessIssue]
+            "station", "station__project"
+        )
+
+        return [
+            {
+                "id": str(install.id),
+                "station": {
+                    "id": str(install.station.id),
+                    "name": install.station.name,
+                    "latitude": str(install.station.latitude),
+                    "longitude": str(install.station.longitude),
+                    "project": {
+                        "id": str(install.station.project.id),
+                        "name": install.station.project.name,
+                    },
+                },
+                "expiracy_memory_date": install.expiracy_memory_date.isoformat()
+                if install.expiracy_memory_date
+                else None,
+                "expiracy_battery_date": install.expiracy_battery_date.isoformat()
+                if install.expiracy_battery_date
+                else None,
+            }
+            for install in installs
         ]
 
 
@@ -227,3 +306,168 @@ class SensorFleetUserPermissionSerializer(
             instance.save()
 
         return instance
+
+
+class SensorInstallSerializer(serializers.ModelSerializer[SensorInstall]):
+    """Serializer for SensorInstall model."""
+
+    # Read-only nested information
+    sensor_id = serializers.UUIDField(source="sensor.id", read_only=True)
+    sensor_name = serializers.CharField(source="sensor.name", read_only=True)
+    sensor_fleet_id = serializers.UUIDField(source="sensor.fleet.id", read_only=True)
+    sensor_fleet_name = serializers.CharField(
+        source="sensor.fleet.name", read_only=True
+    )
+    station_id = serializers.UUIDField(source="station.id", read_only=True)
+    station_name = serializers.CharField(source="station.name", read_only=True)
+
+    # Sensor is write-only for creation
+    sensor = serializers.PrimaryKeyRelatedField(
+        queryset=Sensor.objects.all(),
+        write_only=True,
+        required=True,
+    )
+
+    # Station is write-only for creation (passed via URL)
+    station = serializers.PrimaryKeyRelatedField(
+        queryset=Station.objects.all(),
+        write_only=True,
+        required=False,
+    )
+
+    class Meta:
+        model = SensorInstall
+        fields = "__all__"
+        read_only_fields = [
+            "id",
+            "created_by",
+            "creation_date",
+            "modified_date",
+        ]
+
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Validate sensor install data and state transitions."""
+        instance = self.instance
+        state = data.get(
+            "state", instance.state if instance else InstallState.INSTALLED
+        )
+
+        # If updating state to not INSTALLED, require uninstall fields
+        if state != InstallState.INSTALLED:
+            uninstall_date = data.get("uninstall_date")
+            uninstall_user = data.get("uninstall_user")
+
+            if not uninstall_date:
+                raise serializers.ValidationError(
+                    {
+                        "uninstall_date": (
+                            "Uninstall date is required when marking as uninstalled."
+                        )
+                    }
+                )
+            if not uninstall_user:
+                raise serializers.ValidationError(
+                    {
+                        "uninstall_user": (
+                            "Uninstall user is required when marking as uninstalled."
+                        )
+                    }
+                )
+
+            # Check install_date <= uninstall_date
+            install_date = data.get(
+                "install_date", instance.install_date if instance else None
+            )
+            if install_date and uninstall_date and install_date > uninstall_date:
+                raise serializers.ValidationError(
+                    {
+                        "uninstall_date": (
+                            "Uninstall date must be on or after install date."
+                        )
+                    }
+                )
+
+        # If state is INSTALLED, clear uninstall fields
+        else:
+            if "uninstall_date" in data and data["uninstall_date"] is not None:
+                raise serializers.ValidationError(
+                    {
+                        "uninstall_date": (
+                            "Uninstall date can only be set when state is uninstalled."
+                        )
+                    }
+                )
+            if "uninstall_user" in data and data["uninstall_user"] is not None:
+                raise serializers.ValidationError(
+                    {
+                        "uninstall_user": (
+                            "Uninstall user can only be set when state is uninstalled."
+                        )
+                    }
+                )
+
+        # Validate state transitions
+        if instance:
+            current_state = instance.state
+            # Can only change from INSTALLED to other states
+            if current_state not in (InstallState.INSTALLED, state):
+                raise serializers.ValidationError(
+                    {
+                        "state": (
+                            f"Cannot change state from {current_state} to {state}. "
+                            "Only INSTALLED sensors can have their state changed."
+                        )
+                    }
+                )
+
+        return data
+
+    def create(self, validated_data: dict[str, Any]) -> SensorInstall:
+        """Create a new sensor install."""
+        # Check if sensor is already installed elsewhere
+        sensor = validated_data["sensor"]
+        existing_install = SensorInstall.objects.filter(
+            sensor=sensor, state=InstallState.INSTALLED
+        ).first()
+
+        if existing_install:
+            raise serializers.ValidationError(
+                {
+                    "sensor": (
+                        f"This sensor is already installed at station "
+                        f"{existing_install.station.name} "
+                        f"({existing_install.station.id}). "
+                        "A sensor can only be installed at one station at a time."
+                    )
+                }
+            )
+
+        return super().create(validated_data)
+
+    def update(
+        self, instance: SensorInstall, validated_data: dict[str, Any]
+    ) -> SensorInstall:
+        """Update an existing sensor install."""
+        # If sensor is being changed, check if new sensor is already installed
+        if "sensor" in validated_data:
+            new_sensor = validated_data["sensor"]
+            # Only check if it's a different sensor
+            if new_sensor != instance.sensor:
+                existing_install = SensorInstall.objects.filter(
+                    sensor=new_sensor, state=InstallState.INSTALLED
+                ).first()
+
+                if existing_install:
+                    raise serializers.ValidationError(
+                        {
+                            "sensor": (
+                                f"This sensor is already installed at station "
+                                f"{existing_install.station.name} "
+                                f"({existing_install.station.id}). "
+                                "A sensor can only be installed at one station at a "
+                                "time."
+                            )
+                        }
+                    )
+
+        return super().update(instance, validated_data)

@@ -12,12 +12,18 @@ from speleodb.utils.helpers import maybe_sort_data
 
 
 class DownloadResponseFromBlob(FileResponse):
-    def __init__(self, obj: Any, filename: str, attachment: bool = True) -> None:
+    def __init__(
+        self,
+        obj: Any,
+        filename: str,
+        attachment: bool = True,
+        content_type: str = "application/octet-stream",
+    ) -> None:
         super().__init__(
             obj,
             as_attachment=attachment,
             filename=filename,
-            content_type="application/octet-stream",
+            content_type=content_type,
         )
 
 

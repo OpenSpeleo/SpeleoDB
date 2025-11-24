@@ -13,10 +13,12 @@ Tests cover:
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -24,10 +26,13 @@ from rest_framework.test import APIClient
 from speleodb.api.v1.tests.factories import SensorFactory
 from speleodb.api.v1.tests.factories import SensorFleetFactory
 from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
+from speleodb.api.v1.tests.factories import SensorInstallFactory
+from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
+from speleodb.gis.models.sensor import InstallState
 from speleodb.users.models.user import User
 from speleodb.users.tests.factories import UserFactory
 
@@ -1023,3 +1028,541 @@ class TestSensorFleetEdgeCases:
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["data"]["name"] == "Fleet™ 测试 🚀"
+
+
+@pytest.mark.django_db
+class TestSensorFleetExport:
+    """Tests for exporting sensor fleet data to Excel."""
+
+    def test_export_sensors_excel(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Read-only user can export sensors to Excel."""
+        # Create some sensors with install history
+        sensor1 = SensorFactory.create(fleet=sensor_fleet_with_read, name="Sensor 1")
+        _ = SensorFactory.create(fleet=sensor_fleet_with_read, name="Sensor 2")
+
+        # Create install for sensor 1
+        station = StationFactory.create()
+        SensorInstallFactory.create(
+            sensor=sensor1,
+            station=station,
+            state=InstallState.INSTALLED,
+        )
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-sensors-export",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert (
+            response["Content-Type"]
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        assert "sensor_fleet_" in response["Content-Disposition"]
+
+    def test_export_sensors_no_permission(
+        self,
+        api_client: APIClient,
+        user: User,
+    ) -> None:
+        """User without permission cannot export."""
+        fleet = SensorFleetFactory.create()
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-sensors-export",
+                kwargs={"fleet_id": fleet.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+class TestSensorFleetWatchlist:
+    """Tests for sensor fleet watchlist endpoint."""
+
+    def test_watchlist_default_days(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Default days parameter (60) returns sensors expiring within 60 days."""
+        today = timezone.localdate()
+
+        # Create sensors with installs expiring at different times
+        sensor1 = SensorFactory.create(fleet=sensor_fleet_with_read)
+        sensor2 = SensorFactory.create(fleet=sensor_fleet_with_read)
+        sensor3 = SensorFactory.create(fleet=sensor_fleet_with_read)
+
+        station = StationFactory.create()
+
+        # Sensor 1: expires in 30 days (should be included)
+        SensorInstallFactory.create(
+            sensor=sensor1,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_memory_date=today + timedelta(days=30),
+            created_by=user.email,
+        )
+
+        # Sensor 2: expires in 90 days (should NOT be included with default 60)
+        SensorInstallFactory.create(
+            sensor=sensor2,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_battery_date=today + timedelta(days=90),
+            created_by=user.email,
+        )
+
+        # Sensor 3: expires in 45 days (should be included)
+        SensorInstallFactory.create(
+            sensor=sensor3,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_memory_date=today + timedelta(days=45),
+            created_by=user.email,
+        )
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        sensor_ids = {s["id"] for s in response.data["data"]}
+        assert str(sensor1.id) in sensor_ids
+        assert str(sensor2.id) not in sensor_ids
+        assert str(sensor3.id) in sensor_ids
+
+    def test_watchlist_custom_days(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Custom days parameter filters correctly."""
+        today = timezone.localdate()
+
+        sensor1 = SensorFactory.create(fleet=sensor_fleet_with_read)
+        sensor2 = SensorFactory.create(fleet=sensor_fleet_with_read)
+
+        station = StationFactory.create()
+
+        # Sensor 1: expires in 10 days
+        SensorInstallFactory.create(
+            sensor=sensor1,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_memory_date=today + timedelta(days=10),
+            created_by=user.email,
+        )
+
+        # Sensor 2: expires in 20 days
+        SensorInstallFactory.create(
+            sensor=sensor2,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_battery_date=today + timedelta(days=20),
+            created_by=user.email,
+        )
+
+        # Request with days=15 - should only include sensor1
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            )
+            + "?days=15",
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        sensor_ids = {s["id"] for s in response.data["data"]}
+        assert str(sensor1.id) in sensor_ids
+        assert str(sensor2.id) not in sensor_ids
+
+    def test_watchlist_empty_results(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """No sensors due returns empty list."""
+        today = timezone.localdate()
+
+        sensor = SensorFactory.create(fleet=sensor_fleet_with_read)
+        station = StationFactory.create()
+
+        # Sensor expires in 100 days (beyond default 60)
+        SensorInstallFactory.create(
+            sensor=sensor,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_memory_date=today + timedelta(days=100),
+            created_by=user.email,
+        )
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["data"] == []
+
+    def test_watchlist_memory_expiry_only(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Sensor with only memory expiry is included if due."""
+        today = timezone.localdate()
+
+        sensor = SensorFactory.create(fleet=sensor_fleet_with_read)
+        station = StationFactory.create()
+
+        SensorInstallFactory.create(
+            sensor=sensor,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_memory_date=today + timedelta(days=30),
+            expiracy_battery_date=None,
+            created_by=user.email,
+        )
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data["data"]) == 1
+        assert response.data["data"][0]["id"] == str(sensor.id)
+
+    def test_watchlist_battery_expiry_only(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Sensor with only battery expiry is included if due."""
+        today = timezone.localdate()
+
+        sensor = SensorFactory.create(fleet=sensor_fleet_with_read)
+        station = StationFactory.create()
+
+        SensorInstallFactory.create(
+            sensor=sensor,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_memory_date=None,
+            expiracy_battery_date=today + timedelta(days=30),
+            created_by=user.email,
+        )
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data["data"]) == 1
+        assert response.data["data"][0]["id"] == str(sensor.id)
+
+    def test_watchlist_both_expiry_dates(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Sensor with both expiry dates is included if either is due."""
+        today = timezone.localdate()
+
+        sensor = SensorFactory.create(fleet=sensor_fleet_with_read)
+        station = StationFactory.create()
+
+        # Memory expires in 30 days, battery in 90 days
+        SensorInstallFactory.create(
+            sensor=sensor,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_memory_date=today + timedelta(days=30),
+            expiracy_battery_date=today + timedelta(days=90),
+            created_by=user.email,
+        )
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data["data"]) == 1
+
+    def test_watchlist_read_only_permission(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Read-only user can access watchlist."""
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_watchlist_no_permission(
+        self,
+        api_client: APIClient,
+        user: User,
+    ) -> None:
+        """User without permission gets 403."""
+        fleet = SensorFleetFactory.create()
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": fleet.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_watchlist_unauthenticated(
+        self,
+        api_client: APIClient,
+    ) -> None:
+        """Unauthenticated request returns 403."""
+        fleet = SensorFleetFactory.create()
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": fleet.id},
+            ),
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_watchlist_invalid_fleet_id(
+        self,
+        api_client: APIClient,
+        user: User,
+    ) -> None:
+        """Invalid fleet_id returns 404."""
+        fake_uuid = "00000000-0000-0000-0000-000000000000"
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": fake_uuid},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_watchlist_days_zero(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """days=0 returns only expired sensors."""
+        today = timezone.localdate()
+
+        sensor1 = SensorFactory.create(fleet=sensor_fleet_with_read)
+        sensor2 = SensorFactory.create(fleet=sensor_fleet_with_read)
+
+        station = StationFactory.create()
+
+        # Sensor 1: expired yesterday
+        # install_date must be <= expiracy_memory_date, so set install_date to
+        # 2 days ago
+        SensorInstallFactory.create(
+            sensor=sensor1,
+            station=station,
+            state=InstallState.INSTALLED,
+            install_date=today - timedelta(days=2),
+            expiracy_memory_date=today - timedelta(days=1),
+            created_by=user.email,
+        )
+
+        # Sensor 2: expires tomorrow
+        SensorInstallFactory.create(
+            sensor=sensor2,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_memory_date=today + timedelta(days=1),
+            created_by=user.email,
+        )
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            )
+            + "?days=0",
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        sensor_ids = {s["id"] for s in response.data["data"]}
+        assert str(sensor1.id) in sensor_ids
+        assert str(sensor2.id) not in sensor_ids
+
+    def test_watchlist_negative_days(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Negative days parameter returns 400 error."""
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            )
+            + "?days=-10",
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "non-negative" in response.data["error"].lower()
+
+    def test_watchlist_invalid_days(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Invalid days parameter returns 400 error."""
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            )
+            + "?days=invalid",
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "integer" in response.data["error"].lower()
+
+    def test_watchlist_excludes_retrieved_sensors(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Retrieved sensors are not included in watchlist."""
+        today = timezone.localdate()
+
+        sensor1 = SensorFactory.create(fleet=sensor_fleet_with_read)
+        sensor2 = SensorFactory.create(fleet=sensor_fleet_with_read)
+
+        station = StationFactory.create()
+
+        # Sensor 1: installed and expiring soon
+        SensorInstallFactory.create(
+            sensor=sensor1,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_memory_date=today + timedelta(days=30),
+            created_by=user.email,
+        )
+
+        # Sensor 2: retrieved (should not appear)
+        # install_date must be <= uninstall_date, so set install_date to 11 days ago
+        SensorInstallFactory.create(
+            sensor=sensor2,
+            station=station,
+            state=InstallState.RETRIEVED,
+            install_date=today - timedelta(days=11),
+            expiracy_memory_date=today + timedelta(days=30),
+            uninstall_date=today - timedelta(days=10),
+            uninstall_user=user.email,
+            created_by=user.email,
+        )
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        sensor_ids = {s["id"] for s in response.data["data"]}
+        assert str(sensor1.id) in sensor_ids
+        assert str(sensor2.id) not in sensor_ids
+
+    def test_watchlist_includes_install_info(
+        self,
+        api_client: APIClient,
+        sensor_fleet_with_read: SensorFleet,
+        user: User,
+    ) -> None:
+        """Response includes active install information."""
+        today = timezone.localdate()
+
+        sensor = SensorFactory.create(fleet=sensor_fleet_with_read)
+        station = StationFactory.create()
+
+        SensorInstallFactory.create(
+            sensor=sensor,
+            station=station,
+            state=InstallState.INSTALLED,
+            expiracy_memory_date=today + timedelta(days=30),
+            expiracy_battery_date=today + timedelta(days=60),
+            created_by=user.email,
+        )
+
+        response = api_client.get(
+            reverse(
+                "api:v1:sensor-fleet-watchlist",
+                kwargs={"fleet_id": sensor_fleet_with_read.id},
+            ),
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        sensor_data = response.data["data"][0]
+        assert "latest_install_project" in sensor_data
+        assert "latest_install_memory_expiry" in sensor_data
+        assert "latest_install_battery_expiry" in sensor_data
+        assert "active_installs" in sensor_data

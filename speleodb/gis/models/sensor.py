@@ -4,11 +4,19 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import date
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from django.db import models
+from django.db.models import CheckConstraint
+from django.db.models import F
+from django.db.models import Q
+from django.db.models import QuerySet
+from django.utils import timezone
 
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import Station
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -174,3 +182,171 @@ class SensorFleetUserPermission(models.Model):
     @property
     def level_label(self) -> StrOrPromise:
         return PermissionLevel.from_value(self.level).label
+
+
+class InstallState(models.TextChoices):
+    INSTALLED = "installed", "Installed"
+    RETRIEVED = "retrieved", "Retrieved"
+    LOST = "lost", "Lost"
+    ABANDONED = "abandoned", "Abandoned"
+
+
+class SensorInstallQuerySet(models.QuerySet["SensorInstall"]):
+    def due_for_retrieval(self, days: int | None = None) -> QuerySet[SensorInstall]:
+        """
+        Returns SensorInstalls that are due for retrieval.
+
+        Behavior:
+        - days=None → STRICT: only dates strictly in the past (expired)
+        - days=N → include items expiring within the next N days
+        """
+
+        today = timezone.localdate()
+
+        qs = self.filter(state=InstallState.INSTALLED)
+
+        cutoff_date: date
+        match days:
+            case None:
+                # Strict expired only
+                cutoff_date = today
+
+            case int():
+                # days >= 0 → grow the window
+                cutoff_date = today + timedelta(days=days)
+
+            case _:
+                raise TypeError(
+                    f"Unexpected type received: {type(days)}. Expects: int | None"
+                )
+
+        return qs.filter(
+            models.Q(expiracy_battery_date__lt=cutoff_date)
+            | models.Q(expiracy_memory_date__lt=cutoff_date)
+        )
+
+
+class SensorInstallManager(models.Manager["SensorInstall"]):
+    def due_for_retrieval(self, days: int | None = None) -> QuerySet[SensorInstall]:
+        return SensorInstallQuerySet(self.model, using=self._db).due_for_retrieval(
+            days=days
+        )
+
+
+class SensorInstall(models.Model):
+    id = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        primary_key=True,
+    )
+
+    sensor = models.ForeignKey(
+        Sensor,
+        related_name="installs",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    station = models.ForeignKey(
+        Station,
+        related_name="sensor_installs",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    install_date = models.DateField(null=False, blank=False)
+    install_user = models.EmailField(
+        null=False,
+        blank=False,
+        help_text="User who installed the sensor.",
+    )
+
+    uninstall_date = models.DateField(null=True, blank=True, default=None)
+    uninstall_user = models.EmailField(  # noqa: DJ001
+        # must be null not blank to not fail the condition
+        # `retrieval_fields_match_is_retrieved`
+        null=True,
+        blank=True,
+        default=None,
+        help_text="User who retrieved the sensor.",
+    )
+
+    state = models.CharField(
+        max_length=20,
+        choices=InstallState,
+        default=InstallState.INSTALLED,
+    )
+
+    expiracy_memory_date = models.DateField(null=True, blank=True)
+    expiracy_battery_date = models.DateField(null=True, blank=True)
+
+    # Metadata
+    created_by = models.EmailField(
+        null=False,
+        blank=False,
+        help_text="User who created the sensor fleet.",
+    )
+
+    creation_date = models.DateTimeField(auto_now_add=True)
+    modified_date = models.DateTimeField(auto_now=True)
+
+    objects = SensorInstallManager()
+
+    class Meta:
+        verbose_name = "Sensor Install"
+        verbose_name_plural = "Sensor Installs"
+        ordering = ["-modified_date"]
+
+        indexes = [
+            models.Index(fields=["state"]),
+            models.Index(fields=["sensor", "state"]),
+            models.Index(fields=["station", "state"]),
+        ]
+
+        constraints = [
+            # uninstall_date/user fields match state
+            CheckConstraint(
+                condition=(
+                    Q(
+                        ~Q(state=InstallState.INSTALLED),
+                        uninstall_date__isnull=False,
+                        uninstall_user__isnull=False,
+                    )
+                    | Q(
+                        state=InstallState.INSTALLED,
+                        uninstall_date__isnull=True,
+                        uninstall_user__isnull=True,
+                    )
+                ),
+                name="uninstall_fields_match_is_installed",
+            ),
+            # install_date <= uninstall_date
+            CheckConstraint(
+                condition=Q(uninstall_date__isnull=True)
+                | Q(install_date__lte=F("uninstall_date")),
+                name="install_before_or_equal_retrieval",
+            ),
+            # only one installed sensor per sensor at a time
+            models.UniqueConstraint(
+                fields=["sensor"],
+                condition=Q(state=InstallState.INSTALLED),
+                name="unique_installed_per_sensor",
+            ),
+            # install_date <= expiracy_memory_date if set
+            CheckConstraint(
+                condition=Q(expiracy_memory_date__isnull=True)
+                | Q(install_date__lte=F("expiracy_memory_date")),
+                name="install_before_or_equal_memory_expiracy",
+            ),
+            # install_date <= expiracy_battery_date if set
+            CheckConstraint(
+                condition=Q(expiracy_battery_date__isnull=True)
+                | Q(install_date__lte=F("expiracy_battery_date")),
+                name="install_before_or_equal_battery_expiracy",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"[STATUS: {self.state.upper()}]: Sensor: {self.sensor.id}"

@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import random
 import uuid
+from datetime import date
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -22,10 +24,12 @@ from speleodb.gis.models import LogEntry
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
+from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
+from speleodb.gis.models.sensor import InstallState
 from speleodb.gis.models.station import StationResourceType
 from speleodb.plugins.models import PluginRelease
 from speleodb.plugins.models import PublicAnnoucement
@@ -506,3 +510,95 @@ class SensorFleetUserPermissionFactory(DjangoModelFactory[SensorFleetUserPermiss
     level = PermissionLevel.READ_AND_WRITE
     user: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
     sensor_fleet: SensorFleet = factory.SubFactory(SensorFleetFactory)  # type: ignore[assignment]
+
+
+class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
+    """Factory for creating SensorInstall instances."""
+
+    class Meta:
+        model = SensorInstall
+
+    sensor: Sensor = factory.SubFactory(SensorFactory)  # type: ignore[assignment]
+    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    install_date = factory.LazyFunction(timezone.localdate)
+    install_user: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+    state = InstallState.INSTALLED
+    uninstall_date: date | None = None
+    uninstall_user: str | None = None
+    expiracy_memory_date: date | None = None
+    expiracy_battery_date: date | None = None
+    created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+
+    @classmethod
+    def create_uninstalled(
+        cls,
+        sensor: Sensor | None = None,
+        station: Station | None = None,
+        state: InstallState = InstallState.RETRIEVED,
+        **kwargs: Any,
+    ) -> SensorInstall:
+        """Create a retrieved sensor install."""
+
+        assert state != InstallState.INSTALLED, (
+            "Status must not be INSTALLED for uninstalled installs."
+        )
+
+        if sensor is None:
+            sensor = SensorFactory.create()
+        if station is None:
+            station = StationFactory.create()
+
+        install_date = kwargs.get("install_date", timezone.localdate())
+        uninstall_date = kwargs.get("uninstall_date", install_date + timedelta(days=30))
+
+        return cls.create(
+            sensor=sensor,
+            station=station,
+            state=state,
+            install_date=install_date,
+            uninstall_date=uninstall_date,
+            uninstall_user=kwargs.get("uninstall_user", UserFactory.create().email),
+            **{
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["install_date", "uninstall_date", "uninstall_user"]
+            },
+        )
+
+    @classmethod
+    def create_lost(
+        cls, sensor: Sensor | None = None, station: Station | None = None, **kwargs: Any
+    ) -> SensorInstall:
+        """Create a lost sensor install."""
+        if sensor is None:
+            sensor = SensorFactory.create()
+        if station is None:
+            station = StationFactory.create()
+
+        return cls.create(
+            sensor=sensor,
+            station=station,
+            state=InstallState.LOST,
+            **kwargs,
+        )
+
+    @classmethod
+    def create_abandoned(
+        cls, sensor: Sensor | None = None, station: Station | None = None, **kwargs: Any
+    ) -> SensorInstall:
+        """Create an abandoned sensor install."""
+        if sensor is None:
+            sensor = SensorFactory.create()
+        if station is None:
+            station = StationFactory.create()
+
+        return cls.create(
+            sensor=sensor,
+            station=station,
+            state=InstallState.ABANDONED,
+            **kwargs,
+        )

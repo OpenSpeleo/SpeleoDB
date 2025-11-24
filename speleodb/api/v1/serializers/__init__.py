@@ -43,6 +43,7 @@ from speleodb.api.v1.serializers.request_serializers import (
 from speleodb.api.v1.serializers.sensor_fleet import SensorFleetListSerializer
 from speleodb.api.v1.serializers.sensor_fleet import SensorFleetSerializer
 from speleodb.api.v1.serializers.sensor_fleet import SensorFleetUserPermissionSerializer
+from speleodb.api.v1.serializers.sensor_fleet import SensorInstallSerializer
 from speleodb.api.v1.serializers.sensor_fleet import SensorSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamListSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamMembershipListSerializer
@@ -80,6 +81,7 @@ __all__ = [
     "SensorFleetListSerializer",
     "SensorFleetSerializer",
     "SensorFleetUserPermissionSerializer",
+    "SensorInstallSerializer",
     "SensorSerializer",
     "SurveyTeamListSerializer",
     "SurveyTeamMembershipListSerializer",

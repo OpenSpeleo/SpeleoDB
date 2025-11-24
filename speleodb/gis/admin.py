@@ -26,6 +26,7 @@ from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
+from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationTag
@@ -119,7 +120,7 @@ class StationResourceInline(admin.TabularInline):  # type: ignore[type-arg]
         "creation_date",
         "modified_date",
     )
-    readonly_fields = ("created_by", "creation_date", "modified_date", "created_by")
+    readonly_fields = ("creation_date", "modified_date", "created_by")
     ordering = ("-modified_date",)
 
 
@@ -1100,3 +1101,85 @@ class SensorFleetUserPermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg
         if obj:
             return obj.level_label  # type: ignore[return-value]
         return "-"
+
+
+@admin.register(SensorInstall)
+class SensorInstallAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    # Columns to display in the list view
+    list_display = (
+        "id",
+        "sensor",
+        "station",
+        "state",
+        "install_date",
+        "uninstall_date",
+        "install_user",
+        "uninstall_user",
+        "expiracy_memory_date",
+        "expiracy_battery_date",
+        "created_by",
+        "creation_date",
+        "modified_date",
+    )
+
+    # Filters on the right sidebar
+    list_filter = (
+        "state",
+        "install_date",
+        "uninstall_date",
+        "expiracy_memory_date",
+        "expiracy_battery_date",
+    )
+
+    # Fields you can search by
+    search_fields = (
+        "sensor__id",
+        "sensor__name",  # if your Sensor model has a name
+        "station__name",  # if your Station model has a name
+        "install_user",
+        "uninstall_user",
+        "created_by",
+    )
+
+    # Makes the install and retrieval dates navigable by date hierarchy
+    date_hierarchy = "install_date"
+
+    # Readonly fields (cannot be edited in admin)
+    readonly_fields = ("creation_date", "modified_date", "created_by")
+
+    # Ordering in the list view (optional, already set in Meta)
+    ordering = ("-modified_date",)
+
+    # Optional: grouping fields in the edit form
+    fieldsets = (
+        ("Sensor & Station", {"fields": ("sensor", "station")}),
+        (
+            "Installation Info",
+            {
+                "fields": (
+                    "install_date",
+                    "install_user",
+                    "uninstall_date",
+                    "uninstall_user",
+                    "state",
+                )
+            },
+        ),
+        (
+            "Expiry Info",
+            {"fields": ("expiracy_memory_date", "expiracy_battery_date")},
+        ),
+        ("Metadata", {"fields": ("created_by", "creation_date", "modified_date")}),
+    )
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: Station,
+        form: forms.ModelForm[Station],
+        change: bool,
+    ) -> None:
+        # Auto-populate created_by field when creating a new station
+        if not change:  # Only on creation, not on edit
+            obj.created_by = request.user.email  # type: ignore[union-attr]
+        super().save_model(request, obj, form, change)

@@ -1,8 +1,8 @@
-from datetime import date
 from datetime import timedelta
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from speleodb.plugins.models import PublicAnnoucement
 from speleodb.plugins.models.platform_base import SurveyPlatformEnum
@@ -100,7 +100,7 @@ class TestPublicAnnouncementModel:
     # -------------------------
 
     def test_expiracy_date_can_be_set(self, announcement: PublicAnnoucement) -> None:
-        today = date.today()  # noqa: DTZ011
+        today = timezone.localdate()
         announcement.expiracy_date = today + timedelta(days=10)
         announcement.full_clean()  # Should pass
         announcement.save()

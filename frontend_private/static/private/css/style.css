@@ -3134,6 +3134,16 @@ span.flatpickr-weekday {
   border-color: rgb(252 211 77 / var(--tw-border-opacity));
 }
 
+.border-blue-500 {
+  --tw-border-opacity: 1;
+  border-color: rgb(59 130 246 / var(--tw-border-opacity));
+}
+
+.border-blue-500\/30 {
+  --tw-border-opacity: 0.30;
+  border-color: rgb(59 130 246 / var(--tw-border-opacity));
+}
+
 .border-emerald-200 {
   --tw-border-opacity: 1;
   border-color: rgb(167 243 208 / var(--tw-border-opacity));
@@ -3348,6 +3358,11 @@ span.flatpickr-weekday {
   background-color: rgb(245 158 11 / var(--tw-bg-opacity));
 }
 
+.bg-amber-500\/20 {
+  --tw-bg-opacity: 0.2;
+  background-color: rgb(245 158 11 / var(--tw-bg-opacity));
+}
+
 .bg-amber-500\/30 {
   --tw-bg-opacity: 0.3;
   background-color: rgb(245 158 11 / var(--tw-bg-opacity));
@@ -3508,9 +3523,29 @@ span.flatpickr-weekday {
   background-color: rgb(17 24 39 / var(--tw-bg-opacity))
 }
 
+.bg-green-400 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(74 222 128 / var(--tw-bg-opacity, 1));
+}
+
+.hover\:bg-green-400:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(74 222 128 / var(--tw-bg-opacity, 1));
+}
+
 .bg-green-500 {
   --tw-bg-opacity: 1;
   background-color: rgba(16, 185, 129, var(--tw-bg-opacity));
+}
+
+.bg-green-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgba(16, 185, 129, var(--tw-bg-opacity));
+}
+
+.bg-green-600 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(22 163 74 / var(--tw-bg-opacity));
 }
 
 .hover\:bg-green-600:hover {
@@ -3565,6 +3600,11 @@ span.flatpickr-weekday {
 .bg-lime-200 {
   --tw-bg-opacity: 1;
   background-color: rgb(217 249 157 / var(--tw-bg-opacity));
+}
+
+.bg-red-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(239 68 68/var(--tw-bg-opacity))
 }
 
 .bg-rose-100 {
@@ -5359,6 +5399,11 @@ span.flatpickr-weekday {
   border-color: rgb(251 191 36 / var(--tw-border-opacity));
 }
 
+.border-amber-500\/30 {
+  --tw-border-opacity: 0.3;
+  border-color: rgb(245 158 11 / var(--tw-border-opacity));
+}
+
 .border-amber-500\/50 {
   --tw-border-opacity: 0.5;
   border-color: rgb(245 158 11 / var(--tw-border-opacity));
@@ -5416,6 +5461,11 @@ span.flatpickr-weekday {
 .bg-amber-400\/30 {
   --tw-bg-opacity: 0.30;
   background-color: rgb(251 191 36 / var(--tw-bg-opacity));
+}
+
+.bg-blue-500\/20 {
+  --tw-bg-opacity: 0.20;
+  background-color: rgb(59 130 246 / var(--tw-bg-opacity));
 }
 
 .bg-blue-500\/30 {

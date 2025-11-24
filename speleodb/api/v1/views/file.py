@@ -106,7 +106,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
     lookup_field = "id"
 
     @extend_schema(operation_id="v1_projects_upload")
-    def put(  # noqa: PLR0915
+    def put(
         self,
         request: Request,
         fileformat: str,

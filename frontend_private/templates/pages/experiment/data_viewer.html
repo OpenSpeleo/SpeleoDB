@@ -166,7 +166,6 @@ $(window).on('load', function() {
     // Global Variables
     // ============================================
     let gridApi = null;
-    let gridColumnApi = null;
     const experimentId = "{{ experiment.id }}";
     const gisToken = "{{ experiment.gis_token }}";
     let experimentFields = null; // Will store field definitions with order and names
@@ -256,6 +255,11 @@ $(window).on('load', function() {
                     const fieldId = field.id;
                     const fieldName = field.name;
                     
+                    // Skip status fields
+                    if (fieldName && (fieldName.toLowerCase() === 'status')) {
+                        return;
+                    }
+                    
                     // Get value by field UUID from properties
                     if (fieldId in props) {
                         row[fieldName] = formatValue(props[fieldId]);
@@ -263,10 +267,10 @@ $(window).on('load', function() {
                 });
             } else {
                 // Fallback: if experimentFields not loaded, add all remaining properties
-                const skipFields = ['id', 'station_name', 'station_id', 'project_name', 'project_id', 'created_by'];
+                const skipFields = ['id', 'station_name', 'station_id', 'project_name', 'project_id', 'created_by', 'status'];
                 
                 Object.keys(props).forEach(key => {
-                    if (!skipFields.includes(key)) {
+                    if (!skipFields.includes(key) && key.toLowerCase() !== 'status') {
                         // Format field name: flow -> Flow
                         const fieldName = key
                             .replace(/_/g, ' ')
@@ -279,7 +283,18 @@ $(window).on('load', function() {
             rows.push(row);
         });
         
-        return rows;
+        // Remove status columns from all rows to ensure they don't appear anywhere
+        const cleanedRows = rows.map(row => {
+            const cleanedRow = {};
+            Object.keys(row).forEach(key => {
+                if (key.toLowerCase() !== 'status') {
+                    cleanedRow[key] = row[key];
+                }
+            });
+            return cleanedRow;
+        });
+        
+        return cleanedRows;
     }
     
     function formatValue(value) {
@@ -295,6 +310,16 @@ $(window).on('load', function() {
     // ============================================
     // AG Grid Setup
     // ============================================
+    // Custom header name mapping - map field keys to display names
+    const headerNameMap = {
+        // Add your custom header name mappings here
+        // Example: 'Project Name': 'Project',
+        // 'Station ID': 'Station Identifier',
+    };
+    
+    // Columns to exclude from the table
+    const excludedColumns = ['Status', 'status'];
+    
     function createDataGrid(rows) {
         if (rows.length === 0) {
             showError('No data available to display');
@@ -303,15 +328,17 @@ $(window).on('load', function() {
         
         // Generate column definitions from first row
         const firstRow = rows[0];
-        const columnDefs = Object.keys(firstRow).map(key => ({
-            field: key,
-            headerName: key,
-            sortable: true,
-            filter: true,
-            resizable: true,
-            minWidth: 150,
-            flex: 1,
-        }));
+        const columnDefs = Object.keys(firstRow)
+            .filter(key => !excludedColumns.includes(key)) // Filter out excluded columns
+            .map(key => ({
+                field: key,
+                headerName: headerNameMap[key] || key, // Use custom name if mapped, otherwise use original
+                sortable: true,
+                filter: true,
+                resizable: true,
+                minWidth: 150,
+                flex: 1,
+            }));
         
         // Grid options
         const gridOptions = {

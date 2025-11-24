@@ -25,8 +25,10 @@ from frontend_private.views.project import ProjectUserPermissionsView
 from frontend_private.views.sensor_fleets import NewSensorFleetView
 from frontend_private.views.sensor_fleets import SensorFleetDangerZoneView
 from frontend_private.views.sensor_fleets import SensorFleetDetailsView
+from frontend_private.views.sensor_fleets import SensorFleetHistoryView
 from frontend_private.views.sensor_fleets import SensorFleetListingView
 from frontend_private.views.sensor_fleets import SensorFleetUserPermissionsView
+from frontend_private.views.sensor_fleets import SensorFleetWatchlistView
 from frontend_private.views.team import NewTeamView
 from frontend_private.views.team import TeamDangerZoneView
 from frontend_private.views.team import TeamDetailsView
@@ -77,8 +79,10 @@ __all__ = [
     "ProjectUserPermissionsView",
     "SensorFleetDangerZoneView",
     "SensorFleetDetailsView",
+    "SensorFleetHistoryView",
     "SensorFleetListingView",
     "SensorFleetUserPermissionsView",
+    "SensorFleetWatchlistView",
     "StationTagsView",
     "TeamDangerZoneView",
     "TeamDetailsView",

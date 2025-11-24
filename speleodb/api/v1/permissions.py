@@ -135,10 +135,14 @@ class BaseStationAccessLevel(permissions.BasePermission):
                 project = obj.station.project
 
             case _:
-                raise TypeError(
-                    f"Unknown `type` received: {type(obj)}. "
-                    "Expected: Station | StationResource"
-                )
+                # Try to get station from sensor install or other related objects
+                if hasattr(obj, "station"):
+                    project = obj.station.project
+                else:
+                    raise TypeError(
+                        f"Unknown `type` received: {type(obj)}. "
+                        "Expected: Station | StationResource | LogEntry | SensorInstall"
+                    )
 
         try:
             return (

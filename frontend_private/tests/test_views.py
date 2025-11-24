@@ -15,6 +15,8 @@ from rest_framework import status
 from speleodb.api.v1.tests.base_testcase import BaseProjectTestCaseMixin
 from speleodb.api.v1.tests.base_testcase import BaseUserTestCaseMixin
 from speleodb.api.v1.tests.base_testcase import PermissionType
+from speleodb.api.v1.tests.factories import SensorFleetFactory
+from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
@@ -197,4 +199,41 @@ class ProjectViewsTest(BaseProjectTestCaseMixin, BaseTestCase):
                     usedforsecurity=False,
                 ).hexdigest(),
             },
+        )
+
+
+class SensorFleetViewsTest(BaseTestCase):
+    """Tests for Sensor Fleet frontend views."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        # Create a sensor fleet with user permission
+
+        self.fleet = SensorFleetFactory.create()
+        SensorFleetUserPermissionFactory.create(
+            user=self.user,
+            sensor_fleet=self.fleet,
+            level=PermissionLevel.READ_ONLY,
+        )
+
+    @parameterized.expand(
+        [
+            "sensor_fleets",
+            "sensor_fleet_new",
+        ]
+    )
+    def test_view_with_no_args(self, view_name: str) -> None:
+        self.execute_test(view_name)
+
+    @parameterized.expand(
+        [
+            "sensor_fleet_details",
+            "sensor_fleet_history",
+            "sensor_fleet_user_permissions",
+        ]
+    )
+    def test_view_with_fleet_id(self, view_name: str) -> None:
+        self.execute_test(
+            view_name,
+            {"fleet_id": self.fleet.id},
         )
