@@ -183,7 +183,7 @@ class UserAutocompleteView(GenericAPIView[User]):
         responses={200: UserAutocompleteSerializer(many=True)},
     )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        query = request.query_params.get("query", "").strip()
+        query = request.query_params.get("query", "").strip().lower()
         if len(query) < self.MINIMUM_QUERY_LEN:
             return ErrorResponse(
                 {"error": "Incorrect query: minimum 3 chars"},
