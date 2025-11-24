@@ -27,7 +27,7 @@ repos:
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.5
+    rev: v0.14.6
     hooks:
       # Linter
       - id: ruff
@@ -68,7 +68,7 @@ repos:
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
-    rev: 0.9.9
+    rev: 0.9.11
     hooks:
       - id: uv-lock
         args: ["--check"]
@@ -78,7 +78,7 @@ repos:
   # ========================================================================= #
 
   - repo: https://github.com/pycqa/bandit
-    rev: 1.8.6
+    rev: 1.9.2
     hooks:
       - id: bandit
         args: ["-iii", "-ll"]

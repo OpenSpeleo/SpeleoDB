@@ -9,7 +9,7 @@ dependencies = [
     # Utils
     # ------------------------------------------------------------------------------
     "argon2-cffi==25.1.0",  # https://github.com/hynek/argon2-cffi
-    "cachetools==6.2.1",    # https://github.com/tkem/cachetools
+    "cachetools==6.2.2",    # https://github.com/tkem/cachetools
     "dict-hash==1.3.7",     # https://github.com/LucaCappelletti94/dict_hash
     "python-dotenv==1.2.1", # https://github.com/theskumar/python-dotenv
     "pytz==2025.2",         # https://github.com/stub42/pytz
@@ -21,7 +21,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "django-redis==6.0.0", # https://github.com/jazzband/django-redis
     "hiredis==3.3.0",      # https://github.com/redis/hiredis-py
-    "redis==7.0.1",        # https://github.com/redis/redis-py
+    "redis==7.1.0",        # https://github.com/redis/redis-py
 
     # Data Processing & Writing
     # ------------------------------------------------------------------------------
@@ -38,7 +38,7 @@ dependencies = [
 
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
-    "jsonschema-rs==0.33.0", # https://github.com/Stranger6667/jsonschema
+    "jsonschema-rs==0.37.1", # https://github.com/Stranger6667/jsonschema
     "orjson==3.11.4",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
@@ -55,8 +55,8 @@ dependencies = [
     # Django
     # ------------------------------------------------------------------------------
     "django==5.2.8",               # https://www.djangoproject.com/
-    "django-allauth==65.13.0",     # https://github.com/pennersr/django-allauth
-    "django-countries==8.0.0",     # https://github.com/SmileyChris/django-countries/
+    "django-allauth==65.13.1",     # https://github.com/pennersr/django-allauth
+    "django-countries==8.1.1",     # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",  # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.12.0",      # https://github.com/joke2k/django-environ
     "django-hijack==3.7.4",        # https://github.com/django-hijack/django-hijack/
@@ -72,8 +72,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.40.69", # https://github.com/boto/botocore
-    "boto3==1.40.69",    # https://github.com/boto/boto3
+    "botocore==1.41.2", # https://github.com/boto/botocore
+    "boto3==1.41.2",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -84,14 +84,14 @@ dependencies = [
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.43.0", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.45.0", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
 local = [
     "Werkzeug[watchdog]==3.1.3", # https://github.com/pallets/werkzeug
     "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
-    "psycopg[binary]==3.2.12",   # https://github.com/psycopg/psycopg
+    "psycopg[binary]==3.2.13",   # https://github.com/psycopg/psycopg
 
     # Testing
     # ------------------------------------------------------------------------------
@@ -100,7 +100,7 @@ local = [
     "mypy==1.18.2",         # https://github.com/python/mypy
     "parameterized==0.9.0", # https://github.com/wolever/parameterized
     "pytest-sugar==1.1.1",  # https://github.com/Frozenball/pytest-sugar
-    "pytest==9.0.0",        # https://github.com/pytest-dev/pytest
+    "pytest==9.0.1",        # https://github.com/pytest-dev/pytest
 
     # Typing
     # ------------------------------------------------------------------------------
@@ -118,10 +118,10 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.14.4",      # https://github.com/astral-sh/ruff
-    "coverage==7.11.3",  # https://github.com/nedbat/coveragepy
+    "ruff==0.14.6",      # https://github.com/astral-sh/ruff
+    "coverage==7.12.0",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
-    "pre-commit==4.4.0", # https://github.com/pre-commit/pre-commit
+    "pre-commit==4.5.0", # https://github.com/pre-commit/pre-commit
 
     # Django
     # ------------------------------------------------------------------------------
@@ -134,7 +134,7 @@ local = [
 production = [
     "gunicorn==23.0.0", # https://github.com/benoitc/gunicorn
     # "granian==2.5.2",  # https://github.com/emmett-framework/granian
-    "psycopg[c]==3.2.12", # https://github.com/psycopg/psycopg
+    "psycopg[c]==3.2.13", # https://github.com/psycopg/psycopg
 
     # Django
     # ------------------------------------------------------------------------------

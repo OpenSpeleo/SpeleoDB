@@ -14,7 +14,6 @@ from django.forms import CheckboxInput
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
 
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
@@ -573,8 +572,9 @@ class ExperimentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def raw_experiment_fields_json(self, obj: Experiment) -> str:
         """Display raw experiment_fields JSON in a formatted, read-only way."""
         if not obj.experiment_fields:
-            return mark_safe(
-                '<em style="color: var(--body-quiet-color);">No fields defined</em>'
+            return format_html(
+                "{}",
+                '<em style="color: var(--body-quiet-color);">No fields defined</em>',
             )
 
         # Format JSON with indentation
@@ -593,34 +593,33 @@ class ExperimentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             "overflow-x: auto; "
             "max-height: 400px; "
             "overflow-y: auto;"
-            '">'
-            f"{formatted_json}"
-            "</pre>"
+            '">{}</pre>'
         )
 
-        return mark_safe(html)  # noqa: S308
+        return format_html(html, formatted_json)
 
     @admin.display(description="GIS Token")
     def gis_token_with_refresh(self, obj: Experiment) -> str:
         """Display GIS token with a refresh button."""
         if not obj.pk:
-            return mark_safe(
+            return format_html(
+                "{}",
                 '<em style="color: var(--body-quiet-color);">Save the experiment first '
-                "to generate a token</em>"
+                "to generate a token</em>",
             )
 
         token_html = (
-            '<div style="display: flex; align-items: center; gap: 10px;">'
+            '<div style="display: flex; align-items: center; gap: 10px;">'  # noqa: S105
             '<code style="background: var(--darkened-bg); '
             "color: var(--body-fg); padding: 6px 12px; border-radius: 4px; "
             "font-family: monospace; font-size: 0.9rem; "
-            f'border: 1px solid var(--border-color);">{obj.gis_token}</code>'
+            'border: 1px solid var(--border-color);">{}</code>'
             '<input type="submit" value="Refresh Token" name="_refresh_token" '
             'style="padding: 6px 12px; background: #417690; color: white; '
             'border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">'
             "</div>"
         )
-        return mark_safe(token_html)  # noqa: S308
+        return format_html(token_html, obj.gis_token)
 
     def response_change(self, request: HttpRequest, obj: Experiment) -> Any:
         """Handle refresh token button click."""
@@ -805,15 +804,17 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
             url = f"{request.scheme}://{request.get_host()}{path}" if request else path
 
-            return mark_safe(  # noqa: S308
-                f'<code style="background: var(--darkened-bg); '
-                f"color: var(--body-fg); padding: 6px 12px; border-radius: 4px; "
-                f"font-family: monospace; font-size: 0.9rem; "
-                f'border: 1px solid var(--border-color);">{url}</code>'
+            return format_html(
+                '<code style="background: var(--darkened-bg); '
+                "color: var(--body-fg); padding: 6px 12px; border-radius: 4px; "
+                "font-family: monospace; font-size: 0.9rem; "
+                'border: 1px solid var(--border-color);">{}</code>',
+                url,
             )
 
-        return mark_safe(
-            '<em style="color: var(--body-quiet-color);">Save to generate URL</em>'
+        return format_html(
+            "{}",
+            '<em style="color: var(--body-quiet-color);">Save to generate URL</em>',
         )
 
 

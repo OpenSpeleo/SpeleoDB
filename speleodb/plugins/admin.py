@@ -10,7 +10,7 @@ from typing import Any
 from django import forms
 from django.contrib import admin
 from django.db import models
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from speleodb.plugins.models import PluginRelease
 from speleodb.plugins.models import PublicAnnoucement
@@ -58,8 +58,9 @@ class PublicAnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "style": "width: 28rem; font-family: monospace; font-size: 0.9rem;",
             }
         )
-        form.base_fields["uuid"].help_text = mark_safe(
-            '<input type="submit" value="Regenerate UUID" name="_regenerate_uuid">'
+        form.base_fields["uuid"].help_text = format_html(
+            "{}",
+            '<input type="submit" value="Regenerate UUID" name="_regenerate_uuid">',
         )
         return form
 

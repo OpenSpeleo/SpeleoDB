@@ -115,7 +115,9 @@ class TestProjectCountryFilter:
 
         # Check that all returned countries are in alphabetical order
         returned_codes = [code for code, _ in lookups]
-        assert returned_codes == sorted([c.code for c in expected_countries])
+        assert returned_codes == sorted(
+            [c.code for c in expected_countries if c.code is not None]
+        )
 
         # Check that country names are correct
         for code, name in lookups:
