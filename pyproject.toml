@@ -72,7 +72,7 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.40.69", # https://github.com/boto/botocore
+    "botocore==1.41.2", # https://github.com/boto/botocore
     "boto3==1.40.69",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
