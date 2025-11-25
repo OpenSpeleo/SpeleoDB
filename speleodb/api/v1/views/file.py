@@ -312,6 +312,13 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                     )
                                     continue
 
+                                except (ValueError, TypeError, ValidationError) as e:
+                                    logger.exception("Error converting to GeoJSON")
+                                    return ErrorResponse(
+                                        {"error": str(e)},
+                                        status=status.HTTP_400_BAD_REQUEST,
+                                    )
+
                     with timed_section("GIT Commit and Push"):
                         # Finally commit the project - None if project not dirty
                         hexsha: str | None = project.commit_and_push_project(
