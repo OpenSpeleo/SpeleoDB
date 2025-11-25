@@ -6122,6 +6122,7 @@
     async function fetchExperiments() {
         try {
             const url = Urls["api:v1:experiments"]();
+            const resp = await fetch(url, { credentials: 'same-origin' });
             if (!resp.ok) {
                 let message = `Failed to load experiments (${resp.status})`;
                 try {
