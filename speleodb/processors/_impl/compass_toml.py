@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import cached_property
 from io import BytesIO
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Annotated
 
 from packaging.version import Version
@@ -10,10 +11,40 @@ from pydantic import UUID4
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
+from tomlkit import array
 from tomlkit import dumps as toml_dumps
 from tomlkit import parse as toml_parse
+from tomlkit import table
+
+if TYPE_CHECKING:
+    from typing import Any
+
+    from tomlkit.items import Array
+    from tomlkit.items import Table
+
+    TomlPrimitive = str | int | float | bool | None
+    TomlInput = TomlPrimitive | dict[str, Any] | list[Any]
+    TomlOutput = TomlPrimitive | Table | Array
 
 KNOWN_VERSIONS = [Version("0.0.1")]
+
+
+def to_tomlkit(value: TomlInput) -> TomlOutput:
+    match value:
+        case dict():
+            t = table()
+            for k, v in value.items():
+                t.add(k, to_tomlkit(v))
+            return t
+
+        case list():
+            arr = array().multiline(multiline=True)
+            for item in value:
+                arr.append(to_tomlkit(item))
+            return arr
+
+        case _:
+            return value
 
 
 class SpeleoDB(BaseModel):
@@ -33,8 +64,6 @@ class SpeleoDB(BaseModel):
 
 
 class Project(BaseModel):
-    name: str
-    description: str | None = None
     mak_file: Annotated[str, Field()]
     dat_files: Annotated[list[str], Field(min_length=1)]
     plt_files: list[str] | None = None
@@ -110,8 +139,8 @@ class CompassConfig(BaseModel):
         Load & validate a TOML file using tomlkit.
         Keeps comments and formatting structure.
         """
-        toml_str = toml_dumps(self.model_dump(mode="json"))
-
+        doc: Table | Array = to_tomlkit(self.model_dump(mode="json"))  # type: ignore[assignment]
+        toml_str = toml_dumps(doc)  # type: ignore[arg-type]
         match target:
             case str() | Path():
                 Path(target).write_text(toml_str, encoding="utf-8")

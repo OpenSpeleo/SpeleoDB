@@ -14,14 +14,11 @@ if TYPE_CHECKING:
 # Test data
 # ----------------------------------------------------------------------
 
-VALID_TOML = """
-[speleodb]
+VALID_TOML = """[speleodb]
 id = "53b76eb6-0694-4b6f-a260-f875f5182222"
 version = "0.0.1"
 
 [project]
-name = "Sample Project"
-description = "This is a sample SpeleoDB Compass project."
 mak_file = "project.mak"
 dat_files = [
     "data/file1.dat",
@@ -70,7 +67,6 @@ def test_load_valid_file(tmp_path: Path) -> None:
 
     assert str(cfg.speleodb.id) == "53b76eb6-0694-4b6f-a260-f875f5182222"
     assert cfg.speleodb.version == str(KNOWN_VERSIONS[0])
-    assert cfg.project.name == "Sample Project"
     assert cfg.project.mak_file.endswith(".mak")
     assert all(d.endswith(".dat") for d in cfg.project.dat_files)
     assert cfg.project.plt_files == []
@@ -85,8 +81,9 @@ def test_load_valid_bytesio() -> None:
     bio = BytesIO(VALID_TOML.encode("utf-8"))
     cfg = CompassConfig.from_toml(bio)
 
-    assert cfg.project.name == "Sample Project"
     assert cfg.project.mak_file == "project.mak"
+    assert all(d.endswith(".dat") for d in cfg.project.dat_files)
+    assert cfg.project.plt_files == []
 
 
 # ----------------------------------------------------------------------
@@ -203,20 +200,7 @@ def test_roundtrip_sha256_consistency(tmp_path: Path) -> None:
     # 1. Write TOML to disk
     # -----------------------------------------------------
     input_f = tmp_path / "input.toml"
-    input_f.write_text(
-        """[speleodb]
-id = "53b76eb6-0694-4b6f-a260-f875f5182222"
-version = "0.0.1"
-
-[project]
-name = "Sample Project"
-description = "This is a sample SpeleoDB Compass project."
-mak_file = "project.mak"
-dat_files = ["data/file1.dat", "data/file2.dat", "data/file3.dat"]
-plt_files = []
-""",
-        encoding="utf-8",
-    )
+    input_f.write_text(VALID_TOML, encoding="utf-8")
 
     # -----------------------------------------------------
     # 2. Compute first hash
