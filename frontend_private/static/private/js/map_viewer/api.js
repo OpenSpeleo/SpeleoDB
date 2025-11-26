@@ -1,0 +1,133 @@
+import { Utils } from './utils.js';
+
+const apiRequest = async (url, method = 'GET', body = null, isFormData = false) => {
+    const headers = {
+        'X-CSRFToken': Utils.getCSRFToken()
+    };
+
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    const config = {
+        method,
+        headers,
+        credentials: 'same-origin'
+    };
+
+    if (body) {
+        config.body = isFormData ? body : JSON.stringify(body);
+    }
+
+    const response = await fetch(url, config);
+
+    // Handle 204 No Content
+    if (response.status === 204) {
+        return { ok: true, status: 204 };
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        const error = new Error(data.message || data.error || data.detail || 'API request failed');
+        error.data = data;
+        error.status = response.status;
+        throw error;
+    }
+
+    return data;
+};
+
+export const API = {
+    // Stations
+    createStation: (projectId, stationData) =>
+        apiRequest(Urls['api:v1:project-stations'](projectId), 'POST', stationData),
+
+    updateStation: (stationId, stationData) =>
+        apiRequest(Urls['api:v1:station-detail'](stationId), 'PATCH', stationData),
+
+    deleteStation: (stationId) =>
+        apiRequest(Urls['api:v1:station-detail'](stationId), 'DELETE'),
+
+    getProjectStations: (projectId) =>
+        apiRequest(Urls['api:v1:project-stations'](projectId)),
+
+    getStationDetails: (stationId) =>
+        apiRequest(Urls['api:v1:station-detail'](stationId)),
+
+    // All Stations GeoJSON (single API call for all stations)
+    getAllStationsGeoJSON: () =>
+        apiRequest(Urls['api:v1:stations-geojson']()),
+
+    // POIs
+    createPOI: (poiData) =>
+        apiRequest(Urls['api:v1:pois'](), 'POST', poiData),
+
+    updatePOI: (poiId, poiData) =>
+        apiRequest(Urls['api:v1:poi-detail'](poiId), 'PATCH', poiData),
+
+    deletePOI: (poiId) =>
+        apiRequest(Urls['api:v1:poi-detail'](poiId), 'DELETE'),
+
+    getAllPOIs: () =>
+        apiRequest(Urls['api:v1:pois']()),
+
+    // All POIs GeoJSON (single API call)
+    getAllPOIsGeoJSON: () =>
+        apiRequest(Urls['api:v1:pois-geojson']()),
+
+    // Tags
+    getUserTags: () =>
+        apiRequest(Urls['api:v1:station-tags']()),
+
+    getTagColors: () =>
+        apiRequest(Urls['api:v1:station-tag-colors']()),
+
+    createTag: (name, color) =>
+        apiRequest(Urls['api:v1:station-tags'](), 'POST', { name, color }),
+
+    setStationTag: (stationId, tagId) =>
+        apiRequest(Urls['api:v1:station-tags-manage'](stationId), 'POST', { tag_id: tagId }),
+
+    removeStationTag: (stationId) =>
+        apiRequest(Urls['api:v1:station-tags-manage'](stationId), 'DELETE'),
+
+    // Station Logs
+    getStationLogs: (stationId) =>
+        apiRequest(Urls['api:v1:station-logs'](stationId)),
+
+    createStationLog: (stationId, formData) =>
+        apiRequest(Urls['api:v1:station-logs'](stationId), 'POST', formData, true),
+
+    updateStationLog: (logId, formData) =>
+        apiRequest(Urls['api:v1:log-detail'](logId), 'PATCH', formData, true),
+
+    deleteStationLog: (logId) =>
+        apiRequest(Urls['api:v1:log-detail'](logId), 'DELETE'),
+
+    // Experiments
+    getExperiments: () =>
+        apiRequest(Urls['api:v1:experiments']()),
+
+    getExperimentData: (stationId, experimentId) =>
+        apiRequest(Urls['api:v1:experiment-records'](stationId, experimentId)),
+
+    // Resources
+    getStationResources: (stationId) =>
+        apiRequest(Urls['api:v1:station-resources'](stationId)),
+
+    createStationResource: (stationId, formData) =>
+        apiRequest(Urls['api:v1:station-resources'](stationId), 'POST', formData, true),
+
+    updateStationResource: (resourceId, formData) =>
+        apiRequest(Urls['api:v1:resource-detail'](resourceId), 'PATCH', formData, true),
+
+    deleteStationResource: (resourceId) =>
+        apiRequest(Urls['api:v1:resource-detail'](resourceId), 'DELETE'),
+
+    // GeoJSON
+    getAllProjectsGeoJSON: () =>
+        apiRequest(Urls['api:v1:all-projects-geojson']()),
+};
+
+

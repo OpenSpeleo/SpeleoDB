@@ -24,6 +24,7 @@ from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
+from speleodb.utils.timing_ctx import timed_section
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
@@ -43,36 +44,45 @@ class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
         project = self.get_object()
         serializer = self.get_serializer(project, context={"user": user})
 
-        commits = None
-        serialized_commits: list[dict[str, Any]] = []
-        with contextlib.suppress(ValueError):
-            # Checkout default branch and pull repository
+        with timed_section("Fetching project revisions"):
+            commits = None
+            serialized_commits: list[dict[str, Any]] = []
+
+            with contextlib.suppress(ValueError):
+                with timed_section("GIT Actions"):
+                    # Checkout default branch and pull repository
+                    try:
+                        with timed_section("Checking out project default branch"):
+                            project.git_repo.checkout_default_branch()
+
+                        with timed_section("Listing project commits"):
+                            commits = list(project.git_repo.commits)
+
+                    except GitBaseError:
+                        commits = []
+
+                with timed_section("Serializing project commits"):
+                    # Collect all the commits and sort them by date
+                    # Order: from most recent to oldest
+                    commits_serializer = GitCommitListSerializer(
+                        commits,  # type: ignore[arg-type]
+                        context={"project": project},
+                    )
+
+                    serialized_commits = commits_serializer.data
+
+        with timed_section("Constructing response"):
             try:
-                project.git_repo.checkout_default_branch()
-                commits = list(project.git_repo.commits)
-            except GitBaseError:
-                commits = []
+                return SuccessResponse(
+                    {"project": serializer.data, "commits": serialized_commits}
+                )
 
-            # Collect all the commits and sort them by date
-            # Order: from most recent to oldest
-            commits_serializer = GitCommitListSerializer(
-                commits,  # type: ignore[arg-type]
-                context={"project": project},
-            )
-
-            serialized_commits = commits_serializer.data
-
-        try:
-            return SuccessResponse(
-                {"project": serializer.data, "commits": serialized_commits}
-            )
-
-        except GitlabError:
-            logger.exception("There has been a problem accessing gitlab")
-            return ErrorResponse(
-                {"error": "There has been a problem accessing gitlab"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            except GitlabError:
+                logger.exception("There has been a problem accessing gitlab")
+                return ErrorResponse(
+                    {"error": "There has been a problem accessing gitlab"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
 
 class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):

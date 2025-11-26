@@ -1,0 +1,116 @@
+import { Notification } from './components/notification.js';
+
+export const Utils = {
+    getCSRFToken: function() {
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+        return cookieValue || (window.SPELEO_CONTEXT ? window.SPELEO_CONTEXT.csrfToken : '');
+    },
+
+    formatDateString: function(dateStr) {
+        if (!dateStr) return 'N/A';
+        return new Date(dateStr).toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    },
+
+    formatJournalDate: function(isoString) {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        return date.toLocaleDateString(undefined, {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    },
+
+    formatExpiracyDate: function(dateStr) {
+        if (!dateStr) return 'N/A';
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffTime = date - now;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        let colorClass = 'text-emerald-400';
+        if (diffDays < 0) colorClass = 'text-red-400';
+        else if (diffDays < 7) colorClass = 'text-amber-400';
+        
+        return `<span class="${colorClass}">${date.toLocaleDateString()} (${diffDays > 0 ? 'in ' : ''}${Math.abs(diffDays)} days${diffDays < 0 ? ' ago' : ''})</span>`;
+    },
+
+    filenameFromUrl: function(url) {
+        if (!url) return '';
+        try {
+            const parts = url.split('/');
+            return decodeURIComponent(parts[parts.length - 1].split('?')[0]);
+        } catch (e) {
+            return url;
+        }
+    },
+
+    getFileName: function(url) {
+        if (!url) return '';
+        const parts = url.split('/');
+        return decodeURIComponent(parts[parts.length - 1]);
+    },
+
+    getFileAccept: function(type) {
+        switch (type) {
+            case 'image': return 'image/*';
+            case 'video': return 'video/*';
+            case 'document': return '.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls';
+            default: return '*/*';
+        }
+    },
+
+    ensureAltitudeZero: function(coordinates) {
+        if (coordinates.length > 2) {
+            return [coordinates[0], coordinates[1]];
+        }
+        return coordinates;
+    },
+
+    debounce: function(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    },
+
+    copyToClipboard: async function(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            this.showNotification('success', 'Copied to clipboard');
+            return true;
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            this.showNotification('error', 'Failed to copy');
+            return false;
+        }
+    },
+
+    showNotification: function(type, message, duration) {
+        Notification.show(type, message, duration);
+    },
+
+    escapeHtml: function(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+};

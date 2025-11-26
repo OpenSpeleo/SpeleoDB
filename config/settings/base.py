@@ -145,7 +145,6 @@ THIRD_PARTY_APPS = [
 if DEBUG:
     THIRD_PARTY_APPS += [
         "schema_viewer",
-        "silk",
     ]
 
 LOCAL_APPS = [

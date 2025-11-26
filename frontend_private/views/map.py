@@ -31,15 +31,20 @@ class MapViewerView(AuthenticatedTemplateView):
         ]
 
         # Convert projects to a JSON-serializable format
-        projects_data = [
-            {
+        projects_data = []
+        for project in survey_projects:
+            data_entry = {
                 "id": str(project.id),
                 "name": project.name,
                 "modified_date": project.modified_date.isoformat(),
                 "permissions": request.user.get_best_permission(project).level_label,
+                "geojson_url": None,
             }
-            for project in survey_projects
-        ]
+
+            if (latest_geojson := project.rel_geojsons.first()) is not None:
+                data_entry["geojson_url"] = latest_geojson.get_signed_download_url()
+
+            projects_data.append(data_entry)
 
         # Check if user has write access to any project
         # For map viewer, we'll grant write access if user has write access

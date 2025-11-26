@@ -89,6 +89,7 @@ DEBUG_TOOLBAR_CONFIG = {
 
 # django-silk
 # ------------------------------------------------------------------------------
+INSTALLED_APPS += ["silk"]
 MIDDLEWARE += ["silk.middleware.SilkyMiddleware"]
 
 __ENABLE_PROFILING__ = False
