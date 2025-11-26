@@ -305,11 +305,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         await Promise.all(loadPromises);
 
+        // Reorder layers to ensure stations are on top of survey lines
+        Layers.reorderLayers();
+
         // Load POIs after all projects are loaded
         setTimeout(async () => {
             try {
                 const poisData = await POIManager.loadAllPOIs();
                 Layers.addPOILayer(poisData);
+                // Reorder again after POIs are loaded
+                Layers.reorderLayers();
             } catch (e) {
                 console.error('Error loading POIs', e);
             }
@@ -446,6 +451,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (projectId) {
             const stations = await StationManager.loadStationsForProject(projectId);
             Layers.addStationLayer(projectId, { type: 'FeatureCollection', features: stations });
+            // Ensure stations remain on top of survey lines
+            Layers.reorderLayers();
         }
     });
 

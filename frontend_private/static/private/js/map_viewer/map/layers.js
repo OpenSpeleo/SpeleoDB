@@ -647,5 +647,59 @@ export const Layers = {
         // This needs to call back to main/manager to fetch data
         // We will trigger a custom event 'speleo:refresh-stations'
         window.dispatchEvent(new CustomEvent('speleo:refresh-stations', { detail: { projectId } }));
+    },
+
+    /**
+     * Ensure stations and POIs are rendered on top of survey lines.
+     * Call this after all layers are loaded to fix z-ordering.
+     */
+    reorderLayers: function () {
+        const map = State.map;
+        if (!map) return;
+
+        console.log('🔄 Reordering layers to ensure stations/POIs are on top...');
+
+        // Get all layer IDs
+        const style = map.getStyle();
+        if (!style || !style.layers) return;
+
+        const allLayerIds = style.layers.map(l => l.id);
+
+        // Find station circle layers, station label layers, and POI layers
+        const stationCircleLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-circles'));
+        const stationLabelLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-labels'));
+        const poiLayers = allLayerIds.filter(id => id.startsWith('pois-'));
+
+        // Move layers to top in order: station circles, station labels, POI layer, POI labels
+        // Later moves go on top, so we move in reverse order of desired stacking
+        
+        // First move station circles (will be under labels)
+        stationCircleLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // Then move station labels (on top of circles)
+        stationLabelLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // Finally move POI layers (on top of everything)
+        poiLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        console.log('✅ Layer reordering complete');
     }
 };
