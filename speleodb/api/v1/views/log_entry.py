@@ -83,7 +83,7 @@ class LogEntryApiView(GenericAPIView[Station], SDBAPIViewMixin):
 
 
 class LogEntrySpecificApiView(GenericAPIView[LogEntry], SDBAPIViewMixin):
-    queryset = LogEntry.objects.all().select_related("station", "station__project")
+    queryset = LogEntry.objects.all().select_related("station")
     permission_classes = [
         (IsObjectDeletion & StationUserHasAdminAccess)
         | (IsObjectEdition & StationUserHasWriteAccess)

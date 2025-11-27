@@ -28,11 +28,11 @@ from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
+from speleodb.gis.models import StationResourceType
 from speleodb.gis.models import SubsurfaceStation
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.gis.models.sensor import InstallStatus
-from speleodb.gis.models.station import StationResourceType
 from speleodb.plugins.models import PluginRelease
 from speleodb.plugins.models import PublicAnnoucement
 from speleodb.plugins.models.platform_base import OperatingSystemEnum
@@ -171,9 +171,6 @@ class SubSurfaceStationFactory(DjangoModelFactory[SubsurfaceStation]):
     SubsurfaceStation instances which have a project field.
     """
 
-    class Meta:
-        model = SubsurfaceStation
-
     id = factory.LazyFunction(uuid.uuid4)
     project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
     name = factory.Sequence(lambda n: f"ST{n:03d}")
@@ -181,6 +178,9 @@ class SubSurfaceStationFactory(DjangoModelFactory[SubsurfaceStation]):
     latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
     longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
     created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
+
+    class Meta:
+        model = SubsurfaceStation
 
     @classmethod
     def create_with_coordinates(

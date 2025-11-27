@@ -25,7 +25,7 @@ from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models.station import StationResourceType
+from speleodb.gis.models import StationResourceType
 from speleodb.surveys.models import UserProjectPermission
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.test_utils import named_product

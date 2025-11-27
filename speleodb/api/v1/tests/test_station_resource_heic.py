@@ -13,7 +13,7 @@ from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models.station import StationResourceType
+from speleodb.gis.models import StationResourceType
 from speleodb.utils.image_processing import ImageProcessor
 
 

@@ -11,7 +11,9 @@ from rest_framework import serializers
 
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models.station import StationResourceType
+from speleodb.gis.models import StationResourceType
+from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SurfaceStation
 from speleodb.utils.gps_utils import format_coordinate
 
 
@@ -219,7 +221,16 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
                 "created_by": instance.created_by,
                 "creation_date": instance.creation_date.isoformat(),
                 "modified_date": instance.modified_date.isoformat(),
-                "project": str(instance.project.id),
+                "project": (
+                    str(instance.project.id)
+                    if isinstance(instance, SubsurfaceStation)
+                    else None
+                ),
+                "network": (
+                    str(instance.network.id)
+                    if isinstance(instance, SurfaceStation)
+                    else None
+                ),
                 "tag": tag,
             },
         }

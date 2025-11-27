@@ -132,7 +132,7 @@ class BaseStationAccessLevel(permissions.BasePermission):
                 # Try station.project for StationResource objects
                 project = obj.project
 
-            case StationResource() | LogEntry() | SensorInstall()
+            case StationResource() | LogEntry() | SensorInstall():
                 match station := obj.station:
                     case SubsurfaceStation():
                         project = station.project

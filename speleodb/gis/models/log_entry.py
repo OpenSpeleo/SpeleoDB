@@ -10,6 +10,8 @@ from pathlib import Path
 from django.db import models
 
 from speleodb.gis.models import Station
+from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SurfaceStation
 from speleodb.utils.storages import AttachmentStorage
 from speleodb.utils.validators import AttachmentValidator
 
@@ -19,17 +21,23 @@ logger = logging.getLogger(__name__)
 def get_log_entry_path(instance: LogEntry, filename: str) -> str:
     ext = Path(filename).suffix[1:]
 
+    prefix: str
+
     # Determine path prefix based on station type
     # SubsurfaceStation has 'project', SurfaceStation has 'network'
-    if hasattr(instance.station, "project"):
-        prefix = f"stations/{instance.station.project.id}"
-    else:
-        prefix = f"networks/{instance.station.network.id}"
+    match station := instance.station:
+        case SubsurfaceStation():
+            prefix = f"stations/{station.project.id}"
+        case SurfaceStation():
+            prefix = f"networks/{station.network.id}"
 
-    return (
-        f"{prefix}/{instance.station.id}/logs/"
-        f"{os.urandom(6).hex()}.{ext}"
-    )
+        case _:
+            raise ValueError(
+                "Unsupported station type for log entry path generation: "
+                f"{type(station)}"
+            )
+
+    return f"{prefix}/{instance.station.id}/logs/{os.urandom(6).hex()}.{ext}"
 
 
 class LogEntry(models.Model):

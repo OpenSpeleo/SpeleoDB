@@ -17,6 +17,7 @@ from factory import Faker
 from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
@@ -28,11 +29,11 @@ from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
+from speleodb.gis.models import StationResourceType
 from speleodb.gis.models import SubsurfaceStation
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.gis.models.sensor import InstallStatus
-from speleodb.gis.models.station import StationResourceType
 from speleodb.plugins.models import PluginRelease
 from speleodb.plugins.models import PublicAnnoucement
 from speleodb.plugins.models.platform_base import OperatingSystemEnum
@@ -431,7 +432,7 @@ class LogEntryFactory(DjangoModelFactory[LogEntry]):
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)
-    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    station: Station = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
 
     title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
@@ -527,7 +528,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         model = SensorInstall
 
     sensor: Sensor = factory.SubFactory(SensorFactory)  # type: ignore[assignment]
-    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    station: Station = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     install_date = factory.LazyFunction(timezone.localdate)
     install_user: str = factory.LazyAttribute(  # type: ignore[assignment]
         lambda _: UserFactory.create().email
@@ -558,7 +559,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         if sensor is None:
             sensor = SensorFactory.create()
         if station is None:
-            station = StationFactory.create()
+            station = SubsurfaceStationFactory.create()
 
         install_date = kwargs.get("install_date", timezone.localdate())
         uninstall_date = kwargs.get("uninstall_date", install_date + timedelta(days=30))
@@ -585,7 +586,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         if sensor is None:
             sensor = SensorFactory.create()
         if station is None:
-            station = StationFactory.create()
+            station = SubsurfaceStationFactory.create()
 
         return cls.create(
             sensor=sensor,
@@ -602,7 +603,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         if sensor is None:
             sensor = SensorFactory.create()
         if station is None:
-            station = StationFactory.create()
+            station = SubsurfaceStationFactory.create()
 
         return cls.create(
             sensor=sensor,

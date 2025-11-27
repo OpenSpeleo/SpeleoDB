@@ -3,6 +3,7 @@
 import django.db.models.deletion
 import uuid
 from django.db import migrations, models
+from django.conf import settings
 
 
 class Migration(migrations.Migration):
@@ -28,7 +29,30 @@ class Migration(migrations.Migration):
         ),
 
         # ================================================================
-        # STEP 2: Create SurfaceStation model
+        # STEP 2: Create MonitoringNetworkUserPermission model
+        # ================================================================
+        migrations.CreateModel(
+            name='MonitoringNetworkUserPermission',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('level', models.IntegerField(choices=[(1, 'READ_ONLY'), (2, 'READ_AND_WRITE'), (3, 'ADMIN')], default=1)),
+                ('is_active', models.BooleanField(default=True)),
+                ('creation_date', models.DateTimeField(auto_now_add=True)),
+                ('modified_date', models.DateTimeField(auto_now=True)),
+                ('deactivated_by', models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.RESTRICT, to=settings.AUTH_USER_MODEL)),
+                ('network', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='permissions', to='gis.monitoringnetwork')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='network_permissions', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'verbose_name': 'Monitoring Network - User Permission',
+                'verbose_name_plural': 'Monitoring Network - User Permissions',
+                'indexes': [models.Index(fields=['user', 'is_active'], name='gis_monitor_user_id_1f661f_idx'), models.Index(fields=['network', 'is_active'], name='gis_monitor_network_ab1146_idx'), models.Index(fields=['user', 'network', 'is_active'], name='gis_monitor_user_id_fa9e55_idx')],
+                'unique_together': {('user', 'network')},
+            },
+        ),
+
+        # ================================================================
+        # STEP 3: Create SurfaceStation model
         # ================================================================
         migrations.CreateModel(
             name='SurfaceStation',
