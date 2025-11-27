@@ -5,6 +5,14 @@ import uuid
 from django.db import migrations, models, connection
 
 
+def inject_polymorphic_ctype(apps, schema_editor):
+    Station = apps.get_model('gis', 'Station')
+    ContentType = apps.get_model('contenttypes', 'ContentType')
+
+    new_ct = ContentType.objects.get_for_model(Station)
+    Station.objects.filter(polymorphic_ctype__isnull=True).update(polymorphic_ctype=new_ct)
+
+
 def migrate_stations_to_subsurface(apps, schema_editor):
     """
     Forward migration: Convert all existing Stations to SubsurfaceStations.
@@ -12,36 +20,15 @@ def migrate_stations_to_subsurface(apps, schema_editor):
     Uses raw SQL to:
     1. Insert rows into gis_subsurfacestation linking to existing stations
     2. Set polymorphic_ctype for all migrated stations
-    
-    Note: SQLite uses a fresh empty DB for tests, so we skip data migration.
     """
-    # SQLite uses fresh empty DB for tests - no data to migrate
-    if schema_editor.connection.vendor == 'sqlite':
-        return
-    
-    ContentType = apps.get_model('contenttypes', 'ContentType')
-    
-    # Get or create the ContentType for SubsurfaceStation
-    subsurface_ct, _ = ContentType.objects.get_or_create(
-        app_label='gis',
-        model='subsurfacestation',
-    )
-    
+
     with schema_editor.connection.cursor() as cursor:
         # Insert into child table directly - this links existing stations
         # to SubsurfaceStation without creating new Station rows
         cursor.execute('''
             INSERT INTO gis_subsurfacestation (station_ptr_id, project_id)
-            SELECT id, project_id FROM gis_station WHERE project_id IS NOT NULL
+            SELECT id, _project_id FROM gis_station WHERE _project_id IS NOT NULL
         ''')
-        
-        # Update polymorphic_ctype for all migrated stations
-        cursor.execute(
-            '''UPDATE gis_station 
-               SET polymorphic_ctype_id = %s 
-               WHERE id IN (SELECT station_ptr_id FROM gis_subsurfacestation)''',
-            [subsurface_ct.pk]
-        )
 
 
 def reverse_migrate_to_base_stations(apps, schema_editor):
@@ -52,147 +39,118 @@ def reverse_migrate_to_base_stations(apps, schema_editor):
     1. Copy project_id from SubsurfaceStation back to Station
     2. Clear polymorphic_ctype
     3. Delete SubsurfaceStation and SurfaceStation rows
-    
-    Note: SQLite uses a fresh empty DB for tests, so we skip data migration.
-    """
-    # SQLite uses fresh empty DB for tests - no data to migrate back
-    if schema_editor.connection.vendor == 'sqlite':
-        return
-    
+    """    
     with schema_editor.connection.cursor() as cursor:
         # Copy project data back from SubsurfaceStation to Station
         # Uses PostgreSQL UPDATE...FROM syntax
         cursor.execute('''
             UPDATE gis_station 
-            SET project_id = ss.project_id,
-                polymorphic_ctype_id = NULL
+            SET _project_id = ss.project_id
             FROM gis_subsurfacestation ss
             WHERE gis_station.id = ss.station_ptr_id
         ''')
         
         # Delete all child table rows (the Station rows remain intact)
         cursor.execute('DELETE FROM gis_subsurfacestation')
-        cursor.execute('DELETE FROM gis_surfacestation')
 
 
-def drop_project_column(apps, schema_editor):
-    """Drop project_id column from gis_station (PostgreSQL only)."""
-    # SQLite creates fresh schema without this column
-    if schema_editor.connection.vendor == 'sqlite':
-        return
-    with schema_editor.connection.cursor() as cursor:
-        cursor.execute('ALTER TABLE gis_station DROP COLUMN project_id;')
 
+class Migration(migrations.Migration):
 
-def add_project_column(apps, schema_editor):
-    """Add project_id column back to gis_station (PostgreSQL only)."""
-    # SQLite doesn't need this - fresh schema never had the column
-    if schema_editor.connection.vendor == 'sqlite':
-        return
-    with schema_editor.connection.cursor() as cursor:
-        cursor.execute(
-            'ALTER TABLE gis_station ADD COLUMN project_id uuid '
-            'REFERENCES surveys_project(id) ON DELETE CASCADE;'
-        )
+    dependencies = [
+        ('contenttypes', '0002_remove_content_type_name'),
+        ('gis', '0014_remove_sensorinstall_uninstall_fields_match_is_installed_and_more'),
+        ('surveys', '0019_alter_format__format'),
+    ]
 
+   
+    operations = [
+        # ================================================================
+        # STEP 1: Add polymorphic_ctype to Station (nullable for now)
+        # ================================================================
+        migrations.AddField(
+            model_name='station',
+            name='polymorphic_ctype',
+            field=models.ForeignKey(
+                editable=False,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='polymorphic_%(app_label)s.%(class)s_set+',
+                to='contenttypes.contenttype',
+            ),
+        ),
+        migrations.RunPython(inject_polymorphic_ctype, migrations.RunPython.noop),
 
-if connection.vendor != 'sqlite':
-    class Migration(migrations.Migration):
+        # ================================================================
+        # STEP 2: Remove unique_together constraint and update ordering
+        # Must happen BEFORE we remove the project field
+        # ================================================================
+        migrations.AlterUniqueTogether(
+            name='station',
+            unique_together=set(),
+        ),
+        migrations.AlterModelOptions(
+            name='station',
+            options={'ordering': ['-modified_date']},
+        ),
 
-        dependencies = [
-            ('contenttypes', '0002_remove_content_type_name'),
-            ('gis', '0014_remove_sensorinstall_uninstall_fields_match_is_installed_and_more'),
-            ('surveys', '0019_alter_format__format'),
-        ]
+        # ================================================================
+        # STEP 3: Remove project from Station's STATE only (keep DB column)
+        # This MUST happen before creating SubsurfaceStation to avoid
+        # field name clash between parent and child
+        # ================================================================
+        migrations.AlterField(
+            model_name='station',
+            name='project',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rel_stations', to='surveys.project', null=True, blank=True),
+        ),
 
-        operations = [
-            # ================================================================
-            # STEP 1: Add polymorphic_ctype to Station (nullable for now)
-            # ================================================================
-            migrations.AddField(
-                model_name='station',
-                name='polymorphic_ctype',
-                field=models.ForeignKey(
-                    editable=False,
-                    null=True,
+        migrations.RenameField(
+            model_name='station',
+            old_name='project',
+            new_name='_project'
+        ),
+
+        # ================================================================
+        # STEP 4: Create SubsurfaceStation and SurfaceStation
+        # Now safe to create since Station no longer has 'project' in state
+        # ================================================================
+        migrations.CreateModel(
+            name='SubsurfaceStation',
+            fields=[
+                ('station_ptr', models.OneToOneField(
+                    auto_created=True,
                     on_delete=django.db.models.deletion.CASCADE,
-                    related_name='polymorphic_%(app_label)s.%(class)s_set+',
-                    to='contenttypes.contenttype',
-                ),
-            ),
+                    parent_link=True,
+                    primary_key=True,
+                    serialize=False,
+                    to='gis.station',
+                )),
+                ('project', models.ForeignKey(
+                    on_delete=django.db.models.deletion.CASCADE,
+                    related_name='rel_stations',
+                    to='surveys.project',
+                )),
+            ],
+            options={'verbose_name': 'Station - Subsurface', 'verbose_name_plural': 'Stations - Subsurface'},
+            bases=('gis.station',),
+        ),
 
-            # ================================================================
-            # STEP 2: Remove unique_together constraint and update ordering
-            # Must happen BEFORE we remove the project field
-            # ================================================================
-            migrations.AlterUniqueTogether(
-                name='station',
-                unique_together=set(),
-            ),
-            migrations.AlterModelOptions(
-                name='station',
-                options={'ordering': ['-modified_date']},
-            ),
+        # ================================================================
+        # STEP 5: Data migration - convert existing Stations to SubsurfaceStations
+        # Uses raw SQL to INSERT directly into child table
+        # ================================================================
+        migrations.RunPython(
+            code=migrate_stations_to_subsurface,
+            reverse_code=reverse_migrate_to_base_stations,
+        ),
 
-            # ================================================================
-            # STEP 3: Remove project from Station's STATE only (keep DB column)
-            # This MUST happen before creating SubsurfaceStation to avoid
-            # field name clash between parent and child
-            # ================================================================
-            migrations.SeparateDatabaseAndState(
-                database_operations=[
-                    # Keep project_id column in database - don't do anything
-                ],
-                state_operations=[
-                    # Remove project from Station's state
-                    migrations.RemoveField(
-                        model_name='station',
-                        name='project',
-                    ),
-                ],
-            ),
-
-            # ================================================================
-            # STEP 4: Create SubsurfaceStation and SurfaceStation
-            # Now safe to create since Station no longer has 'project' in state
-            # ================================================================
-            migrations.CreateModel(
-                name='SubsurfaceStation',
-                fields=[
-                    ('station_ptr', models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to='gis.station',
-                    )),
-                    ('project', models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name='rel_stations',
-                        to='surveys.project',
-                    )),
-                ],
-                options={'verbose_name': 'Station - Subsurface', 'verbose_name_plural': 'Stations - Subsurface'},
-                bases=('gis.station',),
-            ),
-
-            # ================================================================
-            # STEP 5: Data migration - convert existing Stations to SubsurfaceStations
-            # Uses raw SQL to INSERT directly into child table
-            # ================================================================
-            migrations.RunPython(
-                code=migrate_stations_to_subsurface,
-                reverse_code=reverse_migrate_to_base_stations,
-            ),
-
-            # ================================================================
-            # STEP 6: Remove project column from database using RunPython
-            # State was already updated in step 3
-            # Note: SQLite creates fresh schema without this column, so we skip
-            # ================================================================
-            migrations.RunPython(
-                code=drop_project_column,
-                reverse_code=add_project_column,
-            ),
-        ]
+        # ================================================================
+        # STEP 6: Remove project column from database using RunPython
+        # State was already updated in step 3
+        # ================================================================
+        migrations.RemoveField(
+            model_name='station',
+            name='_project',
+        ),
+    ] 

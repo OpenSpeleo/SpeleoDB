@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from django.apps import apps
+from django.contrib.contenttypes.models import ContentType
 from dotenv import load_dotenv
 
 from speleodb.api.v1.tests.factories import ProjectFactory
@@ -22,6 +23,14 @@ if TYPE_CHECKING:
     from speleodb.surveys.models import Project
     from speleodb.users.models import SurveyTeam
     from speleodb.users.models import User
+
+
+@pytest.fixture(autouse=True)
+def clear_content_type_cache() -> Generator[None]:
+    """DO NOT REMOVE: Clears ContentType cache before and after each test to avoid
+    stale data issues."""
+    yield
+    ContentType.objects.clear_cache()
 
 
 @pytest.fixture(scope="session", autouse=True)
