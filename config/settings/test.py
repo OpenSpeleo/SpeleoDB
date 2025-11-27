@@ -31,13 +31,23 @@ load_env_files_from_pyproject()
 
 from .base import *  # noqa: E402, F403
 from .base import AWS_STORAGE_BUCKET_NAME  # noqa: E402
+from .base import BASE_DIR  # noqa: E402
 from .base import GITLAB_HOST_URL  # noqa: E402
 from .base import INSTALLED_APPS  # noqa: E402
 from .base import TEMPLATES  # noqa: E402
 from .base import env  # noqa: E402
 
 # Have to overwrite because of `USE_DOCKER` in base.py
-DATABASES = {"default": env.db("DATABASE_URL")}
+# DATABASES = {"default": env.db("DATABASE_URL")}
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",  # Your regular database file
+        "TEST": {
+            "NAME": BASE_DIR / "test_db.sqlite3",  # A separate file for tests
+        },
+    }
+}
 
 # GENERAL
 # ------------------------------------------------------------------------------

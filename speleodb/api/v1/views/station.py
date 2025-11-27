@@ -24,6 +24,7 @@ from speleodb.api.v1.serializers.station import StationSerializer
 from speleodb.api.v1.serializers.station import StationWithResourcesSerializer
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
+from speleodb.gis.models import SubsurfaceStation
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
@@ -143,7 +144,7 @@ class ProjectStationsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     ]
     lookup_field = "id"
 
-    def get_serializer_class(self) -> type[ModelSerializer[Station]]:  # type: ignore[override]
+    def get_serializer_class(self) -> type[ModelSerializer[SubsurfaceStation]]:  # type: ignore[override]
         if self.request.method == "GET":
             return StationWithResourcesSerializer
         return StationSerializer

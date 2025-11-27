@@ -16,6 +16,7 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationResourceType
+from speleodb.gis.models import SubsurfaceStation
 
 
 class TestStationResourceFileValidation(BaseAPIProjectTestCase):
@@ -27,7 +28,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             PermissionLevel.READ_AND_WRITE, PermissionType.USER
         )
-        self.station = Station.objects.create(
+        self.station = SubsurfaceStation.objects.create(
             project=self.project,
             name="Test Station",
             latitude=45.0,

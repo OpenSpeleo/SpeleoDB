@@ -297,3 +297,7 @@ git_projects/
 .uv/
 
 *.db
+
+test_db.sqlite3
+
+test_log.txt

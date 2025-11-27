@@ -14,6 +14,7 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationResourceType
+from speleodb.gis.models import SubsurfaceStation
 from speleodb.utils.image_processing import ImageProcessor
 
 
@@ -27,7 +28,7 @@ class TestHEICSupport(BaseAPIProjectTestCase):
         )
 
         # Create test station
-        self.station = Station.objects.create(
+        self.station = SubsurfaceStation.objects.create(
             project=self.project,
             name="Test Station",
             latitude=0.0,

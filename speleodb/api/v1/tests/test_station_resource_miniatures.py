@@ -19,6 +19,7 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationResourceType
+from speleodb.gis.models import SubsurfaceStation
 
 User = get_user_model()
 

@@ -75,118 +75,118 @@ class TestUnauthenticatedStationAPIAuthentication(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-# @parameterized_class(
-#     [
-#         "level",
-#         "permission_type",
-#     ],
-#     named_product(
-#         level=[
-#             PermissionLevel.ADMIN,
-#             PermissionLevel.READ_AND_WRITE,
-#             PermissionLevel.READ_ONLY,
-#             PermissionLevel.WEB_VIEWER,
-#         ],
-#         permission_type=[PermissionType.USER, PermissionType.TEAM],
-#     ),
-# )
-# class TestStationAPIPermissions(BaseAPIProjectTestCase):
-#     """Test authentication requirements for station API endpoints."""
+@parameterized_class(
+    [
+        "level",
+        "permission_type",
+    ],
+    named_product(
+        level=[
+            PermissionLevel.ADMIN,
+            PermissionLevel.READ_AND_WRITE,
+            PermissionLevel.READ_ONLY,
+            PermissionLevel.WEB_VIEWER,
+        ],
+        permission_type=[PermissionType.USER, PermissionType.TEAM],
+    ),
+)
+class TestStationAPIPermissions(BaseAPIProjectTestCase):
+    """Test authentication requirements for station API endpoints."""
 
-#     level: PermissionLevel
-#     permission_type: PermissionType
-#     station: Station
+    level: PermissionLevel
+    permission_type: PermissionType
+    station: Station
 
-#     def setUp(self) -> None:
-#         super().setUp()
+    def setUp(self) -> None:
+        super().setUp()
 
-#         self.set_test_project_permission(
-#             level=self.level,
-#             permission_type=self.permission_type,
-#         )
+        self.set_test_project_permission(
+            level=self.level,
+            permission_type=self.permission_type,
+        )
 
-#         self.station = SubSurfaceStationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
 
-#     def test_station_list_permissions(self) -> None:
-#         """Test station list endpoint with different permission levels."""
+    def test_station_list_permissions(self) -> None:
+        """Test station list endpoint with different permission levels."""
 
-#         response = self.client.get(
-#             reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
-#             headers={"authorization": self.auth},
-#         )
-#         assert (
-#             response.status_code == status.HTTP_200_OK
-#             if self.level != PermissionLevel.WEB_VIEWER
-#             else status.HTTP_403_FORBIDDEN
-#         )
+        response = self.client.get(
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            headers={"authorization": self.auth},
+        )
+        assert (
+            response.status_code == status.HTTP_200_OK
+            if self.level != PermissionLevel.WEB_VIEWER
+            else status.HTTP_403_FORBIDDEN
+        )
 
-#     def test_station_detail_permissions(self) -> None:
-#         """Test station detail endpoint with different permission levels."""
+    def test_station_detail_permissions(self) -> None:
+        """Test station detail endpoint with different permission levels."""
 
-#         response = self.client.get(
-#             reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
-#             headers={"authorization": self.auth},
-#         )
-#         assert (
-#             response.status_code == status.HTTP_200_OK
-#             if self.level != PermissionLevel.WEB_VIEWER
-#             else status.HTTP_403_FORBIDDEN
-#         )
+        response = self.client.get(
+            reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
+            headers={"authorization": self.auth},
+        )
+        assert (
+            response.status_code == status.HTTP_200_OK
+            if self.level != PermissionLevel.WEB_VIEWER
+            else status.HTTP_403_FORBIDDEN
+        )
 
-#     def test_station_create_permissions(self) -> None:
-#         """Test station create endpoint with different permission levels."""
+    def test_station_create_permissions(self) -> None:
+        """Test station create endpoint with different permission levels."""
 
-#         data = {
-#             "name": f"ST{self.level:03d}_{str(uuid.uuid4())[:8]}",
-#             "description": "Test station",
-#             "latitude": "45.1234567",
-#             "longitude": "-123.8765432",
-#         }
+        data = {
+            "name": f"ST{self.level:03d}_{str(uuid.uuid4())[:8]}",
+            "description": "Test station",
+            "latitude": "45.1234567",
+            "longitude": "-123.8765432",
+        }
 
-#         response = self.client.post(
-#             reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
-#             data=data,
-#             headers={"authorization": self.auth},
-#             content_type="application/json",
-#         )
+        response = self.client.post(
+            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            data=data,
+            headers={"authorization": self.auth},
+            content_type="application/json",
+        )
 
-#         assert (
-#             response.status_code == status.HTTP_201_CREATED
-#             if self.level >= PermissionLevel.READ_AND_WRITE
-#             else status.HTTP_403_FORBIDDEN
-#         )
+        assert (
+            response.status_code == status.HTTP_201_CREATED
+            if self.level >= PermissionLevel.READ_AND_WRITE
+            else status.HTTP_403_FORBIDDEN
+        )
 
-#     def test_station_update_permissions(self) -> None:
-#         """Test station update endpoint with different permission levels."""
+    def test_station_update_permissions(self) -> None:
+        """Test station update endpoint with different permission levels."""
 
-#         data = {"description": "Updated description"}
+        data = {"description": "Updated description"}
 
-#         response = self.client.patch(
-#             reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
-#             data=data,
-#             headers={"authorization": self.auth},
-#             content_type="application/json",
-#         )
+        response = self.client.patch(
+            reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
+            data=data,
+            headers={"authorization": self.auth},
+            content_type="application/json",
+        )
 
-#         assert (
-#             response.status_code == status.HTTP_200_OK
-#             if self.level >= PermissionLevel.READ_AND_WRITE
-#             else status.HTTP_403_FORBIDDEN
-#         )
+        assert (
+            response.status_code == status.HTTP_200_OK
+            if self.level >= PermissionLevel.READ_AND_WRITE
+            else status.HTTP_403_FORBIDDEN
+        )
 
-#     def test_station_delete_permissions(self) -> None:
-#         """Test station delete endpoint with different permission levels."""
+    def test_station_delete_permissions(self) -> None:
+        """Test station delete endpoint with different permission levels."""
 
-#         response = self.client.delete(
-#             reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
-#             headers={"authorization": self.auth},
-#         )
+        response = self.client.delete(
+            reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
+            headers={"authorization": self.auth},
+        )
 
-#         assert (
-#             response.status_code == status.HTTP_200_OK
-#             if self.level == PermissionLevel.ADMIN
-#             else status.HTTP_403_FORBIDDEN
-#         )
+        assert (
+            response.status_code == status.HTTP_200_OK
+            if self.level == PermissionLevel.ADMIN
+            else status.HTTP_403_FORBIDDEN
+        )
 
 
 # @parameterized_class(

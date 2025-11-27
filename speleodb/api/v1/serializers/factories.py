@@ -432,7 +432,7 @@ class LogEntryFactory(DjangoModelFactory[LogEntry]):
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)
-    station: Station = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
+    station: SubsurfaceStation = factory.SubFactory(SubsurfaceStationFactory)  # type: ignore[assignment]
     created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
 
     title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
@@ -528,7 +528,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         model = SensorInstall
 
     sensor: Sensor = factory.SubFactory(SensorFactory)  # type: ignore[assignment]
-    station: Station = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
+    station: SubsurfaceStation = factory.SubFactory(SubsurfaceStationFactory)  # type: ignore[assignment]
     install_date = factory.LazyFunction(timezone.localdate)
     install_user: str = factory.LazyAttribute(  # type: ignore[assignment]
         lambda _: UserFactory.create().email
@@ -585,6 +585,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         """Create a lost sensor install."""
         if sensor is None:
             sensor = SensorFactory.create()
+
         if station is None:
             station = SubsurfaceStationFactory.create()
 
