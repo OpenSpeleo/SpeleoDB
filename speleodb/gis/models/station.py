@@ -99,8 +99,6 @@ class Station(PolymorphicModel):
     modified_date = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Station"
-        verbose_name_plural = "Stations"
         ordering = ["-modified_date"]
 
     def __str__(self) -> str:
@@ -130,8 +128,8 @@ class SubsurfaceStation(Station):
     )
 
     class Meta:
-        verbose_name = "Subsurface Station"
-        verbose_name_plural = "Subsurface Stations"
+        verbose_name = "Station - Subsurface"
+        verbose_name_plural = "Stations - Subsurface"
 
 
 class SurfaceStation(Station):
@@ -149,8 +147,8 @@ class SurfaceStation(Station):
     )
 
     class Meta:
-        verbose_name = "Surface Station"
-        verbose_name_plural = "Surface Stations"
+        verbose_name = "Station - Surface"
+        verbose_name_plural = "Stations - Surface"
 
 
 class StationResourceType(models.TextChoices):
@@ -185,11 +183,7 @@ def get_station_resource_path(instance: StationResource, filename: str) -> str:
     else:
         prefix = f"networks/{instance.station.network.id}"
 
-    return (
-        f"{prefix}/"
-        f"{instance.station.id}/"
-        f"resources/{filekey}{thumb_suffix}.{ext}"
-    )
+    return f"{prefix}/{instance.station.id}/resources/{filekey}{thumb_suffix}.{ext}"
 
 
 class StationResource(models.Model):
