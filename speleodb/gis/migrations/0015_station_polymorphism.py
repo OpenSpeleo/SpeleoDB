@@ -12,7 +12,13 @@ def migrate_stations_to_subsurface(apps, schema_editor):
     Uses raw SQL to:
     1. Insert rows into gis_subsurfacestation linking to existing stations
     2. Set polymorphic_ctype for all migrated stations
+    
+    Note: SQLite uses a fresh empty DB for tests, so we skip data migration.
     """
+    # SQLite uses fresh empty DB for tests - no data to migrate
+    if schema_editor.connection.vendor == 'sqlite':
+        return
+    
     ContentType = apps.get_model('contenttypes', 'ContentType')
     
     # Get or create the ContentType for SubsurfaceStation
@@ -46,9 +52,16 @@ def reverse_migrate_to_base_stations(apps, schema_editor):
     1. Copy project_id from SubsurfaceStation back to Station
     2. Clear polymorphic_ctype
     3. Delete SubsurfaceStation and SurfaceStation rows
+    
+    Note: SQLite uses a fresh empty DB for tests, so we skip data migration.
     """
+    # SQLite uses fresh empty DB for tests - no data to migrate back
+    if schema_editor.connection.vendor == 'sqlite':
+        return
+    
     with schema_editor.connection.cursor() as cursor:
         # Copy project data back from SubsurfaceStation to Station
+        # Uses PostgreSQL UPDATE...FROM syntax
         cursor.execute('''
             UPDATE gis_station 
             SET project_id = ss.project_id,
@@ -60,6 +73,27 @@ def reverse_migrate_to_base_stations(apps, schema_editor):
         # Delete all child table rows (the Station rows remain intact)
         cursor.execute('DELETE FROM gis_subsurfacestation')
         cursor.execute('DELETE FROM gis_surfacestation')
+
+
+def drop_project_column(apps, schema_editor):
+    """Drop project_id column from gis_station (PostgreSQL only)."""
+    # SQLite creates fresh schema without this column
+    if schema_editor.connection.vendor == 'sqlite':
+        return
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute('ALTER TABLE gis_station DROP COLUMN project_id;')
+
+
+def add_project_column(apps, schema_editor):
+    """Add project_id column back to gis_station (PostgreSQL only)."""
+    # SQLite doesn't need this - fresh schema never had the column
+    if schema_editor.connection.vendor == 'sqlite':
+        return
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute(
+            'ALTER TABLE gis_station ADD COLUMN project_id uuid '
+            'REFERENCES surveys_project(id) ON DELETE CASCADE;'
+        )
 
 
 class Migration(migrations.Migration):
@@ -152,11 +186,12 @@ class Migration(migrations.Migration):
         ),
 
         # ================================================================
-        # STEP 6: Remove project column from database using raw SQL
-        # State was already updated in step 4
+        # STEP 6: Remove project column from database using RunPython
+        # State was already updated in step 3
+        # Note: SQLite creates fresh schema without this column, so we skip
         # ================================================================
-        migrations.RunSQL(
-            sql='ALTER TABLE gis_station DROP COLUMN project_id;',
-            reverse_sql='ALTER TABLE gis_station ADD COLUMN project_id uuid REFERENCES surveys_project(id) ON DELETE CASCADE;',
+        migrations.RunPython(
+            code=drop_project_column,
+            reverse_code=add_project_column,
         ),
     ]
