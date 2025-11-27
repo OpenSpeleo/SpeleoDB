@@ -27,7 +27,7 @@ from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
-from speleodb.gis.models.sensor import InstallState
+from speleodb.gis.models.sensor import InstallStatus
 from speleodb.utils.pydantic_utils import NotFutureDate  # noqa: TC001
 
 if TYPE_CHECKING:
@@ -78,7 +78,7 @@ class _BaseSensorFleetView(AuthenticatedTemplateView):
                 Prefetch(
                     "installs",
                     queryset=SensorInstall.objects.filter(
-                        state=InstallState.INSTALLED
+                        status=InstallStatus.INSTALLED
                     ).select_related("station", "station__project"),
                     to_attr="active_installs",
                 )
@@ -170,7 +170,7 @@ class SensorFleetUserPermissionsView(_BaseSensorFleetView):
 
 class SensorInstallEvent(BaseModel):
     date: NotFutureDate
-    event: InstallState
+    event: InstallStatus
     sensor: Sensor
     station: Station
     user: str
@@ -209,14 +209,14 @@ class SensorFleetHistoryView(_BaseSensorFleetView):
             processed_events.append(
                 SensorInstallEvent(
                     date=install.install_date,
-                    event=InstallState.INSTALLED,
+                    event=InstallStatus.INSTALLED,
                     sensor=install.sensor,
                     station=install.station,
                     user=install.install_user,
                 )
             )
 
-            if install.state != InstallState.INSTALLED:
+            if install.status != InstallStatus.INSTALLED:
                 processed_events.append(
                     SensorInstallEvent(
                         date=(
@@ -224,7 +224,7 @@ class SensorFleetHistoryView(_BaseSensorFleetView):
                             if install.uninstall_date
                             else install.modified_date.date()
                         ),
-                        event=install.state,  # type: ignore[arg-type]
+                        event=install.status,  # type: ignore[arg-type]
                         sensor=install.sensor,
                         station=install.station,
                         user=install.uninstall_user if install.uninstall_user else "-",
@@ -279,7 +279,8 @@ class SensorFleetWatchlistView(_BaseSensorFleetView):
 
         # Annotate sensors with minimum expiry date from their active installs
         active_installs = SensorInstall.objects.filter(
-            sensor=OuterRef("pk"), state=InstallState.INSTALLED
+            sensor=OuterRef("pk"),
+            status=InstallStatus.INSTALLED,
         )
 
         sensors = (
@@ -319,7 +320,7 @@ class SensorFleetWatchlistView(_BaseSensorFleetView):
                 Prefetch(
                     "installs",
                     queryset=SensorInstall.objects.filter(
-                        state=InstallState.INSTALLED
+                        status=InstallStatus.INSTALLED
                     ).select_related("station", "station__project"),
                     to_attr="active_installs",
                 )

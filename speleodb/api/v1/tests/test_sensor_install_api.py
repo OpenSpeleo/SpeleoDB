@@ -29,7 +29,7 @@ from speleodb.api.v1.tests.factories import SensorInstallFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models.sensor import InstallState
+from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -192,7 +192,7 @@ class TestStationSensorInstallListCreate:
         assert response.data["data"]["sensor_id"] == str(sensor.id)
         assert response.data["data"]["station_id"] == str(station.id)
         assert response.data["data"]["install_user"] == user.email
-        assert response.data["data"]["state"] == InstallState.INSTALLED
+        assert response.data["data"]["status"] == InstallStatus.INSTALLED
 
     def test_create_sensor_install_with_expiracy_dates(
         self,
@@ -348,17 +348,17 @@ class TestStationSensorInstallRetrieveUpdate:
         assert response.data["data"]["sensor_id"] == str(sensor_install.sensor.id)
         assert response.data["data"]["station_id"] == str(station.id)
 
-    def test_update_state_to_retrieved(
+    def test_update_status_to_retrieved(
         self,
         api_client: APIClient,
         station: Station,
         sensor_install: SensorInstall,
         user: User,
     ) -> None:
-        """User can update install state to RETRIEVED."""
+        """User can update install status to RETRIEVED."""
         uninstall_date = timezone.localdate()
         data = {
-            "state": InstallState.RETRIEVED,
+            "status": InstallStatus.RETRIEVED,
             "uninstall_date": uninstall_date.isoformat(),
         }
 
@@ -373,16 +373,16 @@ class TestStationSensorInstallRetrieveUpdate:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["data"]["state"] == InstallState.RETRIEVED
+        assert response.data["data"]["status"] == InstallStatus.RETRIEVED
         assert response.data["data"]["uninstall_date"] == uninstall_date.isoformat()
         assert response.data["data"]["uninstall_user"] == user.email
 
         # Verify in database
         sensor_install.refresh_from_db()
-        assert sensor_install.state == InstallState.RETRIEVED
+        assert sensor_install.status == InstallStatus.RETRIEVED
         assert sensor_install.uninstall_date == uninstall_date
 
-    def test_update_state_to_retrieved_auto_fills_dates(
+    def test_update_status_to_retrieved_auto_fills_dates(
         self,
         api_client: APIClient,
         station: Station,
@@ -392,7 +392,7 @@ class TestStationSensorInstallRetrieveUpdate:
         """Updating to RETRIEVED auto-fills uninstall_user and uninstall_date if not
         provided."""
         data = {
-            "state": InstallState.RETRIEVED,
+            "status": InstallStatus.RETRIEVED,
         }
 
         response = api_client.patch(
@@ -406,20 +406,20 @@ class TestStationSensorInstallRetrieveUpdate:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["data"]["state"] == InstallState.RETRIEVED
+        assert response.data["data"]["status"] == InstallStatus.RETRIEVED
         assert response.data["data"]["uninstall_user"] == user.email
         assert response.data["data"]["uninstall_date"] is not None
 
-    def test_update_state_to_lost(
+    def test_update_status_to_lost(
         self,
         api_client: APIClient,
         station: Station,
         sensor_install: SensorInstall,
         user: User,
     ) -> None:
-        """User can update install state to LOST."""
+        """User can update install status to LOST."""
         data = {
-            "state": InstallState.LOST,
+            "status": InstallStatus.LOST,
             "uninstall_date": timezone.localdate().isoformat(),
         }
 
@@ -434,21 +434,21 @@ class TestStationSensorInstallRetrieveUpdate:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["data"]["state"] == InstallState.LOST
+        assert response.data["data"]["status"] == InstallStatus.LOST
 
         # Verify in database
         sensor_install.refresh_from_db()
-        assert sensor_install.state == InstallState.LOST
+        assert sensor_install.status == InstallStatus.LOST
 
-    def test_update_state_to_abandoned(
+    def test_update_status_to_abandoned(
         self,
         api_client: APIClient,
         station: Station,
         sensor_install: SensorInstall,
         user: User,
     ) -> None:
-        """User can update install state to ABANDONED."""
-        data = {"state": InstallState.ABANDONED}
+        """User can update install status to ABANDONED."""
+        data = {"status": InstallStatus.ABANDONED}
 
         response = api_client.patch(
             reverse(
@@ -461,25 +461,25 @@ class TestStationSensorInstallRetrieveUpdate:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["data"]["state"] == InstallState.ABANDONED
+        assert response.data["data"]["status"] == InstallStatus.ABANDONED
 
         # Verify in database
         sensor_install.refresh_from_db()
-        assert sensor_install.state == InstallState.ABANDONED
+        assert sensor_install.status == InstallStatus.ABANDONED
 
-    def test_update_state_invalid_transition(
+    def test_update_status_invalid_transition(
         self,
         api_client: APIClient,
         station: Station,
         user: User,
     ) -> None:
-        """Cannot change state from RETRIEVED/LOST/ABANDONED."""
+        """Cannot change status from RETRIEVED/LOST/ABANDONED."""
         # Create a retrieved install
         retrieved_install = SensorInstallFactory.create_uninstalled(
             station=station, uninstall_user=user.email
         )
 
-        data = {"state": InstallState.INSTALLED}
+        data = {"status": InstallStatus.INSTALLED}
 
         response = api_client.patch(
             reverse(
@@ -495,18 +495,18 @@ class TestStationSensorInstallRetrieveUpdate:
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "Cannot change state" in str(response.data["errors"])
+        assert "Cannot change status" in str(response.data["errors"])
 
-    def test_update_state_without_write_permission(
+    def test_update_status_without_write_permission(
         self,
         api_client: APIClient,
         station_read_only: Station,
         user: User,
     ) -> None:
-        """Read-only user cannot update install state."""
+        """Read-only user cannot update install status."""
         install = SensorInstallFactory.create(station=station_read_only)
 
-        data = {"state": InstallState.LOST}
+        data = {"status": InstallStatus.LOST}
 
         response = api_client.patch(
             reverse(
@@ -532,7 +532,7 @@ class TestStationSensorInstallRetrieveUpdate:
         uninstall_date = install_date - timedelta(days=1)
 
         data = {
-            "state": InstallState.RETRIEVED,
+            "status": InstallStatus.RETRIEVED,
             "uninstall_date": uninstall_date.isoformat(),
         }
 
@@ -614,16 +614,16 @@ class TestSensorInstallEdgeCases:
 
         assert response.status_code == status.HTTP_201_CREATED
 
-    def test_retrieval_fields_required_for_retrieved_state(
+    def test_retrieval_fields_required_for_retrieved_status(
         self,
         api_client: APIClient,
         station: Station,
         sensor_install: SensorInstall,
         user: User,
     ) -> None:
-        """RETRIEVED state requires uninstall_date and uninstall_user."""
+        """RETRIEVED status requires uninstall_date and uninstall_user."""
         # Try to set RETRIEVED without uninstall_date (should auto-fill)
-        data = {"state": InstallState.RETRIEVED}
+        data = {"status": InstallStatus.RETRIEVED}
 
         response = api_client.patch(
             reverse(
@@ -638,16 +638,16 @@ class TestSensorInstallEdgeCases:
         # Should succeed because we auto-fill these fields
         assert response.status_code == status.HTTP_200_OK
 
-    def test_retrieval_fields_not_allowed_for_non_retrieved_state(
+    def test_retrieval_fields_not_allowed_for_non_retrieved_status(
         self,
         api_client: APIClient,
         station: Station,
         sensor_install: SensorInstall,
         user: User,
     ) -> None:
-        """Retrieval fields cannot be set when state is not RETRIEVED."""
+        """Retrieval fields cannot be set when status is not RETRIEVED."""
         data = {
-            "state": InstallState.LOST,
+            "status": InstallStatus.LOST,
             "uninstall_date": timezone.localdate().isoformat(),
             "uninstall_user": user.email,
         }
@@ -694,34 +694,42 @@ class TestSensorInstallEdgeCases:
 class TestStationSensorInstallHistory:
     """Tests for sensor installation history features."""
 
-    def test_list_all_sensor_installs_without_state_filter(
+    def test_list_all_sensor_installs_without_status_filter(
         self,
         api_client: APIClient,
         station: Station,
         sensor: Sensor,
         user: User,
     ) -> None:
-        """Verify returns all states when no query param provided."""
-        # Create installs in all states
+        """Verify returns all statuses when no query param provided."""
+        # Create installs in all statuses
         SensorInstallFactory.create(
-            station=station, sensor=sensor, state=InstallState.INSTALLED
+            station=station,
+            sensor=sensor,
+            status=InstallStatus.INSTALLED,
         )
         sensor2 = SensorFactory.create(fleet=sensor.fleet)
         SensorInstallFactory.create_uninstalled(
-            station=station, sensor=sensor2, state=InstallState.RETRIEVED
+            station=station,
+            sensor=sensor2,
+            status=InstallStatus.RETRIEVED,
         )
 
         sensor3 = SensorFactory.create(fleet=sensor.fleet)
         SensorInstallFactory.create_uninstalled(
-            station=station, sensor=sensor3, state=InstallState.LOST
+            station=station,
+            sensor=sensor3,
+            status=InstallStatus.LOST,
         )
 
         sensor4 = SensorFactory.create(fleet=sensor.fleet)
         SensorInstallFactory.create_uninstalled(
-            station=station, sensor=sensor4, state=InstallState.ABANDONED
+            station=station,
+            sensor=sensor4,
+            status=InstallStatus.ABANDONED,
         )
 
-        # Request without state filter should return all
+        # Request without status filter should return all
         response = api_client.get(
             reverse(
                 "api:v1:station-sensor-installs",
@@ -733,50 +741,56 @@ class TestStationSensorInstallHistory:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["data"]) == 4  # noqa: PLR2004
 
-        # Verify all states are present
-        states = {install["state"] for install in response.data["data"]}
-        assert states == {
-            InstallState.INSTALLED,
-            InstallState.RETRIEVED,
-            InstallState.LOST,
-            InstallState.ABANDONED,
+        # Verify all statuses are present
+        statuses = {install["status"] for install in response.data["data"]}
+        assert statuses == {
+            InstallStatus.INSTALLED,
+            InstallStatus.RETRIEVED,
+            InstallStatus.LOST,
+            InstallStatus.ABANDONED,
         }
 
-    def test_list_sensor_installs_with_state_filter_installed(
+    def test_list_sensor_installs_with_status_filter_installed(
         self,
         api_client: APIClient,
         station: Station,
         sensor: Sensor,
         user: User,
     ) -> None:
-        """Verify ?state=installed only returns INSTALLED."""
-        # Create mixed state installs
+        """Verify ?status=installed only returns INSTALLED."""
+        # Create mixed status installs
         SensorInstallFactory.create(
-            station=station, sensor=sensor, state=InstallState.INSTALLED
+            station=station,
+            sensor=sensor,
+            status=InstallStatus.INSTALLED,
         )
         sensor2 = SensorFactory.create(fleet=sensor.fleet)
         SensorInstallFactory.create_uninstalled(
-            station=station, sensor=sensor2, state=InstallState.RETRIEVED
+            station=station,
+            sensor=sensor2,
+            status=InstallStatus.RETRIEVED,
         )
 
         sensor3 = SensorFactory.create(fleet=sensor.fleet)
         SensorInstallFactory.create_uninstalled(
-            station=station, sensor=sensor3, state=InstallState.LOST
+            station=station,
+            sensor=sensor3,
+            status=InstallStatus.LOST,
         )
 
-        # Request with state=installed filter
+        # Request with status=installed filter
         response = api_client.get(
             reverse(
                 "api:v1:station-sensor-installs",
                 kwargs={"id": station.id},
             )
-            + "?state=installed",
+            + "?status=installed",
             HTTP_AUTHORIZATION=get_auth_header(user),
         )
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["data"]) == 1
-        assert response.data["data"][0]["state"] == InstallState.INSTALLED
+        assert response.data["data"][0]["status"] == InstallStatus.INSTALLED
 
     def test_list_sensor_installs_ordering(
         self,
@@ -855,7 +869,7 @@ class TestStationSensorInstallHistory:
         """User with read-only access can list all installs."""
         # Create some installs
         SensorInstallFactory.create(
-            station=station, sensor=sensor, state=InstallState.INSTALLED
+            station=station, sensor=sensor, status=InstallStatus.INSTALLED
         )
         sensor2 = SensorFactory.create(fleet=sensor.fleet)
         SensorInstallFactory.create_uninstalled(station=station, sensor=sensor2)
@@ -888,7 +902,7 @@ class TestStationSensorInstallHistory:
 
         # Create install
         SensorInstallFactory.create(
-            station=station, sensor=sensor, state=InstallState.INSTALLED
+            station=station, sensor=sensor, status=InstallStatus.INSTALLED
         )
 
         response = api_client.get(
@@ -914,9 +928,11 @@ class TestStationSensorInstallExcelExport:
         user: User,
     ) -> None:
         """Create multiple installs and verify Excel export."""
-        # Create installs with various states
+        # Create installs with various statuses
         SensorInstallFactory.create(
-            station=station, sensor=sensor, state=InstallState.INSTALLED
+            station=station,
+            sensor=sensor,
+            status=InstallStatus.INSTALLED,
         )
         sensor2 = SensorFactory.create(fleet=sensor.fleet)
         SensorInstallFactory.create_uninstalled(station=station, sensor=sensor2)
@@ -977,7 +993,7 @@ class TestStationSensorInstallExcelExport:
         _ = SensorInstallFactory.create(
             station=station,
             sensor=sensor,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             install_date=timezone.localdate(),
             expiracy_memory_date=timezone.localdate() + timedelta(days=30),
             expiracy_battery_date=timezone.localdate() + timedelta(days=60),
@@ -1009,7 +1025,7 @@ class TestStationSensorInstallExcelExport:
         SensorInstallFactory.create(
             station=station,
             sensor=sensor,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             uninstall_date=None,
             uninstall_user=None,
             expiracy_memory_date=None,
@@ -1125,31 +1141,39 @@ class TestStationSensorInstallExcelExport:
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_export_excel_multiple_states(
+    def test_export_excel_multiple_statuses(
         self,
         api_client: APIClient,
         station: Station,
         sensor: Sensor,
         user: User,
     ) -> None:
-        """Create installs in all 4 states and verify Excel includes all."""
-        # Create installs in all states
+        """Create installs in all 4 statuses and verify Excel includes all."""
+        # Create installs in all statuses
         SensorInstallFactory.create(
-            station=station, sensor=sensor, state=InstallState.INSTALLED
+            station=station,
+            sensor=sensor,
+            status=InstallStatus.INSTALLED,
         )
         sensor2 = SensorFactory.create(fleet=sensor.fleet)
         SensorInstallFactory.create_uninstalled(
-            station=station, sensor=sensor2, state=InstallState.RETRIEVED
+            station=station,
+            sensor=sensor2,
+            status=InstallStatus.RETRIEVED,
         )
 
         sensor3 = SensorFactory.create(fleet=sensor.fleet)
         SensorInstallFactory.create_uninstalled(
-            station=station, sensor=sensor3, state=InstallState.LOST
+            station=station,
+            sensor=sensor3,
+            status=InstallStatus.LOST,
         )
 
         sensor4 = SensorFactory.create(fleet=sensor.fleet)
         SensorInstallFactory.create_uninstalled(
-            station=station, sensor=sensor4, state=InstallState.ABANDONED
+            station=station,
+            sensor=sensor4,
+            status=InstallStatus.ABANDONED,
         )
 
         response = api_client.get(

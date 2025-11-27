@@ -284,3 +284,4 @@ export const Geometry = {
         return MAGNETIC_SNAP_RADIUS;
     }
 };
+

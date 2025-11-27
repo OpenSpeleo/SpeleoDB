@@ -7,40 +7,43 @@ let currentStationId = null;
 let currentProjectId = null;
 let currentSortColumn = 'modified_date';
 let currentSortDirection = 'desc';
-let currentStateFilter = 'all';
-let pendingSensorStateChange = null;
+let currentStatusFilter = 'all';
+let pendingSensorStatusChange = null;
+
+// Cache for fleet sensors (populated during loadInstallForm/loadEditForm, used by loadFleetSensors)
+let fleetSensorsCache = {};  // { fleetId: [...sensors] }
 
 /**
- * Get color class for sensor install state
+ * Get color class for sensor install status
  */
-function getSensorInstallStateColor(state) {
+function getSensorInstallStatusColor(status) {
     const colors = {
         'installed': 'bg-green-500',
         'retrieved': 'bg-blue-500',
         'lost': 'bg-red-500',
         'abandoned': 'bg-orange-500'
     };
-    return colors[state?.toLowerCase()] || 'bg-gray-500';
+    return colors[status?.toLowerCase()] || 'bg-gray-500';
 }
 
 /**
- * Get label for sensor install state
+ * Get label for sensor install status
  */
-function getSensorInstallStateLabel(state) {
+function getSensorInstallStatusLabel(status) {
     const labels = {
         'installed': 'Installed',
         'retrieved': 'Retrieved',
         'lost': 'Lost',
         'abandoned': 'Abandoned'
     };
-    return labels[state?.toLowerCase()] || state;
+    return labels[status?.toLowerCase()] || status;
 }
 
 /**
- * Check if sensor install state can be changed
+ * Check if sensor install status can be changed
  */
-function canChangeSensorInstallState(install) {
-    return install.state === 'installed';
+function canChangeSensorInstallStatus(install) {
+    return install.status === 'installed';
 }
 
 /**
@@ -79,32 +82,6 @@ function formatExpiracyDate(dateStr) {
     else if (diffDays < 7) colorClass = 'text-amber-400';
 
     return `<span class="${colorClass}">${date.toLocaleDateString()} (${diffDays > 0 ? 'in ' : ''}${Math.abs(diffDays)} days${diffDays < 0 ? ' ago' : ''})</span>`;
-}
-
-/**
- * Show loading overlay
- */
-function showLoadingOverlay(message) {
-    const overlay = document.createElement('div');
-    overlay.id = 'station-loading-overlay';
-    overlay.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center';
-    overlay.innerHTML = `
-        <div class="bg-slate-800 rounded-xl p-6 text-center">
-            <div class="loading-spinner mx-auto mb-4"></div>
-            <p class="text-slate-300">${message}</p>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-    return overlay;
-}
-
-/**
- * Hide loading overlay
- */
-function hideLoadingOverlay(overlay) {
-    if (overlay && overlay.parentNode) {
-        overlay.remove();
-    }
 }
 
 /**
@@ -205,12 +182,12 @@ function renderSensorHistoryTable(installs, stationId, projectId, currentFilter 
                 <!-- Filter and Export Section -->
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div class="flex items-center gap-2">
-                        <label class="text-sm text-slate-400">Filter by State:</label>
+                        <label class="text-sm text-slate-400">Filter by Status:</label>
                         <select
-                            id="state-filter-select"
+                            id="status-filter-select"
                             onchange="window.StationSensors.filterHistory()"
                             class="bg-slate-700 text-white text-sm rounded-lg px-3 py-1.5 border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-transparent">
-                            <option value="all" ${currentFilter === 'all' ? 'selected' : ''}>All States</option>
+                            <option value="all" ${currentFilter === 'all' ? 'selected' : ''}>All Statuses</option>
                             <option value="installed" ${currentFilter === 'installed' ? 'selected' : ''}>Installed</option>
                             <option value="retrieved" ${currentFilter === 'retrieved' ? 'selected' : ''}>Retrieved</option>
                             <option value="lost" ${currentFilter === 'lost' ? 'selected' : ''}>Lost</option>
@@ -231,8 +208,9 @@ function renderSensorHistoryTable(installs, stationId, projectId, currentFilter 
                         <button
                             onclick="window.StationSensors.exportHistory('${stationId}')"
                             id="export-sensor-history-btn"
-                            class="btn-secondary text-sm flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="btn-secondary text-sm flex items-center justify-center gap-2"
+                            style="background-color: #16a34a; border-color: #16a34a; color: white; width: 175px;">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
                             <span>Export to Excel</span>
@@ -258,7 +236,7 @@ function renderSensorHistoryTable(installs, stationId, projectId, currentFilter 
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-slate-700/50" onclick="window.StationSensors.sortHistory('state')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-slate-700/50" onclick="window.StationSensors.sortHistory('status')">
                                         <div class="flex items-center gap-1">
                                             State
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
@@ -292,8 +270,8 @@ function renderSensorHistoryTable(installs, stationId, projectId, currentFilter 
                                         <td class="px-4 py-3 text-white font-medium">${install.sensor_name || 'Unknown'}</td>
                                         <td class="px-4 py-3 text-slate-300">${install.sensor_fleet_name || 'Unknown'}</td>
                                         <td class="px-4 py-3">
-                                            <span class="px-2 py-1 ${getSensorInstallStateColor(install.state)} text-white text-xs rounded-full font-medium block w-20 text-center">
-                                                ${getSensorInstallStateLabel(install.state)}
+                                            <span class="px-2 py-1 ${getSensorInstallStatusColor(install.status)} text-white text-xs rounded-full font-medium block w-20 text-center">
+                                                ${getSensorInstallStatusLabel(install.status)}
                                             </span>
                                         </td>
                                         <td class="px-4 py-3 text-slate-300">${formatDateString(install.install_date)}</td>
@@ -337,13 +315,13 @@ export const StationSensors = {
     async loadCurrentInstalls(stationId, projectId, subtab = 'current') {
         const container = document.getElementById('station-modal-content');
         const hasWriteAccess = Config.hasProjectWriteAccess(projectId);
-        const loadingOverlay = showLoadingOverlay('Loading sensor installations...');
+        const loadingOverlay = Utils.showLoadingOverlay('Loading sensor installations...');
 
         currentStationId = stationId;
         currentProjectId = projectId;
 
         try {
-            const response = await fetch(`/api/v1/stations/${stationId}/sensor-installs/?state=installed`, {
+            const response = await fetch(`/api/v1/stations/${stationId}/sensor-installs/?status=installed`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -359,7 +337,7 @@ export const StationSensors = {
             const result = await response.json();
             const installs = result.data || [];
 
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
 
             container.innerHTML = `
                 <div class="tab-content active">
@@ -403,8 +381,8 @@ export const StationSensors = {
                                                     <h4 class="text-white font-medium text-lg">${install.sensor_name || 'Unknown Sensor'}</h4>
                                                     <p class="text-slate-400 text-sm mt-1">Fleet: ${install.sensor_fleet_name || 'Unknown Fleet'}</p>
                                                 </div>
-                                                <span class="px-3 py-1 ${getSensorInstallStateColor(install.state)} text-white text-xs rounded-full font-medium block w-20 text-center">
-                                                    ${getSensorInstallStateLabel(install.state)}
+                                                <span class="px-3 py-1 ${getSensorInstallStatusColor(install.status)} text-white text-xs rounded-full font-medium block w-20 text-center">
+                                                    ${getSensorInstallStatusLabel(install.status)}
                                                 </span>
                                             </div>
 
@@ -433,7 +411,7 @@ export const StationSensors = {
 
                                             ${hasWriteAccess ? `
                                                 <div class="flex gap-2 mt-4 pt-4 border-t border-slate-600/50">
-                                                    ${canChangeSensorInstallState(install) ? `
+                                                    ${canChangeSensorInstallStatus(install) ? `
                                                         <button onclick="window.StationSensors.loadEditForm('${install.id}', '${stationId}', '${projectId}')"
                                                             class="btn-secondary text-sm flex-1">
                                                             ✏️ Edit
@@ -442,17 +420,17 @@ export const StationSensors = {
                                                             class="btn-secondary text-sm flex-1">
                                                             ✓ Mark as Retrieved
                                                         </button>
-                                                        <button onclick="window.StationSensors.showStateChangeModal('${install.id}', 'lost', '${Utils.escapeHtml(install.sensor_name || 'Sensor')}', '${stationId}', '${projectId}')"
+                                                        <button onclick="window.StationSensors.showInstallStatusChangeModal('${install.id}', 'lost', '${Utils.escapeHtml(install.sensor_name || 'Sensor')}', '${stationId}', '${projectId}')"
                                                             class="btn-secondary text-sm flex-1">
                                                             ⚠ Mark as Lost
                                                         </button>
-                                                        <button onclick="window.StationSensors.showStateChangeModal('${install.id}', 'abandoned', '${Utils.escapeHtml(install.sensor_name || 'Sensor')}', '${stationId}', '${projectId}')"
+                                                        <button onclick="window.StationSensors.showInstallStatusChangeModal('${install.id}', 'abandoned', '${Utils.escapeHtml(install.sensor_name || 'Sensor')}', '${stationId}', '${projectId}')"
                                                             class="btn-secondary text-sm flex-1">
                                                             🚫 Mark as Abandoned
                                                         </button>
                                                     ` : `
                                                         <div class="text-slate-400 text-sm text-center w-full py-2">
-                                                            Sensor status cannot be changed (${getSensorInstallStateLabel(install.state)})
+                                                            Sensor status cannot be changed (${getSensorInstallStatusLabel(install.status)})
                                                         </div>
                                                     `}
                                                 </div>
@@ -480,7 +458,7 @@ export const StationSensors = {
             `;
         } catch (error) {
             console.error('Error loading sensor installs:', error);
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
             Utils.showNotification('error', 'Failed to load sensor installations. Please try again.');
             this.showEmpty();
         }
@@ -505,7 +483,7 @@ export const StationSensors = {
 
     async loadHistory(stationId, projectId) {
         const container = document.getElementById('station-modal-content');
-        const loadingOverlay = showLoadingOverlay('Loading sensor history...');
+        const loadingOverlay = Utils.showLoadingOverlay('Loading sensor history...');
 
         currentStationId = stationId;
         currentProjectId = projectId;
@@ -527,32 +505,32 @@ export const StationSensors = {
             const result = await response.json();
             const allInstalls = result.data || [];
 
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
 
             // Store data for filtering
             sensorHistoryData = allInstalls;
             currentSortColumn = 'modified_date';
             currentSortDirection = 'desc';
-            currentStateFilter = 'all';
+            currentStatusFilter = 'all';
 
             renderSensorHistoryTable(allInstalls, stationId, projectId, 'all');
         } catch (error) {
             console.error('Error loading sensor history:', error);
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
             Utils.showNotification('error', 'Failed to load sensor history. Please try again.');
         }
     },
 
     filterHistory() {
-        const stateFilter = document.getElementById('state-filter-select').value;
-        currentStateFilter = stateFilter;
+        const statusFilter = document.getElementById('status-filter-select').value;
+        currentStatusFilter = statusFilter;
         let filteredData = sensorHistoryData;
 
-        if (stateFilter !== 'all') {
-            filteredData = sensorHistoryData.filter(install => install.state === stateFilter);
+        if (statusFilter !== 'all') {
+            filteredData = sensorHistoryData.filter(install => install.status === statusFilter);
         }
 
-        renderSensorHistoryTable(filteredData, currentStationId, currentProjectId, stateFilter);
+        renderSensorHistoryTable(filteredData, currentStationId, currentProjectId, statusFilter);
     },
 
     sortHistory(column) {
@@ -563,11 +541,11 @@ export const StationSensors = {
             currentSortDirection = 'desc';
         }
 
-        const stateFilter = currentStateFilter || 'all';
+        const statusFilter = currentStatusFilter || 'all';
         let filteredData = sensorHistoryData;
 
-        if (stateFilter !== 'all') {
-            filteredData = sensorHistoryData.filter(install => install.state === stateFilter);
+        if (statusFilter !== 'all') {
+            filteredData = sensorHistoryData.filter(install => install.status === statusFilter);
         }
 
         const sortedData = [...filteredData].sort((a, b) => {
@@ -587,7 +565,7 @@ export const StationSensors = {
             }
         });
 
-        renderSensorHistoryTable(sortedData, currentStationId, currentProjectId, stateFilter);
+        renderSensorHistoryTable(sortedData, currentStationId, currentProjectId, statusFilter);
     },
 
     async exportHistory(stationId) {
@@ -597,7 +575,7 @@ export const StationSensors = {
         try {
             btn.disabled = true;
             btn.innerHTML = `
-                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg class="animate-spin w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -635,18 +613,14 @@ export const StationSensors = {
             window.URL.revokeObjectURL(url);
             a.remove();
 
-            btn.classList.remove('btn-secondary');
-            btn.classList.add('bg-green-600', 'hover:bg-green-700');
             btn.innerHTML = `
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
                 <span>Exported!</span>
             `;
 
             setTimeout(() => {
-                btn.classList.remove('bg-green-600', 'hover:bg-green-700');
-                btn.classList.add('btn-secondary');
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
             }, 2000);
@@ -664,7 +638,7 @@ export const StationSensors = {
         const originalHtml = btn.innerHTML;
         const stationId = currentStationId;
         const projectId = currentProjectId;
-        const stateFilter = currentStateFilter || 'all';
+        const statusFilter = currentStatusFilter || 'all';
 
         if (!stationId) {
             Utils.showNotification('error', 'Station ID not found. Please reload the page.');
@@ -700,11 +674,11 @@ export const StationSensors = {
             sensorHistoryData = allInstalls;
 
             let filteredData = allInstalls;
-            if (stateFilter !== 'all') {
-                filteredData = allInstalls.filter(install => install.state === stateFilter);
+            if (statusFilter !== 'all') {
+                filteredData = allInstalls.filter(install => install.status === statusFilter);
             }
 
-            renderSensorHistoryTable(filteredData, stationId, projectId, stateFilter);
+            renderSensorHistoryTable(filteredData, stationId, projectId, statusFilter);
 
             btn.classList.remove('btn-secondary');
             btn.classList.add('bg-green-600', 'hover:bg-green-700');
@@ -732,28 +706,18 @@ export const StationSensors = {
 
     async loadInstallForm(stationId, projectId) {
         const container = document.getElementById('station-modal-content');
-        const loadingOverlay = showLoadingOverlay('Loading sensor fleets...');
+        const loadingOverlay = Utils.showLoadingOverlay('Loading sensor fleets...');
 
         try {
-            // Fetch fleets and installed sensors in parallel
-            const [fleetsResponse, installsResponse] = await Promise.all([
-                fetch('/api/v1/sensor-fleets/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': Utils.getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                }),
-                fetch(`/api/v1/stations/${stationId}/sensor-installs/`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': Utils.getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                })
-            ]);
+            // Fetch fleets
+            const fleetsResponse = await fetch('/api/v1/sensor-fleets/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': Utils.getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
 
             if (!fleetsResponse.ok) {
                 throw new Error(`HTTP error! status: ${fleetsResponse.status}`);
@@ -762,20 +726,8 @@ export const StationSensors = {
             const fleetsResult = await fleetsResponse.json();
             const fleets = fleetsResult.data || [];
 
-            // Get installed sensor IDs
-            let installedSensorIds = new Set();
-            if (installsResponse.ok) {
-                const installsResult = await installsResponse.json();
-                const installs = installsResult.data || [];
-                installs.forEach(install => {
-                    if (install.state === 'installed') {
-                        installedSensorIds.add(install.sensor_id);
-                    }
-                });
-            }
-
             if (fleets.length === 0) {
-                hideLoadingOverlay(loadingOverlay);
+                Utils.hideLoadingOverlay(loadingOverlay);
                 container.innerHTML = `
                     <div class="tab-content active">
                         <div class="text-center py-12">
@@ -807,16 +759,24 @@ export const StationSensors = {
 
             const fleetSensorsResults = await Promise.all(fleetSensorsPromises);
 
+            // Cache the fleet sensors for use by loadFleetSensors
+            fleetSensorsCache = {};
+            fleets.forEach((fleet, index) => {
+                fleetSensorsCache[fleet.id] = fleetSensorsResults[index]?.data || [];
+            });
+
             // Calculate available sensor count for each fleet
+            // A sensor is available if it's functional AND not installed anywhere (active_installs is empty)
             const fleetsWithAvailableCount = fleets.map((fleet, index) => {
-                const sensors = fleetSensorsResults[index]?.data || [];
+                const sensors = fleetSensorsCache[fleet.id] || [];
                 const availableCount = sensors.filter(sensor =>
-                    sensor.is_functional && !installedSensorIds.has(sensor.id)
+                    sensor.status === 'functional' && 
+                    (!sensor.active_installs || sensor.active_installs.length === 0)
                 ).length;
                 return { ...fleet, availableCount };
             });
 
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
 
             const today = new Date().toISOString().split('T')[0];
 
@@ -898,7 +858,7 @@ export const StationSensors = {
 
         } catch (error) {
             console.error('Error loading install form:', error);
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
             Utils.showNotification('error', 'Failed to load sensor installation form. Please try again.');
         }
     },
@@ -915,47 +875,37 @@ export const StationSensors = {
         sensorSelect.innerHTML = '<option value="">Loading sensors...</option>';
 
         try {
-            const sensorsResponse = await fetch(`/api/v1/sensor-fleets/${fleetId}/sensors/`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
-
-            if (!sensorsResponse.ok) {
-                throw new Error(`HTTP error! status: ${sensorsResponse.status}`);
-            }
-
-            const sensorsResult = await sensorsResponse.json();
-            const allSensors = sensorsResult.data || [];
-
-            // Fetch currently installed sensors to filter them out
-            const installsResponse = await fetch(`/api/v1/stations/${stationId}/sensor-installs/`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
-
-            let installedSensorIds = new Set();
-            if (installsResponse.ok) {
-                const installsResult = await installsResponse.json();
-                const installs = installsResult.data || [];
-                installs.forEach(install => {
-                    if (install.state === 'installed' && install.sensor_id !== currentSensorId) {
-                        installedSensorIds.add(install.sensor_id);
-                    }
+            // Use cached data if available, otherwise fetch from API
+            let allSensors;
+            if (fleetSensorsCache[fleetId]) {
+                allSensors = fleetSensorsCache[fleetId];
+            } else {
+                const sensorsResponse = await fetch(`/api/v1/sensor-fleets/${fleetId}/sensors/`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': Utils.getCSRFToken()
+                    },
+                    credentials: 'same-origin'
                 });
+
+                if (!sensorsResponse.ok) {
+                    throw new Error(`HTTP error! status: ${sensorsResponse.status}`);
+                }
+
+                const sensorsResult = await sensorsResponse.json();
+                allSensors = sensorsResult.data || [];
+                // Store in cache for future use
+                fleetSensorsCache[fleetId] = allSensors;
             }
 
-            // Filter out already installed sensors AND non-functional sensors
+            // Filter out already installed sensors (anywhere) AND non-functional sensors
+            // A sensor is available if:
+            // - It's functional AND
+            // - It's not installed anywhere (active_installs is empty) OR it's the sensor we're editing
             const availableSensors = allSensors.filter(sensor =>
-                sensor.is_functional && 
-                (!installedSensorIds.has(sensor.id) || sensor.id === currentSensorId)
+                sensor.status === 'functional' && 
+                ((!sensor.active_installs || sensor.active_installs.length === 0) || sensor.id === currentSensorId)
             );
 
             sensorSelect.disabled = false;
@@ -985,7 +935,7 @@ export const StationSensors = {
         }
 
         const isEdit = installId !== null;
-        const loadingOverlay = showLoadingOverlay(isEdit ? 'Updating sensor installation...' : 'Installing sensor...');
+        const loadingOverlay = Utils.showLoadingOverlay(isEdit ? 'Updating sensor installation...' : 'Installing sensor...');
 
         try {
             const sensorId = document.getElementById('sensor-select').value;
@@ -1026,9 +976,12 @@ export const StationSensors = {
                 body: JSON.stringify(data)
             });
 
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
 
             if (response.ok) {
+                // Clear the cache since installed sensors have changed
+                fleetSensorsCache = {};
+                
                 Utils.showNotification('success', isEdit ? 'Sensor installation updated successfully!' : 'Sensor installed successfully!');
                 this.loadCurrentInstalls(stationId, projectId);
             } else {
@@ -1038,14 +991,14 @@ export const StationSensors = {
             }
         } catch (error) {
             console.error(`Error ${isEdit ? 'updating' : 'installing'} sensor:`, error);
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
             Utils.showNotification('error', `Error ${isEdit ? 'updating' : 'installing'} sensor. Please try again.`);
         }
     },
 
     async loadEditForm(installId, stationId, projectId) {
         const container = document.getElementById('station-modal-content');
-        const loadingOverlay = showLoadingOverlay('Loading sensor installation...');
+        const loadingOverlay = Utils.showLoadingOverlay('Loading sensor installation...');
 
         try {
             const installResponse = await fetch(`/api/v1/stations/${stationId}/sensor-installs/${installId}/`, {
@@ -1064,32 +1017,22 @@ export const StationSensors = {
             const installResult = await installResponse.json();
             const install = installResult.data;
 
-            if (install.state !== 'installed') {
-                hideLoadingOverlay(loadingOverlay);
+            if (install.status !== 'installed') {
+                Utils.hideLoadingOverlay(loadingOverlay);
                 Utils.showNotification('error', 'Only installed sensors can be edited.');
                 this.loadCurrentInstalls(stationId, projectId);
                 return;
             }
 
-            // Fetch fleets and all installed sensors in parallel
-            const [fleetsResponse, allInstallsResponse] = await Promise.all([
-                fetch('/api/v1/sensor-fleets/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': Utils.getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                }),
-                fetch(`/api/v1/stations/${stationId}/sensor-installs/`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': Utils.getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                })
-            ]);
+            // Fetch fleets
+            const fleetsResponse = await fetch('/api/v1/sensor-fleets/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': Utils.getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
 
             if (!fleetsResponse.ok) {
                 throw new Error(`HTTP error! status: ${fleetsResponse.status}`);
@@ -1097,18 +1040,6 @@ export const StationSensors = {
 
             const fleetsResult = await fleetsResponse.json();
             const fleets = fleetsResult.data || [];
-
-            // Get installed sensor IDs (excluding the one we're currently editing)
-            let installedSensorIds = new Set();
-            if (allInstallsResponse.ok) {
-                const allInstallsResult = await allInstallsResponse.json();
-                const allInstalls = allInstallsResult.data || [];
-                allInstalls.forEach(inst => {
-                    if (inst.state === 'installed' && inst.sensor_id !== install.sensor_id) {
-                        installedSensorIds.add(inst.sensor_id);
-                    }
-                });
-            }
 
             const currentFleetId = install.sensor_fleet_id;
 
@@ -1126,26 +1057,34 @@ export const StationSensors = {
 
             const fleetSensorsResults = await Promise.all(fleetSensorsPromises);
 
+            // Cache the fleet sensors for use by loadFleetSensors
+            fleetSensorsCache = {};
+            fleets.forEach((fleet, index) => {
+                fleetSensorsCache[fleet.id] = fleetSensorsResults[index]?.data || [];
+            });
+
             // Calculate available sensor count for each fleet
-            // For the current fleet, include the currently installed sensor in the count
+            // A sensor is available if:
+            // - It's functional (or it's the currently installed sensor - to allow keeping a broken sensor)
+            // - It's not installed anywhere (active_installs is empty) OR it's the sensor we're editing
             const fleetsWithAvailableCount = fleets.map((fleet, index) => {
-                const sensors = fleetSensorsResults[index]?.data || [];
+                const sensors = fleetSensorsCache[fleet.id] || [];
                 const availableCount = sensors.filter(sensor =>
-                    (sensor.is_functional || sensor.id === install.sensor_id) && 
-                    !installedSensorIds.has(sensor.id)
+                    (sensor.status === 'functional' || sensor.id === install.sensor_id) && 
+                    ((!sensor.active_installs || sensor.active_installs.length === 0) || sensor.id === install.sensor_id)
                 ).length;
                 return { ...fleet, availableCount };
             });
 
             // Get available sensors for the current fleet
             const currentFleetIndex = fleets.findIndex(f => f.id === currentFleetId);
-            const currentFleetSensors = currentFleetIndex >= 0 ? (fleetSensorsResults[currentFleetIndex]?.data || []) : [];
+            const currentFleetSensors = currentFleetIndex >= 0 ? fleetSensorsCache[fleets[currentFleetIndex].id] : [];
             const availableSensors = currentFleetSensors.filter(sensor =>
-                (sensor.is_functional || sensor.id === install.sensor_id) && 
-                !installedSensorIds.has(sensor.id)
+                (sensor.status === 'functional' || sensor.id === install.sensor_id) && 
+                ((!sensor.active_installs || sensor.active_installs.length === 0) || sensor.id === install.sensor_id)
             );
 
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
 
             const installDate = install.install_date ? new Date(install.install_date).toISOString().split('T')[0] : '';
             const expiracyMemoryDate = install.expiracy_memory_date ? new Date(install.expiracy_memory_date).toISOString().split('T')[0] : '';
@@ -1239,7 +1178,7 @@ export const StationSensors = {
 
         } catch (error) {
             console.error('Error loading edit form:', error);
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
             Utils.showNotification('error', 'Failed to load sensor installation form. Please try again.');
         }
     },
@@ -1279,13 +1218,13 @@ export const StationSensors = {
     },
 
     async handleRetrieve(installId, stationId, projectId) {
-        const loadingOverlay = showLoadingOverlay('Updating sensor status...');
+        const loadingOverlay = Utils.showLoadingOverlay('Updating sensor status...');
 
         try {
             const retrievalDate = document.getElementById('retrieval-date').value;
 
             const data = {
-                state: 'retrieved',
+                status: 'retrieved',
                 uninstall_date: retrievalDate
             };
 
@@ -1299,9 +1238,12 @@ export const StationSensors = {
                 body: JSON.stringify(data)
             });
 
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
 
             if (response.ok) {
+                // Clear the cache since installed sensors have changed
+                fleetSensorsCache = {};
+                
                 Utils.showNotification('success', 'Sensor marked as retrieved!');
                 this.loadCurrentInstalls(stationId, projectId);
             } else {
@@ -1311,13 +1253,13 @@ export const StationSensors = {
             }
         } catch (error) {
             console.error('Error retrieving sensor:', error);
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
             Utils.showNotification('error', 'Error updating sensor status. Please try again.');
         }
     },
 
-    showStateChangeModal(installId, newState, sensorName, stationId, projectId) {
-        const stateConfig = {
+    showInstallStatusChangeModal(installId, newStatus, sensorName, stationId, projectId) {
+        const statusConfig = {
             'lost': {
                 label: 'Lost',
                 icon: '⚠️',
@@ -1338,22 +1280,22 @@ export const StationSensors = {
             }
         };
 
-        const config = stateConfig[newState];
+        const config = statusConfig[newStatus];
         if (!config) {
-            console.error('Unknown state:', newState);
+            console.error('Unknown status:', newStatus);
             return;
         }
 
-        pendingSensorStateChange = {
+        pendingSensorStatusChange = {
             installId,
-            newState,
+            newStatus,
             stationId,
             projectId
         };
 
         // Create modal
         const modalHtml = `
-            <div id="sensor-state-change-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div id="sensor-status-change-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6 border-b border-slate-600">
                         <div class="flex items-center justify-between">
@@ -1363,7 +1305,7 @@ export const StationSensors = {
                                 </div>
                                 <h3 class="text-xl font-semibold text-white">Mark Sensor as ${config.label}</h3>
                             </div>
-                            <button onclick="window.StationSensors.cancelStateChange()" class="text-slate-400 hover:text-white transition-colors">
+                            <button onclick="window.StationSensors.cancelStatusChange()" class="text-slate-400 hover:text-white transition-colors">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
@@ -1387,10 +1329,10 @@ export const StationSensors = {
                             <p class="text-amber-300 text-xs mt-1">${config.warning}</p>
                         </div>
                         <div class="flex gap-3 justify-end">
-                            <button onclick="window.StationSensors.cancelStateChange()" class="btn-secondary">
+                            <button onclick="window.StationSensors.cancelStatusChange()" class="btn-secondary">
                                 Cancel
                             </button>
-                            <button onclick="window.StationSensors.confirmStateChange()" class="${config.btnClass}">
+                            <button onclick="window.StationSensors.confirmStatusChange()" class="${config.btnClass}">
                                 ${config.btnText}
                             </button>
                         </div>
@@ -1400,37 +1342,37 @@ export const StationSensors = {
         `;
 
         // Remove existing modal
-        const existingModal = document.getElementById('sensor-state-change-modal');
+        const existingModal = document.getElementById('sensor-status-change-modal');
         if (existingModal) existingModal.remove();
 
         document.body.insertAdjacentHTML('beforeend', modalHtml);
     },
 
-    cancelStateChange() {
-        const modal = document.getElementById('sensor-state-change-modal');
+    cancelStatusChange() {
+        const modal = document.getElementById('sensor-status-change-modal');
         if (modal) modal.remove();
-        pendingSensorStateChange = null;
+        pendingSensorStatusChange = null;
     },
 
-    async confirmStateChange() {
-        if (!pendingSensorStateChange) return;
+    async confirmStatusChange() {
+        if (!pendingSensorStatusChange) return;
 
-        const { installId, newState, stationId, projectId } = pendingSensorStateChange;
+        const { installId, newStatus, stationId, projectId } = pendingSensorStatusChange;
 
-        const modal = document.getElementById('sensor-state-change-modal');
+        const modal = document.getElementById('sensor-status-change-modal');
         if (modal) modal.remove();
 
-        const stateLabels = {
+        const statusLabels = {
             'lost': 'Lost',
             'abandoned': 'Abandoned'
         };
-        const label = stateLabels[newState] || newState;
+        const label = statusLabels[newStatus] || newStatus;
 
-        const loadingOverlay = showLoadingOverlay(`Marking sensor as ${label}...`);
+        const loadingOverlay = Utils.showLoadingOverlay(`Marking sensor as ${label}...`);
 
         try {
             const data = {
-                state: newState
+                status: newStatus
             };
 
             const response = await fetch(`/api/v1/stations/${stationId}/sensor-installs/${installId}/`, {
@@ -1443,9 +1385,12 @@ export const StationSensors = {
                 body: JSON.stringify(data)
             });
 
-            hideLoadingOverlay(loadingOverlay);
+            Utils.hideLoadingOverlay(loadingOverlay);
 
             if (response.ok) {
+                // Clear the cache since installed sensors have changed
+                fleetSensorsCache = {};
+                
                 Utils.showNotification('success', `Sensor marked as ${label}!`);
                 this.loadCurrentInstalls(stationId, projectId);
             } else {
@@ -1454,14 +1399,15 @@ export const StationSensors = {
                 Utils.showNotification('error', errorData.errors ? Object.values(errorData.errors).flat().join(', ') : `Failed to mark sensor as ${label}`);
             }
         } catch (error) {
-            console.error(`Error marking sensor as ${newState}:`, error);
-            hideLoadingOverlay(loadingOverlay);
+            console.error(`Error marking sensor as ${newStatus}:`, error);
+            Utils.hideLoadingOverlay(loadingOverlay);
             Utils.showNotification('error', `Error updating sensor status. Please try again.`);
         } finally {
-            pendingSensorStateChange = null;
+            pendingSensorStatusChange = null;
         }
     }
 };
 
 // Expose functions globally for onclick handlers
 window.StationSensors = StationSensors;
+

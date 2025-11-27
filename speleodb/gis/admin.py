@@ -964,7 +964,7 @@ class SensorAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "name",
         "fleet",
-        "is_functional",
+        "status",
         "created_by",
         "creation_date",
         "modified_date",
@@ -972,7 +972,7 @@ class SensorAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     list_filter = (
         "fleet",
-        "is_functional",
+        "status",
         "creation_date",
         "modified_date",
     )
@@ -1001,7 +1001,7 @@ class SensorAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     "name",
                     "fleet",
                     "notes",
-                    "is_functional",
+                    "status",
                 )
             },
         ),
@@ -1110,7 +1110,7 @@ class SensorInstallAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "id",
         "sensor",
         "station",
-        "state",
+        "status",
         "install_date",
         "uninstall_date",
         "install_user",
@@ -1124,7 +1124,7 @@ class SensorInstallAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     # Filters on the right sidebar
     list_filter = (
-        "state",
+        "status",
         "install_date",
         "uninstall_date",
         "expiracy_memory_date",
@@ -1161,7 +1161,7 @@ class SensorInstallAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     "install_user",
                     "uninstall_date",
                     "uninstall_user",
-                    "state",
+                    "status",
                 )
             },
         ),

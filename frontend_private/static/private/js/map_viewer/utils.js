@@ -112,5 +112,34 @@ export const Utils = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+
+    /**
+     * Show loading overlay (full-screen with blur backdrop)
+     * @param {string} message - Loading message to display
+     * @returns {HTMLElement} - The overlay element (pass to hideLoadingOverlay to remove)
+     */
+    showLoadingOverlay: function(message) {
+        const overlay = document.createElement('div');
+        overlay.id = 'station-loading-overlay';
+        overlay.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center';
+        overlay.innerHTML = `
+            <div class="bg-slate-800 rounded-xl p-6 text-center">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-slate-300">${message}</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        return overlay;
+    },
+
+    /**
+     * Hide loading overlay
+     * @param {HTMLElement} overlay - The overlay element returned from showLoadingOverlay
+     */
+    hideLoadingOverlay: function(overlay) {
+        if (overlay && overlay.parentNode) {
+            overlay.remove();
+        }
     }
 };

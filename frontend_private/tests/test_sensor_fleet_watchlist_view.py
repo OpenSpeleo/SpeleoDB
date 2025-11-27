@@ -22,7 +22,7 @@ from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
 from speleodb.api.v1.tests.factories import SensorInstallFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models.sensor import InstallState
+from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.tests.factories import UserFactory
 
 
@@ -143,7 +143,7 @@ class TestSensorFleetWatchlistView(TestCase):
         SensorInstallFactory.create(
             sensor=sensor,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=30),
             created_by=self.user.email,
         )
@@ -234,7 +234,7 @@ class TestSensorFleetWatchlistView(TestCase):
         SensorInstallFactory.create(
             sensor=sensor,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=30),
             created_by=self.user.email,
         )

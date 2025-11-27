@@ -19,7 +19,7 @@ from speleodb.api.v1.tests.factories import SensorInstallFactory
 from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models.sensor import InstallState
+from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.tests.factories import UserFactory
 
 
@@ -82,7 +82,7 @@ class TestSensorManagementTabRendering(TestCase):
         assert 'data-tab="sensor-management"' in content
         assert 'value="sensor-management"' in content
 
-    def test_map_viewer_includes_state_filter_elements(self) -> None:
+    def test_map_viewer_includes_status_filter_elements(self) -> None:
         """Verify sensor management tab exists (filter is rendered dynamically)."""
         self.client.force_login(self.user)
 
@@ -194,7 +194,7 @@ class TestSensorHistoryIntegration(TestCase):
         self.install_installed = SensorInstallFactory.create(
             station=self.station,
             sensor=sensor,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
         )
 
         sensor2 = SensorFactory.create(fleet=sensor.fleet)
@@ -216,11 +216,11 @@ class TestSensorHistoryIntegration(TestCase):
         assert "sensor-management" in content
         assert "map_viewer/main.js" in content
 
-    def test_api_returns_all_states_without_filter(self) -> None:
-        """Verify API returns all sensor install states when no filter is applied."""
+    def test_api_returns_all_status_without_filter(self) -> None:
+        """Verify API returns all sensor install status when no filter is applied."""
         self.client.force_login(self.user)
 
-        # Make API call without state filter
+        # Make API call without status filter
         response = self.client.get(
             f"/api/v1/stations/{self.station.id}/sensor-installs/",
         )
@@ -231,13 +231,13 @@ class TestSensorHistoryIntegration(TestCase):
         # Should return both installs
         assert len(data["data"]) == 2  # noqa: PLR2004
 
-    def test_api_filters_by_installed_state(self) -> None:
-        """Verify API filters to only installed sensors when state=installed."""
+    def test_api_filters_by_installed_status(self) -> None:
+        """Verify API filters to only installed sensors when status=installed."""
         self.client.force_login(self.user)
 
-        # Make API call with state filter
+        # Make API call with status filter
         response = self.client.get(
-            f"/api/v1/stations/{self.station.id}/sensor-installs/?state=installed",
+            f"/api/v1/stations/{self.station.id}/sensor-installs/?status=installed",
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -245,4 +245,4 @@ class TestSensorHistoryIntegration(TestCase):
 
         # Should return only installed sensor
         assert len(data["data"]) == 1
-        assert data["data"][0]["state"] == InstallState.INSTALLED
+        assert data["data"][0]["status"] == InstallStatus.INSTALLED

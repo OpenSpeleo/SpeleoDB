@@ -66,6 +66,13 @@ class SensorFleet(models.Model):
         return f"Sensor Fleet: {self.name}"
 
 
+class SensorStatus(models.TextChoices):
+    FUNCTIONAL = "functional", "Functional"
+    BROKEN = "broken", "Broken"
+    LOST = "lost", "Lost"
+    ABANDONED = "abandoned", "Abandoned"
+
+
 class Sensor(models.Model):
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -92,7 +99,13 @@ class Sensor(models.Model):
         null=False,
     )
 
-    is_functional = models.BooleanField(default=True)
+    status = models.CharField(
+        max_length=20,
+        choices=SensorStatus,
+        default=SensorStatus.FUNCTIONAL,
+        null=False,
+        blank=False,
+    )
 
     # Metadata
     created_by = models.EmailField(
@@ -108,9 +121,7 @@ class Sensor(models.Model):
         ordering = ["-modified_date"]
 
     def __str__(self) -> str:
-        return (
-            f"Sensor: {self.name} [Status: {'OK' if self.is_functional else 'NOT OK'}]"
-        )
+        return f"Sensor: {self.name} [Status: {self.status.upper()}]"
 
 
 class SensorFleetUserPermission(models.Model):
@@ -184,7 +195,7 @@ class SensorFleetUserPermission(models.Model):
         return PermissionLevel.from_value(self.level).label
 
 
-class InstallState(models.TextChoices):
+class InstallStatus(models.TextChoices):
     INSTALLED = "installed", "Installed"
     RETRIEVED = "retrieved", "Retrieved"
     LOST = "lost", "Lost"
@@ -203,7 +214,7 @@ class SensorInstallQuerySet(models.QuerySet["SensorInstall"]):
 
         today = timezone.localdate()
 
-        qs = self.filter(state=InstallState.INSTALLED)
+        qs = self.filter(status=InstallStatus.INSTALLED)
 
         cutoff_date: date
         match days:
@@ -273,10 +284,10 @@ class SensorInstall(models.Model):
         help_text="User who retrieved the sensor.",
     )
 
-    state = models.CharField(
+    status = models.CharField(
         max_length=20,
-        choices=InstallState,
-        default=InstallState.INSTALLED,
+        choices=InstallStatus,
+        default=InstallStatus.INSTALLED,
     )
 
     expiracy_memory_date = models.DateField(null=True, blank=True)
@@ -300,22 +311,22 @@ class SensorInstall(models.Model):
         ordering = ["-modified_date"]
 
         indexes = [
-            models.Index(fields=["state"]),
-            models.Index(fields=["sensor", "state"]),
-            models.Index(fields=["station", "state"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["sensor", "status"]),
+            models.Index(fields=["station", "status"]),
         ]
 
         constraints = [
-            # uninstall_date/user fields match state
+            # uninstall_date/user fields match status
             CheckConstraint(
                 condition=(
                     Q(
-                        ~Q(state=InstallState.INSTALLED),
+                        ~Q(status=InstallStatus.INSTALLED),
                         uninstall_date__isnull=False,
                         uninstall_user__isnull=False,
                     )
                     | Q(
-                        state=InstallState.INSTALLED,
+                        status=InstallStatus.INSTALLED,
                         uninstall_date__isnull=True,
                         uninstall_user__isnull=True,
                     )
@@ -331,7 +342,7 @@ class SensorInstall(models.Model):
             # only one installed sensor per sensor at a time
             models.UniqueConstraint(
                 fields=["sensor"],
-                condition=Q(state=InstallState.INSTALLED),
+                condition=Q(status=InstallStatus.INSTALLED),
                 name="unique_installed_per_sensor",
             ),
             # install_date <= expiracy_memory_date if set
@@ -349,4 +360,4 @@ class SensorInstall(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"[STATUS: {self.state.upper()}]: Sensor: {self.sensor.id}"
+        return f"[STATUS: {self.status.upper()}]: Sensor: {self.sensor.id}"

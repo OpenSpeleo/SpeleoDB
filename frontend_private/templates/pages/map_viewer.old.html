@@ -10164,7 +10164,7 @@
         `;
     }
 
-    function getSensorInstallStateColor(state) {
+    function getSensorInstallStatusColor(state) {
         const colors = {
             'installed': 'bg-green-500',
             'retrieved': 'bg-blue-500',
@@ -10174,7 +10174,7 @@
         return colors[state.toLowerCase()] || 'bg-gray-500';
     }
 
-    function getSensorInstallStateLabel(state) {
+    function getSensorInstallStatusLabel(state) {
         const labels = {
             'installed': 'Installed',
             'retrieved': 'Retrieved',
@@ -10189,7 +10189,7 @@
         return formatDateString(dateStr);
     }
 
-    function canChangeSensorInstallState(install) {
+    function canChangeSensorInstallStatus(install) {
         return install.state === 'installed';
     }
 
@@ -10284,8 +10284,8 @@
                                                     <h4 class="text-white font-medium text-lg">${install.sensor_name || 'Unknown Sensor'}</h4>
                                                     <p class="text-slate-400 text-sm mt-1">Fleet: ${install.sensor_fleet_name || 'Unknown Fleet'}</p>
                                                 </div>
-                                                <span class="px-3 py-1 ${getSensorInstallStateColor(install.state)} text-white text-xs rounded-full font-medium  block w-20 text-center">
-                                                    ${getSensorInstallStateLabel(install.state)}
+                                                <span class="px-3 py-1 ${getSensorInstallStatusColor(install.state)} text-white text-xs rounded-full font-medium  block w-20 text-center">
+                                                    ${getSensorInstallStatusLabel(install.state)}
                                                 </span>
                                             </div>
                                             
@@ -10314,7 +10314,7 @@
                                             
                                             ${hasWriteAccess ? `
                                                 <div class="flex gap-2 mt-4 pt-4 border-t border-slate-600/50">
-                                                    ${canChangeSensorInstallState(install) ? `
+                                                    ${canChangeSensorInstallStatus(install) ? `
                                                         <button onclick="loadEditSensorInstallForm('${install.id}', '${stationId}', '${projectId}')" 
                                                             class="btn-secondary text-sm flex-1">
                                                             ✏️ Edit
@@ -10333,7 +10333,7 @@
                                                         </button>
                                                     ` : `
                                                         <div class="text-slate-400 text-sm text-center w-full py-2">
-                                                            Sensor status cannot be changed (${getSensorInstallStateLabel(install.state)})
+                                                            Sensor status cannot be changed (${getSensorInstallStatusLabel(install.state)})
                                                         </div>
                                                     `}
                                                 </div>
@@ -10544,8 +10544,8 @@
                                             <td class="px-4 py-3 text-white font-medium">${install.sensor_name || 'Unknown'}</td>
                                             <td class="px-4 py-3 text-slate-300">${install.sensor_fleet_name || 'Unknown'}</td>
                                             <td class="px-4 py-3">
-                                                <span class="px-2 py-1 ${getSensorInstallStateColor(install.state)} text-white text-xs rounded-full font-medium block w-20 text-center">
-                                                    ${getSensorInstallStateLabel(install.state)}
+                                                <span class="px-2 py-1 ${getSensorInstallStatusColor(install.state)} text-white text-xs rounded-full font-medium block w-20 text-center">
+                                                    ${getSensorInstallStatusLabel(install.state)}
                                                 </span>
                                             </td>
                                             <td class="px-4 py-3 text-slate-300">${formatDateString(install.install_date)}</td>
@@ -11562,7 +11562,7 @@
         }
     }
 
-    async function updateSensorInstallState(installId, newState, stationId, projectId) {
+    async function updateSensorInstallStatus(installId, newState, stationId, projectId) {
         // This function is kept for backwards compatibility but now uses the modal
         // It's called from the retrieve modal which doesn't need confirmation
         const loadingOverlay = showStationLoadingOverlay(`Updating sensor status...`);

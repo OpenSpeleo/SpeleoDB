@@ -47,8 +47,9 @@ from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
+from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
-from speleodb.gis.models.sensor import InstallState
+from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import BadRequestError
@@ -327,11 +328,14 @@ class SensorToggleFunctionalApiView(GenericAPIView[Sensor], SDBAPIViewMixin):
     lookup_field = "id"
 
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Toggle the is_functional status of a sensor."""
+        """Toggle the sensor status."""
         sensor = self.get_object()
 
-        # Toggle the functional status
-        sensor.is_functional = not sensor.is_functional
+        if sensor.status == SensorStatus.FUNCTIONAL:
+            sensor.status = SensorStatus.BROKEN
+        else:
+            sensor.status = SensorStatus.FUNCTIONAL
+
         sensor.save()
 
         serializer = self.get_serializer(sensor)
@@ -633,7 +637,7 @@ class SensorFleetExportExcelApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin
         for row_num, sensor in enumerate(sensors, start=1):
             # Get latest install info
             latest_install = sensor.installs.filter(
-                state=InstallState.INSTALLED
+                status=InstallStatus.INSTALLED
             ).first()
 
             project_name = latest_install.station.project.name if latest_install else ""
@@ -650,11 +654,9 @@ class SensorFleetExportExcelApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin
                 else ""
             )
 
-            status_str = "Functional" if sensor.is_functional else "Not Functional"
-
             row_data = [
                 sensor.name,
-                status_str,
+                sensor.status.title(),
                 sensor.notes,
                 project_name,
                 lat,
@@ -734,7 +736,7 @@ class SensorFleetWatchlistApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
         # Annotate sensors with minimum expiry date from their active installs
         # Use subquery to get the minimum of memory and battery expiry dates
         active_installs = SensorInstall.objects.filter(
-            sensor=OuterRef("pk"), state=InstallState.INSTALLED
+            sensor=OuterRef("pk"), status=InstallStatus.INSTALLED
         )
 
         # Annotate with minimum expiry date (least of memory and battery)
@@ -776,7 +778,7 @@ class SensorFleetWatchlistApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
                 Prefetch(
                     "installs",
                     queryset=SensorInstall.objects.filter(
-                        state=InstallState.INSTALLED
+                        status=InstallStatus.INSTALLED
                     ).select_related("station", "station__project"),
                     to_attr="active_installs",
                 )
@@ -833,7 +835,7 @@ class SensorFleetWatchlistExportExcelApiView(
 
         # Annotate sensors with minimum expiry date for sorting
         active_installs = SensorInstall.objects.filter(
-            sensor=OuterRef("pk"), state=InstallState.INSTALLED
+            sensor=OuterRef("pk"), status=InstallStatus.INSTALLED
         )
 
         sensors = (
@@ -910,7 +912,7 @@ class SensorFleetWatchlistExportExcelApiView(
         # Write data rows
         for row_num, sensor in enumerate(sensors, start=1):
             latest_install = sensor.installs.filter(
-                state=InstallState.INSTALLED
+                status=InstallStatus.INSTALLED
             ).first()
 
             project_name = latest_install.station.project.name if latest_install else ""
@@ -927,11 +929,9 @@ class SensorFleetWatchlistExportExcelApiView(
                 else ""
             )
 
-            status_str = "Functional" if sensor.is_functional else "Not Functional"
-
             row_data = [
                 sensor.name,
-                status_str,
+                sensor.status.title(),
                 sensor.notes,
                 project_name,
                 lat,
@@ -984,7 +984,7 @@ class StationSensorInstallApiView(GenericAPIView[Station], SDBAPIViewMixin):
         List sensor installs for a station.
 
         Query Parameters:
-            state (optional): Filter by install state
+            status (optional): Filter by install status
                               (installed, retrieved, lost, abandoned).
                               If not provided, returns all installs.
         """
@@ -993,10 +993,10 @@ class StationSensorInstallApiView(GenericAPIView[Station], SDBAPIViewMixin):
         # Start with base queryset
         installs = SensorInstall.objects.filter(station=station)
 
-        # Apply optional state filter
-        state_filter = request.query_params.get("state")
-        if state_filter:
-            installs = installs.filter(state=state_filter)
+        # Apply optional status filter
+        status_filter = request.query_params.get("status")
+        if status_filter:
+            installs = installs.filter(status=status_filter)
 
         # Order by modified_date DESC, then install_date DESC
         installs = installs.order_by("-modified_date", "-install_date")
@@ -1014,9 +1014,9 @@ class StationSensorInstallApiView(GenericAPIView[Station], SDBAPIViewMixin):
         data["install_user"] = user.email
         data["created_by"] = user.email
 
-        # Set default state if not provided
-        if "state" not in data:
-            data["state"] = InstallState.INSTALLED
+        # Set default status if not provided
+        if "status" not in data:
+            data["status"] = InstallStatus.INSTALLED
 
         serializer = SensorInstallSerializer(data=data)
         if serializer.is_valid():
@@ -1046,7 +1046,7 @@ class StationSensorInstallSpecificApiView(
 ):
     """
     GET: Retrieve a specific sensor install
-    PATCH: Update sensor install state (Retrieved/Lost/Abandoned)
+    PATCH: Update sensor install status (Retrieved/Lost/Abandoned)
     """
 
     queryset = SensorInstall.objects.all()
@@ -1064,15 +1064,16 @@ class StationSensorInstallSpecificApiView(
         return SuccessResponse(serializer.data)
 
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Update sensor install state."""
+        """Update sensor install status."""
         user = self.get_user()
         sensor_install = self.get_object()
 
         data = request.data.copy()
 
-        # If changing state to RETRIEVED, set uninstall_user if not provided
-        new_state = data.get("state", sensor_install.state)
-        if new_state != InstallState.INSTALLED:
+        # If changing status to anything else than RETRIEVED:
+        # => set uninstall_user if not provided
+        new_status = data.get("status", sensor_install.status)
+        if new_status != InstallStatus.INSTALLED:
             if "uninstall_user" not in data or not data["uninstall_user"]:
                 data["uninstall_user"] = user.email
             if "uninstall_date" not in data or not data["uninstall_date"]:
@@ -1083,7 +1084,18 @@ class StationSensorInstallSpecificApiView(
         if serializer.is_valid():
             try:
                 serializer.save()
+
+                match new_status:
+                    case InstallStatus.LOST:
+                        sensor_install.sensor.status = SensorStatus.LOST
+                        sensor_install.sensor.save()
+                    case InstallStatus.ABANDONED:
+                        sensor_install.sensor.status = SensorStatus.ABANDONED
+                        sensor_install.sensor.save()
+                    case _:
+                        pass
                 return SuccessResponse(serializer.data)
+
             except ValidationError as e:
                 error_dict: dict[str, Any] = {}
                 if hasattr(e, "error_dict"):
@@ -1148,9 +1160,9 @@ class StationSensorInstallExportExcelApiView(GenericAPIView[Station], SDBAPIView
 
         cell_format = workbook.add_format({"border": 1, "valign": "top"})
 
-        # State-specific formats with colors
-        state_formats: dict[InstallState, xlsxwriter.format.Format] = {
-            InstallState.INSTALLED: workbook.add_format(
+        # Status-specific formats with colors
+        status_formats: dict[InstallStatus, xlsxwriter.format.Format] = {
+            InstallStatus.INSTALLED: workbook.add_format(
                 {
                     "border": 1,
                     "valign": "top",
@@ -1158,7 +1170,7 @@ class StationSensorInstallExportExcelApiView(GenericAPIView[Station], SDBAPIView
                     "font_color": "white",
                 }
             ),
-            InstallState.RETRIEVED: workbook.add_format(
+            InstallStatus.RETRIEVED: workbook.add_format(
                 {
                     "border": 1,
                     "valign": "top",
@@ -1166,7 +1178,7 @@ class StationSensorInstallExportExcelApiView(GenericAPIView[Station], SDBAPIView
                     "font_color": "white",
                 }
             ),
-            InstallState.LOST: workbook.add_format(
+            InstallStatus.LOST: workbook.add_format(
                 {
                     "border": 1,
                     "valign": "top",
@@ -1174,7 +1186,7 @@ class StationSensorInstallExportExcelApiView(GenericAPIView[Station], SDBAPIView
                     "font_color": "white",
                 }
             ),
-            InstallState.ABANDONED: workbook.add_format(
+            InstallStatus.ABANDONED: workbook.add_format(
                 {
                     "border": 1,
                     "valign": "top",
@@ -1225,10 +1237,12 @@ class StationSensorInstallExportExcelApiView(GenericAPIView[Station], SDBAPIView
             )
             col_num += 1
 
-            # State (with colored formatting)
-            install_state: InstallState = install.state  # type: ignore[assignment]
-            state_format = state_formats.get(install_state, cell_format)
-            worksheet.write(row_num, col_num, install.get_state_display(), state_format)  # pyright: ignore[reportAttributeAccessIssue]
+            # Status (with colored formatting)
+            install_status: InstallStatus = install.status  # type: ignore[assignment]
+            status_format = status_formats.get(install_status, cell_format)
+            worksheet.write(
+                row_num, col_num, install.get_status_display(), status_format
+            )  # pyright: ignore[reportAttributeAccessIssue]
             col_num += 1
 
             # Install Date

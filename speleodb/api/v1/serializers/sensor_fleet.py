@@ -13,7 +13,7 @@ from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
-from speleodb.gis.models.sensor import InstallState
+from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.models import User
 
 logger = logging.getLogger(__name__)
@@ -59,22 +59,22 @@ class SensorSerializer(serializers.ModelSerializer[Sensor]):
 
     def get_latest_install_project(self, obj: Sensor) -> str | None:
         """Get the name of the project where the sensor is currently installed."""
-        install = obj.installs.filter(state=InstallState.INSTALLED).first()
+        install = obj.installs.filter(status=InstallStatus.INSTALLED).first()
         return install.station.project.name if install else None
 
     def get_latest_install_lat(self, obj: Sensor) -> float | None:
         """Get the latitude of the station where the sensor is currently installed."""
-        install = obj.installs.filter(state=InstallState.INSTALLED).first()
+        install = obj.installs.filter(status=InstallStatus.INSTALLED).first()
         return float(install.station.latitude) if install else None
 
     def get_latest_install_long(self, obj: Sensor) -> float | None:
         """Get the longitude of the station where the sensor is currently installed."""
-        install = obj.installs.filter(state=InstallState.INSTALLED).first()
+        install = obj.installs.filter(status=InstallStatus.INSTALLED).first()
         return float(install.station.longitude) if install else None
 
     def get_latest_install_memory_expiry(self, obj: Sensor) -> str | None:
         """Get the memory expiry date of the current install."""
-        install = obj.installs.filter(state=InstallState.INSTALLED).first()
+        install = obj.installs.filter(status=InstallStatus.INSTALLED).first()
         return (
             install.expiracy_memory_date.isoformat()
             if install and install.expiracy_memory_date
@@ -83,7 +83,7 @@ class SensorSerializer(serializers.ModelSerializer[Sensor]):
 
     def get_latest_install_battery_expiry(self, obj: Sensor) -> str | None:
         """Get the battery expiry date of the current install."""
-        install = obj.installs.filter(state=InstallState.INSTALLED).first()
+        install = obj.installs.filter(status=InstallStatus.INSTALLED).first()
         return (
             install.expiracy_battery_date.isoformat()
             if install and install.expiracy_battery_date
@@ -92,7 +92,7 @@ class SensorSerializer(serializers.ModelSerializer[Sensor]):
 
     def get_active_installs(self, obj: Sensor) -> list[dict[str, Any]]:
         """Get active installs with full details."""
-        installs = obj.installs.filter(state=InstallState.INSTALLED).select_related(  # pyright: ignore[reportAttributeAccessIssue]
+        installs = obj.installs.filter(status=InstallStatus.INSTALLED).select_related(  # pyright: ignore[reportAttributeAccessIssue]
             "station", "station__project"
         )
 
@@ -346,14 +346,14 @@ class SensorInstallSerializer(serializers.ModelSerializer[SensorInstall]):
         ]
 
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Validate sensor install data and state transitions."""
+        """Validate sensor install data and status transitions."""
         instance = self.instance
-        state = data.get(
-            "state", instance.state if instance else InstallState.INSTALLED
+        status = data.get(
+            "status", instance.status if instance else InstallStatus.INSTALLED
         )
 
-        # If updating state to not INSTALLED, require uninstall fields
-        if state != InstallState.INSTALLED:
+        # If updating status to not INSTALLED, require uninstall fields
+        if status != InstallStatus.INSTALLED:
             uninstall_date = data.get("uninstall_date")
             uninstall_user = data.get("uninstall_user")
 
@@ -387,13 +387,13 @@ class SensorInstallSerializer(serializers.ModelSerializer[SensorInstall]):
                     }
                 )
 
-        # If state is INSTALLED, clear uninstall fields
+        # If status is INSTALLED, clear uninstall fields
         else:
             if "uninstall_date" in data and data["uninstall_date"] is not None:
                 raise serializers.ValidationError(
                     {
                         "uninstall_date": (
-                            "Uninstall date can only be set when state is uninstalled."
+                            "Uninstall date can only be set when status is uninstalled."
                         )
                     }
                 )
@@ -401,21 +401,21 @@ class SensorInstallSerializer(serializers.ModelSerializer[SensorInstall]):
                 raise serializers.ValidationError(
                     {
                         "uninstall_user": (
-                            "Uninstall user can only be set when state is uninstalled."
+                            "Uninstall user can only be set when status is uninstalled."
                         )
                     }
                 )
 
-        # Validate state transitions
+        # Validate status transitions
         if instance:
-            current_state = instance.state
-            # Can only change from INSTALLED to other states
-            if current_state not in (InstallState.INSTALLED, state):
+            current_status = instance.status
+            # Can only change from INSTALLED to other statuses
+            if current_status not in (InstallStatus.INSTALLED, status):
                 raise serializers.ValidationError(
                     {
-                        "state": (
-                            f"Cannot change state from {current_state} to {state}. "
-                            "Only INSTALLED sensors can have their state changed."
+                        "status": (
+                            f"Cannot change status from {current_status} to {status}. "
+                            "Only INSTALLED sensors can have their status changed."
                         )
                     }
                 )
@@ -427,7 +427,7 @@ class SensorInstallSerializer(serializers.ModelSerializer[SensorInstall]):
         # Check if sensor is already installed elsewhere
         sensor = validated_data["sensor"]
         existing_install = SensorInstall.objects.filter(
-            sensor=sensor, state=InstallState.INSTALLED
+            sensor=sensor, status=InstallStatus.INSTALLED
         ).first()
 
         if existing_install:
@@ -454,7 +454,7 @@ class SensorInstallSerializer(serializers.ModelSerializer[SensorInstall]):
             # Only check if it's a different sensor
             if new_sensor != instance.sensor:
                 existing_install = SensorInstall.objects.filter(
-                    sensor=new_sensor, state=InstallState.INSTALLED
+                    sensor=new_sensor, status=InstallStatus.INSTALLED
                 ).first()
 
                 if existing_install:

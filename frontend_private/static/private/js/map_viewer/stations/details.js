@@ -184,6 +184,8 @@ export const StationDetails = {
         switch (tabName) {
             case 'details':
                 if (currentStationId) {
+                    // Show inline loading state in the modal content, then load data
+                    this.showDetailsLoading();
                     this.loadStationDetails(currentStationId, currentProjectId);
                 } else {
                     this.showEmptyDetails();
@@ -234,6 +236,37 @@ export const StationDetails = {
                         </svg>
                         <h3 class="text-white text-lg font-medium mb-2">No Station Selected</h3>
                         <p class="text-slate-400 mb-4">Select a station from the map or create a new one.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    showDetailsLoading() {
+        const content = document.getElementById('station-modal-content');
+        content.innerHTML = `
+            <div class="tab-content active">
+                <div class="space-y-8">
+                    <div class="bg-slate-700/70 rounded-xl border border-slate-600/50 overflow-hidden">
+                        <div class="bg-slate-800/30 p-6">
+                            <!-- Title skeleton -->
+                            <div class="h-8 w-48 bg-slate-600/50 rounded animate-pulse"></div>
+                            <!-- Buttons skeleton -->
+                            <div class="grid grid-cols-2 gap-3 mt-4">
+                                <div class="h-10 bg-slate-600/50 rounded animate-pulse"></div>
+                                <div class="h-10 bg-slate-600/50 rounded animate-pulse"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-8 space-y-6">
+                            <!-- Loading spinner -->
+                            <div class="flex items-center justify-center py-8">
+                                <div class="text-center">
+                                    <div class="loading-spinner mx-auto mb-4"></div>
+                                    <p class="text-slate-400">Loading station details...</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

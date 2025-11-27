@@ -27,7 +27,8 @@ from speleodb.gis.models.sensor import Sensor
 from speleodb.gis.models.sensor import SensorFleet
 from speleodb.gis.models.sensor import SensorFleetUserPermission
 from speleodb.gis.models.sensor import SensorInstall
-from speleodb.gis.models.sensor import InstallState
+from speleodb.gis.models.sensor import InstallStatus
+from speleodb.gis.models.sensor import SensorStatus
 
 __all__ = [
     "Experiment",
@@ -35,7 +36,7 @@ __all__ = [
     "ExperimentUserPermission",
     "GISView",
     "GISViewProject",
-    "InstallState",
+    "InstallStatus",
     "LogEntry",
     "PointOfInterest",
     "ProjectGeoJSON",
@@ -43,6 +44,7 @@ __all__ = [
     "SensorFleet",
     "SensorFleetUserPermission",
     "SensorInstall",
+    "SensorStatus",
     "Station",
     "StationResource",
     "StationTag",

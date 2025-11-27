@@ -19,7 +19,6 @@ function isSubmitterEmailField(field) {
 // Module state
 let selectedExperimentId = null;
 let experimentDataRows = [];
-let isLoadingData = false;
 let currentStationId = null;
 let currentProjectId = null;
 
@@ -187,22 +186,8 @@ export const StationExperiments = {
 
         const hasWriteAccess = Config.hasProjectWriteAccess(currentProjectId);
 
-        // Show loading state
-        container.innerHTML = `
-            <div class="tab-content active">
-                <div class="space-y-6">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-xl font-semibold text-white">Scientific Experiments</h3>
-                    </div>
-                    <div class="flex items-center justify-center py-12">
-                        <div class="text-center">
-                            <div class="loading-spinner mx-auto mb-4"></div>
-                            <p class="text-slate-400">Loading experiments...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        // Show loading overlay
+        const loadingOverlay = Utils.showLoadingOverlay('Loading experiments...');
 
         try {
             const experimentsResponse = await API.getExperiments();
@@ -210,6 +195,7 @@ export const StationExperiments = {
             const activeExperiments = experiments.filter(exp => exp.is_active);
 
             if (activeExperiments.length === 0) {
+                Utils.hideLoadingOverlay(loadingOverlay);
                 container.innerHTML = `
                     <div class="tab-content active">
                         <div class="space-y-6">
@@ -232,7 +218,6 @@ export const StationExperiments = {
             // Reset state
             selectedExperimentId = null;
             experimentDataRows = [];
-            isLoadingData = false;
 
             const renderContent = () => {
                 const selectedExperiment = activeExperiments.find(exp => exp.id === selectedExperimentId);
@@ -273,14 +258,7 @@ export const StationExperiments = {
                             ${selectedExperiment ? `
                                 <div class="bg-slate-800/30 rounded-lg border border-slate-600/50 p-6">
                                     <h4 class="text-lg font-semibold text-white mb-4">Data Records</h4>
-                                    ${isLoadingData ? `
-                                        <div class="flex items-center justify-center py-8">
-                                            <div class="text-center">
-                                                <div class="loading-spinner mx-auto mb-2"></div>
-                                                <p class="text-slate-400 text-sm">Loading data...</p>
-                                            </div>
-                                        </div>
-                                    ` : renderExperimentTable(selectedExperiment, experimentDataRows, stationId, currentProjectId)}
+                                    ${renderExperimentTable(selectedExperiment, experimentDataRows, stationId, currentProjectId)}
                                 </div>
                             ` : `
                                 <div class="text-center py-12 bg-slate-800/30 rounded-lg border border-slate-600/50">
@@ -301,8 +279,7 @@ export const StationExperiments = {
                     selector.addEventListener('change', async (e) => {
                         selectedExperimentId = e.target.value || null;
                         if (selectedExperimentId) {
-                            isLoadingData = true;
-                            renderContent();
+                            const dataLoadingOverlay = Utils.showLoadingOverlay('Loading experiment data...');
                             try {
                                 const response = await API.getExperimentData(stationId, selectedExperimentId);
                                 experimentDataRows = response?.data || response || [];
@@ -310,11 +287,10 @@ export const StationExperiments = {
                                 console.error('Error fetching experiment data:', err);
                                 experimentDataRows = [];
                             }
-                            isLoadingData = false;
+                            Utils.hideLoadingOverlay(dataLoadingOverlay);
                             renderContent();
                         } else {
                             experimentDataRows = [];
-                            isLoadingData = false;
                             renderContent();
                         }
                     });
@@ -342,9 +318,12 @@ export const StationExperiments = {
                 }
             };
 
+            // Hide loading overlay and render content
+            Utils.hideLoadingOverlay(loadingOverlay);
             renderContent();
         } catch (error) {
             console.error('Error loading experiments:', error);
+            Utils.hideLoadingOverlay(loadingOverlay);
             container.innerHTML = `
                 <div class="tab-content active">
                     <div class="space-y-6">
@@ -740,3 +719,4 @@ export const StationExperiments = {
 
 // Expose functions globally for onclick handlers
 window.StationExperiments = StationExperiments;
+

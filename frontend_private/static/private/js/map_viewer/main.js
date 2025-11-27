@@ -308,17 +308,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Reorder layers to ensure stations are on top of survey lines
         Layers.reorderLayers();
 
-        // Load POIs after all projects are loaded
-        setTimeout(async () => {
-            try {
-                const poisData = await POIManager.loadAllPOIs();
-                Layers.addPOILayer(poisData);
-                // Reorder again after POIs are loaded
-                Layers.reorderLayers();
-            } catch (e) {
-                console.error('Error loading POIs', e);
-            }
-        }, 1000);
+        // Load POIs (no delay - load immediately to ensure spinner waits for all data)
+        try {
+            const poisData = await POIManager.loadAllPOIs();
+            Layers.addPOILayer(poisData);
+            // Reorder again after POIs are loaded
+            Layers.reorderLayers();
+        } catch (e) {
+            console.error('Error loading POIs', e);
+        }
 
         // Create depth scale dynamically
         createDepthScale();
@@ -335,14 +333,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Hide Loading Overlay
+        // Hide Loading Overlay - only after ALL data (projects, GeoJSON, stations, POIs) is loaded
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
             overlay.classList.add('opacity-0', 'pointer-events-none');
             setTimeout(() => overlay.remove(), 500);
         }
 
-        console.log('✅ Map Data Loaded');
+        console.log('✅ Map Data Loaded (Projects, GeoJSON, Stations, POIs)');
     });
 
     // Setup UI listeners

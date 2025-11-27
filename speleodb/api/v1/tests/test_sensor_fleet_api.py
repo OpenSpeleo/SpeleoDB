@@ -32,7 +32,8 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
-from speleodb.gis.models.sensor import InstallState
+from speleodb.gis.models import SensorStatus
+from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.models.user import User
 from speleodb.users.tests.factories import UserFactory
 
@@ -261,8 +262,16 @@ class TestSensorFleetListCreate:
             "name": "Fleet with Sensors",
             "description": "Test",
             "sensors": [
-                {"name": "Sensor 1", "notes": "First sensor", "is_functional": True},
-                {"name": "Sensor 2", "notes": "Second sensor", "is_functional": False},
+                {
+                    "name": "Sensor 1",
+                    "notes": "First sensor",
+                    "status": SensorStatus.FUNCTIONAL,
+                },
+                {
+                    "name": "Sensor 2",
+                    "notes": "Second sensor",
+                    "status": SensorStatus.BROKEN,
+                },
             ],
         }
 
@@ -587,7 +596,7 @@ class TestSensorListCreate:
         data = {
             "name": "New Sensor",
             "notes": "Test notes",
-            "is_functional": True,
+            "status": SensorStatus.FUNCTIONAL,
         }
 
         response = api_client.post(
@@ -693,7 +702,10 @@ class TestSensorToggleFunctional:
         user: User,
     ) -> None:
         """Toggle functional status from True to False."""
-        sensor = SensorFactory.create(fleet=sensor_fleet_with_write, is_functional=True)
+        sensor = SensorFactory.create(
+            fleet=sensor_fleet_with_write,
+            status=SensorStatus.FUNCTIONAL,
+        )
 
         response = api_client.patch(
             reverse("api:v1:sensor-toggle-functional", kwargs={"id": sensor.id}),
@@ -702,7 +714,7 @@ class TestSensorToggleFunctional:
 
         assert response.status_code == status.HTTP_200_OK
         sensor.refresh_from_db()
-        assert sensor.is_functional is False
+        assert sensor.status == SensorStatus.BROKEN
 
     def test_toggle_functional_false_to_true(
         self,
@@ -710,9 +722,9 @@ class TestSensorToggleFunctional:
         sensor_fleet_with_write: SensorFleet,
         user: User,
     ) -> None:
-        """Toggle functional status from False to True."""
+        """Toggle functional status from BROKEN to FUNCTIONAL."""
         sensor = SensorFactory.create(
-            fleet=sensor_fleet_with_write, is_functional=False
+            fleet=sensor_fleet_with_write, status=SensorStatus.BROKEN
         )
 
         response = api_client.patch(
@@ -722,7 +734,7 @@ class TestSensorToggleFunctional:
 
         assert response.status_code == status.HTTP_200_OK
         sensor.refresh_from_db()
-        assert sensor.is_functional is True
+        assert sensor.status == SensorStatus.FUNCTIONAL
 
     def test_toggle_without_write_permission(
         self,
@@ -1050,7 +1062,7 @@ class TestSensorFleetExport:
         SensorInstallFactory.create(
             sensor=sensor1,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
         )
 
         response = api_client.get(
@@ -1111,7 +1123,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor1,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=30),
             created_by=user.email,
         )
@@ -1120,7 +1132,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor2,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_battery_date=today + timedelta(days=90),
             created_by=user.email,
         )
@@ -1129,7 +1141,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor3,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=45),
             created_by=user.email,
         )
@@ -1166,7 +1178,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor1,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=10),
             created_by=user.email,
         )
@@ -1175,7 +1187,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor2,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_battery_date=today + timedelta(days=20),
             created_by=user.email,
         )
@@ -1211,7 +1223,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=100),
             created_by=user.email,
         )
@@ -1242,7 +1254,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=30),
             expiracy_battery_date=None,
             created_by=user.email,
@@ -1275,7 +1287,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=None,
             expiracy_battery_date=today + timedelta(days=30),
             created_by=user.email,
@@ -1309,7 +1321,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=30),
             expiracy_battery_date=today + timedelta(days=90),
             created_by=user.email,
@@ -1415,7 +1427,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor1,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             install_date=today - timedelta(days=2),
             expiracy_memory_date=today - timedelta(days=1),
             created_by=user.email,
@@ -1425,7 +1437,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor2,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=1),
             created_by=user.email,
         )
@@ -1500,7 +1512,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor1,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=30),
             created_by=user.email,
         )
@@ -1510,7 +1522,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor2,
             station=station,
-            state=InstallState.RETRIEVED,
+            status=InstallStatus.RETRIEVED,
             install_date=today - timedelta(days=11),
             expiracy_memory_date=today + timedelta(days=30),
             uninstall_date=today - timedelta(days=10),
@@ -1546,7 +1558,7 @@ class TestSensorFleetWatchlist:
         SensorInstallFactory.create(
             sensor=sensor,
             station=station,
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=today + timedelta(days=30),
             expiracy_battery_date=today + timedelta(days=60),
             created_by=user.email,

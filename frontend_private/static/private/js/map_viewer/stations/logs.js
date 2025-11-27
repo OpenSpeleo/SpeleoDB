@@ -16,41 +16,8 @@ export const StationLogs = {
         const hasWriteAccess = Config.hasProjectWriteAccess(currentProjectId);
         const hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(currentProjectId) : hasWriteAccess;
 
-        // Show loading skeleton
-        container.innerHTML = `
-            <div class="tab-content active">
-                <div class="space-y-4 p-6">
-                    <div class="flex items-center justify-end">
-                        ${hasWriteAccess ? `
-                            <button id="new-log-entry-btn" class="btn-primary w-full sm:w-auto">
-                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                </svg>
-                                New Journal Entry
-                            </button>
-                        ` : `
-                            <button class="btn-primary w-full sm:w-auto opacity-50 cursor-not-allowed" title="You need write access" disabled>
-                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                </svg>
-                                New Journal Entry
-                            </button>
-                        `}
-                    </div>
-                    <div class="journal-skeleton">
-                        <div class="row"></div>
-                        <div class="row"></div>
-                        <div class="row"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Wire up button immediately
-        if (hasWriteAccess) {
-            const btn = document.getElementById('new-log-entry-btn');
-            if (btn) btn.onclick = () => this.openCreateModal(stationId);
-        }
+        // Show loading overlay
+        const loadingOverlay = Utils.showLoadingOverlay('Loading journal entries...');
 
         try {
             const response = await API.getStationLogs(stationId);
@@ -109,6 +76,9 @@ export const StationLogs = {
                 </div>
             `;
 
+            // Hide loading overlay
+            Utils.hideLoadingOverlay(loadingOverlay);
+
             // Wire up event handlers
             if (hasWriteAccess) {
                 const btn = document.getElementById('new-log-entry-btn');
@@ -120,6 +90,7 @@ export const StationLogs = {
 
         } catch (error) {
             console.error('Error loading logs:', error);
+            Utils.hideLoadingOverlay(loadingOverlay);
             container.innerHTML = `
                 <div class="tab-content active p-6">
                     <div class="text-center py-12">

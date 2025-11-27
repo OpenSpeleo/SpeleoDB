@@ -26,16 +26,8 @@ export const StationResources = {
         const hasWriteAccess = Config.hasProjectWriteAccess(currentProjectId);
         const hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(currentProjectId) : hasWriteAccess;
 
-        // Show loading skeleton
-        container.innerHTML = `
-            <div class="tab-content active">
-                <div class="p-6">
-                    <div class="flex justify-center items-center min-h-[200px]">
-                        <div class="loading-spinner w-8 h-8"></div>
-                    </div>
-                </div>
-            </div>
-        `;
+        // Show loading overlay
+        const loadingOverlay = Utils.showLoadingOverlay('Loading station resources...');
 
         try {
             // Fetch resources from API
@@ -95,6 +87,9 @@ export const StationResources = {
                 </div>
             `;
 
+            // Hide loading overlay
+            Utils.hideLoadingOverlay(loadingOverlay);
+
             // Wire up the add button
             if (hasWriteAccess) {
                 const addBtn = document.getElementById('add-resource-btn');
@@ -108,6 +103,7 @@ export const StationResources = {
 
         } catch (error) {
             console.error('Error loading resources:', error);
+            Utils.hideLoadingOverlay(loadingOverlay);
             container.innerHTML = `
                 <div class="tab-content active p-6 text-center">
                     <div class="text-red-400 mb-4">Error loading resources</div>
@@ -1104,3 +1100,4 @@ export const StationResources = {
         return parts[parts.length - 1] || 'File';
     }
 };
+

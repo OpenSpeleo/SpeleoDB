@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from speleodb.api.v1.tests.factories import SensorFactory
 from speleodb.api.v1.tests.factories import StationFactory
-from speleodb.gis.models import InstallState
+from speleodb.gis.models import InstallStatus
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
@@ -37,7 +37,7 @@ class TestSensorInstallModel:
             install_user="installer@example.com",
             created_by="creator@example.com",
         )
-        assert inst.state == InstallState.INSTALLED
+        assert inst.status == InstallStatus.INSTALLED
         assert inst.uninstall_date is None
         assert inst.uninstall_user is None
 
@@ -49,48 +49,48 @@ class TestSensorInstallModel:
             station=station,
             install_date=timezone.localdate(),
             install_user="installer@example.com",
-            state=InstallState.RETRIEVED,
+            status=InstallStatus.RETRIEVED,
             uninstall_date=timezone.localdate(),
             uninstall_user="retriever@example.com",
             created_by="creator@example.com",
         )
-        assert inst.state == InstallState.RETRIEVED
+        assert inst.status == InstallStatus.RETRIEVED
         assert inst.uninstall_date is not None
         assert inst.uninstall_user is not None
         assert str(inst) == f"[STATUS: RETRIEVED]: Sensor: {inst.sensor.id}"
 
     @pytest.mark.parametrize(
-        "state", [InstallState.RETRIEVED, InstallState.ABANDONED, InstallState.LOST]
+        "status", [InstallStatus.RETRIEVED, InstallStatus.ABANDONED, InstallStatus.LOST]
     )
     def test_constraints_is_retrieved_false_requires_null_retrieval_fields(
         self,
         sensor: Sensor,
         station: Station,
-        state: InstallState,
+        status: InstallStatus,
     ) -> None:
         inst = SensorInstall.objects.create(
             sensor=sensor,
             station=station,
             install_date=timezone.localdate(),
             install_user="installer@example.com",
-            state=state,
+            status=status,
             uninstall_date=timezone.localdate(),
             uninstall_user="uninstaller@example.com",
             created_by="creator@example.com",
         )
-        assert inst.state == state
+        assert inst.status == status
         assert inst.uninstall_date is not None
         assert inst.uninstall_user is not None
 
-        assert str(inst) == f"[STATUS: {state.upper()}]: Sensor: {inst.sensor.id}"
+        assert str(inst) == f"[STATUS: {status.upper()}]: Sensor: {inst.sensor.id}"
 
-        # Invalid: state != InstallState.INSTALLED but retrieval fields not set
+        # Invalid: status != InstallStatus.INSTALLED but retrieval fields not set
         inst_bad = SensorInstall(
             sensor=sensor,
             station=station,
             install_date=timezone.localdate(),
             install_user="installer@example.com",
-            state=state,
+            status=status,
             uninstall_date=None,
             uninstall_user=None,
             created_by="creator@example.com",
@@ -107,20 +107,20 @@ class TestSensorInstallModel:
             station=station,
             install_date=timezone.localdate(),
             install_user="installer@example.com",
-            state=InstallState.RETRIEVED,
+            status=InstallStatus.RETRIEVED,
             uninstall_date=timezone.localdate(),
             uninstall_user="retriever@example.com",
             created_by="creator@example.com",
         )
         inst.full_clean()  # should pass
 
-        # Invalid: `state=InstallState.RETRIEVED` but uninstall_user is null
+        # Invalid: `status=InstallStatus.RETRIEVED` but uninstall_user is null
         inst_bad = SensorInstall(
             sensor=sensor,
             station=station,
             install_date=timezone.localdate(),
             install_user="installer@example.com",
-            state=InstallState.RETRIEVED,
+            status=InstallStatus.RETRIEVED,
             uninstall_date=timezone.localdate(),
             uninstall_user=None,
             created_by="creator@example.com",
@@ -128,13 +128,13 @@ class TestSensorInstallModel:
         with pytest.raises(ValidationError):
             inst_bad.full_clean()
 
-        # Invalid: `state=InstallState.RETRIEVED` but uninstall_user is null
+        # Invalid: `status=InstallStatus.RETRIEVED` but uninstall_user is null
         inst_bad = SensorInstall(
             sensor=sensor,
             station=station,
             install_date=timezone.localdate(),
             install_user="installer@example.com",
-            state=InstallState.RETRIEVED,
+            status=InstallStatus.RETRIEVED,
             uninstall_date=None,
             uninstall_user="retriever@example.com",
             created_by="creator@example.com",
@@ -151,7 +151,7 @@ class TestSensorInstallModel:
             station=station,
             install_date=timezone.localdate(),
             install_user="installer@example.com",
-            state=InstallState.RETRIEVED,
+            status=InstallStatus.RETRIEVED,
             uninstall_date=timezone.localdate(),
             uninstall_user="retriever@example.com",
             created_by="creator@example.com",
@@ -164,7 +164,7 @@ class TestSensorInstallModel:
             station=station,
             install_date=timezone.localdate(),
             install_user="installer@example.com",
-            state=InstallState.RETRIEVED,
+            status=InstallStatus.RETRIEVED,
             uninstall_date=timezone.localdate() + timedelta(days=1),
             uninstall_user="retriever@example.com",
             created_by="creator@example.com",
@@ -177,7 +177,7 @@ class TestSensorInstallModel:
             station=station,
             install_date=timezone.localdate() + timedelta(days=2),
             install_user="installer@example.com",
-            state=InstallState.RETRIEVED,
+            status=InstallStatus.RETRIEVED,
             uninstall_date=timezone.localdate(),
             uninstall_user="retriever@example.com",
             created_by="creator@example.com",
@@ -196,7 +196,7 @@ class TestSensorInstallModel:
             station=station,
             install_date=past_date,
             install_user="installer@example.com",
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_battery_date=past_date,
             created_by="creator@example.com",
         )
@@ -207,7 +207,7 @@ class TestSensorInstallModel:
             station=station,
             install_date=past_date,
             install_user="installer@example.com",
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=past_date,
             created_by="creator@example.com",
         )
@@ -217,7 +217,7 @@ class TestSensorInstallModel:
             station=station,
             install_date=past_date,
             install_user="installer@example.com",
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_battery_date=future_date,
             created_by="creator@example.com",
         )
@@ -237,7 +237,7 @@ class TestSensorInstallModel:
             station=station,
             install_date=today,
             install_user="installer@example.com",
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_battery_date=near_future,
             created_by="creator@example.com",
         )
@@ -246,7 +246,7 @@ class TestSensorInstallModel:
             station=station,
             install_date=today,
             install_user="installer@example.com",
-            state=InstallState.INSTALLED,
+            status=InstallStatus.INSTALLED,
             expiracy_memory_date=far_future,
             created_by="creator@example.com",
         )
@@ -271,7 +271,7 @@ class TestSensorInstallModel:
             station=station,
             install_date=past_date,
             install_user="installer@example.com",
-            state=InstallState.RETRIEVED,  # retrieved already
+            status=InstallStatus.RETRIEVED,  # retrieved already
             expiracy_battery_date=past_date,
             uninstall_date=today,
             uninstall_user="retriever@example.com",
@@ -300,7 +300,7 @@ class TestSensorInstallModel:
         assert (
             SensorInstall.objects.filter(
                 sensor=sensor,
-                state=InstallState.INSTALLED,
+                status=InstallStatus.INSTALLED,
             ).count()
             == 1
         )
@@ -313,17 +313,17 @@ class TestSensorInstallModel:
                 station=station,
                 install_date=timezone.localdate(),
                 install_user="installer2@example.com",
-                state=InstallState.INSTALLED,
+                status=InstallStatus.INSTALLED,
                 created_by="creator@example.com",
             )
 
-        # If we change the state to RETRIEVED, it should succeed
+        # If we change the status to RETRIEVED, it should succeed
         _ = SensorInstall.objects.create(
             sensor=sensor,
             station=station,
             install_date=timezone.localdate(),
             install_user="installer2@example.com",
-            state=InstallState.RETRIEVED,
+            status=InstallStatus.RETRIEVED,
             uninstall_date=timezone.localdate(),
             uninstall_user="retriever@example.com",
             created_by="creator@example.com",
@@ -332,7 +332,7 @@ class TestSensorInstallModel:
         assert (
             SensorInstall.objects.filter(
                 sensor=sensor,
-                state=InstallState.INSTALLED,
+                status=InstallStatus.INSTALLED,
             ).count()
             == 1
         )
@@ -340,7 +340,7 @@ class TestSensorInstallModel:
         assert (
             SensorInstall.objects.filter(
                 sensor=sensor,
-                state=InstallState.RETRIEVED,
+                status=InstallStatus.RETRIEVED,
             ).count()
             == 1
         )

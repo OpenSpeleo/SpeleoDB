@@ -35,15 +35,25 @@ Parameters:
                     <div class="text-xs text-slate-400 md:hidden mt-1">{{ sensor.notes|truncatewords:8 }}</div>
                 </td>
                 <td class="px-4 py-3 text-center">
-                    {% if sensor.is_functional %}
+                    {% if sensor.status == "functional" %}
                     <span
                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                         ✓ Functional
                     </span>
-                    {% else %}
+                    {% elif sensor.status == "broken" %}
                     <span
                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                        ✗ Not Functional
+                        ✗ Broken
+                    </span>
+                    {% elif sensor.status == "lost" %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        ⚠ Lost
+                    </span>
+                    {% elif sensor.status == "abandoned" %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        ⊘ Abandoned
                     </span>
                     {% endif %}
                 </td>
@@ -70,14 +80,17 @@ Parameters:
                 <td class="px-4 py-3">
                     <div class="flex items-center justify-center gap-2">
                         <button type="button"
-                            class="toggle-sensor-btn text-xs px-2 py-1 rounded {% if sensor.is_functional %}bg-rose-500/20 hover:bg-rose-500/30 text-rose-300{% else %}bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300{% endif %} w-24"
+                            class="toggle-sensor-btn text-xs px-2 py-1 rounded {% if sensor.status == 'functional' %}bg-rose-500/20 hover:bg-rose-500/30 text-rose-300{% else %}bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300{% endif %} w-28"
                             data-sensor-id="{{ sensor.id }}"
-                            data-is-functional="{{ sensor.is_functional|lower }}">
-                            {% if sensor.is_functional %}Mark Broken{% else %}Mark Fixed{% endif %}
+                            data-status="{{ sensor.status }}">
+                            {% if sensor.status == "functional" %}Mark Broken{% else %}Mark Functional{% endif %}
                         </button>
                         <button type="button"
                             class="edit-sensor-btn text-xs px-2 py-1 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300"
-                            data-sensor-id="{{ sensor.id }}">
+                            data-sensor-id="{{ sensor.id }}"
+                            data-sensor-name="{{ sensor.name }}"
+                            data-sensor-notes="{{ sensor.notes }}"
+                            data-sensor-status="{{ sensor.status }}">
                             Edit
                         </button>
                         <button type="button"

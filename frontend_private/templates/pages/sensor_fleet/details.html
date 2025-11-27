@@ -145,6 +145,20 @@
                         placeholder="e.g., Flow Meter #023">
                 </div>
 
+                <!-- Status -->
+                <div id="modal_status_container" class="hidden">
+                    <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_sensor_status">
+                        Status <span class="text-rose-500">*</span>
+                    </label>
+                    <select id="modal_sensor_status"
+                        class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        <option value="functional">✓ Functional</option>
+                        <option value="broken">✗ Broken</option>
+                        <option value="lost">⚠ Lost</option>
+                        <option value="abandoned">⊘ Abandoned</option>
+                    </select>
+                </div>
+
                 <!-- Notes -->
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_sensor_notes">
@@ -260,20 +274,23 @@
         $('#sensor_modal_title').text('Add Sensor');
         $('#modal_sensor_name').val('');
         $('#modal_sensor_notes').val('');
+        $('#modal_sensor_status').val('functional');
+        $('#modal_status_container').addClass('hidden'); // Hide status for new sensors (defaults to functional)
         $('#sensor_modal').css('display', 'flex').removeClass('hidden');
     });
 
     // Open modal for editing sensor
     $(document).on('click', '.edit-sensor-btn', function () {
         currentSensorId = $(this).data('sensor-id');
-        const row = $(this).closest('tr');
+        const button = $(this);
 
-        // In real implementation, fetch sensor data
-        console.log('🔍 Fetching sensor:', currentSensorId);
+        console.log('🔍 Editing sensor:', currentSensorId);
 
         $('#sensor_modal_title').text('Edit Sensor');
-        $('#modal_sensor_name').val(row.find('td:first .font-medium').text());
-        $('#modal_sensor_notes').val(''); // Would fetch from API
+        $('#modal_sensor_name').val(button.data('sensor-name') || '');
+        $('#modal_sensor_notes').val(button.data('sensor-notes') || '');
+        $('#modal_sensor_status').val(button.data('sensor-status') || 'functional');
+        $('#modal_status_container').removeClass('hidden'); // Show status for editing
         $('#sensor_modal').css('display', 'flex').removeClass('hidden');
     });
 
@@ -290,6 +307,7 @@
     $('#sensor_modal_save').click(function () {
         const name = $('#modal_sensor_name').val().trim();
         const notes = $('#modal_sensor_notes').val().trim();
+        const status = $('#modal_sensor_status').val();
 
         if (!name) {
             alert('Sensor name is required');
@@ -300,6 +318,11 @@
             name: name,
             notes: notes
         };
+
+        // Include status only when editing (new sensors default to functional on backend)
+        if (currentSensorId) {
+            sensorData.status = status;
+        }
 
         // Get CSRF token
         const csrftoken = $('[name=csrfmiddlewaretoken]').val();
@@ -381,18 +404,18 @@
         }
     });
 
-    // Toggle sensor functional status
+    // Toggle sensor functional status (between functional and broken)
     $(document).on('click', '.toggle-sensor-btn', function () {
         const sensorId = $(this).data('sensor-id');
+        const currentStatus = $(this).data('status');
         const button = $(this);
-        const row = button.closest('tr');
 
-        console.log('🔄 Toggling sensor status:', sensorId);
+        console.log('🔄 Toggling sensor status:', sensorId, 'Current:', currentStatus);
 
         // Get CSRF token
         const csrftoken = $('[name=csrfmiddlewaretoken]').val();
 
-        // REAL API CALL
+        // REAL API CALL - uses toggle endpoint which switches between functional/broken
         $.ajax({
             url: Urls['api:v1:sensor-toggle-functional'](sensorId),
             method: 'PATCH',
