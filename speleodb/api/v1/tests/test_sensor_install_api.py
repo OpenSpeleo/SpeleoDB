@@ -1215,3 +1215,4 @@ class TestStationSensorInstallExcelExport:
             response["Content-Type"]
             == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+

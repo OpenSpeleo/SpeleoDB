@@ -19,8 +19,15 @@ logger = logging.getLogger(__name__)
 def get_log_entry_path(instance: LogEntry, filename: str) -> str:
     ext = Path(filename).suffix[1:]
 
+    # Determine path prefix based on station type
+    # SubsurfaceStation has 'project', SurfaceStation has 'network'
+    if hasattr(instance.station, "project"):
+        prefix = f"stations/{instance.station.project.id}"
+    else:
+        prefix = f"networks/{instance.station.network.id}"
+
     return (
-        f"{instance.station.project.id}/{instance.station.id}/logs/"
+        f"{prefix}/{instance.station.id}/logs/"
         f"{os.urandom(6).hex()}.{ext}"
     )
 

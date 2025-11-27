@@ -27,9 +27,10 @@ from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
-from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationTag
+from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SurfaceStation
 from speleodb.utils.admin_filters import GeoJSONProjectFilter
 from speleodb.utils.admin_filters import StationProjectFilter
 
@@ -124,7 +125,7 @@ class StationResourceInline(admin.TabularInline):  # type: ignore[type-arg]
     ordering = ("-modified_date",)
 
 
-@admin.register(Station)
+@admin.register(SubsurfaceStation)
 class StationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "name",
@@ -133,7 +134,7 @@ class StationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "longitude",
         "created_by",
         "creation_date",
-        "modified_date",
+        "modified_date", 
         "resource_count",
         "tag_display",
     )

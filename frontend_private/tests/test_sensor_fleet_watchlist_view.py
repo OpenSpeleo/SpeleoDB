@@ -269,3 +269,4 @@ class TestSensorFleetWatchlistView(TestCase):
         # Context should include sensor_fleet
         assert "sensor_fleet" in response.context
         assert response.context["sensor_fleet"].id == self.fleet.id
+

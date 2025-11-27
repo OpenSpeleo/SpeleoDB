@@ -18,7 +18,9 @@ from django.core.files.base import ContentFile
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
+from polymorphic.models import PolymorphicModel
 
+from speleodb.gis.models import MonitoringNetwork
 from speleodb.gis.models import StationTag
 from speleodb.utils.document_processing import DocumentProcessor
 from speleodb.utils.image_processing import ImageProcessor
@@ -33,7 +35,7 @@ if TYPE_CHECKING:
     from speleodb.gis.models import LogEntry
 
 
-class Station(models.Model):
+class Station(PolymorphicModel):
     """
     Represents a survey station where field data collection occurs.
     Stations are positioned using latitude/longitude coordinates.
@@ -48,15 +50,6 @@ class Station(models.Model):
         default=uuid.uuid4,
         editable=False,
         primary_key=True,
-    )
-
-    # Project relationship
-    project = models.ForeignKey(
-        "surveys.Project",
-        related_name="rel_stations",
-        on_delete=models.CASCADE,
-        blank=False,
-        null=False,
     )
 
     # Station identification
@@ -87,6 +80,14 @@ class Station(models.Model):
         validators=[MinValueValidator(-180), MaxValueValidator(180)],
     )
 
+    tag = models.ForeignKey(
+        StationTag,
+        related_name="stations",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
+
     # Metadata
     created_by = models.EmailField(
         null=False,
@@ -97,22 +98,13 @@ class Station(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
-    tag = models.ForeignKey(
-        StationTag,
-        related_name="stations",
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
-    )
-
     class Meta:
         verbose_name = "Station"
         verbose_name_plural = "Stations"
-        unique_together = ("project", "name")
-        ordering = ["project", "name"]
+        ordering = ["-modified_date"]
 
     def __str__(self) -> str:
-        return f"{self.project.name} - Station {self.name}"
+        return f"Station {self.name}"
 
     @property
     def coordinates(self) -> tuple[float, float] | None:
@@ -120,6 +112,45 @@ class Station(models.Model):
         if self.latitude is not None and self.longitude is not None:
             return (float(self.longitude), float(self.latitude))
         return None
+
+
+class SubsurfaceStation(Station):
+    """
+    Represents a subsurface survey station.
+    Inherits from Station.
+    """
+
+    # Project relationship
+    project = models.ForeignKey(
+        "surveys.Project",
+        related_name="rel_stations",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    class Meta:
+        verbose_name = "Subsurface Station"
+        verbose_name_plural = "Subsurface Stations"
+
+
+class SurfaceStation(Station):
+    """
+    Represents a surface survey station.
+    Inherits from Station.
+    """
+
+    network = models.ForeignKey(
+        MonitoringNetwork,
+        related_name="rel_stations",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    class Meta:
+        verbose_name = "Surface Station"
+        verbose_name_plural = "Surface Stations"
 
 
 class StationResourceType(models.TextChoices):
@@ -147,8 +178,15 @@ def get_station_resource_path(instance: StationResource, filename: str) -> str:
     # Preserve '_thumb' suffix for miniature filenames
     thumb_suffix = "_thumb" if "_thumb" in filename else ""
 
+    # Determine path prefix based on station type
+    # SubsurfaceStation has 'project', SurfaceStation has 'network'
+    if hasattr(instance.station, "project"):
+        prefix = f"stations/{instance.station.project.id}"
+    else:
+        prefix = f"networks/{instance.station.network.id}"
+
     return (
-        f"{instance.station.project.id}/"
+        f"{prefix}/"
         f"{instance.station.id}/"
         f"resources/{filekey}{thumb_suffix}.{ext}"
     )
