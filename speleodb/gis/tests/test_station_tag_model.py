@@ -8,7 +8,7 @@ from django.db import transaction
 from django.db.utils import IntegrityError
 
 from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import StationFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.gis.models import StationTag
 from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory
@@ -176,7 +176,7 @@ class TestStationTagModel:
     ) -> None:
         """Test the foreign key relationship between tag and stations."""
         project = ProjectFactory.create()
-        station = StationFactory.create(project=project)
+        station = SubSurfaceStationFactory.create(project=project)
 
         # Set tag on station
         station.tag = tag
@@ -190,7 +190,7 @@ class TestStationTagModel:
         """Test that a station can only have one tag."""
 
         project = ProjectFactory.create()
-        station = StationFactory.create(project=project)
+        station = SubSurfaceStationFactory.create(project=project)
 
         tag1 = StationTag.objects.create(name="Active", color="#ef4444", user=user)
         tag2 = StationTag.objects.create(name="Complete", color="#22c55e", user=user)
@@ -209,9 +209,9 @@ class TestStationTagModel:
         """Test that a tag can be assigned to multiple stations."""
 
         project = ProjectFactory.create()
-        station1 = StationFactory.create(project=project, name="Station 1")
-        station2 = StationFactory.create(project=project, name="Station 2")
-        station3 = StationFactory.create(project=project, name="Station 3")
+        station1 = SubSurfaceStationFactory.create(project=project, name="Station 1")
+        station2 = SubSurfaceStationFactory.create(project=project, name="Station 2")
+        station3 = SubSurfaceStationFactory.create(project=project, name="Station 3")
 
         station1.tag = tag
         station1.save()
@@ -227,7 +227,7 @@ class TestStationTagModel:
         """Test that station tag can be set to null."""
 
         project = ProjectFactory.create()
-        station = StationFactory.create(project=project)
+        station = SubSurfaceStationFactory.create(project=project)
 
         # Set tag
         station.tag = tag

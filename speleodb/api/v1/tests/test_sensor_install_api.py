@@ -26,7 +26,7 @@ from rest_framework.test import APIClient
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SensorFactory
 from speleodb.api.v1.tests.factories import SensorInstallFactory
-from speleodb.api.v1.tests.factories import StationFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models.sensor import InstallStatus
@@ -67,7 +67,7 @@ def station(user: User) -> Station:
     UserProjectPermissionFactory.create(
         target=user, project=project, level=PermissionLevel.READ_AND_WRITE
     )
-    return StationFactory.create(project=project)
+    return SubSurfaceStationFactory.create(project=project)
 
 
 @pytest.fixture
@@ -77,7 +77,7 @@ def station_read_only(user: User) -> Station:
     UserProjectPermissionFactory.create(
         target=user, project=project, level=PermissionLevel.READ_ONLY
     )
-    return StationFactory.create(project=project)
+    return SubSurfaceStationFactory.create(project=project)
 
 
 @pytest.fixture
@@ -258,7 +258,7 @@ class TestStationSensorInstallListCreate:
     ) -> None:
         """Cannot install sensor that's already installed elsewhere."""
         # Create another station
-        other_station = StationFactory.create(project=station.project)
+        other_station = SubSurfaceStationFactory.create(project=station.project)
 
         data = {
             "sensor": str(sensor_install.sensor.id),
@@ -566,7 +566,7 @@ class TestSensorInstallEdgeCases:
         SensorInstallFactory.create(station=station, sensor=sensor)
 
         # Try to create another install for the same sensor
-        other_station = StationFactory.create(project=station.project)
+        other_station = SubSurfaceStationFactory.create(project=station.project)
         data = {
             "sensor": str(sensor.id),
             "install_date": timezone.localdate().isoformat(),
@@ -596,7 +596,7 @@ class TestSensorInstallEdgeCases:
         _ = SensorInstallFactory.create_uninstalled(station=station, sensor=sensor)
 
         # Now install the same sensor at a different station
-        other_station = StationFactory.create(project=station.project)
+        other_station = SubSurfaceStationFactory.create(project=station.project)
         data = {
             "sensor": str(sensor.id),
             "install_date": timezone.localdate().isoformat(),
@@ -841,7 +841,7 @@ class TestStationSensorInstallHistory:
     ) -> None:
         """Station with no installs returns empty list."""
         # Create station with write permission but no installs
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
         UserProjectPermissionFactory.create(
             target=user,
             project=station.project,
@@ -898,7 +898,7 @@ class TestStationSensorInstallHistory:
         """User without station access gets 401."""
         # Create user without permission
         other_user = UserFactory.create()
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         # Create install
         SensorInstallFactory.create(
@@ -960,7 +960,7 @@ class TestStationSensorInstallExcelExport:
         user: User,
     ) -> None:
         """Station with no installs returns valid Excel with headers only."""
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
         UserProjectPermissionFactory.create(
             target=user,
             project=station.project,
@@ -1054,7 +1054,7 @@ class TestStationSensorInstallExcelExport:
     ) -> None:
         """Station name with special characters gets sanitized in filename."""
         # Create station with special characters in name
-        station = StationFactory.create(name="Test/Station*Name:123")
+        station = SubSurfaceStationFactory.create(name="Test/Station*Name:123")
         UserProjectPermissionFactory.create(
             target=user,
             project=station.project,
@@ -1110,7 +1110,7 @@ class TestStationSensorInstallExcelExport:
     ) -> None:
         """User without access gets 401."""
         other_user = UserFactory.create()
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
         SensorInstallFactory.create(station=station, sensor=sensor)
 
         response = api_client.get(
@@ -1215,4 +1215,3 @@ class TestStationSensorInstallExcelExport:
             response["Content-Type"]
             == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-

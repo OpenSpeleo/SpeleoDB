@@ -16,7 +16,7 @@ from rest_framework import status
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SensorFactory
 from speleodb.api.v1.tests.factories import SensorInstallFactory
-from speleodb.api.v1.tests.factories import StationFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models.sensor import InstallStatus
@@ -31,7 +31,7 @@ class TestSensorManagementTabRendering(TestCase):
         super().setUp()
         self.user = UserFactory.create()
         self.project = ProjectFactory.create()
-        self.station = StationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
 
         # Give user write access to project
         UserProjectPermissionFactory.create(
@@ -134,7 +134,7 @@ class TestSensorManagementPermissions(TestCase):
         super().setUp()
         self.user = UserFactory.create()
         self.project = ProjectFactory.create()
-        self.station = StationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
 
     def test_map_viewer_requires_authentication(self) -> None:
         """Unauthenticated user cannot access map viewer."""
@@ -180,7 +180,7 @@ class TestSensorHistoryIntegration(TestCase):
         super().setUp()
         self.user = UserFactory.create()
         self.project = ProjectFactory.create()
-        self.station = StationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
 
         # Give user write access
         UserProjectPermissionFactory.create(

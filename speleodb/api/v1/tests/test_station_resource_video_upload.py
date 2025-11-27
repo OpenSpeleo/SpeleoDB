@@ -12,7 +12,7 @@ from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
-from speleodb.api.v1.tests.factories import StationFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models.station import StationResourceType
 
@@ -38,7 +38,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             level=PermissionLevel.ADMIN, permission_type=PermissionType.USER
         )
-        self.station = StationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
 
     def test_successful_video_upload_small_file(self) -> None:
         """Test successful video upload with a small file."""

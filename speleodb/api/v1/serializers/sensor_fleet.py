@@ -13,6 +13,7 @@ from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
+from speleodb.gis.models import SubsurfaceStation
 from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.models import User
 

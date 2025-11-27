@@ -164,9 +164,9 @@ class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
     modified_date = factory.LazyFunction(timezone.now)
 
 
-class StationFactory(DjangoModelFactory[SubsurfaceStation]):
+class SubsurfaceStationFactory(DjangoModelFactory[SubsurfaceStation]):
     """Factory for creating SubsurfaceStation instances.
-    
+
     Note: Station is now a polymorphic base class. This factory creates
     SubsurfaceStation instances which have a project field.
     """
@@ -239,7 +239,7 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)
-    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    station: SubsurfaceStation = factory.SubFactory(SubsurfaceStationFactory)  # type: ignore[assignment]
     resource_type: StationResourceType = factory.Faker(
         "random_element",
         elements=[

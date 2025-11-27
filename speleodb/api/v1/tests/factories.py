@@ -164,9 +164,9 @@ class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
     modified_date = factory.LazyFunction(timezone.now)
 
 
-class StationFactory(DjangoModelFactory[SubsurfaceStation]):
+class SubSurfaceStationFactory(DjangoModelFactory[SubsurfaceStation]):
     """Factory for creating SubsurfaceStation instances.
-    
+
     Note: Station is now a polymorphic base class. This factory creates
     SubsurfaceStation instances which have a project field.
     """
@@ -239,7 +239,7 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)
-    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    station: Station = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     resource_type: StationResourceType = factory.Faker(
         "random_element",
         elements=[
@@ -431,7 +431,7 @@ class LogEntryFactory(DjangoModelFactory[LogEntry]):
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)
-    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    station: Station = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
 
     title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
@@ -527,7 +527,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         model = SensorInstall
 
     sensor: Sensor = factory.SubFactory(SensorFactory)  # type: ignore[assignment]
-    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    station: Station = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     install_date = factory.LazyFunction(timezone.localdate)
     install_user: str = factory.LazyAttribute(  # type: ignore[assignment]
         lambda _: UserFactory.create().email
@@ -558,7 +558,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         if sensor is None:
             sensor = SensorFactory.create()
         if station is None:
-            station = StationFactory.create()
+            station = SubSurfaceStationFactory.create()
 
         install_date = kwargs.get("install_date", timezone.localdate())
         uninstall_date = kwargs.get("uninstall_date", install_date + timedelta(days=30))
@@ -585,7 +585,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         if sensor is None:
             sensor = SensorFactory.create()
         if station is None:
-            station = StationFactory.create()
+            station = SubSurfaceStationFactory.create()
 
         return cls.create(
             sensor=sensor,
@@ -602,7 +602,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         if sensor is None:
             sensor = SensorFactory.create()
         if station is None:
-            station = StationFactory.create()
+            station = SubSurfaceStationFactory.create()
 
         return cls.create(
             sensor=sensor,
