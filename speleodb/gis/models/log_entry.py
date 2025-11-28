@@ -19,18 +19,20 @@ logger = logging.getLogger(__name__)
 
 
 def get_log_entry_path(instance: LogEntry, filename: str) -> str:
+    """
+    Determine path prefix based on station type
+    SubsurfaceStation has 'project', SurfaceStation has 'network'"""
     ext = Path(filename).suffix[1:]
 
     prefix: str
 
-    # Determine path prefix based on station type
-    # SubsurfaceStation has 'project', SurfaceStation has 'network'
-    match station := instance.station:
+    # ForeignKey to polymorphic model returns base class by default
+    # Call get_real_instance() to get the actual polymorphic child
+    match station := instance.station.get_real_instance():
         case SubsurfaceStation():
-            prefix = f"stations/{station.project.id}"
+            prefix = f"{station.project.id}"
         case SurfaceStation():
-            prefix = f"networks/{station.network.id}"
-
+            prefix = f"{station.network.id}"
         case _:
             raise ValueError(
                 "Unsupported station type for log entry path generation: "

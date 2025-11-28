@@ -133,13 +133,15 @@ class BaseStationAccessLevel(permissions.BasePermission):
                 project = obj.project
 
             case StationResource() | LogEntry() | SensorInstall():
-                match station := obj.station:
+                # ForeignKey to polymorphic model returns base class by default
+                # Call get_real_instance() to get the actual polymorphic child
+                match station := obj.station.get_real_instance():
                     case SubsurfaceStation():
                         project = station.project
 
                     case _:
                         raise NotImplementedError(
-                            "Not yet implemented for this station type."
+                            f"Not yet implemented for this station type: {type(station)}"
                         )
 
             case _:

@@ -12,6 +12,9 @@ from dotenv import load_dotenv
 
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
+from speleodb.gis.models import Station
+from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SurfaceStation
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -25,12 +28,12 @@ if TYPE_CHECKING:
     from speleodb.users.models import User
 
 
-@pytest.fixture(autouse=True)
-def clear_content_type_cache() -> Generator[None]:
-    """DO NOT REMOVE: Clears ContentType cache before and after each test to avoid
-    stale data issues."""
-    yield
-    ContentType.objects.clear_cache()
+# @pytest.fixture(autouse=True)
+# def clear_content_type_cache() -> Generator[None]:
+#     """DO NOT REMOVE: Clears ContentType cache before and after each test to avoid
+#     stale data issues."""
+#     yield
+#     ContentType.objects.clear_cache()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -78,6 +81,23 @@ def cleanup_database(db: None) -> Generator[None]:
     Automatically applied to all tests that use the database.
     """
     yield  # Let the test run
-    # Delete all objects from all models
+
+    # Import polymorphic station models for proper cleanup order
+
+    # Delete polymorphic children first to avoid FK constraint violations
+    # Use non_polymorphic() to avoid ContentType lookups during deletion
+    SubsurfaceStation.objects.non_polymorphic().all().delete()  # type: ignore[attr-defined]
+    SurfaceStation.objects.non_polymorphic().all().delete()  # type: ignore[attr-defined]
+    Station.objects.non_polymorphic().all().delete()  # type: ignore[attr-defined]
+
+    # Delete all other models, excluding ContentType (managed by Django)
+    # and polymorphic Station models (already deleted above)
+    excluded_labels = {
+        "contenttypes.ContentType",
+        "gis.Station",
+        "gis.SubsurfaceStation",
+        "gis.SurfaceStation",
+    }
     for model in apps.get_models():
-        model.objects.all().delete()  # type: ignore[attr-defined]
+        if model._meta.label not in excluded_labels:  # noqa: SLF001
+            model.objects.all().delete()  # type: ignore[attr-defined]

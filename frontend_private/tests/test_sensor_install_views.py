@@ -10,6 +10,7 @@ with the new History sub-tab functionality.
 from __future__ import annotations
 
 from django.test import TestCase
+from django.urls import resolve
 from django.urls import reverse
 from rest_framework import status
 
@@ -222,7 +223,7 @@ class TestSensorHistoryIntegration(TestCase):
 
         # Make API call without status filter
         response = self.client.get(
-            f"/api/v1/stations/{self.station.id}/sensor-installs/",
+            reverse("api:v1:station-sensor-installs", kwargs={"id": self.station.id}),
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -237,7 +238,7 @@ class TestSensorHistoryIntegration(TestCase):
 
         # Make API call with status filter
         response = self.client.get(
-            f"/api/v1/stations/{self.station.id}/sensor-installs/?status=installed",
+            f"{reverse('api:v1:station-sensor-installs', kwargs={'id': self.station.id})}?status=installed",  # noqa: E501
         )
 
         assert response.status_code == status.HTTP_200_OK

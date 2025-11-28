@@ -1,5 +1,6 @@
 import { Config } from '../config.js';
 import { Utils } from '../utils.js';
+import { API } from '../api.js';
 
 // Module state
 let sensorHistoryData = [];
@@ -321,14 +322,7 @@ export const StationSensors = {
         currentProjectId = projectId;
 
         try {
-            const response = await fetch(`/api/v1/stations/${stationId}/sensor-installs/?status=installed`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const response = await API.getStationSensorInstallsWithStatus(stationId, 'installed');
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -489,14 +483,7 @@ export const StationSensors = {
         currentProjectId = projectId;
 
         try {
-            const response = await fetch(`/api/v1/stations/${stationId}/sensor-installs/`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const response = await API.getStationSensorInstalls(stationId);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -582,13 +569,7 @@ export const StationSensors = {
                 <span>Exporting...</span>
             `;
 
-            const response = await fetch(`/api/v1/stations/${stationId}/sensor-installs/export/excel/`, {
-                method: 'GET',
-                headers: {
-                    'X-CSRFToken': Utils.getCSRFToken(),
-                },
-                credentials: 'same-origin',
-            });
+            const response = await API.getStationSensorInstallsAsExcel(stationId);
 
             if (!response.ok) {
                 throw new Error(`Export failed: ${response.status} ${response.statusText}`);
@@ -655,14 +636,7 @@ export const StationSensors = {
                 <span>Refreshing...</span>
             `;
 
-            const response = await fetch(`/api/v1/stations/${stationId}/sensor-installs/`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const response = await API.getStationSensorInstalls(stationId);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -710,14 +684,7 @@ export const StationSensors = {
 
         try {
             // Fetch fleets
-            const fleetsResponse = await fetch('/api/v1/sensor-fleets/', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const fleetsResponse = await API.getSensorFleets()
 
             if (!fleetsResponse.ok) {
                 throw new Error(`HTTP error! status: ${fleetsResponse.status}`);
@@ -747,14 +714,9 @@ export const StationSensors = {
 
             // Fetch sensors for all fleets in parallel to calculate available counts
             const fleetSensorsPromises = fleets.map(fleet =>
-                fetch(`/api/v1/sensor-fleets/${fleet.id}/sensors/`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': Utils.getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                }).then(res => res.ok ? res.json() : { data: [] })
+                API.getSensorFleetSensors(fleet.id).then(
+                    res => res.ok ? res.json() : { data: [] }
+                )
             );
 
             const fleetSensorsResults = await Promise.all(fleetSensorsPromises);
@@ -770,7 +732,7 @@ export const StationSensors = {
             const fleetsWithAvailableCount = fleets.map((fleet, index) => {
                 const sensors = fleetSensorsCache[fleet.id] || [];
                 const availableCount = sensors.filter(sensor =>
-                    sensor.status === 'functional' && 
+                    sensor.status === 'functional' &&
                     (!sensor.active_installs || sensor.active_installs.length === 0)
                 ).length;
                 return { ...fleet, availableCount };
@@ -880,14 +842,7 @@ export const StationSensors = {
             if (fleetSensorsCache[fleetId]) {
                 allSensors = fleetSensorsCache[fleetId];
             } else {
-                const sensorsResponse = await fetch(`/api/v1/sensor-fleets/${fleetId}/sensors/`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': Utils.getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                });
+                const sensorsResponse = await API.getSensorFleetSensors(fleetId);
 
                 if (!sensorsResponse.ok) {
                     throw new Error(`HTTP error! status: ${sensorsResponse.status}`);
@@ -904,7 +859,7 @@ export const StationSensors = {
             // - It's functional AND
             // - It's not installed anywhere (active_installs is empty) OR it's the sensor we're editing
             const availableSensors = allSensors.filter(sensor =>
-                sensor.status === 'functional' && 
+                sensor.status === 'functional' &&
                 ((!sensor.active_installs || sensor.active_installs.length === 0) || sensor.id === currentSensorId)
             );
 
@@ -919,7 +874,7 @@ export const StationSensors = {
                         </option>
                     `).join('');
             }
-            
+
         } catch (error) {
             console.error('Error loading fleet sensors:', error);
             sensorSelect.disabled = false;
@@ -943,45 +898,41 @@ export const StationSensors = {
             const expiracyMemoryDate = document.getElementById('expiracy-memory-date').value;
             const expiracyBatteryDate = document.getElementById('expiracy-battery-date').value;
 
-            const data = {
-                sensor: sensorId,
-                install_date: installDate
-            };
+            const formData = new FormData();
+            formData.append('sensor', sensorId);
+            formData.append('install_date', installDate);
 
             if (expiracyMemoryDate) {
-                data.expiracy_memory_date = expiracyMemoryDate;
+                formData.append('expiracy_memory_date', expiracyMemoryDate);
             } else if (isEdit) {
-                data.expiracy_memory_date = null;
+                formData.append('expiracy_memory_date', null);
             }
 
             if (expiracyBatteryDate) {
-                data.expiracy_battery_date = expiracyBatteryDate;
+                formData.append('expiracy_battery_date', expiracyBatteryDate);
             } else if (isEdit) {
-                data.expiracy_battery_date = null;
+                formData.append('expiracy_battery_date', null);
             }
 
-            const url = isEdit
-                ? `/api/v1/stations/${stationId}/sensor-installs/${installId}/`
-                : `/api/v1/stations/${stationId}/sensor-installs/`;
-
-            const method = isEdit ? 'PATCH' : 'POST';
-
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify(data)
-            });
+            if (isEdit) {
+                const response = await API.updateStationSensorInstalls(
+                    stationId,
+                    installId,
+                    formData
+                )
+            } else {
+                const response = await API.createStationSensorInstalls(
+                    stationId,
+                    formData
+                )
+            }
 
             Utils.hideLoadingOverlay(loadingOverlay);
 
             if (response.ok) {
                 // Clear the cache since installed sensors have changed
                 fleetSensorsCache = {};
-                
+
                 Utils.showNotification('success', isEdit ? 'Sensor installation updated successfully!' : 'Sensor installed successfully!');
                 this.loadCurrentInstalls(stationId, projectId);
             } else {
@@ -1001,14 +952,7 @@ export const StationSensors = {
         const loadingOverlay = Utils.showLoadingOverlay('Loading sensor installation...');
 
         try {
-            const installResponse = await fetch(`/api/v1/stations/${stationId}/sensor-installs/${installId}/`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const installResponse = await API.getStationSensorInstallDetails(stationId, installId);
 
             if (!installResponse.ok) {
                 throw new Error(`HTTP error! status: ${installResponse.status}`);
@@ -1025,14 +969,7 @@ export const StationSensors = {
             }
 
             // Fetch fleets
-            const fleetsResponse = await fetch('/api/v1/sensor-fleets/', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin'
-            });
+            const fleetsResponse = await API.getSensorFleets();
 
             if (!fleetsResponse.ok) {
                 throw new Error(`HTTP error! status: ${fleetsResponse.status}`);
@@ -1045,14 +982,9 @@ export const StationSensors = {
 
             // Fetch sensors for all fleets in parallel to calculate available counts
             const fleetSensorsPromises = fleets.map(fleet =>
-                fetch(`/api/v1/sensor-fleets/${fleet.id}/sensors/`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': Utils.getCSRFToken()
-                    },
-                    credentials: 'same-origin'
-                }).then(res => res.ok ? res.json() : { data: [] })
+                API.getSensorFleetSensors(fleet.id).then(
+                    res => res.ok ? res.json() : { data: [] }
+                )
             );
 
             const fleetSensorsResults = await Promise.all(fleetSensorsPromises);
@@ -1070,7 +1002,7 @@ export const StationSensors = {
             const fleetsWithAvailableCount = fleets.map((fleet, index) => {
                 const sensors = fleetSensorsCache[fleet.id] || [];
                 const availableCount = sensors.filter(sensor =>
-                    (sensor.status === 'functional' || sensor.id === install.sensor_id) && 
+                    (sensor.status === 'functional' || sensor.id === install.sensor_id) &&
                     ((!sensor.active_installs || sensor.active_installs.length === 0) || sensor.id === install.sensor_id)
                 ).length;
                 return { ...fleet, availableCount };
@@ -1080,7 +1012,7 @@ export const StationSensors = {
             const currentFleetIndex = fleets.findIndex(f => f.id === currentFleetId);
             const currentFleetSensors = currentFleetIndex >= 0 ? fleetSensorsCache[fleets[currentFleetIndex].id] : [];
             const availableSensors = currentFleetSensors.filter(sensor =>
-                (sensor.status === 'functional' || sensor.id === install.sensor_id) && 
+                (sensor.status === 'functional' || sensor.id === install.sensor_id) &&
                 ((!sensor.active_installs || sensor.active_installs.length === 0) || sensor.id === install.sensor_id)
             );
 
@@ -1223,27 +1155,18 @@ export const StationSensors = {
         try {
             const retrievalDate = document.getElementById('retrieval-date').value;
 
-            const data = {
-                status: 'retrieved',
-                uninstall_date: retrievalDate
-            };
+            const formData = new FormData();
+            formData.append('status', 'retrieved');
+            formData.append('uninstall_date', retrievalDate);
 
-            const response = await fetch(`/api/v1/stations/${stationId}/sensor-installs/${installId}/`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify(data)
-            });
+            const response = await API.updateStationSensorInstalls(stationId, installId, formData);
 
             Utils.hideLoadingOverlay(loadingOverlay);
 
             if (response.ok) {
                 // Clear the cache since installed sensors have changed
                 fleetSensorsCache = {};
-                
+
                 Utils.showNotification('success', 'Sensor marked as retrieved!');
                 this.loadCurrentInstalls(stationId, projectId);
             } else {
@@ -1371,26 +1294,17 @@ export const StationSensors = {
         const loadingOverlay = Utils.showLoadingOverlay(`Marking sensor as ${label}...`);
 
         try {
-            const data = {
-                status: newStatus
-            };
+            const formData = new FormData();
+            formData.append('status', newStatus);
 
-            const response = await fetch(`/api/v1/stations/${stationId}/sensor-installs/${installId}/`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': Utils.getCSRFToken()
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify(data)
-            });
+            const response = await API.updateStationSensorInstalls(stationId, installId, formData);
 
             Utils.hideLoadingOverlay(loadingOverlay);
 
             if (response.ok) {
                 // Clear the cache since installed sensors have changed
                 fleetSensorsCache = {};
-                
+
                 Utils.showNotification('success', `Sensor marked as ${label}!`);
                 this.loadCurrentInstalls(stationId, projectId);
             } else {

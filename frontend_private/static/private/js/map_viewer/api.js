@@ -128,6 +128,35 @@ export const API = {
     // GeoJSON
     getAllProjectsGeoJSON: () =>
         apiRequest(Urls['api:v1:all-projects-geojson']()),
+
+    // Sensor-Fleets
+    getSensorFleets: () =>
+        apiRequest(Urls['api:v1:sensor-fleets']()),
+
+    getSensorFleetDetails: (fleetId) =>
+        apiRequest(Urls['api:v1:sensor-fleet-detail'](fleetId)),
+
+    getSensorFleetSensors: (fleetId) =>
+        apiRequest(Urls['api:v1:sensor-fleet-sensors'](fleetId)),
+
+    // Sensor Installs
+    getStationSensorInstalls: (stationId) =>
+        apiRequest(Urls['api:v1:station-sensor-installs'](stationId)),
+
+    getStationSensorInstallsWithStatus: (stationId, status) =>
+        apiRequest(Urls['api:v1:station-sensor-installs'](stationId) + "?status=" + status),
+
+    getStationSensorInstallsAsExcel: (stationId) =>
+        apiRequest(Urls['api:v1:station-sensor-installs-export'](stationId)),
+
+    getStationSensorInstallDetails: (stationId, installId) =>
+        apiRequest(Urls['api:v1:station-sensor-install-detail'](stationId, installId)),
+
+    createStationSensorInstalls: (stationId, formData) =>
+        apiRequest(Urls['api:v1:station-sensor-installs'](stationId), 'POST', formData, true),
+
+    updateStationSensorInstalls: (stationId, installId, formData) =>
+        apiRequest(Urls['api:v1:station-sensor-install-detail'](stationId, installId), 'PATCH', formData, true),
 };
 
 
