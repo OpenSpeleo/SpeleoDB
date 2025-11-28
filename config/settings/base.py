@@ -155,6 +155,7 @@ LOCAL_APPS = [
     # Object Apps
     "speleodb.common",
     "speleodb.gis",
+    "speleodb.permissions",
     "speleodb.plugins",
     "speleodb.surveys",
     "speleodb.users",

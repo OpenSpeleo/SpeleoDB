@@ -29,6 +29,12 @@ from frontend_private.views.sensor_fleets import SensorFleetHistoryView
 from frontend_private.views.sensor_fleets import SensorFleetListingView
 from frontend_private.views.sensor_fleets import SensorFleetUserPermissionsView
 from frontend_private.views.sensor_fleets import SensorFleetWatchlistView
+from frontend_private.views.surface_networks import NewSurfaceNetworkView
+from frontend_private.views.surface_networks import SurfaceNetworkDangerZoneView
+from frontend_private.views.surface_networks import SurfaceNetworkDetailsView
+from frontend_private.views.surface_networks import SurfaceNetworkGISView
+from frontend_private.views.surface_networks import SurfaceNetworkListingView
+from frontend_private.views.surface_networks import SurfaceNetworkUserPermissionsView
 from frontend_private.views.team import NewTeamView
 from frontend_private.views.team import TeamDangerZoneView
 from frontend_private.views.team import TeamDetailsView
@@ -64,6 +70,7 @@ __all__ = [
     "NewGISViewView",
     "NewProjectView",
     "NewSensorFleetView",
+    "NewSurfaceNetworkView",
     "NewTeamView",
     "PassWordView",
     "PreferencesView",
@@ -84,6 +91,11 @@ __all__ = [
     "SensorFleetUserPermissionsView",
     "SensorFleetWatchlistView",
     "StationTagsView",
+    "SurfaceNetworkDangerZoneView",
+    "SurfaceNetworkDetailsView",
+    "SurfaceNetworkGISView",
+    "SurfaceNetworkListingView",
+    "SurfaceNetworkUserPermissionsView",
     "TeamDangerZoneView",
     "TeamDetailsView",
     "TeamListingView",

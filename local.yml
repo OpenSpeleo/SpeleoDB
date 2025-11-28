@@ -23,9 +23,8 @@ services:
     env_file:
       - ./.envs/.django
       - ./.envs/.postgres
-    ports:
-      - "8000:8000"
-    command: /start
+    ports: []
+    command: sleep infinity
     network_mode: "host"
     environment:
       # Pre-commit skip jobs - Only dev env not on CI
@@ -52,6 +51,17 @@ services:
     container_name: speleodb_local_redis
     ports:
       - "6379:6379"
+
+  django-webserver:
+    <<: *django
+    image: speleodb_local_django_webserver
+    container_name: speleodb_local_django_webserver
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - "8000:8000"
+    command: /start
 
   # celeryworker:
   #   <<: *django

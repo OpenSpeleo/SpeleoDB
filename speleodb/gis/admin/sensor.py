@@ -10,7 +10,6 @@ from django.contrib import admin
 
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
-from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
 
@@ -183,77 +182,6 @@ class SensorAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if not change:  # Only on creation, not on edit
             obj.created_by = request.user.email  # type: ignore[union-attr]
         super().save_model(request, obj, form, change)
-
-
-@admin.register(SensorFleetUserPermission)
-class SensorFleetUserPermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    """Admin interface for managing Sensor Fleet User Permissions."""
-
-    list_display = (
-        "sensor_fleet",
-        "user",
-        "level_display",
-        "is_active",
-        "creation_date",
-        "modified_date",
-    )
-
-    list_filter = (
-        "is_active",
-        "level",
-        "creation_date",
-        "modified_date",
-    )
-
-    search_fields = (
-        "user__email",
-        "sensor_fleet__name",
-    )
-
-    readonly_fields = (
-        "creation_date",
-        "modified_date",
-    )
-
-    ordering = ("sensor_fleet", "user")
-
-    fieldsets = (
-        (
-            "Permission Information",
-            {
-                "fields": (
-                    "sensor_fleet",
-                    "user",
-                    "level",
-                    "is_active",
-                )
-            },
-        ),
-        (
-            "Deactivation",
-            {
-                "fields": ("deactivated_by",),
-                "classes": ("collapse",),
-            },
-        ),
-        (
-            "Metadata",
-            {
-                "fields": (
-                    "creation_date",
-                    "modified_date",
-                ),
-                "classes": ("collapse",),
-            },
-        ),
-    )
-
-    @admin.display(description="Permission Level")
-    def level_display(self, obj: SensorFleetUserPermission) -> str:
-        """Display the permission level label."""
-        if obj:
-            return obj.level_label  # type: ignore[return-value]
-        return "-"
 
 
 @admin.register(SensorInstall)

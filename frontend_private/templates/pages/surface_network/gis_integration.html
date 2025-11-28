@@ -1,4 +1,4 @@
-{% extends "pages/experiment/base.html" %}
+{% extends "pages/surface_network/base.html" %}
 {% load static %}
 
 {% block right_panel %}
@@ -19,7 +19,7 @@
 
             <!-- Message -->
             <p class="text-lg text-slate-200 w-full text-center my-6">
-                Use this URL to access your experiment's data in GIS software (QGIS, ArcGIS, etc.) via WFS (Web Feature Service).
+                Use this URL to access your surface monitoring network's data in GIS software (QGIS, ArcGIS, etc.) via WFS (Web Feature Service).
             </p>
             
             <!-- API URL -->
@@ -28,7 +28,8 @@
                 <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 overflow-x-auto relative group">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
                         <code id="api-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
-                            {{ request.scheme }}://{{ request.get_host }}{% url 'api:v1:gis-ogc:experiment' gis_token=experiment.gis_token %}
+                            {% comment %}{{ request.scheme }}://{{ request.get_host }}{% url 'api:v1:gis-ogc:surface_network' gis_token=network.gis_token %}{% endcomment %}
+                            {{ request.scheme }}://{{ request.get_host }}/api/v1/gis-ogc/surface_network/{{ network.gis_token }}/
                         </code>
                         <button 
                             id="copy-btn"
@@ -55,7 +56,7 @@
                             <div class="flex-1">
                                 <p class="text-sm font-medium text-orange-200 mb-1">Security Warning</p>
                                 <p class="text-sm text-orange-300/90 mb-3">
-                                    Sharing this link gives access to the entire dataset collected in the experiment. 
+                                    Sharing this link gives access to the entire dataset collected in the surface monitoring network.<br>
                                     This should be considered private and kept safe like a password.
                                 </p>
                                 <p class="text-sm text-orange-300/90">
@@ -64,7 +65,7 @@
                             </div>
                         </div>
                         <!-- Refresh Token Form -->
-                        {% if is_experiment_admin %}
+                        {% if has_admin_access %}
                         <form method="post" id="refresh-token-form" class="w-full">
                             {% csrf_token %}
                             <button 

@@ -198,7 +198,7 @@
             <!-- Sidebar -->
             <div
                 id="sidebar"
-                class="flex flex-col absolute z-40 left-0 top-0 lg:static lg:left-auto lg:top-auto lg:translate-x-0 h-[100dvh] overflow-y-scroll lg:overflow-y-auto no-scrollbar w-64 lg:!w-64 shrink-0 bg-slate-800 p-4 transition-all duration-200 ease-in-out"
+                class="flex flex-col absolute z-40 left-0 top-0 lg:static lg:left-auto lg:top-auto lg:translate-x-0 h-[100dvh] overflow-y-scroll lg:overflow-y-auto no-scrollbar w-68 lg:!w-64 shrink-0 bg-slate-800 p-4 transition-all duration-200 ease-in-out"
                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-64'"
                 @click.outside="sidebarOpen = false"
                 @keydown.escape.window="sidebarOpen = false"
@@ -422,6 +422,37 @@
                                             </svg>
 
                                             <span class="text-sm font-medium ml-3 duration-200">My GIS Station Tags</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+
+                            <!-- My GIS Surface Monitoring -->
+                            {% if request.url_name|is_in_list:"surface_networks,surface_network_new,surface_network_details,surface_network_user_permissions" %}
+                            {% set stroke_color = 'indigo' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:surface_networks' %}">
+                            {% else %}
+                            {% set stroke_color = 'slate' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:surface_networks' %}">
+                            {% endif %}
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="2.5 2.5 19 19">
+                                                <path d="M5 5m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z"></path>
+                                                <path d="M9 9h6v6h-6z"></path>
+                                                <path d="M3 10h2"></path>
+                                                <path d="M3 14h2"></path>
+                                                <path d="M10 3v2"></path>
+                                                <path d="M14 3v2"></path>
+                                                <path d="M21 10h-2"></path>
+                                                <path d="M21 14h-2"></path>
+                                                <path d="M14 21v-2"></path>
+                                                <path d="M10 21v-2"></path>
+                                            </svg>
+
+                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Surface Monitoring</span>
                                         </div>
                                     </div>
                                 </a>

@@ -816,6 +816,24 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/surface-networks/",
+        "module": "speleodb.api.v1.views.surface_network.SurfaceMonitoringNetworkApiView",
+        "name": "api:v1:surface-networks",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/surface-networks/<uuid:network_id>/",
+        "module": "speleodb.api.v1.views.surface_network.SurfaceMonitoringNetworkSpecificApiView",
+        "name": "api:v1:surface-network",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/surface-networks/<uuid:network_id>/permissions/",
+        "module": "speleodb.api.v1.views.surface_network.SurfaceMonitoringNetworkPermissionApiView",
+        "name": "api:v1:surface-network-permissions",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/teams/",
         "module": "speleodb.api.v1.views.team.TeamApiView",
         "name": "api:v1:teams",
@@ -1179,6 +1197,42 @@
         "url": "/private/station_tags/",
         "module": "frontend_private.views.user.StationTagsView",
         "name": "private:station_tags",
+        "decorators": ""
+    },
+    {
+        "url": "/private/surface-network/<uuid:network_id>/",
+        "module": "frontend_private.views.surface_networks.SurfaceNetworkDetailsView",
+        "name": "private:surface_network_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/surface-network/<uuid:network_id>/danger_zone/",
+        "module": "frontend_private.views.surface_networks.SurfaceNetworkDangerZoneView",
+        "name": "private:surface_network_danger_zone",
+        "decorators": ""
+    },
+    {
+        "url": "/private/surface-network/<uuid:network_id>/gis/",
+        "module": "frontend_private.views.surface_networks.SurfaceNetworkGISView",
+        "name": "private:surface_network_gis_integration",
+        "decorators": ""
+    },
+    {
+        "url": "/private/surface-network/<uuid:network_id>/permissions/",
+        "module": "frontend_private.views.surface_networks.SurfaceNetworkUserPermissionsView",
+        "name": "private:surface_network_user_permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/surface-network/new/",
+        "module": "frontend_private.views.surface_networks.NewSurfaceNetworkView",
+        "name": "private:surface_network_new",
+        "decorators": ""
+    },
+    {
+        "url": "/private/surface-networks/",
+        "module": "frontend_private.views.surface_networks.SurfaceNetworkListingView",
+        "name": "private:surface_networks",
         "decorators": ""
     },
     {

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from django.db import models
 
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models.utils import generate_random_token
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class MonitoringNetwork(models.Model):
+class SurfaceMonitoringNetwork(models.Model):
     id = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -36,6 +37,17 @@ class MonitoringNetwork(models.Model):
         help_text="Optional description of the network",
     )
 
+    is_active = models.BooleanField(default=True)
+
+    gis_token = models.CharField(
+        "GIS Token",
+        max_length=40,
+        unique=True,
+        blank=False,
+        null=False,
+        default=generate_random_token,
+    )
+
     # Metadata
     created_by = models.EmailField(
         null=False,
@@ -46,11 +58,19 @@ class MonitoringNetwork(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = "Surface Monitoring Network"
+        verbose_name_plural = "Surface Monitoring Networks"
+
     def __str__(self) -> str:
         return f"[Monitoring Network: {self.name}]"
 
+    def refresh_gis_token(self) -> None:
+        self.gis_token = generate_random_token()
+        self.save()
 
-class MonitoringNetworkUserPermission(models.Model):
+
+class SurfaceMonitoringNetworkUserPermission(models.Model):
     user = models.ForeignKey(
         User,
         related_name="network_permissions",
@@ -60,7 +80,7 @@ class MonitoringNetworkUserPermission(models.Model):
     )
 
     network = models.ForeignKey(
-        MonitoringNetwork,
+        SurfaceMonitoringNetwork,
         related_name="permissions",
         on_delete=models.CASCADE,
         blank=False,

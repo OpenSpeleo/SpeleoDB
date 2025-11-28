@@ -26,6 +26,7 @@ from frontend_private.views import NewExperimentView
 from frontend_private.views import NewGISViewView
 from frontend_private.views import NewProjectView
 from frontend_private.views import NewSensorFleetView
+from frontend_private.views import NewSurfaceNetworkView
 from frontend_private.views import NewTeamView
 from frontend_private.views import PassWordView
 from frontend_private.views import PreferencesView
@@ -46,6 +47,11 @@ from frontend_private.views import SensorFleetListingView
 from frontend_private.views import SensorFleetUserPermissionsView
 from frontend_private.views import SensorFleetWatchlistView
 from frontend_private.views import StationTagsView
+from frontend_private.views import SurfaceNetworkDangerZoneView
+from frontend_private.views import SurfaceNetworkDetailsView
+from frontend_private.views import SurfaceNetworkGISView
+from frontend_private.views import SurfaceNetworkListingView
+from frontend_private.views import SurfaceNetworkUserPermissionsView
 from frontend_private.views import TeamDangerZoneView
 from frontend_private.views import TeamDetailsView
 from frontend_private.views import TeamListingView
@@ -145,6 +151,25 @@ sensor_fleet_patterns = [
     ),
 ]
 
+surface_network_patterns = [
+    path("", SurfaceNetworkDetailsView.as_view(), name="surface_network_details"),
+    path(
+        "danger_zone/",
+        SurfaceNetworkDangerZoneView.as_view(),
+        name="surface_network_danger_zone",
+    ),
+    path(
+        "permissions/",
+        SurfaceNetworkUserPermissionsView.as_view(),
+        name="surface_network_user_permissions",
+    ),
+    path(
+        "gis/",
+        SurfaceNetworkGISView.as_view(),
+        name="surface_network_gis_integration",
+    ),
+]
+
 gis_view_patterns: list[URLPattern] = [
     path("", GISViewDetailsView.as_view(), name="gis_view_details"),
     path(
@@ -197,6 +222,18 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("sensor-fleets/", SensorFleetListingView.as_view(), name="sensor_fleets"),
     path("sensor-fleet/new/", NewSensorFleetView.as_view(), name="sensor_fleet_new"),
     path("sensor-fleet/<uuid:fleet_id>/", include(sensor_fleet_patterns)),
+    # Surface Networks URLs
+    path(
+        "surface-networks/",
+        SurfaceNetworkListingView.as_view(),
+        name="surface_networks",
+    ),
+    path(
+        "surface-network/new/",
+        NewSurfaceNetworkView.as_view(),
+        name="surface_network_new",
+    ),
+    path("surface-network/<uuid:network_id>/", include(surface_network_patterns)),
     # GIS Views URLs
     path("gis_views/", GISViewListingView.as_view(), name="gis_views"),
     path("gis_view/new/", NewGISViewView.as_view(), name="gis_view_new"),

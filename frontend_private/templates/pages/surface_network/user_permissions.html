@@ -1,0 +1,571 @@
+{% extends "pages/surface_network/base.html" %}
+{% load static %}
+
+{% load set_var %}
+{% load str_format %}
+
+{% block extra_css %}
+{{ block.super }}
+
+<style>
+    /* Mobile card layout for user permissions */
+    @media (max-width: 768px) {
+        .permissions-table {
+            display: none;
+        }
+        
+        .permissions-cards {
+            display: block;
+        }
+        
+        .permission-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .permission-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .permission-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .permission-card-user {
+            flex: 1;
+        }
+        
+        .permission-card-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+        
+        .permission-card-email {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        
+        .permission-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .permission-card-body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .permissions-table {
+            display: block;
+        }
+        
+        .permissions-cards {
+            display: none;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
+{% block right_panel %}
+
+{% csrf_token %}
+
+<div class="grow">
+    <div class="p-6 space-y-6">
+
+        <!-- Page header -->
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
+
+            <!-- Left: Title -->
+            <div>
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
+                    Surface Monitoring Network User Permissions
+                </h1>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="flex justify-start sm:justify-end">
+                <!-- Grant Access button -->
+                {% if not has_admin_access %}
+                <button class="btn bg-slate-600 text-white w-full sm:w-auto" disabled>
+                    <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24" viewBox="0 0 16 16">
+                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+                    </svg>
+                    <span class="ml-2">Grant Access</span>
+                </button>
+                {% else %}
+                <button id="btn_open_add_user" class="btn bg-indigo-500 hover:bg-indigo-600 text-white w-full sm:w-auto">
+                    <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24" viewBox="0 0 16 16">
+                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+                    </svg>
+                    <span class="ml-2">Grant Access</span>
+                </button>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <!-- Mobile Cards View -->
+        <div class="permissions-cards">
+            <div class="p-4">
+                {% for permission in permissions %}
+                <div class="permission-card">
+                    <div class="permission-card-header">
+                        <div class="permission-card-user">
+                            <div class="permission-card-name">{{ permission.user.name }}</div>
+                            <div class="permission-card-email">{{ permission.user.email }}</div>
+                        </div>
+                        <div class="permission-card-actions">
+                            {% if permission.user != user and has_admin_access %}
+                                {% set can_edit = True %}
+                            {% else %}
+                                {% set can_edit = False %}
+                            {% endif %}
+                            <!-- Edit Button -->
+                            <span class="{% if can_edit %}cursor-pointer btn_open_edit_perm{% endif %}" 
+                                  {% if can_edit %}data-user="{{permission.user.email}}" data-level="{{ permission.level_label }}"{% endif %}>
+                                <svg class="stroke-current h-8 w-8 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline" 
+                                     viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                    <path d="M13.5 6.5l4 4" />
+                                </svg>
+                            </span>
+                            <!-- Delete Button -->
+                            <span class="{% if can_edit %}cursor-pointer btn_delete_perm{% endif %}" 
+                                  {% if can_edit %}data-user="{{permission.user.email}}"{% endif %}>
+                                <svg class="stroke-current h-8 w-8 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline" 
+                                     viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M18 6l-12 12" />
+                                    <path d="M6 6l12 12" />
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="permission-card-body">
+                        {% if permission.level_label == "READ_ONLY" %}
+                            {% set bg_color = 'bg-pastel-beige' %}
+                        {% elif permission.level_label == "READ_AND_WRITE" %}
+                            {% set bg_color = 'bg-pastel-navy' %}
+                        {% elif permission.level_label == "ADMIN" %}
+                            {% set bg_color = 'bg-pastel-orange' %}
+                        {% else %}
+                            {% set bg_color = '' %}
+                        {% endif %}
+                        <div class="inline-flex font-medium {{ bg_color }} rounded-full text-center px-3 py-1 text-base">
+                            {{permission.level_label|normalize}}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="permissions-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+
+            <div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full text-slate-300">
+                        <!-- Table header -->
+                        <thead
+                            class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                            <tr>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">#</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">User Name</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">User Email</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Access Level</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="font-semibold text-center">Actions</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <!-- Table body -->
+                        <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
+                            {% for permission in permissions %}
+                            <!-- Row -->
+                            <tr>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="text-center">
+                                        <div class="font-medium text-slate-100">{{ forloop.counter }}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="text-center">
+                                        <div class="font-medium text-slate-100">{{ permission.user.name }}</div>
+                                    </div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                    <div class="text-center">{{ permission.user.email }}</div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+
+                                    <div class="text-center">
+                                        {% if permission.level_label == "READ_ONLY" %}
+                                            {% set bg_color = 'bg-pastel-beige' %}
+                                        {% elif permission.level_label == "READ_AND_WRITE" %}
+                                            {% set bg_color = 'bg-pastel-navy' %}
+                                        {% elif permission.level_label == "ADMIN" %}
+                                            {% set bg_color = 'bg-pastel-orange' %}
+                                        {% else %}
+                                            {% set bg_color = '' %}
+                                        {% endif %}
+                                        <div class="inline-flex font-medium {{ bg_color }} rounded-full text-center px-2.5 py-0.5">
+                                            {{permission.level_label|normalize}}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
+
+                                    {% comment %} 
+                                    A user can not edit/delete their own permission. Must be another ADMIN
+                                    {% endcomment %}
+
+                                    {% if permission.user != user and has_admin_access %}
+                                        {% set can_edit = True %}
+                                    {% else %}
+                                        {% set can_edit = False %}
+                                    {% endif %}
+
+                                    <!-- Edit Link -->
+                                    <span class="cursor-pointer {% if can_edit %}btn_open_edit_perm"
+                                        data-user="{{permission.user.email}}" data-level="{{ permission.level_label }}{% endif %}">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="icon icon-tabler icon-tabler-lock-open stroke-current h-6 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline"
+                                            viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                            <path d="M13.5 6.5l4 4" />
+                                        </svg>
+                                    </span>
+
+                                    <!-- Delete Link -->
+                                    <span class="cursor-pointer {% if can_edit %}btn_delete_perm"
+                                        data-user="{{permission.user.email}}{% endif %}">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="icon icon-tabler icon-tabler-x stroke-current h-6 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline"
+                                            viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <path d="M18 6l-12 12" />
+                                            <path d="M6 6l12 12" />
+                                        </svg>
+                                        </a>
+                                    </span>
+
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+{% include 'snippets/modal_user_surface_network_permission_form.html' %}
+
+{% endblock right_panel %}
+
+
+{% if has_admin_access %}
+{% block inline_extra_js %}
+<script src="{% static 'private/js/user_autocomplete.js' %}"></script>
+<script>
+
+    $(window).on('load', function() {
+        function attachUserAutocomplete($input, $suggestions) {
+            let lastQuery = "";
+            let pending = null;
+            let activeIndex = -1;
+            let currentItems = [];
+
+            function escapeHtml(text) {
+                return String(text)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            function render(items) {
+                currentItems = items || [];
+                if (!currentItems.length) {
+                    $suggestions.addClass('hidden').empty();
+                    activeIndex = -1;
+                    return;
+                }
+
+                const maxToShow = Math.min(3, currentItems.length);
+                let html = "";
+                for (let i = 0; i < maxToShow; i++) {
+                    const it = currentItems[i];
+                    const nameHtml = '<span class="truncate">' + escapeHtml(it.name || '') + '</span>';
+                    const emailHtml = '<span class="text-slate-400 truncate"> &lt;' + escapeHtml(it.email || '') + '&gt;</span>';
+                    html += '<div class="px-2 py-1 hover:bg-slate-700 cursor-pointer flex items-center gap-2' + (i === activeIndex ? ' bg-slate-700' : '') + '" data-index="' + i + '" data-email="' + escapeHtml(it.email || '') + '">' +
+                            nameHtml + emailHtml +
+                            '</div>';
+                }
+                if (currentItems.length > maxToShow) {
+                    html += '<div class="px-2 py-1 text-slate-400 text-center select-none">…</div>';
+                }
+                $suggestions.html(html).removeClass('hidden');
+            }
+
+            function selectIndex(newIndex) {
+                if (currentItems.length === 0) return;
+                const maxToShow = Math.min(3, currentItems.length);
+                activeIndex = (newIndex + maxToShow) % maxToShow;
+                $suggestions.children('div[data-index]').removeClass('bg-slate-700');
+                $suggestions.children('div[data-index="' + activeIndex + '"]').addClass('bg-slate-700');
+            }
+
+            function commitSelection() {
+                if (activeIndex < 0 || activeIndex >= currentItems.length) return;
+                const email = currentItems[activeIndex].email;
+                $input.val(email);
+                $suggestions.addClass('hidden').empty();
+            }
+
+            $input.on('keydown', function(e){
+                if ($suggestions.hasClass('hidden')) return;
+                if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); selectIndex(activeIndex + 1); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); selectIndex(activeIndex - 1); }
+                else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (activeIndex === -1 && currentItems.length > 0) { activeIndex = 0; } commitSelection(); }
+                else if (e.key === 'Escape') { $suggestions.addClass('hidden').empty(); }
+            });
+
+            $input.on('input', function(){
+                const val = $input.val().trim();
+                if (val.length < 3) { $suggestions.addClass('hidden').empty(); return; }
+                if (val === lastQuery) { return; }
+                lastQuery = val;
+                activeIndex = -1;
+
+                if (pending) { pending.abort(); }
+                pending = $.ajax({
+                    url: "{% url 'api:v1:user-autocomplete' %}",
+                    method: "GET",
+                    data: { query: val },
+                    success: function(resp){ render(resp.data); },
+                    error: function(){ $suggestions.addClass('hidden').empty(); },
+                    complete: function(){ pending = null; }
+                });
+            });
+
+            $suggestions.on('mouseover', 'div[data-index]', function(){
+                const idx = parseInt($(this).data('index'));
+                selectIndex(idx);
+            });
+
+            $suggestions.on('mousedown', 'div[data-index]', function(e){
+                e.preventDefault();
+                const idx = parseInt($(this).data('index'));
+                activeIndex = idx;
+                commitSelection();
+            });
+
+            $(document).on('click', function(e){
+                if (!$(e.target).closest($suggestions).length && !$(e.target).is($input)) {
+                    $suggestions.addClass('hidden');
+                }
+            });
+        }
+
+
+        $(".btn_close").click(function () {
+            if ($("#permission_modal").is(":visible")) {
+                $("#permission_modal").hide();
+            }
+            return false; // prevent default
+        });
+
+        $("body").click(function () {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+        });
+
+        /* ------------------------------------------------------------------------- */
+        /* --------------------------- ADDING PERMISSION --------------------------- */
+        /* ------------------------------------------------------------------------- */
+
+        $("#btn_open_add_user").click(function () {
+            var form = $("#permission_form");
+            form[0].reset();
+            form.data("method", "POST");
+            $("#permission_modal_title").text("Add a collaborator to the network");
+            $("#permission_modal_header").text("Who would you like to add 🙌 ?");
+            $("#permission_modal").css('display', 'flex');
+            $("#user").prop("readonly", false);
+            attachUserAutocomplete($("#user"), $("#user_suggestions"));
+            return false; // prevent default
+        });
+
+        /* ------------------------------------------------------------------------- */
+        /* --------------------------- EDITING PERMISSION -------------------------- */
+        /* ------------------------------------------------------------------------- */
+
+        $(".btn_open_edit_perm").click(function () {
+            var form = $("#permission_form");
+            form[0].reset();
+            form.data("method", "PUT");
+            $("#permission_modal_title").text("How shall we modify this user's access ?");
+            $("#permission_modal_header").text("");
+            $("#permission_modal").css('display', 'flex');
+            $("#user").val($(this).data("user")).prop("readonly", true);
+            $("#level").val($(this).data("level"));
+            return false; // prevent default
+        });
+
+        /* ------------------------------------------------------------------------- */
+        /* ---------------------- ADD/EDITING PERMISSION AJAX ---------------------- */
+        /* ------------------------------------------------------------------------- */
+
+        function validateEmail(email) {
+            var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return re.test(email);
+        }
+
+        $('#btn_submit_add').click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+            let permission_form = $("#permission_form");
+            var formData = new FormData(permission_form[0]);
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            $.ajax({
+                url: "{% url 'api:v1:surface-network-permissions' network_id=network.id %}",
+                method: $("#permission_form").data("method"),
+                data: JSON.stringify(Object.fromEntries(formData)),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+
+                    if (!validateEmail($("#user").val()) || $("#user").val() == "") {
+                        $("#modal_error_txt").text("The Email Address is not valid !");
+                        $("#modal_error").css('display', 'flex');
+                        return false;
+                    }
+
+                    if ($("#level").val() == "") {
+                        $("#modal_error_txt").text("The Access Level field is empty !");
+                        $("#modal_error").css('display', 'flex');
+                        return false;
+                    }
+                    return true;
+
+                },
+                success: function (data) {
+                    $("#modal_success_txt").text("Action executed with success!");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function () {
+                        // Refresh the page
+                        window.location.reload();
+                    }, 2000);
+                },
+                error: function (data) {
+                    {% include 'snippets/ajax_error_modal_management.js' %}
+                }
+            });
+            return false; // prevent default
+        });
+
+        /* ------------------------------------------------------------------------- */
+        /* -------------------------- REMOVING PERMISSION -------------------------- */
+        /* ------------------------------------------------------------------------- */
+
+        $(".btn_delete_perm").click(function () {
+            var $this = $(this);
+
+            // Check if the icon is already disabled
+            if ($this.hasClass('disabled')) {
+                return false;
+            }
+            
+            // Disable the button to prevent double-clicks
+            $this.addClass('disabled');
+
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+            var formData = new FormData();
+            formData.append("user", $this.data("user"));
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+
+            $.ajax({
+                url: "{% url 'api:v1:surface-network-permissions' network_id=network.id %}",
+                method: "DELETE",
+                data: JSON.stringify(Object.fromEntries(formData)),
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The permission has been deleted succesfully.");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function () {
+                        // Refresh the page
+                        window.location.reload();
+                    }, 2000);
+                },
+                error: function (data) {
+                    {% include 'snippets/ajax_error_modal_management.js' %}
+                    
+                    // Re-enable the button in case of error
+                    $this.removeClass('disabled');
+                }
+            });
+            return false; // prevent default
+        });
+
+    });
+</script>
+{% endblock inline_extra_js %}
+{% endif %}

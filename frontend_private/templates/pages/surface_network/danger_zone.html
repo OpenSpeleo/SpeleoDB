@@ -1,0 +1,93 @@
+{% extends "pages/surface_network/base.html" %}
+{% load static %}
+
+{% block right_panel %}
+<div class="grow">
+
+    <!-- Panel body -->
+    <div class="p-6 space-y-6">
+        <h2 class="text-2xl text-slate-100 font-bold mb-16">Surface Network Danger Zone</h2>
+
+        {% csrf_token %}
+
+        <!-- Delete Surface Network -->
+        <section>
+            <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="w-full border border-rose-600/50 bg-rose-900/10 p-6 rounded-lg">
+                    <h1 class="mb-6 underline font-heavy text-rose-600">! WARNING ! WARNING ! WARNING ! WARNING ! WARNING ! WARNING !</h1>
+                    <h1 class="mb-2 underline font-heavy text-slate-100">Delete this Surface Network?</h1>
+                    <span class="block text-sm font-medium mb-1 text-slate-300">
+                        Once you delete a Surface Network, there is no going back. All associated data and permissions will be deactivated. Please be <b><u>absolutely</u></b> certain.
+                    </span>
+                    <button id="btn_delete" class="btn bg-rose-500 hover:bg-rose-600 text-white mt-4">Delete Surface Network</button>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</div>
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+{% include 'snippets/modal_confirmation_delete.html' %}
+
+{% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+
+    $(window).on('load', function() {
+
+        $("body").click(function() {
+            if ($("#modal_success").is(":visible")) {
+                $("#modal_success").hide();
+            }
+            if ($("#modal_error").is(":visible")) {
+                $("#modal_error").hide();
+            }
+            if ($("#modal_confirmation").is(":visible")) {
+                $("#modal_confirmation").hide();
+            }
+        });
+
+        $("#btn_delete").click(function () {
+            $("#modal_confirmation").css('display', 'flex');
+            return false; // prevent default
+        });
+
+        $('#btn_confirmed_delete').click(function () {
+            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
+
+            $("#error_div").hide();
+            $("#success_div").hide();
+            $("#modal_confirmation").hide();
+
+            $.ajax({
+                url: "{% url 'api:v1:surface-network' network_id=network.id %}",
+                method: "DELETE",
+                contentType: "application/json; charset=utf-8",
+                cache: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    return true;
+                },
+                success: function (data) {
+                    $("#modal_success_txt").html("The Surface Network has been deleted successfully.");
+                    $("#modal_success").css('display', 'flex');
+
+                    window.setTimeout(function(){
+                        // Redirect to Surface Networks listing
+                        window.location.href = "{% url 'private:surface_networks' %}";
+                    }, 2000);
+                },
+                error: function (data) {
+                    {% include 'snippets/ajax_error_modal_management.js' %}
+                }
+            });
+            return false; // prevent default
+        });
+    });
+</script>
+
+{% endblock inline_extra_js %}

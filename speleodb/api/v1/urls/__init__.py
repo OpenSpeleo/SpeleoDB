@@ -21,6 +21,9 @@ from speleodb.api.v1.urls.sensor import urlpatterns as sensor_urlpatterns
 from speleodb.api.v1.urls.sensor_fleet import urlpatterns as sensor_fleet_urlpatterns
 from speleodb.api.v1.urls.station import urlpatterns as station_urlpatterns
 from speleodb.api.v1.urls.station_tag import urlpatterns as station_tag_urlpatterns
+from speleodb.api.v1.urls.surface_network import (
+    urlpatterns as surface_network_urlpatterns,
+)
 from speleodb.api.v1.urls.team import urlpatterns as team_urlpatterns
 from speleodb.api.v1.urls.tools import urlpatterns as tool_urlpatterns
 from speleodb.api.v1.urls.user import urlpatterns as user_urlpatterns
@@ -52,6 +55,7 @@ urlpatterns: list[URLResolver | URLPattern] = [
     path("sensors/", include(sensor_urlpatterns)),
     path("stations/", include(station_urlpatterns)),
     path("station_tags/", include(station_tag_urlpatterns)),
+    path("surface-networks/", include(surface_network_urlpatterns)),
     path("teams/", include(team_urlpatterns)),
     path("tools/", include(tool_urlpatterns)),
     path("user/", include(user_urlpatterns)),

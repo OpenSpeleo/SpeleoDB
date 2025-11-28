@@ -11,8 +11,8 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from polymorphic.models import PolymorphicModel
 
-from speleodb.gis.models import MonitoringNetwork
 from speleodb.gis.models import StationTag
+from speleodb.gis.models import SurfaceMonitoringNetwork
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ class SurfaceStation(Station):
     """
 
     network = models.ForeignKey(
-        MonitoringNetwork,
+        SurfaceMonitoringNetwork,
         related_name="rel_stations",
         on_delete=models.CASCADE,
         blank=False,

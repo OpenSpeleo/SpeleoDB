@@ -8,25 +8,26 @@ from typing import TYPE_CHECKING
 
 from django.contrib import admin
 
-from speleodb.gis.models import MonitoringNetwork
-from speleodb.gis.models import MonitoringNetworkUserPermission
+from speleodb.gis.models import SurfaceMonitoringNetwork
 
 if TYPE_CHECKING:
     from django import forms
     from django.http import HttpRequest
 
 
-@admin.register(MonitoringNetwork)
-class MonitoringNetworkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+@admin.register(SurfaceMonitoringNetwork)
+class SurfaceMonitoringNetworkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "name",
         "description",
+        "is_active",
         "created_by",
         "creation_date",
         "modified_date",
     )
 
     list_filter = (
+        "is_active",
         "created_by",
         "creation_date",
         "modified_date",
@@ -54,6 +55,7 @@ class MonitoringNetworkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "fields": (
                     "name",
                     "description",
+                    "is_active",
                 )
             },
         ),
@@ -74,25 +76,11 @@ class MonitoringNetworkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def save_model(
         self,
         request: HttpRequest,
-        obj: MonitoringNetwork,
-        form: forms.ModelForm[MonitoringNetwork],
+        obj: SurfaceMonitoringNetwork,
+        form: forms.ModelForm[SurfaceMonitoringNetwork],
         change: bool,
     ) -> None:
         # Auto-populate created_by field when creating a new experiment
         if not change:  # Only on creation, not on edit
             obj.created_by = request.user.email  # type: ignore[union-attr]
         super().save_model(request, obj, form, change)
-
-
-@admin.register(MonitoringNetworkUserPermission)
-class MonitoringNetworkUserPermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "network",
-        "user",
-        "level",
-        "creation_date",
-        "modified_date",
-        "is_active",
-    )
-    ordering = ("network",)
-    list_filter = ["is_active", "level"]

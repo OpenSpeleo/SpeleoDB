@@ -17,7 +17,6 @@ from django.utils.html import format_html
 
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
-from speleodb.gis.models import ExperimentUserPermission
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -271,17 +270,3 @@ class ExperimentRecordAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "creation_date",
         "modified_date",
     )
-
-
-@admin.register(ExperimentUserPermission)
-class ExperimentUserPermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "experiment",
-        "user",
-        "level",
-        "creation_date",
-        "modified_date",
-        "is_active",
-    )
-    ordering = ("experiment",)
-    list_filter = ["is_active", "level"]

@@ -22,6 +22,8 @@ from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import SubSurfaceStation
+from speleodb.gis.models import SurfaceMonitoringNetwork
+from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
 from speleodb.surveys.models import Project
 from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.utils.exceptions import NotAuthorizedError
@@ -304,6 +306,75 @@ class SensorFleetUserHasWriteAccess(BaseSensorFleetAccessLevel):
 
 
 class SensorFleetUserHasReadAccess(BaseSensorFleetAccessLevel):
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
+
+
+# ================ SURFACE MONITORING NETWORK PERMISSIONS ================ #
+
+
+class BaseSurfaceMonitoringNetworkAccessLevel(permissions.BasePermission):
+    """Base permission class for Surface Monitoring Network objects that checks
+    permissions on the network."""
+
+    MIN_ACCESS_LEVEL: int
+
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
+
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: SurfaceMonitoringNetwork | SurfaceMonitoringNetworkUserPermission,
+    ) -> bool:
+        network: SurfaceMonitoringNetwork
+        match obj:
+            case SurfaceMonitoringNetwork():
+                network = obj
+
+            case SurfaceMonitoringNetworkUserPermission():
+                # For permissions, check on the network
+                network = obj.network
+
+            case _:
+                raise TypeError(
+                    f"Unknown `type` received: {type(obj)}. "
+                    "Expected: SurfaceMonitoringNetwork | "
+                    "SurfaceMonitoringNetworkUserPermission"
+                )
+
+        try:
+            return (
+                SurfaceMonitoringNetworkUserPermission.objects.get(
+                    user=request.user,
+                    network=network,
+                    is_active=True,
+                ).level
+                >= self.MIN_ACCESS_LEVEL
+            )
+
+        except ObjectDoesNotExist:
+            return False
+
+
+class SurfaceMonitoringNetworkUserHasAdminAccess(
+    BaseSurfaceMonitoringNetworkAccessLevel
+):
+    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
+
+
+class SurfaceMonitoringNetworkUserHasWriteAccess(
+    BaseSurfaceMonitoringNetworkAccessLevel
+):
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
+
+
+class SurfaceMonitoringNetworkUserHasReadAccess(
+    BaseSurfaceMonitoringNetworkAccessLevel
+):
     MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
 
 
