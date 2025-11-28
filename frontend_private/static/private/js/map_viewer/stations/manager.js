@@ -147,6 +147,9 @@ export const StationManager = {
             // Remove from State
             State.allStations.delete(stationId);
             
+            // Invalidate cache so refresh fetches fresh data without deleted station
+            this.invalidateCache();
+            
             // Refresh Layer
             if (projectId) {
                 await Layers.refreshStationsAfterChange(projectId);
@@ -177,6 +180,7 @@ export const StationManager = {
         }
     }
 };
+
 
 
 

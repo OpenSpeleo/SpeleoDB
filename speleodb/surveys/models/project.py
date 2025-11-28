@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     import datetime
 
     from speleodb.gis.models import ProjectGeoJSON
-    from speleodb.gis.models import Station
+    from speleodb.gis.models import SubSurfaceStation
     from speleodb.surveys.models import Format
     from speleodb.surveys.models import ProjectMutex
     from speleodb.surveys.models import TeamProjectPermission
@@ -50,7 +50,7 @@ class Project(models.Model):
     rel_mutexes: models.QuerySet[ProjectMutex]
     rel_user_permissions: models.QuerySet[UserProjectPermission]
     rel_team_permissions: models.QuerySet[TeamProjectPermission]
-    rel_stations: models.QuerySet[Station]
+    rel_stations: models.QuerySet[SubSurfaceStation]
 
     # Automatic fields
     id = models.UUIDField(

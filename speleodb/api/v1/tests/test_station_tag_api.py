@@ -10,7 +10,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import StationFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import StationTag
 from speleodb.gis.models.station import Station
@@ -318,7 +318,7 @@ class TestStationTagManagementAPI:
     @pytest.fixture
     def station(self, project: Project) -> Station:
         """Create a test station."""
-        return StationFactory.create(project=project)
+        return SubSurfaceStationFactory.create(project=project)
 
     @pytest.fixture
     def tag(self, user: User) -> StationTag:

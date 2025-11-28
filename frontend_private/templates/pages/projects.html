@@ -493,17 +493,38 @@ $( document ).ready(function() {
         return false; // prevent default
     });
 
-    $('.async_revision').each(function(){
-        var target_div = $("#" + $(this).data('id'));
-        var project_id = $(this).data('project_id');
-        get_commit_history(project_id, target_div);
-    });
+    // Process revision elements in batches, yielding to browser event loop
+    // between each batch to keep the UI responsive
+    var revisionElements = $('.async_revision').toArray();
+    var index = 0;
+    var batchSize = 3;
+
+    function processNextBatch() {
+        if (index >= revisionElements.length) return;
+
+        // Process up to batchSize elements
+        for (var i = 0; i < batchSize && index < revisionElements.length; i++) {
+            var $element = $(revisionElements[index]);
+            var target_div = $("#" + $element.data('id'));
+            var project_id = $element.data('project_id');
+
+            get_commit_history(project_id, target_div);
+            index++;
+        }
+
+        // Yield to browser event loop - allows clicks/interactions to be processed
+        setTimeout(processNextBatch, 0);
+    }
+
+    // Start processing
+    processNextBatch();
 
     function get_commit_history(project_id, target_div){
         $.ajax({
             url: Urls['api:v1:project-detail'](project_id),
             type : "GET",
             dataType : "json",
+            async: true,  // Explicitly ensure async
             success: function(data){
                 if (data.success) {
                     target_div.html(data.data.history.length);
@@ -519,7 +540,7 @@ $( document ).ready(function() {
                 return null;
             }
         });
-    };
+    }
 });
 </script>
 {% endblock inline_extra_js %}

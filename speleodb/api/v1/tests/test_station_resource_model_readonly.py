@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 import pytest
 
 from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
-from speleodb.gis.models.station import StationResourceType
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
+from speleodb.gis.models import StationResourceType
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -24,7 +24,9 @@ class TestStationResourceModelReadOnly:
         """Set up test data."""
         self.user = UserFactory.create()
         self.project = ProjectFactory(created_by=self.user.email)
-        self.station = StationFactory(project=self.project, created_by=self.user.email)
+        self.station = SubSurfaceStationFactory(
+            project=self.project, created_by=self.user.email
+        )
 
     def test_model_save_prevents_resource_type_change(self) -> None:
         """Test that changing resource_type at model level raises ValueError."""

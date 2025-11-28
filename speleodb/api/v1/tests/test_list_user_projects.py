@@ -76,13 +76,7 @@ class TestProjectInteraction(BaseAPITestCase):
         response = self.client.get(endpoint, headers={"authorization": auth})
 
         assert response.status_code == status.HTTP_200_OK, response.data
-        assert len(response.data["data"]) == len(
-            [
-                perm
-                for perm in perm_lvls
-                if perm.level > PermissionLevel.WEB_VIEWER.value
-            ]
-        )
+        assert len(response.data["data"]) == len(perm_lvls)
 
         attributes = [
             "creation_date",

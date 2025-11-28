@@ -19,11 +19,12 @@ from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import NoteStationResourceFactory
 from speleodb.api.v1.tests.factories import PhotoStationResourceFactory
 from speleodb.api.v1.tests.factories import SketchStationResourceFactory
-from speleodb.api.v1.tests.factories import StationFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models.station import StationResourceType
+from speleodb.gis.models import StationResourceType
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.utils.test_utils import named_product
 
 
@@ -64,7 +65,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             level=self.level, permission_type=self.permission_type
         )
-        self.station = Station.objects.create(
+        self.station = SubSurfaceStation.objects.create(
             project=self.project,
             name="Test Station",
             latitude=45.1234567,
@@ -539,7 +540,7 @@ class TestUnauthenticatedStationResourceAPIAuthentication(BaseAPIProjectTestCase
 
     def setUp(self) -> None:
         super().setUp()
-        self.station = StationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
 
     def test_resource_list_requires_authentication(self) -> None:
         """Test that resource list endpoint requires authentication."""
@@ -594,7 +595,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             level=self.level, permission_type=self.permission_type
         )
-        self.station = StationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
 
     def test_resource_create_permissions(self) -> None:
         """Test that readonly permissions cannot create resources."""
@@ -863,7 +864,7 @@ class TestStationResourceValidation(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             level=self.level, permission_type=self.permission_type
         )
-        self.station = StationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
 
     def test_create_resource_missing_title(self) -> None:
         """Test creating a resource without a title."""
@@ -1019,7 +1020,7 @@ class TestStationResourceFileHandling(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             level=self.level, permission_type=self.permission_type
         )
-        self.station = StationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
 
     def test_file_upload_with_checksum_verification(self) -> None:
         """Test file upload with SHA256 checksum verification."""
@@ -1185,7 +1186,7 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             level=self.level, permission_type=self.permission_type
         )
-        self.station = StationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
         self.faker = Faker()
 
     def test_fuzz_resource_data(self) -> None:

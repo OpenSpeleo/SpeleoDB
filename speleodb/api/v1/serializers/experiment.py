@@ -557,8 +557,6 @@ class ExperimentRecordGISSerializer(serializers.Serializer[ExperimentRecord]):
                 ],
             },
             "properties": {
-                "project_name": instance.station.project.name,
-                "project_id": str(instance.station.project.id),
                 "station_id": str(instance.station.id),
                 "station_name": instance.station.name,
                 **instance.data,

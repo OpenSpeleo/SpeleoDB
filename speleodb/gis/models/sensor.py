@@ -74,6 +74,8 @@ class SensorStatus(models.TextChoices):
 
 
 class Sensor(models.Model):
+    installs: models.QuerySet[SensorInstall]
+
     id = models.UUIDField(
         default=uuid.uuid4,
         editable=False,

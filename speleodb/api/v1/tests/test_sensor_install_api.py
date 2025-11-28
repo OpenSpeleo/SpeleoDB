@@ -26,7 +26,7 @@ from rest_framework.test import APIClient
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SensorFactory
 from speleodb.api.v1.tests.factories import SensorInstallFactory
-from speleodb.api.v1.tests.factories import StationFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models.sensor import InstallStatus
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from speleodb.gis.models import Sensor
     from speleodb.gis.models import SensorInstall
     from speleodb.gis.models import Station
+    from speleodb.gis.models import SubSurfaceStation
     from speleodb.users.models.user import User
 
 # ================== FIXTURES ================== #
@@ -60,14 +61,14 @@ def other_user() -> User:
 
 
 @pytest.fixture
-def station(user: User) -> Station:
+def station(user: User) -> SubSurfaceStation:
     """Create a station with write access for user."""
 
     project = ProjectFactory.create()
     UserProjectPermissionFactory.create(
         target=user, project=project, level=PermissionLevel.READ_AND_WRITE
     )
-    return StationFactory.create(project=project)
+    return SubSurfaceStationFactory.create(project=project)
 
 
 @pytest.fixture
@@ -77,7 +78,7 @@ def station_read_only(user: User) -> Station:
     UserProjectPermissionFactory.create(
         target=user, project=project, level=PermissionLevel.READ_ONLY
     )
-    return StationFactory.create(project=project)
+    return SubSurfaceStationFactory.create(project=project)
 
 
 @pytest.fixture
@@ -252,13 +253,13 @@ class TestStationSensorInstallListCreate:
     def test_create_sensor_install_already_installed(
         self,
         api_client: APIClient,
-        station: Station,
+        station: SubSurfaceStation,
         sensor_install: SensorInstall,
         user: User,
     ) -> None:
         """Cannot install sensor that's already installed elsewhere."""
         # Create another station
-        other_station = StationFactory.create(project=station.project)
+        other_station = SubSurfaceStationFactory.create(project=station.project)
 
         data = {
             "sensor": str(sensor_install.sensor.id),
@@ -557,7 +558,7 @@ class TestSensorInstallEdgeCases:
     def test_unique_installed_per_sensor_constraint(
         self,
         api_client: APIClient,
-        station: Station,
+        station: SubSurfaceStation,
         sensor: Sensor,
         user: User,
     ) -> None:
@@ -566,7 +567,7 @@ class TestSensorInstallEdgeCases:
         SensorInstallFactory.create(station=station, sensor=sensor)
 
         # Try to create another install for the same sensor
-        other_station = StationFactory.create(project=station.project)
+        other_station = SubSurfaceStationFactory.create(project=station.project)
         data = {
             "sensor": str(sensor.id),
             "install_date": timezone.localdate().isoformat(),
@@ -587,7 +588,7 @@ class TestSensorInstallEdgeCases:
     def test_can_install_retrieved_sensor(
         self,
         api_client: APIClient,
-        station: Station,
+        station: SubSurfaceStation,
         sensor: Sensor,
         user: User,
     ) -> None:
@@ -596,7 +597,7 @@ class TestSensorInstallEdgeCases:
         _ = SensorInstallFactory.create_uninstalled(station=station, sensor=sensor)
 
         # Now install the same sensor at a different station
-        other_station = StationFactory.create(project=station.project)
+        other_station = SubSurfaceStationFactory.create(project=station.project)
         data = {
             "sensor": str(sensor.id),
             "install_date": timezone.localdate().isoformat(),
@@ -841,7 +842,7 @@ class TestStationSensorInstallHistory:
     ) -> None:
         """Station with no installs returns empty list."""
         # Create station with write permission but no installs
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
         UserProjectPermissionFactory.create(
             target=user,
             project=station.project,
@@ -862,7 +863,7 @@ class TestStationSensorInstallHistory:
     def test_list_sensor_installs_read_permission(
         self,
         api_client: APIClient,
-        station: Station,
+        station: SubSurfaceStation,
         sensor: Sensor,
         user: User,
     ) -> None:
@@ -898,7 +899,7 @@ class TestStationSensorInstallHistory:
         """User without station access gets 401."""
         # Create user without permission
         other_user = UserFactory.create()
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         # Create install
         SensorInstallFactory.create(
@@ -960,7 +961,7 @@ class TestStationSensorInstallExcelExport:
         user: User,
     ) -> None:
         """Station with no installs returns valid Excel with headers only."""
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
         UserProjectPermissionFactory.create(
             target=user,
             project=station.project,
@@ -1054,7 +1055,7 @@ class TestStationSensorInstallExcelExport:
     ) -> None:
         """Station name with special characters gets sanitized in filename."""
         # Create station with special characters in name
-        station = StationFactory.create(name="Test/Station*Name:123")
+        station = SubSurfaceStationFactory.create(name="Test/Station*Name:123")
         UserProjectPermissionFactory.create(
             target=user,
             project=station.project,
@@ -1081,7 +1082,7 @@ class TestStationSensorInstallExcelExport:
     def test_export_excel_read_permission(
         self,
         api_client: APIClient,
-        station: Station,
+        station: SubSurfaceStation,
         sensor: Sensor,
         user: User,
     ) -> None:
@@ -1110,7 +1111,7 @@ class TestStationSensorInstallExcelExport:
     ) -> None:
         """User without access gets 401."""
         other_user = UserFactory.create()
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
         SensorInstallFactory.create(station=station, sensor=sensor)
 
         response = api_client.get(

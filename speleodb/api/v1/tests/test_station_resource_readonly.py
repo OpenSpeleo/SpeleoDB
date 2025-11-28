@@ -10,11 +10,11 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models.station import StationResourceType
+from speleodb.gis.models import StationResourceType
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -36,7 +36,9 @@ class TestStationResourceReadOnlyFields:
             project=self.project,
             level=PermissionLevel.READ_AND_WRITE,
         )
-        self.station = StationFactory(project=self.project, created_by=self.user.email)
+        self.station = SubSurfaceStationFactory(
+            project=self.project, created_by=self.user.email
+        )
         self.client.force_authenticate(user=self.user)
 
     def test_resource_type_cannot_be_changed_from_note_to_sketch(self) -> None:

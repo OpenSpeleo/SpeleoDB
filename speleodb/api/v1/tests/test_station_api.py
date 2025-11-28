@@ -14,7 +14,7 @@ from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
-from speleodb.api.v1.tests.factories import StationFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
 from speleodb.utils.test_utils import named_product
@@ -32,7 +32,7 @@ class TestUnauthenticatedStationAPIAuthentication(BaseAPIProjectTestCase):
 
     def test_station_detail_requires_authentication(self) -> None:
         """Test that station detail endpoint requires authentication."""
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
         response = self.client.get(
             reverse("api:v1:station-detail", kwargs={"id": station.id})
         )
@@ -55,7 +55,7 @@ class TestUnauthenticatedStationAPIAuthentication(BaseAPIProjectTestCase):
 
     def test_station_update_requires_authentication(self) -> None:
         """Test that station update endpoint requires authentication."""
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
         data = {"name": "ST002", "description": "Updated description"}
         response = self.client.patch(
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
@@ -66,7 +66,7 @@ class TestUnauthenticatedStationAPIAuthentication(BaseAPIProjectTestCase):
 
     def test_station_delete_requires_authentication(self) -> None:
         """Test that station delete endpoint requires authentication."""
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
         response = self.client.delete(
             reverse("api:v1:station-detail", kwargs={"id": station.id})
         )
@@ -103,7 +103,7 @@ class TestStationAPIPermissions(BaseAPIProjectTestCase):
             permission_type=self.permission_type,
         )
 
-        self.station = StationFactory.create(project=self.project)
+        self.station = SubSurfaceStationFactory.create(project=self.project)
 
     def test_station_list_permissions(self) -> None:
         """Test station list endpoint with different permission levels."""
@@ -247,7 +247,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
     def test_list_project_stations(self) -> None:
         """Test successful station listing."""
         # Create test stations
-        stations = StationFactory.create_batch(3, project=self.project)
+        stations = SubSurfaceStationFactory.create_batch(3, project=self.project)
 
         response = self.client.get(
             reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
@@ -270,7 +270,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
     def test_list_user_stations(self) -> None:
         """Test successful station listing."""
         # Create test stations
-        stations = StationFactory.create_batch(3, project=self.project)
+        stations = SubSurfaceStationFactory.create_batch(3, project=self.project)
 
         response = self.client.get(
             reverse("api:v1:stations"),
@@ -294,7 +294,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
 
     def test_retrieve_station_success(self) -> None:
         """Test successful station retrieval."""
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
 
         response = self.client.get(
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
@@ -313,7 +313,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
 
     def test_delete_station_success(self) -> None:
         """Test successful station deletion."""
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
         station_id = str(station.id)
 
         response = self.client.delete(
@@ -335,7 +335,9 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
     def test_update_station(self, method: str) -> None:
         """Test updating a station to a project with a duplicate name."""
         # Create stations with the same name in both projects
-        station = StationFactory.create(project=self.project, name="DuplicateName")
+        station = SubSurfaceStationFactory.create(
+            project=self.project, name="DuplicateName"
+        )
 
         # Try to update station1 to move it to the second project (should fail)
         data: dict[str, Any] = {
@@ -431,47 +433,6 @@ class TestStationValidation(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "name" in response.data["errors"]
-
-    def test_create_station_duplicate_name(self) -> None:
-        """Test station creation with duplicate name in same project returns proper
-        error message."""
-
-        unique_name = f"ST_{str(uuid.uuid4())[:8]}"
-        # Create the first station
-        station1 = StationFactory.create(
-            name=unique_name,
-            description="First station",
-            latitude="45.1234567",
-            longitude="-123.8765432",
-            project=self.project,
-        )
-
-        # Try to create second station with same name
-        data = {
-            "name": station1.name,
-            "description": "Second station",
-            "latitude": "45.2234567",
-            "longitude": "-123.7765432",
-        }
-
-        response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
-            data=data,
-            headers={"authorization": self.auth},
-            content_type="application/json",
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
-            return
-
-        # Should get a 400 error with a specific message
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "error" in response.data
-        assert (
-            f"The station name `{data['name']}` already exists in project `{self.project.id}`"  # noqa: E501
-            == response.data["error"]
-        )
 
     def test_create_station_invalid_coordinates(self) -> None:
         """Test station creation rejects invalid coordinates (validators are
@@ -913,7 +874,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
     def test_coordinate_rounding_on_update(self) -> None:
         """Test that coordinates are properly rounded on update."""
         # Create a station first
-        station = StationFactory.create(
+        station = SubSurfaceStationFactory.create(
             project=self.project,
             latitude=45.1,
             longitude=-123.9,

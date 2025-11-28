@@ -20,12 +20,12 @@ from rest_framework.authtoken.models import Token
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import StationFactory
 from speleodb.api.v1.tests.factories import StationResourceFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models.station import StationResourceType
+from speleodb.gis.models import StationResourceType
 from speleodb.surveys.models import UserProjectPermission
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.test_utils import named_product
@@ -134,7 +134,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
     def test_station_position_update_workflow(self) -> None:
         """Test updating station position via drag & drop (as frontend does)."""
         # Create a station
-        station = StationFactory.create(
+        station = SubSurfaceStationFactory.create(
             project=self.project,
             latitude=20.194500,
             longitude=-87.497500,
@@ -181,7 +181,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
     def test_station_with_resources_workflow(self) -> None:
         """Test the complete workflow of a station with multiple resources."""
         # Create station with demo resources (as fixtures would create)
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
         resources = StationResourceFactory.create_demo_resources(station)
 
         # Test detailed station retrieval (as modal would load)
@@ -235,7 +235,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
     def test_station_resource_creation_workflow_note(self) -> None:
         """Test creating new resources for a station (as frontend upload would do)."""
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
 
         # Test creating a note resource - MUST use JSON
         note_data = {
@@ -290,7 +290,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
     def test_station_resource_creation_workflow_sketch(self) -> None:
         """Test creating new resources for a station (as frontend upload would do)."""
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
 
         # Test creating a sketch resource - MUST use JSON
         sketch_data = {
@@ -340,7 +340,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
     def test_station_deletion_workflow(self) -> None:
         """Test deleting a station and its resources (as frontend delete would do)."""
         # Create station with resources
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
         resources = StationResourceFactory.create_demo_resources(station)
 
         # Verify station exists with resources
@@ -412,7 +412,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
         created_stations: list[Station] = []
         for station_data in stations_data:
-            station = StationFactory.create(
+            station = SubSurfaceStationFactory.create(
                 project=self.project,
                 name=station_data["name"],
                 description=station_data["description"],
@@ -491,7 +491,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
 
     def test_station_permissions_read(self) -> None:
         """Test station operations with different permission levels."""
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
 
         expected_status = (
             status.HTTP_200_OK
@@ -548,7 +548,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
     def test_station_permissions_patch(self) -> None:
         """Test station operations with different permission levels."""
 
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
 
         response = self.client.patch(
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
@@ -569,7 +569,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
     def test_station_permissions_delete(self) -> None:
         """Test station operations with different permission levels."""
 
-        station = StationFactory.create(project=self.project)
+        station = SubSurfaceStationFactory.create(project=self.project)
 
         response = self.client.delete(
             reverse("api:v1:station-detail", kwargs={"id": station.id}),
@@ -607,7 +607,9 @@ class TestMapViewerWithFixtures(TransactionTestCase):
     def test_realistic_cave_survey_scenario(self) -> None:
         """Test a realistic cave survey scenario with demo stations and resources."""
         # Create demo stations as they would appear in a real cave survey
-        demo_stations = StationFactory.create_demo_stations(self.project, count=3)
+        demo_stations = SubSurfaceStationFactory.create_demo_stations(
+            self.project, count=3
+        )
 
         # Add realistic resources to each station
         for i, station in enumerate(demo_stations):

@@ -374,29 +374,7 @@
                                 </a>
                             </li>
 
-                            <!-- My GIS Views -->
-                            {% if request.url_name|is_in_list:"gis_views,gis_view_new,gis_view_details,gis_view_gis_integration,gis_view_danger_zone" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gis_views' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:gis_views' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                                            </svg>
-
-                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Views</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- My GIS Views -->
+                            <!-- My GIS Sensors -->
                             {% if request.url_name|is_in_list:"sensor_fleets,sensor_fleet_new,sensor_fleet_details,sensor_fleet_danger_zone,sensor_fleet_user_permissions" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
@@ -444,6 +422,28 @@
                                             </svg>
 
                                             <span class="text-sm font-medium ml-3 duration-200">My GIS Station Tags</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+
+                            <!-- My GIS Views -->
+                            {% if request.url_name|is_in_list:"gis_views,gis_view_new,gis_view_details,gis_view_gis_integration,gis_view_danger_zone" %}
+                            {% set stroke_color = 'indigo' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gis_views' %}">
+                            {% else %}
+                            {% set stroke_color = 'slate' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:gis_views' %}">
+                            {% endif %}
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                            </svg>
+
+                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Views</span>
                                         </div>
                                     </div>
                                 </a>

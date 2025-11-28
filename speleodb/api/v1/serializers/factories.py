@@ -17,6 +17,7 @@ from factory import Faker
 from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
@@ -28,10 +29,11 @@ from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
+from speleodb.gis.models import StationResourceType
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.gis.models.sensor import InstallStatus
-from speleodb.gis.models.station import StationResourceType
 from speleodb.plugins.models import PluginRelease
 from speleodb.plugins.models import PublicAnnoucement
 from speleodb.plugins.models.platform_base import OperatingSystemEnum
@@ -163,67 +165,6 @@ class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
     modified_date = factory.LazyFunction(timezone.now)
 
 
-class StationFactory(DjangoModelFactory[Station]):
-    """Factory for creating Station instances."""
-
-    class Meta:
-        model = Station
-
-    id = factory.LazyFunction(uuid.uuid4)
-    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
-    name = factory.Sequence(lambda n: f"ST{n:03d}")
-    description: str = factory.Faker("text", max_nb_chars=200)  # type: ignore[assignment]
-    latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
-    longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
-    created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
-
-    @classmethod
-    def create_with_coordinates(cls, lat: float, lng: float, **kwargs: Any) -> Station:
-        """Create a station with specific coordinates."""
-        return cls.create(latitude=lat, longitude=lng, **kwargs)
-
-    @classmethod
-    def create_demo_stations(
-        cls, project: Project, count: int = 3, **kwargs: Any
-    ) -> list[Station]:
-        """Create demo stations with realistic cave survey data."""
-        demo_data = [
-            {
-                "name": "Station Alpha",
-                "description": "Main data collection point at cave entrance",
-                "latitude": 20.194500,
-                "longitude": -87.497500,
-            },
-            {
-                "name": "Equipment Station",
-                "description": "Data logger and sensor installation point",
-                "latitude": 20.196200,
-                "longitude": -87.499100,
-            },
-            {
-                "name": "Deep Chamber",
-                "description": "Large chamber with multiple passages",
-                "latitude": 20.195800,
-                "longitude": -87.498600,
-            },
-        ]
-
-        stations = []
-        for i in range(min(count, len(demo_data))):
-            data = demo_data[i]
-            station = cls.create(
-                project=project,
-                name=data["name"],
-                description=data["description"],
-                latitude=data["latitude"],
-                longitude=data["longitude"],
-                **kwargs,
-            )
-            stations.append(station)
-
-        return stations
-
-
 class StationResourceFactory(DjangoModelFactory[StationResource]):
     """Factory for creating StationResource instances."""
 
@@ -232,7 +173,7 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)
-    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    station: SubSurfaceStation = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     resource_type: StationResourceType = factory.Faker(
         "random_element",
         elements=[
@@ -424,7 +365,7 @@ class LogEntryFactory(DjangoModelFactory[LogEntry]):
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)
-    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    station: SubSurfaceStation = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
 
     title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
@@ -520,7 +461,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         model = SensorInstall
 
     sensor: Sensor = factory.SubFactory(SensorFactory)  # type: ignore[assignment]
-    station: Station = factory.SubFactory(StationFactory)  # type: ignore[assignment]
+    station: SubSurfaceStation = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     install_date = factory.LazyFunction(timezone.localdate)
     install_user: str = factory.LazyAttribute(  # type: ignore[assignment]
         lambda _: UserFactory.create().email
@@ -551,7 +492,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         if sensor is None:
             sensor = SensorFactory.create()
         if station is None:
-            station = StationFactory.create()
+            station = SubSurfaceStationFactory.create()
 
         install_date = kwargs.get("install_date", timezone.localdate())
         uninstall_date = kwargs.get("uninstall_date", install_date + timedelta(days=30))
@@ -577,8 +518,9 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         """Create a lost sensor install."""
         if sensor is None:
             sensor = SensorFactory.create()
+
         if station is None:
-            station = StationFactory.create()
+            station = SubSurfaceStationFactory.create()
 
         return cls.create(
             sensor=sensor,
@@ -595,7 +537,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         if sensor is None:
             sensor = SensorFactory.create()
         if station is None:
-            station = StationFactory.create()
+            station = SubSurfaceStationFactory.create()
 
         return cls.create(
             sensor=sensor,

@@ -21,6 +21,7 @@ from speleodb.api.v1.tests.file_utils import sha256_from_url
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import LogEntry
 from speleodb.gis.models import Station
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.utils.test_utils import named_product
 
 
@@ -33,7 +34,7 @@ class TestLogEntryCreateAPIValidation(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             PermissionLevel.READ_AND_WRITE, PermissionType.USER
         )
-        self.station = Station.objects.create(
+        self.station = SubSurfaceStation.objects.create(
             project=self.project,
             name="Test Station",
             latitude=45.0,
@@ -114,7 +115,7 @@ class BaseTestLogEntryGetAPI(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             level=self.level, permission_type=self.permission_type
         )
-        self.station = Station.objects.create(
+        self.station = SubSurfaceStation.objects.create(
             project=self.project,
             name="Test Station",
             latitude=45.1234567,

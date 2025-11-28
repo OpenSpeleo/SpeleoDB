@@ -54,15 +54,17 @@ dependencies = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django==5.2.8",               # https://www.djangoproject.com/
-    "django-allauth==65.13.1",     # https://github.com/pennersr/django-allauth
-    "django-countries==8.1.1",     # https://github.com/SmileyChris/django-countries/
-    "django-dynamic-raw-id==4.4",  # https://github.com/lincolnloop/django-dynamic-raw-id
-    "django-environ==0.12.0",      # https://github.com/joke2k/django-environ
-    "django-hijack==3.7.4",        # https://github.com/django-hijack/django-hijack/
-    "django-js-reverse==0.10.2",   # https://github.com/vintasoftware/django-js-reverse
-    "django-model-utils==5.0.0",   # https://github.com/jazzband/django-model-utils
-    "django-storages[s3]==1.14.6", # https://github.com/jschneier/django-storages
+    "django==5.2.8",                    # https://www.djangoproject.com/
+    "django-allauth==65.13.1",          # https://github.com/pennersr/django-allauth
+    "django-countries==8.1.1",          # https://github.com/SmileyChris/django-countries/
+    "django-dynamic-raw-id==4.4",       # https://github.com/lincolnloop/django-dynamic-raw-id
+    "django-environ==0.12.0",           # https://github.com/joke2k/django-environ
+    "django-hijack==3.7.4",             # https://github.com/django-hijack/django-hijack/
+    "django-js-reverse==0.10.2",        # https://github.com/vintasoftware/django-js-reverse
+    "django-model-utils==5.0.0",        # https://github.com/jazzband/django-model-utils
+    "django-polymorphic==4.1.0",        # https://github.com/jazzband/django-polymorphic
+    "django-rest-polymorphic==0.1.10",  # https://github.com/denisorehovsky/django-rest-polymorphic
+    "django-storages[s3]==1.14.6",      # https://github.com/jschneier/django-storages
 
     # Django REST Framework
     # ------------------------------------------------------------------------------
@@ -148,7 +150,8 @@ production = [
 norecursedirs = ".uv/*"
 minversion = "6.0"
 # addopts = "--ds=config.settings.test --import-mode=importlib"
-addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
+addopts = "--ds=config.settings.test --reuse-db  --create-db --import-mode=prepend"
+# addopts = "--ds=config.settings.test --create-db --import-mode=importlib"
 # addopts = "--ds=config.settings.test -vvv --capture=no --reuse-db --import-mode=importlib"
 python_files = ["tests.py", "test_*.py"]
 filterwarnings = [

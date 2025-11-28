@@ -17,6 +17,7 @@ from django.db.models import Count
 from django.db.models import OuterRef
 from django.db.models import Prefetch
 from django.db.models import Q
+from django.db.models import QuerySet
 from django.db.models import Subquery
 from django.db.models import Value
 from django.db.models import When
@@ -49,6 +50,7 @@ from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -82,7 +84,7 @@ class SensorFleetApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
         user = self.get_user()
 
         # Get all active fleets user has access to with sensor count
-        fleet_perms = (
+        fleet_perms: QuerySet[SensorFleetUserPermission] = (
             SensorFleetUserPermission.objects.filter(
                 user=user,
                 is_active=True,
@@ -99,7 +101,7 @@ class SensorFleetApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
             # Use list serializer for optimized response
             serializer = SensorFleetListSerializer(fleet)
             fleet_data = serializer.data
-            fleet_data["sensor_count"] = perm.sensor_count
+            fleet_data["sensor_count"] = perm.sensor_count  # type: ignore[attr-defined]
             fleet_data["user_permission_level"] = perm.level
             fleet_data["user_permission_level_label"] = perm.level_label
             fleets_data.append(fleet_data)
@@ -233,7 +235,7 @@ class SensorApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
         """List all sensors in a fleet."""
         fleet = self.get_object()
 
-        sensors = Sensor.objects.filter(fleet=fleet).order_by("-modified_date")
+        sensors = Sensor.objects.filter(fleet=fleet).order_by("name")
         serializer = SensorSerializer(sensors, many=True)
         return SuccessResponse(serializer.data)
 
@@ -589,9 +591,7 @@ class SensorFleetExportExcelApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin
         # Get all sensors for this fleet
         sensors = (
             Sensor.objects.filter(fleet=fleet)
-            .prefetch_related(
-                "installs", "installs__station", "installs__station__project"
-            )
+            .prefetch_related("installs", "installs__station")
             .order_by("-modified_date")
         )
 
@@ -640,7 +640,15 @@ class SensorFleetExportExcelApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin
                 status=InstallStatus.INSTALLED
             ).first()
 
-            project_name = latest_install.station.project.name if latest_install else ""
+            project_name = (
+                station.project.name
+                if (
+                    latest_install is not None
+                    and isinstance(station := latest_install.station, SubSurfaceStation)
+                )
+                else ""
+            )
+
             lat = float(latest_install.station.latitude) if latest_install else ""
             long = float(latest_install.station.longitude) if latest_install else ""
             mem_expiry = (
@@ -724,9 +732,9 @@ class SensorFleetWatchlistApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
 
         # Get installs due for retrieval for sensors in this fleet
         due_installs = (
-            SensorInstall.objects.due_for_retrieval(days=days)
+            SensorInstall.objects.due_for_retrieval(days=days)  # pyright: ignore[reportAttributeAccessIssue]
             .filter(sensor__fleet=fleet)
-            .select_related("sensor", "station", "station__project")
+            .select_related("sensor", "station")
             .prefetch_related("sensor__fleet")
         )
 
@@ -779,7 +787,7 @@ class SensorFleetWatchlistApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
                     "installs",
                     queryset=SensorInstall.objects.filter(
                         status=InstallStatus.INSTALLED
-                    ).select_related("station", "station__project"),
+                    ).select_related("station"),
                     to_attr="active_installs",
                 )
             )
@@ -824,9 +832,9 @@ class SensorFleetWatchlistExportExcelApiView(
 
         # Get installs due for retrieval for sensors in this fleet
         due_installs = (
-            SensorInstall.objects.due_for_retrieval(days=days)
+            SensorInstall.objects.due_for_retrieval(days=days)  # pyright: ignore[reportAttributeAccessIssue]
             .filter(sensor__fleet=fleet)
-            .select_related("sensor", "station", "station__project")
+            .select_related("sensor", "station")
             .prefetch_related("sensor__fleet")
         )
 
@@ -866,9 +874,7 @@ class SensorFleetWatchlistExportExcelApiView(
                     ).values("min_expiry")[:1]
                 )
             )
-            .prefetch_related(
-                "installs", "installs__station", "installs__station__project"
-            )
+            .prefetch_related("installs", "installs__station")
             .order_by("min_expiry_date", "-modified_date")
         )
 
@@ -915,7 +921,15 @@ class SensorFleetWatchlistExportExcelApiView(
                 status=InstallStatus.INSTALLED
             ).first()
 
-            project_name = latest_install.station.project.name if latest_install else ""
+            project_name = (
+                station.project.name
+                if (
+                    latest_install is not None
+                    and isinstance(station := latest_install.station, SubSurfaceStation)
+                )
+                else ""
+            )
+
             lat = float(latest_install.station.latitude) if latest_install else ""
             long = float(latest_install.station.longitude) if latest_install else ""
             mem_expiry = (

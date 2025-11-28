@@ -13,9 +13,9 @@ from rest_framework import status
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models.station import StationResourceType
+from speleodb.gis.models import StationResourceType
+from speleodb.gis.models import SubSurfaceStation
 
 
 class TestStationResourceFileValidation(BaseAPIProjectTestCase):
@@ -27,7 +27,7 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             PermissionLevel.READ_AND_WRITE, PermissionType.USER
         )
-        self.station = Station.objects.create(
+        self.station = SubSurfaceStation.objects.create(
             project=self.project,
             name="Test Station",
             latitude=45.0,

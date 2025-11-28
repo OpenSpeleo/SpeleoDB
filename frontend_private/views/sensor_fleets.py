@@ -27,6 +27,8 @@ from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
+from speleodb.gis.models import SubSurfaceStation
+from speleodb.gis.models import SurfaceStation
 from speleodb.gis.models.sensor import InstallStatus
 from speleodb.utils.pydantic_utils import NotFutureDate  # noqa: TC001
 
@@ -79,7 +81,7 @@ class _BaseSensorFleetView(AuthenticatedTemplateView):
                     "installs",
                     queryset=SensorInstall.objects.filter(
                         status=InstallStatus.INSTALLED
-                    ).select_related("station", "station__project"),
+                    ).select_related("station"),
                     to_attr="active_installs",
                 )
             )
@@ -172,7 +174,7 @@ class SensorInstallEvent(BaseModel):
     date: NotFutureDate
     event: InstallStatus
     sensor: Sensor
-    station: Station
+    station: Station | SubSurfaceStation | SurfaceStation
     user: str
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -199,7 +201,7 @@ class SensorFleetHistoryView(_BaseSensorFleetView):
         # Fetch all installs for this fleet, ordered by modified_date desc
         installs = (
             SensorInstall.objects.filter(sensor__fleet=data["sensor_fleet"])
-            .select_related("sensor", "station", "station__project")
+            .select_related("sensor", "station")
             .order_by("-modified_date")
         )
 
@@ -271,7 +273,7 @@ class SensorFleetWatchlistView(_BaseSensorFleetView):
         due_installs = (
             SensorInstall.objects.due_for_retrieval(days=days)  # pyright: ignore[reportAttributeAccessIssue]
             .filter(sensor__fleet=data["sensor_fleet"])
-            .select_related("sensor", "station", "station__project")
+            .select_related("sensor", "station")
         )
 
         # Get unique sensors from the installs
@@ -321,7 +323,7 @@ class SensorFleetWatchlistView(_BaseSensorFleetView):
                     "installs",
                     queryset=SensorInstall.objects.filter(
                         status=InstallStatus.INSTALLED
-                    ).select_related("station", "station__project"),
+                    ).select_related("station"),
                     to_attr="active_installs",
                 )
             )

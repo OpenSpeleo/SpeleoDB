@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
+from speleodb.gis.models import Station
+from speleodb.gis.models import SubSurfaceStation
+from speleodb.gis.models import SurfaceStation
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -69,6 +72,23 @@ def cleanup_database(db: None) -> Generator[None]:
     Automatically applied to all tests that use the database.
     """
     yield  # Let the test run
-    # Delete all objects from all models
+
+    # Import polymorphic station models for proper cleanup order
+
+    # Delete polymorphic children first to avoid FK constraint violations
+    # Use non_polymorphic() to avoid ContentType lookups during deletion
+    SubSurfaceStation.objects.non_polymorphic().all().delete()  # type: ignore[no-untyped-call]
+    SurfaceStation.objects.non_polymorphic().all().delete()  # type: ignore[no-untyped-call]
+    Station.objects.non_polymorphic().all().delete()  # type: ignore[no-untyped-call]
+
+    # Delete all other models, excluding ContentType (managed by Django)
+    # and polymorphic Station models (already deleted above)
+    excluded_labels = {
+        "contenttypes.ContentType",
+        "gis.Station",
+        "gis.SubSurfaceStation",
+        "gis.SurfaceStation",
+    }
     for model in apps.get_models():
-        model.objects.all().delete()  # type: ignore[attr-defined]
+        if model._meta.label not in excluded_labels:  # noqa: SLF001
+            model.objects.all().delete()  # type: ignore[attr-defined]

@@ -109,7 +109,7 @@ export const Interactions = {
                 f.layer && f.layer.id && f.layer.id.startsWith('stations-') && f.layer.id.endsWith('-circles')
             );
             
-            if (stationFeature && Config.hasWriteAccess) {
+            if (stationFeature) {
                 const projectId = Geometry.findProjectForFeature(stationFeature, map, State.allProjectLayers);
                 if (Config.hasProjectWriteAccess(projectId)) {
                     isPotentialDrag = true;
@@ -134,7 +134,8 @@ export const Interactions = {
                 f.layer && f.layer.id === 'pois-layer'
             );
             
-            if (poiFeature && Config.hasWriteAccess) {
+            if (poiFeature) {
+                // Any authenticated user can drag their POIs
                 isPotentialDrag = true;
                 hasMoved = false;
                 isDragging = false;
@@ -302,4 +303,5 @@ export const Interactions = {
         });
     }
 };
+
 

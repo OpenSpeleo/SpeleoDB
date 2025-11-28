@@ -32,6 +32,7 @@ from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import Station
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import DownloadResponseFromBlob
@@ -44,6 +45,8 @@ if TYPE_CHECKING:
 
     from django.http import FileResponse
     from rest_framework.request import Request
+
+    from speleodb.surveys.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -577,13 +580,21 @@ class ExperimentExportExcelApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
         for record in records:
             col_num = 0
 
+            project: Project | None = (
+                record.station.project
+                if isinstance(record.station, SubSurfaceStation)
+                else None
+            )
+
             # Project Name
-            worksheet.write(row_num, col_num, record.station.project.name, cell_format)
+            worksheet.write(
+                row_num, col_num, project.name if project else "", cell_format
+            )
             col_num += 1
 
             # Project ID
             worksheet.write(
-                row_num, col_num, str(record.station.project.id), cell_format
+                row_num, col_num, str(project.id) if project else "", cell_format
             )
             col_num += 1
 

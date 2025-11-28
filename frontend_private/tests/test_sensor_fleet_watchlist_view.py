@@ -20,7 +20,7 @@ from speleodb.api.v1.tests.factories import SensorFactory
 from speleodb.api.v1.tests.factories import SensorFleetFactory
 from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
 from speleodb.api.v1.tests.factories import SensorInstallFactory
-from speleodb.api.v1.tests.factories import StationFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.tests.factories import UserFactory
@@ -138,7 +138,7 @@ class TestSensorFleetWatchlistView(TestCase):
 
         # Create sensor with install expiring soon
         sensor = SensorFactory.create(fleet=self.fleet)
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         SensorInstallFactory.create(
             sensor=sensor,
@@ -229,7 +229,7 @@ class TestSensorFleetWatchlistView(TestCase):
         today = timezone.localdate()
 
         sensor = SensorFactory.create(fleet=self.fleet)
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         SensorInstallFactory.create(
             sensor=sensor,

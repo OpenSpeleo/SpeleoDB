@@ -296,9 +296,7 @@ document.getElementById('context-menu-help-modal')?.addEventListener('click', fu
     // Context bridge - defined BEFORE the module loads to ensure availability
     window.SPELEO_CONTEXT = {
         csrfToken: "{{ csrf_token }}",
-        mapboxToken: "{{ mapbox_api_token }}",
-        hasWriteAccess: {{ has_write_access|yesno:"true,false" }},
-        projects: {{ projects|safe }}
+        mapboxToken: "{{ mapbox_api_token }}"
     };
 </script>
 <script type="module" src="{% static 'private/js/map_viewer/main.js' %}"></script>

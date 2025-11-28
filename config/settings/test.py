@@ -38,6 +38,15 @@ from .base import env  # noqa: E402
 
 # Have to overwrite because of `USE_DOCKER` in base.py
 DATABASES = {"default": env.db("DATABASE_URL")}
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",  # Your regular database file
+#         "TEST": {
+#             "NAME": BASE_DIR / "test_db.sqlite3",  # A separate file for tests
+#         },
+#     }
+# }
 
 # GENERAL
 # ------------------------------------------------------------------------------

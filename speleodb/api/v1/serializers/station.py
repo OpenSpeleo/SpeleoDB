@@ -11,7 +11,9 @@ from rest_framework import serializers
 
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models.station import StationResourceType
+from speleodb.gis.models import StationResourceType
+from speleodb.gis.models import SubSurfaceStation
+from speleodb.gis.models import SurfaceStation
 from speleodb.utils.gps_utils import format_coordinate
 
 
@@ -107,7 +109,7 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
 
 
 class StationSerializer(serializers.ModelSerializer[Station]):
-    """Serializer for creating stations."""
+    """Serializer for base Station model (read operations)."""
 
     # Override tag field to return nested representation
     tag = serializers.SerializerMethodField()
@@ -121,7 +123,6 @@ class StationSerializer(serializers.ModelSerializer[Station]):
             "created_by",
             "creation_date",
             "modified_date",
-            "project",
             "tag",
         ]
 
@@ -172,7 +173,78 @@ class StationSerializer(serializers.ModelSerializer[Station]):
 
 
 class StationWithResourcesSerializer(StationSerializer):
-    """Serializer for stations."""
+    """Serializer for stations with resources."""
+
+    resources = StationResourceSerializer(many=True, read_only=True)
+
+
+class SubSurfaceStationSerializer(serializers.ModelSerializer[SubSurfaceStation]):
+    """Serializer for SubSurfaceStation model (has project field)."""
+
+    # Override tag field to return nested representation
+    tag = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubSurfaceStation
+        fields = "__all__"
+
+        read_only_fields = [
+            "id",
+            "created_by",
+            "creation_date",
+            "modified_date",
+            "project",
+            "tag",
+        ]
+
+    def get_tag(self, obj: SubSurfaceStation) -> dict[str, Any] | None:
+        """Get tag as a dictionary."""
+        # Handle case where obj is validated_data dict (during error handling)
+        if isinstance(obj, dict):
+            return None
+
+        if obj.tag:
+            return {
+                "id": str(obj.tag.id),
+                "name": obj.tag.name,
+                "color": obj.tag.color,
+            }
+        return None
+
+    def to_internal_value(self, data: dict[str, Any]) -> Any:
+        """Override to round coordinates before validation."""
+
+        # Data is immutable - need to copy
+        data = data.copy()
+
+        # Round coordinates if they exist in the data
+        if "latitude" in data and data["latitude"] is not None:
+            with contextlib.suppress(ValueError, TypeError, InvalidOperation):
+                # Let the field validation handle the error
+                data["latitude"] = format_coordinate(data["latitude"])
+
+        if "longitude" in data and data["longitude"] is not None:
+            with contextlib.suppress(ValueError, TypeError, InvalidOperation):
+                # Let the field validation handle the error
+                data["longitude"] = format_coordinate(data["longitude"])
+
+        return super().to_internal_value(data)
+
+    def to_representation(self, instance: SubSurfaceStation) -> dict[str, Any]:
+        """Ensure coordinates are formatted without trailing zeros."""
+        data = super().to_representation(instance)
+
+        if data.get("latitude") is not None:
+            data["latitude"] = format_coordinate(data["latitude"])
+
+        if data.get("longitude") is not None:
+            data["longitude"] = format_coordinate(data["longitude"])
+
+        return data
+
+
+class SubSurfaceStationWithResourcesSerializer(SubSurfaceStationSerializer):
+    """Serializer for subsurface stations with resources."""
 
     resources = StationResourceSerializer(many=True, read_only=True)
 
@@ -191,7 +263,6 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
             "created_by",
             "creation_date",
             "modified_date",
-            "project",
             "tag",
         ]
 
@@ -219,7 +290,16 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
                 "created_by": instance.created_by,
                 "creation_date": instance.creation_date.isoformat(),
                 "modified_date": instance.modified_date.isoformat(),
-                "project": str(instance.project.id),
+                "project": (
+                    str(instance.project.id)
+                    if isinstance(instance, SubSurfaceStation)
+                    else None
+                ),
+                "network": (
+                    str(instance.network.id)
+                    if isinstance(instance, SurfaceStation)
+                    else None
+                ),
                 "tag": tag,
             },
         }

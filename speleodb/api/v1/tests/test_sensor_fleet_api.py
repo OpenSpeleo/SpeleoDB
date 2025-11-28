@@ -27,7 +27,7 @@ from speleodb.api.v1.tests.factories import SensorFactory
 from speleodb.api.v1.tests.factories import SensorFleetFactory
 from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
 from speleodb.api.v1.tests.factories import SensorInstallFactory
-from speleodb.api.v1.tests.factories import StationFactory
+from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
@@ -1058,7 +1058,7 @@ class TestSensorFleetExport:
         _ = SensorFactory.create(fleet=sensor_fleet_with_read, name="Sensor 2")
 
         # Create install for sensor 1
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
         SensorInstallFactory.create(
             sensor=sensor1,
             station=station,
@@ -1117,7 +1117,7 @@ class TestSensorFleetWatchlist:
         sensor2 = SensorFactory.create(fleet=sensor_fleet_with_read)
         sensor3 = SensorFactory.create(fleet=sensor_fleet_with_read)
 
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         # Sensor 1: expires in 30 days (should be included)
         SensorInstallFactory.create(
@@ -1172,7 +1172,7 @@ class TestSensorFleetWatchlist:
         sensor1 = SensorFactory.create(fleet=sensor_fleet_with_read)
         sensor2 = SensorFactory.create(fleet=sensor_fleet_with_read)
 
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         # Sensor 1: expires in 10 days
         SensorInstallFactory.create(
@@ -1217,7 +1217,7 @@ class TestSensorFleetWatchlist:
         today = timezone.localdate()
 
         sensor = SensorFactory.create(fleet=sensor_fleet_with_read)
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         # Sensor expires in 100 days (beyond default 60)
         SensorInstallFactory.create(
@@ -1249,7 +1249,7 @@ class TestSensorFleetWatchlist:
         today = timezone.localdate()
 
         sensor = SensorFactory.create(fleet=sensor_fleet_with_read)
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         SensorInstallFactory.create(
             sensor=sensor,
@@ -1282,7 +1282,7 @@ class TestSensorFleetWatchlist:
         today = timezone.localdate()
 
         sensor = SensorFactory.create(fleet=sensor_fleet_with_read)
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         SensorInstallFactory.create(
             sensor=sensor,
@@ -1315,7 +1315,7 @@ class TestSensorFleetWatchlist:
         today = timezone.localdate()
 
         sensor = SensorFactory.create(fleet=sensor_fleet_with_read)
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         # Memory expires in 30 days, battery in 90 days
         SensorInstallFactory.create(
@@ -1419,7 +1419,7 @@ class TestSensorFleetWatchlist:
         sensor1 = SensorFactory.create(fleet=sensor_fleet_with_read)
         sensor2 = SensorFactory.create(fleet=sensor_fleet_with_read)
 
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         # Sensor 1: expired yesterday
         # install_date must be <= expiracy_memory_date, so set install_date to
@@ -1506,7 +1506,7 @@ class TestSensorFleetWatchlist:
         sensor1 = SensorFactory.create(fleet=sensor_fleet_with_read)
         sensor2 = SensorFactory.create(fleet=sensor_fleet_with_read)
 
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         # Sensor 1: installed and expiring soon
         SensorInstallFactory.create(
@@ -1553,7 +1553,7 @@ class TestSensorFleetWatchlist:
         today = timezone.localdate()
 
         sensor = SensorFactory.create(fleet=sensor_fleet_with_read)
-        station = StationFactory.create()
+        station = SubSurfaceStationFactory.create()
 
         SensorInstallFactory.create(
             sensor=sensor,

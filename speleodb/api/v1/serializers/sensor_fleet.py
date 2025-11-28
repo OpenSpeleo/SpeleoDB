@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 from typing import Any
 
 from rest_framework import serializers
@@ -13,8 +14,13 @@ from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
+from speleodb.gis.models import SubSurfaceStation
+from speleodb.gis.models import SurfaceStation
 from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    from speleodb.surveys.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +66,20 @@ class SensorSerializer(serializers.ModelSerializer[Sensor]):
     def get_latest_install_project(self, obj: Sensor) -> str | None:
         """Get the name of the project where the sensor is currently installed."""
         install = obj.installs.filter(status=InstallStatus.INSTALLED).first()
-        return install.station.project.name if install else None
+
+        if install is None:
+            return None
+
+        match station := install.station:
+            case SubSurfaceStation():
+                return station.project.name
+            case SurfaceStation():
+                return ""
+            case _:
+                raise TypeError(
+                    "Unsupported station type for latest install project retrieval: "
+                    f"{type(station)}"
+                )
 
     def get_latest_install_lat(self, obj: Sensor) -> float | None:
         """Get the latitude of the station where the sensor is currently installed."""
@@ -92,32 +111,43 @@ class SensorSerializer(serializers.ModelSerializer[Sensor]):
 
     def get_active_installs(self, obj: Sensor) -> list[dict[str, Any]]:
         """Get active installs with full details."""
-        installs = obj.installs.filter(status=InstallStatus.INSTALLED).select_related(  # pyright: ignore[reportAttributeAccessIssue]
-            "station", "station__project"
+        installs = obj.installs.filter(status=InstallStatus.INSTALLED).select_related(
+            "station"
         )
 
-        return [
-            {
-                "id": str(install.id),
-                "station": {
-                    "id": str(install.station.id),
-                    "name": install.station.name,
-                    "latitude": str(install.station.latitude),
-                    "longitude": str(install.station.longitude),
-                    "project": {
-                        "id": str(install.station.project.id),
-                        "name": install.station.project.name,
+        active_install: list[dict[str, Any]] = []
+
+        for install in installs:
+            station: Station = install.station
+            project: Project | None = (
+                station.project if isinstance(station, SubSurfaceStation) else None
+            )
+
+            active_install.append(
+                {
+                    "id": str(install.id),
+                    "station": {
+                        "id": str(station.id),
+                        "name": station.name,
+                        "latitude": str(station.latitude),
+                        "longitude": str(station.longitude),
+                        "project": {
+                            "id": str(project.id),
+                            "name": project.name,
+                        }
+                        if project
+                        else None,
                     },
-                },
-                "expiracy_memory_date": install.expiracy_memory_date.isoformat()
-                if install.expiracy_memory_date
-                else None,
-                "expiracy_battery_date": install.expiracy_battery_date.isoformat()
-                if install.expiracy_battery_date
-                else None,
-            }
-            for install in installs
-        ]
+                    "expiracy_memory_date": install.expiracy_memory_date.isoformat()
+                    if install.expiracy_memory_date
+                    else None,
+                    "expiracy_battery_date": install.expiracy_battery_date.isoformat()
+                    if install.expiracy_battery_date
+                    else None,
+                }
+            )
+
+        return active_install
 
 
 class SensorFleetSerializer(serializers.ModelSerializer[SensorFleet]):

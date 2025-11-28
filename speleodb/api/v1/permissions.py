@@ -19,8 +19,9 @@ from speleodb.gis.models import PointOfInterest
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
-from speleodb.gis.models import Station
+from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import StationResource
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.surveys.models import Project
 from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.utils.exceptions import NotAuthorizedError
@@ -118,7 +119,7 @@ class BaseStationAccessLevel(permissions.BasePermission):
         self,
         request: AuthenticatedDRFRequest,  # type: ignore[override]
         view: APIView,
-        obj: Project | Station | StationResource | LogEntry,
+        obj: Project | SubSurfaceStation | StationResource | LogEntry | SensorInstall,
     ) -> bool:
         # Get the project from the object
         project: Project
@@ -127,22 +128,29 @@ class BaseStationAccessLevel(permissions.BasePermission):
                 # Try station.project for StationResource objects
                 project = obj
 
-            case Station():
+            case SubSurfaceStation():
                 # Try station.project for StationResource objects
                 project = obj.project
 
-            case StationResource() | LogEntry():
-                project = obj.station.project
+            case StationResource() | LogEntry() | SensorInstall():
+                # ForeignKey to polymorphic model returns base class by default
+                # Call get_real_instance() to get the actual polymorphic child
+                match station := obj.station.get_real_instance():  # type: ignore[no-untyped-call]
+                    case SubSurfaceStation():
+                        project = station.project
+
+                    case _:
+                        raise NotImplementedError(
+                            "Not yet implemented for this station type: "
+                            f"{type(station)}"
+                        )
 
             case _:
-                # Try to get station from sensor install or other related objects
-                if hasattr(obj, "station"):
-                    project = obj.station.project
-                else:
-                    raise TypeError(
-                        f"Unknown `type` received: {type(obj)}. "
-                        "Expected: Station | StationResource | LogEntry | SensorInstall"
-                    )
+                raise TypeError(
+                    f"Unknown `type` received: {type(obj)}. "
+                    "Expected: Project | SubSurfaceStation | StationResource | "
+                    f"LogEntry | SensorInstall"
+                )
 
         try:
             return (
@@ -203,7 +211,8 @@ class BaseExperimentAccessLevel(permissions.BasePermission):
 
             case _:
                 raise TypeError(
-                    f"Unknown `type` received: {type(obj)}. Expected: Experiment"
+                    f"Unknown `type` received: {type(obj)}. "
+                    "Expected: Experiment | ExperimentRecord"
                 )
 
         try:

@@ -125,10 +125,52 @@ export const API = {
     deleteStationResource: (resourceId) =>
         apiRequest(Urls['api:v1:resource-detail'](resourceId), 'DELETE'),
 
-    // GeoJSON
+    // Projects
+    getAllProjects: () =>
+        apiRequest(Urls['api:v1:projects']()),
+
     getAllProjectsGeoJSON: () =>
         apiRequest(Urls['api:v1:all-projects-geojson']()),
+
+    // Sensor-Fleets
+    getSensorFleets: () =>
+        apiRequest(Urls['api:v1:sensor-fleets']()),
+
+    getSensorFleetDetails: (fleetId) =>
+        apiRequest(Urls['api:v1:sensor-fleet-detail'](fleetId)),
+
+    getSensorFleetSensors: (fleetId) =>
+        apiRequest(Urls['api:v1:sensor-fleet-sensors'](fleetId)),
+
+    // Sensor Installs
+    getStationSensorInstalls: (stationId) =>
+        apiRequest(Urls['api:v1:station-sensor-installs'](stationId)),
+
+    getStationSensorInstallsWithStatus: (stationId, status) =>
+        apiRequest(Urls['api:v1:station-sensor-installs'](stationId) + "?status=" + status),
+
+    // Returns raw Response object for blob download (not parsed JSON)
+    getStationSensorInstallsAsExcel: async (stationId) => {
+        const response = await fetch(Urls['api:v1:station-sensor-installs-export'](stationId), {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': Utils.getCSRFToken()
+            },
+            credentials: 'same-origin'
+        });
+        return response;  // Return raw Response for blob handling
+    },
+
+    getStationSensorInstallDetails: (stationId, installId) =>
+        apiRequest(Urls['api:v1:station-sensor-install-detail'](stationId, installId)),
+
+    createStationSensorInstalls: (stationId, formData) =>
+        apiRequest(Urls['api:v1:station-sensor-installs'](stationId), 'POST', formData, true),
+
+    updateStationSensorInstalls: (stationId, installId, formData) =>
+        apiRequest(Urls['api:v1:station-sensor-install-detail'](stationId, installId), 'PATCH', formData, true),
 };
+
 
 
 

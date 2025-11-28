@@ -16,9 +16,9 @@ from rest_framework import status
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models.station import StationResourceType
+from speleodb.gis.models import StationResourceType
+from speleodb.gis.models import SubSurfaceStation
 
 User = get_user_model()
 
@@ -76,7 +76,7 @@ class TestStationResourceMiniatures(BaseAPIProjectTestCase):
             PermissionLevel.READ_AND_WRITE, PermissionType.USER
         )
         # Create a station for testing
-        self.station = Station.objects.create(
+        self.station = SubSurfaceStation.objects.create(
             name="Test Station",
             project=self.project,  # BaseAPIProjectTestCase uses self.project
             latitude=45.0,

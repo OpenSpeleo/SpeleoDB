@@ -11,10 +11,14 @@ from speleodb.gis.models.gis_view import GISView
 from speleodb.gis.models.gis_view import GISViewProject
 
 # GIS Models
+from speleodb.gis.models.network import MonitoringNetwork
+from speleodb.gis.models.network import MonitoringNetworkUserPermission
 from speleodb.gis.models.point_of_interest import PointOfInterest
 from speleodb.gis.models.station_tag import StationTag
 from speleodb.gis.models.station import Station
-from speleodb.gis.models.station import StationResource
+from speleodb.gis.models.station import SurfaceStation
+from speleodb.gis.models.station import SubSurfaceStation
+from speleodb.gis.models.station_resource import StationResource, StationResourceType
 
 # Science Related Models
 from speleodb.gis.models.experiment import Experiment
@@ -38,6 +42,8 @@ __all__ = [
     "GISViewProject",
     "InstallStatus",
     "LogEntry",
+    "MonitoringNetwork",
+    "MonitoringNetworkUserPermission",
     "PointOfInterest",
     "ProjectGeoJSON",
     "Sensor",
@@ -47,5 +53,8 @@ __all__ = [
     "SensorStatus",
     "Station",
     "StationResource",
+    "StationResourceType",
     "StationTag",
+    "SubSurfaceStation",
+    "SurfaceStation",
 ]

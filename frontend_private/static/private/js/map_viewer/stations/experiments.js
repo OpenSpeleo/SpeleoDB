@@ -95,6 +95,7 @@ function validateExperimentField(value, fieldType, required, fieldId = '') {
 function renderExperimentTable(experiment, dataRows, stationId, projectId) {
     const sortedFields = sortExperimentFields(experiment.experiment_fields || {});
     const hasWriteAccess = Config.hasProjectWriteAccess(projectId);
+    const isAdmin = Config.hasProjectAdminAccess(projectId);
 
     if (!dataRows || dataRows.length === 0) {
         return `
@@ -160,11 +161,19 @@ function renderExperimentTable(experiment, dataRows, stationId, projectId) {
         }).join('')}
                             ${hasWriteAccess ? `
                                 <td class="px-4 py-3 text-center">
-                                    <button onclick="window.StationExperiments.openDeleteRowModal('${stationId}', '${experiment.id}', '${row.id || idx}')" class="text-red-400 hover:text-red-300 inline-flex items-center justify-center" title="Delete">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                        </svg>
-                                    </button>
+                                    ${isAdmin ? `
+                                        <button onclick="window.StationExperiments.openDeleteRowModal('${stationId}', '${experiment.id}', '${row.id || idx}')" class="text-red-400 hover:text-red-300 inline-flex items-center justify-center" title="Delete">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    ` : `
+                                        <button disabled class="text-slate-500 cursor-not-allowed inline-flex items-center justify-center" title="Only admins can delete records">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    `}
                                 </td>
                             ` : ''}
                         </tr>
@@ -719,4 +728,5 @@ export const StationExperiments = {
 
 // Expose functions globally for onclick handlers
 window.StationExperiments = StationExperiments;
+
 
