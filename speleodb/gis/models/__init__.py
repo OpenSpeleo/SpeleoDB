@@ -19,7 +19,7 @@ from speleodb.gis.models.point_of_interest import PointOfInterest
 from speleodb.gis.models.station_tag import StationTag
 from speleodb.gis.models.station import Station
 from speleodb.gis.models.station import SurfaceStation
-from speleodb.gis.models.station import SubsurfaceStation
+from speleodb.gis.models.station import SubSurfaceStation
 from speleodb.gis.models.station_resource import StationResource, StationResourceType
 
 # Science Related Models
@@ -57,6 +57,6 @@ __all__ = [
     "StationResource",
     "StationResourceType",
     "StationTag",
-    "SubsurfaceStation",
+    "SubSurfaceStation",
     "SurfaceStation",
 ]

@@ -50,7 +50,7 @@ from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -644,7 +644,7 @@ class SensorFleetExportExcelApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin
                 station.project.name
                 if (
                     latest_install is not None
-                    and isinstance(station := latest_install.station, SubsurfaceStation)
+                    and isinstance(station := latest_install.station, SubSurfaceStation)
                 )
                 else ""
             )
@@ -925,7 +925,7 @@ class SensorFleetWatchlistExportExcelApiView(
                 station.project.name
                 if (
                     latest_install is not None
-                    and isinstance(station := latest_install.station, SubsurfaceStation)
+                    and isinstance(station := latest_install.station, SubSurfaceStation)
                 )
                 else ""
             )

@@ -14,7 +14,7 @@ from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
 from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.models import User
@@ -71,7 +71,7 @@ class SensorSerializer(serializers.ModelSerializer[Sensor]):
             return None
 
         match station := install.station:
-            case SubsurfaceStation():
+            case SubSurfaceStation():
                 return station.project.name
             case SurfaceStation():
                 return ""
@@ -120,7 +120,7 @@ class SensorSerializer(serializers.ModelSerializer[Sensor]):
         for install in installs:
             station: Station = install.station
             project: Project | None = (
-                station.project if isinstance(station, SubsurfaceStation) else None
+                station.project if isinstance(station, SubSurfaceStation) else None
             )
 
             active_install.append(

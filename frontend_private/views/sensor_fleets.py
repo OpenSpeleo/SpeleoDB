@@ -27,7 +27,7 @@ from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
 from speleodb.gis.models.sensor import InstallStatus
 from speleodb.utils.pydantic_utils import NotFutureDate  # noqa: TC001
@@ -174,7 +174,7 @@ class SensorInstallEvent(BaseModel):
     date: NotFutureDate
     event: InstallStatus
     sensor: Sensor
-    station: Station | SubsurfaceStation | SurfaceStation
+    station: Station | SubSurfaceStation | SurfaceStation
     user: str
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

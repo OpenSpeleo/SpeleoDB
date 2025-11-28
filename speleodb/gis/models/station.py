@@ -99,7 +99,7 @@ class Station(PolymorphicModel):
         return None
 
 
-class SubsurfaceStation(Station):
+class SubSurfaceStation(Station):
     """
     Represents a subsurface survey station.
     Inherits from Station.

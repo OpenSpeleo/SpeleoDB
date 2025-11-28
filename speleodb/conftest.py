@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.gis.models import Station
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
 from speleodb.users.tests.factories import UserFactory
 
@@ -86,7 +86,7 @@ def cleanup_database(db: None) -> Generator[None]:
 
     # Delete polymorphic children first to avoid FK constraint violations
     # Use non_polymorphic() to avoid ContentType lookups during deletion
-    SubsurfaceStation.objects.non_polymorphic().all().delete()  # type: ignore[attr-defined]
+    SubSurfaceStation.objects.non_polymorphic().all().delete()  # type: ignore[attr-defined]
     SurfaceStation.objects.non_polymorphic().all().delete()  # type: ignore[attr-defined]
     Station.objects.non_polymorphic().all().delete()  # type: ignore[attr-defined]
 
@@ -95,7 +95,7 @@ def cleanup_database(db: None) -> Generator[None]:
     excluded_labels = {
         "contenttypes.ContentType",
         "gis.Station",
-        "gis.SubsurfaceStation",
+        "gis.SubSurfaceStation",
         "gis.SurfaceStation",
     }
     for model in apps.get_models():

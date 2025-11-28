@@ -21,7 +21,7 @@ from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import StationResource
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.surveys.models import Project
 from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.utils.exceptions import NotAuthorizedError
@@ -119,7 +119,7 @@ class BaseStationAccessLevel(permissions.BasePermission):
         self,
         request: AuthenticatedDRFRequest,  # type: ignore[override]
         view: APIView,
-        obj: Project | SubsurfaceStation | StationResource | LogEntry | SensorInstall,
+        obj: Project | SubSurfaceStation | StationResource | LogEntry | SensorInstall,
     ) -> bool:
         # Get the project from the object
         project: Project
@@ -128,7 +128,7 @@ class BaseStationAccessLevel(permissions.BasePermission):
                 # Try station.project for StationResource objects
                 project = obj
 
-            case SubsurfaceStation():
+            case SubSurfaceStation():
                 # Try station.project for StationResource objects
                 project = obj.project
 
@@ -136,7 +136,7 @@ class BaseStationAccessLevel(permissions.BasePermission):
                 # ForeignKey to polymorphic model returns base class by default
                 # Call get_real_instance() to get the actual polymorphic child
                 match station := obj.station.get_real_instance():
-                    case SubsurfaceStation():
+                    case SubSurfaceStation():
                         project = station.project
 
                     case _:
@@ -147,7 +147,7 @@ class BaseStationAccessLevel(permissions.BasePermission):
             case _:
                 raise TypeError(
                     f"Unknown `type` received: {type(obj)}. "
-                    "Expected: Project | SubsurfaceStation | StationResource | "
+                    "Expected: Project | SubSurfaceStation | StationResource | "
                     f"LogEntry | SensorInstall"
                 )
 

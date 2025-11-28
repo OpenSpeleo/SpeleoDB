@@ -32,7 +32,7 @@ from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import Station
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import DownloadResponseFromBlob
@@ -582,7 +582,7 @@ class ExperimentExportExcelApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
 
             project: Project | None = (
                 record.station.project
-                if isinstance(record.station, SubsurfaceStation)
+                if isinstance(record.station, SubSurfaceStation)
                 else None
             )
 

@@ -15,7 +15,7 @@ def inject_polymorphic_ctype(apps, schema_editor):
 
 def migrate_stations_to_subsurface(apps, schema_editor):
     """
-    Forward migration: Convert all existing Stations to SubsurfaceStations.
+    Forward migration: Convert all existing Stations to SubSurfaceStations.
     
     Uses raw SQL to:
     1. Insert rows into gis_subsurfacestation linking to existing stations
@@ -24,7 +24,7 @@ def migrate_stations_to_subsurface(apps, schema_editor):
 
     with schema_editor.connection.cursor() as cursor:
         # Insert into child table directly - this links existing stations
-        # to SubsurfaceStation without creating new Station rows
+        # to SubSurfaceStation without creating new Station rows
         cursor.execute('''
             INSERT INTO gis_subsurfacestation (station_ptr_id, project_id)
             SELECT id, _project_id FROM gis_station WHERE _project_id IS NOT NULL
@@ -33,15 +33,15 @@ def migrate_stations_to_subsurface(apps, schema_editor):
 
 def reverse_migrate_to_base_stations(apps, schema_editor):
     """
-    Reverse migration: Convert SubsurfaceStations back to base Stations.
+    Reverse migration: Convert SubSurfaceStations back to base Stations.
     
     Uses raw SQL to:
-    1. Copy project_id from SubsurfaceStation back to Station
+    1. Copy project_id from SubSurfaceStation back to Station
     2. Clear polymorphic_ctype
-    3. Delete SubsurfaceStation and SurfaceStation rows
+    3. Delete SubSurfaceStation and SurfaceStation rows
     """    
     with schema_editor.connection.cursor() as cursor:
-        # Copy project data back from SubsurfaceStation to Station
+        # Copy project data back from SubSurfaceStation to Station
         # Uses PostgreSQL UPDATE...FROM syntax
         cursor.execute('''
             UPDATE gis_station 
@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
 
         # ================================================================
         # STEP 3: Remove project from Station's STATE only (keep DB column)
-        # This MUST happen before creating SubsurfaceStation to avoid
+        # This MUST happen before creating SubSurfaceStation to avoid
         # field name clash between parent and child
         # ================================================================
         migrations.AlterField(
@@ -112,11 +112,11 @@ class Migration(migrations.Migration):
         ),
 
         # ================================================================
-        # STEP 4: Create SubsurfaceStation and SurfaceStation
+        # STEP 4: Create SubSurfaceStation and SurfaceStation
         # Now safe to create since Station no longer has 'project' in state
         # ================================================================
         migrations.CreateModel(
-            name='SubsurfaceStation',
+            name='SubSurfaceStation',
             fields=[
                 ('station_ptr', models.OneToOneField(
                     auto_created=True,
@@ -137,7 +137,7 @@ class Migration(migrations.Migration):
         ),
 
         # ================================================================
-        # STEP 5: Data migration - convert existing Stations to SubsurfaceStations
+        # STEP 5: Data migration - convert existing Stations to SubSurfaceStations
         # Uses raw SQL to INSERT directly into child table
         # ================================================================
         migrations.RunPython(

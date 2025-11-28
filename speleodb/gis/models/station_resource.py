@@ -19,7 +19,7 @@ from django.db import models
 
 from speleodb.gis.models import Station
 from speleodb.gis.models import SurfaceStation
-from speleodb.gis.models.station import SubsurfaceStation
+from speleodb.gis.models.station import SubSurfaceStation
 from speleodb.utils.document_processing import DocumentProcessor
 from speleodb.utils.image_processing import ImageProcessor
 from speleodb.utils.storages import AttachmentStorage
@@ -55,10 +55,10 @@ def get_station_resource_path(instance: StationResource, filename: str) -> str:
     thumb_suffix = "_thumb" if "_thumb" in filename else ""
 
     # Determine path prefix based on station type
-    # SubsurfaceStation has 'project', SurfaceStation has 'network'
+    # SubSurfaceStation has 'project', SurfaceStation has 'network'
     prefix: str
     match station := instance.station:
-        case SubsurfaceStation():
+        case SubSurfaceStation():
             prefix = f"stations/{station.project.id}"
         case SurfaceStation():
             prefix = f"networks/{station.network.id}"

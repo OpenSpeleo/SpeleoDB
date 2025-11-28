@@ -24,7 +24,7 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationResourceType
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.utils.test_utils import named_product
 
 
@@ -65,7 +65,7 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         self.set_test_project_permission(
             level=self.level, permission_type=self.permission_type
         )
-        self.station = SubsurfaceStation.objects.create(
+        self.station = SubSurfaceStation.objects.create(
             project=self.project,
             name="Test Station",
             latitude=45.1234567,

@@ -29,7 +29,7 @@ from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationResourceType
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.gis.models.sensor import InstallStatus
@@ -164,11 +164,11 @@ class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
     modified_date = factory.LazyFunction(timezone.now)
 
 
-class SubSurfaceStationFactory(DjangoModelFactory[SubsurfaceStation]):
-    """Factory for creating SubsurfaceStation instances.
+class SubSurfaceStationFactory(DjangoModelFactory[SubSurfaceStation]):
+    """Factory for creating SubSurfaceStation instances.
 
     Note: Station is now a polymorphic base class. This factory creates
-    SubsurfaceStation instances which have a project field.
+    SubSurfaceStation instances which have a project field.
     """
 
     id = factory.LazyFunction(uuid.uuid4)
@@ -180,19 +180,19 @@ class SubSurfaceStationFactory(DjangoModelFactory[SubsurfaceStation]):
     created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
 
     class Meta:
-        model = SubsurfaceStation
+        model = SubSurfaceStation
 
     @classmethod
     def create_with_coordinates(
         cls, lat: float, lng: float, **kwargs: Any
-    ) -> SubsurfaceStation:
+    ) -> SubSurfaceStation:
         """Create a station with specific coordinates."""
         return cls.create(latitude=lat, longitude=lng, **kwargs)
 
     @classmethod
     def create_demo_stations(
         cls, project: Project, count: int = 3, **kwargs: Any
-    ) -> list[SubsurfaceStation]:
+    ) -> list[SubSurfaceStation]:
         """Create demo stations with realistic cave survey data."""
         demo_data = [
             {

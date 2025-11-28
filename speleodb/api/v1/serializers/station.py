@@ -12,7 +12,7 @@ from rest_framework import serializers
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationResourceType
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
 from speleodb.utils.gps_utils import format_coordinate
 
@@ -178,14 +178,14 @@ class StationWithResourcesSerializer(StationSerializer):
     resources = StationResourceSerializer(many=True, read_only=True)
 
 
-class SubsurfaceStationSerializer(serializers.ModelSerializer[SubsurfaceStation]):
-    """Serializer for SubsurfaceStation model (has project field)."""
+class SubSurfaceStationSerializer(serializers.ModelSerializer[SubSurfaceStation]):
+    """Serializer for SubSurfaceStation model (has project field)."""
 
     # Override tag field to return nested representation
     tag = serializers.SerializerMethodField()
 
     class Meta:
-        model = SubsurfaceStation
+        model = SubSurfaceStation
         fields = "__all__"
 
         read_only_fields = [
@@ -197,7 +197,7 @@ class SubsurfaceStationSerializer(serializers.ModelSerializer[SubsurfaceStation]
             "tag",
         ]
 
-    def get_tag(self, obj: SubsurfaceStation) -> dict[str, Any] | None:
+    def get_tag(self, obj: SubSurfaceStation) -> dict[str, Any] | None:
         """Get tag as a dictionary."""
         # Handle case where obj is validated_data dict (during error handling)
         if isinstance(obj, dict):
@@ -230,7 +230,7 @@ class SubsurfaceStationSerializer(serializers.ModelSerializer[SubsurfaceStation]
 
         return super().to_internal_value(data)
 
-    def to_representation(self, instance: SubsurfaceStation) -> dict[str, Any]:
+    def to_representation(self, instance: SubSurfaceStation) -> dict[str, Any]:
         """Ensure coordinates are formatted without trailing zeros."""
         data = super().to_representation(instance)
 
@@ -243,7 +243,7 @@ class SubsurfaceStationSerializer(serializers.ModelSerializer[SubsurfaceStation]
         return data
 
 
-class SubsurfaceStationWithResourcesSerializer(SubsurfaceStationSerializer):
+class SubSurfaceStationWithResourcesSerializer(SubSurfaceStationSerializer):
     """Serializer for subsurface stations with resources."""
 
     resources = StationResourceSerializer(many=True, read_only=True)
@@ -292,7 +292,7 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
                 "modified_date": instance.modified_date.isoformat(),
                 "project": (
                     str(instance.project.id)
-                    if isinstance(instance, SubsurfaceStation)
+                    if isinstance(instance, SubSurfaceStation)
                     else None
                 ),
                 "network": (

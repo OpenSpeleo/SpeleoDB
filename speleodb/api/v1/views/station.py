@@ -22,11 +22,11 @@ from speleodb.api.v1.permissions import StationUserHasWriteAccess
 from speleodb.api.v1.serializers.station import StationGeoJSONSerializer
 from speleodb.api.v1.serializers.station import StationSerializer
 from speleodb.api.v1.serializers.station import StationWithResourcesSerializer
-from speleodb.api.v1.serializers.station import SubsurfaceStationSerializer
-from speleodb.api.v1.serializers.station import SubsurfaceStationWithResourcesSerializer
+from speleodb.api.v1.serializers.station import SubSurfaceStationSerializer
+from speleodb.api.v1.serializers.station import SubSurfaceStationWithResourcesSerializer
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
@@ -39,14 +39,14 @@ if TYPE_CHECKING:
     from rest_framework.serializers import ModelSerializer
 
 
-class BaseStationsApiView(GenericAPIView[SubsurfaceStation], SDBAPIViewMixin):
+class BaseStationsApiView(GenericAPIView[SubSurfaceStation], SDBAPIViewMixin):
     """
     Simple view to get all stations that belongs to a user or create a station.
     """
 
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self) -> QuerySet[SubsurfaceStation]:
+    def get_queryset(self) -> QuerySet[SubSurfaceStation]:
         """Get only stations that the user has access to."""
         user = self.get_user()
         user_projects: list[Project] = [
@@ -54,7 +54,7 @@ class BaseStationsApiView(GenericAPIView[SubsurfaceStation], SDBAPIViewMixin):
             for perm in user.permissions
             if perm.level >= PermissionLevel.READ_ONLY
         ]
-        return SubsurfaceStation.objects.filter(project__in=user_projects)
+        return SubSurfaceStation.objects.filter(project__in=user_projects)
 
 
 class StationsApiView(BaseStationsApiView):
@@ -146,15 +146,15 @@ class ProjectStationsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     ]
     lookup_field = "id"
 
-    def get_serializer_class(self) -> type[ModelSerializer[SubsurfaceStation]]:  # type: ignore[override]
+    def get_serializer_class(self) -> type[ModelSerializer[SubSurfaceStation]]:  # type: ignore[override]
         if self.request.method == "GET":
-            return SubsurfaceStationWithResourcesSerializer
-        return SubsurfaceStationSerializer
+            return SubSurfaceStationWithResourcesSerializer
+        return SubSurfaceStationSerializer
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all stations that belong to the project."""
         project = self.get_object()
-        serializer = SubsurfaceStationWithResourcesSerializer(
+        serializer = SubSurfaceStationWithResourcesSerializer(
             project.rel_stations.all(),
             many=True,
         )
@@ -165,7 +165,7 @@ class ProjectStationsApiView(GenericAPIView[Project], SDBAPIViewMixin):
         project = self.get_object()
         user = self.get_user()
 
-        serializer = SubsurfaceStationSerializer(data=request.data)
+        serializer = SubSurfaceStationSerializer(data=request.data)
         if serializer.is_valid():
             try:
                 serializer.save(created_by=user.email, project=project)
@@ -206,7 +206,7 @@ class ProjectStationsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixin):
         """Get all stations for a project in a map-friendly format."""
         project = self.get_object()
 
-        stations = SubsurfaceStation.objects.filter(project=project)
+        stations = SubSurfaceStation.objects.filter(project=project)
 
         serializer = self.get_serializer(stations, many=True)
 

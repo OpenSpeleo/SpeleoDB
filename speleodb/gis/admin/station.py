@@ -11,7 +11,7 @@ from django.utils.html import format_html
 
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models import SubsurfaceStation
+from speleodb.gis.models import SubSurfaceStation
 from speleodb.utils.admin_filters import StationProjectFilter
 
 if TYPE_CHECKING:
@@ -36,7 +36,7 @@ class StationResourceInline(admin.TabularInline):  # type: ignore[type-arg]
     ordering = ("-modified_date",)
 
 
-@admin.register(SubsurfaceStation)
+@admin.register(SubSurfaceStation)
 class StationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "name",
