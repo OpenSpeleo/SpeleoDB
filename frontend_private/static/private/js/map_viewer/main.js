@@ -22,7 +22,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. Initialize State
     State.init();
 
-    // 2. Initialize Map
+    // 2. Load Projects from API (needed for permissions and project list)
+    await Config.loadProjects();
+
+    // 3. Initialize Map
     const token = window.SPELEO_CONTEXT?.mapboxToken || '';
     if (!token) {
         console.error('Mapbox token not found');
@@ -109,15 +112,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     onClick: () => Utils.copyToClipboard(`${poiLat}, ${poiLng}`) 
                 });
                 
-                // Delete POI
-                if (Config.hasWriteAccess) {
-                    items.push({ 
-                        label: 'Delete Point of Interest', 
-                        subtitle: poiName,
-                        icon: '🗑️', 
-                        onClick: () => POIUI.showDeleteConfirmModal(poi || data.feature.properties) 
-                    });
-                }
+                // Delete POI (any authenticated user can manage their POIs)
+                items.push({ 
+                    label: 'Delete Point of Interest', 
+                    subtitle: poiName,
+                    icon: '🗑️', 
+                    onClick: () => POIUI.showDeleteConfirmModal(poi || data.feature.properties) 
+                });
                 
             } else {
                 // Right-click on empty map area

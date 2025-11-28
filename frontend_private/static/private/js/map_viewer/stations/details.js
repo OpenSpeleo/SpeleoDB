@@ -80,8 +80,8 @@ export const StationDetails = {
                 setTimeout(() => {
                     const content = document.getElementById('station-modal-content');
                     if (content && content.innerHTML) {
-                        const existingContent = content.innerHTML;
-                        content.innerHTML = `
+                        // Use insertAdjacentHTML to prepend without destroying existing event handlers
+                        content.insertAdjacentHTML('afterbegin', `
                             <div class="bg-emerald-500/20 border border-emerald-500/50 rounded-lg p-4 m-6 flex items-center justify-between">
                                 <div class="flex items-center">
                                     <span class="text-2xl mr-3">🎉</span>
@@ -96,8 +96,7 @@ export const StationDetails = {
                                     </svg>
                                 </button>
                             </div>
-                            ${existingContent}
-                        `;
+                        `);
                     }
                 }, 500);
             }
@@ -512,43 +511,114 @@ export const StationDetails = {
     },
 
     confirmDelete(station) {
-        const modalContent = document.getElementById('station-modal-content');
+        const stationModal = document.getElementById('station-modal');
+        const isStationModalOpen = stationModal && !stationModal.classList.contains('hidden');
+        
+        if (isStationModalOpen) {
+            // Station modal is open - show confirmation in modal content
+            const modalContent = document.getElementById('station-modal-content');
 
-        modalContent.innerHTML = `
-            <div class="tab-content active p-6">
-                <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-6 text-center">
-                    <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                    </svg>
-                    <h3 class="text-xl font-bold text-white mb-2">Delete Station?</h3>
-                    <p class="text-slate-300 mb-2">Are you sure you want to delete <strong>${station.name}</strong>?</p>
-                    <p class="text-red-300 text-sm mb-6">This action cannot be undone. All associated resources, logs, and data will be permanently deleted.</p>
-                    <div class="flex gap-3 justify-center">
-                        <button id="cancel-delete-btn" class="btn-secondary">Cancel</button>
-                        <button id="confirm-delete-btn" class="btn-danger">Delete Station</button>
+            modalContent.innerHTML = `
+                <div class="tab-content active p-6">
+                    <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-6 text-center">
+                        <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <h3 class="text-xl font-bold text-white mb-2">Delete Station?</h3>
+                        <p class="text-slate-300 mb-2">Are you sure you want to delete <strong>${station.name}</strong>?</p>
+                        <p class="text-red-300 text-sm mb-6">This action cannot be undone. All associated resources, logs, and data will be permanently deleted.</p>
+                        <div class="flex gap-3 justify-center">
+                            <button id="cancel-delete-btn" class="btn-secondary">Cancel</button>
+                            <button id="confirm-delete-btn" class="btn-danger">Delete Station</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('cancel-delete-btn').onclick = () => {
+                this.displayStationDetails(station, station.project);
+            };
+
+            document.getElementById('confirm-delete-btn').onclick = async () => {
+                try {
+                    await StationManager.deleteStation(station.id);
+                    Utils.showNotification('success', 'Station deleted successfully');
+
+                    // Close modal
+                    document.getElementById('station-modal').classList.add('hidden');
+                } catch (error) {
+                    Utils.showNotification('error', 'Failed to delete station');
+                }
+            };
+        } else {
+            // Called from context menu - show standalone confirmation modal
+            this.showStandaloneDeleteModal(station);
+        }
+    },
+    
+    showStandaloneDeleteModal(station) {
+        // Remove any existing standalone delete modal
+        const existingModal = document.getElementById('station-delete-confirm-modal');
+        if (existingModal) existingModal.remove();
+        
+        const modalHtml = `
+            <div id="station-delete-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
+                    <div class="p-6">
+                        <div class="flex items-center justify-center mb-4">
+                            <div class="w-16 h-16 rounded-full bg-red-900/30 flex items-center justify-center">
+                                <svg class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-bold text-white text-center mb-2">Delete Station?</h3>
+                        <p class="text-slate-300 text-center mb-2">Are you sure you want to delete <strong>${station.name}</strong>?</p>
+                        <p class="text-red-300 text-sm text-center mb-6">This action cannot be undone. All associated resources, logs, and data will be permanently deleted.</p>
+                        <div class="flex gap-3 justify-center">
+                            <button id="standalone-cancel-delete-btn" class="btn-secondary px-6">Cancel</button>
+                            <button id="standalone-confirm-delete-btn" class="btn-danger px-6">Delete Station</button>
+                        </div>
                     </div>
                 </div>
             </div>
         `;
-
-        document.getElementById('cancel-delete-btn').onclick = () => {
-            this.displayStationDetails(station, station.project);
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        const modal = document.getElementById('station-delete-confirm-modal');
+        
+        // Cancel button
+        document.getElementById('standalone-cancel-delete-btn').onclick = () => {
+            modal.remove();
         };
-
-        document.getElementById('confirm-delete-btn').onclick = async () => {
+        
+        // Confirm delete button
+        document.getElementById('standalone-confirm-delete-btn').onclick = async () => {
             try {
                 await StationManager.deleteStation(station.id);
                 Utils.showNotification('success', 'Station deleted successfully');
-
-                // Close modal
-                document.getElementById('station-modal').classList.add('hidden');
-
-                // Refresh stations layer
-                Layers.refreshStationsAfterChange(station.project);
+                modal.remove();
             } catch (error) {
                 Utils.showNotification('error', 'Failed to delete station');
             }
         };
+        
+        // Close on backdrop click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        };
+        
+        // Close on Escape key
+        const escHandler = (e) => {
+            if (e.key === 'Escape' && document.getElementById('station-delete-confirm-modal')) {
+                modal.remove();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
     }
 };
 

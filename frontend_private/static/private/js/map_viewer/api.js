@@ -125,7 +125,10 @@ export const API = {
     deleteStationResource: (resourceId) =>
         apiRequest(Urls['api:v1:resource-detail'](resourceId), 'DELETE'),
 
-    // GeoJSON
+    // Projects
+    getAllProjects: () =>
+        apiRequest(Urls['api:v1:projects']()),
+
     getAllProjectsGeoJSON: () =>
         apiRequest(Urls['api:v1:all-projects-geojson']()),
 
@@ -146,8 +149,17 @@ export const API = {
     getStationSensorInstallsWithStatus: (stationId, status) =>
         apiRequest(Urls['api:v1:station-sensor-installs'](stationId) + "?status=" + status),
 
-    getStationSensorInstallsAsExcel: (stationId) =>
-        apiRequest(Urls['api:v1:station-sensor-installs-export'](stationId)),
+    // Returns raw Response object for blob download (not parsed JSON)
+    getStationSensorInstallsAsExcel: async (stationId) => {
+        const response = await fetch(Urls['api:v1:station-sensor-installs-export'](stationId), {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': Utils.getCSRFToken()
+            },
+            credentials: 'same-origin'
+        });
+        return response;  // Return raw Response for blob handling
+    },
 
     getStationSensorInstallDetails: (stationId, installId) =>
         apiRequest(Urls['api:v1:station-sensor-install-detail'](stationId, installId)),

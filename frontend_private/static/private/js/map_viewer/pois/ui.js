@@ -171,18 +171,16 @@ export const POIUI = {
             </div>` : 
             `<div class="text-center py-8"><h3 class="text-white text-lg font-medium mb-2">Point of Interest Not Found</h3></div>`;
 
-        let footer = '';
-        if (poi && Config.hasWriteAccess) {
-            footer = `
-                <button id="edit-poi-btn" class="btn-secondary" style="min-width: 120px;">Edit</button>
-                <button id="delete-poi-btn" class="btn-danger" style="min-width: 120px;">Delete</button>
-            `;
-        }
+        // Any authenticated user can manage their POIs
+        const footer = poi ? `
+            <button id="edit-poi-btn" class="btn-secondary" style="min-width: 120px;">Edit</button>
+            <button id="delete-poi-btn" class="btn-danger" style="min-width: 120px;">Delete</button>
+        ` : '';
 
         const html = Modal.base('poi-details-modal', title + extraTitle, content, footer);
         
         Modal.open('poi-details-modal', html, () => {
-            if (poi && Config.hasWriteAccess) {
+            if (poi) {
                 document.getElementById('edit-poi-btn').onclick = () => this.openEditModal(poiId);
                 document.getElementById('delete-poi-btn').onclick = () => this.showDeleteConfirmModal(poi);
             }
