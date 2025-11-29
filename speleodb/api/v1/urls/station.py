@@ -16,6 +16,8 @@ from speleodb.api.v1.views.sensor_fleet import StationSensorInstallSpecificApiVi
 from speleodb.api.v1.views.station import StationsApiView
 from speleodb.api.v1.views.station import StationsGeoJSONApiView
 from speleodb.api.v1.views.station import StationSpecificApiView
+from speleodb.api.v1.views.station import SurfaceStationsApiView
+from speleodb.api.v1.views.station import SurfaceStationsGeoJSONApiView
 from speleodb.api.v1.views.station_tag import StationTagsManageApiView
 
 if TYPE_CHECKING:
@@ -59,4 +61,11 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("", StationsApiView.as_view(), name="stations"),
     path("geojson/", StationsGeoJSONApiView.as_view(), name="stations-geojson"),
     path("<uuid:id>/", include(station_urlpatterns)),
+    # Surface Station endpoints (all surface stations user has access to)
+    path("surface/", SurfaceStationsApiView.as_view(), name="surface-stations"),
+    path(
+        "surface/geojson/",
+        SurfaceStationsGeoJSONApiView.as_view(),
+        name="surface-stations-geojson",
+    ),
 ]

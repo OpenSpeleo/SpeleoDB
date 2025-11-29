@@ -27,9 +27,11 @@ export const Modal = {
         this.close(id);
         document.body.insertAdjacentHTML('beforeend', html);
         
-        // Attach standard close handlers
-        const closeBtn = document.querySelector(`[data-close-modal="${id}"]`);
-        if (closeBtn) closeBtn.onclick = () => this.close(id);
+        // Attach standard close handlers to ALL elements with data-close-modal
+        const closeBtns = document.querySelectorAll(`[data-close-modal="${id}"]`);
+        closeBtns.forEach(btn => {
+            btn.onclick = () => this.close(id);
+        });
 
         const escHandler = (e) => {
             if (e.key === 'Escape') {
@@ -47,6 +49,7 @@ export const Modal = {
         if (el) el.remove();
     }
 };
+
 
 
 

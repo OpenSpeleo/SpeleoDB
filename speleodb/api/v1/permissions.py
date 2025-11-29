@@ -20,10 +20,12 @@ from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
+from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceMonitoringNetwork
 from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
+from speleodb.gis.models import SurfaceStation
 from speleodb.surveys.models import Project
 from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.utils.exceptions import NotAuthorizedError
@@ -107,7 +109,7 @@ class UserOwnsProjectMutex(permissions.BasePermission):
 
 class BaseStationAccessLevel(permissions.BasePermission):
     """Base permission class for Station objects that checks permissions on the
-    station's project."""
+    station's project or network (for surface stations)."""
 
     MIN_ACCESS_LEVEL: int
 
@@ -117,29 +119,69 @@ class BaseStationAccessLevel(permissions.BasePermission):
 
         raise NotAuthenticated("Authentication credentials were not provided.")
 
+    def _check_project_permission(
+        self, request: AuthenticatedDRFRequest, project: Project
+    ) -> bool:
+        """Check permission on a project."""
+        try:
+            return (
+                request.user.get_best_permission(project=project).level
+                >= self.MIN_ACCESS_LEVEL
+            )
+        except (ObjectDoesNotExist, NotAuthorizedError):
+            return False
+
+    def _check_network_permission(
+        self, request: AuthenticatedDRFRequest, network: SurfaceMonitoringNetwork
+    ) -> bool:
+        """Check permission on a surface monitoring network."""
+        try:
+            return (
+                SurfaceMonitoringNetworkUserPermission.objects.get(
+                    user=request.user,
+                    network=network,
+                    is_active=True,
+                ).level
+                >= self.MIN_ACCESS_LEVEL
+            )
+        except ObjectDoesNotExist:
+            return False
+
     def has_object_permission(
         self,
         request: AuthenticatedDRFRequest,  # type: ignore[override]
         view: APIView,
-        obj: Project | SubSurfaceStation | StationResource | LogEntry | SensorInstall,
+        obj: (
+            Project
+            | SubSurfaceStation
+            | SurfaceStation
+            | Station
+            | StationResource
+            | LogEntry
+            | SensorInstall
+        ),
     ) -> bool:
-        # Get the project from the object
-        project: Project
+        # Handle polymorphic Station types
         match obj:
             case Project():
-                # Try station.project for StationResource objects
-                project = obj
+                return self._check_project_permission(request, obj)
 
             case SubSurfaceStation():
-                # Try station.project for StationResource objects
-                project = obj.project
+                return self._check_project_permission(request, obj.project)
+
+            case SurfaceStation():
+                return self._check_network_permission(request, obj.network)
 
             case StationResource() | LogEntry() | SensorInstall():
                 # ForeignKey to polymorphic model returns base class by default
                 # Call get_real_instance() to get the actual polymorphic child
-                match station := obj.station.get_real_instance():  # type: ignore[no-untyped-call]
+                station = obj.station.get_real_instance()  # type: ignore[no-untyped-call]
+                match station:
                     case SubSurfaceStation():
-                        project = station.project
+                        return self._check_project_permission(request, station.project)
+
+                    case SurfaceStation():
+                        return self._check_network_permission(request, station.network)
 
                     case _:
                         raise NotImplementedError(
@@ -147,21 +189,32 @@ class BaseStationAccessLevel(permissions.BasePermission):
                             f"{type(station)}"
                         )
 
+            case Station():
+                # Base Station type - need to get real instance
+                real_station = obj.get_real_instance()  # type: ignore[no-untyped-call]
+                match real_station:
+                    case SubSurfaceStation():
+                        return self._check_project_permission(
+                            request, real_station.project
+                        )
+
+                    case SurfaceStation():
+                        return self._check_network_permission(
+                            request, real_station.network
+                        )
+
+                    case _:
+                        raise NotImplementedError(
+                            "Not yet implemented for this station type: "
+                            f"{type(real_station)}"
+                        )
+
             case _:
                 raise TypeError(
                     f"Unknown `type` received: {type(obj)}. "
-                    "Expected: Project | SubSurfaceStation | StationResource | "
-                    f"LogEntry | SensorInstall"
+                    "Expected: Project | SubSurfaceStation | SurfaceStation | "
+                    "Station | StationResource | LogEntry | SensorInstall"
                 )
-
-        try:
-            return (
-                request.user.get_best_permission(project=project).level
-                >= self.MIN_ACCESS_LEVEL
-            )
-
-        except ObjectDoesNotExist:
-            return False
 
 
 class StationUserHasAdminAccess(BaseStationAccessLevel):

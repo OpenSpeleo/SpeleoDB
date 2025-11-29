@@ -816,6 +816,18 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/stations/surface/",
+        "module": "speleodb.api.v1.views.station.SurfaceStationsApiView",
+        "name": "api:v1:surface-stations",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/surface/geojson/",
+        "module": "speleodb.api.v1.views.station.SurfaceStationsGeoJSONApiView",
+        "name": "api:v1:surface-stations-geojson",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/surface-networks/",
         "module": "speleodb.api.v1.views.surface_network.SurfaceMonitoringNetworkApiView",
         "name": "api:v1:surface-networks",
@@ -831,6 +843,18 @@
         "url": "/api/v1/surface-networks/<uuid:network_id>/permissions/",
         "module": "speleodb.api.v1.views.surface_network.SurfaceMonitoringNetworkPermissionApiView",
         "name": "api:v1:surface-network-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/surface-networks/<uuid:network_id>/stations/",
+        "module": "speleodb.api.v1.views.station.NetworkStationsApiView",
+        "name": "api:v1:network-stations",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/surface-networks/<uuid:network_id>/stations/geojson/",
+        "module": "speleodb.api.v1.views.station.NetworkStationsGeoJSONView",
+        "name": "api:v1:network-stations-geojson",
         "decorators": ""
     },
     {

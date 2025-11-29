@@ -20,11 +20,20 @@ let cachedResources = [];
 export const StationResources = {
     async render(stationId, container) {
         currentStationId = stationId;
-        const station = State.allStations.get(stationId);
-        currentProjectId = station?.project;
+        // Check both subsurface and surface stations
+        const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
+        const isSurfaceStation = station?.network || station?.station_type === 'surface';
+        currentProjectId = station?.project || station?.network;
         
-        const hasWriteAccess = Config.hasProjectWriteAccess(currentProjectId);
-        const hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(currentProjectId) : hasWriteAccess;
+        // Use appropriate permission check based on station type
+        let hasWriteAccess, hasAdminAccess;
+        if (isSurfaceStation) {
+            hasWriteAccess = Config.hasNetworkWriteAccess(station?.network);
+            hasAdminAccess = Config.hasNetworkAdminAccess(station?.network);
+        } else {
+            hasWriteAccess = Config.hasProjectWriteAccess(currentProjectId);
+            hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(currentProjectId) : hasWriteAccess;
+        }
 
         // Show loading overlay
         const loadingOverlay = Utils.showLoadingOverlay('Loading station resources...');
@@ -306,7 +315,7 @@ export const StationResources = {
 
     // ===== ADD RESOURCE FORM =====
     openAddForm(stationId, preselectedType = '') {
-        const station = State.allStations.get(stationId);
+        const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
         const container = document.getElementById('station-modal-content');
 
         container.innerHTML = `
@@ -531,7 +540,7 @@ export const StationResources = {
 
     // ===== EDIT RESOURCE FORM =====
     openEditForm(stationId, resourceId) {
-        const station = State.allStations.get(stationId);
+        const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
         const container = document.getElementById('station-modal-content');
 
         // Use cached resources for instant access
@@ -1100,5 +1109,6 @@ export const StationResources = {
         return parts[parts.length - 1] || 'File';
     }
 };
+
 
 

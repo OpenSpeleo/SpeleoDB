@@ -59,6 +59,26 @@ export const API = {
     getAllStationsGeoJSON: () =>
         apiRequest(Urls['api:v1:stations-geojson']()),
 
+    // Surface Networks
+    getAllSurfaceNetworks: () =>
+        apiRequest(Urls['api:v1:surface-networks']()),
+
+    // Surface Stations
+    createSurfaceStation: (networkId, stationData) =>
+        apiRequest(Urls['api:v1:network-stations'](networkId), 'POST', stationData),
+
+    getNetworkStations: (networkId) =>
+        apiRequest(Urls['api:v1:network-stations'](networkId)),
+
+    getNetworkStationsGeoJSON: (networkId) =>
+        apiRequest(Urls['api:v1:network-stations-geojson'](networkId)),
+
+    getAllSurfaceStations: () =>
+        apiRequest(Urls['api:v1:surface-stations']()),
+
+    getAllSurfaceStationsGeoJSON: () =>
+        apiRequest(Urls['api:v1:surface-stations-geojson']()),
+
     // POIs
     createPOI: (poiData) =>
         apiRequest(Urls['api:v1:pois'](), 'POST', poiData),
@@ -170,6 +190,7 @@ export const API = {
     updateStationSensorInstalls: (stationId, installId, formData) =>
         apiRequest(Urls['api:v1:station-sensor-install-detail'](stationId, installId), 'PATCH', formData, true),
 };
+
 
 
 

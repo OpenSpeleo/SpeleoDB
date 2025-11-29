@@ -914,7 +914,8 @@ class TestStationSensorInstallHistory:
             HTTP_AUTHORIZATION=get_auth_header(other_user),
         )
 
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        # User is authenticated but has no permission - should get 403 Forbidden
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -1109,7 +1110,7 @@ class TestStationSensorInstallExcelExport:
         api_client: APIClient,
         sensor: Sensor,
     ) -> None:
-        """User without access gets 401."""
+        """User without access gets 403 Forbidden."""
         other_user = UserFactory.create()
         station = SubSurfaceStationFactory.create()
         SensorInstallFactory.create(station=station, sensor=sensor)
@@ -1122,7 +1123,8 @@ class TestStationSensorInstallExcelExport:
             HTTP_AUTHORIZATION=get_auth_header(other_user),
         )
 
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        # User is authenticated but has no permission - should get 403 Forbidden
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_export_excel_unauthenticated(
         self,

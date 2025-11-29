@@ -47,8 +47,12 @@ export const StationTags = {
     // Open tag selector modal
     openTagSelector(stationId) {
         State.currentStationForTagging = stationId;
-        const station = State.allStations.get(stationId);
-        if (!station) return;
+        // Check both subsurface and surface stations
+        const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
+        if (!station) {
+            console.error('❌ Station not found for tagging:', stationId);
+            return;
+        }
 
         const currentTagId = station.tag ? station.tag.id : null;
 
@@ -249,16 +253,17 @@ export const StationTags = {
         try {
             const response = await API.setStationTag(stationId, tagId);
 
-            const station = State.allStations.get(stationId);
+            // Check both subsurface and surface stations
+            const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
             if (station) {
                 // response.data is the tag object
                 station.tag = response.data;
 
                 // Update marker color on map
-                this.updateStationMarkerColor(stationId);
+                this.updateStationMarkerColor(stationId, station);
 
                 // Refresh tag display in modal
-                this.refreshStationTagDisplay(stationId);
+                this.refreshStationTagDisplay(stationId, station);
             }
 
             Utils.showNotification('success', 'Tag set on station');
@@ -274,11 +279,12 @@ export const StationTags = {
         try {
             await API.removeStationTag(stationId);
 
-            const station = State.allStations.get(stationId);
+            // Check both subsurface and surface stations
+            const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
             if (station) {
                 station.tag = null;
-                this.updateStationMarkerColor(stationId);
-                this.refreshStationTagDisplay(stationId);
+                this.updateStationMarkerColor(stationId, station);
+                this.refreshStationTagDisplay(stationId, station);
             }
 
             Utils.showNotification('success', 'Tag removed from station');
@@ -290,28 +296,34 @@ export const StationTags = {
     },
 
     // Update station marker color based on tag
-    updateStationMarkerColor(stationId) {
-        const station = State.allStations.get(stationId);
-        if (!station || !station.project) return;
+    updateStationMarkerColor(stationId, stationObj = null) {
+        const station = stationObj || State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
+        if (!station) return;
 
         // Use the tag's color if available, otherwise default
         const color = station.tag ? station.tag.color : '#fb923c';
 
-        // Update the color in the station layer
-        Layers.updateStationColor(station.project, stationId, color);
+        // Determine if this is a surface or subsurface station
+        if (station.network || station.station_type === 'surface') {
+            // Surface station - update surface station layer
+            Layers.updateSurfaceStationColor(station.network, stationId, color);
+        } else if (station.project) {
+            // Subsurface station - update station layer
+            Layers.updateStationColor(station.project, stationId, color);
+        }
     },
 
     // Refresh station tag display in modal
-    refreshStationTagDisplay(stationId) {
+    refreshStationTagDisplay(stationId, stationObj = null) {
         const tagContainer = document.getElementById('station-tag-display');
         if (!tagContainer) {
             console.log('⚠️ Tag container not found');
             return;
         }
 
-        const station = State.allStations.get(stationId);
+        const station = stationObj || State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
         if (!station) {
-            console.log('⚠️ Station not found in allStations:', stationId);
+            console.log('⚠️ Station not found:', stationId);
             return;
         }
 

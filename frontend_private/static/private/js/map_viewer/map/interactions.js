@@ -32,7 +32,9 @@ export const Interactions = {
             
             for (const feature of features) {
                 if (!feature.layer || !feature.layer.id) continue;
+                // Check for subsurface stations, surface stations, and POIs
                 if (feature.layer.id.includes('stations-') || 
+                    feature.layer.id.startsWith('surface-stations-') ||
                     feature.layer.id === 'pois-layer' || 
                     feature.layer.id === 'pois-labels') {
                     isInteractive = true;
@@ -50,15 +52,33 @@ export const Interactions = {
 
             const features = map.queryRenderedFeatures(e.point);
             
-            // Check for Stations
+            // Check for Subsurface Stations (circles)
             const stationFeature = features.find(f => 
-                f.layer && f.layer.id && f.layer.id.startsWith('stations-') && f.layer.id.endsWith('-circles')
+                f.layer && f.layer.id && 
+                f.layer.id.startsWith('stations-') && 
+                f.layer.id.endsWith('-circles') &&
+                !f.layer.id.startsWith('surface-')
             );
             
             if (stationFeature) {
                 const stationId = stationFeature.properties.id;
                 if (this.handlers.onStationClick) {
-                    this.handlers.onStationClick(stationId);
+                    this.handlers.onStationClick(stationId, 'subsurface');
+                }
+                return;
+            }
+            
+            // Check for Surface Stations (diamond symbols)
+            const surfaceStationFeature = features.find(f => 
+                f.layer && f.layer.id && 
+                f.layer.id.startsWith('surface-stations-') &&
+                !f.layer.id.endsWith('-labels')
+            );
+            
+            if (surfaceStationFeature) {
+                const stationId = surfaceStationFeature.properties.id;
+                if (this.handlers.onStationClick) {
+                    this.handlers.onStationClick(stationId, 'surface');
                 }
                 return;
             }
@@ -264,16 +284,38 @@ export const Interactions = {
         map.on('contextmenu', (e) => {
             const features = map.queryRenderedFeatures(e.point);
             
-            // Check Station
+            // Check Subsurface Station
             const stationFeature = features.find(f => 
-                f.layer && f.layer.id && f.layer.id.startsWith('stations-') && f.layer.id.endsWith('-circles')
+                f.layer && f.layer.id && 
+                f.layer.id.startsWith('stations-') && 
+                f.layer.id.endsWith('-circles') &&
+                !f.layer.id.startsWith('surface-')
             );
             
             if (stationFeature) {
                 if (this.handlers.onContextMenu) {
                     this.handlers.onContextMenu(e, 'station', {
                         id: stationFeature.properties.id,
-                        feature: stationFeature
+                        feature: stationFeature,
+                        stationType: 'subsurface'
+                    });
+                }
+                return;
+            }
+            
+            // Check Surface Station
+            const surfaceStationFeature = features.find(f => 
+                f.layer && f.layer.id && 
+                f.layer.id.startsWith('surface-stations-') &&
+                !f.layer.id.endsWith('-labels')
+            );
+            
+            if (surfaceStationFeature) {
+                if (this.handlers.onContextMenu) {
+                    this.handlers.onContextMenu(e, 'surface-station', {
+                        id: surfaceStationFeature.properties.id,
+                        feature: surfaceStationFeature,
+                        stationType: 'surface'
                     });
                 }
                 return;
@@ -303,5 +345,6 @@ export const Interactions = {
         });
     }
 };
+
 
 

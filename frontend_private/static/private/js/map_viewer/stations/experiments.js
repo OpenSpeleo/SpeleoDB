@@ -92,10 +92,15 @@ function validateExperimentField(value, fieldType, required, fieldId = '') {
 /**
  * Render the experiment data table
  */
-function renderExperimentTable(experiment, dataRows, stationId, projectId) {
+function renderExperimentTable(experiment, dataRows, stationId, projectId, isSurfaceStation = false) {
     const sortedFields = sortExperimentFields(experiment.experiment_fields || {});
-    const hasWriteAccess = Config.hasProjectWriteAccess(projectId);
-    const isAdmin = Config.hasProjectAdminAccess(projectId);
+    // Use appropriate permission check based on station type
+    const hasWriteAccess = isSurfaceStation 
+        ? Config.hasNetworkWriteAccess(projectId) 
+        : Config.hasProjectWriteAccess(projectId);
+    const isAdmin = isSurfaceStation 
+        ? Config.hasNetworkAdminAccess(projectId) 
+        : Config.hasProjectAdminAccess(projectId);
 
     if (!dataRows || dataRows.length === 0) {
         return `
@@ -188,12 +193,16 @@ function renderExperimentTable(experiment, dataRows, stationId, projectId) {
 export const StationExperiments = {
     async render(stationId, container) {
         currentStationId = stationId;
-        // Get project ID from state
+        // Get project/network ID from state - check both subsurface and surface stations
         const { State } = await import('../state.js');
-        const station = State.allStations.get(stationId);
-        currentProjectId = station?.project || null;
+        const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
+        const isSurfaceStation = station?.network || station?.station_type === 'surface';
+        currentProjectId = station?.project || station?.network || null;
 
-        const hasWriteAccess = Config.hasProjectWriteAccess(currentProjectId);
+        // Use appropriate permission check based on station type
+        const hasWriteAccess = isSurfaceStation 
+            ? Config.hasNetworkWriteAccess(station?.network)
+            : Config.hasProjectWriteAccess(currentProjectId);
 
         // Show loading overlay
         const loadingOverlay = Utils.showLoadingOverlay('Loading experiments...');
@@ -267,7 +276,7 @@ export const StationExperiments = {
                             ${selectedExperiment ? `
                                 <div class="bg-slate-800/30 rounded-lg border border-slate-600/50 p-6">
                                     <h4 class="text-lg font-semibold text-white mb-4">Data Records</h4>
-                                    ${renderExperimentTable(selectedExperiment, experimentDataRows, stationId, currentProjectId)}
+                                    ${renderExperimentTable(selectedExperiment, experimentDataRows, stationId, currentProjectId, isSurfaceStation)}
                                 </div>
                             ` : `
                                 <div class="text-center py-12 bg-slate-800/30 rounded-lg border border-slate-600/50">
@@ -364,7 +373,14 @@ export const StationExperiments = {
             }
 
             const sortedFields = sortExperimentFields(experiment.experiment_fields || {});
-            const hasWriteAccess = Config.hasProjectWriteAccess(projectId);
+            
+            // Determine station type and use appropriate permission check
+            const { State } = await import('../state.js');
+            const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
+            const isSurfaceStation = station?.network || station?.station_type === 'surface';
+            const hasWriteAccess = isSurfaceStation 
+                ? Config.hasNetworkWriteAccess(projectId) 
+                : Config.hasProjectWriteAccess(projectId);
 
             if (!hasWriteAccess) {
                 Utils.showNotification('warning', 'You have read access and cannot add records.');
@@ -728,5 +744,6 @@ export const StationExperiments = {
 
 // Expose functions globally for onclick handlers
 window.StationExperiments = StationExperiments;
+
 
 

@@ -145,9 +145,15 @@ function validateSensorInstallDates() {
 /**
  * Render sensor history table
  */
-function renderSensorHistoryTable(installs, stationId, projectId, currentFilter = 'all') {
+async function renderSensorHistoryTable(installs, stationId, projectId, currentFilter = 'all') {
     const container = document.getElementById('station-modal-content');
-    const hasWriteAccess = Config.hasProjectWriteAccess(projectId);
+    // Determine station type and use appropriate permission check
+    const { State } = await import('../state.js');
+    const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
+    const isSurfaceStation = station?.network || station?.station_type === 'surface';
+    const hasWriteAccess = isSurfaceStation 
+        ? Config.hasNetworkWriteAccess(projectId) 
+        : Config.hasProjectWriteAccess(projectId);
 
     container.innerHTML = `
         <div class="tab-content active">
@@ -305,17 +311,21 @@ function renderSensorHistoryTable(installs, stationId, projectId, currentFilter 
 export const StationSensors = {
     async render(stationId, container) {
         currentStationId = stationId;
-        // Get project ID from state
+        // Get project/network ID from state - check both subsurface and surface stations
         const { State } = await import('../state.js');
-        const station = State.allStations.get(stationId);
-        currentProjectId = station?.project || null;
+        const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
+        const isSurfaceStation = station?.network || station?.station_type === 'surface';
+        currentProjectId = station?.project || station?.network || null;
 
-        await this.loadCurrentInstalls(stationId, currentProjectId);
+        await this.loadCurrentInstalls(stationId, currentProjectId, 'current', isSurfaceStation);
     },
 
-    async loadCurrentInstalls(stationId, projectId, subtab = 'current') {
+    async loadCurrentInstalls(stationId, projectId, subtab = 'current', isSurfaceStation = false) {
         const container = document.getElementById('station-modal-content');
-        const hasWriteAccess = Config.hasProjectWriteAccess(projectId);
+        // Use appropriate permission check based on station type
+        const hasWriteAccess = isSurfaceStation 
+            ? Config.hasNetworkWriteAccess(projectId) 
+            : Config.hasProjectWriteAccess(projectId);
         const loadingOverlay = Utils.showLoadingOverlay('Loading sensor installations...');
 
         currentStationId = stationId;
@@ -1300,5 +1310,6 @@ export const StationSensors = {
 
 // Expose functions globally for onclick handlers
 window.StationSensors = StationSensors;
+
 
 

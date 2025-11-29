@@ -6,15 +6,37 @@ import { State } from '../state.js';
 // Track current context for log operations
 let currentStationId = null;
 let currentProjectId = null;
+let currentNetworkId = null;
 
 export const StationLogs = {
     async render(stationId, container) {
         currentStationId = stationId;
-        const station = State.allStations.get(stationId);
-        currentProjectId = station?.project;
+        // Check both subsurface and surface stations
+        const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
+        const isSurfaceStation = station?.network || station?.station_type === 'surface';
         
-        const hasWriteAccess = Config.hasProjectWriteAccess(currentProjectId);
-        const hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(currentProjectId) : hasWriteAccess;
+        console.log('📝 StationLogs.render:', {
+            stationId,
+            station: station ? { id: station.id, network: station.network, project: station.project, station_type: station.station_type } : null,
+            isSurfaceStation,
+            inAllStations: State.allStations.has(stationId),
+            inAllSurfaceStations: State.allSurfaceStations.has(stationId)
+        });
+        
+        currentProjectId = station?.project;
+        currentNetworkId = station?.network;
+        
+        // Use appropriate permission check based on station type
+        let hasWriteAccess, hasAdminAccess;
+        if (isSurfaceStation) {
+            hasWriteAccess = Config.hasNetworkWriteAccess(currentNetworkId);
+            hasAdminAccess = Config.hasNetworkAdminAccess(currentNetworkId);
+        } else {
+            hasWriteAccess = Config.hasProjectWriteAccess(currentProjectId);
+            hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(currentProjectId) : hasWriteAccess;
+        }
+        
+        console.log('📝 StationLogs permissions:', { hasWriteAccess, hasAdminAccess, currentNetworkId, currentProjectId });
 
         // Show loading overlay
         const loadingOverlay = Utils.showLoadingOverlay('Loading journal entries...');
