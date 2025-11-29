@@ -98,7 +98,9 @@ class StationResource(models.Model):
     title = models.CharField(max_length=200, help_text="Title or name of the resource")
 
     description = models.TextField(
-        blank=True, default="", help_text="Optional description of the resource"
+        blank=True,
+        default="",
+        help_text="Optional description of the resource",
     )
 
     # File storage (for photos, videos, documents)
@@ -142,6 +144,10 @@ class StationResource(models.Model):
         verbose_name = "Station Resource"
         verbose_name_plural = "Station Resources"
         ordering = ["station", "-modified_date"]
+
+        indexes = [
+            models.Index(fields=["station"]),
+        ]
 
     def __str__(self) -> str:
         # https://docs.djangoproject.com/en/5.2/ref/models/instances/#django.db.models.Model.get_FOO_display

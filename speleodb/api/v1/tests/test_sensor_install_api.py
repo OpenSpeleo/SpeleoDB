@@ -25,6 +25,7 @@ from rest_framework.test import APIClient
 
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import SensorFactory
+from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
 from speleodb.api.v1.tests.factories import SensorInstallFactory
 from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
@@ -66,7 +67,9 @@ def station(user: User) -> SubSurfaceStation:
 
     project = ProjectFactory.create()
     UserProjectPermissionFactory.create(
-        target=user, project=project, level=PermissionLevel.READ_AND_WRITE
+        target=user,
+        project=project,
+        level=PermissionLevel.READ_AND_WRITE,
     )
     return SubSurfaceStationFactory.create(project=project)
 
@@ -82,9 +85,15 @@ def station_read_only(user: User) -> Station:
 
 
 @pytest.fixture
-def sensor() -> Sensor:
+def sensor(user: User) -> Sensor:
     """Create a sensor."""
-    return SensorFactory.create()
+    sensor = SensorFactory.create()
+    _ = SensorFleetUserPermissionFactory(
+        user=user,
+        sensor_fleet=sensor.fleet,
+        level=PermissionLevel.ADMIN,
+    )
+    return sensor
 
 
 @pytest.fixture
@@ -471,13 +480,16 @@ class TestStationSensorInstallRetrieveUpdate:
     def test_update_status_invalid_transition(
         self,
         api_client: APIClient,
+        sensor: Sensor,
         station: Station,
         user: User,
     ) -> None:
         """Cannot change status from RETRIEVED/LOST/ABANDONED."""
         # Create a retrieved install
         retrieved_install = SensorInstallFactory.create_uninstalled(
-            station=station, uninstall_user=user.email
+            station=station,
+            sensor=sensor,
+            uninstall_user=user.email,
         )
 
         data = {"status": InstallStatus.INSTALLED}
@@ -656,7 +668,10 @@ class TestSensorInstallEdgeCases:
         response = api_client.patch(
             reverse(
                 "api:v1:station-sensor-install-detail",
-                kwargs={"id": station.id, "install_id": sensor_install.id},
+                kwargs={
+                    "id": station.id,
+                    "install_id": sensor_install.id,
+                },
             ),
             data=data,
             format="json",
@@ -914,7 +929,8 @@ class TestStationSensorInstallHistory:
             HTTP_AUTHORIZATION=get_auth_header(other_user),
         )
 
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        # User is authenticated but has no permission - should get 403 Forbidden
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -1109,7 +1125,7 @@ class TestStationSensorInstallExcelExport:
         api_client: APIClient,
         sensor: Sensor,
     ) -> None:
-        """User without access gets 401."""
+        """User without access gets 403 Forbidden."""
         other_user = UserFactory.create()
         station = SubSurfaceStationFactory.create()
         SensorInstallFactory.create(station=station, sensor=sensor)
@@ -1122,7 +1138,8 @@ class TestStationSensorInstallExcelExport:
             HTTP_AUTHORIZATION=get_auth_header(other_user),
         )
 
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        # User is authenticated but has no permission - should get 403 Forbidden
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_export_excel_unauthenticated(
         self,

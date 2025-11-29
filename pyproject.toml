@@ -150,7 +150,7 @@ production = [
 norecursedirs = ".uv/*"
 minversion = "6.0"
 # addopts = "--ds=config.settings.test --import-mode=importlib"
-addopts = "--ds=config.settings.test --reuse-db  --create-db --import-mode=prepend"
+addopts = "--ds=config.settings.test --reuse-db  --create-db --import-mode=importlib"
 # addopts = "--ds=config.settings.test --create-db --import-mode=importlib"
 # addopts = "--ds=config.settings.test -vvv --capture=no --reuse-db --import-mode=importlib"
 python_files = ["tests.py", "test_*.py"]

@@ -44,6 +44,17 @@ class PublicAnnoucement(models.Model):
         verbose_name="Is Active",
     )
 
+    class Meta:
+        verbose_name = "Public Annoucement"
+        verbose_name_plural = "Public Annoucements"
+        ordering = ["-creation_date"]
+        indexes = [
+            models.Index(fields=["software"]),
+            models.Index(fields=["version"]),
+            models.Index(fields=["is_active"]),
+            models.Index(fields=["creation_date"]),
+        ]
+
     def __str__(self) -> str:
         return f"{self.title}"
 

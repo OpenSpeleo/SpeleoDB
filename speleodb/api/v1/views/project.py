@@ -12,13 +12,15 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import ProjectUserHasAdminAccess
-from speleodb.api.v1.permissions import ProjectUserHasReadAccess
-from speleodb.api.v1.permissions import ProjectUserHasWriteAccess
+from speleodb.api.v1.permissions import IsObjectDeletion
+from speleodb.api.v1.permissions import IsObjectEdition
+from speleodb.api.v1.permissions import IsReadOnly
+from speleodb.api.v1.permissions import SDB_AdminAccess
+from speleodb.api.v1.permissions import SDB_ReadAccess
+from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
-from speleodb.utils.api_decorators import method_permission_classes
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
@@ -32,7 +34,11 @@ logger = logging.getLogger(__name__)
 
 class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [ProjectUserHasReadAccess]
+    permission_classes = [
+        (IsObjectDeletion & SDB_AdminAccess)
+        | (IsObjectEdition & SDB_WriteAccess)
+        | (IsReadOnly & SDB_ReadAccess)
+    ]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -52,37 +58,31 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @method_permission_classes((ProjectUserHasWriteAccess,))
+    def _modify_obj(
+        self, request: Request, partial: bool, *args: Any, **kwargs: Any
+    ) -> Response:
+        user = self.get_user()
+        project = self.get_object()
+        serializer = self.get_serializer(
+            project,
+            data=request.data,
+            context={"user": user},
+            partial=partial,
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return SuccessResponse(serializer.data)
+
+        return ErrorResponse(
+            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
+
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        user = self.get_user()
-        project = self.get_object()
-        serializer = self.get_serializer(
-            project, data=request.data, context={"user": user}
-        )
-        if serializer.is_valid():
-            serializer.save()
-            return SuccessResponse(serializer.data)
+        return self._modify_obj(request=request, partial=False, **kwargs)
 
-        return ErrorResponse(
-            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    @method_permission_classes((ProjectUserHasWriteAccess,))
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        user = self.get_user()
-        project = self.get_object()
-        serializer = self.get_serializer(
-            project, data=request.data, context={"user": user}, partial=True
-        )
-        if serializer.is_valid():
-            serializer.save()
-            return SuccessResponse(serializer.data)
+        return self._modify_obj(request=request, partial=True, **kwargs)
 
-        return ErrorResponse(
-            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    @method_permission_classes((ProjectUserHasAdminAccess,))
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Note: We only delete the permissions, rendering the project invisible to the
         # users. After 30 days, the project gets automatically deleted by a cronjob.

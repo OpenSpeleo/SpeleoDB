@@ -18,7 +18,7 @@ from speleodb.utils.validators import AttachmentValidator
 logger = logging.getLogger(__name__)
 
 
-def get_log_entry_path(instance: LogEntry, filename: str) -> str:
+def get_log_entry_path(instance: StationLogEntry, filename: str) -> str:
     """
     Determine path prefix based on station type
     SubSurfaceStation has 'project', SurfaceStation has 'network'"""
@@ -42,7 +42,7 @@ def get_log_entry_path(instance: LogEntry, filename: str) -> str:
     return f"{prefix}/{instance.station.id}/logs/{os.urandom(6).hex()}.{ext}"
 
 
-class LogEntry(models.Model):
+class StationLogEntry(models.Model):
     """A scientific log or observation recorded at a specific Station."""
 
     id = models.UUIDField(
@@ -91,6 +91,9 @@ class LogEntry(models.Model):
     class Meta:
         ordering = ["-creation_date"]
         verbose_name_plural = "Log Entries"
+        indexes = [
+            models.Index(fields=["station"]),
+        ]
 
     def __str__(self) -> str:
         return (

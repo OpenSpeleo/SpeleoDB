@@ -61,6 +61,9 @@ class SensorFleet(models.Model):
         verbose_name = "Sensor Fleet"
         verbose_name_plural = "Sensor Fleets"
         ordering = ["-modified_date"]
+        indexes = [
+            models.Index(fields=["is_active"]),
+        ]
 
     def __str__(self) -> str:
         return f"Sensor Fleet: {self.name}"
@@ -121,6 +124,11 @@ class Sensor(models.Model):
 
     class Meta:
         ordering = ["-modified_date"]
+        indexes = [
+            models.Index(fields=["fleet"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["fleet", "status"]),
+        ]
 
     def __str__(self) -> str:
         return f"Sensor: {self.name} [Status: {self.status.upper()}]"
@@ -313,9 +321,10 @@ class SensorInstall(models.Model):
         ordering = ["-modified_date"]
 
         indexes = [
-            models.Index(fields=["status"]),
-            models.Index(fields=["sensor", "status"]),
-            models.Index(fields=["station", "status"]),
+            # models.Index(fields=["status"]),  # we never filter only by status
+            models.Index(fields=["sensor"]),
+            models.Index(fields=["station"]),
+            models.Index(fields=["sensor", "station"]),
         ]
 
         constraints = [

@@ -7,6 +7,7 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import indexes
 from django.utils import timezone
 
 from speleodb.surveys.models import Project
@@ -115,6 +116,7 @@ class Format(models.Model):
         null=False,
     )
 
+    # Note: `_format` because `format` is a reserved word in Python
     _format = models.IntegerField(
         choices=FileFormat.db_choices,
         verbose_name="format",
@@ -132,6 +134,10 @@ class Format(models.Model):
             "project",
             "_format",
         )
+        indexes = [
+            indexes.Index(fields=["project"]),
+            # indexes.Index(fields=["project", "_format"]), # Present via unique constraint  # noqa: E501
+        ]
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"

@@ -10,21 +10,28 @@ from speleodb.gis.models.project_geojson import ProjectGeoJSON
 from speleodb.gis.models.gis_view import GISView
 from speleodb.gis.models.gis_view import GISViewProject
 
-# GIS Models
+# Landmark Related Models
+from speleodb.gis.models.landmark import Landmark
+
+# Surface Monitoring Network Related Models
 from speleodb.gis.models.network import SurfaceMonitoringNetwork
 from speleodb.gis.models.network import SurfaceMonitoringNetworkUserPermission
-from speleodb.gis.models.point_of_interest import PointOfInterest
+
+# Station Related Models
 from speleodb.gis.models.station_tag import StationTag
 from speleodb.gis.models.station import Station
 from speleodb.gis.models.station import SurfaceStation
 from speleodb.gis.models.station import SubSurfaceStation
-from speleodb.gis.models.station_resource import StationResource, StationResourceType
+
+# Resource Related Models
+from speleodb.gis.models.station_resource import StationResourceType
+from speleodb.gis.models.station_resource import StationResource
 
 # Science Related Models
 from speleodb.gis.models.experiment import Experiment
 from speleodb.gis.models.experiment import ExperimentRecord
 from speleodb.gis.models.experiment import ExperimentUserPermission
-from speleodb.gis.models.log_entry import LogEntry
+from speleodb.gis.models.log_entry import StationLogEntry
 
 # Sensor Related Models
 from speleodb.gis.models.sensor import Sensor
@@ -41,8 +48,7 @@ __all__ = [
     "GISView",
     "GISViewProject",
     "InstallStatus",
-    "LogEntry",
-    "PointOfInterest",
+    "Landmark",
     "ProjectGeoJSON",
     "Sensor",
     "SensorFleet",
@@ -50,6 +56,7 @@ __all__ = [
     "SensorInstall",
     "SensorStatus",
     "Station",
+    "StationLogEntry",
     "StationResource",
     "StationResourceType",
     "StationTag",

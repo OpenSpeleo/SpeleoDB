@@ -38,7 +38,7 @@ class TeamProjectPermission(BasePermissionModel):
             )
         ]
         indexes = [
-            models.Index(fields=["target", "is_active"]),
-            models.Index(fields=["project", "is_active"]),
-            models.Index(fields=["target", "project", "is_active"]),
+            models.Index(fields=["target"]),
+            models.Index(fields=["project"]),
+            # models.Index(fields=["target", "project"]), # Present via unique constraint  # noqa: E501
         ]

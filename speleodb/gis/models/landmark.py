@@ -9,7 +9,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 
-class PointOfInterest(models.Model):
+class Landmark(models.Model):
     """
     Represents a Point of Interest (POI) on the map.
     POIs are standalone markers not linked to any project.

@@ -6,12 +6,12 @@ from django.urls import URLPattern
 from django.urls import URLResolver
 from django.urls import path
 
-from speleodb.api.v1.views.poi import PointOfInterestAPIView
-from speleodb.api.v1.views.poi import PointOfInterestGeoJSONView
-from speleodb.api.v1.views.poi import PointOfInterestSpecificAPIView
+from speleodb.api.v1.views.poi import LandmarkAPIView
+from speleodb.api.v1.views.poi import LandmarkGeoJSONView
+from speleodb.api.v1.views.poi import LandmarkSpecificAPIView
 
 urlpatterns: list[URLPattern | URLResolver] = [
-    path("", PointOfInterestAPIView.as_view(), name="pois"),
-    path("geojson/", PointOfInterestGeoJSONView.as_view(), name="pois-geojson"),
-    path("<uuid:id>/", PointOfInterestSpecificAPIView.as_view(), name="poi-detail"),
+    path("", LandmarkAPIView.as_view(), name="pois"),
+    path("geojson/", LandmarkGeoJSONView.as_view(), name="pois-geojson"),
+    path("<uuid:id>/", LandmarkSpecificAPIView.as_view(), name="poi-detail"),
 ]

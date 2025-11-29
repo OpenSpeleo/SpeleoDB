@@ -1,17 +1,17 @@
-"""Tests for PointOfInterest model."""
+"""Tests for Landmark model."""
 
 from __future__ import annotations
 
 import pytest
 from django.core.exceptions import ValidationError
 
-from speleodb.gis.models import PointOfInterest
+from speleodb.gis.models import Landmark
 from speleodb.users.models import User
 
 
 @pytest.mark.django_db
-class TestPointOfInterestModel:
-    """Test cases for PointOfInterest model."""
+class TestLandmarkModel:
+    """Test cases for Landmark model."""
 
     @pytest.fixture
     def user(self) -> User:
@@ -22,9 +22,9 @@ class TestPointOfInterestModel:
         )
 
     @pytest.fixture
-    def poi(self, user: User) -> PointOfInterest:
+    def poi(self, user: User) -> Landmark:
         """Create a test POI."""
-        return PointOfInterest.objects.create(
+        return Landmark.objects.create(
             name="Test Cave Entrance",
             description="A beautiful cave entrance with stalactites",
             latitude=45.123456,
@@ -34,7 +34,7 @@ class TestPointOfInterestModel:
 
     def test_create_poi_with_valid_data(self, user: User) -> None:
         """Test creating a POI with all valid data."""
-        poi = PointOfInterest.objects.create(
+        poi = Landmark.objects.create(
             name="Mountain Peak Viewpoint",
             description="Stunning panoramic views",
             latitude=47.608013,
@@ -53,7 +53,7 @@ class TestPointOfInterestModel:
 
     def test_create_poi_minimal_data(self, user: User) -> None:
         """Test creating a POI with only required fields."""
-        poi = PointOfInterest.objects.create(
+        poi = Landmark.objects.create(
             name="Minimal POI",
             latitude=0.0,
             longitude=0.0,
@@ -65,7 +65,7 @@ class TestPointOfInterestModel:
         assert poi.description == ""  # Default value
         assert poi.user == user
 
-    def test_poi_string_representation(self, poi: PointOfInterest) -> None:
+    def test_poi_string_representation(self, poi: Landmark) -> None:
         """Test the string representation of POI."""
         assert str(poi) == "POI: Test Cave Entrance"
 
@@ -73,7 +73,7 @@ class TestPointOfInterestModel:
         """Test latitude must be between -90 and 90."""
         # Test invalid latitude > 90
         with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
-            poi = PointOfInterest(
+            poi = Landmark(
                 name="Invalid Latitude High",
                 latitude=91.0,
                 longitude=0.0,
@@ -85,7 +85,7 @@ class TestPointOfInterestModel:
 
         # Test invalid latitude < -90
         with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
-            poi = PointOfInterest(
+            poi = Landmark(
                 name="Invalid Latitude Low",
                 latitude=-91.0,
                 longitude=0.0,
@@ -96,7 +96,7 @@ class TestPointOfInterestModel:
         assert "latitude" in exc_info.value.message_dict
 
         # Test boundary values are valid
-        poi_north = PointOfInterest(
+        poi_north = Landmark(
             name="North Pole",
             latitude=90.0,
             longitude=0.0,
@@ -104,7 +104,7 @@ class TestPointOfInterestModel:
         )
         poi_north.full_clean()  # Should not raise
 
-        poi_south = PointOfInterest(
+        poi_south = Landmark(
             name="South Pole",
             latitude=-90.0,
             longitude=0.0,
@@ -116,7 +116,7 @@ class TestPointOfInterestModel:
         """Test longitude must be between -180 and 180."""
         # Test invalid longitude > 180
         with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
-            poi = PointOfInterest(
+            poi = Landmark(
                 name="Invalid Longitude High",
                 latitude=0.0,
                 longitude=181.0,
@@ -128,7 +128,7 @@ class TestPointOfInterestModel:
 
         # Test invalid longitude < -180
         with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
-            poi = PointOfInterest(
+            poi = Landmark(
                 name="Invalid Longitude Low",
                 latitude=0.0,
                 longitude=-181.0,
@@ -139,7 +139,7 @@ class TestPointOfInterestModel:
         assert "longitude" in exc_info.value.message_dict
 
         # Test boundary values are valid
-        poi_east = PointOfInterest(
+        poi_east = Landmark(
             name="International Date Line East",
             latitude=0.0,
             longitude=180.0,
@@ -147,7 +147,7 @@ class TestPointOfInterestModel:
         )
         poi_east.full_clean()  # Should not raise
 
-        poi_west = PointOfInterest(
+        poi_west = Landmark(
             name="International Date Line West",
             latitude=0.0,
             longitude=-180.0,
@@ -157,7 +157,7 @@ class TestPointOfInterestModel:
 
     def test_coordinate_precision(self, user: User) -> None:
         """Test that coordinates maintain 7 decimal places."""
-        poi = PointOfInterest.objects.create(
+        poi = Landmark.objects.create(
             name="Precise Location",
             latitude=45.1234567,
             longitude=-122.7654321,
@@ -171,9 +171,7 @@ class TestPointOfInterestModel:
         assert str(poi.latitude) == "45.1234567"
         assert str(poi.longitude) == "-122.7654321"
 
-    def test_user_cascade_on_user_delete(
-        self, poi: PointOfInterest, user: User
-    ) -> None:
+    def test_user_cascade_on_user_delete(self, poi: Landmark, user: User) -> None:
         """Test that POI is deleted when user is deleted (CASCADE)."""
         assert poi.user == user
         poi_id = poi.id
@@ -182,24 +180,24 @@ class TestPointOfInterestModel:
         user.delete()
 
         # POI should be deleted due to CASCADE
-        assert not PointOfInterest.objects.filter(id=poi_id).exists()
+        assert not Landmark.objects.filter(id=poi_id).exists()
 
     def test_ordering(self, user: User) -> None:
         """Test that POIs are ordered by name."""
         # Create POIs in non-alphabetical order
-        _ = PointOfInterest.objects.create(
+        _ = Landmark.objects.create(
             name="Cave C",
             latitude=0.0,
             longitude=0.0,
             user=user,
         )
-        _ = PointOfInterest.objects.create(
+        _ = Landmark.objects.create(
             name="Arch A",
             latitude=0.0,
             longitude=0.0,
             user=user,
         )
-        _ = PointOfInterest.objects.create(
+        _ = Landmark.objects.create(
             name="Bridge B",
             latitude=0.0,
             longitude=0.0,
@@ -207,14 +205,14 @@ class TestPointOfInterestModel:
         )
 
         # Query all POIs
-        pois = list(PointOfInterest.objects.all())
+        pois = list(Landmark.objects.all())
 
         # Should be ordered alphabetically by name
         assert pois[0].name == "Arch A"
         assert pois[1].name == "Bridge B"
         assert pois[2].name == "Cave C"
 
-    def test_timestamps_auto_update(self, poi: PointOfInterest) -> None:
+    def test_timestamps_auto_update(self, poi: Landmark) -> None:
         """Test that timestamps are automatically managed."""
         original_created = poi.creation_date
         original_modified = poi.modified_date
@@ -231,12 +229,12 @@ class TestPointOfInterestModel:
 
     def test_verbose_names(self) -> None:
         """Test model verbose names."""
-        assert PointOfInterest._meta.verbose_name == "Point of Interest"  # noqa: SLF001
-        assert PointOfInterest._meta.verbose_name_plural == "Points of Interest"  # noqa: SLF001
+        assert Landmark._meta.verbose_name == "Point of Interest"  # noqa: SLF001
+        assert Landmark._meta.verbose_name_plural == "Points of Interest"  # noqa: SLF001
 
     def test_blank_description_allowed(self, user: User) -> None:
         """Test that blank description is allowed."""
-        poi = PointOfInterest.objects.create(
+        poi = Landmark.objects.create(
             name="No Description POI",
             latitude=10.0,
             longitude=20.0,

@@ -11,7 +11,7 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import StationUserHasWriteAccess
+from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.serializers.station_tag import StationTagListSerializer
 from speleodb.api.v1.serializers.station_tag import StationTagSerializer
 from speleodb.gis.models import Station
@@ -162,7 +162,7 @@ class StationTagsManageApiView(GenericAPIView[Station], SDBAPIViewMixin):
     """
 
     queryset = Station.objects.all()
-    permission_classes = [StationUserHasWriteAccess]
+    permission_classes = [SDB_WriteAccess]
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:

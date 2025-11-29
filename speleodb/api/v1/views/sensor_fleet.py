@@ -33,11 +33,9 @@ from speleodb.api.v1.permissions import IsObjectCreation
 from speleodb.api.v1.permissions import IsObjectDeletion
 from speleodb.api.v1.permissions import IsObjectEdition
 from speleodb.api.v1.permissions import IsReadOnly
-from speleodb.api.v1.permissions import SensorFleetUserHasAdminAccess
-from speleodb.api.v1.permissions import SensorFleetUserHasReadAccess
-from speleodb.api.v1.permissions import SensorFleetUserHasWriteAccess
-from speleodb.api.v1.permissions import StationUserHasReadAccess
-from speleodb.api.v1.permissions import StationUserHasWriteAccess
+from speleodb.api.v1.permissions import SDB_AdminAccess
+from speleodb.api.v1.permissions import SDB_ReadAccess
+from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.serializers import SensorFleetListSerializer
 from speleodb.api.v1.serializers import SensorFleetSerializer
 from speleodb.api.v1.serializers import SensorFleetUserPermissionSerializer
@@ -152,9 +150,9 @@ class SensorFleetSpecificApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
 
     queryset = SensorFleet.objects.all()
     permission_classes = [
-        (IsObjectDeletion & SensorFleetUserHasAdminAccess)
-        | (IsObjectEdition & SensorFleetUserHasWriteAccess)
-        | (IsReadOnly & SensorFleetUserHasReadAccess)
+        (IsObjectDeletion & SDB_AdminAccess)
+        | (IsObjectEdition & SDB_WriteAccess)
+        | (IsReadOnly & SDB_ReadAccess)
     ]
     serializer_class = SensorFleetSerializer
     lookup_field = "id"
@@ -222,8 +220,7 @@ class SensorApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
 
     queryset = SensorFleet.objects.all()
     permission_classes = [
-        (IsObjectCreation & SensorFleetUserHasWriteAccess)
-        | (IsReadOnly & SensorFleetUserHasReadAccess)
+        (IsObjectCreation & SDB_WriteAccess) | (IsReadOnly & SDB_ReadAccess)
     ]
     serializer_class = SensorFleetSerializer
     lookup_field = "id"
@@ -272,9 +269,9 @@ class SensorSpecificApiView(GenericAPIView[Sensor], SDBAPIViewMixin):
 
     queryset = Sensor.objects.all()
     permission_classes = [
-        (IsObjectDeletion & SensorFleetUserHasWriteAccess)
-        | (IsObjectEdition & SensorFleetUserHasWriteAccess)
-        | (IsReadOnly & SensorFleetUserHasReadAccess)
+        (IsObjectDeletion & SDB_WriteAccess)
+        | (IsObjectEdition & SDB_WriteAccess)
+        | (IsReadOnly & SDB_ReadAccess)
     ]
     serializer_class = SensorSerializer
     lookup_field = "id"
@@ -325,7 +322,7 @@ class SensorToggleFunctionalApiView(GenericAPIView[Sensor], SDBAPIViewMixin):
     """
 
     queryset = Sensor.objects.all()
-    permission_classes = [SensorFleetUserHasWriteAccess]
+    permission_classes = [SDB_WriteAccess]
     serializer_class = SensorSerializer
     lookup_field = "id"
 
@@ -351,9 +348,7 @@ class SensorFleetPermissionApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin)
     """
 
     queryset = SensorFleet.objects.all()
-    permission_classes = [
-        SensorFleetUserHasAdminAccess | (IsReadOnly & SensorFleetUserHasReadAccess)
-    ]
+    permission_classes = [SDB_AdminAccess | (IsReadOnly & SDB_ReadAccess)]
     serializer_class = SensorFleetSerializer
     lookup_field = "id"
     lookup_url_kwarg = "fleet_id"
@@ -577,7 +572,7 @@ class SensorFleetExportExcelApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin
     """
 
     queryset = SensorFleet.objects.all()
-    permission_classes = [(IsReadOnly & SensorFleetUserHasReadAccess)]
+    permission_classes = [(IsReadOnly & SDB_ReadAccess)]
     lookup_field = "id"
     lookup_url_kwarg = "fleet_id"
     serializer_class = SensorSerializer  # type: ignore[assignment]
@@ -704,7 +699,7 @@ class SensorFleetWatchlistApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
     """
 
     queryset = SensorFleet.objects.all()
-    permission_classes = [(IsReadOnly & SensorFleetUserHasReadAccess)]
+    permission_classes = [(IsReadOnly & SDB_ReadAccess)]
     serializer_class = SensorSerializer  # type: ignore[assignment]
     lookup_field = "id"
     lookup_url_kwarg = "fleet_id"
@@ -810,7 +805,7 @@ class SensorFleetWatchlistExportExcelApiView(
     """
 
     queryset = SensorFleet.objects.all()
-    permission_classes = [(IsReadOnly & SensorFleetUserHasReadAccess)]
+    permission_classes = [(IsReadOnly & SDB_ReadAccess)]
     lookup_field = "id"
     lookup_url_kwarg = "fleet_id"
     serializer_class = SensorSerializer  # type: ignore[assignment]
@@ -984,9 +979,7 @@ class StationSensorInstallApiView(GenericAPIView[Station], SDBAPIViewMixin):
     """
 
     queryset = Station.objects.all()
-    permission_classes = [
-        StationUserHasWriteAccess | (IsReadOnly & StationUserHasReadAccess)
-    ]
+    permission_classes = [SDB_WriteAccess | (IsReadOnly & SDB_ReadAccess)]
     lookup_field = "id"
 
     def get_serializer_class(self) -> type[SensorInstallSerializer]:  # type: ignore[override]
@@ -1064,9 +1057,7 @@ class StationSensorInstallSpecificApiView(
     """
 
     queryset = SensorInstall.objects.all()
-    permission_classes = [
-        StationUserHasWriteAccess | (IsReadOnly & StationUserHasReadAccess)
-    ]
+    permission_classes = [SDB_WriteAccess | (IsReadOnly & SDB_ReadAccess)]
     serializer_class = SensorInstallSerializer
     lookup_field = "id"
     lookup_url_kwarg = "install_id"
@@ -1136,9 +1127,7 @@ class StationSensorInstallExportExcelApiView(GenericAPIView[Station], SDBAPIView
     """
 
     queryset = Station.objects.all()
-    permission_classes = [
-        StationUserHasWriteAccess | (IsReadOnly & StationUserHasReadAccess)
-    ]
+    permission_classes = [SDB_WriteAccess | (IsReadOnly & SDB_ReadAccess)]
     lookup_field = "id"
     serializer_class = SensorInstallSerializer  # type: ignore[assignment]
 

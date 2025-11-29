@@ -10,8 +10,8 @@ from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v1.permissions import IsReadOnly
-from speleodb.api.v1.permissions import ProjectUserHasAdminAccess
-from speleodb.api.v1.permissions import ProjectUserHasReadAccess
+from speleodb.api.v1.permissions import SDB_AdminAccess
+from speleodb.api.v1.permissions import SDB_ReadAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import ProjectTeamPermissionListSerializer
 from speleodb.api.v1.serializers import ProjectTeamPermissionSerializer
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 class ProjectTeamPermissionListApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [ProjectUserHasReadAccess]
+    permission_classes = [SDB_ReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -55,9 +55,7 @@ class ProjectTeamPermissionListApiView(GenericAPIView[Project], SDBAPIViewMixin)
 
 class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [
-        ProjectUserHasAdminAccess | (IsReadOnly & ProjectUserHasReadAccess)
-    ]
+    permission_classes = [SDB_AdminAccess | (IsReadOnly & SDB_ReadAccess)]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 

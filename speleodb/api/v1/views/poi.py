@@ -9,10 +9,10 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import POIOwnershipPermission
-from speleodb.api.v1.serializers.poi import PointOfInterestGeoJSONSerializer
-from speleodb.api.v1.serializers.poi import PointOfInterestSerializer
-from speleodb.gis.models import PointOfInterest
+from speleodb.api.v1.permissions import LandmarkOwnershipPermission
+from speleodb.api.v1.serializers.poi import LandmarkGeoJSONSerializer
+from speleodb.api.v1.serializers.poi import LandmarkSerializer
+from speleodb.gis.models import Landmark
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from rest_framework.response import Response
 
 
-class PointOfInterestSpecificAPIView(GenericAPIView[PointOfInterest], SDBAPIViewMixin):
+class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
     """API View for managing personal Points of Interest.
 
     POIs are personal/private - users can only see and modify their own POIs.
@@ -31,9 +31,9 @@ class PointOfInterestSpecificAPIView(GenericAPIView[PointOfInterest], SDBAPIView
     - Requires authentication and ownership
     """
 
-    queryset = PointOfInterest.objects.all().select_related("user")
-    permission_classes = [POIOwnershipPermission]
-    serializer_class = PointOfInterestSerializer
+    queryset = Landmark.objects.all().select_related("user")
+    permission_classes = [LandmarkOwnershipPermission]
+    serializer_class = LandmarkSerializer
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -73,7 +73,7 @@ class PointOfInterestSpecificAPIView(GenericAPIView[PointOfInterest], SDBAPIView
         )
 
 
-class PointOfInterestAPIView(GenericAPIView[PointOfInterest], SDBAPIViewMixin):
+class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
     """API View for managing personal Points of Interest.
 
     POIs are personal/private - users can only see and modify their own POIs.
@@ -82,13 +82,13 @@ class PointOfInterestAPIView(GenericAPIView[PointOfInterest], SDBAPIViewMixin):
     """
 
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = PointOfInterestSerializer
+    serializer_class = LandmarkSerializer
     lookup_field = "id"
 
-    def get_queryset(self) -> QuerySet[PointOfInterest]:
+    def get_queryset(self) -> QuerySet[Landmark]:
         """Get only POIs created by the authenticated user."""
         user = self.get_user()
-        return PointOfInterest.objects.filter(user=user).select_related("user")
+        return Landmark.objects.filter(user=user).select_related("user")
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         queryset = self.get_queryset()
@@ -113,7 +113,7 @@ class PointOfInterestAPIView(GenericAPIView[PointOfInterest], SDBAPIViewMixin):
         )
 
 
-class PointOfInterestGeoJSONView(GenericAPIView[PointOfInterest], SDBAPIViewMixin):
+class LandmarkGeoJSONView(GenericAPIView[Landmark], SDBAPIViewMixin):
     """
     View to get user's POIs as GeoJSON-compatible data.
     Used by the map viewer to display POI markers.
@@ -121,12 +121,12 @@ class PointOfInterestGeoJSONView(GenericAPIView[PointOfInterest], SDBAPIViewMixi
     """
 
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = PointOfInterestGeoJSONSerializer
+    serializer_class = LandmarkGeoJSONSerializer
 
-    def get_queryset(self) -> QuerySet[PointOfInterest]:
+    def get_queryset(self) -> QuerySet[Landmark]:
         """Get only POIs created by the authenticated user."""
         user = self.get_user()
-        return PointOfInterest.objects.filter(user=user).select_related("user")
+        return Landmark.objects.filter(user=user).select_related("user")
 
     def get(self, request: Request) -> Response:
         """Get user's POIs in a map-friendly format."""

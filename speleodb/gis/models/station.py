@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from speleodb.gis.models import ExperimentRecord
-    from speleodb.gis.models import LogEntry
+    from speleodb.gis.models import StationLogEntry
     from speleodb.gis.models import StationResource
 
 
@@ -30,7 +30,7 @@ class Station(PolymorphicModel):
 
     # type checking
     resources: models.QuerySet[StationResource]
-    log_entries: models.QuerySet[LogEntry]
+    log_entries: models.QuerySet[StationLogEntry]
     rel_records: models.QuerySet[ExperimentRecord]
 
     id = models.UUIDField(
@@ -87,6 +87,10 @@ class Station(PolymorphicModel):
 
     class Meta:
         ordering = ["-modified_date"]
+        indexes = [
+            models.Index(fields=["tag"]),
+            models.Index(fields=["latitude", "longitude"]),  # for spatial queries
+        ]
 
     def __str__(self) -> str:
         return f"Station {self.name}"
@@ -117,6 +121,9 @@ class SubSurfaceStation(Station):
     class Meta:
         verbose_name = "Station - Subsurface"
         verbose_name_plural = "Stations - Subsurface"
+        indexes = [
+            models.Index(fields=["project"]),
+        ]
 
 
 class SurfaceStation(Station):
@@ -136,3 +143,6 @@ class SurfaceStation(Station):
     class Meta:
         verbose_name = "Station - Surface"
         verbose_name_plural = "Stations - Surface"
+        indexes = [
+            models.Index(fields=["network"]),
+        ]

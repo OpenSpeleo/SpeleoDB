@@ -136,8 +136,6 @@ class Project(models.Model):
         editable=False,
         primary_key=True,
     )
-    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
-    modified_date = models.DateTimeField(auto_now=True, editable=False)
 
     name = models.CharField(max_length=255, blank=False, null=False)
     description = models.TextField(blank=False, null=False)
@@ -203,6 +201,9 @@ class Project(models.Model):
         verbose_name="Is Active",
     )
 
+    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
+    modified_date = models.DateTimeField(auto_now=True, editable=False)
+
     objects = ProjectQuerySet.as_manager()
 
     class Meta:
@@ -214,6 +215,13 @@ class Project(models.Model):
                 ),
                 name="Latitude & Longitude must both me null/not null simultaneously",
             )
+        ]
+        indexes = [
+            models.Index(fields=["country"]),
+            models.Index(fields=["is_active"]),
+            models.Index(fields=["longitude", "latitude"]),
+            models.Index(fields=["visibility"]),
+            # models.Index(fields=["target", "project"]), # Present via unique constraint  # noqa: E501
         ]
 
     def __repr__(self) -> str:

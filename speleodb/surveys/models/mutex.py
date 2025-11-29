@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from django.db import models
+from django.db.models import indexes
 
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
@@ -46,6 +47,10 @@ class ProjectMutex(models.Model):
 
     class Meta:
         verbose_name_plural = "mutexes"
+        indexes = [
+            indexes.Index(fields=["project"]),
+            indexes.Index(fields=["project", "user"]),
+        ]
 
     def __str__(self) -> str:
         return f"{self.user} => {self.project} @ {self.creation_date}"

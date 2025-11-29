@@ -63,7 +63,6 @@ class GISView(models.Model):
         blank=False,
         null=False,
         default=generate_random_token,
-        db_index=True,
         help_text="Unique token for API access to this view",
     )
 
@@ -90,7 +89,7 @@ class GISView(models.Model):
         ordering = ["-modified_date"]
         indexes = [
             models.Index(fields=["owner"]),
-            models.Index(fields=["gis_token"]),
+            # models.Index(fields=["gis_token"]),  # Present via unique constraint
         ]
 
     def __str__(self) -> str:
@@ -268,7 +267,8 @@ class GISViewProject(models.Model):
         unique_together = [("gis_view", "project")]
         ordering = ["creation_date"]
         indexes = [
-            models.Index(fields=["gis_view", "project"]),
+            models.Index(fields=["gis_view"])
+            # models.Index(fields=["gis_view", "project"]), # present via unique_together  # noqa: E501
         ]
         constraints = [
             # Must specify either use_latest=True OR commit_sha

@@ -8,15 +8,15 @@ from typing import TYPE_CHECKING
 
 from django.contrib import admin
 
-from speleodb.gis.models import LogEntry
+from speleodb.gis.models import StationLogEntry
 
 if TYPE_CHECKING:
     from django import forms
     from django.http import HttpRequest
 
 
-@admin.register(LogEntry)
-class LogEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+@admin.register(StationLogEntry)
+class StationLogEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "id",
         "station",
@@ -38,8 +38,8 @@ class LogEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def save_model(
         self,
         request: HttpRequest,
-        obj: LogEntry,
-        form: forms.ModelForm[LogEntry],
+        obj: StationLogEntry,
+        form: forms.ModelForm[StationLogEntry],
         change: bool,
     ) -> None:
         # Auto-populate created_by field when creating a new log entry

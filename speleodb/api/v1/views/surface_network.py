@@ -15,9 +15,9 @@ from rest_framework.generics import GenericAPIView
 from speleodb.api.v1.permissions import IsObjectDeletion
 from speleodb.api.v1.permissions import IsObjectEdition
 from speleodb.api.v1.permissions import IsReadOnly
-from speleodb.api.v1.permissions import SurfaceMonitoringNetworkUserHasAdminAccess
-from speleodb.api.v1.permissions import SurfaceMonitoringNetworkUserHasReadAccess
-from speleodb.api.v1.permissions import SurfaceMonitoringNetworkUserHasWriteAccess
+from speleodb.api.v1.permissions import SDB_AdminAccess
+from speleodb.api.v1.permissions import SDB_ReadAccess
+from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.serializers.surface_network import (
     SurfaceMonitoringNetworkListSerializer,
 )
@@ -110,9 +110,9 @@ class SurfaceMonitoringNetworkSpecificApiView(
 
     queryset = SurfaceMonitoringNetwork.objects.all()
     permission_classes = [
-        (IsObjectDeletion & SurfaceMonitoringNetworkUserHasAdminAccess)
-        | (IsObjectEdition & SurfaceMonitoringNetworkUserHasWriteAccess)
-        | (IsReadOnly & SurfaceMonitoringNetworkUserHasReadAccess)
+        (IsObjectDeletion & SDB_AdminAccess)
+        | (IsObjectEdition & SDB_WriteAccess)
+        | (IsReadOnly & SDB_ReadAccess)
     ]
     serializer_class = SurfaceMonitoringNetworkSerializer
     lookup_field = "id"
@@ -179,10 +179,7 @@ class SurfaceMonitoringNetworkPermissionApiView(
     """
 
     queryset = SurfaceMonitoringNetwork.objects.all()
-    permission_classes = [
-        SurfaceMonitoringNetworkUserHasAdminAccess
-        | (IsReadOnly & SurfaceMonitoringNetworkUserHasReadAccess)
-    ]
+    permission_classes = [SDB_AdminAccess | (IsReadOnly & SDB_ReadAccess)]
     serializer_class = SurfaceMonitoringNetworkSerializer
     lookup_field = "id"
     lookup_url_kwarg = "network_id"

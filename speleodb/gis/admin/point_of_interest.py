@@ -8,15 +8,15 @@ from typing import TYPE_CHECKING
 
 from django.contrib import admin
 
-from speleodb.gis.models import PointOfInterest
+from speleodb.gis.models import Landmark
 
 if TYPE_CHECKING:
     from django import forms
     from django.http import HttpRequest
 
 
-@admin.register(PointOfInterest)
-class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+@admin.register(Landmark)
+class LandmarkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "name",
         "description_preview",
@@ -55,7 +55,7 @@ class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
 
     @admin.display(description="Description")
-    def description_preview(self, obj: PointOfInterest) -> str:
+    def description_preview(self, obj: Landmark) -> str:
         """Show a preview of the description in the list view."""
         if obj.description:
             return (
@@ -66,7 +66,7 @@ class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return "-"
 
     @admin.display(description="Coordinates (Lat, Lon)")
-    def coordinates(self, obj: PointOfInterest) -> str:
+    def coordinates(self, obj: Landmark) -> str:
         """Display coordinates in a readable format."""
         if obj.coordinates:
             return f"{obj.coordinates[1]:.7f}, {obj.coordinates[0]:.7f}"
@@ -75,8 +75,8 @@ class PointOfInterestAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def save_model(
         self,
         request: HttpRequest,
-        obj: PointOfInterest,
-        form: forms.ModelForm[PointOfInterest],
+        obj: Landmark,
+        form: forms.ModelForm[Landmark],
         change: bool,
     ) -> None:
         # Auto-populate user field when creating a new point of interest

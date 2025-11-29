@@ -9,8 +9,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import ExperimentUserHasAdminAccess
-from speleodb.api.v1.permissions import ExperimentUserHasReadAccess
+from speleodb.api.v1.permissions import SDB_AdminAccess
+from speleodb.api.v1.permissions import SDB_ReadAccess
 from speleodb.api.v1.serializers import ExperimentSerializer
 from speleodb.api.v1.serializers import ExperimentUserPermissionListSerializer
 from speleodb.api.v1.serializers import ExperimentUserPermissionSerializer
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 class ExperimentUserPermissionListApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
     queryset = Experiment.objects.all()
-    permission_classes = [ExperimentUserHasReadAccess]
+    permission_classes = [SDB_ReadAccess]
     serializer_class = ExperimentSerializer
     lookup_field = "id"
 
@@ -58,7 +58,7 @@ class ExperimentUserPermissionSpecificApiView(
     GenericAPIView[Experiment], SDBAPIViewMixin
 ):
     queryset = Experiment.objects.all()
-    permission_classes = [ExperimentUserHasAdminAccess]
+    permission_classes = [SDB_AdminAccess]
     serializer_class = ExperimentSerializer
     lookup_field = "id"
 

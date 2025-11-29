@@ -58,6 +58,10 @@ class StationTag(models.Model):
         verbose_name_plural = "Station Tags"
         ordering = ["user", "name"]
         unique_together = ("user", "name")
+        indexes = [
+            models.Index(fields=["user"]),
+            # models.Index(fields=["user", "name"]),  # present via unique_together
+        ]
 
     def __str__(self) -> str:
         return f"{self.name} ({self.color})"

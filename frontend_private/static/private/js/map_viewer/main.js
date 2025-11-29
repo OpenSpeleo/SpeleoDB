@@ -8,6 +8,8 @@ import { StationManager } from './stations/manager.js';
 import { StationUI } from './stations/ui.js';
 import { StationDetails } from './stations/details.js';
 import { StationTags } from './stations/tags.js';
+import { SurfaceStationManager } from './surface_stations/manager.js';
+import { SurfaceStationUI } from './surface_stations/ui.js';
 import { POIManager } from './pois/manager.js';
 import { POIUI } from './pois/ui.js';
 import { Utils } from './utils.js';
@@ -22,8 +24,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. Initialize State
     State.init();
 
-    // 2. Load Projects from API (needed for permissions and project list)
+    // 2. Load Projects and Networks from API (needed for permissions and lists)
     await Config.loadProjects();
+    await Config.loadNetworks();
 
     // 3. Initialize Map
     const token = window.SPELEO_CONTEXT?.mapboxToken || '';
@@ -54,7 +57,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. Setup Interactions
     Interactions.init(map, {
-        onStationClick: (stationId) => StationDetails.openModal(stationId),
+        onStationClick: (stationId, stationType) => {
+            if (stationType === 'surface') {
+                const station = State.allSurfaceStations.get(stationId);
+                StationDetails.openModal(stationId, station?.network, false, 'surface');
+            } else {
+                const station = State.allStations.get(stationId);
+                StationDetails.openModal(stationId, station?.project, false, 'subsurface');
+            }
+        },
         onPOIClick: (poiId) => POIUI.openDetailsModal(poiId),
         onStationDrag: (stationId, projectId, newCoords) => {
             Layers.updateStationPosition(projectId, stationId, newCoords);
@@ -74,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const items = [];
             
             if (type === 'station') {
-                // Get station data for coordinates
+                // Get subsurface station data for coordinates
                 const station = State.allStations.get(data.id);
                 const stationLat = station?.latitude?.toFixed(7) || 'N/A';
                 const stationLng = station?.longitude?.toFixed(7) || 'N/A';
@@ -93,7 +104,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                         label: 'Delete Station', 
                         subtitle: station.name,
                         icon: '🗑️', 
-                        onClick: () => StationDetails.confirmDelete(station) 
+                        onClick: () => StationDetails.confirmDelete(station, 'subsurface') 
+                    });
+                }
+                
+            } else if (type === 'surface-station') {
+                // Get surface station data for coordinates
+                const station = State.allSurfaceStations.get(data.id);
+                const stationLat = station?.latitude?.toFixed(7) || 'N/A';
+                const stationLng = station?.longitude?.toFixed(7) || 'N/A';
+                
+                // Copy GPS Coordinates
+                items.push({ 
+                    label: 'Copy GPS Coordinates', 
+                    subtitle: `${stationLat}, ${stationLng}`,
+                    icon: '📋', 
+                    onClick: () => Utils.copyToClipboard(`${stationLat}, ${stationLng}`) 
+                });
+                
+                // Delete Surface Station (if network admin access)
+                if (station && Config.hasNetworkAdminAccess(station.network)) {
+                    items.push({ 
+                        label: 'Delete Surface Station', 
+                        subtitle: station.name,
+                        icon: '🗑️', 
+                        onClick: () => StationDetails.confirmDelete(station, 'surface') 
                     });
                 }
                 
@@ -311,6 +346,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         await Promise.all(loadPromises);
 
+        // Load Surface Stations for each network
+        Layers.loadNetworkVisibilityPrefs();
+        const surfaceStationPromises = Config.networks.map(async (network) => {
+            try {
+                const stations = await SurfaceStationManager.loadStationsForNetwork(network.id);
+                Layers.addSurfaceStationLayer(network.id, { type: 'FeatureCollection', features: stations });
+            } catch (e) {
+                console.error(`Error loading surface stations for ${network.name}`, e);
+            }
+        });
+        await Promise.all(surfaceStationPromises);
+
         // Reorder layers to ensure stations are on top of survey lines
         Layers.reorderLayers();
 
@@ -460,8 +507,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Listen for Surface Station Refresh Events
+    window.addEventListener('speleo:refresh-surface-stations', async (e) => {
+        const { networkId } = e.detail;
+        if (networkId) {
+            const stations = await SurfaceStationManager.loadStationsForNetwork(networkId);
+            Layers.addSurfaceStationLayer(networkId, { type: 'FeatureCollection', features: stations });
+            // Ensure stations remain on top of survey lines
+            Layers.reorderLayers();
+        }
+    });
+
     // Global Exposes
     window.openStationManager = () => StationUI.openManagerModal();
+    window.openSurfaceStationManager = () => SurfaceStationUI.openManagerModal();
     // Expose POI Manager for the button we added above or HTML onclick
     window.openPOIManager = () => POIUI.openManagerModal();
     window.POIUI = POIUI; // Expose for inline HTML onclicks
@@ -473,8 +532,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.goToStation = (id, lat, lon) => {
         map.flyTo({ center: [lon, lat], zoom: 18 });
+        // Check if it's a subsurface or surface station
         const station = State.allStations.get(id);
-        if (station) Layers.toggleProjectVisibility(station.project, true);
+        const surfaceStation = State.allSurfaceStations.get(id);
+        if (station) {
+            Layers.toggleProjectVisibility(station.project, true);
+        } else if (surfaceStation) {
+            Layers.toggleNetworkVisibility(surfaceStation.network, true);
+        }
     };
 
     // Expose station modal for compatibility with old HTML handlers

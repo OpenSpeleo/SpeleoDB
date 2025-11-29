@@ -6,14 +6,14 @@ from typing import Any
 
 from rest_framework import serializers
 
-from speleodb.gis.models import LogEntry
+from speleodb.gis.models import StationLogEntry
 
 
-class LogEntrySerializer(serializers.ModelSerializer[LogEntry]):
-    """Serializer for LogEntry model."""
+class StationLogEntrySerializer(serializers.ModelSerializer[StationLogEntry]):
+    """Serializer for StationLogEntry model."""
 
     class Meta:
-        model = LogEntry
+        model = StationLogEntry
         fields = [
             "id",
             "attachment",

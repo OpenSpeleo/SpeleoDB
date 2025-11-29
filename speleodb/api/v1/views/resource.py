@@ -12,9 +12,9 @@ from rest_framework.generics import GenericAPIView
 from speleodb.api.v1.permissions import IsObjectDeletion
 from speleodb.api.v1.permissions import IsObjectEdition
 from speleodb.api.v1.permissions import IsReadOnly
-from speleodb.api.v1.permissions import StationUserHasAdminAccess
-from speleodb.api.v1.permissions import StationUserHasReadAccess
-from speleodb.api.v1.permissions import StationUserHasWriteAccess
+from speleodb.api.v1.permissions import SDB_AdminAccess
+from speleodb.api.v1.permissions import SDB_ReadAccess
+from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.serializers.station import StationResourceSerializer
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
@@ -31,9 +31,7 @@ if TYPE_CHECKING:
 
 class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
     queryset = Station.objects.all()
-    permission_classes = [
-        StationUserHasWriteAccess | (IsReadOnly & StationUserHasReadAccess)
-    ]
+    permission_classes = [SDB_WriteAccess | (IsReadOnly & SDB_ReadAccess)]
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -84,9 +82,9 @@ class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
 class StationResourceSpecificApiView(GenericAPIView[StationResource], SDBAPIViewMixin):
     queryset = StationResource.objects.all()
     permission_classes = [
-        (IsObjectDeletion & StationUserHasAdminAccess)
-        | (IsObjectEdition & StationUserHasWriteAccess)
-        | (IsReadOnly & StationUserHasReadAccess)
+        (IsObjectDeletion & SDB_AdminAccess)
+        | (IsObjectEdition & SDB_WriteAccess)
+        | (IsReadOnly & SDB_ReadAccess)
     ]
     lookup_field = "id"
 

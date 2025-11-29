@@ -49,10 +49,25 @@ class PluginRelease(models.Model):
         verbose_name="SHA256 Hash",
     )
 
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Is Active",
+    )
+
     download_url = models.URLField(max_length=500)
 
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        verbose_name = "Public Annoucement"
+        verbose_name_plural = "Public Annoucements"
+        ordering = ["-creation_date"]
+        indexes = [
+            models.Index(fields=["creation_date"]),
+            models.Index(fields=["is_active"]),
+            models.Index(fields=["software"]),
+        ]
 
     def __str__(self) -> str:
         version_range = ""

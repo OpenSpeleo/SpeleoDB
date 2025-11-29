@@ -31,7 +31,7 @@ class UserProjectPermission(BasePermissionModel):
         verbose_name_plural = "Project - User Permissions"
         unique_together = ("target", "project")
         indexes = [
-            models.Index(fields=["target", "is_active"]),
-            models.Index(fields=["project", "is_active"]),
-            models.Index(fields=["target", "project", "is_active"]),
+            models.Index(fields=["target"]),
+            models.Index(fields=["project"]),
+            # models.Index(fields=["target", "project"]), # Present via unique constraint  # noqa: E501
         ]

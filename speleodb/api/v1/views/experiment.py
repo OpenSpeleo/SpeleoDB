@@ -18,13 +18,12 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 
-from speleodb.api.v1.permissions import ExperimentUserHasAdminAccess
-from speleodb.api.v1.permissions import ExperimentUserHasReadAccess
-from speleodb.api.v1.permissions import ExperimentUserHasWriteAccess
 from speleodb.api.v1.permissions import IsObjectDeletion
 from speleodb.api.v1.permissions import IsObjectEdition
 from speleodb.api.v1.permissions import IsReadOnly
-from speleodb.api.v1.permissions import StationUserHasReadAccess
+from speleodb.api.v1.permissions import SDB_AdminAccess
+from speleodb.api.v1.permissions import SDB_ReadAccess
+from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.serializers import ExperimentRecordGISSerializer
 from speleodb.api.v1.serializers import ExperimentRecordSerializer
 from speleodb.api.v1.serializers import ExperimentSerializer
@@ -192,9 +191,9 @@ class ExperimentApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
 class ExperimentSpecificApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
     queryset = Experiment.objects.all()
     permission_classes = [
-        (IsObjectDeletion & ExperimentUserHasAdminAccess)
-        | (IsObjectEdition & ExperimentUserHasWriteAccess)
-        | (IsReadOnly & ExperimentUserHasReadAccess)
+        (IsObjectDeletion & SDB_AdminAccess)
+        | (IsObjectEdition & SDB_WriteAccess)
+        | (IsReadOnly & SDB_ReadAccess)
     ]
     serializer_class = ExperimentSerializer
     lookup_field = "id"
@@ -348,7 +347,7 @@ class ExperimentSpecificApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
 
 class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
     queryset = Station.objects.all()
-    permission_classes = [StationUserHasReadAccess]
+    permission_classes = [SDB_ReadAccess]
     lookup_field = "id"
     serializer_class = ExperimentRecordSerializer  # type: ignore[assignment]
 
@@ -376,7 +375,7 @@ class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
             case Experiment():
                 station = self.get_object()
 
-                if not ExperimentUserHasReadAccess().has_object_permission(
+                if not SDB_ReadAccess().has_object_permission(
                     request,  # type: ignore[arg-type]
                     self,
                     experiment_or_response,
@@ -410,7 +409,7 @@ class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
                 station = self.get_object()
                 user = self.get_user()
 
-                if not ExperimentUserHasWriteAccess().has_object_permission(
+                if not SDB_WriteAccess().has_object_permission(
                     request,  # type: ignore[arg-type]
                     self,
                     experiment_or_response,
@@ -451,7 +450,7 @@ class ExperimentRecordSpecificApiView(
     GenericAPIView[ExperimentRecord], SDBAPIViewMixin
 ):
     queryset = ExperimentRecord.objects.all()
-    permission_classes = [ExperimentUserHasAdminAccess]
+    permission_classes = [SDB_AdminAccess]
     lookup_field = "id"
     serializer_class = ExperimentRecordSerializer
 

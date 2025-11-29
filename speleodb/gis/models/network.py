@@ -61,6 +61,9 @@ class SurfaceMonitoringNetwork(models.Model):
     class Meta:
         verbose_name = "Surface Monitoring Network"
         verbose_name_plural = "Surface Monitoring Networks"
+        indexes = [
+            # models.Index(fields=["gis_token"]),  # Present via unique constraint
+        ]
 
     def __str__(self) -> str:
         return f"[Monitoring Network: {self.name}]"

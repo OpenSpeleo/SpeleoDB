@@ -7,24 +7,42 @@ import { StationResources } from './resources.js';
 import { StationExperiments } from './experiments.js';
 import { StationSensors } from './sensors.js';
 import { StationManager } from './manager.js';
+import { SurfaceStationManager } from '../surface_stations/manager.js';
 import { Layers } from '../map/layers.js';
 import { StationTags } from './tags.js';
 
 // Track current station state
 let currentStationId = null;
 let currentProjectId = null;
+let currentNetworkId = null;
+let currentStationType = 'subsurface';  // 'subsurface' or 'surface'
 let activeTab = 'details';
 
 export const StationDetails = {
     currentStationId: null,
     currentTab: 'details',
 
-    async openModal(stationId, projectId = null, isNewlyCreated = false) {
-        console.log(`📋 Opening station modal for: ${stationId || 'NEW STATION'}`);
+    /**
+     * Open the station details modal.
+     * @param {string} stationId - The station ID
+     * @param {string} parentId - Project ID for subsurface, Network ID for surface
+     * @param {boolean} isNewlyCreated - Whether this is a newly created station
+     * @param {string} stationType - 'subsurface' or 'surface'
+     */
+    async openModal(stationId, parentId = null, isNewlyCreated = false, stationType = 'subsurface') {
+        console.log(`📋 Opening ${stationType} station modal for: ${stationId || 'NEW STATION'}`);
 
         currentStationId = stationId;
         this.currentStationId = stationId;
-        currentProjectId = projectId || (State.allStations.get(stationId)?.project) || Config.projects[0]?.id;
+        currentStationType = stationType;
+        
+        if (stationType === 'surface') {
+            currentNetworkId = parentId || (State.allSurfaceStations.get(stationId)?.network) || Config.networks[0]?.id;
+            currentProjectId = null;
+        } else {
+            currentProjectId = parentId || (State.allStations.get(stationId)?.project) || Config.projects[0]?.id;
+            currentNetworkId = null;
+        }
 
         const modal = document.getElementById('station-modal');
         if (!modal) {
@@ -71,9 +89,9 @@ export const StationDetails = {
         modal.classList.remove('hidden');
 
         if (stationId) {
-            console.log(`📋 Loading existing station: ${stationId}`);
+            console.log(`📋 Loading existing ${stationType} station: ${stationId}`);
             this.switchTab('details');
-            await this.loadStationDetails(stationId, currentProjectId);
+            await this.loadStationDetails(stationId, stationType === 'surface' ? currentNetworkId : currentProjectId, stationType);
 
             // Show a special message if newly created
             if (isNewlyCreated) {
@@ -185,7 +203,8 @@ export const StationDetails = {
                 if (currentStationId) {
                     // Show inline loading state in the modal content, then load data
                     this.showDetailsLoading();
-                    this.loadStationDetails(currentStationId, currentProjectId);
+                    const parentId = currentStationType === 'surface' ? currentNetworkId : currentProjectId;
+                    this.loadStationDetails(currentStationId, parentId, currentStationType);
                 } else {
                     this.showEmptyDetails();
                 }
@@ -289,9 +308,9 @@ export const StationDetails = {
         `;
     },
 
-    async loadStationDetails(stationId, projectId) {
+    async loadStationDetails(stationId, parentId, stationType = 'subsurface') {
         try {
-            // Fetch the full station details from the API
+            // Fetch the full station details from the API (same endpoint for both types)
             const response = await API.getStationDetails(stationId);
 
             let station;
@@ -303,30 +322,46 @@ export const StationDetails = {
                 throw new Error('Invalid station response');
             }
 
-            // Update the allStations map with the complete data
-            const existingStation = State.allStations.get(stationId);
+            // Update the appropriate state map with the complete data
+            const stateMap = stationType === 'surface' ? State.allSurfaceStations : State.allStations;
+            const existingStation = stateMap.get(stationId);
+            
             if (existingStation) {
                 const mergedStation = {
                     ...existingStation,
                     ...station,
                     latitude: Number(station.latitude || existingStation.latitude),
                     longitude: Number(station.longitude || existingStation.longitude),
-                    project: existingStation.project || projectId
+                    station_type: stationType
                 };
-                State.allStations.set(stationId, mergedStation);
+                
+                if (stationType === 'surface') {
+                    mergedStation.network = existingStation.network || parentId;
+                } else {
+                    mergedStation.project = existingStation.project || parentId;
+                }
+                
+                stateMap.set(stationId, mergedStation);
                 station = mergedStation;
             } else {
                 station = {
                     ...station,
                     latitude: Number(station.latitude),
                     longitude: Number(station.longitude),
-                    project: projectId
+                    station_type: stationType
                 };
-                State.allStations.set(stationId, station);
+                
+                if (stationType === 'surface') {
+                    station.network = parentId;
+                } else {
+                    station.project = parentId;
+                }
+                
+                stateMap.set(stationId, station);
             }
 
             // Display the station details
-            this.displayStationDetails(station, projectId);
+            this.displayStationDetails(station, parentId, stationType);
 
         } catch (error) {
             console.error('Error loading station details:', error);
@@ -335,7 +370,7 @@ export const StationDetails = {
         }
     },
 
-    displayStationDetails(station, projectId) {
+    displayStationDetails(station, parentId, stationType = 'subsurface') {
         const modalTitle = document.getElementById('station-modal-title');
         const modalContent = document.getElementById('station-modal-content');
 
@@ -344,28 +379,45 @@ export const StationDetails = {
             return;
         }
 
+        const isSurfaceStation = stationType === 'surface';
+
         // Update title
         const isDemoStation = station.is_demo || (station.id && String(station.id).startsWith('demo-'));
-        modalTitle.innerHTML = `Station: ${station.name}${isDemoStation ? ' <span class="demo-badge">DEMO</span>' : ''}`;
+        const stationTypeLabel = isSurfaceStation ? 'Surface Station' : 'Station';
+        modalTitle.innerHTML = `${stationTypeLabel}: ${station.name}${isDemoStation ? ' <span class="demo-badge">DEMO</span>' : ''}`;
 
-        const hasWriteAccess = Config.hasProjectWriteAccess(projectId);
-        const hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(projectId) : hasWriteAccess;
+        // Determine access based on station type
+        let hasWriteAccess, hasAdminAccess, parentName, parentType;
+        
+        if (isSurfaceStation) {
+            hasWriteAccess = Config.hasNetworkWriteAccess(parentId);
+            hasAdminAccess = Config.hasNetworkAdminAccess(parentId);
+            const network = Config.networks.find(n => n.id === String(parentId));
+            parentName = network ? network.name : 'Unknown Network';
+            parentType = 'Network';
+        } else {
+            hasWriteAccess = Config.hasProjectWriteAccess(parentId);
+            hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(parentId) : hasWriteAccess;
+            const project = Config.projects.find(p => p.id === String(parentId));
+            parentName = project ? project.name : 'Unknown Project';
+            parentType = 'Project';
+        }
 
-        // Get project name
-        const project = Config.projects.find(p => p.id === String(projectId));
-        const projectName = project ? project.name : 'Unknown Project';
-
-        // GPS location info
+        // GPS location info - different message for surface vs subsurface
+        const dragInfo = isSurfaceStation 
+            ? '<div class="text-xs text-slate-400 mt-2">📍 Surface stations have fixed GPS coordinates</div>'
+            : (hasWriteAccess 
+                ? '<div class="text-xs text-slate-400 mt-2">🖱️ Drag this station to move it or use magnetic snap to nearby survey lines</div>'
+                : '<div class="text-xs text-amber-300 mt-2">🔒 Read-only access - moving stations is disabled</div>');
+        
         const snapInfo = `
             <div class="mt-3 bg-slate-700/50 p-3 rounded-lg border border-slate-500/30">
                 <strong class="text-slate-300">📍 Station Location:</strong>
                 <div class="text-sm text-slate-200 mt-1">
                     <div>GPS Location: <span class="font-mono text-slate-300">${Number(station.latitude).toFixed(7)}, ${Number(station.longitude).toFixed(7)}</span></div>
+                    <div class="mt-1">${parentType}: <span class="text-slate-300">${parentName}</span></div>
                 </div>
-                ${hasWriteAccess ?
-                `<div class="text-xs text-slate-400 mt-2">🖱️ Drag this station to move it or use magnetic snap to nearby survey lines</div>` :
-                `<div class="text-xs text-amber-300 mt-2">🔒 Read-only access - moving stations is disabled</div>`
-            }
+                ${dragInfo}
             </div>
         `;
 
@@ -434,7 +486,7 @@ export const StationDetails = {
         if (hasWriteAccess) {
             const editBtn = document.getElementById('edit-station-btn');
             if (editBtn) {
-                editBtn.onclick = () => this.openEditForm(station);
+                editBtn.onclick = () => this.openEditForm(station, stationType);
             }
 
             // Tag selector button
@@ -447,13 +499,14 @@ export const StationDetails = {
         if (hasAdminAccess) {
             const deleteBtn = document.getElementById('delete-station-btn');
             if (deleteBtn) {
-                deleteBtn.onclick = () => this.confirmDelete(station);
+                deleteBtn.onclick = () => this.confirmDelete(station, stationType);
             }
         }
     },
 
-    openEditForm(station) {
+    openEditForm(station, stationType = 'subsurface') {
         const modalContent = document.getElementById('station-modal-content');
+        const isSurfaceStation = stationType === 'surface';
 
         modalContent.innerHTML = `
             <div class="tab-content active p-6">
@@ -476,8 +529,10 @@ export const StationDetails = {
             </div>
         `;
 
+        const parentId = isSurfaceStation ? station.network : station.project;
+
         document.getElementById('cancel-edit-btn').onclick = () => {
-            this.displayStationDetails(station, station.project);
+            this.displayStationDetails(station, parentId, stationType);
         };
 
         document.getElementById('edit-station-form').onsubmit = async (e) => {
@@ -492,31 +547,42 @@ export const StationDetails = {
             }
 
             try {
+                // Use the same API for both station types (polymorphic on backend)
                 await StationManager.updateStation(station.id, { name, description });
                 Utils.showNotification('success', 'Station updated successfully');
 
                 // Refresh the station data
                 station.name = name;
                 station.description = description;
-                State.allStations.set(station.id, station);
+                
+                // Update the appropriate state map
+                if (isSurfaceStation) {
+                    State.allSurfaceStations.set(station.id, station);
+                    // For surface stations, we'd use a different layer update function
+                    // but the name update uses the same pattern
+                } else {
+                    State.allStations.set(station.id, station);
+                    // Update the station label on the map
+                    Layers.updateStationProperties(station.project, station.id, { name });
+                }
 
-                // Update the station label on the map
-                Layers.updateStationProperties(station.project, station.id, { name });
-
-                this.displayStationDetails(station, station.project);
+                this.displayStationDetails(station, parentId, stationType);
             } catch (error) {
                 Utils.showNotification('error', 'Failed to update station');
             }
         };
     },
 
-    confirmDelete(station) {
+    confirmDelete(station, stationType = 'subsurface') {
         const stationModal = document.getElementById('station-modal');
         const isStationModalOpen = stationModal && !stationModal.classList.contains('hidden');
+        const isSurfaceStation = stationType === 'surface';
+        const parentId = isSurfaceStation ? station.network : station.project;
         
         if (isStationModalOpen) {
             // Station modal is open - show confirmation in modal content
             const modalContent = document.getElementById('station-modal-content');
+            const stationTypeLabel = isSurfaceStation ? 'Surface Station' : 'Station';
 
             modalContent.innerHTML = `
                 <div class="tab-content active p-6">
@@ -524,42 +590,49 @@ export const StationDetails = {
                         <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                         </svg>
-                        <h3 class="text-xl font-bold text-white mb-2">Delete Station?</h3>
+                        <h3 class="text-xl font-bold text-white mb-2">Delete ${stationTypeLabel}?</h3>
                         <p class="text-slate-300 mb-2">Are you sure you want to delete <strong>${station.name}</strong>?</p>
                         <p class="text-red-300 text-sm mb-6">This action cannot be undone. All associated resources, logs, and data will be permanently deleted.</p>
                         <div class="flex gap-3 justify-center">
                             <button id="cancel-delete-btn" class="btn-secondary">Cancel</button>
-                            <button id="confirm-delete-btn" class="btn-danger">Delete Station</button>
+                            <button id="confirm-delete-btn" class="btn-danger">Delete ${stationTypeLabel}</button>
                         </div>
                     </div>
                 </div>
             `;
 
             document.getElementById('cancel-delete-btn').onclick = () => {
-                this.displayStationDetails(station, station.project);
+                this.displayStationDetails(station, parentId, stationType);
             };
 
             document.getElementById('confirm-delete-btn').onclick = async () => {
                 try {
-                    await StationManager.deleteStation(station.id);
-                    Utils.showNotification('success', 'Station deleted successfully');
+                    if (isSurfaceStation) {
+                        await SurfaceStationManager.deleteStation(station.id);
+                    } else {
+                        await StationManager.deleteStation(station.id);
+                    }
+                    Utils.showNotification('success', `${stationTypeLabel} deleted successfully`);
 
                     // Close modal
                     document.getElementById('station-modal').classList.add('hidden');
                 } catch (error) {
-                    Utils.showNotification('error', 'Failed to delete station');
+                    Utils.showNotification('error', `Failed to delete ${stationTypeLabel.toLowerCase()}`);
                 }
             };
         } else {
             // Called from context menu - show standalone confirmation modal
-            this.showStandaloneDeleteModal(station);
+            this.showStandaloneDeleteModal(station, stationType);
         }
     },
     
-    showStandaloneDeleteModal(station) {
+    showStandaloneDeleteModal(station, stationType = 'subsurface') {
         // Remove any existing standalone delete modal
         const existingModal = document.getElementById('station-delete-confirm-modal');
         if (existingModal) existingModal.remove();
+        
+        const isSurfaceStation = stationType === 'surface';
+        const stationTypeLabel = isSurfaceStation ? 'Surface Station' : 'Station';
         
         const modalHtml = `
             <div id="station-delete-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -572,12 +645,12 @@ export const StationDetails = {
                                 </svg>
                             </div>
                         </div>
-                        <h3 class="text-xl font-bold text-white text-center mb-2">Delete Station?</h3>
+                        <h3 class="text-xl font-bold text-white text-center mb-2">Delete ${stationTypeLabel}?</h3>
                         <p class="text-slate-300 text-center mb-2">Are you sure you want to delete <strong>${station.name}</strong>?</p>
                         <p class="text-red-300 text-sm text-center mb-6">This action cannot be undone. All associated resources, logs, and data will be permanently deleted.</p>
                         <div class="flex gap-3 justify-center">
                             <button id="standalone-cancel-delete-btn" class="btn-secondary px-6">Cancel</button>
-                            <button id="standalone-confirm-delete-btn" class="btn-danger px-6">Delete Station</button>
+                            <button id="standalone-confirm-delete-btn" class="btn-danger px-6">Delete ${stationTypeLabel}</button>
                         </div>
                     </div>
                 </div>
@@ -596,11 +669,15 @@ export const StationDetails = {
         // Confirm delete button
         document.getElementById('standalone-confirm-delete-btn').onclick = async () => {
             try {
-                await StationManager.deleteStation(station.id);
-                Utils.showNotification('success', 'Station deleted successfully');
+                if (isSurfaceStation) {
+                    await SurfaceStationManager.deleteStation(station.id);
+                } else {
+                    await StationManager.deleteStation(station.id);
+                }
+                Utils.showNotification('success', `${stationTypeLabel} deleted successfully`);
                 modal.remove();
             } catch (error) {
-                Utils.showNotification('error', 'Failed to delete station');
+                Utils.showNotification('error', `Failed to delete ${stationTypeLabel.toLowerCase()}`);
             }
         };
         

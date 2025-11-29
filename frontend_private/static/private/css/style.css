@@ -2424,6 +2424,10 @@ span.flatpickr-weekday {
   width: 12rem;
 }
 
+.w-56 {
+  width: 14rem;
+}
+
 .w-64 {
   width: 16rem;
 }
@@ -3491,7 +3495,7 @@ span.flatpickr-weekday {
 
 .bg-emerald-600 {
   --tw-bg-opacity: 1;
-  background-color: rgba(5, 150, 105, var(--tw-bg-opacity));
+  background-color: rgb(5 150 105 / var(--tw-bg-opacity));
 }
 
 .bg-gray-100 {
@@ -5117,6 +5121,11 @@ span.flatpickr-weekday {
 .hover\:bg-emerald-600:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(5 150 105 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-emerald-700:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(4 120 87 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:bg-indigo-100:hover {

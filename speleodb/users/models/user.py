@@ -80,6 +80,7 @@ class User(AbstractUser):
     name = CharField("Name of User", blank=False, null=False, max_length=255)
     email = EmailField("email address", unique=True)
     country = CountryField()
+
     first_name = None  # type: ignore[assignment]
     last_name = None  # type: ignore[assignment]
     username = None  # type: ignore[assignment]
@@ -102,6 +103,15 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ["name"]
 
     objects: ClassVar[UserManager] = UserManager()
+
+    class Meta:
+        verbose_name = "User"
+        verbose_name_plural = "Users"
+        ordering = ["name"]
+        indexes = [
+            # models.Index(fields=["email"]),  # Present via unique constraint
+            models.Index(fields=["country"]),
+        ]
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.name} [{self.email}]>"

@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='LogEntry',
+            name='StationLogEntry',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_by', models.EmailField(help_text='User who created or submitted the entry.', max_length=254)),

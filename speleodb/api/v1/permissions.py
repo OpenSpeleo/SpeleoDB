@@ -14,16 +14,18 @@ from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import GISView
-from speleodb.gis.models import LogEntry
-from speleodb.gis.models import PointOfInterest
+from speleodb.gis.models import Landmark
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
+from speleodb.gis.models import Station
+from speleodb.gis.models import StationLogEntry
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceMonitoringNetwork
 from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
+from speleodb.gis.models import SurfaceStation
 from speleodb.surveys.models import Project
 from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.utils.exceptions import NotAuthorizedError
@@ -38,7 +40,7 @@ if TYPE_CHECKING:
 # ================ PROJECT PERMISSIONS ================ #
 
 
-class BaseProjectAccessLevel(permissions.BasePermission):
+class BaseAccessLevel(permissions.BasePermission):
     MIN_ACCESS_LEVEL: int
 
     def has_permission(self, request: Request, view: APIView) -> bool:
@@ -47,35 +49,188 @@ class BaseProjectAccessLevel(permissions.BasePermission):
 
         raise NotAuthenticated("Authentication credentials were not provided.")
 
+    def _check_project_permission(
+        self, request: AuthenticatedDRFRequest, project: Project
+    ) -> bool:
+        """Check permission on a project."""
+        try:
+            return (
+                request.user.get_best_permission(project=project).level
+                >= self.MIN_ACCESS_LEVEL
+            )
+        except (ObjectDoesNotExist, NotAuthorizedError):
+            return False
+
     def has_object_permission(
         self,
         request: AuthenticatedDRFRequest,  # type: ignore[override]
         view: APIView,
-        obj: Project,
+        obj: Any,
     ) -> bool:
-        try:
-            return (
-                request.user.get_best_permission(project=obj).level
-                >= self.MIN_ACCESS_LEVEL
-            )
-        except NotAuthorizedError:
-            return False
+        match obj:
+            # =============================================================== #
+            #                           CORE MODELS                           #
+            # =============================================================== #
+            case Project():
+                try:
+                    return (
+                        request.user.get_best_permission(project=obj).level
+                        >= self.MIN_ACCESS_LEVEL
+                    )
+                except ObjectDoesNotExist, NotAuthorizedError:
+                    return False
+
+            case SurfaceMonitoringNetwork():
+                try:
+                    return (
+                        SurfaceMonitoringNetworkUserPermission.objects.get(
+                            user=request.user,
+                            network=obj,
+                            is_active=True,
+                        ).level
+                        >= self.MIN_ACCESS_LEVEL
+                    )
+                except ObjectDoesNotExist, NotAuthorizedError:
+                    return False
+
+            case SensorFleet():
+                try:
+                    return (
+                        SensorFleetUserPermission.objects.get(
+                            user=request.user,
+                            sensor_fleet=obj,
+                            is_active=True,
+                        ).level
+                        >= self.MIN_ACCESS_LEVEL
+                    )
+
+                except ObjectDoesNotExist:
+                    return False
+
+            case Experiment():
+                try:
+                    return (
+                        ExperimentUserPermission.objects.get(
+                            user=request.user,
+                            experiment=obj,
+                            is_active=True,
+                        ).level
+                        >= self.MIN_ACCESS_LEVEL
+                    )
+                except ObjectDoesNotExist, NotAuthorizedError:
+                    return False
+
+            # =============================================================== #
+            #                        TRANSITIVE MODELS                        #
+            # =============================================================== #
+
+            # Station Models
+            # -----------------------------------------------------------------
+
+            case SubSurfaceStation():
+                # Call on the `Project` underlying object
+                return self.has_object_permission(
+                    request,
+                    view,
+                    obj.project,
+                )
+
+            case SurfaceStation():
+                # Call on the `SurfaceMonitoringNetwork` underlying object
+                return self.has_object_permission(
+                    request,
+                    view,
+                    obj.network,
+                )
+
+            case Station():
+                # NOTE: THIS MUST BE AFTER THE POLYMORPHIC MODELS TO GUARANTEE
+                #       IT DOESN'T MATCH EVERYTHING !
+
+                # ForeignKey to polymorphic model returns base class by default
+                # Call get_real_instance() to get the actual polymorphic child
+                return self.has_object_permission(
+                    request,
+                    view,
+                    obj.get_real_instance(),  # type: ignore[no-untyped-call]
+                )
+
+            case StationResource() | StationLogEntry():
+                # Call on the `Station` underlying object
+
+                # ForeignKey to polymorphic model returns base class by default
+                # Call get_real_instance() to get the actual polymorphic child
+                return self.has_object_permission(
+                    request,
+                    view,
+                    obj.station.get_real_instance(),  # type: ignore[no-untyped-call]
+                )
+
+            # SurfaceMonitoringNetwork Models
+            # -----------------------------------------------------------------
+            case SurfaceMonitoringNetworkUserPermission():
+                # Call on the `SurfaceMonitoringNetwork` underlying object
+                return self.has_object_permission(request, view, obj.network)
+
+            # Experiment Models
+            # -----------------------------------------------------------------
+            case ExperimentRecord():
+                # Call on the `Experiment` underlying object
+                return self.has_object_permission(
+                    request,
+                    view,
+                    obj.experiment,
+                )
+
+            # SensorFleet Models
+            # -----------------------------------------------------------------
+            case Sensor():
+                # Call on the `SensorFleet` underlying object
+                return self.has_object_permission(request, view, obj.fleet)
+
+            case SensorFleetUserPermission():
+                # Call on the `SensorFleet` underlying object
+                return self.has_object_permission(request, view, obj.sensor_fleet)
+
+            # SensorFleet & Station Models
+            # -----------------------------------------------------------------
+            case SensorInstall():
+                # Call on the `SensorFleet` and `Station` underlying objects
+                station_perm = self.has_object_permission(
+                    request,
+                    view,
+                    obj.station.get_real_instance(),  # type: ignore[no-untyped-call]
+                )
+
+                fleet_perm = self.has_object_permission(
+                    request,
+                    view,
+                    obj.sensor.fleet,
+                )
+
+                return station_perm and fleet_perm
+
+            # =============================================================== #
+            #                              ERROR                              #
+            # =============================================================== #
+            case _:
+                raise TypeError(f"Unknown `type` received: {type(obj)}.")
 
 
-class ProjectUserHasAdminAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
+class SDB_WebViewerAccess(BaseAccessLevel):  # noqa: N801
+    MIN_ACCESS_LEVEL = PermissionLevel.WEB_VIEWER
 
 
-class ProjectUserHasWriteAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
-
-
-class ProjectUserHasReadAccess(BaseProjectAccessLevel):
+class SDB_ReadAccess(BaseAccessLevel):  # noqa: N801
     MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
 
 
-class ProjectUserHasWebViewerAccess(BaseProjectAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.WEB_VIEWER
+class SDB_WriteAccess(BaseAccessLevel):  # noqa: N801
+    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
+
+
+class SDB_AdminAccess(BaseAccessLevel):  # noqa: N801
+    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
 
 
 # ================ Mutex ================ #
@@ -100,282 +255,6 @@ class UserOwnsProjectMutex(permissions.BasePermission):
             return False
 
         return mutex.user.id == request.user.id
-
-
-# ================ STATION PERMISSIONS ================ #
-
-
-class BaseStationAccessLevel(permissions.BasePermission):
-    """Base permission class for Station objects that checks permissions on the
-    station's project."""
-
-    MIN_ACCESS_LEVEL: int
-
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        if request.user and request.user.is_authenticated:
-            return True
-
-        raise NotAuthenticated("Authentication credentials were not provided.")
-
-    def has_object_permission(
-        self,
-        request: AuthenticatedDRFRequest,  # type: ignore[override]
-        view: APIView,
-        obj: Project | SubSurfaceStation | StationResource | LogEntry | SensorInstall,
-    ) -> bool:
-        # Get the project from the object
-        project: Project
-        match obj:
-            case Project():
-                # Try station.project for StationResource objects
-                project = obj
-
-            case SubSurfaceStation():
-                # Try station.project for StationResource objects
-                project = obj.project
-
-            case StationResource() | LogEntry() | SensorInstall():
-                # ForeignKey to polymorphic model returns base class by default
-                # Call get_real_instance() to get the actual polymorphic child
-                match station := obj.station.get_real_instance():  # type: ignore[no-untyped-call]
-                    case SubSurfaceStation():
-                        project = station.project
-
-                    case _:
-                        raise NotImplementedError(
-                            "Not yet implemented for this station type: "
-                            f"{type(station)}"
-                        )
-
-            case _:
-                raise TypeError(
-                    f"Unknown `type` received: {type(obj)}. "
-                    "Expected: Project | SubSurfaceStation | StationResource | "
-                    f"LogEntry | SensorInstall"
-                )
-
-        try:
-            return (
-                request.user.get_best_permission(project=project).level
-                >= self.MIN_ACCESS_LEVEL
-            )
-
-        except ObjectDoesNotExist:
-            return False
-
-
-class StationUserHasAdminAccess(BaseStationAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
-
-
-class StationUserHasWriteAccess(BaseStationAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
-
-
-class StationUserHasReadAccess(BaseStationAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
-
-
-class StationUserHasWebViewerAccess(BaseStationAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.WEB_VIEWER
-
-
-# ================ EXPERIMENT PERMISSIONS ================ #
-
-
-class BaseExperimentAccessLevel(permissions.BasePermission):
-    """Base permission class for Experiment objects that checks permissions on the
-    experiment."""
-
-    MIN_ACCESS_LEVEL: int
-
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        if request.user and request.user.is_authenticated:
-            return True
-
-        raise NotAuthenticated("Authentication credentials were not provided.")
-
-    def has_object_permission(
-        self,
-        request: AuthenticatedDRFRequest,  # type: ignore[override]
-        view: APIView,
-        obj: Experiment | ExperimentRecord,
-    ) -> bool:
-        experiment: Experiment
-        match obj:
-            case Experiment():
-                # Try station.project for StationResource objects
-                experiment = obj
-
-            case ExperimentRecord():
-                # Try station.project for StationResource objects
-                experiment = obj.experiment
-
-            case _:
-                raise TypeError(
-                    f"Unknown `type` received: {type(obj)}. "
-                    "Expected: Experiment | ExperimentRecord"
-                )
-
-        try:
-            return (
-                ExperimentUserPermission.objects.get(
-                    user=request.user,
-                    experiment=experiment,
-                    is_active=True,
-                ).level
-                >= self.MIN_ACCESS_LEVEL
-            )
-
-        except ObjectDoesNotExist:
-            return False
-
-
-class ExperimentUserHasAdminAccess(BaseExperimentAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
-
-
-class ExperimentUserHasWriteAccess(BaseExperimentAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
-
-
-class ExperimentUserHasReadAccess(BaseExperimentAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
-
-
-# ================ SENSOR FLEET PERMISSIONS ================ #
-
-
-class BaseSensorFleetAccessLevel(permissions.BasePermission):
-    """Base permission class for Sensor Fleet objects that checks permissions on the
-    sensor fleet."""
-
-    MIN_ACCESS_LEVEL: int
-
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        if request.user and request.user.is_authenticated:
-            return True
-
-        raise NotAuthenticated("Authentication credentials were not provided.")
-
-    def has_object_permission(
-        self,
-        request: AuthenticatedDRFRequest,  # type: ignore[override]
-        view: APIView,
-        obj: Any,
-    ) -> bool:
-        sensor_fleet: SensorFleet
-        match obj:
-            case SensorFleet():
-                sensor_fleet = obj
-
-            case Sensor():
-                # For sensors, check permission on their fleet
-                sensor_fleet = obj.fleet
-
-            case SensorFleetUserPermission():
-                # For permissions, check on the fleet
-                sensor_fleet = obj.sensor_fleet
-
-            case _:
-                raise TypeError(
-                    f"Unknown `type` received: {type(obj)}. "
-                    "Expected: SensorFleet | Sensor | SensorFleetUserPermission"
-                )
-
-        try:
-            return (
-                SensorFleetUserPermission.objects.get(
-                    user=request.user,
-                    sensor_fleet=sensor_fleet,
-                    is_active=True,
-                ).level
-                >= self.MIN_ACCESS_LEVEL
-            )
-
-        except ObjectDoesNotExist:
-            return False
-
-
-class SensorFleetUserHasAdminAccess(BaseSensorFleetAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
-
-
-class SensorFleetUserHasWriteAccess(BaseSensorFleetAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
-
-
-class SensorFleetUserHasReadAccess(BaseSensorFleetAccessLevel):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
-
-
-# ================ SURFACE MONITORING NETWORK PERMISSIONS ================ #
-
-
-class BaseSurfaceMonitoringNetworkAccessLevel(permissions.BasePermission):
-    """Base permission class for Surface Monitoring Network objects that checks
-    permissions on the network."""
-
-    MIN_ACCESS_LEVEL: int
-
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        if request.user and request.user.is_authenticated:
-            return True
-
-        raise NotAuthenticated("Authentication credentials were not provided.")
-
-    def has_object_permission(
-        self,
-        request: AuthenticatedDRFRequest,  # type: ignore[override]
-        view: APIView,
-        obj: SurfaceMonitoringNetwork | SurfaceMonitoringNetworkUserPermission,
-    ) -> bool:
-        network: SurfaceMonitoringNetwork
-        match obj:
-            case SurfaceMonitoringNetwork():
-                network = obj
-
-            case SurfaceMonitoringNetworkUserPermission():
-                # For permissions, check on the network
-                network = obj.network
-
-            case _:
-                raise TypeError(
-                    f"Unknown `type` received: {type(obj)}. "
-                    "Expected: SurfaceMonitoringNetwork | "
-                    "SurfaceMonitoringNetworkUserPermission"
-                )
-
-        try:
-            return (
-                SurfaceMonitoringNetworkUserPermission.objects.get(
-                    user=request.user,
-                    network=network,
-                    is_active=True,
-                ).level
-                >= self.MIN_ACCESS_LEVEL
-            )
-
-        except ObjectDoesNotExist:
-            return False
-
-
-class SurfaceMonitoringNetworkUserHasAdminAccess(
-    BaseSurfaceMonitoringNetworkAccessLevel
-):
-    MIN_ACCESS_LEVEL = PermissionLevel.ADMIN
-
-
-class SurfaceMonitoringNetworkUserHasWriteAccess(
-    BaseSurfaceMonitoringNetworkAccessLevel
-):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_AND_WRITE
-
-
-class SurfaceMonitoringNetworkUserHasReadAccess(
-    BaseSurfaceMonitoringNetworkAccessLevel
-):
-    MIN_ACCESS_LEVEL = PermissionLevel.READ_ONLY
 
 
 # ================ TEAM PERMISSIONS ================ #
@@ -411,10 +290,10 @@ class UserHasMemberAccess(BaseTeamAccessLevel):
     MIN_ACCESS_LEVEL = SurveyTeamMembershipRole.MEMBER
 
 
-# ================ POI ================ #
+# ================ Landmark ================ #
 
 
-class POIOwnershipPermission(permissions.BasePermission):
+class LandmarkOwnershipPermission(permissions.BasePermission):
     """
     Permission class specifically for POI ownership.
     - Users can only see/modify their own POIs
@@ -431,12 +310,12 @@ class POIOwnershipPermission(permissions.BasePermission):
         self,
         request: AuthenticatedDRFRequest,  # type: ignore[override]
         view: APIView,
-        obj: PointOfInterest,
+        obj: Landmark,
     ) -> bool:
         """Users can only access POIs they created."""
         # Check if the object has a created_by field and if it matches the user
-        if not isinstance(obj, PointOfInterest):
-            raise TypeError(f"Expected a `PointOfInterest` object, got {type(obj)}")
+        if not isinstance(obj, Landmark):
+            raise TypeError(f"Expected a `Landmark` object, got {type(obj)}")
 
         return obj.user == request.user
 

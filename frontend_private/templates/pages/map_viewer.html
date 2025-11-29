@@ -40,6 +40,14 @@
                     </svg>
                     <span class="hidden xs:block ml-2">Station Manager</span>
                 </button>
+                
+                <!-- Surface Station Management button -->
+                <button id="surface-station-manager-button" onclick="window.openSurfaceStationManager()" class="btn bg-emerald-500 hover:bg-emerald-600 text-white">
+                    <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                    </svg>
+                    <span class="hidden xs:block ml-2">Surface Stations</span>
+                </button>
 
                 <!-- POI Management button -->
                 <button id="poi-manager-button" onclick="window.openPOIManager()" class="btn bg-blue-500 hover:bg-blue-600 text-white">
@@ -91,6 +99,35 @@
                         <div class="flex-1 min-h-0">
                             <div id="station-manager-content">
                                 <!-- Station Manager content will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Surface Station Manager Modal -->
+            <div id="surface-station-manager-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
+                    <div class="flex flex-col">
+                        <!-- Modal Header -->
+                        <div class="flex items-center justify-between p-6 border-b border-slate-600 flex-shrink-0">
+                            <div class="flex items-center">
+                                <svg class="w-6 h-6 text-emerald-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                </svg>
+                                <h2 class="text-xl font-semibold text-white">Surface Station Manager</h2>
+                            </div>
+                            <button id="surface-station-manager-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Modal Content -->
+                        <div class="flex-1 min-h-0">
+                            <div id="surface-station-manager-content">
+                                <!-- Surface Station Manager content will be loaded here -->
                             </div>
                         </div>
                     </div>

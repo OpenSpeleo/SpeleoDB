@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from speleodb.gis.admin.experiment import ExperimentAdmin
 from speleodb.gis.admin.experiment import ExperimentRecordAdmin
-from speleodb.gis.admin.log import LogEntryAdmin
+from speleodb.gis.admin.log import StationLogEntryAdmin
 from speleodb.gis.admin.network import SurfaceMonitoringNetworkAdmin
-from speleodb.gis.admin.point_of_interest import PointOfInterestAdmin
+from speleodb.gis.admin.point_of_interest import LandmarkAdmin
 from speleodb.gis.admin.project_geojson import ProjectGeoJSONAdmin
 from speleodb.gis.admin.resource import StationResourceAdmin
 from speleodb.gis.admin.sensor import SensorAdmin
@@ -24,12 +24,12 @@ __all__ = [
     "ExperimentRecordAdmin",
     "GISViewAdmin",
     "GISViewProjectAdmin",
-    "LogEntryAdmin",
-    "PointOfInterestAdmin",
+    "LandmarkAdmin",
     "ProjectGeoJSONAdmin",
     "SensorAdmin",
     "SensorFleetAdmin",
     "SensorInstallAdmin",
+    "StationLogEntryAdmin",
     "StationResourceAdmin",
     "StationTagAdmin",
     "SubSurfaceStationAdmin",

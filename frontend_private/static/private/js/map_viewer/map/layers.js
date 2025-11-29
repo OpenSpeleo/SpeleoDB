@@ -152,6 +152,62 @@ export const Layers = {
             return true;
         }
     },
+    
+    // Network visibility preferences
+    loadNetworkVisibilityPrefs: function () {
+        try {
+            const prefs = localStorage.getItem(Config.NETWORK_VISIBILITY_PREFS_STORAGE_KEY);
+            if (prefs) {
+                const parsed = JSON.parse(prefs);
+                Object.keys(parsed).forEach(id => {
+                    State.networkLayerStates.set(id, parsed[id]);
+                });
+            }
+        } catch (e) {
+            console.error('Error loading network visibility prefs', e);
+        }
+    },
+
+    saveNetworkVisibilityPref: function (networkId, isVisible) {
+        try {
+            State.networkLayerStates.set(String(networkId), isVisible);
+            const prefsObj = {};
+            State.networkLayerStates.forEach((value, key) => {
+                prefsObj[key] = value;
+            });
+            localStorage.setItem(Config.NETWORK_VISIBILITY_PREFS_STORAGE_KEY, JSON.stringify(prefsObj));
+        } catch (e) {
+            console.error('Error saving network visibility pref', e);
+        }
+    },
+
+    isNetworkVisible: function (networkId) {
+        try {
+            return State.networkLayerStates.get(String(networkId)) !== false;
+        } catch (e) {
+            return true;
+        }
+    },
+
+    toggleNetworkVisibility: function (networkId, isVisible) {
+        const nid = String(networkId);
+        this.saveNetworkVisibilityPref(nid, isVisible);
+
+        if (State.map && State.map.getStyle()) {
+            const surfaceStationLayerId = `surface-stations-${nid}`;
+            const surfaceStationLabelsId = `surface-stations-${nid}-labels`;
+
+            [surfaceStationLayerId, surfaceStationLabelsId].forEach(layerId => {
+                if (State.map.getLayer(layerId)) {
+                    State.map.setLayoutProperty(
+                        layerId,
+                        'visibility',
+                        isVisible ? 'visible' : 'none'
+                    );
+                }
+            });
+        }
+    },
 
     toggleProjectVisibility: function (projectId, isVisible) {
         const pid = String(projectId);
@@ -564,6 +620,150 @@ export const Layers = {
         });
     },
 
+    // Surface Station Layer - uses diamond (◆) symbol instead of circle
+    addSurfaceStationLayer: function (networkId, data) {
+        const map = State.map;
+        if (!map) return;
+
+        const sourceId = `surface-stations-source-${networkId}`;
+        const symbolLayerId = `surface-stations-${networkId}`;
+        const labelLayerId = `surface-stations-${networkId}-labels`;
+
+        console.log(`📍 Adding ${data.features?.length || 0} surface stations to map for network ${networkId}`);
+
+        // Remove existing layer and source if they exist (for refresh)
+        if (map.getLayer(labelLayerId)) {
+            map.removeLayer(labelLayerId);
+        }
+        if (map.getLayer(symbolLayerId)) {
+            map.removeLayer(symbolLayerId);
+        }
+        if (map.getSource(sourceId)) {
+            map.removeSource(sourceId);
+        }
+
+        if (!data.features || data.features.length === 0) {
+            console.log(`📍 No surface stations to display for network ${networkId}`);
+            return;
+        }
+
+        // Ensure color property is set on each feature for data-driven styling
+        data.features.forEach(feature => {
+            if (!feature.properties.color) {
+                // Use tag color if available, otherwise use default orange
+                const tag = feature.properties.tag;
+                feature.properties.color = (tag && tag.color) ? tag.color : '#fb923c';
+            }
+        });
+
+        map.addSource(sourceId, {
+            type: 'geojson',
+            data: data
+        });
+
+        // Add Diamond Symbol Layer (◆)
+        // Use text-field with unicode diamond instead of circle
+        map.addLayer({
+            id: symbolLayerId,
+            type: 'symbol',
+            source: sourceId,
+            minzoom: 14,
+            layout: {
+                'text-field': '◆',  // Diamond shape
+                'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                'text-size': ['interpolate', ['linear'], ['zoom'], 14, 16, 18, 24],
+                'text-allow-overlap': true,
+                'text-ignore-placement': true
+            },
+            paint: {
+                'text-color': ['coalesce', ['get', 'color'], '#fb923c'],
+                'text-halo-color': '#ffffff',
+                'text-halo-width': 2,
+                'text-halo-blur': 0.5
+            }
+        });
+
+        // Add Label Layer
+        map.addLayer({
+            id: labelLayerId,
+            type: 'symbol',
+            source: sourceId,
+            minzoom: 15,
+            layout: {
+                'text-field': ['get', 'name'],
+                'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+                'text-offset': [0, 1.2],
+                'text-size': 12,
+                'text-anchor': 'top',
+                'text-allow-overlap': false,
+                'text-ignore-placement': false
+            },
+            paint: {
+                'text-color': '#222',
+                'text-halo-color': '#ffffff',
+                'text-halo-width': 2
+            }
+        });
+
+        // Track layers
+        if (!State.allNetworkLayers.has(String(networkId))) {
+            State.allNetworkLayers.set(String(networkId), []);
+        }
+        const networkLayers = State.allNetworkLayers.get(String(networkId));
+        if (!networkLayers.includes(symbolLayerId)) {
+            networkLayers.push(symbolLayerId, labelLayerId);
+        }
+
+        // Respect initial visibility
+        if (!this.isNetworkVisible(networkId)) {
+            map.setLayoutProperty(symbolLayerId, 'visibility', 'none');
+            map.setLayoutProperty(labelLayerId, 'visibility', 'none');
+        }
+    },
+
+    updateSurfaceStationPosition: function (networkId, stationId, newCoords) {
+        const map = State.map;
+        if (!map) return;
+
+        const sourceId = `surface-stations-source-${networkId}`;
+        const source = map.getSource(sourceId);
+        if (source && source._data) {
+            const data = source._data;
+            const feature = data.features.find(f => f.properties.id === stationId);
+            if (feature) {
+                feature.geometry.coordinates = newCoords;
+                source.setData(data);
+
+                // Update in our local lookup as well
+                const station = State.allSurfaceStations.get(stationId);
+                if (station) {
+                    station.latitude = newCoords[1];
+                    station.longitude = newCoords[0];
+                }
+            }
+        }
+    },
+
+    updateSurfaceStationColor: function (networkId, stationId, color) {
+        const map = State.map;
+        if (!map) return;
+
+        const sourceId = `surface-stations-source-${networkId}`;
+        const source = map.getSource(sourceId);
+        if (source && source._data) {
+            const data = source._data;
+            const feature = data.features.find(f => f.properties.id === stationId);
+            if (feature) {
+                feature.properties.color = color;
+                source.setData(data);
+            }
+        }
+    },
+
+    refreshSurfaceStationsAfterChange: async function (networkId) {
+        window.dispatchEvent(new CustomEvent('speleo:refresh-surface-stations', { detail: { networkId } }));
+    },
+
     updateStationPosition: function (projectId, stationId, newCoords) {
         const map = State.map;
         if (!map) return;
@@ -650,7 +850,7 @@ export const Layers = {
     },
 
     /**
-     * Ensure stations and POIs are rendered on top of survey lines.
+     * Ensure stations, surface stations, and POIs are rendered on top of survey lines.
      * Call this after all layers are loaded to fix z-ordering.
      */
     reorderLayers: function () {
@@ -665,15 +865,16 @@ export const Layers = {
 
         const allLayerIds = style.layers.map(l => l.id);
 
-        // Find station circle layers, station label layers, and POI layers
-        const stationCircleLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-circles'));
-        const stationLabelLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-labels'));
+        // Find station circle layers, station label layers, surface station layers, and POI layers
+        const stationCircleLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-circles') && !id.includes('surface-'));
+        const stationLabelLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-labels') && !id.includes('surface-'));
+        const surfaceStationSymbolLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && !id.includes('-labels'));
+        const surfaceStationLabelLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && id.includes('-labels'));
         const poiLayers = allLayerIds.filter(id => id.startsWith('pois-'));
 
-        // Move layers to top in order: station circles, station labels, POI layer, POI labels
-        // Later moves go on top, so we move in reverse order of desired stacking
+        // Move layers to top in order (later moves go on top)
         
-        // First move station circles (will be under labels)
+        // First move subsurface station circles (will be under labels)
         stationCircleLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
@@ -682,8 +883,26 @@ export const Layers = {
             }
         });
 
-        // Then move station labels (on top of circles)
+        // Then move subsurface station labels
         stationLabelLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // Then move surface station symbols
+        surfaceStationSymbolLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // Then move surface station labels
+        surfaceStationLabelLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
             } catch (e) {

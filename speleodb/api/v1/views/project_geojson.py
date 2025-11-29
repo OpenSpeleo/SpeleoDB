@@ -17,8 +17,8 @@ from rest_framework import permissions
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import ProjectUserHasReadAccess
-from speleodb.api.v1.permissions import ProjectUserHasWebViewerAccess
+from speleodb.api.v1.permissions import SDB_ReadAccess
+from speleodb.api.v1.permissions import SDB_WebViewerAccess
 from speleodb.api.v1.serializers import ProjectGeoJSONCommitSerializer
 from speleodb.api.v1.serializers import ProjectWithGeoJsonSerializer
 from speleodb.gis.models import ProjectGeoJSON
@@ -63,7 +63,7 @@ class ProjectAllProjectGeoJsonApiView(
     """API view that returns raw GeoJSON data for every user's project."""
 
     queryset = Project.objects.all()
-    permission_classes = [ProjectUserHasWebViewerAccess]
+    permission_classes = [SDB_WebViewerAccess]
     serializer_class = ProjectWithGeoJsonSerializer
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -241,7 +241,7 @@ class ProjectGeoJsonCommitsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     """
 
     queryset = Project.objects.all()
-    permission_classes = [ProjectUserHasReadAccess]
+    permission_classes = [SDB_ReadAccess]
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:

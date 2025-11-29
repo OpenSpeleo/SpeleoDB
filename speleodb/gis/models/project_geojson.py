@@ -82,7 +82,9 @@ class ProjectGeoJSON(models.Model):
         verbose_name_plural = "Project GeoJSONs"
         indexes = [
             models.Index(fields=["project"]),
+            models.Index(fields=["commit_sha"]),
             models.Index(fields=["commit_date"]),
+            models.Index(fields=["project", "commit_date"]),  # get latest by project
         ]
         ordering = ["-commit_date"]
 

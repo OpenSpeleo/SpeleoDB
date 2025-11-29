@@ -8,17 +8,17 @@ from typing import Any
 
 from rest_framework import serializers
 
-from speleodb.gis.models import PointOfInterest
+from speleodb.gis.models import Landmark
 from speleodb.utils.gps_utils import format_coordinate
 
 
-class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
+class LandmarkSerializer(serializers.ModelSerializer[Landmark]):
     """Serializer for POI with all details."""
 
     user = serializers.EmailField(source="user.email", read_only=True)
 
     class Meta:
-        model = PointOfInterest
+        model = Landmark
         fields = "__all__"
         read_only_fields = [
             "id",
@@ -27,7 +27,7 @@ class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
             "user",
         ]
 
-    def create(self, validated_data: Any) -> PointOfInterest:
+    def create(self, validated_data: Any) -> Landmark:
         """Create a new POI and set user from request user."""
         request = self.context.get("request")
         if request and hasattr(request, "user") and request.user.is_authenticated:
@@ -54,7 +54,7 @@ class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
 
         return super().to_internal_value(data)
 
-    def to_representation(self, instance: PointOfInterest) -> dict[str, Any]:
+    def to_representation(self, instance: Landmark) -> dict[str, Any]:
         """Ensure coordinates are rounded to 7 decimal places."""
         data = super().to_representation(instance)
         if data.get("latitude") is not None:
@@ -64,11 +64,11 @@ class PointOfInterestSerializer(serializers.ModelSerializer[PointOfInterest]):
         return data
 
 
-class PointOfInterestGeoJSONSerializer(serializers.ModelSerializer[PointOfInterest]):
+class LandmarkGeoJSONSerializer(serializers.ModelSerializer[Landmark]):
     """Map serializer for POIs - returns GeoJSON-like format."""
 
     class Meta:
-        model = PointOfInterest
+        model = Landmark
         fields = [
             "id",
             "name",
@@ -79,7 +79,7 @@ class PointOfInterestGeoJSONSerializer(serializers.ModelSerializer[PointOfIntere
             "creation_date",
         ]
 
-    def to_representation(self, instance: PointOfInterest) -> dict[str, Any]:
+    def to_representation(self, instance: Landmark) -> dict[str, Any]:
         """Convert to GeoJSON Feature format."""
         return {
             "type": "Feature",

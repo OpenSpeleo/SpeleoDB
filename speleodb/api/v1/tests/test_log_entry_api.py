@@ -19,13 +19,13 @@ from speleodb.api.v1.tests.file_utils import create_test_text_file
 from speleodb.api.v1.tests.file_utils import create_test_video
 from speleodb.api.v1.tests.file_utils import sha256_from_url
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models import LogEntry
 from speleodb.gis.models import Station
+from speleodb.gis.models import StationLogEntry
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.utils.test_utils import named_product
 
 
-class TestLogEntryCreateAPIValidation(BaseAPIProjectTestCase):
+class TestStationLogEntryCreateAPIValidation(BaseAPIProjectTestCase):
     """Test file type validation for station resources."""
 
     def setUp(self) -> None:
@@ -103,7 +103,7 @@ class TestLogEntryCreateAPIValidation(BaseAPIProjectTestCase):
             assert response.data["data"]["notes"] == ""
 
 
-class BaseTestLogEntryGetAPI(BaseAPIProjectTestCase):
+class BaseTestStationLogEntryGetAPI(BaseAPIProjectTestCase):
     """Test cases for Station Resource CRUD operations."""
 
     level: PermissionLevel
@@ -139,7 +139,7 @@ class BaseTestLogEntryGetAPI(BaseAPIProjectTestCase):
         permission_type=[PermissionType.USER, PermissionType.TEAM],
     ),
 )
-class TestLogEntryListAPI(BaseTestLogEntryGetAPI):
+class TestStationLogEntryListAPI(BaseTestStationLogEntryGetAPI):
     def setUp(self) -> None:
         super().setUp()
 
@@ -168,7 +168,7 @@ class TestLogEntryListAPI(BaseTestLogEntryGetAPI):
         """Test listing resources when they exist."""
         # Create some resources
         logs = [
-            LogEntry.objects.create(
+            StationLogEntry.objects.create(
                 title=f"Test Note {idx}",
                 notes=f"Some notes {idx}",
                 created_by=self.user.email,
@@ -238,11 +238,11 @@ class TestLogEntryListAPI(BaseTestLogEntryGetAPI):
         permission_type=[PermissionType.USER, PermissionType.TEAM],
     ),
 )
-class TestLogEntryDetailAPI(BaseTestLogEntryGetAPI):
+class TestStationLogEntryDetailAPI(BaseTestStationLogEntryGetAPI):
     def setUp(self) -> None:
         super().setUp()
 
-        self.log_entry = LogEntry.objects.create(
+        self.log_entry = StationLogEntry.objects.create(
             title="Test Note",
             notes="Some notes",
             created_by=self.user.email,
@@ -250,14 +250,14 @@ class TestLogEntryDetailAPI(BaseTestLogEntryGetAPI):
             attachment=create_test_image(),
         )
 
-    def _get_log_detail_url(self, log_entry: LogEntry) -> str:
+    def _get_log_detail_url(self, log_entry: StationLogEntry) -> str:
         return reverse(
             "api:v1:log-detail",
             kwargs={"id": log_entry.id},
         )
 
     def test_retrieve_log_entry(self) -> None:
-        """Test retrieving a single LogEntry."""
+        """Test retrieving a single StationLogEntry."""
 
         response = self.client.get(
             self._get_log_detail_url(self.log_entry),
@@ -276,7 +276,7 @@ class TestLogEntryDetailAPI(BaseTestLogEntryGetAPI):
         assert data["title"] == "Test Note"
 
     def test_update_logentry(self) -> None:
-        """Test update a single LogEntry."""
+        """Test update a single StationLogEntry."""
 
         update_data = {
             "title": "New Title",
@@ -304,7 +304,7 @@ class TestLogEntryDetailAPI(BaseTestLogEntryGetAPI):
         assert data["notes"] == "Updated notes"
 
     def test_update_logentry_file(self) -> None:
-        """Test updating a single LogEntry's attachment with a new file."""
+        """Test updating a single StationLogEntry's attachment with a new file."""
 
         # Update with new file
         update_data = {
@@ -338,7 +338,7 @@ class TestLogEntryDetailAPI(BaseTestLogEntryGetAPI):
         assert expected_digest == sha256_from_url(data["attachment"])
 
     def test_delete_resource(self) -> None:
-        """Test deleting a LogEntry."""
+        """Test deleting a StationLogEntry."""
 
         response = self.client.delete(
             self._get_log_detail_url(self.log_entry),
@@ -353,4 +353,4 @@ class TestLogEntryDetailAPI(BaseTestLogEntryGetAPI):
         assert response.data["success"]
 
         # Verify deletion
-        assert not LogEntry.objects.filter(id=self.log_entry.id).exists()
+        assert not StationLogEntry.objects.filter(id=self.log_entry.id).exists()

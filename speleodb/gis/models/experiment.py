@@ -16,10 +16,10 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import Q
-from pydantic import BaseModel
+from pydantic import BaseModel as PydanticBaseModel
 from pydantic import BeforeValidator
 from pydantic import Field
-from pydantic import RootModel
+from pydantic import RootModel as PydanticRootModel
 from pydantic import ValidationError as PydanticValidationError
 from pydantic import field_validator
 from pydantic import model_validator
@@ -107,7 +107,7 @@ class MandatoryFieldUuid(enum.Enum):
         }
 
 
-class ExperimentFieldDefinition(BaseModel):
+class ExperimentFieldDefinition(PydanticBaseModel):
     """Pydantic model for a single field definition in experiment_fields."""
 
     name: Annotated[str, Field(min_length=1, description="Field display name")]
@@ -200,7 +200,7 @@ def _validate_and_parse_fields_dict(
     return processed_data
 
 
-class ExperimentFieldsDict(RootModel[dict[str, ExperimentFieldDefinition]]):
+class ExperimentFieldsDict(PydanticRootModel[dict[str, ExperimentFieldDefinition]]):
     """
     Pydantic RootModel for the experiment_fields dictionary structure.
 
@@ -288,7 +288,9 @@ class Experiment(models.Model):
             ),
         ]
         indexes = [
+            models.Index(fields=["code"]),
             models.Index(fields=["is_active"]),
+            # models.Index(fields=["gis_token"]), # Unique field already indexed
         ]
 
     def __str__(self) -> str:
@@ -694,6 +696,7 @@ class ExperimentRecord(models.Model):
 
     class Meta:
         indexes = [
+            models.Index(fields=["experiment"]),
             models.Index(fields=["experiment", "station"]),
         ]
 

@@ -162,6 +162,8 @@ class SensorFleetSerializer(serializers.ModelSerializer[SensorFleet]):
         trim_whitespace=True,
     )
 
+    created_by = serializers.EmailField(required=False)
+
     # Read-only sensor count
     sensor_count = serializers.SerializerMethodField()
 
@@ -196,6 +198,19 @@ class SensorFleetSerializer(serializers.ModelSerializer[SensorFleet]):
         )
 
         return sensor_fleet
+
+    def validate(self, attrs: dict[str, str]) -> dict[str, str]:
+        created_by = attrs.get("created_by")
+
+        if self.instance is None and created_by is None:
+            raise serializers.ValidationError(
+                "`created_by` must be specified during creation."
+            )
+
+        if self.instance is not None and "created_by" in attrs:
+            raise serializers.ValidationError("`created_by` cannot be updated.")
+
+        return attrs
 
 
 class SensorFleetListSerializer(serializers.ModelSerializer[SensorFleet]):

@@ -32,8 +32,8 @@ from openspeleo_lib.interfaces import ArianeInterface
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v1.permissions import ProjectUserHasReadAccess
-from speleodb.api.v1.permissions import ProjectUserHasWriteAccess
+from speleodb.api.v1.permissions import SDB_ReadAccess
+from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.permissions import UserOwnsProjectMutex
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import UploadSerializer
@@ -101,7 +101,7 @@ def handle_exception(
 
 class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [ProjectUserHasWriteAccess, UserOwnsProjectMutex]
+    permission_classes = [SDB_WriteAccess, UserOwnsProjectMutex]
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
@@ -463,7 +463,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
 class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [ProjectUserHasReadAccess]
+    permission_classes = [SDB_ReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
     lookup_field = "id"
@@ -564,7 +564,7 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
 
 class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     queryset = Project.objects.all()
-    permission_classes = [ProjectUserHasReadAccess]
+    permission_classes = [SDB_ReadAccess]
     serializer_class = UploadSerializer
     http_method_names = ["get"]
     lookup_field = "id"

@@ -20,16 +20,19 @@ from rest_framework.authtoken.models import Token
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
-from speleodb.gis.models import LogEntry
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
+from speleodb.gis.models import StationLogEntry
 from speleodb.gis.models import StationResource
 from speleodb.gis.models import StationResourceType
 from speleodb.gis.models import SubSurfaceStation
+from speleodb.gis.models import SurfaceMonitoringNetwork
+from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
+from speleodb.gis.models import SurfaceStation
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.gis.models.sensor import InstallStatus
@@ -254,6 +257,72 @@ class SubSurfaceStationFactory(DjangoModelFactory[SubSurfaceStation]):
         return stations
 
 
+# ================ SURFACE MONITORING NETWORK FACTORIES ================ #
+
+
+class SurfaceMonitoringNetworkFactory(DjangoModelFactory[SurfaceMonitoringNetwork]):
+    """Factory for creating SurfaceMonitoringNetwork instances."""
+
+    class Meta:
+        model = SurfaceMonitoringNetwork
+
+    id = factory.LazyFunction(uuid.uuid4)
+    name = factory.Sequence(lambda n: f"Network {n:03d}")
+    description: str = factory.LazyAttribute(
+        lambda obj: f"Network description for `{obj.name}`"
+    )  # type: ignore[assignment]
+    is_active = True
+    created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+
+
+class SurfaceMonitoringNetworkUserPermissionFactory(
+    DjangoModelFactory[SurfaceMonitoringNetworkUserPermission]
+):
+    """Factory for creating SurfaceMonitoringNetworkUserPermission instances."""
+
+    class Meta:
+        model = SurfaceMonitoringNetworkUserPermission
+
+    user: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
+    network: SurfaceMonitoringNetwork = factory.SubFactory(  # type: ignore[assignment]
+        SurfaceMonitoringNetworkFactory
+    )
+    level = PermissionLevel.READ_AND_WRITE
+    is_active = True
+
+
+class SurfaceStationFactory(DjangoModelFactory[SurfaceStation]):
+    """Factory for creating SurfaceStation instances.
+
+    SurfaceStation instances are linked to a SurfaceMonitoringNetwork
+    (not a Project like SubSurfaceStation).
+    """
+
+    class Meta:
+        model = SurfaceStation
+
+    id = factory.LazyFunction(uuid.uuid4)
+    network: SurfaceMonitoringNetwork = factory.SubFactory(  # type: ignore[assignment]
+        SurfaceMonitoringNetworkFactory
+    )
+    name = factory.Sequence(lambda n: f"SURF{n:03d}")
+    description: str = factory.Faker("text", max_nb_chars=200)  # type: ignore[assignment]
+    latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
+    longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
+    created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+
+    @classmethod
+    def create_with_coordinates(
+        cls, lat: float, lng: float, **kwargs: Any
+    ) -> SurfaceStation:
+        """Create a surface station with specific coordinates."""
+        return cls.create(latitude=lat, longitude=lng, **kwargs)
+
+
 class StationResourceFactory(DjangoModelFactory[StationResource]):
     """Factory for creating StationResource instances."""
 
@@ -446,11 +515,11 @@ class DocumentStationResourceFactory(StationResourceFactory):
     title: str = factory.LazyAttribute(lambda obj: f"Document - {obj.station.name}")  # type: ignore[assignment]
 
 
-class LogEntryFactory(DjangoModelFactory[LogEntry]):
-    """Factory for creating LogEntry instances."""
+class StationLogEntryFactory(DjangoModelFactory[StationLogEntry]):
+    """Factory for creating StationLogEntry instances."""
 
     class Meta:
-        model = LogEntry
+        model = StationLogEntry
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)

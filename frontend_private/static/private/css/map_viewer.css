@@ -1039,8 +1039,8 @@ input[type="number"] {
 
 /* Ensure all header buttons have same size */
 .btn {
-    min-width: 150px;
-    width: 150px;
+    min-width: 160px;
+    width: 160px;
     display: inline-flex;
     align-items: center;
     justify-content: center;

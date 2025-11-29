@@ -1,4 +1,4 @@
-"""Tests for PointOfInterest API endpoints."""
+"""Tests for Landmark API endpoints."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from speleodb.gis.models import PointOfInterest
+from speleodb.gis.models import Landmark
 from speleodb.users.models import User
 
 
 @pytest.mark.django_db
-class TestPointOfInterestEndpoints:
+class TestLandmarkEndpoints:
     """Test cases for POI API endpoints."""
 
     @pytest.fixture
@@ -39,9 +39,9 @@ class TestPointOfInterestEndpoints:
         )
 
     @pytest.fixture
-    def poi(self, user: User) -> PointOfInterest:
+    def poi(self, user: User) -> Landmark:
         """Create a test POI."""
-        return PointOfInterest.objects.create(
+        return Landmark.objects.create(
             name="Test POI",
             description="Test description",
             latitude=45.123456,
@@ -51,7 +51,7 @@ class TestPointOfInterestEndpoints:
 
     # List endpoint tests
     def test_list_pois_unauthenticated(
-        self, api_client: APIClient, poi: PointOfInterest
+        self, api_client: APIClient, poi: Landmark
     ) -> None:
         """Test listing POIs without authentication (should work - read-only)."""
         url = reverse("api:v1:pois")
@@ -60,7 +60,7 @@ class TestPointOfInterestEndpoints:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_list_pois_authenticated(
-        self, api_client: APIClient, user: User, poi: PointOfInterest
+        self, api_client: APIClient, user: User, poi: Landmark
     ) -> None:
         """Test listing POIs with authentication."""
         api_client.force_authenticate(user=user)
@@ -87,7 +87,7 @@ class TestPointOfInterestEndpoints:
         """Test listing multiple POIs."""
         # Create multiple POIs
         for i in range(3):
-            PointOfInterest.objects.create(
+            Landmark.objects.create(
                 name=f"POI {i}",
                 latitude=45.0 + i,
                 longitude=-122.0 + i,
@@ -104,7 +104,7 @@ class TestPointOfInterestEndpoints:
 
     # Retrieve endpoint tests
     def test_retrieve_poi_unauthenticated(
-        self, api_client: APIClient, poi: PointOfInterest
+        self, api_client: APIClient, poi: Landmark
     ) -> None:
         """Test retrieving a single POI without authentication (should work)."""
         url = reverse("api:v1:poi-detail", kwargs={"id": poi.id})
@@ -113,7 +113,7 @@ class TestPointOfInterestEndpoints:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_retrieve_poi_authenticated(
-        self, api_client: APIClient, user: User, poi: PointOfInterest
+        self, api_client: APIClient, user: User, poi: Landmark
     ) -> None:
         """Test retrieving a single POI with authentication."""
         api_client.force_authenticate(user=user)
@@ -169,7 +169,7 @@ class TestPointOfInterestEndpoints:
         assert response_data["data"]["poi"]["user"] == "testuser@example.com"
 
         # Verify POI was created in database
-        poi = PointOfInterest.objects.get(name="New POI")
+        poi = Landmark.objects.get(name="New POI")
         assert poi.user == user
 
     def test_create_poi_minimal_data(self, api_client: APIClient, user: User) -> None:
@@ -185,7 +185,7 @@ class TestPointOfInterestEndpoints:
         response = api_client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_201_CREATED
-        poi = PointOfInterest.objects.get(name="Minimal POI")
+        poi = Landmark.objects.get(name="Minimal POI")
         assert poi.description == ""
 
     def test_create_poi_invalid_latitude(
@@ -226,7 +226,7 @@ class TestPointOfInterestEndpoints:
 
     # Update endpoint tests
     def test_update_poi_unauthenticated(
-        self, api_client: APIClient, poi: PointOfInterest
+        self, api_client: APIClient, poi: Landmark
     ) -> None:
         """Test updating a POI without authentication (should fail)."""
         url = reverse("api:v1:poi-detail", kwargs={"id": poi.id})
@@ -237,7 +237,7 @@ class TestPointOfInterestEndpoints:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_update_poi_as_creator(
-        self, api_client: APIClient, user: User, poi: PointOfInterest
+        self, api_client: APIClient, user: User, poi: Landmark
     ) -> None:
         """Test updating a POI as the creator."""
         api_client.force_authenticate(user=user)
@@ -259,7 +259,7 @@ class TestPointOfInterestEndpoints:
         assert poi.name == "Updated POI"
 
     def test_update_poi_as_other_user(
-        self, api_client: APIClient, other_user: User, poi: PointOfInterest
+        self, api_client: APIClient, other_user: User, poi: Landmark
     ) -> None:
         """Test updating a POI as a different user (should succeed - any authenticated
         user can update)."""
@@ -277,7 +277,7 @@ class TestPointOfInterestEndpoints:
         assert poi.description != test_new_description
 
     def test_update_poi_coordinates(
-        self, api_client: APIClient, user: User, poi: PointOfInterest
+        self, api_client: APIClient, user: User, poi: Landmark
     ) -> None:
         """Test updating POI coordinates."""
         api_client.force_authenticate(user=user)
@@ -295,7 +295,7 @@ class TestPointOfInterestEndpoints:
         assert poi.longitude == -123.0  # noqa: PLR2004
 
     def test_update_poi_invalid_data(
-        self, api_client: APIClient, user: User, poi: PointOfInterest
+        self, api_client: APIClient, user: User, poi: Landmark
     ) -> None:
         """Test updating POI with invalid data."""
         api_client.force_authenticate(user=user)
@@ -308,7 +308,7 @@ class TestPointOfInterestEndpoints:
 
     # Delete endpoint tests
     def test_delete_poi_unauthenticated(
-        self, api_client: APIClient, poi: PointOfInterest
+        self, api_client: APIClient, poi: Landmark
     ) -> None:
         """Test deleting a POI without authentication (should fail)."""
         url = reverse("api:v1:poi-detail", kwargs={"id": poi.id})
@@ -317,7 +317,7 @@ class TestPointOfInterestEndpoints:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_delete_poi_as_creator(
-        self, api_client: APIClient, user: User, poi: PointOfInterest
+        self, api_client: APIClient, user: User, poi: Landmark
     ) -> None:
         """Test deleting a POI as the creator."""
         api_client.force_authenticate(user=user)
@@ -327,10 +327,10 @@ class TestPointOfInterestEndpoints:
         assert response.status_code == status.HTTP_200_OK
 
         # Verify POI was deleted
-        assert not PointOfInterest.objects.filter(id=poi.id).exists()
+        assert not Landmark.objects.filter(id=poi.id).exists()
 
     def test_delete_poi_as_other_user(
-        self, api_client: APIClient, other_user: User, poi: PointOfInterest
+        self, api_client: APIClient, other_user: User, poi: Landmark
     ) -> None:
         """Test deleting a POI as a different user (should succeed - any authenticated
         user can delete)."""
@@ -354,14 +354,14 @@ class TestPointOfInterestEndpoints:
     ) -> None:
         """Test geojson endpoint without authentication (should work)."""
         # Create POIs with different properties
-        PointOfInterest.objects.create(
+        Landmark.objects.create(
             name="POI 1",
             description="Description 1",
             latitude=45.0,
             longitude=-122.0,
             user=user,
         )
-        PointOfInterest.objects.create(
+        Landmark.objects.create(
             name="POI 2",
             latitude=46.0,
             longitude=-123.0,
@@ -385,7 +385,7 @@ class TestPointOfInterestEndpoints:
         assert len(data["data"]["features"]) == 0
 
     def test_geojson_endpoint_coordinate_format(
-        self, api_client: APIClient, poi: PointOfInterest, user: User
+        self, api_client: APIClient, poi: Landmark, user: User
     ) -> None:
         """Test that geojson endpoint returns coordinates in correct GeoJSON format."""
         api_client.force_authenticate(user=user)
@@ -401,9 +401,7 @@ class TestPointOfInterestEndpoints:
         assert coordinates[1] == 45.123456  # latitude  # noqa: PLR2004
 
     # Edge cases and error handling
-    def test_invalid_http_methods(
-        self, api_client: APIClient, poi: PointOfInterest
-    ) -> None:
+    def test_invalid_http_methods(self, api_client: APIClient, poi: Landmark) -> None:
         """Test invalid HTTP methods return appropriate errors."""
         # Test PUT on list endpoint (should not be allowed)
         url = reverse("api:v1:pois")

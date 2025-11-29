@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
             name='station',
         ),
         migrations.DeleteModel(
-            name='LogEntry',
+            name='StationLogEntry',
         ),
         migrations.DeleteModel(
             name='Station',

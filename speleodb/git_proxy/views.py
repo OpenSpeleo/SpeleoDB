@@ -21,8 +21,8 @@ from rest_framework.renderers import BaseRenderer
 
 from speleodb.api.v1.authentication import BearerAuthentication
 from speleodb.api.v1.authentication import GitOAuth2Authentication
-from speleodb.api.v1.permissions import ProjectUserHasReadAccess
-from speleodb.api.v1.permissions import ProjectUserHasWriteAccess
+from speleodb.api.v1.permissions import SDB_ReadAccess
+from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
@@ -232,7 +232,7 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
 
 
 class InfoRefsView(BaseGitProxyAPIView):
-    permission_classes = [ProjectUserHasReadAccess]
+    permission_classes = [SDB_ReadAccess]
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> StreamingHttpResponse:
         git_service = request.query_params.get("service")
@@ -261,7 +261,7 @@ class RWServiceView(BaseGitProxyAPIView):
 
 
 class ReadServiceView(RWServiceView):
-    permission_classes = [ProjectUserHasReadAccess]
+    permission_classes = [SDB_ReadAccess]
 
     def post(
         self, request: Request, *args: Any, **kwargs: Any
@@ -271,7 +271,7 @@ class ReadServiceView(RWServiceView):
 
 
 class WriteServiceView(RWServiceView):
-    permission_classes = [ProjectUserHasWriteAccess]
+    permission_classes = [SDB_WriteAccess]
 
     def post(
         self, request: Request, *args: Any, **kwargs: Any
