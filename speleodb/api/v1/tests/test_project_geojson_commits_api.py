@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import uuid
 from hashlib import sha1
 
@@ -128,8 +129,8 @@ class TestProjectGeoJsonCommitsApiView(BaseAPIProjectTestCase):
         import time
 
         # Create commits with different dates
-        old_date = timezone.now() - timezone.timedelta(days=2)
-        mid_date = timezone.now() - timezone.timedelta(days=1)
+        old_date = timezone.now() - datetime.timedelta(days=2)
+        mid_date = timezone.now() - datetime.timedelta(days=1)
         new_date = timezone.now()
 
         sha_old = sha1_hash()

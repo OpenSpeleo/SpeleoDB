@@ -111,8 +111,16 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
     @extend_schema(operation_id="v1_projects_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
+        project_ids = [perm.project.id for perm in user.permissions]
+        projects = (
+            Project.objects.with_commits()  # pyright: ignore[reportAttributeAccessIssue]
+            .with_commit_count()  # pyright: ignore[reportAttributeAccessIssue]
+            .with_active_mutex()  # pyright: ignore[reportAttributeAccessIssue]
+            .filter(id__in=project_ids)
+        )
+
         serializer = self.get_serializer(
-            [perm.project for perm in user.permissions],
+            projects,
             many=True,
             context={"user": user},
         )

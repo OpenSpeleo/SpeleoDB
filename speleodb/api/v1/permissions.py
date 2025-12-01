@@ -94,7 +94,7 @@ class UserOwnsProjectMutex(permissions.BasePermission):
         view: APIView,
         obj: Project,
     ) -> bool:
-        mutex = obj.active_mutex()
+        mutex = obj.active_mutex
 
         if mutex is None:
             return False

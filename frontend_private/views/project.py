@@ -130,7 +130,7 @@ class ProjectUploadView(_BaseProjectView):
         data["limit_number_files"] = settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT
 
         # Redirect users who don't own the mutex
-        mutex = data["project"].active_mutex()
+        mutex = data["project"].active_mutex
         if mutex is None or mutex.user != request.user:
             return redirect(
                 reverse(

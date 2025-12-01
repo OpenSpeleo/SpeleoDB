@@ -7,6 +7,7 @@ from __future__ import annotations
 
 # Project Related Models
 from speleodb.surveys.models.project import Project
+from speleodb.surveys.models.project_commit import ProjectCommit
 from speleodb.surveys.models.format import Format
 from speleodb.surveys.models.format import FileFormat
 from speleodb.surveys.models.mutex import ProjectMutex
@@ -20,6 +21,7 @@ __all__ = [
     "FileFormat",
     "Format",
     "Project",
+    "ProjectCommit",
     "ProjectMutex",
     "TeamProjectPermission",
     "UserProjectPermission",

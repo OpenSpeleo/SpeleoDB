@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import pathlib
 import uuid
 from itertools import chain
@@ -16,7 +17,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Prefetch
 from django.db.models import Q
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django_countries.fields import CountryField
 
@@ -27,10 +30,13 @@ from speleodb.utils.exceptions import ProjectNotFound
 
 if TYPE_CHECKING:
     import datetime
+    from typing import Self
 
     from speleodb.gis.models import ProjectGeoJSON
     from speleodb.gis.models import SubSurfaceStation
+    from speleodb.git_engine.core import GitCommit
     from speleodb.surveys.models import Format
+    from speleodb.surveys.models import ProjectCommit
     from speleodb.surveys.models import ProjectMutex
     from speleodb.surveys.models import TeamProjectPermission
     from speleodb.surveys.models import UserProjectPermission
@@ -43,6 +49,75 @@ class ProjectVisibility(BaseIntegerChoices):
     PUBLIC = (1, "PUBLIC")
 
 
+class ProjectQuerySet(models.QuerySet["Project"]):
+    def with_commits(self) -> Self:
+        from speleodb.surveys.models import ProjectCommit  # noqa: PLC0415
+
+        latest_commit_qs = ProjectCommit.objects.order_by("-datetime")
+
+        return self.prefetch_related(
+            Prefetch(
+                "commits",
+                queryset=latest_commit_qs,
+                to_attr="_prefetched_commits",
+            )
+        )
+
+    def with_commit_count(self) -> Self:
+        return self.annotate(
+            _prefetched_commit_count=Coalesce(models.Count("commits"), 0)
+        )
+
+    def with_active_mutex(self) -> Self:
+        from speleodb.surveys.models import ProjectMutex  # noqa: PLC0415
+
+        active_mutex_qs = ProjectMutex.objects.filter(is_active=True).select_related(
+            "user"
+        )
+
+        return self.prefetch_related(
+            Prefetch(
+                "rel_mutexes",
+                queryset=active_mutex_qs,
+                to_attr="_prefetched_active_mutex",
+            )
+        )
+
+    # def with_user_permissions(self) -> Self:
+    #     from speleodb.surveys.models import UserProjectPermission
+
+    #     user_permissions_qs = (
+    #         UserProjectPermission.objects.filter(is_active=True)
+    #         .select_related("target")
+    #         .order_by("-level", "target__email")
+    #     )
+
+    #     return self.prefetch_related(
+    #         Prefetch(
+    #             "rel_user_permissions",
+    #             queryset=user_permissions_qs,
+    #             to_attr="_prefetched_user_permissions",
+    #         )
+    #     )
+
+    # def with_team_permissions(self) -> Self:
+    #     from speleodb.surveys.models import TeamProjectPermission
+
+    #     team_permissions_qs = (
+    #         TeamProjectPermission.objects.filter(is_active=True)
+    #         .select_related("target")
+    #         .order_by("-level", "target__name")
+    #     )
+
+    #     return self.prefetch_related(
+    #         Prefetch(
+    #             "rel_team_permissions",
+    #             queryset=team_permissions_qs,
+    #             to_attr="_prefetched_team_permissions",
+    #         )
+    #     )
+
+
 class Project(models.Model):
     # type checking
     rel_formats: models.QuerySet[Format]
@@ -51,6 +126,12 @@ class Project(models.Model):
     rel_user_permissions: models.QuerySet[UserProjectPermission]
     rel_team_permissions: models.QuerySet[TeamProjectPermission]
     rel_stations: models.QuerySet[SubSurfaceStation]
+    commits: models.QuerySet[ProjectCommit]
+
+    # Prefetched attributes
+    _prefetched_active_mutex: list[ProjectMutex]
+    _prefetched_commits: list[ProjectCommit]
+    _prefetched_commit_count: int
 
     # Automatic fields
     id = models.UUIDField(
@@ -118,6 +199,8 @@ class Project(models.Model):
         verbose_name="Is Active",
     )
 
+    objects = ProjectQuerySet.as_manager()
+
     class Meta:
         constraints = [
             models.CheckConstraint(
@@ -132,31 +215,51 @@ class Project(models.Model):
     def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__}: {self.name} "
-            f"[{'LOCKED' if self.active_mutex() is not None else 'UNLOCKED'}]> "
+            f"[{'LOCKED' if self.active_mutex is not None else 'UNLOCKED'}]> "
         )
 
     def __str__(self) -> str:
         return self.name
 
-    @cached(cache=TTLCache(maxsize=1, ttl=300))
-    def active_mutex(self) -> ProjectMutex | None:
-        try:
-            return self.rel_mutexes.filter(is_active=True).select_related("user")[0]
-        except IndexError:
-            return None
-
     @property
     def mutex_owner(self) -> User | None:
-        if (active_mutex := self.active_mutex()) is None:
+        if (active_mutex := self.active_mutex) is None:
             return None
 
         return active_mutex.user
 
     @property
     def mutex_dt(self) -> datetime.datetime | None:
-        if (active_mutex := self.active_mutex()) is None:
+        if (active_mutex := self.active_mutex) is None:
             return None
         return active_mutex.modified_date
+
+    @property
+    def latest_commit(self) -> ProjectCommit | None:
+        if hasattr(self, "_prefetched_commits"):
+            return self._prefetched_commits[0] if self._prefetched_commits else None
+        return self.commits.order_by("-datetime").first()
+
+    @cached(cache=TTLCache(maxsize=1, ttl=300))
+    def _active_mutex(self) -> ProjectMutex | None:
+        if hasattr(self, "_prefetched_active_mutex"):
+            return (
+                self._prefetched_active_mutex[0]
+                if self._prefetched_active_mutex
+                else None
+            )
+        return self.rel_mutexes.filter(is_active=True).select_related("user").first()
+
+    @property
+    def active_mutex(self) -> ProjectMutex | None:
+        return self._active_mutex()
+
+    @property
+    def commit_count(self) -> int:
+        try:
+            return self._prefetched_commit_count
+        except AttributeError:
+            return self.commits.count()
 
     def acquire_mutex(self, user: User) -> None:
         if not self.has_write_access(user):
@@ -164,7 +267,7 @@ class Project(models.Model):
 
         # if the user is already the mutex_owner, just refresh the mutex_dt
         # => re-acquire mutex
-        if (active_mutex := self.active_mutex()) is not None:
+        if (active_mutex := self.active_mutex) is not None:
             if active_mutex.user != user:
                 raise ValidationError(
                     "Another user already is currently editing this file: "
@@ -181,7 +284,7 @@ class Project(models.Model):
         self.void_mutex_cache()
 
     def release_mutex(self, user: User, comment: str = "") -> None:
-        if (active_mutex := self.active_mutex()) is None:
+        if (active_mutex := self.active_mutex) is None:
             # if nobody owns the project, returns without error.
             return
 
@@ -321,20 +424,60 @@ class Project(models.Model):
             return []
 
     def commit_and_push_project(self, message: str, author: User) -> str | None:
-        return self.git_repo.commit_and_push_project(
+        git_repo = self.git_repo
+        hexsha = git_repo.commit_and_push_project(
             message=message, author_name=author.name, author_email=author.email
         )
 
-    def checkout_commit_or_default_branch(self, hexsha: str | None = None) -> None:
-        if not self.git_repo:
+        # Ensure the git history is properly constructed
+        self.construct_git_history_from_project(git_repo=git_repo)
+
+        return hexsha
+
+    def checkout_commit_or_default_pull_branch(self, hexsha: str | None = None) -> None:
+        if not (git_repo := self.git_repo):
             raise ProjectNotFound("This project does not exist on gitlab or on drive")
 
         if hexsha is None:
             # Make sure the project is update to ToT (Top of Tree)
-            self.git_repo.checkout_default_branch()
+            git_repo.checkout_default_branch_and_pull()
 
         else:
-            self.git_repo.checkout_commit(hexsha=hexsha)
+            git_repo.checkout_commit(hexsha=hexsha)
+
+        self.construct_git_history_from_project(git_repo=git_repo)
+
+    def construct_git_history_from_project(self, git_repo: GitRepo) -> None:
+        from speleodb.surveys.models import ProjectCommit  # noqa: PLC0415
+
+        hashtable = {
+            commit.oid: commit for commit in ProjectCommit.objects.filter(project=self)
+        }
+
+        # 1. Get all commits from HEAD
+        commits: list[GitCommit] = list(git_repo.iter_commits("HEAD"))
+
+        # 2. Sort by commit datetime (oldest first)
+        commits.sort(key=lambda c: c.committed_date)
+
+        # 3. Rebuild commits in order
+        for git_commit in commits:
+            if git_commit.hexsha not in hashtable:
+                with contextlib.suppress(ProjectCommit.DoesNotExist):
+                    _ = ProjectCommit.objects.create(
+                        oid=git_commit.hexsha,
+                        project=self,
+                        author_name=git_commit.author.name or "",
+                        author_email=git_commit.author.email or "",
+                        message=(
+                            message
+                            if isinstance(message := git_commit.message, str)
+                            else message.decode("utf-8", errors="ignore")
+                        ),
+                        parents=[parent.hexsha for parent in git_commit.parents],
+                        datetime=git_commit.committed_datetime,
+                        tree=git_commit.tree_to_json(),
+                    )
 
     @property
     def formats(self) -> models.QuerySet[Format]:
@@ -356,4 +499,4 @@ class Project(models.Model):
         # to populate the geojson field
 
     def void_mutex_cache(self) -> None:
-        self.active_mutex.cache_clear()
+        self._active_mutex.cache_clear()

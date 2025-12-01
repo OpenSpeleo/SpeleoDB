@@ -53,7 +53,7 @@ class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
                     # Checkout default branch and pull repository
                     try:
                         with timed_section("Checking out project default branch"):
-                            project.git_repo.checkout_default_branch()
+                            project.checkout_commit_or_default_pull_branch()
 
                         with timed_section("Listing project commits"):
                             commits = list(project.git_repo.commits)
@@ -97,14 +97,14 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
         try:
             # Checkout default branch and pull repository
             try:
-                project.git_repo.checkout_default_branch()
+                project.checkout_commit_or_default_pull_branch()
             except GitBaseError:
                 return ErrorResponse(
                     {"error": f"Problem checking out the commit `{hexsha}`"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
-            project.git_repo.checkout_default_branch()
+            project.checkout_commit_or_default_pull_branch()
 
             commit = project.git_repo.commit(hexsha)
 

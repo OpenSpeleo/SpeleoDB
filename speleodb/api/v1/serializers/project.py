@@ -12,6 +12,7 @@ from rest_framework import serializers
 # from django.core.exceptions import ValidationError
 from rest_framework.exceptions import ValidationError
 
+from speleodb.api.v1.serializers.project_commit import ProjectCommitSerializer
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
@@ -30,6 +31,9 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
         choices=ProjectVisibility,  # type: ignore[arg-type]
         default=ProjectVisibility.PRIVATE,
     )
+
+    commit_count = serializers.SerializerMethodField()
+    latest_commit = serializers.SerializerMethodField()
 
     permission = serializers.SerializerMethodField()
     active_mutex = serializers.SerializerMethodField()
@@ -172,7 +176,7 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
             # Unsaved object
             return None
 
-        if (active_mtx := obj.active_mutex()) is None:
+        if (active_mtx := obj.active_mutex) is None:
             return None
 
         return {
@@ -187,6 +191,24 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
             # return len(obj.commit_history)
             return obj.git_repo.commit_count
         return None
+
+    def get_latest_commit(self, obj: Project) -> None | dict[str, str]:
+        """
+        Return the first commit in obj.commits (prefetch_related or default ordering).
+        Returns None if there are no commits.
+        """
+        latest_commit = obj.latest_commit
+
+        if latest_commit is None:
+            return None
+
+        return ProjectCommitSerializer(latest_commit).data
+
+    def get_commit_count(self, obj: Project) -> int:
+        """
+        Return the total number of commits in the project.
+        """
+        return obj.commit_count
 
 
 class ProjectGeoJSONFileSerializer(serializers.ModelSerializer[ProjectGeoJSON]):

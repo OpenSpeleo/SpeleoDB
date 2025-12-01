@@ -4,22 +4,28 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from typing import Any
 
+from django import forms
 from django.contrib import admin
 from django.db.models import F
 from django.db.models import QuerySet
+from django.http import HttpRequest
+from django.utils.html import format_html
 
 from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectCommit
 from speleodb.surveys.models import ProjectMutex
 from speleodb.utils.admin_filters import ProjectCountryFilter
 
 if TYPE_CHECKING:
     from django import forms
     from django.http import HttpRequest
+    from django.utils.safestring import SafeString
 
 
 @admin.register(Format)
@@ -115,3 +121,32 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if not change:  # Only on creation, not on edit
             obj.created_by = request.user.email  # type: ignore[union-attr]
         super().save_model(request, obj, form, change)
+
+
+@admin.register(ProjectCommit)
+class ProjectCommitAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = ("oid", "project", "author_name", "author_email", "datetime")
+    search_fields = ("oid", "author_name", "author_email", "message")
+    list_filter = ("project",)
+    ordering = ("-datetime",)
+
+    fields = (
+        "oid",
+        "project",
+        "author_name",
+        "author_email",
+        "datetime",
+        "message",
+        "pretty_tree",
+    )
+
+    # Prevent edits
+    def has_change_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        return False
+
+    @admin.display(description="Tree")
+    def pretty_tree(self, obj: ProjectCommit) -> SafeString:
+        """Return indented JSON in a <pre> tag."""
+        formatted = json.dumps(obj.tree, indent=2, sort_keys=True)
+
+        return format_html("<pre>{}</pre>", formatted)

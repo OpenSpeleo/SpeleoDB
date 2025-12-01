@@ -38,6 +38,7 @@ from speleodb.plugins.models import PublicAnnoucement
 from speleodb.plugins.models.platform_base import OperatingSystemEnum
 from speleodb.plugins.models.platform_base import SurveyPlatformEnum
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectCommit
 from speleodb.surveys.models import TeamProjectPermission
 from speleodb.surveys.models import UserProjectPermission
 from speleodb.users.models import SurveyTeam
@@ -91,6 +92,23 @@ class ProjectFactory(DjangoModelFactory[Project]):
 
     class Meta:
         model = Project
+
+
+class ProjectCommitFactory(DjangoModelFactory[ProjectCommit]):
+    """Factory for creating ProjectCommit instances."""
+
+    oid: str = factory.LazyFunction(  # type: ignore[assignment]
+        lambda: hashlib.sha1(random.randbytes(32), usedforsecurity=False).hexdigest()
+    )
+    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
+    author_name: str = Faker("name")  # type: ignore[assignment]
+    author_email: str = Faker("email")  # type: ignore[assignment]
+    message: str = Faker("sentence")  # type: ignore[assignment]
+    datetime: Any = factory.LazyFunction(timezone.now)
+    tree: list[dict[str, str]] = []
+
+    class Meta:
+        model = ProjectCommit
 
 
 class UserProjectPermissionFactory(DjangoModelFactory[UserProjectPermission]):

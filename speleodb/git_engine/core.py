@@ -483,6 +483,49 @@ class GitCommit(Commit):
         """
         yield from self.tree.root_files
 
+    def tree_to_json(self, prefi: str = "") -> list[dict[str, Any]]:
+        """Convert the commit tree to a JSON-serializable dictionary.
+
+        Equivalent to:
+        `git ls-tree -r HEAD | awk '{print "{\"mode\":\""$1"\", \"type\":\""$2"\", \"object\":\""$3"\", \"path\":\""$4"\"}"}' | jq -s .`
+        """  # noqa: E501
+        entries: list[dict[str, Any]] = []
+
+        stack: list[tuple[GitTree | Tree, str]] = [
+            (self.tree, "")
+        ]  # (tree_object, path_prefix)
+
+        for _ in range(int(1e6)):  # Safety limit to prevent infinite recursion
+            if not stack:
+                break
+
+            tree, prefix = stack.pop()
+
+            for item in tree:
+                full_path = f"{prefix}/{item.name}".lstrip("/")
+
+                # For subtrees, recurse
+                match item:
+                    case GitTree() | Tree():
+                        # Behave like "git ls-tree -r": push subtree to stack
+                        stack.append((item, full_path))
+
+                    case GitFile() | Blob():
+                        entries.append(
+                            {
+                                # octal like git ls-tree
+                                "mode": format(item.mode, "o").zfill(6),
+                                "type": item.type,
+                                "object": item.hexsha,
+                                "path": full_path,
+                            }
+                        )
+
+                    case _:
+                        raise ValueError(f"Unknown git object type: {item.type}")
+
+        return entries
+
 
 class GitHead(HEAD):
     @property  # type: ignore[misc]
@@ -644,7 +687,7 @@ class GitRepo(Repo):
                 f"{self.remotes.origin.url.split('@')[-1]}"  # Removes OAUTH2 token
             )
 
-    def _checkout_branch_or_commit(
+    def _checkout_branch_or_commit_and_maybe_pull(
         self, hexsha: str | None = None, branch_name: str | None = None
     ) -> None:
         if hexsha and branch_name:
@@ -657,23 +700,32 @@ class GitRepo(Repo):
                 f"`{hexsha=}` and `{branch_name=}` can not be both set to `None`."
             )
 
+        if hexsha:
+            with contextlib.suppress(GitCommandError):
+                # Try to checkout the commit directly - no pull
+                self.git.checkout(hexsha)
+                return
+
         try:
             self.pull()
             self.git.checkout(branch_name or hexsha)
+
         except GitCommandError:
             if branch_name:  # Create the branch if it doesn't exist yet
                 self.git.checkout("-b", branch_name)
             else:
                 raise
 
-    def checkout_default_branch(self) -> None:
+    def checkout_default_branch_and_pull(self) -> None:
         try:
-            self._checkout_branch_or_commit(branch_name=settings.DJANGO_GIT_BRANCH_NAME)
+            self._checkout_branch_or_commit_and_maybe_pull(
+                branch_name=settings.DJANGO_GIT_BRANCH_NAME
+            )
         except GitBaseError:
             self.git.checkout("-b", settings.DJANGO_GIT_BRANCH_NAME)
 
     def checkout_commit(self, hexsha: str) -> None:
-        self._checkout_branch_or_commit(hexsha=hexsha)
+        self._checkout_branch_or_commit_and_maybe_pull(hexsha=hexsha)
 
     def commit_and_push_project(
         self,
@@ -741,7 +793,7 @@ class GitRepo(Repo):
 
     def publish_first_commit(self) -> None:
         # Create an initial empty commit
-        self.checkout_default_branch()
+        self.checkout_default_branch_and_pull()
         self.commit_and_push_project(
             settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE,
             author_name=settings.DJANGO_GIT_COMMITTER_NAME,

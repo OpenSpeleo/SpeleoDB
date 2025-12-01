@@ -242,7 +242,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
             try:
                 with timed_section("Git Project - Checkout and Pull"):
                     # Make sure the project is update to ToT (Top of Tree)
-                    project.git_repo.checkout_default_branch()
+                    project.checkout_commit_or_default_pull_branch()
 
                 with timed_section("Project Edition - File Adding - Git Commit & Push"):
                     uploaded_files: list[pathlib.Path] = []
@@ -590,7 +590,7 @@ class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
 
             if retry_attempt == 0:
                 # Ensure we pull the project to update just in case
-                project.checkout_commit_or_default_branch()
+                project.checkout_commit_or_default_pull_branch()
 
         return ErrorResponse(
             {"error": f"Object id=`{hexsha}` not found."},

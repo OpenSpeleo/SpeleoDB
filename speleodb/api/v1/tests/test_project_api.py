@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
 from django.conf import settings
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+from django.test.utils import override_settings
 from django.urls import reverse
+from django.utils import timezone
 from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
@@ -16,8 +21,11 @@ from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
+from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.common.enums import PermissionLevel
+from speleodb.surveys.models import ProjectCommit
 from speleodb.utils.test_utils import named_product
 
 if TYPE_CHECKING:
@@ -218,7 +226,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             self.user.email,
         )
 
-        mutex: ProjectMutex | None = self.project.active_mutex()
+        mutex: ProjectMutex | None = self.project.active_mutex
         assert mutex is not None
 
         assert mutex.is_active
@@ -399,3 +407,178 @@ class TestProjectCreation(BaseAPITestCase):
         assert (
             "This field is required." in response.data["errors"][missing_param_key]
         ), response.data
+
+
+class TestProjectListLatestCommit(BaseAPITestCase):
+    """Test suite for latest_commit field in project list endpoint."""
+
+    def test_project_list_includes_latest_commit_field(self) -> None:
+        """Test that GET /api/v1/projects/ includes latest_commit field."""
+
+        # Create project with commits
+        project = ProjectFactory.create(created_by=self.user.email)
+
+        # Give user permission to see the project
+        UserProjectPermissionFactory.create(
+            target=self.user,
+            project=project,
+            level=PermissionLevel.ADMIN,
+        )
+
+        # Create commits
+        _ = ProjectCommit.objects.create(
+            oid="a" * 40,
+            project=project,
+            author_name="Author",
+            author_email="author@test.com",
+            message="Old commit",
+            datetime=timezone.now() - datetime.timedelta(days=2),
+        )
+
+        _ = ProjectCommit.objects.create(
+            oid="b" * 40,
+            project=project,
+            author_name="Author",
+            author_email="author@test.com",
+            message="Latest commit",
+            datetime=timezone.now(),
+        )
+
+        # GET project list
+        response = self.client.get(
+            reverse("api:v1:projects"),
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        projects_data = response.data["data"]
+
+        # Find our project
+        project_data = next(p for p in projects_data if p["id"] == str(project.id))
+
+        # Verify latest_commit field exists
+        assert "latest_commit" in project_data
+
+        # Verify it contains the latest commit data
+        latest_commit_data = project_data["latest_commit"]
+        assert latest_commit_data is not None
+        assert latest_commit_data["oid"] == "b" * 40
+        assert latest_commit_data["message"] == "Latest commit"
+
+    def test_project_list_latest_commit_none_when_no_commits(self) -> None:
+        """Test that projects without commits have latest_commit as None."""
+
+        # Create project without commits
+        project = ProjectFactory.create(created_by=self.user.email)
+
+        # Give user permission to see the project
+        UserProjectPermissionFactory.create(
+            target=self.user,
+            project=project,
+            level=PermissionLevel.ADMIN,
+        )
+
+        response = self.client.get(
+            reverse("api:v1:projects"),
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        projects_data = response.data["data"]
+
+        # Find our project
+        project_data = next(p for p in projects_data if p["id"] == str(project.id))
+
+        # latest_commit should be None
+        assert "latest_commit" in project_data
+        assert project_data["latest_commit"] is None
+
+    def test_project_list_latest_commit_structure(self) -> None:
+        """Test that latest_commit has correct ProjectCommitSerializer structure."""
+
+        project = ProjectFactory.create(created_by=self.user.email)
+
+        # Give user permission to see the project
+        UserProjectPermissionFactory.create(
+            target=self.user,
+            project=project,
+            level=PermissionLevel.ADMIN,
+        )
+
+        _ = ProjectCommit.objects.create(
+            oid="a" * 40,
+            project=project,
+            author_name="Test Author",
+            author_email="test@example.com",
+            message="Test message",
+            datetime=timezone.now(),
+            tree=[
+                {"mode": "100644", "type": "blob", "object": "b" * 40, "path": "f.txt"}
+            ],
+        )
+
+        response = self.client.get(
+            reverse("api:v1:projects"),
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        project_data = next(
+            p for p in response.data["data"] if p["id"] == str(project.id)
+        )
+
+        latest_commit_data = project_data["latest_commit"]
+
+        # Verify all expected fields
+        expected_fields = [
+            "oid",
+            "parents",
+            "author_name",
+            "author_email",
+            "message",
+            "datetime",
+            "tree",
+            "creation_date",
+            "modified_date",
+        ]
+
+        for field in expected_fields:
+            assert field in latest_commit_data, f"Missing field: {field}"
+
+        # Verify parents is a list
+        assert isinstance(latest_commit_data["parents"], list)
+
+    def test_project_list_no_n_plus_1_with_commits(self) -> None:
+        """Test that fetching projects with latest_commit doesn't cause N+1 queries."""
+        # Create multiple projects with commits
+        n_projects = 5
+        n_commits = 3
+        for i in range(n_projects):
+            project = ProjectFactory.create(created_by=self.user.email)
+            for j in range(n_commits):
+                ProjectCommit.objects.create(
+                    oid=f"{i:02d}{j:02d}" + "0" * 36,
+                    project=project,
+                    author_name=f"Author {i}",
+                    author_email=f"author{i}@test.com",
+                    message=f"Commit {j}",
+                    datetime=timezone.now() - datetime.timedelta(days=2 - j),
+                )
+
+        # Test with query counting
+        with override_settings(DEBUG=True):
+            with CaptureQueriesContext(connection) as context:
+                response = self.client.get(
+                    reverse("api:v1:projects"),
+                    headers={"authorization": self.auth},
+                )
+
+            assert response.status_code == status.HTTP_200_OK
+
+            # Query count should be constant regardless of number of projects
+            # Should be: 1 for user permissions, 1 for projects, 1 prefetch for commits
+            # Total should be relatively constant (< 10 queries)
+            assert len(context.captured_queries) < n_projects * n_commits, (
+                f"Too many queries: {len(context.captured_queries)}. "
+                f"Possible N+1 issue."
+            )

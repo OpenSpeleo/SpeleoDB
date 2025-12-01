@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
     from speleodb.surveys.models import Project
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -136,6 +137,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         project_dir.parent.mkdir(exist_ok=True, parents=True)
         git_url = f"{settings.GITLAB_HTTP_PROTOCOL}://oauth2:{gitlab_creds.token}@{gitlab_creds.instance}/{gitlab_creds.group_name}/{project.id}.git"
 
+        git_repo: GitRepo
         try:
             # try to create the repository in Gitlab
             self.create_project(project)
@@ -153,11 +155,11 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
 
         except gitlab.exceptions.GitlabCreateError:
             # The repository already exists in Gitlab - git clone instead
-            repo = GitRepo.clone_from(url=git_url, to_path=project_dir)
-            if not repo.head.is_valid():
-                repo.publish_first_commit()
+            git_repo = GitRepo.clone_from(url=git_url, to_path=project_dir)
+            if not git_repo.head.is_valid():
+                git_repo.publish_first_commit()
 
-            return repo
+        return git_repo
 
     @lru_cache(maxsize=256)  # noqa: B019
     @check_initialized
