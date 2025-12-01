@@ -253,13 +253,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize Projects Layers visibility
         Layers.loadProjectVisibilityPrefs();
 
-        // Initialize Project Panel
-        ProjectPanel.init();
-        
-        // Load user tags and colors for tag management
-        StationTags.init();
-
-        // Fetch GeoJSON metadata for all projects
+        // Fetch GeoJSON metadata for all projects FIRST
+        // This allows us to filter out projects without GeoJSON before showing the panel
         let geojsonMetadata = [];
         try {
             console.log('🔄 Fetching all projects\' GeoJSON metadata via single API call...');
@@ -271,6 +266,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {
             console.error('❌ Failed to load all-projects GeoJSON metadata:', e);
         }
+
+        // Filter projects to only include those with GeoJSON data
+        // This ensures the project panel only shows projects that can be displayed on the map
+        Config.filterProjectsByGeoJSON(geojsonMetadata);
+
+        // Initialize Project Panel (now shows only projects with GeoJSON)
+        ProjectPanel.init();
+        
+        // Load user tags and colors for tag management
+        StationTags.init();
 
         // Load Stations and GeoJSON for each project
         const loadPromises = Config.projects.map(async (project) => {

@@ -71,5 +71,43 @@ export const Config = {
         }
     },
 
+    /**
+     * Filter projects to only include those with available GeoJSON data.
+     * Call this after fetching GeoJSON metadata to remove projects without map data.
+     * @param {Array} geojsonMetadata - Array of project metadata with geojson_file field
+     */
+    filterProjectsByGeoJSON: function(geojsonMetadata) {
+        if (!this._projects || !Array.isArray(geojsonMetadata)) {
+            return;
+        }
+
+        const projectsWithGeoJSON = new Set();
+        
+        // Build a set of project IDs that have valid GeoJSON
+        geojsonMetadata.forEach(meta => {
+            if (meta.geojson_file) {
+                projectsWithGeoJSON.add(String(meta.id));
+            }
+        });
+
+        // Also check for projects that have geojson_url directly set
+        this._projects.forEach(p => {
+            if (p.geojson_url) {
+                projectsWithGeoJSON.add(String(p.id));
+            }
+        });
+
+        const originalCount = this._projects.length;
+        
+        // Filter to only keep projects with GeoJSON
+        this._projects = this._projects.filter(p => projectsWithGeoJSON.has(String(p.id)));
+        
+        const filteredCount = originalCount - this._projects.length;
+        if (filteredCount > 0) {
+            console.log(`🗺️ Filtered out ${filteredCount} projects without GeoJSON data`);
+        }
+        console.log(`✅ ${this._projects.length} projects with GeoJSON available for map viewer`);
+    },
+
     VISIBILITY_PREFS_STORAGE_KEY: 'speleo_project_visibility'
 };
