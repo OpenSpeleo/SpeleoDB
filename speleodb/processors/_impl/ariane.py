@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
+from zipfile import ZipFile
 
 from django.utils.timezone import localtime
 from mnemo_lib.commands.split import split_dmp_into_sections
 from mnemo_lib.models import DMPFile
 
+from speleodb.processors.artifact import Artifact
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import FileFormat
 from speleodb.utils.timing_ctx import timed_section
@@ -19,8 +22,6 @@ from speleodb.utils.timing_ctx import timed_section
 if TYPE_CHECKING:
     from django.core.files.uploadedfile import InMemoryUploadedFile
     from django.core.files.uploadedfile import TemporaryUploadedFile
-
-    from speleodb.processors.artifact import Artifact
 
 
 def calculate_sha1(
@@ -72,6 +73,31 @@ def calculate_sha1(
         raise RuntimeError("This should never execute. See XOR above.")
 
     return sha1.hexdigest()
+
+
+def metadata_invariant_zip_hash(
+    src: Path | str | bytes | io.BytesIO | bytearray,
+) -> str:
+    match src:
+        case Path() | str():
+            zf = ZipFile(src, "r")
+        case bytes() | bytearray():
+            zf = ZipFile(io.BytesIO(src), "r")
+        case io.BytesIO():
+            zf = ZipFile(src, "r")
+        case _:
+            raise TypeError(f"Unsupported type for `src`: {type(src)=}")
+
+    hash_obj = hashlib.sha256()
+
+    with zf:
+        for name in sorted(zf.namelist()):
+            hash_obj.update(name.encode("utf-8"))
+            with zf.open(name, "r") as f:
+                while chunk := f.read(8192):
+                    hash_obj.update(chunk)
+
+    return hash_obj.hexdigest()
 
 
 class ArianeAGRFileProcessor(BaseFileProcessor):
@@ -154,6 +180,30 @@ class ArianeTMLFileProcessor(BaseFileProcessor):
     TARGET_FOLDER = None
     TARGET_SAVE_FILENAME = "project.tml"
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.tml"
+
+    def _add_to_project(self, artifact: Artifact) -> list[Path]:
+        if isinstance(artifact, Artifact):
+            filename = self._get_storage_name(file=artifact)
+        else:
+            raise TypeError(f"Unexpected file type received: `{type(artifact)=}`")
+
+        target_path = self.storage_folder / filename
+
+        bytes_io = io.BytesIO()
+        bytes_io.write(artifact.read())
+        bytes_io.seek(0)
+
+        new_hash = metadata_invariant_zip_hash(bytes_io)
+
+        if (
+            not target_path.exists()
+            or metadata_invariant_zip_hash(target_path) != new_hash
+        ):
+            with timed_section("File copy to project dir"):
+                bytes_io.seek(0)
+                target_path.write_bytes(bytes_io.read())
+
+        return [target_path]
 
 
 class ArianeTMLUFileProcessor(BaseFileProcessor):
