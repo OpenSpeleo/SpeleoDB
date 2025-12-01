@@ -233,10 +233,13 @@ SECURE_REFERRER_POLICY: str = "strict-origin-when-cross-origin"
 
 # DJANGO COUNTRIES
 # ------------------------------------------------------------------------------
-# https://github.com/SmileyChris/django-countries#show-certain-countries-first
+# https://smileychris.github.io/django-countries/usage/settings/?h=countries_first_auto_detect#countries_first
 COUNTRIES_FIRST = ["US", "MX", "FR"]
 
-# https://github.com/SmileyChris/django-countries/blob/main/django_countries/data.py
+# https://smileychris.github.io/django-countries/usage/settings/?h=countries_first_auto_detect#countries_first_auto_detect
+COUNTRIES_FIRST_AUTO_DETECT = True
+
+# https://smileychris.github.io/django-countries/usage/settings/?h=countries_first_auto_detect#countries_override
 COUNTRIES_OVERRIDE = {
     "AB": "Scotland",
     "BO": "Bolivia",
