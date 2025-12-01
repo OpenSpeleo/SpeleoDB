@@ -73,6 +73,10 @@ class ProjectListingView(AuthenticatedTemplateView):
     ) -> HttpResponse:
         context = self.get_context_data(**kwargs)
         # Filter out projects where user only has WEB_VIEWER access
+
+        # Ensuring we don't get phantom cached permissions
+        request.user.void_permission_cache()
+
         context["filtered_permissions"] = [
             perm
             for perm in request.user.permissions

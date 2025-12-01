@@ -25,7 +25,8 @@ from django_countries.fields import CountryField
 
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabManager
-from speleodb.utils.django_base_models import BaseIntegerChoices
+from speleodb.surveys.models import ProjectType
+from speleodb.surveys.models import ProjectVisibility
 from speleodb.utils.exceptions import ProjectNotFound
 
 if TYPE_CHECKING:
@@ -42,11 +43,6 @@ if TYPE_CHECKING:
     from speleodb.surveys.models import UserProjectPermission
     from speleodb.users.models import SurveyTeam
     from speleodb.users.models import User
-
-
-class ProjectVisibility(BaseIntegerChoices):
-    PRIVATE = (0, "PRIVATE")
-    PUBLIC = (1, "PUBLIC")
 
 
 class ProjectQuerySet(models.QuerySet["Project"]):
@@ -185,6 +181,13 @@ class Project(models.Model):
         null=True,
         blank=True,
         validators=[MinValueValidator(-180), MaxValueValidator(180)],
+    )
+
+    type = models.CharField(
+        max_length=20,
+        choices=ProjectType.choices,
+        null=False,
+        blank=False,
     )
 
     visibility = models.IntegerField(

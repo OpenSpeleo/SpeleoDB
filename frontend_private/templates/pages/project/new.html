@@ -5,6 +5,7 @@
 {% load set_var %}
 {% load survey_formats %}
 {% load visibility_scopes %}
+{% load project_types %}
 
 
 {% block content %}
@@ -55,7 +56,7 @@
                                 </div>
                             </section>
 
-                            <!-- Country / Latitude / Longitude -->
+                            <!-- Country / Project Type -->
                             <section>
                                 <div class="flex flex-wrap mt-5 gap-4">
                                     <div class="w-full lg:flex-1">
@@ -70,20 +71,35 @@
                                     </div>
 
                                     <div class="w-full lg:flex-1">
-                                        <label class="block text-sm font-medium mb-1" for="latitude">Latitude:</label>
-                                        <input id="latitude" name="latitude" class="form-input max-w-full w-full" type="text" placeholder="[Optional]" />
+                                        <label class="block text-sm font-medium mb-1" for="type">Project Type:<span class="text-rose-600"> *</span></label>
+                                        <select id="type" name="type" class="form-select max-w-full w-full">
+                                            <option disabled selected value>Select an option...</option>
+                                        {% get_project_types as project_types %}
+                                        {% for project_type in project_types %}
+                                            <option value="{{ project_type }}">{{ project_type }}</option>
+                                        {% endfor %}
+                                        </select>
                                     </div>
+                                </div>
+                            </section>
 
-                                    <div class="w-full lg:flex-1">
-                                        <label class="block text-sm font-medium mb-1" for="longitude">Longitude:</label>
-                                        <input id="longitude" name="longitude" class="form-input max-w-full w-full" type="text" placeholder="[Optional]" />
-                                    </div>
+                            <!-- Latitude / Longitude -->
+                            <section>
+                                <div class="flex flex-wrap mt-5 gap-4">
+                                <div class="w-full lg:flex-1">
+                                    <label class="block text-sm font-medium mb-1" for="latitude">Latitude:</label>
+                                    <input id="latitude" name="latitude" class="form-input max-w-full w-full" type="text" placeholder="[Optional]" />
+                                </div>
+
+                                <div class="w-full lg:flex-1">
+                                    <label class="block text-sm font-medium mb-1" for="longitude">Longitude:</label>
+                                    <input id="longitude" name="longitude" class="form-input max-w-full w-full" type="text" placeholder="[Optional]" />
                                 </div>
                             </section>
 
                             {% comment %} <!-- Visibility -->
                             <section>
-                                <div class="flex flex-wrap mt-5">
+                                <div class="flex flex-wrap mt-5 gap-4">
                                     <div class="mr-2">
                                         <label class="block text-sm font-medium mb-1" for="visibility">Visibility:<span class="text-rose-600"> *</span></label>
                                         <select id="visibility" name="visibility" class="form-select max-w-full w-full">

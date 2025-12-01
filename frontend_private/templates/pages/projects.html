@@ -4,6 +4,7 @@
 {% load countries %}
 {% load set_var %}
 {% load str_format %}
+{% load project_types %}
 
 {% block extra_css %}
 <style>
@@ -168,11 +169,14 @@
                     </div>
                     <div class="project-card-body">
                         <div class="project-card-row">
-                            <span class="project-card-label">Country</span>
-                            <span class="project-card-value">
-                                {% get_country permission.project.country as country %}
-                                {{ country.name }}
-                            </span>
+                            <span class="project-card-label">Software</span>
+                            <div class="project-card-badge">
+                                {% get_project_type_color permission.project.type as type_bg_color %}
+                                {% get_project_type_display permission.project.type as type_display %}
+                                <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 text-white {{ type_bg_color }}">
+                                    {{ type_display }}
+                                </div>
+                            </div>
                         </div>
                         <div class="project-card-row">
                             <span class="project-card-label">Collaborators</span>
@@ -248,7 +252,7 @@
                                     <div class="font-semibold text-center">Project Name</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3">
-                                    <div class="font-semibold text-center">Country</div>
+                                    <div class="font-semibold text-center">Software</div>
                                 </th>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">Collaborators</div>
@@ -287,8 +291,11 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% get_country permission.project.country as country %}
-                                            {{ country.name }}
+                                            {% get_project_type_color permission.project.type as type_bg_color %}
+                                            {% get_project_type_display permission.project.type as type_display %}
+                                            <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 text-white {{ type_bg_color }}">
+                                                {{ type_display }}
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">

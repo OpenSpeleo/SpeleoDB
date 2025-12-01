@@ -99,6 +99,8 @@ class Migration(migrations.Migration):
         # This MUST happen before creating SubSurfaceStation to avoid
         # field name clash between parent and child
         # ================================================================
+
+        # Make field nullable - useful for reverse migration later
         migrations.AlterField(
             model_name='station',
             name='project',

@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 # Project Related Models
+from speleodb.surveys.models.enums import ProjectType
+from speleodb.surveys.models.enums import ProjectVisibility
 from speleodb.surveys.models.project import Project
 from speleodb.surveys.models.project_commit import ProjectCommit
 from speleodb.surveys.models.format import Format
@@ -23,6 +25,8 @@ __all__ = [
     "Project",
     "ProjectCommit",
     "ProjectMutex",
+    "ProjectType",
+    "ProjectVisibility",
     "TeamProjectPermission",
     "UserProjectPermission",
 ]

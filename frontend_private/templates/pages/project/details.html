@@ -2,6 +2,8 @@
 {% load static %}
 
 {% load countries %}
+{% load visibility_scopes %}
+{% load project_types %}
 
 {% block right_panel %}
 <div class="grow">
@@ -36,7 +38,7 @@
                 </div>
             </section>
 
-            <!-- Country / Latitude / Longitude -->
+            <!-- Country / Project Type -->
             <section>
                 <div class="flex flex-wrap mt-5 gap-4">
                     <div class="w-full lg:flex-1">
@@ -48,6 +50,22 @@
                         {% endfor %}
                         </select>
                     </div>
+
+                    <div class="w-full lg:flex-1">
+                        <label class="block text-sm font-medium mb-1" for="type">Project Type:<span class="text-rose-600"> *</span></label>
+                        <select id="type" name="type" class="form-select max-w-full w-full">
+                        {% get_project_types as project_types %}
+                        {% for project_type in project_types %}
+                            <option value="{{ project_type }}" {% if project_type|lower == project.type %} selected {% endif %}>{{ project_type }}</option>
+                        {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Latitude / Longitude -->
+            <section>
+                <div class="flex flex-wrap mt-5">
                     <div class="w-full lg:flex-1">
                         <label class="block text-sm font-medium mb-1" for="latitude">Latitude:</label>
                         <input id="latitude" name="latitude" class="form-input max-w-full w-full" type="text" value="{% if project.latitude %}{{ project.latitude }}{% endif %}" />

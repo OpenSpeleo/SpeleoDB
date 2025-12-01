@@ -16,8 +16,9 @@ from speleodb.api.v1.serializers.project_commit import ProjectCommitSerializer
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectType
+from speleodb.surveys.models import ProjectVisibility
 from speleodb.surveys.models import UserProjectPermission
-from speleodb.surveys.models.project import ProjectVisibility
 from speleodb.users.models import User
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.gps_utils import format_coordinate
@@ -41,6 +42,8 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
     created_by = serializers.CharField(required=False)
 
     n_commits = serializers.SerializerMethodField()
+
+    type = CustomChoiceField(choices=ProjectType, required=True)  # type: ignore[arg-type]
 
     class Meta:
         model = Project

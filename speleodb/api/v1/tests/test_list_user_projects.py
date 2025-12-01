@@ -89,6 +89,7 @@ class TestProjectInteraction(BaseAPITestCase):
             "active_mutex",
             "name",
             "permission",
+            "type",
         ]
 
         for project_data in response.data["data"]:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from django import template
 
-from speleodb.surveys.models.project import ProjectVisibility
+from speleodb.surveys.models import ProjectVisibility
 
 register = template.Library()
 

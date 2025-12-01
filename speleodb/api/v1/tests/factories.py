@@ -39,6 +39,7 @@ from speleodb.plugins.models.platform_base import OperatingSystemEnum
 from speleodb.plugins.models.platform_base import SurveyPlatformEnum
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
+from speleodb.surveys.models import ProjectType
 from speleodb.surveys.models import TeamProjectPermission
 from speleodb.surveys.models import UserProjectPermission
 from speleodb.users.models import SurveyTeam
@@ -87,6 +88,10 @@ class ProjectFactory(DjangoModelFactory[Project]):
 
     # Defer to Faker for a valid ISO country code; avoids empty-iterator races
     country: str = factory.Faker("country_code")  # type: ignore[assignment]
+
+    type: str = factory.Faker(  # type: ignore[assignment]
+        "random_element", elements=ProjectType.values
+    )
 
     created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
 
@@ -257,7 +262,7 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)
-    station: Station = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
+    station: SubSurfaceStation = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     resource_type: StationResourceType = factory.Faker(
         "random_element",
         elements=[
@@ -449,7 +454,7 @@ class LogEntryFactory(DjangoModelFactory[LogEntry]):
         skip_postgeneration_save = True  # Add this to avoid deprecation warning
 
     id = factory.LazyFunction(uuid.uuid4)
-    station: Station = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
+    station: SubSurfaceStation = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
 
     title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
@@ -545,7 +550,7 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
         model = SensorInstall
 
     sensor: Sensor = factory.SubFactory(SensorFactory)  # type: ignore[assignment]
-    station: Station = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
+    station: SubSurfaceStation = factory.SubFactory(SubSurfaceStationFactory)  # type: ignore[assignment]
     install_date = factory.LazyFunction(timezone.localdate)
     install_user: str = factory.LazyAttribute(  # type: ignore[assignment]
         lambda _: UserFactory.create().email

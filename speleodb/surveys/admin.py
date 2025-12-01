@@ -77,6 +77,7 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "name",
         "country",
+        "type",
         "created_by",
         "is_active",
         "admin_count",
@@ -90,7 +91,7 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     ordering = ("name",)
     readonly_fields = ("created_by", "creation_date", "modified_date")
 
-    list_filter = [ProjectCountryFilter, "created_by", "is_active"]
+    list_filter = [ProjectCountryFilter, "type", "created_by", "is_active"]
 
     @admin.display(description="Description")
     def short_description(self, obj: Project) -> str:

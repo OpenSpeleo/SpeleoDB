@@ -5,6 +5,7 @@ from __future__ import annotations
 import enum
 from typing import Any
 
+from django.core.exceptions import ValidationError
 from django_countries.fields import Country
 from rest_framework import serializers
 
@@ -30,4 +31,11 @@ class CustomChoiceField(serializers.ChoiceField):
         if self.field_name == "country":
             return super().to_internal_value(data)
 
-        return getattr(self._kwargs["choices"], data)
+        choices = {val.name.upper(): val for val in self._kwargs["choices"]}
+
+        try:
+            return choices[data.upper()]
+        except KeyError as e:
+            raise ValidationError(
+                f"Invalid value received: `{data}`. Allowed: {list(choices.keys())}"
+            ) from e

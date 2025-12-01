@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import random
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -26,6 +27,7 @@ from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import ProjectCommit
+from speleodb.surveys.models import ProjectType
 from speleodb.utils.test_utils import named_product
 
 if TYPE_CHECKING:
@@ -310,10 +312,12 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 class TestProjectCreation(BaseAPITestCase):
     @parameterized.expand([True, False])
     def test_create_project(self, use_lat_long: bool) -> None:
+        _, project_type = random.choice(ProjectType.choices)
         data: dict[str, Any] = {
             "name": "My Cool Project",
             "description": "A super cool project",
             "country": "US",
+            "type": project_type,
         }
 
         if use_lat_long:
@@ -333,10 +337,12 @@ class TestProjectCreation(BaseAPITestCase):
 
     @parameterized.expand(["longitude", "latitude"])
     def test_create_project_failure_with_only_one_geo(self, geokey: str) -> None:
+        _, project_type = random.choice(ProjectType.choices)
         data = {
             "name": "My Cool Project",
             "description": "A super cool project",
             "country": "US",
+            "type": project_type,
             geokey: 45.423897,  # Valid coordinate value
         }
 
@@ -362,10 +368,12 @@ class TestProjectCreation(BaseAPITestCase):
             assert geokey in response.data.get("errors", {}), response.data
 
     def test_create_project_failure_with_non_existing_country(self) -> None:
+        _, project_type = random.choice(ProjectType.choices)
         data = {
             "name": "My Cool Project",
             "description": "A super cool project",
             "country": "YOLO",
+            "type": project_type,
         }
 
         auth = self.header_prefix + self.token.key
@@ -382,14 +390,16 @@ class TestProjectCreation(BaseAPITestCase):
             response.data
         )
 
-    @parameterized.expand(["name", "description", "country"])
+    @parameterized.expand(["name", "description", "country", "type"])
     def test_create_project_failure_with_missing_data(
         self, missing_param_key: str
     ) -> None:
+        _, project_type = random.choice(ProjectType.choices)
         data = {
             "name": "My Cool Project",
             "description": "A super cool project",
-            "country": "YOLO",
+            "country": "US",
+            "type": project_type,
         }
 
         del data[missing_param_key]
