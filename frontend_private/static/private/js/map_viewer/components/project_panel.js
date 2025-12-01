@@ -58,7 +58,10 @@ export const ProjectPanel = {
         list.innerHTML = '';
         
         // Show all projects - GeoJSON availability is checked at load time
-        const validProjects = Config.projects;
+        // Sort projects by name (case-insensitive)
+        const validProjects = [...Config.projects].sort((a, b) => 
+            a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+        );
         
         validProjects.forEach(project => {
             const isVisible = Layers.isProjectVisible(project.id);
