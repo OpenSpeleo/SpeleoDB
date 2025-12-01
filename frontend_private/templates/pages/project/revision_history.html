@@ -235,12 +235,16 @@ $(window).on('load', function() {
                 // Iterate over each commit and append a new row to the table
                 data.data.commits.forEach(function (commit, index) {
 
+                    if (commit.message == "[Automated] Project Creation" && commit.author_name == "SpeleoDB") {
+                        return;  // Skip automated project creation commits
+                    }
+
                     // === Build Mobile List Item ===
                     var $mobileItem = $('<div class="revision-item"></div>');
                     
                     // Header with ID and actions
                     var $header = $('<div class="revision-header"></div>');
-                    $header.append('<div class="revision-id">' + commit.hexsha_short + '</div>');
+                    $header.append('<div class="revision-id">' + commit.id.slice(0, 8) + '</div>');
                     
                     var $actions = $('<div class="revision-actions"></div>');
                     
@@ -265,7 +269,7 @@ $(window).on('load', function() {
                     // Meta info
                     var $meta = $('<div class="revision-meta"></div>');
                     $meta.append('<div class="revision-meta-item"><svg class="revision-meta-icon stroke-current" fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span>' + commit.author_name + '</span></div>');
-                    $meta.append('<div class="revision-meta-item"><svg class="revision-meta-icon stroke-current" fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span>' + commit.committed_date + '</span></div>');
+                    $meta.append('<div class="revision-meta-item"><svg class="revision-meta-icon stroke-current" fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span>' + commit.authored_date + '</span></div>');
                     $mobileItem.append($meta);
                     
                     // Append to mobile container
@@ -283,9 +287,9 @@ $(window).on('load', function() {
 
                     // Populate the row with commit data
                     // ---------------------------------------------------------------------
-                    $row.find('td').eq(0).find('.font-medium').text(commit.hexsha_short);    // Commit ID
+                    $row.find('td').eq(0).find('.font-medium').text(commit.id.slice(0, 8));    // Commit Short ID
                     $row.find('td').eq(1).find('.font-medium').text(commit.author_name);     // Author
-                    $row.find('td').eq(2).find('.text-center').text(commit.committed_date);  // Date
+                    $row.find('td').eq(2).find('.text-center').text(commit.authored_date);  // Date
                     $row.find('td').eq(3).find('.font-medium').text(commit.message);         // Message
 
                     // Adjusting all the links

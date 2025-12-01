@@ -32,12 +32,12 @@ class TestWithLatestCommitQuerySet(TestCase):
             # Create 3 commits for each project
             for j in range(3):
                 ProjectCommit.objects.create(
-                    oid=f"{i:02d}{j:02d}" + "0" * 36,
+                    id=f"{i:02d}{j:02d}" + "0" * 36,
                     project=project,
                     author_name=f"Author {i}",
                     author_email=f"author{i}@test.com",
+                    authored_date=timezone.now() - datetime.timedelta(days=2 - j),
                     message=f"Commit {j}",
-                    datetime=timezone.now() - datetime.timedelta(days=2 - j),
                 )
 
         # Test WITHOUT with_latest_commit() - this would cause N+1
@@ -67,30 +67,30 @@ class TestWithLatestCommitQuerySet(TestCase):
         new_time = timezone.now() - datetime.timedelta(days=1)
 
         _ = ProjectCommit.objects.create(
-            oid="a" * 40,
+            id="a" * 40,
             project=project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=old_time,
             message="Old commit",
-            datetime=old_time,
         )
 
         _ = ProjectCommit.objects.create(
-            oid="b" * 40,
+            id="b" * 40,
             project=project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=mid_time,
             message="Mid commit",
-            datetime=mid_time,
         )
 
         commit_new = ProjectCommit.objects.create(
-            oid="c" * 40,
+            id="c" * 40,
             project=project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=new_time,
             message="New commit",
-            datetime=new_time,
         )
 
         # Query with with_latest_commit()
@@ -115,12 +115,12 @@ class TestWithLatestCommitQuerySet(TestCase):
         project = ProjectFactory.create(created_by=self.user.email)
 
         commit = ProjectCommit.objects.create(
-            oid="a" * 40,
+            id="a" * 40,
             project=project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=timezone.now(),
             message="Commit",
-            datetime=timezone.now(),
         )
 
         # Call via Manager instead of QuerySet
@@ -138,29 +138,29 @@ class TestWithLatestCommitQuerySet(TestCase):
         # Project with 1 commit
         project2 = ProjectFactory.create(created_by=self.user.email)
         commit2 = ProjectCommit.objects.create(
-            oid="b" * 40,
+            id="b" * 40,
             project=project2,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=timezone.now(),
             message="Commit",
-            datetime=timezone.now(),
         )
 
         # Project with 5 commits
         project3 = ProjectFactory.create(created_by=self.user.email)
         for i in range(5):
             ProjectCommit.objects.create(
-                oid=f"c{i:02d}" + "0" * 37,
+                id=f"c{i:02d}" + "0" * 37,
                 project=project3,
                 author_name="Author",
                 author_email="author@test.com",
+                authored_date=timezone.now() - datetime.timedelta(days=4 - i),
                 message=f"Commit {i}",
-                datetime=timezone.now() - datetime.timedelta(days=4 - i),
             )
 
         # Get the latest commit for project3
         latest_commit3 = ProjectCommit.objects.filter(project=project3).order_by(
-            "-datetime"
+            "-authored_date"
         )[0]
 
         # Query all with with_latest_commit()

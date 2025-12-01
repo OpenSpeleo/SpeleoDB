@@ -126,17 +126,17 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 @admin.register(ProjectCommit)
 class ProjectCommitAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = ("oid", "project", "author_name", "author_email", "datetime")
-    search_fields = ("oid", "author_name", "author_email", "message")
+    list_display = ("id", "project", "author_name", "author_email", "authored_date")
+    search_fields = ("id", "author_name", "author_email", "message")
     list_filter = ("project",)
-    ordering = ("-datetime",)
+    ordering = ("-authored_date",)
 
     fields = (
-        "oid",
+        "id",
         "project",
         "author_name",
         "author_email",
-        "datetime",
+        "authored_date",
         "message",
         "pretty_tree",
     )

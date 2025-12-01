@@ -102,14 +102,14 @@ class ProjectFactory(DjangoModelFactory[Project]):
 class ProjectCommitFactory(DjangoModelFactory[ProjectCommit]):
     """Factory for creating ProjectCommit instances."""
 
-    oid: str = factory.LazyFunction(  # type: ignore[assignment]
+    id: str = factory.LazyFunction(  # type: ignore[assignment]
         lambda: hashlib.sha1(random.randbytes(32), usedforsecurity=False).hexdigest()
     )
     project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
     author_name: str = Faker("name")  # type: ignore[assignment]
     author_email: str = Faker("email")  # type: ignore[assignment]
+    authored_date: Any = factory.LazyFunction(timezone.now)
     message: str = Faker("sentence")  # type: ignore[assignment]
-    datetime: Any = factory.LazyFunction(timezone.now)
     tree: list[dict[str, str]] = []
 
     class Meta:

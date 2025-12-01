@@ -406,7 +406,8 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                     else None
                                 ),
                                 "project": ProjectSerializer(
-                                    project, context={"user": user}
+                                    project,
+                                    context={"user": user},
                                 ).data,
                             }
                         )

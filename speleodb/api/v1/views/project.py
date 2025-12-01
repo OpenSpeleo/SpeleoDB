@@ -43,9 +43,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
         serializer = self.get_serializer(project, context={"user": user})
 
         try:
-            return SuccessResponse(
-                {"project": serializer.data, "history": project.commit_history}
-            )
+            return SuccessResponse(serializer.data)
 
         except GitlabError:
             logger.exception("There has been a problem accessing gitlab")

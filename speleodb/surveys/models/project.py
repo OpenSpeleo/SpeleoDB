@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import pathlib
 import uuid
+from datetime import datetime
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
@@ -20,6 +21,7 @@ from django.db import models
 from django.db.models import Prefetch
 from django.db.models import Q
 from django.db.models.functions import Coalesce
+from django.db.utils import IntegrityError
 from django.utils import timezone
 from django_countries.fields import CountryField
 
@@ -30,7 +32,6 @@ from speleodb.surveys.models import ProjectVisibility
 from speleodb.utils.exceptions import ProjectNotFound
 
 if TYPE_CHECKING:
-    import datetime
     from typing import Self
 
     from speleodb.gis.models import ProjectGeoJSON
@@ -49,7 +50,7 @@ class ProjectQuerySet(models.QuerySet["Project"]):
     def with_commits(self) -> Self:
         from speleodb.surveys.models import ProjectCommit  # noqa: PLC0415
 
-        latest_commit_qs = ProjectCommit.objects.order_by("-datetime")
+        latest_commit_qs = ProjectCommit.objects.order_by("-authored_date")
 
         return self.prefetch_related(
             Prefetch(
@@ -232,7 +233,7 @@ class Project(models.Model):
         return active_mutex.user
 
     @property
-    def mutex_dt(self) -> datetime.datetime | None:
+    def mutex_dt(self) -> datetime | None:
         if (active_mutex := self.active_mutex) is None:
             return None
         return active_mutex.modified_date
@@ -241,7 +242,7 @@ class Project(models.Model):
     def latest_commit(self) -> ProjectCommit | None:
         if hasattr(self, "_prefetched_commits"):
             return self._prefetched_commits[0] if self._prefetched_commits else None
-        return self.commits.order_by("-datetime").first()
+        return self.commits.order_by("-authored_date").first()
 
     @cached(cache=TTLCache(maxsize=1, ttl=300))
     def _active_mutex(self) -> ProjectMutex | None:
@@ -454,7 +455,7 @@ class Project(models.Model):
         from speleodb.surveys.models import ProjectCommit  # noqa: PLC0415
 
         hashtable = {
-            commit.oid: commit for commit in ProjectCommit.objects.filter(project=self)
+            commit.id: commit for commit in ProjectCommit.objects.filter(project=self)
         }
 
         # 1. Get all commits from HEAD
@@ -466,19 +467,22 @@ class Project(models.Model):
         # 3. Rebuild commits in order
         for git_commit in commits:
             if git_commit.hexsha not in hashtable:
-                with contextlib.suppress(ProjectCommit.DoesNotExist):
+                with contextlib.suppress(IntegrityError):
                     _ = ProjectCommit.objects.create(
-                        oid=git_commit.hexsha,
+                        id=git_commit.hexsha,
                         project=self,
                         author_name=git_commit.author.name or "",
                         author_email=git_commit.author.email or "",
+                        authored_date=datetime.fromtimestamp(
+                            git_commit.authored_date,
+                            tz=timezone.get_current_timezone(),
+                        ),
                         message=(
                             message
                             if isinstance(message := git_commit.message, str)
                             else message.decode("utf-8", errors="ignore")
                         ),
-                        parents=[parent.hexsha for parent in git_commit.parents],
-                        datetime=git_commit.committed_datetime,
+                        parent_ids=[parent.hexsha for parent in git_commit.parents],
                         tree=git_commit.tree_to_json(),
                     )
 

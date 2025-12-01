@@ -100,7 +100,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
 
         # Verify commits exist (may be fewer than expected due to 304 responses)
         commits = ProjectCommit.objects.filter(project=self.project).order_by(
-            "-datetime"
+            "-authored_date"
         )
         commit_messages = [c.message for c in commits]
 
@@ -133,8 +133,8 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
         commit = ProjectCommit.objects.filter(project=self.project).first()
         assert commit is not None
         # Parent count could be 0 (root) or more
-        # Just verify the parents relationship is accessible
-        _ = len(commit.parents)
+        # Just verify the parent_ids relationship is accessible
+        _ = len(commit.parent_ids)
 
     def test_construct_git_history_tree_populated(self) -> None:
         """Test that tree field is populated with git ls-tree data."""

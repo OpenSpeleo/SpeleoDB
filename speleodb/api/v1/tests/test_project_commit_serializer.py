@@ -23,12 +23,12 @@ class TestProjectCommitSerializer(TestCase):
     def test_basic_serialization(self) -> None:
         """Test basic serialization of a ProjectCommit."""
         commit = ProjectCommit.objects.create(
-            oid="a" * 40,
+            id="a" * 40,
             project=self.project,
             author_name="Test Author",
             author_email="test@example.com",
+            authored_date=timezone.now(),
             message="Test commit message",
-            datetime=timezone.now(),
             tree=[
                 {
                     "mode": "100644",
@@ -43,18 +43,16 @@ class TestProjectCommitSerializer(TestCase):
         data = serializer.data
 
         # Verify all fields are present
-        assert "oid" in data
-        assert "parents" in data
+        assert "id" in data
+        assert "parent_ids" in data
         assert "author_name" in data
         assert "author_email" in data
         assert "message" in data
-        assert "datetime" in data
+        assert "authored_date" in data
         assert "tree" in data
-        assert "creation_date" in data
-        assert "modified_date" in data
 
         # Verify field values
-        assert data["oid"] == "a" * 40
+        assert data["id"] == "a" * 40
         assert data["author_name"] == "Test Author"
         assert data["author_email"] == "test@example.com"
         assert data["message"] == "Test commit message"
@@ -64,34 +62,34 @@ class TestProjectCommitSerializer(TestCase):
         """Test that parents field returns list of SHA strings, not objects."""
         # Create parent commits
         parent1 = ProjectCommit.objects.create(
-            oid="a" * 40,
+            id="a" * 40,
             project=self.project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=timezone.now(),
             message="Parent 1",
-            datetime=timezone.now(),
         )
 
         parent2 = ProjectCommit.objects.create(
-            oid="b" * 40,
+            id="b" * 40,
             project=self.project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=timezone.now(),
             message="Parent 2",
-            datetime=timezone.now(),
         )
 
         parents = [parent1, parent2]
 
         # Create child commit
         child = ProjectCommit.objects.create(
-            oid="c" * 40,
+            id="c" * 40,
             project=self.project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=timezone.now(),
             message="Child",
-            datetime=timezone.now(),
-            parents=[parent.oid for parent in parents],
+            parent_ids=[parent.id for parent in parents],
         )
 
         # Serialize
@@ -99,26 +97,26 @@ class TestProjectCommitSerializer(TestCase):
         data = serializer.data
 
         # Verify parents is a list of strings
-        assert isinstance(data["parents"], list)
-        assert len(data["parents"]) == len(parents)
-        assert all(isinstance(p, str) for p in data["parents"])
-        assert set(data["parents"]) == {"a" * 40, "b" * 40}
+        assert isinstance(data["parent_ids"], list)
+        assert len(data["parent_ids"]) == len(parents)
+        assert all(isinstance(p, str) for p in data["parent_ids"])
+        assert set(data["parent_ids"]) == {"a" * 40, "b" * 40}
 
     def test_empty_parents_for_root_commit(self) -> None:
         """Test that root commit has empty parents list."""
         root_commit = ProjectCommit.objects.create(
-            oid="a" * 40,
+            id="a" * 40,
             project=self.project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=timezone.now(),
             message="Root commit",
-            datetime=timezone.now(),
         )
 
         serializer = ProjectCommitSerializer(root_commit)
         data = serializer.data
 
-        assert data["parents"] == []
+        assert data["parent_ids"] == []
 
     def test_all_fields_read_only(self) -> None:
         """Test that all fields are read-only."""
@@ -130,12 +128,12 @@ class TestProjectCommitSerializer(TestCase):
     def test_consistent_serialization(self) -> None:
         """Test that serializing the same commit twice produces identical output."""
         commit = ProjectCommit.objects.create(
-            oid="a" * 40,
+            id="a" * 40,
             project=self.project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=timezone.now(),
             message="Test",
-            datetime=timezone.now(),
             tree=[
                 {"mode": "100644", "type": "blob", "object": "b" * 40, "path": "f.txt"}
             ],
@@ -155,12 +153,12 @@ class TestProjectCommitSerializer(TestCase):
         n_commits = 3
         for i in range(n_commits):
             commit = ProjectCommit.objects.create(
-                oid=f"{i:02d}" + "0" * 38,
+                id=f"{i:02d}" + "0" * 38,
                 project=self.project,
                 author_name=f"Author {i}",
                 author_email=f"author{i}@test.com",
+                authored_date=timezone.now() - datetime.timedelta(days=i),
                 message=f"Commit {i}",
-                datetime=timezone.now() - datetime.timedelta(days=i),
             )
             commits.append(commit)
 
@@ -168,8 +166,8 @@ class TestProjectCommitSerializer(TestCase):
         data = serializer.data
 
         assert len(data) == n_commits
-        assert all("oid" in item for item in data)
-        assert all("parents" in item for item in data)
+        assert all("id" in item for item in data)
+        assert all("parent_ids" in item for item in data)
 
     def test_tree_field_serialization(self) -> None:
         """Test that tree field with complex structure is serialized correctly."""
@@ -195,12 +193,12 @@ class TestProjectCommitSerializer(TestCase):
         ]
 
         commit = ProjectCommit.objects.create(
-            oid="a" * 40,
+            id="a" * 40,
             project=self.project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=timezone.now(),
             message="Test",
-            datetime=timezone.now(),
             tree=tree_data,
         )
 

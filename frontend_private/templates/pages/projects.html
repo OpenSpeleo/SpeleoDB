@@ -500,54 +500,47 @@ $( document ).ready(function() {
         return false; // prevent default
     });
 
-    // Process revision elements in batches, yielding to browser event loop
-    // between each batch to keep the UI responsive
-    var revisionElements = $('.async_revision').toArray();
-    var index = 0;
-    var batchSize = 3;
+    // Fetch all projects at once and update revision counts
+    $.ajax({
+        url: Urls['api:v1:projects'](),
+        type: "GET",
+        dataType: "json",
+        success: function(data) {
+            if (data.success) {
+                // Create a map of project_id -> commit_count for quick lookup
+                var commitCounts = {};
+                data.data.forEach(function(project) {
+                    commitCounts[project.id] = project.commit_count;
+                });
 
-    function processNextBatch() {
-        if (index >= revisionElements.length) return;
+                // Update all revision elements
+                $('.async_revision').each(function() {
+                    var $element = $(this);
+                    var target_div = $("#" + $element.data('id'));
+                    var project_id = $element.data('project_id');
 
-        // Process up to batchSize elements
-        for (var i = 0; i < batchSize && index < revisionElements.length; i++) {
-            var $element = $(revisionElements[index]);
-            var target_div = $("#" + $element.data('id'));
-            var project_id = $element.data('project_id');
-
-            get_commit_history(project_id, target_div);
-            index++;
-        }
-
-        // Yield to browser event loop - allows clicks/interactions to be processed
-        setTimeout(processNextBatch, 0);
-    }
-
-    // Start processing
-    processNextBatch();
-
-    function get_commit_history(project_id, target_div){
-        $.ajax({
-            url: Urls['api:v1:project-detail'](project_id),
-            type : "GET",
-            dataType : "json",
-            async: true,  // Explicitly ensure async
-            success: function(data){
-                if (data.success) {
-                    target_div.html(data.data.history.length);
-                }
-                else {
-                    console.log("ERROR: " + data.error);
-                    target_div.html("-");
-                }
-            },
-            error: function (textStatus, errorThrown) {
-                console.log("ERROR: " + textStatus + " & " + errorThrown);
-                target_div.html("-");
-                return null;
+                    if (commitCounts.hasOwnProperty(project_id)) {
+                        target_div.html(commitCounts[project_id]);
+                    } else {
+                        target_div.html("-");
+                    }
+                });
+            } else {
+                console.log("ERROR: " + data.error);
+                // Set all elements to error state
+                $('.async_revision').each(function() {
+                    $("#" + $(this).data('id')).html("-");
+                });
             }
-        });
-    }
+        },
+        error: function(textStatus, errorThrown) {
+            console.log("ERROR: " + textStatus + " & " + errorThrown);
+            // Set all elements to error state
+            $('.async_revision').each(function() {
+                $("#" + $(this).data('id')).html("-");
+            });
+        }
+    });
 });
 </script>
 {% endblock inline_extra_js %}

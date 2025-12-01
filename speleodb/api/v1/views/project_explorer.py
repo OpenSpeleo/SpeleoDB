@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from typing import TYPE_CHECKING
 from typing import Any
@@ -12,9 +11,9 @@ from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v1.permissions import ProjectUserHasReadAccess
-from speleodb.api.v1.serializers import GitCommitListSerializer
 from speleodb.api.v1.serializers import GitCommitSerializer
 from speleodb.api.v1.serializers import GitFileListSerializer
+from speleodb.api.v1.serializers import ProjectCommitSerializer
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.core import GitFile
 from speleodb.git_engine.exceptions import GitBaseError
@@ -24,7 +23,6 @@ from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
-from speleodb.utils.timing_ctx import timed_section
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
@@ -34,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
-    queryset = Project.objects.all()
+    queryset = Project.objects.prefetch_related("commits", "rel_formats").all()
     permission_classes = [ProjectUserHasReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"
@@ -44,45 +42,14 @@ class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
         project = self.get_object()
         serializer = self.get_serializer(project, context={"user": user})
 
-        with timed_section("Fetching project revisions"):
-            commits = None
-            serialized_commits: list[dict[str, Any]] = []
-
-            with contextlib.suppress(ValueError):
-                with timed_section("GIT Actions"):
-                    # Checkout default branch and pull repository
-                    try:
-                        with timed_section("Checking out project default branch"):
-                            project.checkout_commit_or_default_pull_branch()
-
-                        with timed_section("Listing project commits"):
-                            commits = list(project.git_repo.commits)
-
-                    except GitBaseError:
-                        commits = []
-
-                with timed_section("Serializing project commits"):
-                    # Collect all the commits and sort them by date
-                    # Order: from most recent to oldest
-                    commits_serializer = GitCommitListSerializer(
-                        commits,  # type: ignore[arg-type]
-                        context={"project": project},
-                    )
-
-                    serialized_commits = commits_serializer.data
-
-        with timed_section("Constructing response"):
-            try:
-                return SuccessResponse(
-                    {"project": serializer.data, "commits": serialized_commits}
-                )
-
-            except GitlabError:
-                logger.exception("There has been a problem accessing gitlab")
-                return ErrorResponse(
-                    {"error": "There has been a problem accessing gitlab"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+        return SuccessResponse(
+            {
+                "project": serializer.data,
+                "commits": ProjectCommitSerializer(project.commits, many=True).data
+                if project.commits
+                else [],
+            }
+        )
 
 
 class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):

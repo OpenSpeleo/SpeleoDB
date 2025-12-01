@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
-from django.conf import settings
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.test.utils import override_settings
@@ -82,42 +81,15 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_200_OK, response.data
 
         # Verify data can be de-serialized
-        serializer = ProjectSerializer(data=response.data["data"]["project"])
+        serializer = ProjectSerializer(data=response.data["data"])
         assert serializer.is_valid(), (serializer.errors, response.data)
 
         serializer = ProjectSerializer(self.project, context={"user": self.user})
 
-        assert serializer.data == response.data["data"]["project"], {
+        assert serializer.data == response.data["data"], {
             "reserialized": serializer.data,
-            "response_data": response.data["data"]["project"],
+            "response_data": response.data["data"],
         }
-
-        if isinstance(response.data["data"]["history"], (tuple, list)):
-            commit_keys = [
-                "author_email",
-                "author_name",
-                "authored_date",
-                "committed_date",
-                "committer_email",
-                "committer_name",
-                "created_at",
-                "extended_trailers",
-                "id",
-                "message",
-                "parent_ids",
-                "short_id",
-                "title",
-                "trailers",
-            ]
-            for commit_data in response.data["data"]["history"]:
-                assert all(key in commit_data for key in commit_keys), commit_data
-                assert (
-                    commit_data["committer_email"]
-                    == settings.DJANGO_GIT_COMMITTER_EMAIL
-                ), commit_data["committer_email"]
-                assert (
-                    commit_data["committer_name"] == settings.DJANGO_GIT_COMMITTER_NAME
-                ), commit_data["committer_name"]
 
     def test_acquire_and_release_user_project(self) -> None:
         """
@@ -437,21 +409,21 @@ class TestProjectListLatestCommit(BaseAPITestCase):
 
         # Create commits
         _ = ProjectCommit.objects.create(
-            oid="a" * 40,
+            id="a" * 40,
             project=project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=timezone.now() - datetime.timedelta(days=2),
             message="Old commit",
-            datetime=timezone.now() - datetime.timedelta(days=2),
         )
 
         _ = ProjectCommit.objects.create(
-            oid="b" * 40,
+            id="b" * 40,
             project=project,
             author_name="Author",
             author_email="author@test.com",
+            authored_date=timezone.now(),
             message="Latest commit",
-            datetime=timezone.now(),
         )
 
         # GET project list
@@ -472,7 +444,7 @@ class TestProjectListLatestCommit(BaseAPITestCase):
         # Verify it contains the latest commit data
         latest_commit_data = project_data["latest_commit"]
         assert latest_commit_data is not None
-        assert latest_commit_data["oid"] == "b" * 40
+        assert latest_commit_data["id"] == "b" * 40
         assert latest_commit_data["message"] == "Latest commit"
 
     def test_project_list_latest_commit_none_when_no_commits(self) -> None:
@@ -516,12 +488,12 @@ class TestProjectListLatestCommit(BaseAPITestCase):
         )
 
         _ = ProjectCommit.objects.create(
-            oid="a" * 40,
+            id="a" * 40,
             project=project,
             author_name="Test Author",
             author_email="test@example.com",
+            authored_date=timezone.now(),
             message="Test message",
-            datetime=timezone.now(),
             tree=[
                 {"mode": "100644", "type": "blob", "object": "b" * 40, "path": "f.txt"}
             ],
@@ -541,22 +513,20 @@ class TestProjectListLatestCommit(BaseAPITestCase):
 
         # Verify all expected fields
         expected_fields = [
-            "oid",
-            "parents",
+            "id",
             "author_name",
             "author_email",
+            "authored_date",
             "message",
-            "datetime",
+            "parent_ids",
             "tree",
-            "creation_date",
-            "modified_date",
         ]
 
         for field in expected_fields:
             assert field in latest_commit_data, f"Missing field: {field}"
 
         # Verify parents is a list
-        assert isinstance(latest_commit_data["parents"], list)
+        assert isinstance(latest_commit_data["parent_ids"], list)
 
     def test_project_list_no_n_plus_1_with_commits(self) -> None:
         """Test that fetching projects with latest_commit doesn't cause N+1 queries."""
@@ -567,12 +537,12 @@ class TestProjectListLatestCommit(BaseAPITestCase):
             project = ProjectFactory.create(created_by=self.user.email)
             for j in range(n_commits):
                 ProjectCommit.objects.create(
-                    oid=f"{i:02d}{j:02d}" + "0" * 36,
+                    id=f"{i:02d}{j:02d}" + "0" * 36,
                     project=project,
                     author_name=f"Author {i}",
                     author_email=f"author{i}@test.com",
+                    authored_date=timezone.now() - datetime.timedelta(days=2 - j),
                     message=f"Commit {j}",
-                    datetime=timezone.now() - datetime.timedelta(days=2 - j),
                 )
 
         # Test with query counting
