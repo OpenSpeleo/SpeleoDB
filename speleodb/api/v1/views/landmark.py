@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
-    """API View for managing personal Points of Interest.
+    """API View for managing personal Landmarks.
 
     Landmarks are personal/private - users can only see and modify their own Landmarks.
     - Shows only Landmarks created by the authenticated user
@@ -38,9 +38,9 @@ class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get detailed Landmark information (only if owned by user)."""
-        poi = self.get_object()
-        serializer = self.get_serializer(poi)
-        return SuccessResponse({"poi": serializer.data})
+        landmark = self.get_object()
+        serializer = self.get_serializer(landmark)
+        return SuccessResponse({"landmark": serializer.data})
 
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._update(request=request, partial=True, **kwargs)
@@ -52,12 +52,12 @@ class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
         self, request: Request, partial: bool, *args: Any, **kwargs: Any
     ) -> Response:
         """Update a Landmark (only if owned by user)."""
-        poi = self.get_object()
+        landmark = self.get_object()
 
-        serializer = self.get_serializer(poi, data=request.data, partial=partial)
+        serializer = self.get_serializer(landmark, data=request.data, partial=partial)
         if serializer.is_valid():
             serializer.save()
-            return SuccessResponse({"poi": serializer.data})
+            return SuccessResponse({"landmark": serializer.data})
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
@@ -65,14 +65,16 @@ class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete a Landmark (only if owned by user)."""
-        ldmk = self.get_object()
-        ldmk_id = ldmk.id
-        ldmk.delete()
-        return SuccessResponse({"message": f"Landmark {ldmk_id} deleted successfully"})
+        landmark = self.get_object()
+        landmark_id = landmark.id
+        landmark.delete()
+        return SuccessResponse(
+            {"message": f"Landmark {landmark_id} deleted successfully"}
+        )
 
 
 class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
-    """API View for managing personal Points of Interest.
+    """API View for managing personal Landmarks.
 
     Landmarks are personal/private - users can only see and modify their own Landmarks.
     - Shows only Landmarks created by the authenticated user
@@ -91,7 +93,7 @@ class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
-        return SuccessResponse({"pois": serializer.data})
+        return SuccessResponse({"landmarks": serializer.data})
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new Landmark for the authenticated user."""
@@ -101,7 +103,7 @@ class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
         if serializer.is_valid():
             serializer.save(user=user)
             return SuccessResponse(
-                {"poi": serializer.data},
+                {"landmark": serializer.data},
                 status=status.HTTP_201_CREATED,
             )
 
@@ -128,10 +130,10 @@ class LandmarkGeoJSONView(GenericAPIView[Landmark], SDBAPIViewMixin):
 
     def get(self, request: Request) -> Response:
         """Get user's Landmarks in a map-friendly format."""
-        pois = self.get_queryset()
+        landmarks = self.get_queryset()
 
         # Use the map serializer to convert to GeoJSON format
-        serializer = self.get_serializer(pois, many=True)
+        serializer = self.get_serializer(landmarks, many=True)
         features = serializer.data
 
         return SuccessResponse({"type": "FeatureCollection", "features": features})

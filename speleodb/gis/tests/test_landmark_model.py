@@ -22,7 +22,7 @@ class TestLandmarkModel:
         )
 
     @pytest.fixture
-    def poi(self, user: User) -> Landmark:
+    def landmark(self, user: User) -> Landmark:
         """Create a test Landmark."""
         return Landmark.objects.create(
             name="Test Cave Entrance",
@@ -34,7 +34,7 @@ class TestLandmarkModel:
 
     def test_create_landmark_with_valid_data(self, user: User) -> None:
         """Test creating a Landmark with all valid data."""
-        poi = Landmark.objects.create(
+        landmark = Landmark.objects.create(
             name="Mountain Peak Viewpoint",
             description="Stunning panoramic views",
             latitude=47.608013,
@@ -42,122 +42,119 @@ class TestLandmarkModel:
             user=user,
         )
 
-        assert poi.id is not None
-        assert poi.name == "Mountain Peak Viewpoint"
-        assert poi.description == "Stunning panoramic views"
-        assert poi.latitude == 47.608013  # noqa: PLR2004
-        assert poi.longitude == -122.335167  # noqa: PLR2004
-        assert poi.user == user
-        assert poi.creation_date is not None
-        assert poi.modified_date is not None
+        assert landmark.id is not None
+        assert landmark.name == "Mountain Peak Viewpoint"
+        assert landmark.description == "Stunning panoramic views"
+        assert landmark.latitude == 47.608013  # noqa: PLR2004
+        assert landmark.longitude == -122.335167  # noqa: PLR2004
+        assert landmark.user == user
+        assert landmark.creation_date is not None
+        assert landmark.modified_date is not None
 
     def test_create_landmark_minimal_data(self, user: User) -> None:
         """Test creating a Landmark with only required fields."""
-        poi = Landmark.objects.create(
+        landmark = Landmark.objects.create(
             name="Minimal Landmark",
             latitude=0.0,
             longitude=0.0,
             user=user,
         )
 
-        assert poi.id is not None
-        assert poi.name == "Minimal Landmark"
-        assert poi.description == ""  # Default value
-        assert poi.user == user
+        assert landmark.id is not None
+        assert landmark.name == "Minimal Landmark"
+        assert landmark.description == ""  # Default value
+        assert landmark.user == user
 
-    def test_landmark_string_representation(self, poi: Landmark) -> None:
+    def test_landmark_string_representation(self, landmark: Landmark) -> None:
         """Test the string representation of Landmark."""
-        assert str(poi) == "POI: Test Cave Entrance"
+        assert str(landmark) == "Landmark: Test Cave Entrance"
 
     def test_latitude_validation(self, user: User) -> None:
         """Test latitude must be between -90 and 90."""
-        # Test invalid latitude > 90
-        with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
-            poi = Landmark(
-                name="Invalid Latitude High",
-                latitude=91.0,
-                longitude=0.0,
-                user=user,
-            )
-            poi.full_clean()
 
-        assert "latitude" in exc_info.value.message_dict
+        # Test invalid latitude > 90
+        landmark = Landmark(
+            name="Invalid Latitude High",
+            latitude=91.0,
+            longitude=0.0,
+            user=user,
+        )
+        with pytest.raises(ValidationError, match="latitude"):
+            landmark.full_clean()
 
         # Test invalid latitude < -90
-        with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
-            poi = Landmark(
-                name="Invalid Latitude Low",
-                latitude=-91.0,
-                longitude=0.0,
-                user=user,
-            )
-            poi.full_clean()
-
-        assert "latitude" in exc_info.value.message_dict
+        landmark = Landmark(
+            name="Invalid Latitude Low",
+            latitude=-91.0,
+            longitude=0.0,
+            user=user,
+        )
+        with pytest.raises(ValidationError, match="latitude"):
+            landmark.full_clean()
 
         # Test boundary values are valid
-        poi_north = Landmark(
+        landmark_north = Landmark(
             name="North Pole",
             latitude=90.0,
             longitude=0.0,
             user=user,
         )
-        poi_north.full_clean()  # Should not raise
+        landmark_north.full_clean()  # Should not raise
 
-        poi_south = Landmark(
+        landmark_south = Landmark(
             name="South Pole",
             latitude=-90.0,
             longitude=0.0,
             user=user,
         )
-        poi_south.full_clean()  # Should not raise
+        landmark_south.full_clean()  # Should not raise
 
     def test_longitude_validation(self, user: User) -> None:
         """Test longitude must be between -180 and 180."""
         # Test invalid longitude > 180
         with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
-            poi = Landmark(
+            landmark = Landmark(
                 name="Invalid Longitude High",
                 latitude=0.0,
                 longitude=181.0,
                 user=user,
             )
-            poi.full_clean()
+            landmark.full_clean()
 
         assert "longitude" in exc_info.value.message_dict
 
         # Test invalid longitude < -180
         with pytest.raises(ValidationError) as exc_info:  # noqa: PT012
-            poi = Landmark(
+            landmark = Landmark(
                 name="Invalid Longitude Low",
                 latitude=0.0,
                 longitude=-181.0,
                 user=user,
             )
-            poi.full_clean()
+            landmark.full_clean()
 
         assert "longitude" in exc_info.value.message_dict
 
         # Test boundary values are valid
-        poi_east = Landmark(
+        landmark_east = Landmark(
             name="International Date Line East",
             latitude=0.0,
             longitude=180.0,
             user=user,
         )
-        poi_east.full_clean()  # Should not raise
+        landmark_east.full_clean()  # Should not raise
 
-        poi_west = Landmark(
+        landmark_west = Landmark(
             name="International Date Line West",
             latitude=0.0,
             longitude=-180.0,
             user=user,
         )
-        poi_west.full_clean()  # Should not raise
+        landmark_west.full_clean()  # Should not raise
 
     def test_coordinate_precision(self, user: User) -> None:
         """Test that coordinates maintain 7 decimal places."""
-        poi = Landmark.objects.create(
+        landmark = Landmark.objects.create(
             name="Precise Location",
             latitude=45.1234567,
             longitude=-122.7654321,
@@ -165,22 +162,22 @@ class TestLandmarkModel:
         )
 
         # Refresh from database
-        poi.refresh_from_db()
+        landmark.refresh_from_db()
 
         # Check precision is maintained
-        assert str(poi.latitude) == "45.1234567"
-        assert str(poi.longitude) == "-122.7654321"
+        assert str(landmark.latitude) == "45.1234567"
+        assert str(landmark.longitude) == "-122.7654321"
 
-    def test_user_cascade_on_user_delete(self, poi: Landmark, user: User) -> None:
+    def test_user_cascade_on_user_delete(self, landmark: Landmark, user: User) -> None:
         """Test that Landmark is deleted when user is deleted (CASCADE)."""
-        assert poi.user == user
-        poi_id = poi.id
+        assert landmark.user == user
+        landmark_id = landmark.id
 
         # Delete the user
         user.delete()
 
         # Landmark should be deleted due to CASCADE
-        assert not Landmark.objects.filter(id=poi_id).exists()
+        assert not Landmark.objects.filter(id=landmark_id).exists()
 
     def test_ordering(self, user: User) -> None:
         """Test that Landmarks are ordered by name."""
@@ -205,27 +202,26 @@ class TestLandmarkModel:
         )
 
         # Query all Landmarks
-        pois = list(Landmark.objects.all())
+        landmarks = list(Landmark.objects.all())
 
         # Should be ordered alphabetically by name
-        assert pois[0].name == "Arch A"
-        assert pois[1].name == "Bridge B"
-        assert pois[2].name == "Cave C"
+        assert landmarks[0].name == "Arch A"
+        assert landmarks[1].name == "Bridge B"
+        assert landmarks[2].name == "Cave C"
 
-    def test_timestamps_auto_update(self, poi: Landmark) -> None:
+    def test_timestamps_auto_update(self, landmark: Landmark) -> None:
         """Test that timestamps are automatically managed."""
-        original_created = poi.creation_date
-        original_modified = poi.modified_date
+        original_created = landmark.creation_date
+        original_modified = landmark.modified_date
 
         # Update the Landmark
-        poi.description = "Updated description"
-        poi.save()
-
+        landmark.description = "Updated description"
+        landmark.save()
         # creation_date should not change
-        assert poi.creation_date == original_created
+        assert landmark.creation_date == original_created
 
         # modified_date should be updated
-        assert poi.modified_date > original_modified
+        assert landmark.modified_date > original_modified
 
     def test_verbose_names(self) -> None:
         """Test model verbose names."""
@@ -234,7 +230,7 @@ class TestLandmarkModel:
 
     def test_blank_description_allowed(self, user: User) -> None:
         """Test that blank description is allowed."""
-        poi = Landmark.objects.create(
+        landmark = Landmark.objects.create(
             name="No Description Landmark",
             latitude=10.0,
             longitude=20.0,
@@ -242,5 +238,5 @@ class TestLandmarkModel:
             description="",
         )
 
-        assert poi.description == ""
-        poi.full_clean()  # Should not raise
+        assert landmark.description == ""
+        landmark.full_clean()  # Should not raise

@@ -80,14 +80,14 @@ export const API = {
         apiRequest(Urls['api:v1:surface-stations-geojson']()),
 
     // Landmarks
-    createLandmark: (poiData) =>
-        apiRequest(Urls['api:v1:landmarks'](), 'POST', poiData),
+    createLandmark: (landmarkData) =>
+        apiRequest(Urls['api:v1:landmarks'](), 'POST', landmarkData),
 
-    updateLandmark: (poiId, poiData) =>
-        apiRequest(Urls['api:v1:landmark-detail'](poiId), 'PATCH', poiData),
+    updateLandmark: (landmarkId, landmarkData) =>
+        apiRequest(Urls['api:v1:landmark-detail'](landmarkId), 'PATCH', landmarkData),
 
-    deleteLandmark: (poiId) =>
-        apiRequest(Urls['api:v1:landmark-detail'](poiId), 'DELETE'),
+    deleteLandmark: (landmarkId) =>
+        apiRequest(Urls['api:v1:landmark-detail'](landmarkId), 'DELETE'),
 
     getAllLandmarks: () =>
         apiRequest(Urls['api:v1:landmarks']()),

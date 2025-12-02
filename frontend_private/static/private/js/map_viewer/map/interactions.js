@@ -11,9 +11,9 @@ export const Interactions = {
 
     // Handlers should contain:
     // onStationClick(stationId)
-    // onPOIClick(poiId)
+    // onLandmarkClick(landmarkId)
     // onStationDragEnd(stationId, snapResult, originalCoords)
-    // onPOIDragEnd(poiId, newCoords, originalCoords)
+    // onLandmarkDragEnd(landmarkId, newCoords, originalCoords)
     // onContextMenu(event, type, data)
     // onMapClick(coords)
 
@@ -35,8 +35,8 @@ export const Interactions = {
                 // Check for subsurface stations, surface stations, and Landmarks
                 if (feature.layer.id.includes('stations-') ||
                     feature.layer.id.startsWith('surface-stations-') ||
-                    feature.layer.id === 'pois-layer' ||
-                    feature.layer.id === 'pois-labels') {
+                    feature.layer.id === 'landmarks-layer' ||
+                    feature.layer.id === 'landmarks-labels') {
                     isInteractive = true;
                     break;
                 }
@@ -85,13 +85,13 @@ export const Interactions = {
 
             // Check for Landmarks
             const poiFeature = features.find(f =>
-                f.layer && (f.layer.id === 'pois-layer' || f.layer.id === 'pois-labels')
+                f.layer && (f.layer.id === 'landmarks-layer' || f.layer.id === 'landmarks-labels')
             );
 
             if (poiFeature) {
-                const poiId = poiFeature.properties.id;
-                if (this.handlers.onPOIClick) {
-                    this.handlers.onPOIClick(poiId);
+                const landmarkId = poiFeature.properties.id;
+                if (this.handlers.onLandmarkClick) {
+                    this.handlers.onLandmarkClick(landmarkId);
                 }
                 return;
             }
@@ -109,7 +109,7 @@ export const Interactions = {
         let isDragging = false;
         let hasMoved = false;
         let draggedFeatureId = null;
-        let draggedType = null; // 'station' or 'poi'
+        let draggedType = null; // 'station' or 'landmark'
         let originalCoords = null;
         let mouseDownPoint = null;
         let currentSnapResult = null;
@@ -151,7 +151,7 @@ export const Interactions = {
 
             // Check Landmark
             const poiFeature = features.find(f =>
-                f.layer && f.layer.id === 'pois-layer'
+                f.layer && f.layer.id === 'landmarks-layer'
             );
 
             if (poiFeature) {
@@ -160,7 +160,7 @@ export const Interactions = {
                 hasMoved = false;
                 isDragging = false;
                 draggedFeatureId = poiFeature.properties.id;
-                draggedType = 'poi';
+                draggedType = 'landmark';
                 originalCoords = poiFeature.geometry.coordinates.slice();
                 mouseDownPoint = e.point;
                 draggedProjectId = null;
@@ -214,10 +214,10 @@ export const Interactions = {
                 const newColor = snapResult.snapped ? '#10b981' : '#f59e0b'; // Green if snapped, amber if not
                 Layers.updateStationColor(draggedProjectId, draggedFeatureId, newColor);
 
-            } else if (draggedType === 'poi') {
+            } else if (draggedType === 'landmark') {
                 // Landmarks don't snap to survey lines
-                if (self.handlers.onPOIDrag) {
-                    self.handlers.onPOIDrag(draggedFeatureId, coords);
+                if (self.handlers.onLandmarkDrag) {
+                    self.handlers.onLandmarkDrag(draggedFeatureId, coords);
                 }
             }
         });
@@ -253,10 +253,10 @@ export const Interactions = {
                             originalCoords
                         );
                     }
-                } else if (draggedType === 'poi') {
+                } else if (draggedType === 'landmark') {
                     const finalCoords = [e.lngLat.lng, e.lngLat.lat];
-                    if (self.handlers.onPOIDragEnd) {
-                        self.handlers.onPOIDragEnd(draggedFeatureId, finalCoords, originalCoords);
+                    if (self.handlers.onLandmarkDragEnd) {
+                        self.handlers.onLandmarkDragEnd(draggedFeatureId, finalCoords, originalCoords);
                     }
                 }
             } else {
@@ -323,12 +323,12 @@ export const Interactions = {
 
             // Check Landmark
             const poiFeature = features.find(f =>
-                f.layer && (f.layer.id === 'pois-layer' || f.layer.id === 'pois-labels')
+                f.layer && (f.layer.id === 'landmarks-layer' || f.layer.id === 'landmarks-labels')
             );
 
             if (poiFeature) {
                 if (this.handlers.onContextMenu) {
-                    this.handlers.onContextMenu(e, 'poi', {
+                    this.handlers.onContextMenu(e, 'landmark', {
                         id: poiFeature.properties.id,
                         feature: poiFeature
                     });

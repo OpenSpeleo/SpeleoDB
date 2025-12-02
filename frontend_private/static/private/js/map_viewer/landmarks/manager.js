@@ -1,10 +1,9 @@
 import { API } from '../api.js';
 import { State } from '../state.js';
-import { Utils } from '../utils.js';
 import { Layers } from '../map/layers.js';
 
 export const LandmarkManager = {
-    async loadAllPOIs() {
+    async loadAllLandmarks() {
         try {
             console.log('📍 Loading all Landmarks...');
             const response = await API.getAllLandmarksGeoJSON();
@@ -14,8 +13,8 @@ export const LandmarkManager = {
                 throw new Error('Invalid Landmark GeoJSON response');
             }
 
-            const poiData = response.data;
-            const features = poiData.features || [];
+            const landmarkData = response.data;
+            const features = landmarkData.features || [];
 
             State.allLandmarks.clear();
             features.forEach(feature => {
@@ -37,7 +36,7 @@ export const LandmarkManager = {
             });
 
             console.log(`📍 Loaded ${State.allLandmarks.size} Landmarks`);
-            return poiData;
+            return landmarkData;
         } catch (error) {
             console.error('Error loading Landmarks:', error);
             return { type: 'FeatureCollection', features: [] };
@@ -47,25 +46,25 @@ export const LandmarkManager = {
     async createLandmark(data) {
         try {
             const result = await API.createLandmark(data);
-            const poiData = result.data || result;
+            const landmarkData = result.data.landmark;
 
             // Refresh list and update map
-            const featureCollection = await this.loadAllPOIs();
+            const featureCollection = await this.loadAllLandmarks();
             Layers.addLandmarkLayer(featureCollection);
 
-            return poiData;
+            return landmarkData;
         } catch (error) {
             console.error('Error creating Landmark:', error);
             throw error;
         }
     },
 
-    async updateLandmark(poiId, data) {
+    async updateLandmark(landmarkId, data) {
         try {
-            const result = await API.updateLandmark(poiId, data);
+            const result = await API.updateLandmark(landmarkId, data);
 
             // Refresh list and update map
-            const featureCollection = await this.loadAllPOIs();
+            const featureCollection = await this.loadAllLandmarks();
             Layers.addLandmarkLayer(featureCollection);
 
             return result;
@@ -75,15 +74,15 @@ export const LandmarkManager = {
         }
     },
 
-    async deleteLandmark(poiId) {
+    async deleteLandmark(landmarkId) {
         try {
-            await API.deleteLandmark(poiId);
+            await API.deleteLandmark(landmarkId);
 
             // Update state
-            State.allLandmarks.delete(poiId);
+            State.allLandmarks.delete(landmarkId);
 
             // Refresh list and update map
-            const featureCollection = await this.loadAllPOIs();
+            const featureCollection = await this.loadAllLandmarks();
             Layers.addLandmarkLayer(featureCollection);
 
             return true;
@@ -93,18 +92,18 @@ export const LandmarkManager = {
         }
     },
 
-    async movePOI(poiId, newCoords) {
+    async moveLandmark(landmarkId, newCoords) {
         try {
-            await this.updateLandmark(poiId, {
+            await this.updateLandmark(landmarkId, {
                 latitude: newCoords[1],
                 longitude: newCoords[0]
             });
             return true;
         } catch (error) {
             // Revert on map if failed
-            const poi = State.allLandmarks.get(poiId);
-            if (poi) {
-                Layers.revertPOIPosition(poiId, [poi.longitude, poi.latitude]);
+            const landmark = State.allLandmarks.get(landmarkId);
+            if (landmark) {
+                Layers.revertLandmarkPosition(landmarkId, [landmark.longitude, landmark.latitude]);
             }
             throw error;
         }

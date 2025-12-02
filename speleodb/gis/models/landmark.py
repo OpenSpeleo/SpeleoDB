@@ -39,7 +39,7 @@ class Landmark(models.Model):
         decimal_places=7,
         null=False,
         blank=False,
-        help_text="POI latitude coordinate",
+        help_text="Landmark latitude coordinate",
         validators=[MinValueValidator(-90), MaxValueValidator(90)],
     )
 
@@ -48,14 +48,14 @@ class Landmark(models.Model):
         decimal_places=7,
         null=False,
         blank=False,
-        help_text="POI longitude coordinate",
+        help_text="Landmark longitude coordinate",
         validators=[MinValueValidator(-180), MaxValueValidator(180)],
     )
 
     # Metadata
     user = models.ForeignKey(
         "users.User",
-        related_name="pois",
+        related_name="landmarks",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -76,7 +76,7 @@ class Landmark(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"POI: {self.name}"
+        return f"Landmark: {self.name}"
 
     @property
     def coordinates(self) -> tuple[float, float] | None:

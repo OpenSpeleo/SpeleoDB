@@ -39,7 +39,7 @@ class TestLandmarkEndpoints:
         )
 
     @pytest.fixture
-    def poi(self, user: User) -> Landmark:
+    def landmark(self, user: User) -> Landmark:
         """Create a test Landmark."""
         return Landmark.objects.create(
             name="Test Landmark",
@@ -50,8 +50,8 @@ class TestLandmarkEndpoints:
         )
 
     # List endpoint tests
-    def test_list_pois_unauthenticated(
-        self, api_client: APIClient, poi: Landmark
+    def test_list_landmarks_unauthenticated(
+        self, api_client: APIClient, landmark: Landmark
     ) -> None:
         """Test listing Landmarks without authentication (should work - read-only)."""
         url = reverse("api:v1:landmarks")
@@ -59,8 +59,8 @@ class TestLandmarkEndpoints:
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_list_pois_authenticated(
-        self, api_client: APIClient, user: User, poi: Landmark
+    def test_list_landmarks_authenticated(
+        self, api_client: APIClient, user: User, landmark: Landmark
     ) -> None:
         """Test listing Landmarks with authentication."""
         api_client.force_authenticate(user=user)
@@ -70,9 +70,9 @@ class TestLandmarkEndpoints:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
-        assert len(data["data"]["pois"]) == 1
+        assert len(data["data"]["landmarks"]) == 1
 
-    def test_list_pois_empty(self, api_client: APIClient, user: User) -> None:
+    def test_list_landmarks_empty(self, api_client: APIClient, user: User) -> None:
         """Test listing Landmarks when none exist."""
         api_client.force_authenticate(user=user)
         url = reverse("api:v1:landmarks")
@@ -81,14 +81,14 @@ class TestLandmarkEndpoints:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
-        assert len(data["data"]["pois"]) == 0
+        assert len(data["data"]["landmarks"]) == 0
 
-    def test_list_pois_multiple(self, api_client: APIClient, user: User) -> None:
+    def test_list_landmarks_multiple(self, api_client: APIClient, user: User) -> None:
         """Test listing multiple Landmarks."""
         # Create multiple Landmarks
         for i in range(3):
             Landmark.objects.create(
-                name=f"POI {i}",
+                name=f"Landmark {i}",
                 latitude=45.0 + i,
                 longitude=-122.0 + i,
                 user=user,
@@ -100,29 +100,29 @@ class TestLandmarkEndpoints:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data["data"]["pois"]) == 3  # noqa: PLR2004
+        assert len(data["data"]["landmarks"]) == 3  # noqa: PLR2004
 
     # Retrieve endpoint tests
     def test_retrieve_landmark_unauthenticated(
-        self, api_client: APIClient, poi: Landmark
+        self, api_client: APIClient, landmark: Landmark
     ) -> None:
         """Test retrieving a single Landmark without authentication (should work)."""
-        url = reverse("api:v1:landmark-detail", kwargs={"id": poi.id})
+        url = reverse("api:v1:landmark-detail", kwargs={"id": landmark.id})
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_retrieve_landmark_authenticated(
-        self, api_client: APIClient, user: User, poi: Landmark
+        self, api_client: APIClient, user: User, landmark: Landmark
     ) -> None:
         """Test retrieving a single Landmark with authentication."""
         api_client.force_authenticate(user=user)
-        url = reverse("api:v1:landmark-detail", kwargs={"id": poi.id})
+        url = reverse("api:v1:landmark-detail", kwargs={"id": landmark.id})
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["data"]["poi"]["user"] == "testuser@example.com"
+        assert data["data"]["landmark"]["user"] == "testuser@example.com"
 
     def test_retrieve_landmark_not_found(
         self, api_client: APIClient, user: User
@@ -169,12 +169,12 @@ class TestLandmarkEndpoints:
         assert response.status_code == status.HTTP_201_CREATED
         response_data = response.json()
         assert response_data["success"] is True
-        assert response_data["data"]["poi"]["name"] == "New Landmark"
-        assert response_data["data"]["poi"]["user"] == "testuser@example.com"
+        assert response_data["data"]["landmark"]["name"] == "New Landmark"
+        assert response_data["data"]["landmark"]["user"] == "testuser@example.com"
 
         # Verify Landmark was created in database
-        poi = Landmark.objects.get(name="New Landmark")
-        assert poi.user == user
+        landmark = Landmark.objects.get(name="New Landmark")
+        assert landmark.user == user
 
     def test_create_landmark_minimal_data(
         self, api_client: APIClient, user: User
@@ -191,8 +191,8 @@ class TestLandmarkEndpoints:
         response = api_client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_201_CREATED
-        poi = Landmark.objects.get(name="Minimal Landmark")
-        assert poi.description == ""
+        landmark = Landmark.objects.get(name="Minimal Landmark")
+        assert landmark.description == ""
 
     def test_create_landmark_invalid_latitude(
         self, api_client: APIClient, user: User
@@ -232,10 +232,10 @@ class TestLandmarkEndpoints:
 
     # Update endpoint tests
     def test_update_landmark_unauthenticated(
-        self, api_client: APIClient, poi: Landmark
+        self, api_client: APIClient, landmark: Landmark
     ) -> None:
         """Test updating a Landmark without authentication (should fail)."""
-        url = reverse("api:v1:landmark-detail", kwargs={"id": poi.id})
+        url = reverse("api:v1:landmark-detail", kwargs={"id": landmark.id})
         data = {"name": "Updated Landmark"}
 
         response = api_client.patch(url, data, format="json")
@@ -243,11 +243,11 @@ class TestLandmarkEndpoints:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_update_landmark_as_creator(
-        self, api_client: APIClient, user: User, poi: Landmark
+        self, api_client: APIClient, user: User, landmark: Landmark
     ) -> None:
         """Test updating a Landmark as the creator."""
         api_client.force_authenticate(user=user)
-        url = reverse("api:v1:landmark-detail", kwargs={"id": poi.id})
+        url = reverse("api:v1:landmark-detail", kwargs={"id": landmark.id})
         data = {
             "name": "Updated Landmark",
             "description": "Updated description",
@@ -257,36 +257,36 @@ class TestLandmarkEndpoints:
 
         assert response.status_code == status.HTTP_200_OK
         response_data = response.json()
-        assert response_data["data"]["poi"]["name"] == "Updated Landmark"
-        assert response_data["data"]["poi"]["description"] == "Updated description"
+        assert response_data["data"]["landmark"]["name"] == "Updated Landmark"
+        assert response_data["data"]["landmark"]["description"] == "Updated description"
 
         # Verify in database
-        poi.refresh_from_db()
-        assert poi.name == "Updated Landmark"
+        landmark.refresh_from_db()
+        assert landmark.name == "Updated Landmark"
 
     def test_update_landmark_as_other_user(
-        self, api_client: APIClient, other_user: User, poi: Landmark
+        self, api_client: APIClient, other_user: User, landmark: Landmark
     ) -> None:
         """Test updating a Landmark as a different user."""
 
         test_new_description = "Updated by another user"
 
         api_client.force_authenticate(user=other_user)
-        url = reverse("api:v1:landmark-detail", kwargs={"id": poi.id})
+        url = reverse("api:v1:landmark-detail", kwargs={"id": landmark.id})
         data = {"description": test_new_description}
 
         response = api_client.patch(url, data, format="json")
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        poi.refresh_from_db()
-        assert poi.description != test_new_description
+        landmark.refresh_from_db()
+        assert landmark.description != test_new_description
 
     def test_update_landmark_coordinates(
-        self, api_client: APIClient, user: User, poi: Landmark
+        self, api_client: APIClient, user: User, landmark: Landmark
     ) -> None:
         """Test updating Landmark coordinates."""
         api_client.force_authenticate(user=user)
-        url = reverse("api:v1:landmark-detail", kwargs={"id": poi.id})
+        url = reverse("api:v1:landmark-detail", kwargs={"id": landmark.id})
         data = {
             "latitude": "48.0",
             "longitude": "-123.0",
@@ -295,16 +295,16 @@ class TestLandmarkEndpoints:
         response = api_client.patch(url, data, format="json")
 
         assert response.status_code == status.HTTP_200_OK
-        poi.refresh_from_db()
-        assert poi.latitude == 48.0  # noqa: PLR2004
-        assert poi.longitude == -123.0  # noqa: PLR2004
+        landmark.refresh_from_db()
+        assert landmark.latitude == 48.0  # noqa: PLR2004
+        assert landmark.longitude == -123.0  # noqa: PLR2004
 
     def test_update_landmark_invalid_data(
-        self, api_client: APIClient, user: User, poi: Landmark
+        self, api_client: APIClient, user: User, landmark: Landmark
     ) -> None:
         """Test updating Landmark with invalid data."""
         api_client.force_authenticate(user=user)
-        url = reverse("api:v1:landmark-detail", kwargs={"id": poi.id})
+        url = reverse("api:v1:landmark-detail", kwargs={"id": landmark.id})
         data = {"latitude": "invalid"}
 
         response = api_client.patch(url, data, format="json")
@@ -313,33 +313,33 @@ class TestLandmarkEndpoints:
 
     # Delete endpoint tests
     def test_delete_landmark_unauthenticated(
-        self, api_client: APIClient, poi: Landmark
+        self, api_client: APIClient, landmark: Landmark
     ) -> None:
         """Test deleting a Landmark without authentication (should fail)."""
-        url = reverse("api:v1:landmark-detail", kwargs={"id": poi.id})
+        url = reverse("api:v1:landmark-detail", kwargs={"id": landmark.id})
         response = api_client.delete(url)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_delete_landmark_as_creator(
-        self, api_client: APIClient, user: User, poi: Landmark
+        self, api_client: APIClient, user: User, landmark: Landmark
     ) -> None:
         """Test deleting a Landmark as the creator."""
         api_client.force_authenticate(user=user)
-        url = reverse("api:v1:landmark-detail", kwargs={"id": poi.id})
+        url = reverse("api:v1:landmark-detail", kwargs={"id": landmark.id})
         response = api_client.delete(url)
 
         assert response.status_code == status.HTTP_200_OK
 
         # Verify Landmark was deleted
-        assert not Landmark.objects.filter(id=poi.id).exists()
+        assert not Landmark.objects.filter(id=landmark.id).exists()
 
     def test_delete_landmark_as_other_user(
-        self, api_client: APIClient, other_user: User, poi: Landmark
+        self, api_client: APIClient, other_user: User, landmark: Landmark
     ) -> None:
         """Test deleting a Landmark as a different user."""
         api_client.force_authenticate(user=other_user)
-        url = reverse("api:v1:landmark-detail", kwargs={"id": poi.id})
+        url = reverse("api:v1:landmark-detail", kwargs={"id": landmark.id})
         response = api_client.delete(url)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -359,14 +359,14 @@ class TestLandmarkEndpoints:
         """Test geojson endpoint without authentication (should work)."""
         # Create Landmarks with different properties
         Landmark.objects.create(
-            name="POI 1",
+            name="Landmark 1",
             description="Description 1",
             latitude=45.0,
             longitude=-122.0,
             user=user,
         )
         Landmark.objects.create(
-            name="POI 2",
+            name="Landmark 2",
             latitude=46.0,
             longitude=-123.0,
             user=user,  # Using the same user
@@ -389,7 +389,7 @@ class TestLandmarkEndpoints:
         assert len(data["data"]["features"]) == 0
 
     def test_geojson_endpoint_coordinate_format(
-        self, api_client: APIClient, poi: Landmark, user: User
+        self, api_client: APIClient, landmark: Landmark, user: User
     ) -> None:
         """Test that geojson endpoint returns coordinates in correct GeoJSON format."""
         api_client.force_authenticate(user=user)
@@ -405,7 +405,9 @@ class TestLandmarkEndpoints:
         assert coordinates[1] == 45.123456  # latitude  # noqa: PLR2004
 
     # Edge cases and error handling
-    def test_invalid_http_methods(self, api_client: APIClient, poi: Landmark) -> None:
+    def test_invalid_http_methods(
+        self, api_client: APIClient, landmark: Landmark
+    ) -> None:
         """Test invalid HTTP methods return appropriate errors."""
         # Test PUT on list endpoint (should not be allowed)
         url = reverse("api:v1:landmarks")
@@ -430,6 +432,6 @@ class TestLandmarkEndpoints:
         assert response.status_code == status.HTTP_201_CREATED
 
         # Check response maintains 7 decimal places
-        poi_data = response.json()["data"]["poi"]
-        assert poi_data["latitude"] == 45.1234567  # noqa: PLR2004
-        assert poi_data["longitude"] == -122.7654321  # noqa: PLR2004
+        landmark_data = response.json()["data"]["landmark"]
+        assert landmark_data["latitude"] == 45.1234567  # noqa: PLR2004
+        assert landmark_data["longitude"] == -122.7654321  # noqa: PLR2004

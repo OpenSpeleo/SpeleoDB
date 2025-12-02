@@ -60,9 +60,9 @@ export const StationManager = {
 
             // Filter stations for this project
             const allFc = allStationsGeoJson || { type: 'FeatureCollection', features: [] };
-            
+
             const features = allFc.features.filter(f => String(f?.properties?.project) === String(projectId));
-            
+
             console.log(`📍 Loaded ${features.length} stations for project ${projectId}`);
 
             // Update State
@@ -76,7 +76,7 @@ export const StationManager = {
                     });
                 }
             });
-            
+
             return features;
         } catch (error) {
             console.error(`Error loading stations for project ${projectId}:`, error);
@@ -87,18 +87,18 @@ export const StationManager = {
     async createStation(projectId, stationData) {
         try {
             const result = await API.createStation(projectId, stationData);
-            const station = result.data || result;
-            
+            const station = result.data;
+
             // Add to state
             State.allStations.set(station.id, {
                 ...station,
                 project: projectId
             });
-            
+
             // Invalidate cache and trigger layer refresh
             this.invalidateCache();
             await Layers.refreshStationsAfterChange(projectId);
-            
+
             return station;
         } catch (error) {
             console.error('Error creating station:', error);
@@ -109,14 +109,14 @@ export const StationManager = {
     async updateStation(stationId, updateData) {
         try {
             const result = await API.updateStation(stationId, updateData);
-            const updatedStation = result.data || result;
-            
+            const updatedStation = result.data;
+
             // Update State
             const existing = State.allStations.get(stationId);
             if (existing) {
                 State.allStations.set(stationId, { ...existing, ...updatedStation });
             }
-            
+
             // Update Map Layer
             if (existing) {
                 // If coordinates changed
@@ -125,11 +125,11 @@ export const StationManager = {
                     const sourceId = `stations-${existing.project}`;
                     Layers.updateStationPosition(sourceId, stationId, newCoords);
                 }
-                
+
                 // If color/tag changed (not handled by updateStationPosition but helpful)
                 // We usually just refresh the layer or update properties
             }
-            
+
             return updatedStation;
         } catch (error) {
             console.error('Error updating station:', error);
@@ -141,20 +141,20 @@ export const StationManager = {
         try {
             const station = State.allStations.get(stationId);
             const projectId = station ? station.project : null;
-            
+
             await API.deleteStation(stationId);
-            
+
             // Remove from State
             State.allStations.delete(stationId);
-            
+
             // Invalidate cache so refresh fetches fresh data without deleted station
             this.invalidateCache();
-            
+
             // Refresh Layer
             if (projectId) {
                 await Layers.refreshStationsAfterChange(projectId);
             }
-            
+
             return true;
         } catch (error) {
             console.error('Error deleting station:', error);

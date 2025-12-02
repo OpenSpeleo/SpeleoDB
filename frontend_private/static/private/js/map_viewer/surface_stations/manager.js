@@ -16,8 +16,8 @@ export const SurfaceStationManager = {
 
     // Ensure all surface stations are loaded (single API call)
     async ensureAllSurfaceStationsLoaded() {
-        if (allSurfaceStationsGeoJson && 
-            allSurfaceStationsGeoJson.type === 'FeatureCollection' && 
+        if (allSurfaceStationsGeoJson &&
+            allSurfaceStationsGeoJson.type === 'FeatureCollection' &&
             Array.isArray(allSurfaceStationsGeoJson.features)) {
             return;
         }
@@ -30,7 +30,7 @@ export const SurfaceStationManager = {
         console.log('🔄 Fetching all surface stations (GeoJSON) via single API call...');
         allSurfaceStationsFetchPromise = API.getAllSurfaceStationsGeoJSON()
             .then(response => {
-                if (!response || response.success !== true || !response.data || 
+                if (!response || response.success !== true || !response.data ||
                     response.data.type !== 'FeatureCollection' || !Array.isArray(response.data.features)) {
                     throw new Error('Invalid all-surface-stations GeoJSON payload');
                 }
@@ -55,9 +55,9 @@ export const SurfaceStationManager = {
 
             // Filter stations for this network
             const allFc = allSurfaceStationsGeoJson || { type: 'FeatureCollection', features: [] };
-            
+
             const features = allFc.features.filter(f => String(f?.properties?.network) === String(networkId));
-            
+
             console.log(`📍 Loaded ${features.length} surface stations for network ${networkId}`);
 
             // Update State
@@ -72,7 +72,7 @@ export const SurfaceStationManager = {
                     });
                 }
             });
-            
+
             return features;
         } catch (error) {
             console.error(`Error loading surface stations for network ${networkId}:`, error);
@@ -83,19 +83,19 @@ export const SurfaceStationManager = {
     async createStation(networkId, stationData) {
         try {
             const result = await API.createSurfaceStation(networkId, stationData);
-            const station = result.data || result;
-            
+            const station = result.data;
+
             // Add to state
             State.allSurfaceStations.set(station.id, {
                 ...station,
                 network: networkId,
                 station_type: 'surface'
             });
-            
+
             // Invalidate cache and trigger layer refresh
             this.invalidateCache();
             await Layers.refreshSurfaceStationsAfterChange(networkId);
-            
+
             return station;
         } catch (error) {
             console.error('Error creating surface station:', error);
@@ -106,21 +106,21 @@ export const SurfaceStationManager = {
     async updateStation(stationId, updateData) {
         try {
             const result = await API.updateStation(stationId, updateData);
-            const updatedStation = result.data || result;
-            
+            const updatedStation = result.data;
+
             // Update State
             const existing = State.allSurfaceStations.get(stationId);
             if (existing) {
                 State.allSurfaceStations.set(stationId, { ...existing, ...updatedStation });
             }
-            
+
             // Update Map Layer if coordinates changed
             if (existing && updateData.latitude !== undefined && updateData.longitude !== undefined) {
                 const newCoords = [updateData.longitude, updateData.latitude];
                 const sourceId = `surface-stations-${existing.network}`;
                 Layers.updateSurfaceStationPosition(sourceId, stationId, newCoords);
             }
-            
+
             return updatedStation;
         } catch (error) {
             console.error('Error updating surface station:', error);
@@ -132,20 +132,20 @@ export const SurfaceStationManager = {
         try {
             const station = State.allSurfaceStations.get(stationId);
             const networkId = station ? station.network : null;
-            
+
             await API.deleteStation(stationId);
-            
+
             // Remove from State
             State.allSurfaceStations.delete(stationId);
-            
+
             // Invalidate cache so refresh fetches fresh data without deleted station
             this.invalidateCache();
-            
+
             // Refresh Layer
             if (networkId) {
                 await Layers.refreshSurfaceStationsAfterChange(networkId);
             }
-            
+
             return true;
         } catch (error) {
             console.error('Error deleting surface station:', error);

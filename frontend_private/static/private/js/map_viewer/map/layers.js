@@ -4,6 +4,25 @@ import { Colors } from './colors.js';
 import { DepthUtils } from './depth.js';
 import { Geometry } from './geometry.js';
 
+const ZOOM_LEVELS = {
+    // Survey GeoJSONs
+    PROJECT_LINE: 8,
+    PROJECT_LINE_LABEL: 13,
+    PROJECT_ENTRY_SYMBOL: 10,
+
+    // Landmarks
+    LANDMARK_SYMBOL: 10,
+    LANDMARK_LABEL: 14,
+
+    // Surface Stations
+    SURFACE_STATION_SYMBOL: 10,
+    SURFACE_STATION_LABEL: 14,
+
+    // Subsurface Stations
+    SUBSURFACE_STATION_SYMBOL: 10,
+    SUBSURFACE_STATION_LABEL: 14,
+};
+
 // Helper to ensure altitude zero (defined locally or imported if moved to Utils)
 function processGeoJSON(geojsonData) {
     if (!geojsonData || !geojsonData.features) return geojsonData;
@@ -311,7 +330,8 @@ export const Layers = {
                 map.addSource(sourceId, {
                     type: 'geojson',
                     data: data,
-                    generateId: true
+                    generateId: true,
+                    tolerance: 0  // Prevent line simplification at low zoom levels
                 });
 
                 // Use Color Helper
@@ -323,53 +343,56 @@ export const Layers = {
                 }
                 const projectLayers = State.allProjectLayers.get(String(projectId));
 
-                // 1. Polygons (Fill & Stroke)
-                const fillLayerId = `project-fill-${projectId}`;
-                const strokeLayerId = `project-stroke-${projectId}`;
+                // // 1. Polygons (Fill & Stroke) - visible from zoom 0
+                // const fillLayerId = `project-fill-${projectId}`;
+                // const strokeLayerId = `project-stroke-${projectId}`;
 
-                map.addLayer({
-                    id: fillLayerId,
-                    type: 'fill',
-                    source: sourceId,
-                    filter: ['in', '$type', 'Polygon'],
-                    paint: {
-                        'fill-color': color,
-                        'fill-opacity': 0.6
-                    }
-                });
-                projectLayers.push(fillLayerId);
+                // map.addLayer({
+                //     id: fillLayerId,
+                //     type: 'fill',
+                //     source: sourceId,
+                //     filter: ['in', '$type', 'Polygon'],
+                //     minzoom: 0,
+                //     paint: {
+                //         'fill-color': color,
+                //         'fill-opacity': 0.6
+                //     }
+                // });
+                // projectLayers.push(fillLayerId);
 
+                // map.addLayer({
+                //     id: strokeLayerId,
+                //     type: 'line',
+                //     source: sourceId,
+                //     filter: ['in', '$type', 'Polygon'],
+                //     minzoom: 0,
+                //     paint: {
+                //         'line-color': '#000',
+                //         'line-width': 2
+                //     }
+                // });
+                // projectLayers.push(strokeLayerId);
+
+                // 2. Lines (survey lines visible from zoom 0)
+                const lineLayerId = `project-layer-${projectId}`;
                 map.addLayer({
-                    id: strokeLayerId,
+                    id: lineLayerId,
                     type: 'line',
                     source: sourceId,
-                    filter: ['in', '$type', 'Polygon'],
-                    paint: {
-                        'line-color': '#000',
-                        'line-width': 2
-                    }
-                });
-                projectLayers.push(strokeLayerId);
-
-                // 2. Lines
-                const layerId = `project-layer-${projectId}`;
-                map.addLayer({
-                    id: layerId,
-                    type: 'line',
-                    source: sourceId,
-                    filter: ['in', '$type', 'LineString'],
+                    filter: ['==', '$type', 'LineString'],
+                    minzoom: ZOOM_LEVELS.PROJECT_LINE,
                     layout: {
                         'line-join': 'round',
                         'line-cap': 'round'
                     },
                     paint: {
                         'line-color': this.colorMode === 'project' ? color : Colors.getDepthPaint(0, 500),
-                        // Increased line width at low zoom for better visibility from high altitude
-                        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 1, 4, 1.5, 8, 2, 12, 3, 16, 5, 20, 8],
+                        // Thicker lines at low zoom for visibility from high altitude
+                        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 2, 6, 2.5, 10, 3, 14, 4, 18, 6],
                         'line-opacity': 1
                     }
                 });
-                projectLayers.push(layerId);
+                projectLayers.push(lineLayerId);
 
                 // 3. Line Labels
                 const labelLayerId = `project-labels-${projectId}`;
@@ -377,8 +400,8 @@ export const Layers = {
                     id: labelLayerId,
                     type: 'symbol',
                     source: sourceId,
-                    filter: ['all', ['in', '$type', 'LineString'], ['has', 'section_name']],
-                    minzoom: 13,
+                    filter: ['all', ['==', '$type', 'LineString'], ['has', 'section_name']],
+                    minzoom: ZOOM_LEVELS.PROJECT_LINE_LABEL,
                     layout: {
                         'text-field': ['get', 'section_name'],
                         'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
@@ -401,8 +424,8 @@ export const Layers = {
                     id: pointLayerId,
                     type: 'symbol',
                     source: sourceId,
-                    filter: ['in', '$type', 'Point'],
-                    minzoom: 11,
+                    filter: ['==', '$type', 'Point'],
+                    minzoom: ZOOM_LEVELS.PROJECT_ENTRY_SYMBOL,
                     layout: {
                         'text-field': '★',
                         'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
@@ -454,7 +477,7 @@ export const Layers = {
         }
     },
 
-    addStationLayer: function (projectId, data) {
+    addSubSurfaceStationLayer: function (projectId, data) {
         const map = State.map;
         if (!map) return;
 
@@ -494,13 +517,13 @@ export const Layers = {
             data: data
         });
 
-        // Add Circle Layer (matching old implementation)
+        // Add Circle Layer
         // Use data-driven color from feature properties
         map.addLayer({
             id: circleLayerId,
             type: 'circle',
             source: sourceId,
-            minzoom: 14,
+            minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
             paint: {
                 'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 5, 18, 8],
                 'circle-color': ['coalesce', ['get', 'color'], '#fb923c'],
@@ -515,7 +538,7 @@ export const Layers = {
             id: labelLayerId,
             type: 'symbol',
             source: sourceId,
-            minzoom: 15,
+            minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_LABEL,
             layout: {
                 'text-field': ['get', 'name'],
                 'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
@@ -552,16 +575,16 @@ export const Layers = {
         const map = State.map;
         if (!map) return;
 
-        const sourceId = 'pois-source';
+        const sourceId = 'landmarks-source';
 
         console.log(`📍 Adding ${data.features?.length || 0} Landmarks to map`);
 
         // Remove existing layer and source if they exist (to refresh)
-        if (map.getLayer('pois-layer')) {
-            map.removeLayer('pois-layer');
+        if (map.getLayer('landmarks-layer')) {
+            map.removeLayer('landmarks-layer');
         }
-        if (map.getLayer('pois-labels')) {
-            map.removeLayer('pois-labels');
+        if (map.getLayer('landmarks-labels')) {
+            map.removeLayer('landmarks-labels');
         }
         if (map.getSource(sourceId)) {
             map.removeSource(sourceId);
@@ -577,16 +600,16 @@ export const Layers = {
             data: data
         });
 
-        // Landmark symbol layer (matching old implementation with triangle marker)
+        // Landmark symbol layer (triangle marker visible from far zoom)
         map.addLayer({
-            id: 'pois-layer',
+            id: 'landmarks-layer',
             type: 'symbol',
             source: sourceId,
-            minzoom: 14,
+            minzoom: ZOOM_LEVELS.LANDMARK_SYMBOL,
             layout: {
-                'text-field': '▼',  // Triangle pointing down (matching old implementation)
+                'text-field': '▼',  // Triangle pointing down
                 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-                'text-size': ['interpolate', ['linear'], ['zoom'], 14, 20, 18, 28],
+                'text-size': ['interpolate', ['linear'], ['zoom'], 6, 10, 10, 14, 14, 20, 18, 28],
                 'text-allow-overlap': true,
                 'text-ignore-placement': true
             },
@@ -598,17 +621,17 @@ export const Layers = {
             }
         });
 
-        // Landmark labels (hidden until higher zoom to avoid clutter)
+        // Landmark labels (visible from moderate zoom)
         map.addLayer({
-            id: 'pois-labels',
+            id: 'landmarks-labels',
             type: 'symbol',
             source: sourceId,
-            minzoom: 16,
+            minzoom: ZOOM_LEVELS.LANDMARK_LABEL,
             layout: {
                 'text-field': ['get', 'name'],
                 'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
                 'text-offset': [0, 1.5],
-                'text-size': 12,
+                'text-size': ['interpolate', ['linear'], ['zoom'], 10, 10, 14, 12, 18, 14],
                 'text-anchor': 'top',
                 'text-allow-overlap': false
             },
@@ -667,7 +690,7 @@ export const Layers = {
             id: symbolLayerId,
             type: 'symbol',
             source: sourceId,
-            minzoom: 14,
+            minzoom: ZOOM_LEVELS.SURFACE_STATION_SYMBOL,
             layout: {
                 'text-field': '◆',  // Diamond shape
                 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
@@ -688,7 +711,7 @@ export const Layers = {
             id: labelLayerId,
             type: 'symbol',
             source: sourceId,
-            minzoom: 15,
+            minzoom: ZOOM_LEVELS.SURFACE_STATION_LABEL,
             layout: {
                 'text-field': ['get', 'name'],
                 'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
@@ -760,6 +783,23 @@ export const Layers = {
         }
     },
 
+    updateSurfaceStationProperties: function (networkId, stationId, properties) {
+        const map = State.map;
+        if (!map) return;
+
+        const sourceId = `surface-stations-source-${networkId}`;
+        const source = map.getSource(sourceId);
+        if (source && source._data) {
+            const data = source._data;
+            const feature = data.features.find(f => f.properties.id === stationId);
+            if (feature) {
+                // Update all provided properties
+                Object.assign(feature.properties, properties);
+                source.setData(data);
+            }
+        }
+    },
+
     refreshSurfaceStationsAfterChange: async function (networkId) {
         window.dispatchEvent(new CustomEvent('speleo:refresh-surface-stations', { detail: { networkId } }));
     },
@@ -821,23 +861,23 @@ export const Layers = {
         }
     },
 
-    revertPOIPosition: function (poiId, originalCoords) {
+    revertLandmarkPosition: function (landmarkId, originalCoords) {
         const map = State.map;
         if (!map) return;
 
-        const source = map.getSource('pois-source');
+        const source = map.getSource('landmarks-source');
         if (source && source._data) {
             const data = source._data;
-            const feature = data.features.find(f => f.properties.id === poiId);
+            const feature = data.features.find(f => f.properties.id === landmarkId);
             if (feature) {
                 feature.geometry.coordinates = originalCoords;
                 source.setData(data);
 
                 // Reset internal state if needed
-                const poi = State.allLandmarks.get(poiId);
-                if (poi) {
-                    poi.latitude = originalCoords[1];
-                    poi.longitude = originalCoords[0];
+                const landmark = State.allLandmarks.get(landmarkId);
+                if (landmark) {
+                    landmark.latitude = originalCoords[1];
+                    landmark.longitude = originalCoords[0];
                 }
             }
         }
@@ -857,7 +897,7 @@ export const Layers = {
         const map = State.map;
         if (!map) return;
 
-        console.log('🔄 Reordering layers to ensure stations/POIs are on top...');
+        console.log('🔄 Reordering layers to ensure stations/Landmarks are on top...');
 
         // Get all layer IDs
         const style = map.getStyle();
@@ -870,7 +910,7 @@ export const Layers = {
         const stationLabelLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-labels') && !id.includes('surface-'));
         const surfaceStationSymbolLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && !id.includes('-labels'));
         const surfaceStationLabelLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && id.includes('-labels'));
-        const poiLayers = allLayerIds.filter(id => id.startsWith('pois-'));
+        const landmarkLayers = allLayerIds.filter(id => id.startsWith('landmarks-'));
 
         // Move layers to top in order (later moves go on top)
 
@@ -911,7 +951,7 @@ export const Layers = {
         });
 
         // Finally move Landmark layers (on top of everything)
-        poiLayers.forEach(layerId => {
+        landmarkLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
             } catch (e) {

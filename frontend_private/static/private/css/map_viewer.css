@@ -1454,7 +1454,7 @@ select.form-input:focus {
     /* Hide non-color-mode header buttons globally */
     #legend-toggle-button,
     #station-manager-button,
-    #poi-manager-button,
+    #landmark-manager-button,
     #context-menu-help-button,
     #refresh-button {
         display: none !important;

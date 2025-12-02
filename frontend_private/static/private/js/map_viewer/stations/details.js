@@ -35,7 +35,7 @@ export const StationDetails = {
         currentStationId = stationId;
         this.currentStationId = stationId;
         currentStationType = stationType;
-        
+
         if (stationType === 'surface') {
             currentNetworkId = parentId || (State.allSurfaceStations.get(stationId)?.network) || Config.networks[0]?.id;
             currentProjectId = null;
@@ -325,7 +325,7 @@ export const StationDetails = {
             // Update the appropriate state map with the complete data
             const stateMap = stationType === 'surface' ? State.allSurfaceStations : State.allStations;
             const existingStation = stateMap.get(stationId);
-            
+
             if (existingStation) {
                 const mergedStation = {
                     ...existingStation,
@@ -334,13 +334,13 @@ export const StationDetails = {
                     longitude: Number(station.longitude || existingStation.longitude),
                     station_type: stationType
                 };
-                
+
                 if (stationType === 'surface') {
                     mergedStation.network = existingStation.network || parentId;
                 } else {
                     mergedStation.project = existingStation.project || parentId;
                 }
-                
+
                 stateMap.set(stationId, mergedStation);
                 station = mergedStation;
             } else {
@@ -350,13 +350,13 @@ export const StationDetails = {
                     longitude: Number(station.longitude),
                     station_type: stationType
                 };
-                
+
                 if (stationType === 'surface') {
                     station.network = parentId;
                 } else {
                     station.project = parentId;
                 }
-                
+
                 stateMap.set(stationId, station);
             }
 
@@ -388,7 +388,7 @@ export const StationDetails = {
 
         // Determine access based on station type
         let hasWriteAccess, hasAdminAccess, parentName, parentType;
-        
+
         if (isSurfaceStation) {
             hasWriteAccess = Config.hasNetworkWriteAccess(parentId);
             hasAdminAccess = Config.hasNetworkAdminAccess(parentId);
@@ -404,12 +404,12 @@ export const StationDetails = {
         }
 
         // GPS location info - different message for surface vs subsurface
-        const dragInfo = isSurfaceStation 
+        const dragInfo = isSurfaceStation
             ? '<div class="text-xs text-slate-400 mt-2">📍 Surface stations have fixed GPS coordinates</div>'
-            : (hasWriteAccess 
+            : (hasWriteAccess
                 ? '<div class="text-xs text-slate-400 mt-2">🖱️ Drag this station to move it or use magnetic snap to nearby survey lines</div>'
                 : '<div class="text-xs text-amber-300 mt-2">🔒 Read-only access - moving stations is disabled</div>');
-        
+
         const snapInfo = `
             <div class="mt-3 bg-slate-700/50 p-3 rounded-lg border border-slate-500/30">
                 <strong class="text-slate-300">📍 Station Location:</strong>
@@ -554,12 +554,12 @@ export const StationDetails = {
                 // Refresh the station data
                 station.name = name;
                 station.description = description;
-                
+
                 // Update the appropriate state map
                 if (isSurfaceStation) {
                     State.allSurfaceStations.set(station.id, station);
-                    // For surface stations, we'd use a different layer update function
-                    // but the name update uses the same pattern
+                    // Update the station label on the map
+                    Layers.updateSurfaceStationProperties(station.network, station.id, { name });
                 } else {
                     State.allStations.set(station.id, station);
                     // Update the station label on the map
@@ -578,7 +578,7 @@ export const StationDetails = {
         const isStationModalOpen = stationModal && !stationModal.classList.contains('hidden');
         const isSurfaceStation = stationType === 'surface';
         const parentId = isSurfaceStation ? station.network : station.project;
-        
+
         if (isStationModalOpen) {
             // Station modal is open - show confirmation in modal content
             const modalContent = document.getElementById('station-modal-content');
@@ -625,15 +625,15 @@ export const StationDetails = {
             this.showStandaloneDeleteModal(station, stationType);
         }
     },
-    
+
     showStandaloneDeleteModal(station, stationType = 'subsurface') {
         // Remove any existing standalone delete modal
         const existingModal = document.getElementById('station-delete-confirm-modal');
         if (existingModal) existingModal.remove();
-        
+
         const isSurfaceStation = stationType === 'surface';
         const stationTypeLabel = isSurfaceStation ? 'Surface Station' : 'Station';
-        
+
         const modalHtml = `
             <div id="station-delete-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
@@ -656,16 +656,16 @@ export const StationDetails = {
                 </div>
             </div>
         `;
-        
+
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
+
         const modal = document.getElementById('station-delete-confirm-modal');
-        
+
         // Cancel button
         document.getElementById('standalone-cancel-delete-btn').onclick = () => {
             modal.remove();
         };
-        
+
         // Confirm delete button
         document.getElementById('standalone-confirm-delete-btn').onclick = async () => {
             try {
@@ -680,14 +680,14 @@ export const StationDetails = {
                 Utils.showNotification('error', `Failed to delete ${stationTypeLabel.toLowerCase()}`);
             }
         };
-        
+
         // Close on backdrop click
         modal.onclick = (e) => {
             if (e.target === modal) {
                 modal.remove();
             }
         };
-        
+
         // Close on Escape key
         const escHandler = (e) => {
             if (e.key === 'Escape' && document.getElementById('station-delete-confirm-modal')) {
@@ -707,7 +707,7 @@ window.returnToStationManager = function () {
         stationModal.classList.add('hidden');
         stationModal.style.display = 'none';
     }
-    if (window.openStationManager) {
-        window.openStationManager();
+    if (window.openSurveyStationManager) {
+        window.openSurveyStationManager();
     }
 };

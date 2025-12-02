@@ -32,11 +32,11 @@ export const MapCore = {
         map.on('load', () => {
             // Hide street-level labels while keeping city/place names (matching old implementation)
             const labelsToHide = [
-                'road-label', 'road-number-shield', 'road-exit-shield', 'poi-label', 
-                'airport-label', 'rail-label', 'water-point-label', 'natural-point-label', 
-                'transit-label', 'road-crossing', 'road-label-simple', 'road-label-large', 
-                'road-label-medium', 'road-label-small', 'bridge-case-label', 'bridge-label', 
-                'tunnel-label', 'ferry-label', 'pedestrian-label', 'aerialway-label', 
+                'road-label', 'road-number-shield', 'road-exit-shield', 'landmark-label',
+                'airport-label', 'rail-label', 'water-point-label', 'natural-point-label',
+                'transit-label', 'road-crossing', 'road-label-simple', 'road-label-large',
+                'road-label-medium', 'road-label-small', 'bridge-case-label', 'bridge-label',
+                'tunnel-label', 'ferry-label', 'pedestrian-label', 'aerialway-label',
                 'building-label', 'housenum-label'
             ];
 
@@ -54,29 +54,29 @@ export const MapCore = {
         return map;
     },
 
-    setupMapHeight: function(map) {
+    setupMapHeight: function (map) {
         // Height is handled by CSS (flex-grow/h-full)
         // Just ensure map resizes when window does
         window.addEventListener('resize', () => {
             map.resize();
         });
-        
+
         // Initial resize to fit container
         setTimeout(() => map.resize(), 100);
     },
 
-    setupColorModeToggle: function(map) {
+    setupColorModeToggle: function (map) {
         const toggle = document.getElementById('color-mode-toggle');
         const label = document.getElementById('color-mode-label');
-        
+
         if (!toggle) return;
 
-        toggle.addEventListener('change', function() {
+        toggle.addEventListener('change', function () {
             const isDepthMode = this.checked;
             if (label) {
                 label.textContent = isDepthMode ? 'Color: By Depth' : 'Color: By Survey';
             }
-            
+
             // Switch color mode (lines) without changing map style to avoid reloading data
             if (isDepthMode) {
                 // map.setStyle('mapbox://styles/mapbox/dark-v11'); // This clears sources
@@ -85,7 +85,7 @@ export const MapCore = {
                 // map.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
                 Layers.setColorMode('project');
             }
-            
+
             // Dispatch event for other listeners
             window.dispatchEvent(new CustomEvent('speleo:color-mode-changed', { detail: { mode: isDepthMode ? 'depth' : 'project' } }));
         });

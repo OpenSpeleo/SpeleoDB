@@ -33,7 +33,7 @@
                 </button>
 
                 <!-- Station Management button -->
-                <button id="station-manager-button" onclick="window.openStationManager()" class="btn bg-orange-500 hover:bg-orange-600 text-white">
+                <button id="station-manager-button" onclick="window.openSurveyStationManager()" class="btn bg-orange-500 hover:bg-orange-600 text-white">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                         <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -43,17 +43,17 @@
                 
                 <!-- Surface Station Management button -->
                 <button id="surface-station-manager-button" onclick="window.openSurfaceStationManager()" class="btn bg-emerald-500 hover:bg-emerald-600 text-white">
-                    <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                    <svg class="w-4 h-4 stroke-current fill-current shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="112.31 64 799.38 896">
+                        <path d="m574 304 4 38a16 16 0 0 1-16 18h-18v122h12c9 0 16 7 16 16v36h103a120 120 0 1 1 0 56H572v76a16 16 0 0 1-16 16h-12v198h39a32 32 0 0 1 32 29l4 42a8 8 0 0 1-8 9H413a8 8 0 0 1-8-9l4-42a32 32 0 0 1 32-29h39V682h-12a16 16 0 0 1-16-16v-76H349a120 120 0 1 1 0-56h103v-36c0-9 7-16 16-16h12V360h-18a16 16 0 0 1-16-18l13-128a16 16 0 0 1 15-14h76c8 0 15 6 15 14l4 34h127l11-177a8 8 0 0 1 8-7h154c4 0 7 3 8 7l14 224a8 8 0 0 1-8 9H574zM232 518a44 44 0 1 0 0 88 44 44 0 0 0 0-88zm560 0a44 44 0 1 0 0 88 44 44 0 0 0 0-88zm32-398h-64l-8 128h80l-8-128z"></path>
                     </svg>
                     <span class="hidden xs:block ml-2">Surface Stations</span>
                 </button>
 
                 <!-- Landmark Management button -->
-                <button id="poi-manager-button" onclick="window.openLandmarkManager()" class="btn bg-blue-500 hover:bg-blue-600 text-white">
-                    <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"></path>
-                        <path d="M12 11.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"></path>
+                <button id="landmark-manager-button" onclick="window.openLandmarkManager()" class="btn bg-blue-500 hover:bg-blue-600 text-white">
+                    <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="2.5 2.5 19 19.01">
+                        <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
+                        <path d="M12 17l-1 -4l-4 -1l9 -4z"></path>
                     </svg>
                     <span class="hidden xs:block ml-2">Landmarks</span>
                 </button>
@@ -135,13 +135,13 @@
             </div>
             
             <!-- Landmark Manager Modal -->
-            <div id="poi-manager-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
+            <div id="landmark-manager-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
                     <div class="flex flex-col">
                         <!-- Modal Header -->
                         <div class="flex items-center justify-between p-6 border-b border-slate-600 flex-shrink-0">
                             <h2 class="text-xl font-semibold text-white">Landmark Manager</h2>
-                            <button id="poi-manager-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
+                            <button id="landmark-manager-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
@@ -150,7 +150,7 @@
 
                         <!-- Modal Content -->
                         <div class="flex-1 min-h-0">
-                            <div id="poi-manager-content">
+                            <div id="landmark-manager-content">
                                 <!-- Landmark Manager content will be loaded here -->
                             </div>
                         </div>
@@ -233,7 +233,7 @@
                 <div class="space-y-2 ml-4">
                     <div class="flex items-center space-x-2">
                         <span class="text-emerald-400 font-medium">Left Click:</span>
-                        <span class="text-slate-300">Select and view station/POI details</span>
+                        <span class="text-slate-300">Select and view station/Landmark details</span>
                     </div>
                     <div class="flex items-center space-x-2">
                         <span class="text-emerald-400 font-medium">Right Click:</span>
@@ -241,7 +241,7 @@
                     </div>
                     <div class="flex items-center space-x-2">
                         <span class="text-emerald-400 font-medium">Drag & Drop:</span>
-                        <span class="text-slate-300">Move stations/POIs to new locations (with write access)</span>
+                        <span class="text-slate-300">Move stations/Landmarks to new locations (with write access)</span>
                     </div>
                 </div>
             </div>

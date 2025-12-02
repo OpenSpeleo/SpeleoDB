@@ -10,8 +10,8 @@ import { StationDetails } from './stations/details.js';
 import { StationTags } from './stations/tags.js';
 import { SurfaceStationManager } from './surface_stations/manager.js';
 import { SurfaceStationUI } from './surface_stations/ui.js';
-import { LandmarkManager } from './pois/manager.js';
-import { LandmarkUI } from './pois/ui.js';
+import { LandmarkManager } from './landmarks/manager.js';
+import { LandmarkUI } from './landmarks/ui.js';
 import { Utils } from './utils.js';
 import { ContextMenu } from './components/context_menu.js';
 import { ProjectPanel } from './components/project_panel.js';
@@ -66,20 +66,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 StationDetails.openModal(stationId, station?.project, false, 'subsurface');
             }
         },
-        onPOIClick: (poiId) => LandmarkUI.openDetailsModal(poiId),
+        onLandmarkClick: (landmarkId) => LandmarkUI.openDetailsModal(landmarkId),
         onStationDrag: (stationId, projectId, newCoords) => {
             Layers.updateStationPosition(projectId, stationId, newCoords);
         },
-        onPOIDrag: (poiId, newCoords) => {
-            Layers.revertPOIPosition(poiId, newCoords);
+        onLandmarkDrag: (landmarkId, newCoords) => {
+            Layers.revertLandmarkPosition(landmarkId, newCoords);
         },
         onStationDragEnd: (stationId, projectId, snapResult, originalCoords) => {
             // Show drag confirm modal with snap information
             showStationDragConfirmModal(stationId, projectId, snapResult, originalCoords);
         },
-        onPOIDragEnd: (poiId, newCoords, originalCoords) => {
+        onLandmarkDragEnd: (landmarkId, newCoords, originalCoords) => {
             // Show Landmark drag confirm modal
-            showLandmarkDragConfirmModal(poiId, newCoords, originalCoords);
+            showLandmarkDragConfirmModal(landmarkId, newCoords, originalCoords);
         },
         onContextMenu: (event, type, data) => {
             const items = [];
@@ -132,27 +132,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }
 
-            } else if (type === 'poi') {
+            } else if (type === 'landmark') {
                 // Get Landmark data
-                const poi = State.allLandmarks.get(data.id);
-                const poiLat = poi?.latitude?.toFixed(7) || data.feature?.properties?.latitude?.toFixed(7) || 'N/A';
-                const poiLng = poi?.longitude?.toFixed(7) || data.feature?.properties?.longitude?.toFixed(7) || 'N/A';
-                const poiName = poi?.name || data.feature?.properties?.name || 'POI';
-
+                const landmark = State.allLandmarks.get(data.id);
+                const landmarkLat = landmark?.latitude?.toFixed(7) || data.feature?.properties?.latitude?.toFixed(7) || 'N/A';
+                const landmarkLong = landmark?.longitude?.toFixed(7) || data.feature?.properties?.longitude?.toFixed(7) || 'N/A';
+                const landmarkName = landmark?.name || data.feature?.properties?.name || 'Landmark';
                 // Copy GPS Coordinates
                 items.push({
                     label: 'Copy GPS Coordinates',
-                    subtitle: `${poiLat}, ${poiLng}`,
+                    subtitle: `${landmarkLat}, ${landmarkLong}`,
                     icon: '📋',
-                    onClick: () => Utils.copyToClipboard(`${poiLat}, ${poiLng}`)
+                    onClick: () => Utils.copyToClipboard(`${landmarkLat}, ${landmarkLong}`)
                 });
 
                 // Delete Landmark (any authenticated user can manage their Landmarks)
                 items.push({
                     label: 'Delete Landmark',
-                    subtitle: poiName,
+                    subtitle: landmarkName,
                     icon: '🗑️',
-                    onClick: () => LandmarkUI.showDeleteConfirmModal(poi || data.feature.properties)
+                    onClick: () => LandmarkUI.showDeleteConfirmModal(landmark || data.feature.properties)
                 });
 
             } else {
@@ -320,7 +319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             projectPromises.push(
                 StationManager.loadStationsForProject(project.id)
                     .then(stations => {
-                        Layers.addStationLayer(project.id, { type: 'FeatureCollection', features: stations });
+                        Layers.addSubSurfaceStationLayer(project.id, { type: 'FeatureCollection', features: stations });
                     })
                     .catch(e => {
                         console.error(`Error loading stations for ${project.name}`, e);
@@ -363,7 +362,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Load Landmarks (no delay - load immediately to ensure spinner waits for all data)
         try {
-            const landmarksData = await LandmarkManager.loadAllPOIs();
+            const landmarksData = await LandmarkManager.loadAllLandmarks();
             Layers.addLandmarkLayer(landmarksData);
             // Reorder again after Landmarks are loaded
             Layers.reorderLayers();
@@ -400,7 +399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     MapCore.setupColorModeToggle(map);
 
     // Setup Landmark Manager Button (backup to onclick in HTML)
-    const landmarkManagerButton = document.getElementById('poi-manager-button');
+    const landmarkManagerButton = document.getElementById('landmark-manager-button');
     if (landmarkManagerButton && !landmarkManagerButton.onclick) {
         landmarkManagerButton.addEventListener('click', () => LandmarkUI.openManagerModal());
     }
@@ -501,7 +500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { projectId } = e.detail;
         if (projectId) {
             const stations = await StationManager.loadStationsForProject(projectId);
-            Layers.addStationLayer(projectId, { type: 'FeatureCollection', features: stations });
+            Layers.addSubSurfaceStationLayer(projectId, { type: 'FeatureCollection', features: stations });
             // Ensure stations remain on top of survey lines
             Layers.reorderLayers();
         }
@@ -519,7 +518,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Global Exposes
-    window.openStationManager = () => StationUI.openManagerModal();
+    window.openSurveyStationManager = () => StationUI.openManagerModal();
     window.openSurfaceStationManager = () => SurfaceStationUI.openManagerModal();
     // Expose Landmark Manager for the button we added above or HTML onclick
     window.openLandmarkManager = () => LandmarkUI.openManagerModal();
@@ -548,12 +547,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Landmark drag confirmation modal
-    function showLandmarkDragConfirmModal(poiId, newCoords, originalCoords) {
-        const ldmk = State.allLandmarks.get(poiId);
-        const ldmkName = ldmk?.name || 'Landmark';
+    function showLandmarkDragConfirmModal(landmarkId, newCoords, originalCoords) {
+        const landmark = State.allLandmarks.get(landmarkId);
+        const landmarkName = landmark?.name || 'Landmark';
 
         const modalHtml = `
-            <div id="poi-drag-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div id="landmark-drag-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6">
                         <div class="flex items-center justify-center mb-4">
@@ -564,13 +563,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         <h3 class="text-lg font-semibold text-white text-center mb-2">Move Landmark</h3>
                         <p class="text-slate-300 text-center mb-6">
-                            Move "${ldmkName}" to this location?
+                            Move "${landmarkName}" to this location?
                         </p>
                         
                         <div class="bg-slate-700/50 rounded-lg p-4 space-y-2 mb-6">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Landmark Name:</span>
-                                <span class="text-white">${ldmkName}</span>
+                                <span class="text-white">${landmarkName}</span>
                             </div>
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">New Location:</span>
@@ -579,10 +578,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         
                         <div class="flex gap-3">
-                            <button id="poi-drag-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
+                            <button id="landmark-drag-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
                                 Cancel
                             </button>
-                            <button id="poi-drag-confirm-btn" class="flex-1 px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white rounded-lg transition-colors">
+                            <button id="landmark-drag-confirm-btn" class="flex-1 px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white rounded-lg transition-colors">
                                 Move Landmark
                             </button>
                         </div>
@@ -592,37 +591,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
 
         // Remove any existing modal
-        const existingModal = document.getElementById('poi-drag-confirm-modal');
+        const existingModal = document.getElementById('landmark-drag-confirm-modal');
         if (existingModal) existingModal.remove();
 
         // Add modal to DOM
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
         // Setup handlers
-        document.getElementById('poi-drag-cancel-btn').onclick = () => {
-            Layers.revertPOIPosition(poiId, originalCoords);
-            document.getElementById('poi-drag-confirm-modal').remove();
+        document.getElementById('landmark-drag-cancel-btn').onclick = () => {
+            Layers.revertLandmarkPosition(landmarkId, originalCoords);
+            document.getElementById('landmark-drag-confirm-modal').remove();
         };
 
-        document.getElementById('poi-drag-confirm-btn').onclick = async () => {
-            const modal = document.getElementById('poi-drag-confirm-modal');
+        document.getElementById('landmark-drag-confirm-btn').onclick = async () => {
+            const modal = document.getElementById('landmark-drag-confirm-modal');
 
             try {
-                await LandmarkManager.movePOI(poiId, newCoords);
+                await LandmarkManager.moveLandmark(landmarkId, newCoords);
                 Utils.showNotification('success', 'Landmark moved successfully!');
             } catch (error) {
                 console.error('Error moving Landmark:', error);
                 Utils.showNotification('error', 'Failed to move Landmark');
-                Layers.revertPOIPosition(poiId, originalCoords);
+                Layers.revertLandmarkPosition(landmarkId, originalCoords);
             }
 
             modal.remove();
         };
 
         // Close on backdrop click
-        document.getElementById('poi-drag-confirm-modal').onclick = (e) => {
-            if (e.target.id === 'poi-drag-confirm-modal') {
-                Layers.revertPOIPosition(poiId, originalCoords);
+        document.getElementById('landmark-drag-confirm-modal').onclick = (e) => {
+            if (e.target.id === 'landmark-drag-confirm-modal') {
+                Layers.revertLandmarkPosition(landmarkId, originalCoords);
                 e.target.remove();
             }
         };
