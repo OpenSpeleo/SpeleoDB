@@ -53,7 +53,7 @@ export const LandmarkUI = {
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-medium text-white">All Landmarks</h3>
-                        <span class="text-sm text-slate-400">${totalLandmarks} Point${totalLandmarks !== 1 ? 's' : ''} of Interest total</span>
+                        <span class="text-sm text-slate-400">${totalLandmarks} Landmark${totalLandmarks !== 1 ? 's' : ''} total</span>
                     </div>
                 </div>
         `;

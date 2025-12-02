@@ -79,7 +79,7 @@ class LandmarkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         form: forms.ModelForm[Landmark],
         change: bool,
     ) -> None:
-        # Auto-populate user field when creating a new point of interest
+        # Auto-populate user field when creating a new Landmark
         if not change:  # Only on creation, not on edit
             obj.user = request.user  # type: ignore[assignment]
         super().save_model(request, obj, form, change)

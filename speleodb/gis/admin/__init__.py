@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from speleodb.gis.admin.experiment import ExperimentAdmin
 from speleodb.gis.admin.experiment import ExperimentRecordAdmin
+from speleodb.gis.admin.landmark import LandmarkAdmin
 from speleodb.gis.admin.log import StationLogEntryAdmin
 from speleodb.gis.admin.network import SurfaceMonitoringNetworkAdmin
-from speleodb.gis.admin.point_of_interest import LandmarkAdmin
 from speleodb.gis.admin.project_geojson import ProjectGeoJSONAdmin
 from speleodb.gis.admin.resource import StationResourceAdmin
 from speleodb.gis.admin.sensor import SensorAdmin

@@ -30,7 +30,7 @@ class Landmark(models.Model):
     description = models.TextField(
         blank=True,
         default="",
-        help_text="Optional description of the point of interest",
+        help_text="Optional description of the landmark",
     )
 
     # Landmark coordinates
