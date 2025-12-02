@@ -351,8 +351,8 @@ input[type="number"] {
 
 /* Resource-based coloring removed; stations use a single style */
 
-/* POI Marker Styles - Push Pin Shape */
-.poi-marker {
+/* Landmark Marker Styles - Push Pin Shape */
+.landmark-marker {
     width: 18px;
     height: 22px;
     cursor: pointer;
@@ -360,12 +360,12 @@ input[type="number"] {
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 
-.poi-marker svg {
+.landmark-marker svg {
     width: 100%;
     height: 100%;
 }
 
-.poi-marker:hover {
+.landmark-marker:hover {
     transform: scale(1.25);
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
     z-index: 10;

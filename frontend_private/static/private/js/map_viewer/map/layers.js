@@ -152,7 +152,7 @@ export const Layers = {
             return true;
         }
     },
-    
+
     // Network visibility preferences
     loadNetworkVisibilityPrefs: function () {
         try {
@@ -548,13 +548,13 @@ export const Layers = {
         }
     },
 
-    addPOILayer: function (data) {
+    addLandmarkLayer: function (data) {
         const map = State.map;
         if (!map) return;
 
         const sourceId = 'pois-source';
 
-        console.log(`📍 Adding ${data.features?.length || 0} POIs to map`);
+        console.log(`📍 Adding ${data.features?.length || 0} Landmarks to map`);
 
         // Remove existing layer and source if they exist (to refresh)
         if (map.getLayer('pois-layer')) {
@@ -568,7 +568,7 @@ export const Layers = {
         }
 
         if (!data.features || data.features.length === 0) {
-            console.log('📍 No POIs to display');
+            console.log('📍 No Landmarks to display');
             return;
         }
 
@@ -577,7 +577,7 @@ export const Layers = {
             data: data
         });
 
-        // POI symbol layer (matching old implementation with triangle marker)
+        // Landmark symbol layer (matching old implementation with triangle marker)
         map.addLayer({
             id: 'pois-layer',
             type: 'symbol',
@@ -598,7 +598,7 @@ export const Layers = {
             }
         });
 
-        // POI labels (hidden until higher zoom to avoid clutter)
+        // Landmark labels (hidden until higher zoom to avoid clutter)
         map.addLayer({
             id: 'pois-labels',
             type: 'symbol',
@@ -834,7 +834,7 @@ export const Layers = {
                 source.setData(data);
 
                 // Reset internal state if needed
-                const poi = State.allPOIs.get(poiId);
+                const poi = State.allLandmarks.get(poiId);
                 if (poi) {
                     poi.latitude = originalCoords[1];
                     poi.longitude = originalCoords[0];
@@ -850,7 +850,7 @@ export const Layers = {
     },
 
     /**
-     * Ensure stations, surface stations, and POIs are rendered on top of survey lines.
+     * Ensure stations, surface stations, and Landmarks are rendered on top of survey lines.
      * Call this after all layers are loaded to fix z-ordering.
      */
     reorderLayers: function () {
@@ -865,7 +865,7 @@ export const Layers = {
 
         const allLayerIds = style.layers.map(l => l.id);
 
-        // Find station circle layers, station label layers, surface station layers, and POI layers
+        // Find station circle layers, station label layers, surface station layers, and Landmark layers
         const stationCircleLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-circles') && !id.includes('surface-'));
         const stationLabelLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-labels') && !id.includes('surface-'));
         const surfaceStationSymbolLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && !id.includes('-labels'));
@@ -873,7 +873,7 @@ export const Layers = {
         const poiLayers = allLayerIds.filter(id => id.startsWith('pois-'));
 
         // Move layers to top in order (later moves go on top)
-        
+
         // First move subsurface station circles (will be under labels)
         stationCircleLayers.forEach(layerId => {
             try {
@@ -910,7 +910,7 @@ export const Layers = {
             }
         });
 
-        // Finally move POI layers (on top of everything)
+        // Finally move Landmark layers (on top of everything)
         poiLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);

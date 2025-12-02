@@ -10,8 +10,8 @@ import { StationDetails } from './stations/details.js';
 import { StationTags } from './stations/tags.js';
 import { SurfaceStationManager } from './surface_stations/manager.js';
 import { SurfaceStationUI } from './surface_stations/ui.js';
-import { POIManager } from './pois/manager.js';
-import { POIUI } from './pois/ui.js';
+import { LandmarkManager } from './pois/manager.js';
+import { LandmarkUI } from './pois/ui.js';
 import { Utils } from './utils.js';
 import { ContextMenu } from './components/context_menu.js';
 import { ProjectPanel } from './components/project_panel.js';
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 StationDetails.openModal(stationId, station?.project, false, 'subsurface');
             }
         },
-        onPOIClick: (poiId) => POIUI.openDetailsModal(poiId),
+        onPOIClick: (poiId) => LandmarkUI.openDetailsModal(poiId),
         onStationDrag: (stationId, projectId, newCoords) => {
             Layers.updateStationPosition(projectId, stationId, newCoords);
         },
@@ -78,140 +78,140 @@ document.addEventListener('DOMContentLoaded', async () => {
             showStationDragConfirmModal(stationId, projectId, snapResult, originalCoords);
         },
         onPOIDragEnd: (poiId, newCoords, originalCoords) => {
-            // Show POI drag confirm modal
-            showPOIDragConfirmModal(poiId, newCoords, originalCoords);
+            // Show Landmark drag confirm modal
+            showLandmarkDragConfirmModal(poiId, newCoords, originalCoords);
         },
         onContextMenu: (event, type, data) => {
             const items = [];
-            
+
             if (type === 'station') {
                 // Get subsurface station data for coordinates
                 const station = State.allStations.get(data.id);
                 const stationLat = station?.latitude?.toFixed(7) || 'N/A';
                 const stationLng = station?.longitude?.toFixed(7) || 'N/A';
-                
+
                 // Copy GPS Coordinates
-                items.push({ 
-                    label: 'Copy GPS Coordinates', 
+                items.push({
+                    label: 'Copy GPS Coordinates',
                     subtitle: `${stationLat}, ${stationLng}`,
-                    icon: '📋', 
-                    onClick: () => Utils.copyToClipboard(`${stationLat}, ${stationLng}`) 
+                    icon: '📋',
+                    onClick: () => Utils.copyToClipboard(`${stationLat}, ${stationLng}`)
                 });
-                
+
                 // Delete Station (if admin access)
                 if (station && Config.hasProjectAdminAccess && Config.hasProjectAdminAccess(station.project)) {
-                    items.push({ 
-                        label: 'Delete Station', 
+                    items.push({
+                        label: 'Delete Station',
                         subtitle: station.name,
-                        icon: '🗑️', 
-                        onClick: () => StationDetails.confirmDelete(station, 'subsurface') 
+                        icon: '🗑️',
+                        onClick: () => StationDetails.confirmDelete(station, 'subsurface')
                     });
                 }
-                
+
             } else if (type === 'surface-station') {
                 // Get surface station data for coordinates
                 const station = State.allSurfaceStations.get(data.id);
                 const stationLat = station?.latitude?.toFixed(7) || 'N/A';
                 const stationLng = station?.longitude?.toFixed(7) || 'N/A';
-                
+
                 // Copy GPS Coordinates
-                items.push({ 
-                    label: 'Copy GPS Coordinates', 
+                items.push({
+                    label: 'Copy GPS Coordinates',
                     subtitle: `${stationLat}, ${stationLng}`,
-                    icon: '📋', 
-                    onClick: () => Utils.copyToClipboard(`${stationLat}, ${stationLng}`) 
+                    icon: '📋',
+                    onClick: () => Utils.copyToClipboard(`${stationLat}, ${stationLng}`)
                 });
-                
+
                 // Delete Surface Station (if network admin access)
                 if (station && Config.hasNetworkAdminAccess(station.network)) {
-                    items.push({ 
-                        label: 'Delete Surface Station', 
+                    items.push({
+                        label: 'Delete Surface Station',
                         subtitle: station.name,
-                        icon: '🗑️', 
-                        onClick: () => StationDetails.confirmDelete(station, 'surface') 
+                        icon: '🗑️',
+                        onClick: () => StationDetails.confirmDelete(station, 'surface')
                     });
                 }
-                
+
             } else if (type === 'poi') {
-                // Get POI data
-                const poi = State.allPOIs.get(data.id);
+                // Get Landmark data
+                const poi = State.allLandmarks.get(data.id);
                 const poiLat = poi?.latitude?.toFixed(7) || data.feature?.properties?.latitude?.toFixed(7) || 'N/A';
                 const poiLng = poi?.longitude?.toFixed(7) || data.feature?.properties?.longitude?.toFixed(7) || 'N/A';
                 const poiName = poi?.name || data.feature?.properties?.name || 'POI';
-                
+
                 // Copy GPS Coordinates
-                items.push({ 
-                    label: 'Copy GPS Coordinates', 
+                items.push({
+                    label: 'Copy GPS Coordinates',
                     subtitle: `${poiLat}, ${poiLng}`,
-                    icon: '📋', 
-                    onClick: () => Utils.copyToClipboard(`${poiLat}, ${poiLng}`) 
+                    icon: '📋',
+                    onClick: () => Utils.copyToClipboard(`${poiLat}, ${poiLng}`)
                 });
-                
-                // Delete POI (any authenticated user can manage their POIs)
-                items.push({ 
-                    label: 'Delete Point of Interest', 
+
+                // Delete Landmark (any authenticated user can manage their Landmarks)
+                items.push({
+                    label: 'Delete Landmark',
                     subtitle: poiName,
-                    icon: '🗑️', 
-                    onClick: () => POIUI.showDeleteConfirmModal(poi || data.feature.properties) 
+                    icon: '🗑️',
+                    onClick: () => LandmarkUI.showDeleteConfirmModal(poi || data.feature.properties)
                 });
-                
+
             } else {
                 // Right-click on empty map area
                 const coords = data.coordinates;
                 const lngLat = { lat: coords[1], lng: coords[0] };
-                
+
                 // Check if we can create a station here (need snap point within radius)
                 const snapCheck = Geometry.findNearestSnapPointWithinRadius(coords, Geometry.getSnapRadius());
-                
+
                 if (!snapCheck.snapped || (snapCheck.projectId && !Layers.isProjectVisible(snapCheck.projectId))) {
                     // Can't create station - too far from survey line
-                    items.push({ 
-                        label: 'Create Station', 
+                    items.push({
+                        label: 'Create Station',
                         subtitle: "Can't create a station at this location. Too far from the line",
-                        icon: '📌', 
+                        icon: '📌',
                         disabled: true
                     });
                 } else {
                     // Check write access for the detected project
                     const nearestProjectId = snapCheck.projectId;
                     const canCreate = nearestProjectId && Config.hasProjectWriteAccess(nearestProjectId);
-                    
+
                     if (canCreate) {
-                        items.push({ 
-                            label: 'Create Station', 
+                        items.push({
+                            label: 'Create Station',
                             subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                            icon: '📌', 
+                            icon: '📌',
                             onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId)
                         });
                     } else {
-                        items.push({ 
-                            label: 'No write access', 
+                        items.push({
+                            label: 'No write access',
                             subtitle: "Can't create a station for this project",
-                            icon: '🔒', 
+                            icon: '🔒',
                             disabled: true
                         });
                     }
                 }
-                
-                // POI creation is always available for authenticated users
-                items.push({ 
-                    label: 'Create Point of Interest', 
-                    subtitle: 'Point of Interest',
-                    icon: '📍', 
-                    onClick: () => POIUI.openCreateModal(coords) 
+
+                // Landmark creation is always available for authenticated users
+                items.push({
+                    label: 'Create Landmark',
+                    subtitle: 'Landmark',
+                    icon: '📍',
+                    onClick: () => LandmarkUI.openCreateModal(coords)
                 });
-                
+
                 items.push('-');
-                
+
                 // Copy Coordinates
-                items.push({ 
-                    label: 'Copy Coordinates', 
+                items.push({
+                    label: 'Copy Coordinates',
                     subtitle: `${lngLat.lat.toFixed(7)}, ${lngLat.lng.toFixed(7)}`,
-                    icon: '📋', 
-                    onClick: () => Utils.copyToClipboard(`${lngLat.lat.toFixed(7)}, ${lngLat.lng.toFixed(7)}`) 
+                    icon: '📋',
+                    onClick: () => Utils.copyToClipboard(`${lngLat.lat.toFixed(7)}, ${lngLat.lng.toFixed(7)}`)
                 });
             }
-            
+
             if (items.length > 0) ContextMenu.show(event.point.x, event.point.y, items);
         }
     });
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const mapContainer = document.getElementById('map');
             const existing = document.getElementById('depth-scale-fixed');
             let container = existing;
-            
+
             if (!container) {
                 container = document.createElement('div');
                 container.id = 'depth-scale-fixed';
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 container.style.padding = '8px 10px';
                 mapContainer.appendChild(container);
             }
-            
+
             const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : 9999;
             container.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span>${Math.ceil(maxVal)} ft</span>
                 </div>
             `;
-            
+
             // Respect initial color mode for legend visibility
             updateDepthLegendVisibility();
         } catch (e) {
@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Initialize Project Panel (now shows only projects with GeoJSON)
         ProjectPanel.init();
-        
+
         // Load user tags and colors for tag management
         StationTags.init();
 
@@ -361,14 +361,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Reorder layers to ensure stations are on top of survey lines
         Layers.reorderLayers();
 
-        // Load POIs (no delay - load immediately to ensure spinner waits for all data)
+        // Load Landmarks (no delay - load immediately to ensure spinner waits for all data)
         try {
-            const poisData = await POIManager.loadAllPOIs();
-            Layers.addPOILayer(poisData);
-            // Reorder again after POIs are loaded
+            const landmarksData = await LandmarkManager.loadAllPOIs();
+            Layers.addLandmarkLayer(landmarksData);
+            // Reorder again after Landmarks are loaded
             Layers.reorderLayers();
         } catch (e) {
-            console.error('Error loading POIs', e);
+            console.error('Error loading Landmarks', e);
         }
 
         // Create depth scale dynamically
@@ -386,23 +386,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Hide Loading Overlay - only after ALL data (projects, GeoJSON, stations, POIs) is loaded
+        // Hide Loading Overlay - only after ALL data (projects, GeoJSON, stations, Landmarks) is loaded
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
             overlay.classList.add('opacity-0', 'pointer-events-none');
             setTimeout(() => overlay.remove(), 500);
         }
 
-        console.log('✅ Map Data Loaded (Projects, GeoJSON, Stations, POIs)');
+        console.log('✅ Map Data Loaded (Projects, GeoJSON, Stations, Landmarks)');
     });
 
     // Setup UI listeners
     MapCore.setupColorModeToggle(map);
 
-    // Setup POI Manager Button (backup to onclick in HTML)
-    const poiManagerButton = document.getElementById('poi-manager-button');
-    if (poiManagerButton && !poiManagerButton.onclick) {
-        poiManagerButton.addEventListener('click', () => POIUI.openManagerModal());
+    // Setup Landmark Manager Button (backup to onclick in HTML)
+    const landmarkManagerButton = document.getElementById('poi-manager-button');
+    if (landmarkManagerButton && !landmarkManagerButton.onclick) {
+        landmarkManagerButton.addEventListener('click', () => LandmarkUI.openManagerModal());
     }
 
     // Ensure depth scale is hidden initially
@@ -454,9 +454,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // Find line features with depth data
-        const lineFeature = features.find(f => 
-            f.layer && f.layer.type === 'line' && 
-            f.properties && 
+        const lineFeature = features.find(f =>
+            f.layer && f.layer.type === 'line' &&
+            f.properties &&
             (f.properties.depth_val !== undefined || f.properties.depth_norm !== undefined)
         );
 
@@ -521,11 +521,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Global Exposes
     window.openStationManager = () => StationUI.openManagerModal();
     window.openSurfaceStationManager = () => SurfaceStationUI.openManagerModal();
-    // Expose POI Manager for the button we added above or HTML onclick
-    window.openPOIManager = () => POIUI.openManagerModal();
-    window.POIUI = POIUI; // Expose for inline HTML onclicks
+    // Expose Landmark Manager for the button we added above or HTML onclick
+    window.openLandmarkManager = () => LandmarkUI.openManagerModal();
+    window.LandmarkUI = LandmarkUI; // Expose for inline HTML onclicks
     window.StationUI = StationUI; // Expose for inline HTML onclicks
-    
+
     // Expose snap debugging functions (like old implementation)
     window.getSnapInfo = () => Geometry.getSnapInfo();
     window.setSnapRadius = (radius) => Geometry.setSnapRadius(radius);
@@ -547,11 +547,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         StationDetails.openModal(stationId, projectId, isNewlyCreated);
     };
 
-    // POI drag confirmation modal
-    function showPOIDragConfirmModal(poiId, newCoords, originalCoords) {
-        const poi = State.allPOIs.get(poiId);
-        const poiName = poi?.name || 'Point of Interest';
-        
+    // Landmark drag confirmation modal
+    function showLandmarkDragConfirmModal(poiId, newCoords, originalCoords) {
+        const ldmk = State.allLandmarks.get(poiId);
+        const ldmkName = ldmk?.name || 'Landmark';
+
         const modalHtml = `
             <div id="poi-drag-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
@@ -562,15 +562,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 📍
                             </div>
                         </div>
-                        <h3 class="text-lg font-semibold text-white text-center mb-2">Move Point of Interest</h3>
+                        <h3 class="text-lg font-semibold text-white text-center mb-2">Move Landmark</h3>
                         <p class="text-slate-300 text-center mb-6">
-                            Move "${poiName}" to this location?
+                            Move "${ldmkName}" to this location?
                         </p>
                         
                         <div class="bg-slate-700/50 rounded-lg p-4 space-y-2 mb-6">
                             <div class="flex justify-between text-sm">
-                                <span class="text-slate-400">POI Name:</span>
-                                <span class="text-white">${poiName}</span>
+                                <span class="text-slate-400">Landmark Name:</span>
+                                <span class="text-white">${ldmkName}</span>
                             </div>
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">New Location:</span>
@@ -583,42 +583,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 Cancel
                             </button>
                             <button id="poi-drag-confirm-btn" class="flex-1 px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white rounded-lg transition-colors">
-                                Move POI
+                                Move Landmark
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
         `;
-        
+
         // Remove any existing modal
         const existingModal = document.getElementById('poi-drag-confirm-modal');
         if (existingModal) existingModal.remove();
-        
+
         // Add modal to DOM
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
+
         // Setup handlers
         document.getElementById('poi-drag-cancel-btn').onclick = () => {
             Layers.revertPOIPosition(poiId, originalCoords);
             document.getElementById('poi-drag-confirm-modal').remove();
         };
-        
+
         document.getElementById('poi-drag-confirm-btn').onclick = async () => {
             const modal = document.getElementById('poi-drag-confirm-modal');
-            
+
             try {
-                await POIManager.movePOI(poiId, newCoords);
-                Utils.showNotification('success', 'Point of Interest moved successfully!');
+                await LandmarkManager.movePOI(poiId, newCoords);
+                Utils.showNotification('success', 'Landmark moved successfully!');
             } catch (error) {
-                console.error('Error moving POI:', error);
-                Utils.showNotification('error', 'Failed to move POI');
+                console.error('Error moving Landmark:', error);
+                Utils.showNotification('error', 'Failed to move Landmark');
                 Layers.revertPOIPosition(poiId, originalCoords);
             }
-            
+
             modal.remove();
         };
-        
+
         // Close on backdrop click
         document.getElementById('poi-drag-confirm-modal').onclick = (e) => {
             if (e.target.id === 'poi-drag-confirm-modal') {
@@ -633,12 +633,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const station = State.allStations.get(stationId);
         const stationName = station?.name || 'Station';
         const finalCoords = snapResult.coordinates;
-        
+
         // Create modal HTML
-        const actionText = snapResult.snapped 
-            ? `snap to survey line "${snapResult.lineName}"` 
+        const actionText = snapResult.snapped
+            ? `snap to survey line "${snapResult.lineName}"`
             : 'place at the exact GPS coordinates';
-        
+
         const modalHtml = `
             <div id="drag-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
@@ -696,47 +696,47 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             </div>
         `;
-        
+
         // Remove any existing modal
         const existingModal = document.getElementById('drag-confirm-modal');
         if (existingModal) existingModal.remove();
-        
+
         // Add modal to DOM
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
+
         // Setup handlers
         document.getElementById('drag-cancel-btn').onclick = () => {
             // Revert to original position
             Layers.updateStationPosition(projectId, stationId, originalCoords);
             document.getElementById('drag-confirm-modal').remove();
         };
-        
+
         document.getElementById('drag-confirm-btn').onclick = async () => {
             const modal = document.getElementById('drag-confirm-modal');
-            
+
             try {
                 // Update station via API
                 await StationManager.moveStation(stationId, finalCoords);
-                
-                const snapMessage = snapResult.snapped 
-                    ? ` and snapped to ${snapResult.lineName}` 
+
+                const snapMessage = snapResult.snapped
+                    ? ` and snapped to ${snapResult.lineName}`
                     : '';
                 Utils.showNotification('success', `Station moved successfully${snapMessage}!`);
-                
+
                 // Refresh stations
                 Layers.refreshStationsAfterChange(projectId);
-                
+
             } catch (error) {
                 console.error('Error moving station:', error);
                 Utils.showNotification('error', 'Failed to move station');
-                
+
                 // Revert on error
                 Layers.updateStationPosition(projectId, stationId, originalCoords);
             }
-            
+
             modal.remove();
         };
-        
+
         // Close on backdrop click
         document.getElementById('drag-confirm-modal').onclick = (e) => {
             if (e.target.id === 'drag-confirm-modal') {
@@ -746,7 +746,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    window.goToPOI = (id, lat, lon) => {
+    window.goToLandmark = (id, lat, lon) => {
         map.flyTo({ center: [lon, lat], zoom: 18 });
     };
 });

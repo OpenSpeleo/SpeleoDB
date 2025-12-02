@@ -13,7 +13,7 @@ from speleodb.utils.gps_utils import format_coordinate
 
 
 class LandmarkSerializer(serializers.ModelSerializer[Landmark]):
-    """Serializer for POI with all details."""
+    """Serializer for Landmark with all details."""
 
     user = serializers.EmailField(source="user.email", read_only=True)
 
@@ -28,7 +28,7 @@ class LandmarkSerializer(serializers.ModelSerializer[Landmark]):
         ]
 
     def create(self, validated_data: Any) -> Landmark:
-        """Create a new POI and set user from request user."""
+        """Create a new Landmark and set user from request user."""
         request = self.context.get("request")
         if request and hasattr(request, "user") and request.user.is_authenticated:
             validated_data["user"] = request.user
@@ -65,7 +65,7 @@ class LandmarkSerializer(serializers.ModelSerializer[Landmark]):
 
 
 class LandmarkGeoJSONSerializer(serializers.ModelSerializer[Landmark]):
-    """Map serializer for POIs - returns GeoJSON-like format."""
+    """Map serializer for Landmarks - returns GeoJSON-like format."""
 
     class Meta:
         model = Landmark

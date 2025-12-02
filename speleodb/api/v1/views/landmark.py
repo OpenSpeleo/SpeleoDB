@@ -10,8 +10,8 @@ from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v1.permissions import LandmarkOwnershipPermission
-from speleodb.api.v1.serializers.poi import LandmarkGeoJSONSerializer
-from speleodb.api.v1.serializers.poi import LandmarkSerializer
+from speleodb.api.v1.serializers.landmark import LandmarkGeoJSONSerializer
+from speleodb.api.v1.serializers.landmark import LandmarkSerializer
 from speleodb.gis.models import Landmark
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
@@ -26,8 +26,8 @@ if TYPE_CHECKING:
 class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
     """API View for managing personal Points of Interest.
 
-    POIs are personal/private - users can only see and modify their own POIs.
-    - Shows only POIs created by the authenticated user
+    Landmarks are personal/private - users can only see and modify their own Landmarks.
+    - Shows only Landmarks created by the authenticated user
     - Requires authentication and ownership
     """
 
@@ -37,7 +37,7 @@ class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Get detailed POI information (only if owned by user)."""
+        """Get detailed Landmark information (only if owned by user)."""
         poi = self.get_object()
         serializer = self.get_serializer(poi)
         return SuccessResponse({"poi": serializer.data})
@@ -51,7 +51,7 @@ class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
     def _update(
         self, request: Request, partial: bool, *args: Any, **kwargs: Any
     ) -> Response:
-        """Update a POI (only if owned by user)."""
+        """Update a Landmark (only if owned by user)."""
         poi = self.get_object()
 
         serializer = self.get_serializer(poi, data=request.data, partial=partial)
@@ -64,20 +64,18 @@ class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
         )
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Delete a POI (only if owned by user)."""
-        poi = self.get_object()
-        poi_id = poi.id
-        poi.delete()
-        return SuccessResponse(
-            {"message": f"Point of Interest {poi_id} deleted successfully"}
-        )
+        """Delete a Landmark (only if owned by user)."""
+        ldmk = self.get_object()
+        ldmk_id = ldmk.id
+        ldmk.delete()
+        return SuccessResponse({"message": f"Landmark {ldmk_id} deleted successfully"})
 
 
 class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
     """API View for managing personal Points of Interest.
 
-    POIs are personal/private - users can only see and modify their own POIs.
-    - Shows only POIs created by the authenticated user
+    Landmarks are personal/private - users can only see and modify their own Landmarks.
+    - Shows only Landmarks created by the authenticated user
     - Requires authentication and ownership
     """
 
@@ -86,7 +84,7 @@ class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
     lookup_field = "id"
 
     def get_queryset(self) -> QuerySet[Landmark]:
-        """Get only POIs created by the authenticated user."""
+        """Get only Landmarks created by the authenticated user."""
         user = self.get_user()
         return Landmark.objects.filter(user=user).select_related("user")
 
@@ -96,7 +94,7 @@ class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
         return SuccessResponse({"pois": serializer.data})
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Create a new POI for the authenticated user."""
+        """Create a new Landmark for the authenticated user."""
         user = self.get_user()
 
         serializer = self.get_serializer(data=request.data)
@@ -115,21 +113,21 @@ class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
 
 class LandmarkGeoJSONView(GenericAPIView[Landmark], SDBAPIViewMixin):
     """
-    View to get user's POIs as GeoJSON-compatible data.
-    Used by the map viewer to display POI markers.
-    Only shows POIs created by the authenticated user.
+    View to get user's Landmarks as GeoJSON-compatible data.
+    Used by the map viewer to display Landmark markers.
+    Only shows Landmarks created by the authenticated user.
     """
 
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = LandmarkGeoJSONSerializer
 
     def get_queryset(self) -> QuerySet[Landmark]:
-        """Get only POIs created by the authenticated user."""
+        """Get only Landmarks created by the authenticated user."""
         user = self.get_user()
         return Landmark.objects.filter(user=user).select_related("user")
 
     def get(self, request: Request) -> Response:
-        """Get user's POIs in a map-friendly format."""
+        """Get user's Landmarks in a map-friendly format."""
         pois = self.get_queryset()
 
         # Use the map serializer to convert to GeoJSON format

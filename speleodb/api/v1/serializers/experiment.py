@@ -543,7 +543,7 @@ class ExperimentRecordSerializer(serializers.ModelSerializer[ExperimentRecord]):
 
 
 class ExperimentRecordGISSerializer(serializers.Serializer[ExperimentRecord]):
-    """Map serializer for POIs - returns GeoJSON-like format."""
+    """Map serializer for Landmarks - returns GeoJSON-like format."""
 
     def to_representation(self, instance: ExperimentRecord) -> dict[str, Any]:
         """Convert to GeoJSON Feature format."""

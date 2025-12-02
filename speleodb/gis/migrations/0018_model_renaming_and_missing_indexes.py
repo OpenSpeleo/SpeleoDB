@@ -35,6 +35,15 @@ class Migration(migrations.Migration):
             old_name='PointOfInterest',
             new_name='Landmark',
         ),
+        migrations.AlterModelOptions(
+            name='landmark',
+            options={'ordering': ['name'], 'verbose_name': 'Landmark', 'verbose_name_plural': 'Landmarks'},
+        ),
+        migrations.AlterField(
+            model_name='landmark',
+            name='name',
+            field=models.CharField(help_text='Landmark name', max_length=100),
+        ),
         migrations.AddIndex(
             model_name='landmark',
             index=models.Index(fields=['latitude', 'longitude'], name='gis_landmar_latitud_68b766_idx'),

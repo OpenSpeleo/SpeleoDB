@@ -540,6 +540,24 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/landmarks/",
+        "module": "speleodb.api.v1.views.landmark.LandmarkAPIView",
+        "name": "api:v1:landmarks",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/landmarks/<uuid:id>/",
+        "module": "speleodb.api.v1.views.landmark.LandmarkSpecificAPIView",
+        "name": "api:v1:landmark-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/landmarks/geojson/",
+        "module": "speleodb.api.v1.views.landmark.LandmarkGeoJSONView",
+        "name": "api:v1:landmarks-geojson",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/logs/<uuid:id>/",
         "module": "speleodb.api.v1.views.log_entry.StationLogEntrySpecificApiView",
         "name": "api:v1:log-detail",
@@ -549,24 +567,6 @@
         "url": "/api/v1/plugin_releases/",
         "module": "speleodb.api.v1.views.plugin_release.PluginReleasesApiView",
         "name": "api:v1:plugin-releases",
-        "decorators": ""
-    },
-    {
-        "url": "/api/v1/points_of_interest/",
-        "module": "speleodb.api.v1.views.poi.LandmarkAPIView",
-        "name": "api:v1:pois",
-        "decorators": ""
-    },
-    {
-        "url": "/api/v1/points_of_interest/<uuid:id>/",
-        "module": "speleodb.api.v1.views.poi.LandmarkSpecificAPIView",
-        "name": "api:v1:poi-detail",
-        "decorators": ""
-    },
-    {
-        "url": "/api/v1/points_of_interest/geojson/",
-        "module": "speleodb.api.v1.views.poi.LandmarkGeoJSONView",
-        "name": "api:v1:pois-geojson",
         "decorators": ""
     },
     {

@@ -38,7 +38,7 @@
                         <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                         <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
-                    <span class="hidden xs:block ml-2">Station Manager</span>
+                    <span class="hidden xs:block ml-2">Survey Stations</span>
                 </button>
                 
                 <!-- Surface Station Management button -->
@@ -49,13 +49,13 @@
                     <span class="hidden xs:block ml-2">Surface Stations</span>
                 </button>
 
-                <!-- POI Management button -->
-                <button id="poi-manager-button" onclick="window.openPOIManager()" class="btn bg-blue-500 hover:bg-blue-600 text-white">
+                <!-- Landmark Management button -->
+                <button id="poi-manager-button" onclick="window.openLandmarkManager()" class="btn bg-blue-500 hover:bg-blue-600 text-white">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"></path>
                         <path d="M12 11.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"></path>
                     </svg>
-                    <span class="hidden xs:block ml-2">POI Manager</span>
+                    <span class="hidden xs:block ml-2">Landmarks</span>
                 </button>
 
                 <!-- Context Menu Help -->
@@ -87,7 +87,7 @@
                     <div class="flex flex-col">
                         <!-- Modal Header -->
                         <div class="flex items-center justify-between p-6 border-b border-slate-600 flex-shrink-0">
-                            <h2 class="text-xl font-semibold text-white">Station Manager</h2>
+                            <h2 class="text-xl font-semibold text-white">SubSurface Survey Stations</h2>
                             <button id="station-manager-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -134,13 +134,13 @@
                 </div>
             </div>
             
-            <!-- POI Manager Modal -->
+            <!-- Landmark Manager Modal -->
             <div id="poi-manager-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
                     <div class="flex flex-col">
                         <!-- Modal Header -->
                         <div class="flex items-center justify-between p-6 border-b border-slate-600 flex-shrink-0">
-                            <h2 class="text-xl font-semibold text-white">Point of Interest Manager</h2>
+                            <h2 class="text-xl font-semibold text-white">Landmark Manager</h2>
                             <button id="poi-manager-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -151,7 +151,7 @@
                         <!-- Modal Content -->
                         <div class="flex-1 min-h-0">
                             <div id="poi-manager-content">
-                                <!-- POI Manager content will be loaded here -->
+                                <!-- Landmark Manager content will be loaded here -->
                             </div>
                         </div>
                     </div>

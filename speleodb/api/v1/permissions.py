@@ -295,9 +295,9 @@ class UserHasMemberAccess(BaseTeamAccessLevel):
 
 class LandmarkOwnershipPermission(permissions.BasePermission):
     """
-    Permission class specifically for POI ownership.
-    - Users can only see/modify their own POIs
-    - No sharing or public access to POIs
+    Permission class specifically for Landmark ownership.
+    - Users can only see/modify their own Landmarks
+    - No sharing or public access to Landmarks
     """
 
     def has_permission(self, request: Request, view: APIView) -> bool:
@@ -312,7 +312,7 @@ class LandmarkOwnershipPermission(permissions.BasePermission):
         view: APIView,
         obj: Landmark,
     ) -> bool:
-        """Users can only access POIs they created."""
+        """Users can only access Landmarks they created."""
         # Check if the object has a created_by field and if it matches the user
         if not isinstance(obj, Landmark):
             raise TypeError(f"Expected a `Landmark` object, got {type(obj)}")
@@ -325,9 +325,9 @@ class LandmarkOwnershipPermission(permissions.BasePermission):
 
 class GISViewOwnershipPermission(permissions.BasePermission):
     """
-    Permission class specifically for POI ownership.
-    - Users can only see/modify their own POIs
-    - No sharing or public access to POIs
+    Permission class specifically for Landmark ownership.
+    - Users can only see/modify their own Landmarks
+    - No sharing or public access to Landmarks
     """
 
     def has_permission(self, request: Request, view: APIView) -> bool:
@@ -342,7 +342,7 @@ class GISViewOwnershipPermission(permissions.BasePermission):
         view: APIView,
         obj: GISView,
     ) -> bool:
-        """Users can only access POIs they created."""
+        """Users can only access Landmarks they created."""
         # Check if the object has a created_by field and if it matches the user
         if not isinstance(obj, GISView):
             raise TypeError(f"Expected a `GISView` object, got {type(obj)}")

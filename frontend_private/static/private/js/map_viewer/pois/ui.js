@@ -1,16 +1,14 @@
-import { POIManager } from './manager.js';
+import { LandmarkManager } from './manager.js';
 import { State } from '../state.js';
 import { Config } from '../config.js';
 import { Utils } from '../utils.js';
 import { Modal } from '../components/modal.js';
 
-export const POIUI = {
+export const LandmarkUI = {
     openManagerModal() {
-        console.log('📋 Opening POI Manager');
-
         const modal = document.getElementById('poi-manager-modal');
         if (!modal) {
-            console.error('❌ POI Manager modal element not found!');
+            console.error('❌ Landmark Manager modal element not found!');
             return;
         }
 
@@ -18,7 +16,7 @@ export const POIUI = {
         modal.classList.remove('hidden');
 
         // Load content
-        this.loadPOIManagerContent();
+        this.loadLandmarkManagerContent();
 
         // Setup close handlers
         const closeBtn = document.getElementById('poi-manager-close');
@@ -36,18 +34,18 @@ export const POIUI = {
         };
     },
 
-    loadPOIManagerContent() {
+    loadLandmarkManagerContent() {
         const content = document.getElementById('poi-manager-content');
         if (!content) {
             console.error('❌ poi-manager-content element not found!');
             return;
         }
 
-        // Gather all POIs
-        const pois = Array.from(State.allPOIs.values());
+        // Gather all Landmarks
+        const pois = Array.from(State.allLandmarks.values());
         const totalPOIs = pois.length;
 
-        // Sort POIs by name
+        // Sort Landmarks by name
         pois.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         // Build HTML
@@ -69,7 +67,7 @@ export const POIUI = {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
                     <h3 class="text-white text-lg font-medium mb-2">No Points of Interest Yet</h3>
-                    <p class="text-slate-400">Right-click on the map to create your first Point of Interest.</p>
+                    <p class="text-slate-400">Right-click on the map to create your first Landmark.</p>
                 </div>
             `;
         } else {
@@ -99,7 +97,7 @@ export const POIUI = {
                                         data-poi-id="${poi.id}"
                                         data-lat="${Number(poi.latitude)}"
                                         data-lon="${Number(poi.longitude)}"
-                                        title="Go to Point of Interest on map">
+                                        title="Go to Landmark on map">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
@@ -129,8 +127,8 @@ export const POIUI = {
                 const poiId = btn.dataset.poiId;
                 const lat = parseFloat(btn.dataset.lat);
                 const lon = parseFloat(btn.dataset.lon);
-                if (window.goToPOI) {
-                    window.goToPOI(poiId, lat, lon);
+                if (window.goToLandmark) {
+                    window.goToLandmark(poiId, lat, lon);
                 }
             });
         });
@@ -148,15 +146,15 @@ export const POIUI = {
     },
 
     openDetailsModal(poiId, isNewlyCreated = false) {
-        const poi = poiId ? State.allPOIs.get(poiId) : null;
+        const poi = poiId ? State.allLandmarks.get(poiId) : null;
         if (!poi && poiId) {
-            Utils.showNotification('error', 'Point of Interest not found');
+            Utils.showNotification('error', 'Landmark not found');
             return;
         }
 
-        const title = poi ? `Point of Interest: ${poi.name}` : 'Point of Interest Details';
+        const title = poi ? `Landmark: ${poi.name}` : 'Landmark Details';
         const extraTitle = isNewlyCreated ? '<span class="ml-2 text-sm text-emerald-400">✨ Newly Created</span>' : '';
-        
+
         const content = poi ? `
             <div class="space-y-4">
                 <div>
@@ -168,17 +166,17 @@ export const POIUI = {
                     <p class="text-slate-300"><strong>Created by:</strong> ${poi.created_by || 'Unknown'}</p>
                     <p class="text-slate-300"><strong>Created:</strong> ${poi.creation_date ? new Date(poi.creation_date).toLocaleDateString() : 'Unknown'}</p>
                 </div>
-            </div>` : 
-            `<div class="text-center py-8"><h3 class="text-white text-lg font-medium mb-2">Point of Interest Not Found</h3></div>`;
+            </div>` :
+            `<div class="text-center py-8"><h3 class="text-white text-lg font-medium mb-2">Landmark Not Found</h3></div>`;
 
-        // Any authenticated user can manage their POIs
+        // Any authenticated user can manage their Landmarks
         const footer = poi ? `
             <button id="edit-poi-btn" class="btn-secondary" style="min-width: 120px;">Edit</button>
             <button id="delete-poi-btn" class="btn-danger" style="min-width: 120px;">Delete</button>
         ` : '';
 
         const html = Modal.base('poi-details-modal', title + extraTitle, content, footer);
-        
+
         Modal.open('poi-details-modal', html, () => {
             if (poi) {
                 document.getElementById('edit-poi-btn').onclick = () => this.openEditModal(poiId);
@@ -208,7 +206,7 @@ export const POIUI = {
             <button form="create-poi-form" type="submit" class="btn-primary">Create</button>
         `;
 
-        const html = Modal.base('create-poi-modal', 'Create Point of Interest', formHtml, footer, 'max-w-md');
+        const html = Modal.base('create-poi-modal', 'Create Landmark', formHtml, footer, 'max-w-md');
 
         Modal.open('create-poi-modal', html, () => {
             document.getElementById('poi-name').focus();
@@ -218,7 +216,7 @@ export const POIUI = {
                 if (!name) return;
 
                 try {
-                    const poi = await POIManager.createPOI({
+                    const poi = await LandmarkManager.createLandmark({
                         name,
                         description: document.getElementById('poi-description').value.trim(),
                         latitude: coordinates[1],
@@ -235,7 +233,7 @@ export const POIUI = {
     },
 
     openEditModal(poiId) {
-        const poi = State.allPOIs.get(poiId);
+        const poi = State.allLandmarks.get(poiId);
         if (!poi) return;
 
         const formHtml = `
@@ -255,13 +253,13 @@ export const POIUI = {
             <button form="edit-poi-form" type="submit" class="btn-primary">Save</button>
         `;
 
-        const html = Modal.base('edit-poi-modal', 'Edit Point of Interest', formHtml, footer, 'max-w-md');
+        const html = Modal.base('edit-poi-modal', 'Edit Landmark', formHtml, footer, 'max-w-md');
 
         Modal.open('edit-poi-modal', html, () => {
             document.getElementById('edit-poi-form').onsubmit = async (e) => {
                 e.preventDefault();
                 try {
-                    await POIManager.updatePOI(poiId, {
+                    await LandmarkManager.updateLandmark(poiId, {
                         name: document.getElementById('edit-poi-name').value.trim(),
                         description: document.getElementById('edit-poi-description').value.trim()
                     });
@@ -279,7 +277,7 @@ export const POIUI = {
     showDeleteConfirmModal(poi) {
         const content = `
             <div class="mb-6">
-                <p class="text-slate-300 mb-2">Are you sure you want to delete this POI?</p>
+                <p class="text-slate-300 mb-2">Are you sure you want to delete this Landmark?</p>
                 <p class="text-white font-semibold text-lg">${poi.name}</p>
             </div>
             <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
@@ -291,17 +289,17 @@ export const POIUI = {
             <button id="confirm-delete-poi" class="btn-danger">Delete</button>
         `;
 
-        const html = Modal.base('delete-poi-modal', 'Delete Point of Interest', content, footer, 'max-w-md');
+        const html = Modal.base('delete-poi-modal', 'Delete Landmark', content, footer, 'max-w-md');
 
         Modal.open('delete-poi-modal', html, () => {
             document.getElementById('confirm-delete-poi').onclick = async () => {
                 try {
-                    await POIManager.deletePOI(poi.id);
+                    await LandmarkManager.deleteLandmark(poi.id);
                     Utils.showNotification('success', 'POI deleted');
                     Modal.close('delete-poi-modal');
                     Modal.close('poi-details-modal');
                 } catch (err) {
-                    Utils.showNotification('error', 'Failed to delete POI');
+                    Utils.showNotification('error', 'Failed to delete Landmark');
                 }
             };
         });

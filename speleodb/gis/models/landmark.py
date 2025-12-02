@@ -11,8 +11,8 @@ from django.db import models
 
 class Landmark(models.Model):
     """
-    Represents a Point of Interest (POI) on the map.
-    POIs are standalone markers not linked to any project.
+    Represents a Landmark on the map.
+    Landmarks are standalone markers not linked to any project.
     """
 
     id = models.UUIDField(
@@ -21,10 +21,10 @@ class Landmark(models.Model):
         primary_key=True,
     )
 
-    # POI identification
+    # Landmark identification
     name = models.CharField(
         max_length=100,
-        help_text="Point of Interest name",
+        help_text="Landmark name",
     )
 
     description = models.TextField(
@@ -33,7 +33,7 @@ class Landmark(models.Model):
         help_text="Optional description of the point of interest",
     )
 
-    # POI coordinates
+    # Landmark coordinates
     latitude = models.DecimalField(
         max_digits=10,
         decimal_places=7,
@@ -65,14 +65,14 @@ class Landmark(models.Model):
     modified_date = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Point of Interest"
-        verbose_name_plural = "Points of Interest"
+        verbose_name = "Landmark"
+        verbose_name_plural = "Landmarks"
         ordering = ["name"]
         indexes = [
             models.Index(fields=["latitude", "longitude"]),  # For spatial queries
             models.Index(fields=["name"]),  # For name lookups
-            models.Index(fields=["creation_date"]),  # For recent POIs
-            models.Index(fields=["user"]),  # For user's POIs
+            models.Index(fields=["creation_date"]),  # For recent Landmarks
+            models.Index(fields=["user"]),  # For user's Landmarks
         ]
 
     def __str__(self) -> str:

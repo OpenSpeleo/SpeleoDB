@@ -13,8 +13,8 @@ from speleodb.api.v1.urls.experiment_records import (
 )
 from speleodb.api.v1.urls.gis import urlpatterns as gis_urlpatterns
 from speleodb.api.v1.urls.gis_view import urlpatterns as gis_view_urlpatterns
+from speleodb.api.v1.urls.landmark import urlpatterns as landmark_urlpatterns
 from speleodb.api.v1.urls.log_entry import urlpatterns as log_entry_urlpatterns
-from speleodb.api.v1.urls.poi import urlpatterns as poi_urlpatterns
 from speleodb.api.v1.urls.project import urlpatterns as project_urlpatterns
 from speleodb.api.v1.urls.resource import urlpatterns as resource_urlpatterns
 from speleodb.api.v1.urls.sensor import urlpatterns as sensor_urlpatterns
@@ -48,7 +48,7 @@ urlpatterns: list[URLResolver | URLPattern] = [
     path("gis-ogc/", include((gis_urlpatterns, "gis-ogc"), namespace="gis-ogc")),
     path("gis_view/", include(gis_view_urlpatterns)),
     path("logs/", include(log_entry_urlpatterns)),
-    path("points_of_interest/", include(poi_urlpatterns)),
+    path("landmarks/", include(landmark_urlpatterns)),
     path("projects/", include(project_urlpatterns)),
     path("resources/", include(resource_urlpatterns)),
     path("sensor-fleets/", include(sensor_fleet_urlpatterns)),

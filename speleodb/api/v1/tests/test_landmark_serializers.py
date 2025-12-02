@@ -7,8 +7,8 @@ from decimal import Decimal
 
 import pytest
 
-from speleodb.api.v1.serializers.poi import LandmarkGeoJSONSerializer
-from speleodb.api.v1.serializers.poi import LandmarkSerializer
+from speleodb.api.v1.serializers.landmark import LandmarkGeoJSONSerializer
+from speleodb.api.v1.serializers.landmark import LandmarkSerializer
 from speleodb.gis.models import Landmark
 from speleodb.users.models import User
 
@@ -24,9 +24,9 @@ def user() -> User:
 
 @pytest.fixture
 def poi(user: User) -> Landmark:
-    """Create a test POI."""
+    """Create a test Landmark."""
     return Landmark.objects.create(
-        name="Test POI",
+        name="Test Landmark",
         description="Test description",
         latitude=45.123456,
         longitude=-122.654321,
@@ -39,12 +39,12 @@ class TestLandmarkSerializer:
     """Test cases for LandmarkSerializer."""
 
     def test_serialize_poi(self, poi: Landmark) -> None:
-        """Test serializing a POI to JSON."""
+        """Test serializing a Landmark to JSON."""
         serializer = LandmarkSerializer(poi)
         data = serializer.data
 
         assert data["id"] == str(poi.id)
-        assert data["name"] == "Test POI"
+        assert data["name"] == "Test Landmark"
         assert data["description"] == "Test description"
         assert data["latitude"] == 45.123456  # noqa: PLR2004
         assert data["longitude"] == -122.654321  # noqa: PLR2004
@@ -52,12 +52,12 @@ class TestLandmarkSerializer:
         assert "creation_date" in data
         assert "modified_date" in data
 
-    def test_deserialize_poi_create(self, user: User) -> None:
-        """Test creating a POI from JSON data."""
+    def test_deserialize_landmark_create(self, user: User) -> None:
+        """Test creating a Landmark from JSON data."""
         latitude = Decimal("47.608")
         longitude = Decimal("-122.3351432423467")
         data = {
-            "name": "New POI",
+            "name": "New Landmark",
             "description": "New description",
             "latitude": f"{latitude}",
             "longitude": f"{longitude}",
@@ -74,18 +74,18 @@ class TestLandmarkSerializer:
         serializer.context["request"] = MockRequest(user)
         saved_poi = serializer.save()
 
-        assert saved_poi.name == "New POI"
+        assert saved_poi.name == "New Landmark"
         assert saved_poi.description == "New description"
         assert saved_poi.latitude == round(latitude, 7)
         assert saved_poi.longitude == round(longitude, 7)
         assert saved_poi.user == user
 
-    def test_deserialize_poi_update(self, poi: Landmark) -> None:
-        """Test updating a POI from JSON data."""
+    def test_deserialize_landmark_update(self, poi: Landmark) -> None:
+        """Test updating a Landmark from JSON data."""
         latitude = Decimal("-12.89493274807432")
         longitude = Decimal("-123.432")
         data = {
-            "name": "Updated POI",
+            "name": "Updated Landmark",
             "description": "Updated description",
             "latitude": f"{latitude}",
             "longitude": f"{longitude}",
@@ -96,7 +96,7 @@ class TestLandmarkSerializer:
 
         saved_poi = serializer.save()
 
-        assert saved_poi.name == "Updated POI"
+        assert saved_poi.name == "Updated Landmark"
         assert saved_poi.description == "Updated description"
         assert saved_poi.latitude == round(latitude, 7)
         assert saved_poi.longitude == round(longitude, 7)
@@ -105,7 +105,7 @@ class TestLandmarkSerializer:
         """Test latitude validation in serializer."""
         # Test invalid latitude > 90
         data = {
-            "name": "Invalid POI",
+            "name": "Invalid Landmark",
             "latitude": "91.0",
             "longitude": "0.0",
         }
@@ -124,7 +124,7 @@ class TestLandmarkSerializer:
         """Test longitude validation in serializer."""
         # Test invalid longitude > 180
         data = {
-            "name": "Invalid POI",
+            "name": "Invalid Landmark",
             "latitude": "0.0",
             "longitude": "181.0",
         }
@@ -187,11 +187,11 @@ class TestLandmarkGeoJSONSerializer:
         # Check properties
         properties = data["properties"]
         assert properties["id"] == str(poi.id)
-        assert properties["name"] == "Test POI"
+        assert properties["name"] == "Test Landmark"
         assert properties["description"] == "Test description"
 
     def test_map_serializer_feature_collection(self, user: User) -> None:
-        """Test serializing multiple POIs as GeoJSON FeatureCollection."""
+        """Test serializing multiple Landmarks as GeoJSON FeatureCollection."""
         _ = Landmark.objects.create(
             name="POI 1",
             latitude=45.0,
@@ -226,7 +226,7 @@ class TestLandmarkGeoJSONSerializer:
     def test_map_serializer_null_description(self, user: User) -> None:
         """Test map serializer with null/empty description."""
         poi = Landmark.objects.create(
-            name="No Description POI",
+            name="No Description Landmark",
             description="",
             latitude=45.0,
             longitude=-122.0,

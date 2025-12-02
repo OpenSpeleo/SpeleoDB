@@ -37,7 +37,7 @@ class LandmarkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             "Location",
             {
                 "fields": ("latitude", "longitude", "coordinates"),
-                "description": "GPS coordinates for the Point of Interest",
+                "description": "GPS coordinates for the Landmark",
             },
         ),
         (

@@ -8,7 +8,7 @@ const DRAG_THRESHOLD = 10;
 
 export const Interactions = {
     handlers: {},
-    
+
     // Handlers should contain:
     // onStationClick(stationId)
     // onPOIClick(poiId)
@@ -16,8 +16,8 @@ export const Interactions = {
     // onPOIDragEnd(poiId, newCoords, originalCoords)
     // onContextMenu(event, type, data)
     // onMapClick(coords)
-    
-    init: function(map, handlers) {
+
+    init: function (map, handlers) {
         this.handlers = handlers || {};
         this.setupHoverEffects(map);
         this.setupClickHandlers(map);
@@ -25,41 +25,41 @@ export const Interactions = {
         this.setupContextMenu(map);
     },
 
-    setupHoverEffects: function(map) {
+    setupHoverEffects: function (map) {
         map.on('mousemove', (e) => {
             const features = map.queryRenderedFeatures(e.point);
             let isInteractive = false;
-            
+
             for (const feature of features) {
                 if (!feature.layer || !feature.layer.id) continue;
-                // Check for subsurface stations, surface stations, and POIs
-                if (feature.layer.id.includes('stations-') || 
+                // Check for subsurface stations, surface stations, and Landmarks
+                if (feature.layer.id.includes('stations-') ||
                     feature.layer.id.startsWith('surface-stations-') ||
-                    feature.layer.id === 'pois-layer' || 
+                    feature.layer.id === 'pois-layer' ||
                     feature.layer.id === 'pois-labels') {
                     isInteractive = true;
                     break;
                 }
             }
-            
+
             map.getCanvas().style.cursor = isInteractive ? 'pointer' : '';
         });
     },
 
-    setupClickHandlers: function(map) {
+    setupClickHandlers: function (map) {
         map.on('click', (e) => {
             if (e.defaultPrevented) return;
 
             const features = map.queryRenderedFeatures(e.point);
-            
+
             // Check for Subsurface Stations (circles)
-            const stationFeature = features.find(f => 
-                f.layer && f.layer.id && 
-                f.layer.id.startsWith('stations-') && 
+            const stationFeature = features.find(f =>
+                f.layer && f.layer.id &&
+                f.layer.id.startsWith('stations-') &&
                 f.layer.id.endsWith('-circles') &&
                 !f.layer.id.startsWith('surface-')
             );
-            
+
             if (stationFeature) {
                 const stationId = stationFeature.properties.id;
                 if (this.handlers.onStationClick) {
@@ -67,14 +67,14 @@ export const Interactions = {
                 }
                 return;
             }
-            
+
             // Check for Surface Stations (diamond symbols)
-            const surfaceStationFeature = features.find(f => 
-                f.layer && f.layer.id && 
+            const surfaceStationFeature = features.find(f =>
+                f.layer && f.layer.id &&
                 f.layer.id.startsWith('surface-stations-') &&
                 !f.layer.id.endsWith('-labels')
             );
-            
+
             if (surfaceStationFeature) {
                 const stationId = surfaceStationFeature.properties.id;
                 if (this.handlers.onStationClick) {
@@ -83,11 +83,11 @@ export const Interactions = {
                 return;
             }
 
-            // Check for POIs
-            const poiFeature = features.find(f => 
+            // Check for Landmarks
+            const poiFeature = features.find(f =>
                 f.layer && (f.layer.id === 'pois-layer' || f.layer.id === 'pois-labels')
             );
-            
+
             if (poiFeature) {
                 const poiId = poiFeature.properties.id;
                 if (this.handlers.onPOIClick) {
@@ -103,7 +103,7 @@ export const Interactions = {
         });
     },
 
-    setupDragHandlers: function(map) {
+    setupDragHandlers: function (map) {
         // State for drag handling
         let isPotentialDrag = false;
         let isDragging = false;
@@ -115,9 +115,9 @@ export const Interactions = {
         let currentSnapResult = null;
         let draggedProjectId = null;
         let originalColor = null;
-        
+
         const self = this;
-        
+
         map.on('mousedown', (e) => {
             if (e.originalEvent.button !== 0) return; // Only left click
 
@@ -125,10 +125,10 @@ export const Interactions = {
             if (!features.length) return;
 
             // Check Station
-            const stationFeature = features.find(f => 
+            const stationFeature = features.find(f =>
                 f.layer && f.layer.id && f.layer.id.startsWith('stations-') && f.layer.id.endsWith('-circles')
             );
-            
+
             if (stationFeature) {
                 const projectId = Geometry.findProjectForFeature(stationFeature, map, State.allProjectLayers);
                 if (Config.hasProjectWriteAccess(projectId)) {
@@ -142,20 +142,20 @@ export const Interactions = {
                     draggedProjectId = projectId;
                     originalColor = stationFeature.properties.color;
                     currentSnapResult = null;
-                    
+
                     // Disable pan immediately to avoid interference
                     map.dragPan.disable();
                     return;
                 }
             }
 
-            // Check POI
-            const poiFeature = features.find(f => 
+            // Check Landmark
+            const poiFeature = features.find(f =>
                 f.layer && f.layer.id === 'pois-layer'
             );
-            
+
             if (poiFeature) {
-                // Any authenticated user can drag their POIs
+                // Any authenticated user can drag their Landmarks
                 isPotentialDrag = true;
                 hasMoved = false;
                 isDragging = false;
@@ -165,57 +165,57 @@ export const Interactions = {
                 mouseDownPoint = e.point;
                 draggedProjectId = null;
                 currentSnapResult = null;
-                
+
                 map.dragPan.disable();
             }
         });
 
         map.on('mousemove', (e) => {
             if (!isPotentialDrag) return;
-            
+
             // Check if we've moved past the threshold
             if (!hasMoved && mouseDownPoint) {
                 const dx = e.point.x - mouseDownPoint.x;
                 const dy = e.point.y - mouseDownPoint.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                
+
                 if (distance < DRAG_THRESHOLD) {
                     return; // Not dragging yet
                 }
-                
+
                 // Threshold exceeded - now we're dragging
                 hasMoved = true;
                 isDragging = true;
                 map.getCanvas().style.cursor = 'grabbing';
                 map.doubleClickZoom.disable();
-                
+
                 console.log(`🫳 Started dragging ${draggedType}: ${draggedFeatureId}`);
             }
-            
+
             if (!isDragging) return;
-            
+
             const coords = [e.lngLat.lng, e.lngLat.lat];
-            
+
             if (draggedType === 'station') {
                 // Check for snap
                 const snapResult = Geometry.findMagneticSnapPoint(coords, null);
                 currentSnapResult = snapResult;
-                
+
                 // Use snapped coordinates if snapping
                 const displayCoords = snapResult.snapped ? snapResult.coordinates : coords;
-                
+
                 // Update visual position
                 Layers.updateStationPosition(draggedProjectId, draggedFeatureId, displayCoords);
-                
+
                 // Show snap indicator
                 Geometry.showSnapIndicator(displayCoords, map, snapResult.snapped);
-                
+
                 // Update station color to indicate snap status
                 const newColor = snapResult.snapped ? '#10b981' : '#f59e0b'; // Green if snapped, amber if not
                 Layers.updateStationColor(draggedProjectId, draggedFeatureId, newColor);
-                
+
             } else if (draggedType === 'poi') {
-                // POIs don't snap to survey lines
+                // Landmarks don't snap to survey lines
                 if (self.handlers.onPOIDrag) {
                     self.handlers.onPOIDrag(draggedFeatureId, coords);
                 }
@@ -224,32 +224,32 @@ export const Interactions = {
 
         const onUp = (e) => {
             if (!isPotentialDrag) return;
-            
+
             const wasDragging = isDragging && hasMoved;
-            
+
             // Hide snap indicator
             Geometry.hideSnapIndicator();
-            
+
             // Restore cursor and map interactions
             map.getCanvas().style.cursor = '';
             map.dragPan.enable();
             map.doubleClickZoom.enable();
-            
+
             if (wasDragging) {
                 if (draggedType === 'station') {
                     // Calculate final snap result
                     const finalCoords = [e.lngLat.lng, e.lngLat.lat];
                     const snapResult = Geometry.findMagneticSnapPoint(finalCoords, null);
-                    
+
                     // Restore original color (will be updated after confirm/cancel)
                     Layers.updateStationColor(draggedProjectId, draggedFeatureId, originalColor || '#fb923c');
-                    
+
                     // Call handler with snap result
                     if (self.handlers.onStationDragEnd) {
                         self.handlers.onStationDragEnd(
-                            draggedFeatureId, 
+                            draggedFeatureId,
                             draggedProjectId,
-                            snapResult, 
+                            snapResult,
                             originalCoords
                         );
                     }
@@ -280,18 +280,18 @@ export const Interactions = {
         map.on('mouseup', onUp);
     },
 
-    setupContextMenu: function(map) {
+    setupContextMenu: function (map) {
         map.on('contextmenu', (e) => {
             const features = map.queryRenderedFeatures(e.point);
-            
+
             // Check Subsurface Station
-            const stationFeature = features.find(f => 
-                f.layer && f.layer.id && 
-                f.layer.id.startsWith('stations-') && 
+            const stationFeature = features.find(f =>
+                f.layer && f.layer.id &&
+                f.layer.id.startsWith('stations-') &&
                 f.layer.id.endsWith('-circles') &&
                 !f.layer.id.startsWith('surface-')
             );
-            
+
             if (stationFeature) {
                 if (this.handlers.onContextMenu) {
                     this.handlers.onContextMenu(e, 'station', {
@@ -302,14 +302,14 @@ export const Interactions = {
                 }
                 return;
             }
-            
+
             // Check Surface Station
-            const surfaceStationFeature = features.find(f => 
-                f.layer && f.layer.id && 
+            const surfaceStationFeature = features.find(f =>
+                f.layer && f.layer.id &&
                 f.layer.id.startsWith('surface-stations-') &&
                 !f.layer.id.endsWith('-labels')
             );
-            
+
             if (surfaceStationFeature) {
                 if (this.handlers.onContextMenu) {
                     this.handlers.onContextMenu(e, 'surface-station', {
@@ -321,11 +321,11 @@ export const Interactions = {
                 return;
             }
 
-            // Check POI
-            const poiFeature = features.find(f => 
+            // Check Landmark
+            const poiFeature = features.find(f =>
                 f.layer && (f.layer.id === 'pois-layer' || f.layer.id === 'pois-labels')
             );
-            
+
             if (poiFeature) {
                 if (this.handlers.onContextMenu) {
                     this.handlers.onContextMenu(e, 'poi', {

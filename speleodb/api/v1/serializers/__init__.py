@@ -17,6 +17,9 @@ from speleodb.api.v1.serializers.git import GitCommitListSerializer
 from speleodb.api.v1.serializers.git import GitCommitSerializer
 from speleodb.api.v1.serializers.git import GitFileListSerializer
 from speleodb.api.v1.serializers.git import GitFileSerializer
+from speleodb.api.v1.serializers.landmark import LandmarkGeoJSONSerializer
+from speleodb.api.v1.serializers.landmark import LandmarkSerializer
+from speleodb.api.v1.serializers.log_entry import StationLogEntrySerializer
 from speleodb.api.v1.serializers.password import PasswordChangeSerializer
 from speleodb.api.v1.serializers.permissions import (
     ExperimentUserPermissionListSerializer,
@@ -69,6 +72,8 @@ __all__ = [
     "GitCommitSerializer",
     "GitFileListSerializer",
     "GitFileSerializer",
+    "LandmarkGeoJSONSerializer",
+    "LandmarkSerializer",
     "PasswordChangeSerializer",
     "PluginReleaseSerializer",
     "ProjectCommitSerializer",
@@ -86,6 +91,7 @@ __all__ = [
     "SensorFleetUserPermissionSerializer",
     "SensorInstallSerializer",
     "SensorSerializer",
+    "StationLogEntrySerializer",
     "SurveyTeamListSerializer",
     "SurveyTeamMembershipListSerializer",
     "SurveyTeamMembershipSerializer",

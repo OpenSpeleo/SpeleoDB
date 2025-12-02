@@ -23,7 +23,7 @@ class TestLandmarkModel:
 
     @pytest.fixture
     def poi(self, user: User) -> Landmark:
-        """Create a test POI."""
+        """Create a test Landmark."""
         return Landmark.objects.create(
             name="Test Cave Entrance",
             description="A beautiful cave entrance with stalactites",
@@ -32,8 +32,8 @@ class TestLandmarkModel:
             user=user,
         )
 
-    def test_create_poi_with_valid_data(self, user: User) -> None:
-        """Test creating a POI with all valid data."""
+    def test_create_landmark_with_valid_data(self, user: User) -> None:
+        """Test creating a Landmark with all valid data."""
         poi = Landmark.objects.create(
             name="Mountain Peak Viewpoint",
             description="Stunning panoramic views",
@@ -51,22 +51,22 @@ class TestLandmarkModel:
         assert poi.creation_date is not None
         assert poi.modified_date is not None
 
-    def test_create_poi_minimal_data(self, user: User) -> None:
-        """Test creating a POI with only required fields."""
+    def test_create_landmark_minimal_data(self, user: User) -> None:
+        """Test creating a Landmark with only required fields."""
         poi = Landmark.objects.create(
-            name="Minimal POI",
+            name="Minimal Landmark",
             latitude=0.0,
             longitude=0.0,
             user=user,
         )
 
         assert poi.id is not None
-        assert poi.name == "Minimal POI"
+        assert poi.name == "Minimal Landmark"
         assert poi.description == ""  # Default value
         assert poi.user == user
 
-    def test_poi_string_representation(self, poi: Landmark) -> None:
-        """Test the string representation of POI."""
+    def test_landmark_string_representation(self, poi: Landmark) -> None:
+        """Test the string representation of Landmark."""
         assert str(poi) == "POI: Test Cave Entrance"
 
     def test_latitude_validation(self, user: User) -> None:
@@ -172,19 +172,19 @@ class TestLandmarkModel:
         assert str(poi.longitude) == "-122.7654321"
 
     def test_user_cascade_on_user_delete(self, poi: Landmark, user: User) -> None:
-        """Test that POI is deleted when user is deleted (CASCADE)."""
+        """Test that Landmark is deleted when user is deleted (CASCADE)."""
         assert poi.user == user
         poi_id = poi.id
 
         # Delete the user
         user.delete()
 
-        # POI should be deleted due to CASCADE
+        # Landmark should be deleted due to CASCADE
         assert not Landmark.objects.filter(id=poi_id).exists()
 
     def test_ordering(self, user: User) -> None:
-        """Test that POIs are ordered by name."""
-        # Create POIs in non-alphabetical order
+        """Test that Landmarks are ordered by name."""
+        # Create Landmarks in non-alphabetical order
         _ = Landmark.objects.create(
             name="Cave C",
             latitude=0.0,
@@ -204,7 +204,7 @@ class TestLandmarkModel:
             user=user,
         )
 
-        # Query all POIs
+        # Query all Landmarks
         pois = list(Landmark.objects.all())
 
         # Should be ordered alphabetically by name
@@ -217,7 +217,7 @@ class TestLandmarkModel:
         original_created = poi.creation_date
         original_modified = poi.modified_date
 
-        # Update the POI
+        # Update the Landmark
         poi.description = "Updated description"
         poi.save()
 
@@ -229,13 +229,13 @@ class TestLandmarkModel:
 
     def test_verbose_names(self) -> None:
         """Test model verbose names."""
-        assert Landmark._meta.verbose_name == "Point of Interest"  # noqa: SLF001
-        assert Landmark._meta.verbose_name_plural == "Points of Interest"  # noqa: SLF001
+        assert Landmark._meta.verbose_name == "Landmark"  # noqa: SLF001
+        assert Landmark._meta.verbose_name_plural == "Landmarks"  # noqa: SLF001
 
     def test_blank_description_allowed(self, user: User) -> None:
         """Test that blank description is allowed."""
         poi = Landmark.objects.create(
-            name="No Description POI",
+            name="No Description Landmark",
             latitude=10.0,
             longitude=20.0,
             user=user,

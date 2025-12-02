@@ -79,22 +79,22 @@ export const API = {
     getAllSurfaceStationsGeoJSON: () =>
         apiRequest(Urls['api:v1:surface-stations-geojson']()),
 
-    // POIs
-    createPOI: (poiData) =>
-        apiRequest(Urls['api:v1:pois'](), 'POST', poiData),
+    // Landmarks
+    createLandmark: (poiData) =>
+        apiRequest(Urls['api:v1:landmarks'](), 'POST', poiData),
 
-    updatePOI: (poiId, poiData) =>
-        apiRequest(Urls['api:v1:poi-detail'](poiId), 'PATCH', poiData),
+    updateLandmark: (poiId, poiData) =>
+        apiRequest(Urls['api:v1:landmark-detail'](poiId), 'PATCH', poiData),
 
-    deletePOI: (poiId) =>
-        apiRequest(Urls['api:v1:poi-detail'](poiId), 'DELETE'),
+    deleteLandmark: (poiId) =>
+        apiRequest(Urls['api:v1:landmark-detail'](poiId), 'DELETE'),
 
-    getAllPOIs: () =>
-        apiRequest(Urls['api:v1:pois']()),
+    getAllLandmarks: () =>
+        apiRequest(Urls['api:v1:landmarks']()),
 
-    // All POIs GeoJSON (single API call)
-    getAllPOIsGeoJSON: () =>
-        apiRequest(Urls['api:v1:pois-geojson']()),
+    // All Landmarks GeoJSON (single API call)
+    getAllLandmarksGeoJSON: () =>
+        apiRequest(Urls['api:v1:landmarks-geojson']()),
 
     // Tags
     getUserTags: () =>
