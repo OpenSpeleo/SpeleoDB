@@ -6272,6 +6272,12 @@ focus\:border-slate-900:focus {
     line-height: 1.5715;
   }
 
+  .sm\:text-xl {
+    font-size: 1.25rem;
+    line-height: 1.5;
+    letter-spacing: -0.017em;
+  }
+
   .sm\:first\:pl-6:first-child {
     padding-left: 1.5rem;
   }
@@ -6781,6 +6787,18 @@ focus\:border-slate-900:focus {
 
   .lg\:text-left {
     text-align: left;
+  }
+
+  .lg\:text-2xl {
+    font-size: 1.5rem;
+    line-height: 1.33;
+    letter-spacing: -0.01em;
+  }
+
+  .lg\:text-3xl {
+    font-size: 1.88rem;
+    line-height: 1.33;
+    letter-spacing: -0.01em;
   }
 
   .lg\:opacity-0 {

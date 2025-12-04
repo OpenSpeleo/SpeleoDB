@@ -1,0 +1,227 @@
+{% load static %}
+
+<!-- Welcome Modal for Non-Authenticated Users -->
+{% if not request.user.is_authenticated %}
+<div x-data="{ showModal: !sessionStorage.getItem('welcomeModalDismissed') }" 
+     x-show="showModal" 
+     x-cloak
+     class="fixed inset-0 z-9999 flex items-center justify-center p-4 welcome-modal-backdrop"
+     style="display: none;"
+     @keydown.escape.window="showModal = false; sessionStorage.setItem('welcomeModalDismissed', 'true')">
+    
+    <!-- Modal Container -->
+    <div class="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto welcome-modal">
+        
+        <!-- Background glow effects -->
+        <div class="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none" aria-hidden="true">
+            <div class="absolute w-96 h-96 bg-purple-500 rounded-full blur-[120px] opacity-30 pulse-glow"></div>
+        </div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-slate-900 rounded-3xl border border-slate-200 modal-gradient-border shadow-2xl">
+            
+            <!-- Close Button -->
+            <button @click="showModal = false; sessionStorage.setItem('welcomeModalDismissed', 'true')" 
+                    class="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 text-slate-400 hover:text-white transition-colors duration-200 p-2 rounded-full hover:bg-slate-800/50"
+                    aria-label="Close modal">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+            
+            <div class="p-6 sm:p-8 md:p-12">
+                
+                <!-- Logo and Header -->
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center mb-6">
+                        <img src="{% static 'media/logo_webview.png' %}" alt="SpeleoDB" class="h-16 sm:h-20">
+                    </div>
+                    
+                    <h2 class="text-xl lg:text-3xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 mb-4">
+                        Explore as One, Survey as Many
+                    </h2>
+                    
+                    <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                        A collaborative platform for cave survey data management, built by cave divers for the entire speleological community.
+                    </p>
+                </div>
+                
+                <!-- Features Grid -->
+                <div class="grid sm:grid-cols-2 gap-4 mb-8">
+                    
+                    <!-- Feature 1 -->
+                    <div class="feature-card bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm sm:text-base font-semibold text-slate-100 mb-1">Data Privacy First</h3>
+                                <p class="text-xs sm:text-sm text-slate-400">You maintain full ownership and control over your survey data</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Feature 2 -->
+                    <div class="feature-card bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm sm:text-base font-semibold text-slate-100 mb-1">Team Collaboration</h3>
+                                <p class="text-xs sm:text-sm text-slate-400">
+                                    Work together seamlessly with direct integration inside <a href="https://www.arianesline.com/" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">Ariane's line</a>, 
+                                    <a href="https://fountainware.com/compass/" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">Compass</a> and any GIS software 
+                                    (e.g. <a href="https://www.esri.com/en-us/arcgis/geospatial-platform/overview" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">ESRI / ArcGIS</a>, 
+                                    <a href="https://qgis.org/" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">QGIS</a>, etc.). 
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Feature 3 -->
+                    <div class="feature-card bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm sm:text-base font-semibold text-slate-100 mb-1">Open Source</h3>
+                                <p class="text-xs sm:text-sm text-slate-400">Transparent, community-driven platform with full code access</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Feature 4 -->
+                    <div class="feature-card bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm sm:text-base font-semibold text-slate-100 mb-1">Cloud or Self-Hosted</h3>
+                                <p class="text-xs sm:text-sm text-slate-400">Choose our managed service or host your own instance</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <!-- Mission Statement -->
+                <div class="bg-gradient-to-br from-purple-900/30 to-slate-800/30 rounded-2xl p-6 border border-purple-500/20 mb-8">
+                    <p class="text-sm sm:text-base text-slate-200 text-center leading-relaxed">
+                        <span class="font-semibold text-purple-300">SpeleoDB</span> is developed by the 
+                        <span class="font-semibold">Underwater Speleological and Archaeological Heritage Institute (USAH Institute)</span>, 
+                        a US-registered 501c3 non-profit. We're building the future of cave surveying with 
+                        <span class="font-semibold text-purple-300">transparency</span>, 
+                        <span class="font-semibold text-purple-300">collaboration</span>, and 
+                        <span class="font-semibold text-purple-300">data privacy</span> at the core.
+                    </p>
+                </div>
+                
+                <!-- Call to Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+
+                    <a href="{% url 'account_signup' %}" 
+                       target="_blank"
+                       class="btn text-slate-900 bg-gradient-to-r from-white/80 via-white to-white/80 hover:bg-white w-full sm:w-auto px-8 py-3 transition duration-150 ease-in-out group shadow-lg hover:shadow-xl"
+                       style="width: 100%;">
+                        <span class="flex items-center justify-center">
+                            Create Free Account
+                            <svg class="w-5 h-5 ml-2 text-purple-500 group-hover:translate-x-1 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                            </svg>
+                        </span>
+                    </a>
+                    
+                    <button @click="showModal = false; sessionStorage.setItem('welcomeModalDismissed', 'true')" 
+                            class="btn bg-slate-800 hover:bg-slate-700 text-slate-200 w-full sm:w-auto px-8 py-3 border border-slate-700 transition duration-150 ease-in-out"
+                            style="width: 100%;">
+                        Continue Exploring
+                    </button>
+                </div>
+                
+                <!-- Additional Info -->
+                <div class="mt-6 text-center">
+                    <p class="text-xs sm:text-sm text-slate-500">
+                        Already have an account? 
+                        <a href="{% url 'account_login' %}" class="text-purple-400 hover:text-purple-300 font-medium transition-colors duration-150">
+                            Sign in here
+                        </a>
+                    </p>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Styles -->
+<style>
+    /* Welcome Modal Styles */
+    .welcome-modal-backdrop {
+        /* background-color: rgba(15, 23, 42, 0.95); */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    
+    .welcome-modal {
+        animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95) translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+    
+    .feature-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(168, 85, 247, 0.2);
+    }
+    
+    .modal-gradient-border {
+        background: linear-gradient(theme(colors.slate.900), theme(colors.slate.900)) padding-box,
+                    conic-gradient(theme(colors.purple.500), theme(colors.purple.300) 25%, theme(colors.purple.700) 75%, theme(colors.purple.500) 100%) border-box;
+    }
+    
+    .pulse-glow {
+        animation: pulseGlow 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulseGlow {
+        0%, 100% {
+            opacity: 0.7;
+        }
+        50% {
+            opacity: 1;
+        }
+    }
+    
+    @media (max-width: 640px) {
+        .welcome-modal {
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+    }
+</style>
+{% endif %}
+
