@@ -534,6 +534,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gis-ogc/view/<gis_token>/geojson",
+        "module": "speleodb.api.v1.views.gis_view.PublicGISViewGeoJSONApiView",
+        "name": "api:v1:gis-ogc:view-geojson",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/gis_view/<uuid:id>/",
         "module": "speleodb.api.v1.views.gis_view.GISViewDataApiView",
         "name": "api:v1:gis-view-data",
@@ -1359,6 +1365,12 @@
         "url": "/terms_and_conditions/",
         "module": "django.views.generic.base.TemplateView",
         "name": "terms_and_conditions",
+        "decorators": ""
+    },
+    {
+        "url": "/view/<str:gis_token>/",
+        "module": "frontend_public.views.PublicGISViewMapViewer",
+        "name": "gis_view_map",
         "decorators": ""
     },
     {

@@ -203,11 +203,9 @@ class GISView(models.Model):
 
         for geojson_data in data:
             try:
-                geojson_data["url"] = (
-                    geojson_data.pop("project_geojson").get_signed_download_url(
-                        expires_in=expires_in
-                    ),
-                )
+                geojson_data["url"] = geojson_data.pop(
+                    "project_geojson"
+                ).get_signed_download_url(expires_in=expires_in)
 
             except (ValidationError, Exception):  # noqa: BLE001
                 logger.exception(

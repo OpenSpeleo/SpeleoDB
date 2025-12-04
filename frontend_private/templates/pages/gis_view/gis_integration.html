@@ -6,7 +6,7 @@
 
     <!-- Panel body -->
     <div class="p-6 space-y-6">
-        <div class="flex flex-col items-center justify-center min-h-[60vh]">
+        <div class="flex flex-col items-center justify-center">
             <!-- Icon -->
             <div class="mb-6">
                 <svg class="w-24 h-24 mx-auto text-slate-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
@@ -15,30 +15,84 @@
             </div>
             
             <!-- Title -->
-            <h2 class="text-3xl text-slate-100 font-bold mb-4">GIS Integration</h2>
+            <h2 class="text-3xl text-slate-100 font-bold mb-4">Share & Integrate</h2>
 
             <!-- Message -->
-            <p class="text-lg text-slate-200 w-full text-center my-6">
-                Use this URL to access GeoJSON data from multiple projects for GIS integration.
+            <p class="text-lg text-slate-200 w-full text-center mb-8">
+                Share this view with others or integrate it into your GIS workflow.
             </p>
-            
-            <!-- API URL -->
+
+            <!-- ==================== PUBLIC MAP VIEWER ==================== -->
+            <div class="w-full mb-8">
+                <div class="flex items-center gap-2 mb-3">
+                    <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    <h3 class="text-lg font-semibold text-slate-100">Public Map Viewer</h3>
+                </div>
+                <p class="text-sm text-slate-400 mb-3">
+                    Share this link to let anyone view this GIS View on an interactive map <span class="text-slate-200 font-heavy underlined">- no login required</span>.
+                </p>
+                <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 overflow-x-auto">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+                        <code id="map-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
+                            {{ request.scheme }}://{{ request.get_host }}{% url 'gis_view_map' gis_token=gis_view.gis_token %}
+                        </code>
+                        <div class="flex gap-2 md:flex-shrink-0">
+                            <button 
+                                id="copy-map-btn"
+                                type="button"
+                                class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                            >
+                                <svg id="copy-map-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <span id="copy-map-text">Copy</span>
+                            </button>
+                            <a 
+                                href="{% url 'gis_view_map' gis_token=gis_view.gis_token %}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                <span>View Map</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="w-full border-t border-slate-700 mb-8"></div>
+
+            <!-- ==================== OGC API ENDPOINT ==================== -->
             <div class="w-full mb-6">
-                <label class="block text-sm font-medium text-slate-300 mb-2">API Endpoint URL</label>
-                <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 overflow-x-auto relative group">
+                <div class="flex items-center gap-2 mb-3">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <h3 class="text-lg font-semibold text-slate-100">GIS OGC API Endpoint</h3>
+                </div>
+                <p class="text-sm text-slate-400 mb-3">
+                    Use this URL in external GIS software (QGIS, ArcGIS, etc.) to access GeoJSON data programmatically.
+                </p>
+                <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 overflow-x-auto">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
                         <code id="api-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
                             {{ request.scheme }}://{{ request.get_host }}{% url 'api:v1:gis-ogc:view-data' gis_token=gis_view.gis_token %}
                         </code>
                         <button 
-                            id="copy-btn"
+                            id="copy-api-btn"
                             type="button"
-                            class="w-full md:w-auto md:flex-shrink-0 px-4 py-2.5 md:px-3 md:py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                            class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
                         >
-                            <svg id="copy-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg id="copy-api-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
-                            <span id="copy-text">Copy</span>
+                            <span id="copy-api-text">Copy</span>
                         </button>
                     </div>
                 </div>
@@ -55,11 +109,11 @@
                             <div class="flex-1">
                                 <p class="text-sm font-medium text-orange-200 mb-1">Security Warning</p>
                                 <p class="text-sm text-orange-300/90 mb-3">
-                                    Sharing this link gives access to GeoJSON data for all projects in this view. 
-                                    This should be considered private and kept safe like a password.
+                                    Both links above use a secure token that grants access to all projects in this view. 
+                                    Treat these links like a password — only share them with trusted parties.
                                 </p>
                                 <p class="text-sm text-orange-300/90">
-                                    If this secure token link was compromised or shared unintentionally, you can refresh it to invalidate the old link and generate a new one.
+                                    If a link was compromised or shared unintentionally, refresh the token below to invalidate all existing links and generate new ones.
                                 </p>
                             </div>
                         </div>
@@ -90,28 +144,34 @@
 {% block inline_extra_js %}
 <script>
     $(document).ready(function() {
-        // Copy button functionality
-        $('#copy-btn').click(function() {
-            const url = $('#api-url').text().trim();
-            
-            navigator.clipboard.writeText(url).then(function() {
-                // Change button text to "Copied!"
-                $('#copy-text').text('Copied!');
-                $('#copy-icon').html(`
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                `);
+        // Generic copy button handler
+        function setupCopyButton(btnId, urlId, textId, iconId) {
+            $(btnId).click(function() {
+                const url = $(urlId).text().trim();
                 
-                // Reset after 2 seconds
-                setTimeout(function() {
-                    $('#copy-text').text('Copy');
-                    $('#copy-icon').html(`
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                navigator.clipboard.writeText(url).then(function() {
+                    // Change button text to "Copied!"
+                    $(textId).text('Copied!');
+                    $(iconId).html(`
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     `);
-                }, 2000);
-            }).catch(function(err) {
-                console.error('Failed to copy:', err);
+                    
+                    // Reset after 2 seconds
+                    setTimeout(function() {
+                        $(textId).text('Copy');
+                        $(iconId).html(`
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        `);
+                    }, 2000);
+                }).catch(function(err) {
+                    console.error('Failed to copy:', err);
+                });
             });
-        });
+        }
+
+        // Setup copy buttons for both URLs
+        setupCopyButton('#copy-map-btn', '#map-url', '#copy-map-text', '#copy-map-icon');
+        setupCopyButton('#copy-api-btn', '#api-url', '#copy-api-text', '#copy-api-icon');
     });
 </script>
 {% endblock inline_extra_js %}

@@ -16,6 +16,7 @@ from frontend_public.views import LoginView
 from frontend_public.views import PasswordResetFromKeyView
 from frontend_public.views import PasswordResetView
 from frontend_public.views import PeoplePageView
+from frontend_public.views import PublicGISViewMapViewer
 from frontend_public.views import SignUpView
 from frontend_public.views import robots_txt
 
@@ -70,6 +71,12 @@ urlpatterns = [
         "privacy_policy/",
         TemplateView.as_view(template_name="pages/privacy_policy.html"),
         name="privacy_policy",
+    ),
+    # Public GIS View Map Viewer
+    path(
+        "view/<str:gis_token>/",
+        PublicGISViewMapViewer.as_view(),
+        name="gis_view_map",
     ),
     # Webviews
     path("webview/ariane/", ArianeWebView, name="webview_ariane"),

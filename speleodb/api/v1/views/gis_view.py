@@ -18,6 +18,7 @@ from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v1.permissions import GISViewOwnershipPermission
 from speleodb.api.v1.serializers.gis_view import GISViewDataSerializer
+from speleodb.api.v1.serializers.gis_view import PublicGISViewSerializer
 from speleodb.gis.models import GISView
 from speleodb.gis.models import GISViewProject
 from speleodb.gis.models import ProjectGeoJSON
@@ -237,3 +238,36 @@ class OGCGISViewCollectionItemApiView(BaseOGCGISViewCollectionApiView):
             buffer_stream(),
             content_type="application/geo+json",
         )
+
+
+class PublicGISViewGeoJSONApiView(GenericAPIView[GISView], SDBAPIViewMixin):
+    """
+    Public endpoint returning GeoJSON URLs for frontend map viewer.
+
+    This endpoint is accessible via gis_token without authentication.
+    Returns signed URLs to GeoJSON files in a format suitable for the
+    frontend map viewer (different from OGC format used by external GIS tools).
+
+    Usage: Public SpeleoDB map viewer at /view/<gis_token>/
+    """
+
+    queryset = GISView.objects.all()
+    permission_classes = [permissions.AllowAny]
+    lookup_field = "gis_token"
+
+    def get(
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Response:
+        """Return GeoJSON signed URLs for the view in frontend format."""
+
+        gis_view = self.get_object()
+
+        serializer = PublicGISViewSerializer(
+            gis_view,
+            context={"expires_in": 3600},
+        )
+
+        return SuccessResponse(serializer.data)

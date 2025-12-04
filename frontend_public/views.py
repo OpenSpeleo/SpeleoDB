@@ -7,6 +7,7 @@ from typing import Any
 from typing import TypeVar
 
 from django.conf import settings
+from django.http import Http404
 from django.http.response import HttpResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
@@ -18,6 +19,7 @@ from frontend_public.models import BoardMember
 from frontend_public.models import ExplorerMember
 from frontend_public.models import ScientificMember
 from frontend_public.models import TechnicalMember
+from speleodb.gis.models import GISView
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -123,3 +125,39 @@ class PeoplePageView(TemplateView):
         context["scientific_members"] = ScientificMember.objects.all()
 
         return context
+
+
+class PublicGISViewMapViewer(TemplateView):
+    """
+    Public map viewer for GIS Views - no authentication required.
+
+    Displays a read-only map with only GeoJSON survey data from the
+    specified GIS View. All management features (stations, landmarks,
+    context menus, etc.) are hidden.
+    """
+
+    template_name = "pages/gis_view_map.html"
+
+    def get(
+        self,
+        request: HttpRequest,
+        gis_token: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        # Validate that the GIS View exists
+        try:
+            gis_view = GISView.objects.get(gis_token=gis_token)
+        except GISView.DoesNotExist as e:
+            raise Http404("GIS View not found") from e
+
+        context = self.get_context_data(**kwargs)
+        context.update(
+            {
+                "mapbox_api_token": settings.MAPBOX_API_TOKEN,
+                "view_mode": "public",  # Key flag for template conditionals
+                "gis_view": gis_view,
+                "gis_token": gis_token,
+            }
+        )
+        return self.render_to_response(context)

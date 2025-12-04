@@ -222,6 +222,50 @@ class GISViewDataGeoJSONFileSerializer(serializers.Serializer[Any]):
     use_latest = serializers.BooleanField()
 
 
+class PublicGISViewProjectSerializer(serializers.Serializer[dict[str, Any]]):
+    """Serializer for individual project in public GIS view frontend response."""
+
+    id = serializers.UUIDField(source="project_id")
+    name = serializers.CharField(source="project_name")
+    geojson_file = serializers.SerializerMethodField()
+    commit_sha = serializers.CharField()
+    commit_date = serializers.CharField()
+    use_latest = serializers.BooleanField()
+
+    def get_geojson_file(self, obj: dict[str, Any]) -> str | None:
+        """Extract URL from tuple if needed."""
+        url = obj.get("url", None)  # noqa: SIM910
+
+        match url:
+            case str():
+                return url
+            case _:
+                return None
+
+
+class PublicGISViewSerializer(serializers.Serializer[GISView]):
+    """
+    Serializer for the public GIS view frontend map viewer response.
+
+    Used by the public SpeleoDB map viewer at /view/<gis_token>/
+    Returns data in a format suitable for the frontend JavaScript.
+    """
+
+    view_name = serializers.CharField(source="name")
+    view_description = serializers.CharField(source="description")
+    projects = serializers.SerializerMethodField()
+
+    def get_projects(self, obj: GISView) -> list[dict[str, Any]]:
+        """Get projects with signed GeoJSON URLs."""
+        expires_in = self.context.get("expires_in", 3600)
+        try:
+            geojson_data = obj.get_geojson_urls(expires_in=expires_in)
+            serializer = PublicGISViewProjectSerializer(geojson_data, many=True)  # type: ignore[arg-type]
+            return serializer.data  # type: ignore[return-value]
+        except Exception:  # noqa: BLE001
+            return []
+
+
 class GISViewDataSerializer(serializers.Serializer[GISView]):
     """
     Serializer for the public GIS view data endpoint response.

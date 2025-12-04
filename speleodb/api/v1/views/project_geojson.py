@@ -154,7 +154,7 @@ class OGCGISUserCollectionApiView(BaseOGCGISViewCollectionApiView):
 
         return GISResponse(
             {
-                "id": project_geojson.id,
+                "id": project_geojson.commit,
                 "title": project_geojson.project.name,
                 "description": f"Commit: {project_geojson.commit_sha}",
                 "itemType": "feature",

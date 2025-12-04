@@ -11,6 +11,7 @@ from speleodb.api.v1.views.experiment import ExperimentGISApiView
 from speleodb.api.v1.views.gis_view import OGCGISViewCollectionApiView
 from speleodb.api.v1.views.gis_view import OGCGISViewCollectionItemApiView
 from speleodb.api.v1.views.gis_view import OGCGISViewDataApiView
+from speleodb.api.v1.views.gis_view import PublicGISViewGeoJSONApiView
 from speleodb.api.v1.views.project_geojson import OGCGISUserCollectionApiView
 from speleodb.api.v1.views.project_geojson import OGCGISUserCollectionItemApiView
 from speleodb.api.v1.views.project_geojson import OGCGISUserProjectsApiView
@@ -21,6 +22,11 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("experiment/<gis_token>/", ExperimentGISApiView.as_view(), name="experiment"),
     # OGC GIS - View endpoints
     path("view/<gis_token>", OGCGISViewDataApiView.as_view(), name="view-data"),
+    path(
+        "view/<gis_token>/geojson",
+        PublicGISViewGeoJSONApiView.as_view(),
+        name="view-geojson",
+    ),
     path(
         "view/<gis_token>/<gitsha:commit_sha>",
         OGCGISViewCollectionApiView.as_view(),

@@ -42,6 +42,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
     <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
 
+    {% block extra_css %}{% endblock extra_css %}
 </head>
 
 <body class="font-inter antialiased bg-slate-900 text-slate-100 tracking-tight">
@@ -238,6 +239,7 @@
 
     <script src="{% static 'js/main.js' %}"></script>
 
+    {% block extra_js %}{% endblock extra_js %}
     {% block inline_extra_js %}{% endblock inline_extra_js %}
 
 </body>
