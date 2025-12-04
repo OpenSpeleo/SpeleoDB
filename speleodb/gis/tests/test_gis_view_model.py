@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import orjson
 import pytest
 from django.core.exceptions import ValidationError
@@ -12,7 +14,12 @@ from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.gis.models import GISView
 from speleodb.gis.models import GISViewProject
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectCommit
 from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 def temp_geojson_file() -> SimpleUploadedFile:
@@ -35,6 +42,31 @@ def temp_geojson_file() -> SimpleUploadedFile:
             }
         ),
         content_type="application/geo+json",
+    )
+
+
+def create_project_geojson(
+    project: Project,
+    commit_sha: str,
+    commit_date: datetime,
+    author_name: str,
+    author_email: str,
+    message: str,
+    file: SimpleUploadedFile,
+) -> ProjectGeoJSON:
+    """Helper to create a ProjectGeoJSON with its required ProjectCommit."""
+    commit = ProjectCommit.objects.create(
+        id=commit_sha,
+        project=project,
+        author_name=author_name,
+        author_email=author_email,
+        authored_date=commit_date,
+        message=message,
+    )
+    return ProjectGeoJSON.objects.create(
+        commit=commit,
+        project=project,
+        file=file,
     )
 
 
@@ -245,13 +277,13 @@ class TestGISViewIntegration:
 
         # Create a GeoJSON for the project
         commit_sha = "a" * 40
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project,
             commit_sha=commit_sha,
             commit_date=timezone.now(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            message="Initial commit",
             file=temp_geojson_file(),
         )
 
@@ -283,23 +315,23 @@ class TestGISViewIntegration:
         old_sha = "a" * 40
         new_sha = "b" * 40
 
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project,
             commit_sha=old_sha,
             commit_date=timezone.now(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            message="Initial commit",
             file=temp_geojson_file(),
         )
 
-        latest_geojson = ProjectGeoJSON.objects.create(
+        latest_geojson = create_project_geojson(
             project=project,
             commit_sha=new_sha,
             commit_date=timezone.now(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            message="Initial commit",
             file=temp_geojson_file(),
         )
 
@@ -345,22 +377,22 @@ class TestGISViewIntegration:
         project2 = ProjectFactory.create()
 
         geojson_objs = [
-            ProjectGeoJSON.objects.create(
+            create_project_geojson(
                 project=project1,
                 commit_sha="a" * 40,
                 commit_date=timezone.now(),
-                commit_author_name="John Doe",
-                commit_author_email="john.doe@example.com",
-                commit_message="Initial commit",
+                author_name="John Doe",
+                author_email="john.doe@example.com",
+                message="Initial commit",
                 file=temp_geojson_file(),
             ),
-            ProjectGeoJSON.objects.create(
+            create_project_geojson(
                 project=project2,
                 commit_sha="b" * 40,
                 commit_date=timezone.now(),
-                commit_author_name="John Doe",
-                commit_author_email="john.doe@example.com",
-                commit_message="Initial commit",
+                author_name="John Doe",
+                author_email="john.doe@example.com",
+                message="Initial commit",
                 file=temp_geojson_file(),
             ),
         ]

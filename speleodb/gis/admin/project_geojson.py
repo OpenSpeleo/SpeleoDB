@@ -18,36 +18,37 @@ if TYPE_CHECKING:
 @admin.register(ProjectGeoJSON)
 class ProjectGeoJSONAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
-        "commit_sha",
+        "commit__id",
         "project",
-        "commit_author_name",
-        "commit_author_email",
-        "commit_message",
-        "commit_date",
+        "commit__authored_date",
+        "commit__author_name",
+        "commit__author_email",
+        "commit__message",
         "creation_date",
         "modified_date",
     )
 
     readonly_fields = (
+        "commit",
         "creation_date",
         "modified_date",
     )
 
-    search_fields = ["commit_sha", "project__name", "commit_author_email"]
+    search_fields = [
+        "commit__id",
+        "project__name",
+        "commit__authored_date",
+    ]
 
     fields = (
-        "commit_sha",
+        "commit",
         "project",
-        "commit_author_name",
-        "commit_author_email",
-        "commit_message",
-        "commit_date",
+        "file",
         "creation_date",
         "modified_date",
-        "file",
     )
 
-    list_filter = [GeoJSONProjectFilter, "commit_date"]
+    list_filter = [GeoJSONProjectFilter, "commit__authored_date"]
 
     def has_change_permission(
         self, request: HttpRequest, obj: ProjectGeoJSON | None = None

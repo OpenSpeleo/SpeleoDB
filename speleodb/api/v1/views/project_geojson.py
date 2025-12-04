@@ -48,7 +48,8 @@ class BaseUserProjectGeoJsonApiView(SDBAPIViewMixin):
         user_projects = [perm.project for perm in user.permissions]
 
         geojson_prefetch = Prefetch(
-            "rel_geojsons", queryset=ProjectGeoJSON.objects.order_by("-commit_date")
+            "rel_geojsons",
+            queryset=ProjectGeoJSON.objects.order_by("-commit__authored_date"),
         )
 
         return Project.objects.filter(
@@ -119,9 +120,9 @@ class BaseOGCGISViewCollectionApiView(GenericAPIView[Token], SDBAPIViewMixin):
         user: User = self.get_object().user
 
         try:
-            project_geojson = ProjectGeoJSON.objects.select_related("project").get(
-                commit_sha=commit_sha
-            )
+            project_geojson = ProjectGeoJSON.objects.select_related(
+                "project", "commit"
+            ).get(commit__id=commit_sha)
         except ProjectGeoJSON.DoesNotExist as e:
             raise Http404(
                 f"ProjectGeoJSON with commit_sha '{commit_sha}' not found."
@@ -251,7 +252,7 @@ class ProjectGeoJsonCommitsApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
         # Get all GeoJSON for this project, ordered by commit_date descending
         serializer = ProjectGeoJSONCommitSerializer(
-            project.rel_geojsons.order_by("-commit_date"),
+            project.rel_geojsons.order_by("-commit__authored_date"),
             many=True,
         )
 

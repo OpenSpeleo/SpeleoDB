@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from speleodb.api.v1.tests.test_project_geojson_commits_api import sha1_hash
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.surveys.models import ProjectCommit
 
 if TYPE_CHECKING:
     from speleodb.surveys.models import Project
@@ -32,14 +33,18 @@ class TestGeoJSONModel:
         upload = make_uploaded("map.geojson", payload)
 
         commit_sha1 = sha1_hash()
+        commit = ProjectCommit.objects.create(
+            id=commit_sha1,
+            project=project,
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            authored_date=timezone.now(),
+            message="Initial commit",
+        )
 
         obj = ProjectGeoJSON(
+            commit=commit,
             project=project,
-            commit_sha=commit_sha1,
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
-            commit_date=timezone.now(),
             file=upload,
         )
         obj.save()
@@ -50,13 +55,19 @@ class TestGeoJSONModel:
         payload = {"type": "NotFeatureCollection"}
         upload = make_uploaded("map.geojson", payload)
 
-        obj = ProjectGeoJSON(
+        commit_sha = sha1_hash()
+        commit = ProjectCommit.objects.create(
+            id=commit_sha,
             project=project,
-            commit_sha=sha1_hash(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
-            commit_date=timezone.now(),
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            authored_date=timezone.now(),
+            message="Initial commit",
+        )
+
+        obj = ProjectGeoJSON(
+            commit=commit,
+            project=project,
             file=upload,
         )
 
@@ -70,13 +81,19 @@ class TestGeoJSONModel:
         payload = {"type": "FeatureCollection", "features": []}
         upload = make_uploaded("map.geojson", payload)
 
-        obj = ProjectGeoJSON(
+        commit_sha = sha1_hash()
+        commit = ProjectCommit.objects.create(
+            id=commit_sha,
             project=project,
-            commit_sha=sha1_hash(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
-            commit_date=timezone.now(),
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            authored_date=timezone.now(),
+            message="Initial commit",
+        )
+
+        obj = ProjectGeoJSON(
+            commit=commit,
+            project=project,
             file=upload,
         )
         obj.save()
@@ -90,13 +107,19 @@ class TestGeoJSONModel:
         payload = {"type": "FeatureCollection", "features": []}
         upload = make_uploaded("map.geojson", payload)
 
-        obj = ProjectGeoJSON(
+        commit_sha = sha1_hash()
+        commit = ProjectCommit.objects.create(
+            id=commit_sha,
             project=project,
-            commit_sha=sha1_hash(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
-            commit_date=timezone.now(),
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            authored_date=timezone.now(),
+            message="Initial commit",
+        )
+
+        obj = ProjectGeoJSON(
+            commit=commit,
+            project=project,
             file=upload,
         )
         obj.save()

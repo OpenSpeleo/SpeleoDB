@@ -23,7 +23,6 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.db import transaction
 from django.http import HttpResponse
 from django.urls import reverse
-from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from git.exc import GitCommandError
 from openspeleo_lib.geojson import NoKnownAnchorError
@@ -44,6 +43,7 @@ from speleodb.processors.auto_selector import AutoSelector
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectCommit
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import FileRejectedError
 from speleodb.utils.exceptions import ProjectNotFound
@@ -358,15 +358,17 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
                                 try:
                                     with transaction.atomic():
+                                        # This object must exist.
+                                        commit_obj = ProjectCommit.objects.get(
+                                            id=hexsha
+                                        )
+
                                         ProjectGeoJSON.objects.create(
                                             project=project,
-                                            commit_author_name=user.name,
-                                            commit_author_email=user.email,
-                                            commit_message=commit_message,
-                                            commit_sha=hexsha,
-                                            commit_date=timezone.now(),
+                                            commit=commit_obj,
                                             file=geojson_f,
                                         )
+
                                 except ClientError:
                                     # # This ensures the atomic block is rolled back
                                     # transaction.set_rollback(True)

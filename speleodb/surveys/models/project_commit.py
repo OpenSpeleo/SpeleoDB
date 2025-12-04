@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+import contextlib
+from datetime import datetime
+from typing import TYPE_CHECKING
+
 from django.core.validators import RegexValidator
 from django.db import models
+from django.utils import timezone
 
 from speleodb.surveys.models import Project
+
+if TYPE_CHECKING:
+    from speleodb.git_engine.core import GitCommit
 
 
 class ProjectCommit(models.Model):
@@ -94,3 +102,28 @@ class ProjectCommit(models.Model):
     def is_root(self) -> bool:
         """Return True if this is a root commit (no parents)."""
         return len(self.parent_ids) == 0
+
+    @classmethod
+    def get_or_create_from_commit(
+        cls, project: Project, commit: GitCommit
+    ) -> ProjectCommit:
+        with contextlib.suppress(cls.DoesNotExist):
+            return ProjectCommit.objects.get(id=commit.hexsha)
+
+        return ProjectCommit.objects.create(
+            id=commit.hexsha,
+            project=project,
+            author_name=commit.author.name or "",
+            author_email=commit.author.email or "",
+            authored_date=datetime.fromtimestamp(
+                commit.authored_date,
+                tz=timezone.get_current_timezone(),
+            ),
+            message=(
+                message
+                if isinstance(message := commit.message, str)
+                else message.decode("utf-8", errors="ignore")
+            ),
+            parent_ids=[parent.hexsha for parent in commit.parents],
+            tree=commit.tree_to_json(),
+        )

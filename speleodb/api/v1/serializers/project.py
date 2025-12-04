@@ -215,7 +215,18 @@ class ProjectSerializer(serializers.ModelSerializer[Project]):
 
 
 class ProjectGeoJSONFileSerializer(serializers.ModelSerializer[ProjectGeoJSON]):
-    date = serializers.DateTimeField(source="commit_date")
+    commit_sha = serializers.CharField(source="commit.id", read_only=True)
+    commit_date = serializers.DateTimeField(
+        source="commit.authored_date", read_only=True
+    )
+    commit_author_name = serializers.CharField(
+        source="commit.author_name", read_only=True
+    )
+    commit_author_email = serializers.EmailField(
+        source="commit.author_email", read_only=True
+    )
+    commit_message = serializers.CharField(source="commit.message", read_only=True)
+    date = serializers.DateTimeField(source="commit.authored_date", read_only=True)
     url = serializers.CharField(source="get_signed_download_url", read_only=True)
 
     class Meta:
@@ -246,7 +257,7 @@ class ProjectWithGeoJsonSerializer(ProjectSerializer):
         """
 
         try:
-            geojson_obj = obj.rel_geojsons.order_by("-commit_date")[0]
+            geojson_obj = obj.rel_geojsons.order_by("-commit__authored_date")[0]
             return geojson_obj.get_signed_download_url()
 
         except IndexError:

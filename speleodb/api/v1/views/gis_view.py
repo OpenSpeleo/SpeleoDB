@@ -104,12 +104,14 @@ class OGCGISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
 
         data = [
             {
-                "sha": data["project_geojson"].commit_sha,
-                "title": data["project_name"],
-                "description": f"Commit: {data['commit_sha']}",
-                "url": data["project_geojson"].get_signed_download_url(expires_in=3600),
+                "sha": _data["project_geojson"].commit_sha,
+                "title": _data["project_name"],
+                "description": f"Commit: {_data['commit_sha']}",
+                "url": _data["project_geojson"].get_signed_download_url(
+                    expires_in=3600
+                ),
             }
-            for data in gis_view.get_view_geojson_data()
+            for _data in gis_view.get_view_geojson_data()
         ]
 
         ogc_layers: OGCLayerList = OGCLayerList.model_validate({"layers": data})
@@ -126,13 +128,11 @@ class BaseOGCGISViewCollectionApiView(GenericAPIView[GISView], SDBAPIViewMixin):
         gis_view = self.get_object()
 
         try:
-            project_geojson = ProjectGeoJSON.objects.select_related("project").get(
-                commit_sha=commit_sha
-            )
+            project_geojson = ProjectGeoJSON.objects.select_related(
+                "project", "commit"
+            ).get(commit__id=commit_sha)
         except ProjectGeoJSON.DoesNotExist as e:
-            raise Http404(
-                f"ProjectGeoJSON with commit_sha '{commit_sha}' not found."
-            ) from e
+            raise Http404(f"ProjectGeoJSON for commit '{commit_sha}' not found.") from e
 
         # Verify that the project_geojson is part of the gis_view
         if (
@@ -162,9 +162,9 @@ class OGCGISViewCollectionApiView(BaseOGCGISViewCollectionApiView):
 
         return GISResponse(
             {
-                "id": project_geojson.id,
+                "id": project_geojson.commit.id,
                 "title": project_geojson.project.name,
-                "description": f"Commit: {project_geojson.commit_sha}",
+                "description": f"Commit: {project_geojson.commit.id}",
                 "itemType": "feature",
                 "links": [
                     {
@@ -193,7 +193,7 @@ class OGCGISViewCollectionItemApiView(BaseOGCGISViewCollectionApiView):
 
         buffer = BytesIO()
 
-        cache_key = f"ogc_collections_project_geojson_{project_geojson.commit_sha}"
+        cache_key = f"ogc_collections_project_geojson_{project_geojson.commit.id}"
         cached_content: bytes | None = cache.get(cache_key)
 
         if cached_content:

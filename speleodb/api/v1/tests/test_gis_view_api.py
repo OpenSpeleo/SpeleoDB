@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import orjson
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -15,6 +17,11 @@ from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.gis.models import GISView
 from speleodb.gis.models import GISViewProject
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectCommit
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 def temp_geojson_file() -> SimpleUploadedFile:
@@ -37,6 +44,31 @@ def temp_geojson_file() -> SimpleUploadedFile:
             }
         ),
         content_type="application/geo+json",
+    )
+
+
+def create_project_geojson(
+    project: Project,
+    commit_sha: str,
+    commit_date: datetime,
+    author_name: str,
+    author_email: str,
+    message: str,
+    file: SimpleUploadedFile,
+) -> ProjectGeoJSON:
+    """Helper to create a ProjectGeoJSON with its required ProjectCommit."""
+    commit = ProjectCommit.objects.create(
+        id=commit_sha,
+        project=project,
+        author_name=author_name,
+        author_email=author_email,
+        authored_date=commit_date,
+        message=message,
+    )
+    return ProjectGeoJSON.objects.create(
+        commit=commit,
+        project=project,
+        file=file,
     )
 
 
@@ -74,13 +106,13 @@ class TestGISViewDataSerializer(BaseAPITestCase):
         )
 
         commit_sha = "a" * 40
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project,
             commit_sha=commit_sha,
             commit_date=timezone.now(),
-            commit_author_name="Author",
-            commit_author_email="author@example.com",
-            commit_message="Test commit",
+            author_name="Author",
+            author_email="author@example.com",
+            message="Test commit",
             file=temp_geojson_file(),
         )
 
@@ -111,13 +143,13 @@ class TestGISViewDataSerializer(BaseAPITestCase):
         )
 
         commit_sha = "a" * 40
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project,
             commit_sha=commit_sha,
             commit_date=timezone.now(),
-            commit_author_name="Author",
-            commit_author_email="author@example.com",
-            commit_message="Test",
+            author_name="Author",
+            author_email="author@example.com",
+            message="Test",
             file=temp_geojson_file(),
         )
 
@@ -155,13 +187,13 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         # Create GeoJSON
         commit_sha = "a" * 40
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project,
             commit_sha=commit_sha,
             commit_date=timezone.now(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            message="Initial commit",
             file=temp_geojson_file(),
         )
 
@@ -208,13 +240,13 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         )
 
         commit_sha = "a" * 40
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project,
             commit_sha=commit_sha,
             commit_date=timezone.now(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            message="Initial commit",
             file=temp_geojson_file(),
         )
 
@@ -246,23 +278,23 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         old_sha = "a" * 40
         new_sha = "b" * 40
 
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project,
             commit_sha=old_sha,
             commit_date=timezone.now(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            message="Initial commit",
             file=temp_geojson_file(),
         )
 
-        latest = ProjectGeoJSON.objects.create(
+        latest = create_project_geojson(
             project=project,
             commit_sha=new_sha,
             commit_date=timezone.now(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            message="Initial commit",
             file=temp_geojson_file(),
         )
 
@@ -295,23 +327,23 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         sha1 = "a" * 40
         sha2 = "b" * 40
 
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project1,
             commit_sha=sha1,
             commit_date=timezone.now(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            message="Initial commit",
             file=temp_geojson_file(),
         )
 
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project2,
             commit_sha=sha2,
             commit_date=timezone.now(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            message="Initial commit",
             file=temp_geojson_file(),
         )
 
@@ -367,13 +399,13 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         sha1 = "a" * 40
 
         # Only create GeoJSON for project1
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project1,
             commit_sha=sha1,
             commit_date=timezone.now(),
-            commit_author_name="John Doe",
-            commit_author_email="john.doe@example.com",
-            commit_message="Initial commit",
+            author_name="John Doe",
+            author_email="john.doe@example.com",
+            message="Initial commit",
             file=temp_geojson_file(),
         )
 
@@ -412,13 +444,13 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         )
 
         commit_sha = "a" * 40
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project,
             commit_sha=commit_sha,
             commit_date=timezone.now(),
-            commit_author_name="Author",
-            commit_author_email="author@example.com",
-            commit_message="Test",
+            author_name="Author",
+            author_email="author@example.com",
+            message="Test",
             file=temp_geojson_file(),
         )
 
@@ -476,13 +508,13 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         )
 
         commit_sha = "a" * 40
-        ProjectGeoJSON.objects.create(
+        create_project_geojson(
             project=project,
             commit_sha=commit_sha,
             commit_date=timezone.now(),
-            commit_author_name="Author",
-            commit_author_email="author@example.com",
-            commit_message="Test",
+            author_name="Author",
+            author_email="author@example.com",
+            message="Test",
             file=temp_geojson_file(),
         )
 

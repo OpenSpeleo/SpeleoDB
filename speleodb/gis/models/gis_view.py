@@ -137,7 +137,7 @@ class GISView(models.Model):
         ).prefetch_related(
             Prefetch(
                 "project__rel_geojsons",
-                queryset=ProjectGeoJSON.objects.order_by("-commit_date"),
+                queryset=ProjectGeoJSON.objects.order_by("-commit__authored_date"),
             )
         )
 
@@ -146,20 +146,20 @@ class GISView(models.Model):
         for view_project in view_projects:
             project: Project = view_project.project
 
-            geojson: ProjectGeoJSON
+            proj_geojson: ProjectGeoJSON
 
             # Get the appropriate GeoJSON
             if view_project.use_latest:
                 try:
-                    geojson = project.rel_geojsons.all()[0]
+                    proj_geojson = project.rel_geojsons.all()[0]
                 except IndexError:
                     continue
 
             elif view_project.commit_sha:
                 # Find in prefetched data
                 try:
-                    geojson = project.rel_geojsons.filter(
-                        commit_sha=view_project.commit_sha
+                    proj_geojson = project.rel_geojsons.filter(
+                        commit__id=view_project.commit_sha
                     )[0]
                 except IndexError:
                     continue
@@ -175,9 +175,9 @@ class GISView(models.Model):
                 {
                     "project_id": str(project.id),
                     "project_name": project.name,
-                    "commit_sha": geojson.commit_sha,
-                    "commit_date": geojson.commit_date.isoformat(),
-                    "project_geojson": geojson,
+                    "project_geojson": proj_geojson,
+                    "commit_sha": proj_geojson.commit.id,
+                    "commit_date": proj_geojson.commit.authored_date.isoformat(),
                     "use_latest": view_project.use_latest,
                 }
             )

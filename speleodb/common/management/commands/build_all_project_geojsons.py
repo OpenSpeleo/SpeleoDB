@@ -19,6 +19,7 @@ from openspeleo_lib.interfaces import ArianeInterface
 
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectCommit
 
 if TYPE_CHECKING:
     from openspeleo_lib.models import Survey
@@ -43,13 +44,14 @@ class Command(BaseCommand):
                 git_repo = project.git_repo  # load the git project
 
                 for commit in git_repo.commits:
-                    # Download all the geojson files for each commit
-                    if ProjectGeoJSON.objects.filter(
-                        project=project, commit_sha=commit.hexsha
-                    ).exists():
+                    with contextlib.suppress(ProjectGeoJSON.DoesNotExist):
+                        _ = ProjectGeoJSON.objects.get(
+                            # Globally unique. Does not need to specify the project
+                            commit__id=commit.hexsha,
+                        )
                         logger.info(
-                            f"GeoJSON for commit {commit.hexsha} already exists for "
-                            f"project {project.id}. Skipping ..."
+                            f"GeoJSON for commit {commit.hexsha} already exists. "
+                            "Skipping ..."
                         )
                         continue
 
@@ -86,7 +88,7 @@ class Command(BaseCommand):
 
                                     try:
                                         geojson_data = survey_to_geojson(survey)
-                                    except Exception:
+                                    except Exception:  # noqa: BLE001
                                         logger.error(  # noqa: TRY400
                                             f"Error processing file {file.path} in "
                                             f"commit {commit.hexsha} - Not a valid TML"
@@ -99,19 +101,16 @@ class Command(BaseCommand):
                                         content_type="application/geo+json",
                                     )
 
-                                    commit_message = re.sub(
-                                        r"(?:\s*\n\s*)+",
-                                        ". ",
-                                        str(commit.message).strip(),
+                                    commit_obj = (
+                                        ProjectCommit.get_or_create_from_commit(
+                                            project=project,
+                                            commit=commit,
+                                        )
                                     )
 
                                     ProjectGeoJSON.objects.create(
                                         project=project,
-                                        commit_author_name=commit.author.name,
-                                        commit_author_email=commit.author.email,
-                                        commit_message=commit_message,
-                                        commit_sha=commit.hexsha,
-                                        commit_date=commit.date_dt,
+                                        commit=commit_obj,
                                         file=geojson_f,
                                     )
 

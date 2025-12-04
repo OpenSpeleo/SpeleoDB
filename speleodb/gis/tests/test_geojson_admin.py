@@ -12,6 +12,7 @@ from rest_framework import status
 from speleodb.api.v1.tests.test_project_geojson_commits_api import sha1_hash
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectCommit
 from speleodb.users.models import User
 
 
@@ -37,52 +38,59 @@ def project(db: None, user: User) -> Project:
 
 
 @pytest.mark.django_db
-def test_admin_create_geojson(admin_client: Any, project: Project) -> None:
-    url = reverse("admin:gis_projectgeojson_add")
-    file = SimpleUploadedFile(
-        "map.geojson",
-        json.dumps({"type": "FeatureCollection", "features": []}).encode(),
-        content_type="application/geo+json",
-    )
-
+def test_admin_list_geojson(admin_client: Any, project: Project) -> None:
+    """Test that the admin list view works for ProjectGeoJSON."""
+    # Create a ProjectCommit first
     commit_sha = sha1_hash()
-
-    resp = admin_client.post(
-        url,
-        data={
-            "project": str(project.id),
-            "commit_sha": commit_sha,
-            "commit_author_name": "John Doe",
-            "commit_author_email": "john.doe@example.com",
-            "commit_message": "Initial commit",
-            # The admin split up in 2 fields the datetime input
-            "commit_date_0": timezone.now().date().strftime("%Y-%m-%d"),
-            "commit_date_1": timezone.now().date().strftime("%H:%m:%S"),
-            "file": file,
-        },
-        follow=True,
+    commit = ProjectCommit.objects.create(
+        id=commit_sha,
+        project=project,
+        author_name="John Doe",
+        author_email="john.doe@example.com",
+        authored_date=timezone.now(),
+        message="Initial commit",
     )
 
-    # The admin doesn't return a 201, but a 200 on success
-    assert resp.status_code == status.HTTP_200_OK
+    # Create the ProjectGeoJSON
+    ProjectGeoJSON.objects.create(
+        commit=commit,
+        project=project,
+        file=SimpleUploadedFile(
+            "map.geojson",
+            json.dumps({"type": "FeatureCollection", "features": []}).encode(),
+            content_type="application/geo+json",
+        ),
+    )
 
-    assert ProjectGeoJSON.objects.filter(commit_sha=commit_sha).count() == 1
+    # Verify the list view works
+    url = reverse("admin:gis_projectgeojson_changelist")
+    resp = admin_client.get(url)
+    assert resp.status_code == status.HTTP_200_OK
+    assert ProjectGeoJSON.objects.filter(commit=commit_sha).count() == 1
 
 
 @pytest.mark.django_db
 def test_admin_view_form(admin_client: Any, project: Project) -> None:
-    obj = ProjectGeoJSON.objects.create(
+    """Test that the admin change view works for viewing a ProjectGeoJSON."""
+    # Create a ProjectCommit first
+    commit_sha = sha1_hash()
+    commit = ProjectCommit.objects.create(
+        id=commit_sha,
         project=project,
-        commit_sha=sha1_hash(),
-        commit_date=timezone.now(),
-        commit_author_name="John Doe",
-        commit_author_email="john.doe@example.com",
-        commit_message="Initial commit",
+        author_name="John Doe",
+        author_email="john.doe@example.com",
+        authored_date=timezone.now(),
+        message="Initial commit",
+    )
+
+    obj = ProjectGeoJSON.objects.create(
+        commit=commit,
+        project=project,
         file=SimpleUploadedFile(
             "map.geojson",
             json.dumps({"type": "FeatureCollection", "features": []}).encode(),
         ),
     )
-    url = reverse("admin:gis_projectgeojson_change", args=[obj.id])
+    url = reverse("admin:gis_projectgeojson_change", args=[obj.pk])
     resp = admin_client.get(url)
     assert resp.status_code == status.HTTP_200_OK

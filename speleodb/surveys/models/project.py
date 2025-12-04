@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 import pathlib
 import uuid
-from datetime import datetime
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
@@ -30,8 +29,10 @@ from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import ProjectType
 from speleodb.surveys.models import ProjectVisibility
 from speleodb.utils.exceptions import ProjectNotFound
+from speleodb.utils.timing_ctx import timed_section
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from typing import Self
 
     from speleodb.gis.models import ProjectGeoJSON
@@ -462,37 +463,27 @@ class Project(models.Model):
     def construct_git_history_from_project(self, git_repo: GitRepo) -> None:
         from speleodb.surveys.models import ProjectCommit  # noqa: PLC0415
 
-        hashtable = {
-            commit.id: commit for commit in ProjectCommit.objects.filter(project=self)
-        }
+        with timed_section("Constructing Git History"):
+            hashtable = {
+                commit.id: commit
+                for commit in ProjectCommit.objects.filter(project=self)
+            }
 
-        # 1. Get all commits from HEAD
-        commits: list[GitCommit] = list(git_repo.iter_commits("HEAD"))
+            # 1. Get all commits from HEAD
+            commits: list[GitCommit] = list(git_repo.iter_commits("HEAD"))
 
-        # 2. Sort by commit datetime (oldest first)
-        commits.sort(key=lambda c: c.committed_date)
+            # 2. Sort by commit datetime (oldest first)
+            commits.sort(key=lambda c: c.committed_date)
 
-        # 3. Rebuild commits in order
-        for git_commit in commits:
-            if git_commit.hexsha not in hashtable:
-                with contextlib.suppress(IntegrityError):
-                    _ = ProjectCommit.objects.create(
-                        id=git_commit.hexsha,
-                        project=self,
-                        author_name=git_commit.author.name or "",
-                        author_email=git_commit.author.email or "",
-                        authored_date=datetime.fromtimestamp(
-                            git_commit.authored_date,
-                            tz=timezone.get_current_timezone(),
-                        ),
-                        message=(
-                            message
-                            if isinstance(message := git_commit.message, str)
-                            else message.decode("utf-8", errors="ignore")
-                        ),
-                        parent_ids=[parent.hexsha for parent in git_commit.parents],
-                        tree=git_commit.tree_to_json(),
-                    )
+            # 3. Rebuild commits in order
+            for git_commit in commits:
+                if git_commit.hexsha not in hashtable:
+                    # Ignore errors silently and proceed
+                    with contextlib.suppress(IntegrityError):
+                        _ = ProjectCommit.get_or_create_from_commit(
+                            project=self,
+                            commit=git_commit,
+                        )
 
     @property
     def formats(self) -> models.QuerySet[Format]:

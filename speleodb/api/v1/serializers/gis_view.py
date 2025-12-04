@@ -59,7 +59,7 @@ class GISViewProjectInputSerializer(serializers.Serializer[GISViewProject]):
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         """Validate that either use_latest or commit_sha is provided."""
         use_latest = attrs.get("use_latest", False)
-        commit_sha = attrs.get("commit_sha")
+        commit_sha = attrs.get("commit_sha", None)  # noqa: SIM910
 
         if not use_latest and not commit_sha:
             raise serializers.ValidationError(

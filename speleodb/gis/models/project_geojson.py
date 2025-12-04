@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import boto3
@@ -9,20 +10,28 @@ from botocore.exceptions import BotoCoreError
 from botocore.exceptions import NoCredentialsError
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator
 from django.db import models
 
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectCommit
 from speleodb.utils.storages import GeoJSONStorage
 from speleodb.utils.validators import GeoJsonValidator
 
 
 def get_geojson_upload_path(instance: ProjectGeoJSON, filename: str) -> str:
-    return f"{instance.project.id}/{instance.commit_sha}.json"
+    return f"{instance.project.id}/{instance.commit.id}.json"
 
 
 class ProjectGeoJSON(models.Model):
-    id: int
+    commit = models.OneToOneField(
+        ProjectCommit,
+        related_name="geojson",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+        editable=False,
+        primary_key=True,
+    )
 
     project = models.ForeignKey(
         Project,
@@ -43,37 +52,6 @@ class ProjectGeoJSON(models.Model):
         validators=[GeoJsonValidator()],
     )
 
-    commit_author_name = models.CharField(
-        "Name of User",
-        blank=False,
-        null=False,
-        max_length=255,
-    )
-
-    commit_author_email = models.EmailField(
-        "email address",
-        blank=False,
-        null=False,
-    )
-
-    commit_message = models.CharField(
-        "commit message",
-        blank=False,
-        null=False,
-        max_length=1024,
-    )
-
-    commit_sha = models.CharField(
-        max_length=40,
-        unique=True,
-        editable=True,
-        validators=[
-            RegexValidator(regex=r"^[0-9a-f]{40}$", message="Enter a valid sha1 value")
-        ],
-    )
-
-    commit_date = models.DateTimeField(null=False, blank=False)
-
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
@@ -82,19 +60,44 @@ class ProjectGeoJSON(models.Model):
         verbose_name_plural = "Project GeoJSONs"
         indexes = [
             models.Index(fields=["project"]),
-            models.Index(fields=["commit_sha"]),
-            models.Index(fields=["commit_date"]),
-            models.Index(fields=["project", "commit_date"]),  # get latest by project
+            models.Index(fields=["commit"]),
         ]
-        ordering = ["-commit_date"]
+        ordering = ["-commit__authored_date"]
 
     def __str__(self) -> str:
-        return f"[ProjectGeoJSON] {self.project.name} @ {self.commit_sha[:8]}"
+        return f"[ProjectGeoJSON] {self.project.name} @ {self.commit.id[:8]}"
+
+    # Backward-compatible properties for legacy code
+    @property
+    def commit_sha(self) -> str:
+        """Return the commit SHA (backward compatibility)."""
+        return self.commit.id
+
+    @property
+    def commit_date(self) -> datetime:
+        """Return the commit authored date (backward compatibility)."""
+        return self.commit.authored_date
+
+    @property
+    def commit_author_name(self) -> str:
+        """Return the commit author name (backward compatibility)."""
+        return self.commit.author_name
+
+    @property
+    def commit_author_email(self) -> str:
+        """Return the commit author email (backward compatibility)."""
+        return self.commit.author_email
+
+    @property
+    def commit_message(self) -> str:
+        """Return the commit message (backward compatibility)."""
+        return self.commit.message
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Enforce immutability: once created, cannot be updated."""
         self.full_clean()
-        if self.pk:
+        # Use _state.adding to check if this is a new object (pk is always set due to OneToOneField)
+        if not self._state.adding:
             raise ValidationError("ProjectGeoJSON objects are immutable once created.")
         return super().save(*args, **kwargs)
 
