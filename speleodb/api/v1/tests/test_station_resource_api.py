@@ -18,7 +18,6 @@ from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import NoteStationResourceFactory
 from speleodb.api.v1.tests.factories import PhotoStationResourceFactory
-from speleodb.api.v1.tests.factories import SketchStationResourceFactory
 from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
@@ -234,34 +233,6 @@ class TestStationResourceAPI(BaseAPIProjectTestCase):
         assert resource["resource_type"] == StationResourceType.NOTE
         assert resource["text_content"] == data["text_content"]
         assert resource["file"] is None
-
-    def test_create_sketch_resource(self) -> None:
-        """Test creating a sketch resource."""
-        svg_content = '<svg><circle cx="50" cy="50" r="40" /></svg>'
-        data = {
-            "resource_type": StationResourceType.SKETCH,
-            "title": "Cave Map Sketch",
-            "description": "Rough layout",
-            "text_content": svg_content,
-        }
-
-        response = self.client.post(
-            self.resource_url,
-            data,
-            format="json",
-            headers={"authorization": self.auth},
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-            return
-
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.data["success"]
-
-        resource = response.data["data"]
-        assert resource["resource_type"] == StationResourceType.SKETCH
-        assert resource["text_content"] == svg_content
 
     def test_create_document_resource(self) -> None:
         """Test creating a document resource."""
@@ -653,40 +624,6 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         assert resource_data["title"] == "Cave Survey Notes"
         assert resource_data["text_content"] == data["text_content"]
 
-    def test_create_sketch_resource(self) -> None:
-        """Test creating a sketch resource."""
-        svg_content = """<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="100" cy="100" r="50" fill="blue" stroke="black" stroke-width="2"/>
-            <text x="100" y="105" text-anchor="middle" fill="white" font-size="14">Cave</text>
-        </svg>"""  # noqa: E501
-
-        data = {
-            "resource_type": StationResourceType.SKETCH,
-            "title": "Cave Entrance Sketch",
-            "description": "Hand-drawn sketch of the cave entrance",
-            "text_content": svg_content,
-        }
-
-        response = self.client.post(
-            reverse(
-                "api:v1:station-resources",
-                kwargs={"id": self.station.id},
-            ),
-            data=data,
-            headers={"authorization": self.auth},
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-            return
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-        resource_data = response.data["data"]
-        assert resource_data["resource_type"] == StationResourceType.SKETCH
-        assert resource_data["title"] == "Cave Entrance Sketch"
-        assert svg_content in resource_data["text_content"]
-
     def test_create_photo_resource_with_file(self) -> None:
         """Test creating a photo resource with file upload."""
         # Create a fake image file
@@ -728,7 +665,6 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
         # Create multiple resources
         resources = [
             NoteStationResourceFactory.create(station=self.station),
-            SketchStationResourceFactory.create(station=self.station),
             PhotoStationResourceFactory.create(station=self.station),
         ]
 
@@ -746,7 +682,7 @@ class TestStationResourceAPIPermissions(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data["data"]) == 3  # noqa: PLR2004
+        assert len(response.data["data"]) == len(resources)
 
         # Verify all resources are present (without depending on order)
         response_resource_ids = {r["id"] for r in response.data["data"]}
@@ -1223,18 +1159,6 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
                 "resource_type": StationResourceType.NOTE,
                 "title": "Long Content Test",
                 "text_content": self.faker.text(max_nb_chars=10000),
-            },
-            # SVG sketch content
-            {
-                "resource_type": StationResourceType.SKETCH,
-                "title": "SVG Test",
-                "text_content": '<svg><rect x="0" y="0" width="100" height="100"/></svg>',  # noqa: E501
-            },
-            # Malformed SVG
-            {
-                "resource_type": StationResourceType.SKETCH,
-                "title": "Malformed SVG",
-                "text_content": '<svg><rect x="0" y="0" width="100"',  # Incomplete
             },
         ]
 

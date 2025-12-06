@@ -41,33 +41,6 @@ class TestStationResourceReadOnlyFields:
         )
         self.client.force_authenticate(user=self.user)
 
-    def test_resource_type_cannot_be_changed_from_note_to_sketch(self) -> None:
-        """Test that changing resource_type from note to sketch is rejected."""
-        # Create a note resource
-        resource: StationResource = StationResourceFactory(
-            station=self.station,
-            resource_type=StationResourceType.NOTE,
-            title="Test Note",
-            text_content="This is a test note",
-        )  # type: ignore[assignment]
-
-        # Try to change it to a sketch
-        response = self.client.patch(
-            reverse("api:v1:resource-detail", kwargs={"id": resource.id}),
-            {
-                "resource_type": StationResourceType.SKETCH,
-                "text_content": '{"type": "sketch_with_history", "operations": {}, "preview": "data:image/png;base64,..."}',  # noqa: E501
-            },
-            format="json",
-        )
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "Resource type cannot be changed" in str(response.data)
-
-        # Verify the resource type hasn't changed
-        resource.refresh_from_db()
-        assert resource.resource_type == StationResourceType.NOTE
-
     def test_resource_type_cannot_be_changed_from_photo_to_video(self) -> None:
         """Test that changing resource_type from photo to video is rejected."""
         # Create a photo resource
@@ -96,14 +69,14 @@ class TestStationResourceReadOnlyFields:
         resource.refresh_from_db()
         assert resource.resource_type == StationResourceType.PHOTO
 
-    def test_resource_type_cannot_be_changed_from_sketch_to_document(self) -> None:
-        """Test that changing resource_type from sketch to document is rejected."""
-        # Create a sketch resource
+    def test_resource_type_cannot_be_changed_from_note_to_document(self) -> None:
+        """Test that changing resource_type from note to document is rejected."""
+        # Create a note resource
         resource: StationResource = StationResourceFactory(
             station=self.station,
-            resource_type=StationResourceType.SKETCH,
-            title="Test Sketch",
-            text_content='{"type": "sketch_with_history", "operations": {}, "preview": "data:image/png;base64,..."}',  # noqa: E501
+            resource_type=StationResourceType.NOTE,
+            title="Test Note",
+            text_content="My note",
         )  # type: ignore[assignment]
 
         # Try to change it to a document
@@ -120,7 +93,7 @@ class TestStationResourceReadOnlyFields:
 
         # Verify the resource type hasn't changed
         resource.refresh_from_db()
-        assert resource.resource_type == StationResourceType.SKETCH
+        assert resource.resource_type == StationResourceType.NOTE
 
     def test_other_fields_can_be_updated(self) -> None:
         """Test that other fields can still be updated normally."""
@@ -155,20 +128,20 @@ class TestStationResourceReadOnlyFields:
 
     def test_resource_type_same_value_is_allowed(self) -> None:
         """Test that sending the same resource_type value is allowed."""
-        # Create a sketch resource
+        # Create a note resource
         resource: StationResource = StationResourceFactory(
             station=self.station,
-            resource_type=StationResourceType.SKETCH,
-            title="Test Sketch",
-            text_content='{"type": "sketch_with_history", "operations": {}, "preview": "data:image/png;base64,..."}',  # noqa: E501
+            resource_type=StationResourceType.NOTE,
+            title="Test Note",
+            text_content="Custom note",
         )  # type: ignore[assignment]
 
         # Send an update with the same resource_type
         response = self.client.patch(
             reverse("api:v1:resource-detail", kwargs={"id": resource.id}),
             {
-                "resource_type": StationResourceType.SKETCH,
-                "title": "Updated Sketch Title",
+                "resource_type": StationResourceType.NOTE,
+                "title": "Updated Note Title",
             },
             format="json",
         )
@@ -177,8 +150,7 @@ class TestStationResourceReadOnlyFields:
 
         # Verify the title was updated
         resource.refresh_from_db()
-        assert resource.title == "Updated Sketch Title"
-        assert resource.resource_type == StationResourceType.SKETCH
+        assert resource.title == "Updated Note Title"
 
     def test_resource_type_field_optional_on_update(self) -> None:
         """Test that resource_type field is optional during updates."""

@@ -35,7 +35,7 @@ class GISView(models.Model):
     """
 
     # Type hints for reverse relations
-    rel_view_projects: models.QuerySet[GISViewProject]
+    project_views: models.QuerySet[GISProjectView]
 
     id = models.UUIDField(
         primary_key=True,
@@ -75,8 +75,8 @@ class GISView(models.Model):
 
     projects = models.ManyToManyField(  # type: ignore[var-annotated]
         Project,
-        through="GISViewProject",
-        related_name="rel_gis_views",
+        through="GISProjectView",
+        related_name="gis_views",
         help_text="Projects included in this view",
     )
 
@@ -132,18 +132,16 @@ class GISView(models.Model):
         """
 
         # Optimize: prefetch GeoJSON to avoid N+1 queries
-        view_projects = self.rel_view_projects.select_related(
-            "project"
-        ).prefetch_related(
+        project_views = self.project_views.select_related("project").prefetch_related(
             Prefetch(
-                "project__rel_geojsons",
+                "project__geojsons",
                 queryset=ProjectGeoJSON.objects.order_by("-commit__authored_date"),
             )
         )
 
         results = []
 
-        for view_project in view_projects:
+        for view_project in project_views:
             project: Project = view_project.project
 
             proj_geojson: ProjectGeoJSON
@@ -151,14 +149,14 @@ class GISView(models.Model):
             # Get the appropriate GeoJSON
             if view_project.use_latest:
                 try:
-                    proj_geojson = project.rel_geojsons.all()[0]
+                    proj_geojson = project.geojsons.all()[0]
                 except IndexError:
                     continue
 
             elif view_project.commit_sha:
                 # Find in prefetched data
                 try:
-                    proj_geojson = project.rel_geojsons.filter(
+                    proj_geojson = project.geojsons.filter(
                         commit__id=view_project.commit_sha
                     )[0]
                 except IndexError:
@@ -166,7 +164,7 @@ class GISView(models.Model):
 
             else:
                 logger.error(
-                    "GISViewProject %s has neither use_latest nor commit_sha set",
+                    "GISProjectView %s has neither use_latest nor commit_sha set",
                     view_project.id,
                 )
                 continue
@@ -220,11 +218,11 @@ class GISView(models.Model):
         return result
 
 
-class GISViewProject(models.Model):
+class GISProjectView(models.Model):
     """
-    Through model linking GIS Views to Projects with commit selection.
+    Through model linking GISViews to Projects with commit selection.
 
-    Represents the configuration for a single project within a GIS view,
+    Represents the configuration for a single project within a GISView,
     specifying either a specific commit SHA or using the latest commit.
     """
 
@@ -232,13 +230,13 @@ class GISViewProject(models.Model):
 
     gis_view = models.ForeignKey(
         GISView,
-        related_name="rel_view_projects",
+        related_name="project_views",
         on_delete=models.CASCADE,
     )
 
     project = models.ForeignKey(
         Project,
-        related_name="rel_gis_view_projects",
+        related_name="project_views",
         on_delete=models.CASCADE,
     )
 
@@ -260,8 +258,8 @@ class GISViewProject(models.Model):
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        verbose_name = "GIS View Project"
-        verbose_name_plural = "GIS View Projects"
+        verbose_name = "GIS Project View"
+        verbose_name_plural = "GIS Project Views"
         unique_together = [("gis_view", "project")]
         ordering = ["creation_date"]
         indexes = [

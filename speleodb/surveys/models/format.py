@@ -110,7 +110,7 @@ class FileFormat(BaseIntegerChoices):
 class Format(models.Model):
     project = models.ForeignKey(
         Project,
-        related_name="rel_formats",
+        related_name="_formats",
         on_delete=models.CASCADE,
         blank=False,
         null=False,

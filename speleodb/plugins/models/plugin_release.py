@@ -60,8 +60,8 @@ class PluginRelease(models.Model):
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        verbose_name = "Public Annoucement"
-        verbose_name_plural = "Public Annoucements"
+        verbose_name = "Plugin Release"
+        verbose_name_plural = "Plugin Releases"
         ordering = ["-creation_date"]
         indexes = [
             models.Index(fields=["creation_date"]),

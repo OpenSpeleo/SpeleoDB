@@ -16,14 +16,14 @@ from speleodb.gis.admin.sensor import SensorFleetAdmin
 from speleodb.gis.admin.sensor import SensorInstallAdmin
 from speleodb.gis.admin.station import SubSurfaceStationAdmin
 from speleodb.gis.admin.tag import StationTagAdmin
+from speleodb.gis.admin.view import GISProjectViewAdmin
 from speleodb.gis.admin.view import GISViewAdmin
-from speleodb.gis.admin.view import GISViewProjectAdmin
 
 __all__ = [
     "ExperimentAdmin",
     "ExperimentRecordAdmin",
+    "GISProjectViewAdmin",
     "GISViewAdmin",
-    "GISViewProjectAdmin",
     "LandmarkAdmin",
     "ProjectGeoJSONAdmin",
     "SensorAdmin",

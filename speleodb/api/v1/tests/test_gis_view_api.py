@@ -12,12 +12,12 @@ from django.utils import timezone
 from rest_framework import status
 
 from speleodb.api.v1.serializers.gis_view import GISViewDataSerializer
-from speleodb.api.v1.serializers.gis_view import PublicGISViewProjectSerializer
+from speleodb.api.v1.serializers.gis_view import PublicGISProjectViewSerializer
 from speleodb.api.v1.serializers.gis_view import PublicGISViewSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
-from speleodb.gis.models import GISViewProject
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
@@ -118,7 +118,7 @@ class TestGISViewDataSerializer(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -155,7 +155,7 @@ class TestGISViewDataSerializer(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -200,7 +200,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         )
 
         # Add to view
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -252,7 +252,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -300,7 +300,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             use_latest=True,
@@ -349,13 +349,13 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project1,
             commit_sha=sha1,
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project2,
             use_latest=True,
@@ -412,13 +412,13 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         )
 
         # Add both projects, but project2 has no GeoJSON
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project1,
             commit_sha=sha1,
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project2,
             commit_sha="b" * 40,  # Doesn't exist
@@ -456,7 +456,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -520,7 +520,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -567,8 +567,8 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
 
 @pytest.mark.django_db
-class TestPublicGISViewProjectSerializer(BaseAPITestCase):
-    """Test PublicGISViewProjectSerializer."""
+class TestPublicGISProjectViewSerializer(BaseAPITestCase):
+    """Test PublicGISProjectViewSerializer."""
 
     def test_serializer_field_mapping(self) -> None:
         """Test that serializer correctly maps source fields."""
@@ -581,7 +581,7 @@ class TestPublicGISViewProjectSerializer(BaseAPITestCase):
             "use_latest": False,
         }
 
-        serializer = PublicGISViewProjectSerializer(data)
+        serializer = PublicGISProjectViewSerializer(data)
         result = serializer.data
 
         # Verify field name mappings
@@ -603,7 +603,7 @@ class TestPublicGISViewProjectSerializer(BaseAPITestCase):
             "use_latest": False,
         }
 
-        serializer = PublicGISViewProjectSerializer(data)
+        serializer = PublicGISProjectViewSerializer(data)
         result = serializer.data
 
         assert result["geojson_file"] == "https://example.com/direct.json"
@@ -629,7 +629,7 @@ class TestPublicGISViewProjectSerializer(BaseAPITestCase):
             },
         ]
 
-        serializer = PublicGISViewProjectSerializer(projects_data, many=True)  # type: ignore[arg-type]
+        serializer = PublicGISProjectViewSerializer(projects_data, many=True)  # type: ignore[arg-type]
         result = serializer.data
 
         assert len(result) == 2  # noqa: PLR2004
@@ -681,7 +681,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -717,7 +717,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             use_latest=True,
@@ -788,13 +788,13 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project1,
             commit_sha=sha1,
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project2,
             use_latest=True,
@@ -828,7 +828,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -871,7 +871,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -912,7 +912,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -1022,13 +1022,13 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project1,
             commit_sha=sha1,
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project2,
             use_latest=True,
@@ -1077,7 +1077,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             use_latest=True,
@@ -1129,7 +1129,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         )
 
         # Add with specific old commit
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=old_sha,
@@ -1171,13 +1171,13 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project1,
             commit_sha=sha1,
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project2,
             commit_sha="2" * 40,  # Doesn't exist
@@ -1216,7 +1216,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -1256,7 +1256,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -1293,7 +1293,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
             file=temp_geojson_file(),
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,

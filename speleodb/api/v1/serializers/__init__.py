@@ -8,10 +8,10 @@ from speleodb.api.v1.serializers.experiment import ExperimentRecordGISSerializer
 from speleodb.api.v1.serializers.experiment import ExperimentRecordSerializer
 from speleodb.api.v1.serializers.experiment import ExperimentSerializer
 from speleodb.api.v1.serializers.file import UploadSerializer
+from speleodb.api.v1.serializers.gis_view import GISProjectViewInputSerializer
+from speleodb.api.v1.serializers.gis_view import GISProjectViewSerializer
 from speleodb.api.v1.serializers.gis_view import GISViewCreateUpdateSerializer
 from speleodb.api.v1.serializers.gis_view import GISViewDataSerializer
-from speleodb.api.v1.serializers.gis_view import GISViewProjectInputSerializer
-from speleodb.api.v1.serializers.gis_view import GISViewProjectSerializer
 from speleodb.api.v1.serializers.gis_view import GISViewSerializer
 from speleodb.api.v1.serializers.git import GitCommitListSerializer
 from speleodb.api.v1.serializers.git import GitCommitSerializer
@@ -63,10 +63,10 @@ __all__ = [
     "ExperimentSerializer",
     "ExperimentUserPermissionListSerializer",
     "ExperimentUserPermissionSerializer",
+    "GISProjectViewInputSerializer",
+    "GISProjectViewSerializer",
     "GISViewCreateUpdateSerializer",
     "GISViewDataSerializer",
-    "GISViewProjectInputSerializer",
-    "GISViewProjectSerializer",
     "GISViewSerializer",
     "GitCommitListSerializer",
     "GitCommitSerializer",

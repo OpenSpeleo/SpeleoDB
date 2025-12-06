@@ -260,8 +260,8 @@ class ProjectTeamPermissionsView(_BaseProjectView):
         data["permissions"] = project.team_permissions
 
         project_teams = SurveyTeam.objects.filter(
-            rel_permissions__project=project,
-            rel_permissions__is_active=True,
+            project_permissions__project=project,
+            project_permissions__is_active=True,
         )
 
         data["available_teams"] = sorted(
@@ -290,7 +290,7 @@ class ProjectMutexesView(_BaseProjectView):
         project: Project = data["project"]
 
         data["mutexes"] = (
-            project.rel_mutexes.all().select_related("user").order_by("-creation_date")
+            project.mutexes.all().select_related("user").order_by("-creation_date")
         )
 
         return super().get(request, *args, **data, **kwargs)

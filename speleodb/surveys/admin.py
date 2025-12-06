@@ -106,7 +106,7 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     @admin.display(description="Admins")
     def admin_count(self, obj: Project) -> int:
         """Display the number of data collection fields defined."""
-        return obj.rel_user_permissions.filter(
+        return obj.user_permissions.filter(
             level=PermissionLevel.ADMIN,
             is_active=True,
         ).count()

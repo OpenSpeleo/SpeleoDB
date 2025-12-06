@@ -31,7 +31,7 @@ class Station(PolymorphicModel):
     # type checking
     resources: models.QuerySet[StationResource]
     log_entries: models.QuerySet[StationLogEntry]
-    rel_records: models.QuerySet[ExperimentRecord]
+    records: models.QuerySet[ExperimentRecord]
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -112,7 +112,7 @@ class SubSurfaceStation(Station):
     # Project relationship
     project = models.ForeignKey(
         "surveys.Project",
-        related_name="rel_stations",
+        related_name="stations",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -134,7 +134,7 @@ class SurfaceStation(Station):
 
     network = models.ForeignKey(
         SurfaceMonitoringNetwork,
-        related_name="rel_stations",
+        related_name="stations",
         on_delete=models.CASCADE,
         blank=False,
         null=False,

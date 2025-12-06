@@ -50,7 +50,7 @@
                         
                         <div id="projects_container" class="space-y-3">
                             <!-- Existing projects -->
-                            {% for view_project in gis_view.rel_view_projects.all %}
+                            {% for view_project in gis_view.project_views.all %}
                             <div class="bg-slate-700 rounded-lg p-4 border border-slate-600 project-item" data-project-id="item_{{ forloop.counter }}" data-existing-id="{{ view_project.id }}">
                                 <div class="flex flex-col gap-4">
                                     <!-- Project Display -->
@@ -104,7 +104,7 @@
                             {% endfor %}
                         </div>
 
-                        <div id="no_projects_message" class="text-center py-8 text-slate-500 border-2 border-dashed border-slate-600 rounded-lg {% if gis_view.rel_view_projects.count > 0 %}hidden{% endif %}">
+                        <div id="no_projects_message" class="text-center py-8 text-slate-500 border-2 border-dashed border-slate-600 rounded-lg {% if gis_view.project_views.count > 0 %}hidden{% endif %}">
                             No projects in this view. Click "Add Project" to begin.
                         </div>
                     </div>
@@ -140,7 +140,7 @@
 
     $(window).on('load', function() {
 
-        let projectCounter = {{ gis_view.rel_view_projects.count }};
+        let projectCounter = {{ gis_view.project_views.count }};
         let availableProjects = [];
         const usedProjectIds = new Set();
         const gisViewId = "{{ gis_view.id }}";

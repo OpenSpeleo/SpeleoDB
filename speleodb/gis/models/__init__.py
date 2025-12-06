@@ -6,10 +6,6 @@
 # Project Related Models
 from speleodb.gis.models.project_geojson import ProjectGeoJSON
 
-# GIS View Models
-from speleodb.gis.models.gis_view import GISView
-from speleodb.gis.models.gis_view import GISViewProject
-
 # Landmark Related Models
 from speleodb.gis.models.landmark import Landmark
 
@@ -41,12 +37,16 @@ from speleodb.gis.models.sensor import SensorInstall
 from speleodb.gis.models.sensor import InstallStatus
 from speleodb.gis.models.sensor import SensorStatus
 
+# GIS View Models
+from speleodb.gis.models.view import GISView
+from speleodb.gis.models.view import GISProjectView
+
 __all__ = [
     "Experiment",
     "ExperimentRecord",
     "ExperimentUserPermission",
+    "GISProjectView",
     "GISView",
-    "GISViewProject",
     "InstallStatus",
     "Landmark",
     "ProjectGeoJSON",

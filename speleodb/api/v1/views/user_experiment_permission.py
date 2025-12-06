@@ -41,7 +41,7 @@ class ExperimentUserPermissionListApiView(GenericAPIView[Experiment], SDBAPIView
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         experiment = self.get_object()
 
-        permissions = experiment.rel_user_permissions.prefetch_related("user")
+        permissions = experiment.user_permissions.prefetch_related("user")
 
         experiment_serializer = self.get_serializer(experiment)
         permission_serializer = ExperimentUserPermissionListSerializer(permissions)

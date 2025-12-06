@@ -172,27 +172,23 @@ class TestStationResourceFileValidation(BaseAPIProjectTestCase):
                 "File extension" in error_message and "not allowed" in error_message
             )
 
-    def test_note_and_sketch_reject_files(self) -> None:
-        """Test that note and sketch resources reject any files."""
-        for resource_type in [
-            StationResourceType.NOTE,
-            StationResourceType.SKETCH,
-        ]:
-            resource = StationResource(
-                station=self.station,
-                resource_type=resource_type,
-                title="Test",
-                file=self.create_test_file("test.txt"),
-                text_content="Some content",
-                created_by=self.user.email,
-            )
+    def test_note_reject_files(self) -> None:
+        """Test that note resources reject any files."""
+        resource = StationResource(
+            station=self.station,
+            resource_type=StationResourceType.NOTE,
+            title="Test",
+            file=self.create_test_file("test.txt"),
+            text_content="Some content",
+            created_by=self.user.email,
+        )
 
-            with pytest.raises(ValidationError) as exc_info:
-                resource.full_clean()
+        with pytest.raises(ValidationError) as exc_info:
+            resource.full_clean()
 
-            assert "file" in exc_info.value.error_dict
-            error_message = str(exc_info.value.error_dict["file"][0])
-            assert "should not have a file" in error_message
+        assert "file" in exc_info.value.error_dict
+        error_message = str(exc_info.value.error_dict["file"][0])
+        assert "should not have a file" in error_message
 
     def test_api_returns_validation_errors(self) -> None:
         """Test that API returns proper validation errors."""

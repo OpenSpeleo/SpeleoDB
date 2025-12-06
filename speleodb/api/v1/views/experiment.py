@@ -334,7 +334,7 @@ class ExperimentSpecificApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
         user = self.get_user()
         experiment = self.get_object()
 
-        for perm in experiment.rel_user_permissions.all():
+        for perm in experiment.user_permissions.all():
             perm.deactivate(deactivated_by=user)
 
         experiment.is_active = False

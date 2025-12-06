@@ -41,7 +41,7 @@ class GISViewManagementListApiView(GenericAPIView[GISView], SDBAPIViewMixin):
         user = self.get_user()
         return (
             GISView.objects.filter(owner=user)
-            .prefetch_related("rel_view_projects__project")
+            .prefetch_related("project_views__project")
             .order_by("-modified_date")
         )
 
@@ -87,7 +87,7 @@ class GISViewManagementDetailApiView(GenericAPIView[GISView], SDBAPIViewMixin):
         """Filter to only views owned by the current user."""
         user = self.get_user()
         return GISView.objects.filter(owner=user).prefetch_related(
-            "rel_view_projects__project"
+            "project_views__project"
         )
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:

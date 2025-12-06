@@ -257,7 +257,7 @@ class ProjectWithGeoJsonSerializer(ProjectSerializer):
         """
 
         try:
-            geojson_obj = obj.rel_geojsons.order_by("-commit__authored_date")[0]
+            geojson_obj = obj.geojsons.order_by("-commit__authored_date")[0]
             return geojson_obj.get_signed_download_url()
 
         except IndexError:

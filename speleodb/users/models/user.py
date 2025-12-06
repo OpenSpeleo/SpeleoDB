@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 
     from speleodb.gis.models import ExperimentUserPermission
     from speleodb.gis.models import Station
-    from speleodb.gis.models import StationResource
     from speleodb.surveys.models import Project
     from speleodb.surveys.models import ProjectMutex
     from speleodb.surveys.models import TeamProjectPermission
@@ -67,12 +66,11 @@ class User(AbstractUser):
     """
 
     # FK Keys
-    rel_experiment_permissions: models.QuerySet[ExperimentUserPermission]
-    rel_mutexes: models.QuerySet[ProjectMutex]
-    rel_permissions: models.QuerySet[UserProjectPermission]
-    rel_stations_created: models.QuerySet[Station]
-    rel_station_resources_created: models.QuerySet[StationResource]
-    rel_team_memberships: models.QuerySet[SurveyTeamMembership]
+    _team_memberships: models.QuerySet[SurveyTeamMembership]
+    mutexes: models.QuerySet[ProjectMutex]
+    experiment_permissions: models.QuerySet[ExperimentUserPermission]
+    project_user_permissions: models.QuerySet[UserProjectPermission]
+    stations_created: models.QuerySet[Station]
 
     id = models.AutoField(primary_key=True)  # Explicitly declared for typing
 
@@ -124,15 +122,13 @@ class User(AbstractUser):
         from speleodb.users.models import SurveyTeam  # noqa: PLC0415
 
         return SurveyTeam.objects.filter(
-            rel_team_memberships__user=self,
-            rel_team_memberships__is_active=True,
+            memberships__user=self,
+            memberships__is_active=True,
         )
 
     @property
     def team_memberships(self) -> models.QuerySet[SurveyTeamMembership]:
-        return self.rel_team_memberships.filter(is_active=True).order_by(
-            "-modified_date"
-        )
+        return self._team_memberships.filter(is_active=True).order_by("-modified_date")
 
     @property
     def projects(self) -> list[Project]:
@@ -166,7 +162,7 @@ class User(AbstractUser):
 
         # -------------------------- USER PERMISSIONS -------------------------- #
 
-        user_permissions = self.rel_permissions.filter(
+        user_permissions = self.project_user_permissions.filter(
             is_active=True,
             **project_filter,
         ).select_related("project")
@@ -174,8 +170,8 @@ class User(AbstractUser):
         # -------------------------- TEAM PERMISSIONS -------------------------- #
 
         team_permissions = TeamProjectPermission.objects.filter(
-            target__rel_team_memberships__user=self,
-            target__rel_team_memberships__is_active=True,
+            target__memberships__user=self,
+            target__memberships__is_active=True,
             is_active=True,
             **project_filter,
         ).select_related("project")
@@ -196,7 +192,7 @@ class User(AbstractUser):
 
     @property
     def active_mutexes(self) -> models.QuerySet[ProjectMutex]:
-        return self.rel_mutexes.filter(is_active=True)
+        return self.mutexes.filter(is_active=True)
 
     def has_beta_access(self) -> bool:
         return self.is_beta_tester or self.is_superuser or self.is_staff

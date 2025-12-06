@@ -48,7 +48,7 @@ class BaseUserProjectGeoJsonApiView(SDBAPIViewMixin):
         user_projects = [perm.project for perm in user.permissions]
 
         geojson_prefetch = Prefetch(
-            "rel_geojsons",
+            "geojsons",
             queryset=ProjectGeoJSON.objects.order_by("-commit__authored_date"),
         )
 
@@ -93,7 +93,7 @@ class OGCGISUserProjectsApiView(GenericAPIView[Token], BaseUserProjectGeoJsonApi
         projects = self.get_user_projects(token.user)
 
         geojson_objs: list[ProjectGeoJSON] = [
-            objs[0] for project in projects if (objs := project.rel_geojsons.all())
+            objs[0] for project in projects if (objs := project.geojsons.all())
         ]
 
         data = [
@@ -252,7 +252,7 @@ class ProjectGeoJsonCommitsApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
         # Get all GeoJSON for this project, ordered by commit_date descending
         serializer = ProjectGeoJSONCommitSerializer(
-            project.rel_geojsons.order_by("-commit__authored_date"),
+            project.geojsons.order_by("-commit__authored_date"),
             many=True,
         )
 

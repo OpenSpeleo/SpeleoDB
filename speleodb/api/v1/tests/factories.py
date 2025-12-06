@@ -338,10 +338,10 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
             StationResourceType.PHOTO,
             StationResourceType.VIDEO,
             StationResourceType.NOTE,
-            StationResourceType.SKETCH,
             StationResourceType.DOCUMENT,
         ],
     )  # type: ignore[assignment]
+
     title: str = factory.Faker("sentence", nb_words=4)  # type: ignore[assignment]
     description: str = factory.Faker("text", max_nb_chars=300)  # type: ignore[assignment]
     created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
@@ -357,15 +357,6 @@ class StationResourceFactory(DjangoModelFactory[StationResource]):
         if self.resource_type == StationResourceType.NOTE:
             if not self.text_content:
                 self.text_content = f"Note content for {self.title}"
-        elif self.resource_type == StationResourceType.SKETCH:
-            if not self.text_content:
-                # Simple SVG sketch
-                self.text_content = """<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="300" height="200" fill="#1e293b"/>
-                    <path d="M50 100 L250 100 M150 50 L150 150" stroke="#38bdf8" stroke-width="3" fill="none"/>
-                    <circle cx="150" cy="100" r="8" fill="#f59e0b"/>
-                    <text x="160" y="105" fill="#e2e8f0" font-size="12">Station</text>
-                </svg>"""  # noqa: E501
 
     @classmethod
     def _create(
@@ -443,17 +434,6 @@ Good visibility in all directions."""
         )
 
     @classmethod
-    def create_sketch(cls, station: Station, **kwargs: Any) -> StationResource:
-        """Create a sketch resource."""
-        return cls.create(
-            station=station,
-            resource_type=StationResourceType.SKETCH,
-            title="Cross-section Diagram",
-            description="Hand-drawn cross-section of the area",
-            **kwargs,
-        )
-
-    @classmethod
     def create_video(cls, station: Station, **kwargs: Any) -> StationResource:
         """Create a video resource."""
         return cls.create(
@@ -470,7 +450,6 @@ Good visibility in all directions."""
         return [
             cls.create_photo(station),
             cls.create_note(station),
-            cls.create_sketch(station),
             cls.create_video(station),
         ]
 
@@ -487,17 +466,6 @@ class VideoStationResourceFactory(StationResourceFactory):
 
     resource_type = StationResourceType.VIDEO
     title: str = factory.LazyAttribute(lambda obj: f"Video - {obj.station.name}")  # type: ignore[assignment]
-
-
-class SketchStationResourceFactory(StationResourceFactory):
-    """Factory specifically for sketch station resources."""
-
-    resource_type = StationResourceType.SKETCH
-    title: str = factory.LazyAttribute(lambda obj: f"Sketch - {obj.station.name}")  # type: ignore[assignment]
-    text_content = (
-        '<svg width="200" height="200"><circle cx="100" cy="100" r="50" fill="blue"/>'
-        '<text x="100" y="100" text-anchor="middle" fill="white">Cave</text></svg>'
-    )
 
 
 class NoteStationResourceFactory(StationResourceFactory):

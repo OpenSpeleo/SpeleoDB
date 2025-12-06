@@ -32,7 +32,6 @@ logger = logging.getLogger(__name__)
 class StationResourceType(models.TextChoices):
     PHOTO = "photo", "Photo"
     VIDEO = "video", "Video"
-    SKETCH = "sketch", "Sketch"
     NOTE = "note", "Note"
     DOCUMENT = "document", "Document"
 
@@ -70,7 +69,7 @@ def get_station_resource_path(instance: StationResource, filename: str) -> str:
 
 class StationResource(models.Model):
     """
-    Stores various types of resources (photos, videos, sketches, notes)
+    Stores various types of resources (photos, videos, document, notes)
     associated with a survey station.
     """
 
@@ -123,11 +122,11 @@ class StationResource(models.Model):
         help_text="Thumbnail/preview image for the resource",
     )
 
-    # Text content (for notes, sketches)
+    # Text content (for notes)
     text_content = models.TextField(
         blank=True,
         default="",
-        help_text="Text content for notes or sketch descriptions",
+        help_text="Text content for notes descriptions",
     )
 
     # Metadata
@@ -409,7 +408,4 @@ class StationResource(models.Model):
     @property
     def is_text_based(self) -> bool:
         """Check if this resource type uses text content."""
-        return self.resource_type in [
-            StationResourceType.NOTE,
-            StationResourceType.SKETCH,
-        ]
+        return self.resource_type == StationResourceType.NOTE

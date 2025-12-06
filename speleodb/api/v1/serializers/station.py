@@ -72,42 +72,39 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
         file_field = attrs.get("file")
         text_content = attrs.get("text_content")
 
-        # Only validate file requirement for new resources or when file is being updated
-        if resource_type in [
-            StationResourceType.PHOTO,
-            StationResourceType.VIDEO,
-            StationResourceType.DOCUMENT,
-        ]:
-            # For updates, only validate if file is being changed
-            if self.instance and not file_field:
-                with contextlib.suppress(KeyError):
-                    del attrs["file"]
-                return attrs
+        match resource_type:
+            case (
+                StationResourceType.PHOTO
+                | StationResourceType.VIDEO
+                | StationResourceType.DOCUMENT
+            ):
+                # For updates, only validate if file is being changed
+                if self.instance and not file_field:
+                    with contextlib.suppress(KeyError):
+                        del attrs["file"]
+                    return attrs
 
-            # Validate file size (max 5MBs)
-            if file_field:
-                max_size = 5 * 1024 * 1024  # 5MB in bytes
-                if file_field.size > max_size:
+                # Validate file size (max 5MBs)
+                if file_field:
+                    max_size = 5 * 1024 * 1024  # 5MB in bytes
+                    if file_field.size > max_size:
+                        raise serializers.ValidationError(
+                            {"file": "File size cannot exceed 5MB."}
+                        )
+
+            case StationResourceType.NOTE:
+                # For updates, check if text_content is being updated
+                if self.instance and "text_content" not in attrs:
+                    return attrs
+
+                # For new resources, text_content is required
+                if not text_content:
                     raise serializers.ValidationError(
-                        {"file": "File size cannot exceed 5MB."}
+                        f"Resource type '{resource_type}' requires text content."
                     )
 
-        elif resource_type in [
-            StationResourceType.NOTE,
-            StationResourceType.SKETCH,
-        ]:
-            # For updates, check if text_content is being updated
-            if self.instance and "text_content" not in attrs:
-                return attrs
-
-            # For new resources, text_content is required
-            if not text_content:
-                raise serializers.ValidationError(
-                    f"Resource type '{resource_type}' requires text content."
-                )
-
-        else:
-            raise ValidationError(f"Unknown value received: `{resource_type}`")
+            case _:
+                raise ValidationError(f"Unknown value received: `{resource_type}`")
 
         return attrs
 

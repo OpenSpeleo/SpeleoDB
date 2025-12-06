@@ -37,7 +37,7 @@ class GISViewListingView(AuthenticatedTemplateView):
         # Get all active GIS views owned by the user
         context["gis_views"] = (
             GISView.objects.filter(owner=request.user)
-            .prefetch_related("rel_view_projects__project")
+            .prefetch_related("project_views__project")
             .order_by("-modified_date")
         )
 
@@ -60,7 +60,7 @@ class _BaseGISViewView(AuthenticatedTemplateView):
 
     def get_gis_view_data(self, user: User, gis_view_id: str) -> dict[str, Any]:
         """Get GIS view and verify ownership."""
-        gis_view = GISView.objects.prefetch_related("rel_view_projects__project").get(
+        gis_view = GISView.objects.prefetch_related("project_views__project").get(
             id=gis_view_id,
             owner=user,
         )

@@ -93,7 +93,7 @@ class SensorFleetAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def permission_count(self, obj: SensorFleet) -> int:
         """Display the number of user permissions for this fleet."""
         if obj and obj.pk:
-            return obj.rel_user_permissions.count()
+            return obj.user_permissions.count()
         return 0
 
     def save_model(

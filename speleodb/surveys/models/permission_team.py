@@ -13,7 +13,7 @@ from speleodb.users.models import SurveyTeam
 class TeamProjectPermission(BasePermissionModel):
     target = models.ForeignKey(
         SurveyTeam,
-        related_name="rel_permissions",
+        related_name="project_permissions",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -21,7 +21,7 @@ class TeamProjectPermission(BasePermissionModel):
 
     project = models.ForeignKey(
         Project,
-        related_name="rel_team_permissions",
+        related_name="_team_permissions",
         on_delete=models.CASCADE,
         blank=False,
         null=False,

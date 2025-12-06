@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 class SensorFleet(models.Model):
     sensors: models.QuerySet[Sensor]
-    rel_user_permissions: models.QuerySet[SensorFleetUserPermission]
+    user_permissions: models.QuerySet[SensorFleetUserPermission]
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -139,7 +139,7 @@ class SensorFleetUserPermission(models.Model):
 
     user = models.ForeignKey(
         User,
-        related_name="rel_sensorfleet_permissions",
+        related_name="sensorfleet_permissions",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -147,7 +147,7 @@ class SensorFleetUserPermission(models.Model):
 
     sensor_fleet = models.ForeignKey(
         SensorFleet,
-        related_name="rel_user_permissions",
+        related_name="user_permissions",
         on_delete=models.CASCADE,
         blank=False,
         null=False,

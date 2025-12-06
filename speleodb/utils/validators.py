@@ -47,10 +47,9 @@ class AttachmentValidator(FileExtensionValidator):
     """
 
     # Define allowed extensions for each resource type
-    IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "bmp", "webp"]
+    IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"]
     VIDEO_EXTENSIONS = ["mp4", "avi", "mov", "wmv", "flv", "webm"]
     DOCUMENT_EXTENSIONS = ["pdf", "doc", "docx", "txt", "rtf"]
-    SKETCH_EXTENSIONS = ["svg"]
 
     def __init__(self) -> None:
         # Combine all extensions and add HEIC/HEIF for upload
@@ -59,7 +58,6 @@ class AttachmentValidator(FileExtensionValidator):
             *["heic", "heif"],  # Allow HEIC upload (will be converted)
             *self.VIDEO_EXTENSIONS,
             *self.DOCUMENT_EXTENSIONS,
-            *self.SKETCH_EXTENSIONS,
         )
         super().__init__(allowed_extensions=all_extensions)
 

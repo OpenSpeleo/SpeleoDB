@@ -26,8 +26,8 @@ class SurveyTeam(models.Model):
     Each member has a role (Leader or Member) with timestamps for auditing changes.
     """
 
-    rel_team_memberships: models.QuerySet[SurveyTeamMembership]
-    rel_permissions: models.QuerySet[TeamProjectPermission]
+    memberships: models.QuerySet[SurveyTeamMembership]
+    project_permissions: models.QuerySet[TeamProjectPermission]
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -53,14 +53,14 @@ class SurveyTeam(models.Model):
 
     @cached(cache=TTLCache(maxsize=100, ttl=300))
     def get_membership(self, user: User) -> SurveyTeamMembership:
-        return self.rel_team_memberships.get(user=user, is_active=True)
+        return self.memberships.get(user=user, is_active=True)
 
     def get_member_count(self) -> int:
         return self.get_all_memberships().count()
 
     def get_all_memberships(self) -> models.QuerySet[SurveyTeamMembership]:
         return (
-            self.rel_team_memberships.filter(is_active=True)
+            self.memberships.filter(is_active=True)
             .select_related("user")
             .order_by("-role", "user__email")
         )
@@ -99,7 +99,7 @@ class SurveyTeamMembership(models.Model):
     team = models.ForeignKey(
         SurveyTeam,
         on_delete=models.CASCADE,
-        related_name="rel_team_memberships",
+        related_name="memberships",
         blank=False,
         null=False,
     )
@@ -107,7 +107,7 @@ class SurveyTeamMembership(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name="rel_team_memberships",
+        related_name="_team_memberships",
         blank=False,
         null=False,
     )
@@ -119,7 +119,7 @@ class SurveyTeamMembership(models.Model):
 
     deactivated_by = models.ForeignKey(
         User,
-        related_name="rel_deactivated_memberships",
+        related_name="deactivated_memberships",
         on_delete=models.RESTRICT,
         null=True,
         blank=True,

@@ -19,8 +19,8 @@ from rest_framework.generics import GenericAPIView
 from speleodb.api.v1.permissions import GISViewOwnershipPermission
 from speleodb.api.v1.serializers.gis_view import GISViewDataSerializer
 from speleodb.api.v1.serializers.gis_view import PublicGISViewSerializer
+from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
-from speleodb.gis.models import GISViewProject
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.ogc_models import OGCLayerList
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -137,7 +137,7 @@ class BaseOGCGISViewCollectionApiView(GenericAPIView[GISView], SDBAPIViewMixin):
 
         # Verify that the project_geojson is part of the gis_view
         if (
-            not GISViewProject.objects.filter(
+            not GISProjectView.objects.filter(
                 gis_view=gis_view,
                 project=project_geojson.project,
             )

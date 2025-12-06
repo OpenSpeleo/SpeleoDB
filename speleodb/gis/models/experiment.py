@@ -221,8 +221,8 @@ class Experiment(models.Model):
     Does NOT imply a single location; sensors/sites/measurements are related objects.
     """
 
-    rel_records: models.QuerySet[ExperimentRecord]
-    rel_user_permissions: models.QuerySet[ExperimentUserPermission]
+    records: models.QuerySet[ExperimentRecord]
+    user_permissions: models.QuerySet[ExperimentUserPermission]
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -671,7 +671,7 @@ class ExperimentRecord(models.Model):
 
     experiment = models.ForeignKey(
         Experiment,
-        related_name="rel_records",
+        related_name="records",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -679,7 +679,7 @@ class ExperimentRecord(models.Model):
 
     station = models.ForeignKey(
         Station,
-        related_name="rel_records",
+        related_name="records",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -707,7 +707,7 @@ class ExperimentRecord(models.Model):
 class ExperimentUserPermission(models.Model):
     user = models.ForeignKey(
         User,
-        related_name="rel_experiment_permissions",
+        related_name="experiment_permissions",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -715,7 +715,7 @@ class ExperimentUserPermission(models.Model):
 
     experiment = models.ForeignKey(
         Experiment,
-        related_name="rel_user_permissions",
+        related_name="user_permissions",
         on_delete=models.CASCADE,
         blank=False,
         null=False,

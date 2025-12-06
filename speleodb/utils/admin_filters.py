@@ -139,9 +139,7 @@ class StationProjectFilter(BaseProjectFilter[Station]):
         """Return only countries that are actually used by projects."""
         # Get distinct countries from projects, ordered alphabetically
         return list(
-            Project.objects.filter(rel_stations__isnull=False)
-            .distinct()
-            .order_by("name")
+            Project.objects.filter(stations__isnull=False).distinct().order_by("name")
         )
 
 
@@ -152,7 +150,5 @@ class GeoJSONProjectFilter(BaseProjectFilter[ProjectGeoJSON]):
         """Return only countries that are actually used by projects."""
         # Get distinct countries from projects, ordered alphabetically
         return list(
-            Project.objects.filter(rel_geojsons__isnull=False)
-            .distinct()
-            .order_by("name")
+            Project.objects.filter(geojsons__isnull=False).distinct().order_by("name")
         )

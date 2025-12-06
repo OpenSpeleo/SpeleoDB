@@ -158,7 +158,7 @@ class ProjectStationsApiView(GenericAPIView[Project], SDBAPIViewMixin):
         """Get all stations that belong to the project."""
         project = self.get_object()
         serializer = SubSurfaceStationWithResourcesSerializer(
-            project.rel_stations.all(),
+            project.stations.all(),
             many=True,
         )
         return SuccessResponse(serializer.data)
@@ -296,7 +296,7 @@ class NetworkStationsApiView(GenericAPIView[SurfaceMonitoringNetwork], SDBAPIVie
         """Get all stations that belong to the network."""
         network = self.get_object()
         serializer = SurfaceStationWithResourcesSerializer(
-            network.rel_stations.all(),
+            network.stations.all(),
             many=True,
         )
         return SuccessResponse(serializer.data)

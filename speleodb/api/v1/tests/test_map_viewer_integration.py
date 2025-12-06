@@ -288,54 +288,6 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             == 1
         )
 
-    def test_station_resource_creation_workflow_sketch(self) -> None:
-        """Test creating new resources for a station (as frontend upload would do)."""
-        station = SubSurfaceStationFactory.create(project=self.project)
-
-        # Test creating a sketch resource - MUST use JSON
-        sketch_data = {
-            "resource_type": StationResourceType.SKETCH,
-            "title": "Cave Cross-Section",
-            "description": "Hand-drawn diagram of the passage",
-            "text_content": """<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
-                <rect width="300" height="200" fill="#1e293b"/>
-                <path d="M50 100 L250 100 M150 50 L150 150" stroke="#38bdf8" stroke-width="3" fill="none"/>
-                <circle cx="150" cy="100" r="8" fill="#f59e0b"/>
-                <text x="160" y="105" fill="#e2e8f0" font-size="12">Station</text>
-            </svg>""",  # noqa: E501
-        }
-
-        response = self.client.post(
-            reverse("api:v1:station-resources", kwargs={"id": station.id}),
-            data=json.dumps(sketch_data),
-            content_type="application/json",
-            headers={"authorization": self.auth},
-        )
-
-        if self.level < PermissionLevel.READ_AND_WRITE:
-            # Read-only and web viewer users cannot create resources
-            assert response.status_code == status.HTTP_403_FORBIDDEN, (
-                response.status_code,
-                self.level,
-                self.permission_type,
-            )
-            return
-
-        assert response.status_code == status.HTTP_201_CREATED, (
-            response.status_code,
-            self.level,
-            self.permission_type,
-        )
-
-        # Verify station now has 1 resource
-        assert (
-            StationResource.objects.filter(
-                station=station,
-                resource_type=StationResourceType.SKETCH,
-            ).count()
-            == 1
-        )
-
     @pytest.mark.skip_if_lighttest
     def test_station_deletion_workflow(self) -> None:
         """Test deleting a station and its resources (as frontend delete would do)."""
@@ -617,13 +569,12 @@ class TestMapViewerWithFixtures(TransactionTestCase):
             if i == 0:  # Station Alpha - Main data collection point
                 StationResourceFactory.create_photo(station)
                 StationResourceFactory.create_note(station)
-                StationResourceFactory.create_sketch(station)
                 StationResourceFactory.create_video(station)
             elif i == 1:  # Equipment Station
                 StationResourceFactory.create_photo(station)
                 StationResourceFactory.create_note(station)
             else:  # Deep Chamber
-                StationResourceFactory.create_sketch(station)
+                StationResourceFactory.create_note(station)
 
         # Test map viewer loads all stations
         response = self.client.get(
@@ -658,14 +609,13 @@ class TestMapViewerWithFixtures(TransactionTestCase):
         assert response.status_code == status.HTTP_200_OK
         station_data = response.json()["data"]
 
-        # Verify it has the expected 4 resources (photo, note, sketch, video)
-        assert len(station_data["resources"]) == 4  # noqa: PLR2004
+        # Verify it has the expected 3 resources (photo, note, video)
+        assert len(station_data["resources"]) == 3  # noqa: PLR2004
 
         resource_types = {r["resource_type"] for r in station_data["resources"]}
         assert resource_types == {
             StationResourceType.PHOTO,
             StationResourceType.NOTE,
-            StationResourceType.SKETCH,
             StationResourceType.VIDEO,
         }
 

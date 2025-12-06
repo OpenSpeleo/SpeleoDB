@@ -625,9 +625,9 @@ class TestSensorFleetIntegration:
             level=PermissionLevel.READ_AND_WRITE,
         )
 
-        assert fleet.rel_user_permissions.count() == 2  # noqa: PLR2004
-        assert perm1 in fleet.rel_user_permissions.all()
-        assert perm2 in fleet.rel_user_permissions.all()
+        assert fleet.user_permissions.count() == 2  # noqa: PLR2004
+        assert perm1 in fleet.user_permissions.all()
+        assert perm2 in fleet.user_permissions.all()
 
     def test_user_multiple_fleet_permissions(self) -> None:
         """Test a user with permissions on multiple fleets."""
@@ -656,6 +656,6 @@ class TestSensorFleetIntegration:
             level=PermissionLevel.ADMIN,
         )
 
-        assert user.rel_sensorfleet_permissions.count() == 2  # noqa: PLR2004
-        assert perm1 in user.rel_sensorfleet_permissions.all()
-        assert perm2 in user.rel_sensorfleet_permissions.all()
+        assert user.sensorfleet_permissions.count() == 2  # noqa: PLR2004
+        assert perm1 in user.sensorfleet_permissions.all()
+        assert perm2 in user.sensorfleet_permissions.all()

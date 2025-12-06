@@ -12,7 +12,7 @@ from speleodb.users.models import User
 class UserProjectPermission(BasePermissionModel):
     target = models.ForeignKey(
         User,
-        related_name="rel_permissions",
+        related_name="project_user_permissions",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -20,7 +20,7 @@ class UserProjectPermission(BasePermissionModel):
 
     project = models.ForeignKey(
         Project,
-        related_name="rel_user_permissions",
+        related_name="_user_permissions",
         on_delete=models.CASCADE,
         blank=False,
         null=False,

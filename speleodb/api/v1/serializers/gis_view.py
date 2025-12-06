@@ -7,22 +7,22 @@ from typing import Any
 
 from rest_framework import serializers
 
+from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
-from speleodb.gis.models import GISViewProject
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import NotAuthorizedError
 
 sha1_regex = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 
 
-class GISViewProjectSerializer(serializers.ModelSerializer[GISViewProject]):
-    """Serializer for GISViewProject (read operations)."""
+class GISProjectViewSerializer(serializers.ModelSerializer[GISProjectView]):
+    """Serializer for GISProjectView (read operations)."""
 
     project_id = serializers.UUIDField(source="project.id", read_only=True)
     project_name = serializers.CharField(source="project.name", read_only=True)
 
     class Meta:
-        model = GISViewProject
+        model = GISProjectView
         fields = [
             "id",
             "project_id",
@@ -34,7 +34,7 @@ class GISViewProjectSerializer(serializers.ModelSerializer[GISViewProject]):
         read_only_fields = ["id", "project_id", "project_name", "creation_date"]
 
 
-class GISViewProjectInputSerializer(serializers.Serializer[GISViewProject]):
+class GISProjectViewInputSerializer(serializers.Serializer[GISProjectView]):
     """Serializer for project input when creating/updating GIS views."""
 
     project_id = serializers.UUIDField()
@@ -74,8 +74,8 @@ class GISViewSerializer(serializers.ModelSerializer[GISView]):
 
     owner_email = serializers.EmailField(source="owner.email", read_only=True)
     project_count = serializers.SerializerMethodField()
-    projects = GISViewProjectSerializer(
-        source="rel_view_projects",
+    projects = GISProjectViewSerializer(
+        source="project_views",
         many=True,
         read_only=True,
     )
@@ -104,13 +104,13 @@ class GISViewSerializer(serializers.ModelSerializer[GISView]):
 
     def get_project_count(self, obj: GISView) -> int:
         """Get the number of projects in this view."""
-        return obj.rel_view_projects.count()
+        return obj.project_views.count()
 
 
 class GISViewCreateUpdateSerializer(serializers.ModelSerializer[GISView]):
     """Serializer for creating/updating GIS views."""
 
-    projects = GISViewProjectInputSerializer(many=True, write_only=True)
+    projects = GISProjectViewInputSerializer(many=True, write_only=True)
 
     class Meta:
         model = GISView
@@ -171,7 +171,7 @@ class GISViewCreateUpdateSerializer(serializers.ModelSerializer[GISView]):
 
         # Create project associations
         for project_data in projects_data:
-            GISViewProject.objects.create(
+            GISProjectView.objects.create(
                 gis_view=gis_view,
                 project_id=project_data["project_id"],
                 commit_sha=project_data.get("commit_sha"),
@@ -192,11 +192,11 @@ class GISViewCreateUpdateSerializer(serializers.ModelSerializer[GISView]):
         # Replace projects if provided
         if projects_data is not None:
             # Delete existing associations
-            instance.rel_view_projects.all().delete()
+            instance.project_views.all().delete()
 
             # Create new associations
             for project_data in projects_data:
-                GISViewProject.objects.create(
+                GISProjectView.objects.create(
                     gis_view=instance,
                     project_id=project_data["project_id"],
                     commit_sha=project_data.get("commit_sha"),
@@ -222,7 +222,7 @@ class GISViewDataGeoJSONFileSerializer(serializers.Serializer[Any]):
     use_latest = serializers.BooleanField()
 
 
-class PublicGISViewProjectSerializer(serializers.Serializer[dict[str, Any]]):
+class PublicGISProjectViewSerializer(serializers.Serializer[dict[str, Any]]):
     """Serializer for individual project in public GIS view frontend response."""
 
     id = serializers.UUIDField(source="project_id")
@@ -260,7 +260,7 @@ class PublicGISViewSerializer(serializers.Serializer[GISView]):
         expires_in = self.context.get("expires_in", 3600)
         try:
             geojson_data = obj.get_geojson_urls(expires_in=expires_in)
-            serializer = PublicGISViewProjectSerializer(geojson_data, many=True)  # type: ignore[arg-type]
+            serializer = PublicGISProjectViewSerializer(geojson_data, many=True)  # type: ignore[arg-type]
             return serializer.data  # type: ignore[return-value]
         except Exception:  # noqa: BLE001
             return []

@@ -200,7 +200,7 @@ class SensorFleetSpecificApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
         sensor_fleet = self.get_object()
 
         # Deactivate all permissions
-        for perm in sensor_fleet.rel_user_permissions.all():
+        for perm in sensor_fleet.user_permissions.all():
             perm.deactivate(deactivated_by=user)
 
         # Deactivate the fleet

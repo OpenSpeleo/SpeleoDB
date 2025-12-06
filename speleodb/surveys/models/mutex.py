@@ -12,7 +12,7 @@ from speleodb.users.models import User
 class ProjectMutex(models.Model):
     project = models.ForeignKey(
         Project,
-        related_name="rel_mutexes",
+        related_name="mutexes",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -20,7 +20,7 @@ class ProjectMutex(models.Model):
 
     user = models.ForeignKey(
         User,
-        related_name="rel_mutexes",
+        related_name="mutexes",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -36,7 +36,7 @@ class ProjectMutex(models.Model):
 
     closing_user = models.ForeignKey(
         User,
-        related_name="rel_closing_mutexes",
+        related_name="closing_mutexes",
         on_delete=models.RESTRICT,
         blank=True,
         null=True,

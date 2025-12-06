@@ -11,17 +11,17 @@ from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
 
+from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
-from speleodb.gis.models import GISViewProject
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
 
 
-class GISViewProjectInline(admin.TabularInline):  # type: ignore[type-arg]
+class GISProjectViewInline(admin.TabularInline):  # type: ignore[type-arg]
     """Inline admin for managing projects within a GIS view."""
 
-    model = GISViewProject
+    model = GISProjectView
     extra = 1
 
     fields = [
@@ -79,7 +79,7 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "modified_date",
     ]
 
-    inlines = [GISViewProjectInline]
+    inlines = [GISProjectViewInline]
 
     autocomplete_fields = ["owner"]
 
@@ -114,7 +114,7 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def project_count(self, obj: GISView) -> int:
         """Show number of projects in view."""
         if obj and obj.pk:
-            return obj.rel_view_projects.count()
+            return obj.project_views.count()
         return 0
 
     def api_url_display(self, obj: GISView) -> str:
@@ -144,8 +144,8 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         )
 
 
-@admin.register(GISViewProject)
-class GISViewProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+@admin.register(GISProjectView)
+class GISProjectViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     """Admin interface for GIS View Projects."""
 
     list_display = [
@@ -181,7 +181,7 @@ class GISViewProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     ]
 
     @admin.display(description="Commit")
-    def commit_display(self, obj: GISViewProject) -> str:
+    def commit_display(self, obj: GISProjectView) -> str:
         """Display commit info in a readable format."""
         if obj.use_latest:
             return "latest"

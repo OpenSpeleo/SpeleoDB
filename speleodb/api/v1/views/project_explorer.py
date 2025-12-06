@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
-    queryset = Project.objects.prefetch_related("commits", "rel_formats").all()
+    queryset = Project.objects.prefetch_related("commits", "_formats").all()
     permission_classes = [SDB_ReadAccess]
     serializer_class = ProjectSerializer
     lookup_field = "id"

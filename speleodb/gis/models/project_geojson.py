@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from typing import TYPE_CHECKING
 from typing import Any
 
 import boto3
@@ -16,6 +16,9 @@ from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 from speleodb.utils.storages import GeoJSONStorage
 from speleodb.utils.validators import GeoJsonValidator
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 def get_geojson_upload_path(instance: ProjectGeoJSON, filename: str) -> str:
@@ -35,7 +38,7 @@ class ProjectGeoJSON(models.Model):
 
     project = models.ForeignKey(
         Project,
-        related_name="rel_geojsons",
+        related_name="geojsons",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -67,6 +70,15 @@ class ProjectGeoJSON(models.Model):
     def __str__(self) -> str:
         return f"[ProjectGeoJSON] {self.project.name} @ {self.commit.id[:8]}"
 
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Enforce immutability: once created, cannot be updated."""
+        self.full_clean()
+        # Use _state.adding to check if this is a new object
+        # (pk is always set due to OneToOneField)
+        if not self._state.adding:
+            raise ValidationError("ProjectGeoJSON objects are immutable once created.")
+        return super().save(*args, **kwargs)
+
     # Backward-compatible properties for legacy code
     @property
     def commit_sha(self) -> str:
@@ -92,14 +104,6 @@ class ProjectGeoJSON(models.Model):
     def commit_message(self) -> str:
         """Return the commit message (backward compatibility)."""
         return self.commit.message
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        """Enforce immutability: once created, cannot be updated."""
-        self.full_clean()
-        # Use _state.adding to check if this is a new object (pk is always set due to OneToOneField)
-        if not self._state.adding:
-            raise ValidationError("ProjectGeoJSON objects are immutable once created.")
-        return super().save(*args, **kwargs)
 
     # S3 signed URL helper
     def get_signed_download_url(self, expires_in: int = 3600) -> str:

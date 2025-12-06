@@ -75,7 +75,7 @@ class ProjectQuerySet(models.QuerySet["Project"]):
 
         return self.prefetch_related(
             Prefetch(
-                "rel_mutexes",
+                "mutexes",
                 queryset=active_mutex_qs,
                 to_attr="_prefetched_active_mutex",
             )
@@ -92,7 +92,7 @@ class ProjectQuerySet(models.QuerySet["Project"]):
 
     #     return self.prefetch_related(
     #         Prefetch(
-    #             "rel_user_permissions",
+    #             "user_permissions",
     #             queryset=user_permissions_qs,
     #             to_attr="_prefetched_user_permissions",
     #         )
@@ -109,7 +109,7 @@ class ProjectQuerySet(models.QuerySet["Project"]):
 
     #     return self.prefetch_related(
     #         Prefetch(
-    #             "rel_team_permissions",
+    #             "team_permissions",
     #             queryset=team_permissions_qs,
     #             to_attr="_prefetched_team_permissions",
     #         )
@@ -117,14 +117,14 @@ class ProjectQuerySet(models.QuerySet["Project"]):
 
 
 class Project(models.Model):
-    # type checking
-    rel_formats: models.QuerySet[Format]
-    rel_geojsons: models.QuerySet[ProjectGeoJSON]
-    rel_mutexes: models.QuerySet[ProjectMutex]
-    rel_user_permissions: models.QuerySet[UserProjectPermission]
-    rel_team_permissions: models.QuerySet[TeamProjectPermission]
-    rel_stations: models.QuerySet[SubSurfaceStation]
+    _formats: models.QuerySet[Format]
+    _team_permissions: models.QuerySet[TeamProjectPermission]
+    _user_permissions: models.QuerySet[UserProjectPermission]
+
     commits: models.QuerySet[ProjectCommit]
+    geojsons: models.QuerySet[ProjectGeoJSON]
+    mutexes: models.QuerySet[ProjectMutex]
+    stations: models.QuerySet[SubSurfaceStation]
 
     # Prefetched attributes
     _prefetched_active_mutex: list[ProjectMutex]
@@ -261,7 +261,7 @@ class Project(models.Model):
                 if self._prefetched_active_mutex
                 else None
             )
-        return self.rel_mutexes.filter(is_active=True).select_related("user").first()
+        return self.mutexes.filter(is_active=True).select_related("user").first()
 
     @property
     def active_mutex(self) -> ProjectMutex | None:
@@ -315,15 +315,15 @@ class Project(models.Model):
         return user.get_best_permission(project=self)
 
     def get_user_permission(self, user: User) -> UserProjectPermission:
-        return self.rel_user_permissions.get(target=user, is_active=True)
+        return self._user_permissions.get(target=user, is_active=True)
 
     def get_team_permission(self, team: SurveyTeam) -> TeamProjectPermission:
-        return self.rel_team_permissions.get(target=team, is_active=True)
+        return self._team_permissions.get(target=team, is_active=True)
 
     @property
     def user_permissions(self) -> models.QuerySet[UserProjectPermission]:
         return (
-            self.rel_user_permissions.filter(is_active=True)
+            self._user_permissions.filter(is_active=True)
             .select_related("target")
             .order_by("-level", "target__email")
         )
@@ -331,7 +331,7 @@ class Project(models.Model):
     @property
     def team_permissions(self) -> models.QuerySet[TeamProjectPermission]:
         return (
-            self.rel_team_permissions.filter(is_active=True)
+            self._team_permissions.filter(is_active=True)
             .select_related("target")
             .order_by("-level", "target__name")
         )
@@ -342,11 +342,11 @@ class Project(models.Model):
 
     @property
     def user_permission_count(self) -> int:
-        return self.rel_user_permissions.filter(is_active=True).count()
+        return self._user_permissions.filter(is_active=True).count()
 
     @property
     def team_permission_count(self) -> int:
-        return self.rel_team_permissions.filter(is_active=True).count()
+        return self._team_permissions.filter(is_active=True).count()
 
     @property
     def collaborator_count(self) -> int:
@@ -359,8 +359,8 @@ class Project(models.Model):
         ).values_list("target", flat=True)
 
         team_user_ids = SurveyTeamMembership.objects.filter(
-            team__rel_permissions__project=self,
-            team__rel_permissions__is_active=True,
+            team__project_permissions__project=self,
+            team__project_permissions__is_active=True,
             is_active=True,
         ).values_list("user", flat=True)
 
@@ -487,7 +487,7 @@ class Project(models.Model):
 
     @property
     def formats(self) -> models.QuerySet[Format]:
-        return self.rel_formats.all().order_by("_format")
+        return self._formats.all().order_by("_format")
 
     @property
     def formats_downloadable(self) -> list[Format]:

@@ -11,8 +11,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
 from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
-from speleodb.gis.models import GISViewProject
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
@@ -118,8 +118,8 @@ class TestGISViewModel:
 
 
 @pytest.mark.django_db
-class TestGISViewProjectModel:
-    """Test suite for GISViewProject model."""
+class TestGISProjectViewModel:
+    """Test suite for GISProjectView model."""
 
     def test_create_view_project_with_commit(self) -> None:
         """Test creating a view project with specific commit."""
@@ -130,7 +130,7 @@ class TestGISViewProjectModel:
             owner=user,
         )
 
-        view_project = GISViewProject.objects.create(
+        view_project = GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha="a" * 40,
@@ -149,7 +149,7 @@ class TestGISViewProjectModel:
             owner=user,
         )
 
-        view_project = GISViewProject.objects.create(
+        view_project = GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             use_latest=True,
@@ -167,7 +167,7 @@ class TestGISViewProjectModel:
             owner=user,
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             use_latest=True,
@@ -176,7 +176,7 @@ class TestGISViewProjectModel:
         # Try to add same project again
         # Note: ValidationError is raised by full_clean() before IntegrityError
         with pytest.raises(ValidationError):
-            GISViewProject.objects.create(
+            GISProjectView.objects.create(
                 gis_view=gis_view,
                 project=project,
                 commit_sha="b" * 40,
@@ -191,7 +191,7 @@ class TestGISViewProjectModel:
             owner=user,
         )
 
-        view_project = GISViewProject(
+        view_project = GISProjectView(
             gis_view=gis_view,
             project=project,
             commit_sha="abc123",  # Too short
@@ -212,7 +212,7 @@ class TestGISViewProjectModel:
             owner=user,
         )
 
-        view_project = GISViewProject(
+        view_project = GISProjectView(
             gis_view=gis_view,
             project=project,
             commit_sha="z" * 40,  # Invalid hex
@@ -232,7 +232,7 @@ class TestGISViewProjectModel:
             owner=user,
         )
 
-        view_project = GISViewProject(
+        view_project = GISProjectView(
             gis_view=gis_view,
             project=project,
             use_latest=False,
@@ -250,7 +250,7 @@ class TestGISViewProjectModel:
             owner=user,
         )
 
-        view_project = GISViewProject(
+        view_project = GISProjectView(
             gis_view=gis_view,
             project=project,
             commit_sha="a" * 40,
@@ -288,7 +288,7 @@ class TestGISViewIntegration:
         )
 
         # Add project to view
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha=commit_sha,
@@ -336,7 +336,7 @@ class TestGISViewIntegration:
         )
 
         # Add project to view with use_latest
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             use_latest=True,
@@ -359,7 +359,7 @@ class TestGISViewIntegration:
         )
 
         # Add project with non-existent commit
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=project,
             commit_sha="a" * 40,  # Doesn't exist
@@ -403,13 +403,13 @@ class TestGISViewIntegration:
         )
 
         # Add both projects
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=geojson_objs[0].project,
             commit_sha=geojson_objs[0].commit_sha,
         )
 
-        GISViewProject.objects.create(
+        GISProjectView.objects.create(
             gis_view=gis_view,
             project=geojson_objs[1].project,
             use_latest=True,
