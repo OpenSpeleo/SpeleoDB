@@ -102,7 +102,7 @@ local = [
     "mypy==1.18.2",         # https://github.com/python/mypy
     "parameterized==0.9.0", # https://github.com/wolever/parameterized
     "pytest-sugar==1.1.1",  # https://github.com/Frozenball/pytest-sugar
-    "pytest==9.0.1",        # https://github.com/pytest-dev/pytest
+    "pytest==9.0.2",        # https://github.com/pytest-dev/pytest
 
     # Typing
     # ------------------------------------------------------------------------------
