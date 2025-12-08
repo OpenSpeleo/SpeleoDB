@@ -93,7 +93,7 @@ dependencies = [
 local = [
     "Werkzeug[watchdog]==3.1.4", # https://github.com/pallets/werkzeug
     "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
-    "psycopg[binary]==3.2.13",   # https://github.com/psycopg/psycopg
+    "psycopg[binary]==3.3.2",   # https://github.com/psycopg/psycopg
 
     # Testing
     # ------------------------------------------------------------------------------
