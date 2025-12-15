@@ -42,14 +42,14 @@ from speleodb.api.v1.serializers import SensorFleetUserPermissionSerializer
 from speleodb.api.v1.serializers import SensorInstallSerializer
 from speleodb.api.v1.serializers import SensorSerializer
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import OperationalStatus
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
-from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
-from speleodb.gis.models.sensor import InstallStatus
+from speleodb.gis.models.enums import InstallStatus
 from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import BadRequestError
@@ -330,10 +330,10 @@ class SensorToggleFunctionalApiView(GenericAPIView[Sensor], SDBAPIViewMixin):
         """Toggle the sensor status."""
         sensor = self.get_object()
 
-        if sensor.status == SensorStatus.FUNCTIONAL:
-            sensor.status = SensorStatus.BROKEN
+        if sensor.status == OperationalStatus.FUNCTIONAL:
+            sensor.status = OperationalStatus.BROKEN
         else:
-            sensor.status = SensorStatus.FUNCTIONAL
+            sensor.status = OperationalStatus.FUNCTIONAL
 
         sensor.save()
 
@@ -1092,10 +1092,10 @@ class StationSensorInstallSpecificApiView(
 
                 match new_status:
                     case InstallStatus.LOST:
-                        sensor_install.sensor.status = SensorStatus.LOST
+                        sensor_install.sensor.status = OperationalStatus.LOST
                         sensor_install.sensor.save()
                     case InstallStatus.ABANDONED:
-                        sensor_install.sensor.status = SensorStatus.ABANDONED
+                        sensor_install.sensor.status = OperationalStatus.ABANDONED
                         sensor_install.sensor.save()
                     case _:
                         pass

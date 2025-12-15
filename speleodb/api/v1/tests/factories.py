@@ -20,11 +20,11 @@ from rest_framework.authtoken.models import Token
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
+from speleodb.gis.models import OperationalStatus
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
-from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationLogEntry
 from speleodb.gis.models import StationResource
@@ -33,9 +33,9 @@ from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceMonitoringNetwork
 from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
 from speleodb.gis.models import SurfaceStation
+from speleodb.gis.models.enums import InstallStatus
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
-from speleodb.gis.models.sensor import InstallStatus
 from speleodb.plugins.models import PluginRelease
 from speleodb.plugins.models import PublicAnnoucement
 from speleodb.plugins.models.platform_base import OperatingSystemEnum
@@ -562,7 +562,7 @@ class SensorFactory(DjangoModelFactory[Sensor]):
 
     name: str = factory.Sequence(lambda n: f"Sensor {n:03d}")  # type: ignore[assignment]
     notes: str = factory.Faker("text", max_nb_chars=100)  # type: ignore[assignment]
-    status = SensorStatus.FUNCTIONAL
+    status = OperationalStatus.FUNCTIONAL
     fleet: SensorFleet = factory.SubFactory(SensorFleetFactory)  # type: ignore[assignment]
     created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
         lambda _: UserFactory.create().email
