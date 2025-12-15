@@ -8,6 +8,8 @@ from datetime import date
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
+from django.core.validators import MaxValueValidator
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import F
@@ -16,7 +18,6 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models import Station
 from speleodb.gis.models.enums import InstallStatus
 from speleodb.gis.models.enums import OperationalStatus
 from speleodb.users.models import User
@@ -28,9 +29,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class SensorFleet(models.Model):
-    sensors: models.QuerySet[Sensor]
-    user_permissions: models.QuerySet[SensorFleetUserPermission]
+class TankFleet(models.Model):
+    tanks: models.QuerySet[Tank]
+    user_permissions: models.QuerySet[TankFleetUserPermission]
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -40,11 +41,13 @@ class SensorFleet(models.Model):
 
     name = models.CharField(
         max_length=50,
-        help_text="Sensor Fleet name (e.g., 'Flow Meters - Yucatan Peninsula')",
+        help_text="Tank Fleet name (e.g., 'Wakulla Project Tanks')",
     )
 
     description = models.TextField(
-        blank=True, default="", help_text="Optional description of the station"
+        blank=True,
+        default="",
+        help_text="Optional description of the tank fleet",
     )
 
     is_active = models.BooleanField(default=True)
@@ -53,26 +56,26 @@ class SensorFleet(models.Model):
     created_by = models.EmailField(
         null=False,
         blank=False,
-        help_text="User who created the sensor fleet.",
+        help_text="User who created the tank fleet.",
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Sensor Fleet"
-        verbose_name_plural = "Sensor Fleets"
+        verbose_name = "Tank Fleet"
+        verbose_name_plural = "Tank Fleets"
         ordering = ["-modified_date"]
         indexes = [
             models.Index(fields=["is_active"]),
         ]
 
     def __str__(self) -> str:
-        return f"Sensor Fleet: {self.name}"
+        return f"Tank Fleet: {self.name}"
 
 
-class Sensor(models.Model):
-    installs: models.QuerySet[SensorInstall]
+class Tank(models.Model):
+    installs: models.QuerySet[TankInstall]
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -82,18 +85,62 @@ class Sensor(models.Model):
 
     name = models.CharField(
         max_length=50,
-        help_text="Sensor name (e.g., 'Flow Meters #023')",
+        help_text="Tank name (e.g., 'Tank #023')",
+    )
+
+    owner = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Tank owner (e.g., 'John Doe')",
     )
 
     notes = models.TextField(
         blank=True,
         default="",
-        help_text="Optional notes for the sensor",
+        help_text="Optional notes for the tank",
+    )
+
+    type = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Tank type/model (e.g., 'AL80, AL40')",
+    )
+
+    o2_percentage = models.DecimalField(
+        max_digits=3,
+        decimal_places=0,
+        null=False,
+        blank=False,
+        help_text="O2 percentage (e.g., '21%')",
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+    )
+
+    he_percentage = models.DecimalField(
+        max_digits=3,
+        decimal_places=0,
+        null=False,
+        blank=False,
+        help_text="He percentage (e.g., '79%')",
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+    )
+
+    pressure = models.IntegerField(
+        null=False,
+        blank=False,
+        help_text="Tank pressure in PSI or BARs (e.g., '3000')",
+        validators=[MinValueValidator(0)],
+    )
+
+    pressure_unit = models.CharField(
+        max_length=10,
+        null=False,
+        blank=False,
+        help_text="Tank pressure unit (e.g., 'PSI' or 'BAR')",
     )
 
     fleet = models.ForeignKey(
-        SensorFleet,
-        related_name="sensors",
+        TankFleet,
+        related_name="tanks",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -111,7 +158,7 @@ class Sensor(models.Model):
     created_by = models.EmailField(
         null=False,
         blank=False,
-        help_text="User who created the sensor fleet.",
+        help_text="User who created the tank fleet.",
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)
@@ -124,24 +171,30 @@ class Sensor(models.Model):
             models.Index(fields=["status"]),
             models.Index(fields=["fleet", "status"]),
         ]
+        constraints = [
+            CheckConstraint(
+                condition=F("o2_percentage") + F("he_percentage") <= 100,  # noqa: PLR2004  # pyright: ignore[reportOperatorIssue]
+                name="o2_he_sum_lte_100",
+            )
+        ]
 
     def __str__(self) -> str:
-        return f"Sensor: {self.name} [Status: {self.status.upper()}]"
+        return f"Tank: {self.name} [Status: {self.status.upper()}]"
 
 
-class SensorFleetUserPermission(models.Model):
+class TankFleetUserPermission(models.Model):
     id: int
 
     user = models.ForeignKey(
         User,
-        related_name="sensorfleet_permissions",
+        related_name="tankfleet_permissions",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
     )
 
-    sensor_fleet = models.ForeignKey(
-        SensorFleet,
+    tank_fleet = models.ForeignKey(
+        TankFleet,
         related_name="user_permissions",
         on_delete=models.CASCADE,
         blank=False,
@@ -169,17 +222,17 @@ class SensorFleetUserPermission(models.Model):
     )
 
     class Meta:
-        verbose_name = "Sensor Fleet - User Permission"
-        verbose_name_plural = "Sensor Fleet - User Permissions"
-        unique_together = ("user", "sensor_fleet")
+        verbose_name = "Tank Fleet - User Permission"
+        verbose_name_plural = "Tank Fleet - User Permissions"
+        unique_together = ("user", "tank_fleet")
         indexes = [
             models.Index(fields=["user", "is_active"]),
-            models.Index(fields=["sensor_fleet", "is_active"]),
-            models.Index(fields=["user", "sensor_fleet", "is_active"]),
+            models.Index(fields=["tank_fleet", "is_active"]),
+            models.Index(fields=["user", "tank_fleet", "is_active"]),
         ]
 
     def __str__(self) -> str:
-        return f"{self.user} => {self.sensor_fleet} [{self.level}]"
+        return f"{self.user} => {self.tank_fleet} [{self.level}]"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
@@ -200,10 +253,10 @@ class SensorFleetUserPermission(models.Model):
         return PermissionLevel.from_value(self.level).label
 
 
-class SensorInstallQuerySet(models.QuerySet["SensorInstall"]):
-    def due_for_retrieval(self, days: int | None = None) -> QuerySet[SensorInstall]:
+class TankInstallQuerySet(models.QuerySet["TankInstall"]):
+    def due_for_retrieval(self, days: int | None = None) -> QuerySet[TankInstall]:
         """
-        Returns SensorInstalls that are due for retrieval.
+        Returns TankInstalls that are due for retrieval.
 
         Behavior:
         - days=None → STRICT: only dates strictly in the past (expired)
@@ -235,41 +288,59 @@ class SensorInstallQuerySet(models.QuerySet["SensorInstall"]):
         )
 
 
-class SensorInstallManager(models.Manager["SensorInstall"]):
-    def due_for_retrieval(self, days: int | None = None) -> QuerySet[SensorInstall]:
-        return SensorInstallQuerySet(self.model, using=self._db).due_for_retrieval(
+class TankInstallManager(models.Manager["TankInstall"]):
+    def due_for_retrieval(self, days: int | None = None) -> QuerySet[TankInstall]:
+        return TankInstallQuerySet(self.model, using=self._db).due_for_retrieval(
             days=days
         )
 
 
-class SensorInstall(models.Model):
+class TankInstall(models.Model):
     id = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
         primary_key=True,
     )
 
-    sensor = models.ForeignKey(
-        Sensor,
+    tank = models.ForeignKey(
+        Tank,
         related_name="installs",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
     )
 
-    station = models.ForeignKey(
-        Station,
-        related_name="sensor_installs",
-        on_delete=models.CASCADE,
-        blank=False,
+    # Tank Coordinates
+    latitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
         null=False,
+        blank=False,
+        help_text="Station latitude coordinate",
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+    )
+
+    longitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
+        null=False,
+        blank=False,
+        help_text="Station longitude coordinate",
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+    )
+
+    last_check_date = models.DateField(null=False, blank=False)
+    last_check_user = models.EmailField(
+        null=False,
+        blank=False,
+        help_text="User who last checked the tank.",
     )
 
     install_date = models.DateField(null=False, blank=False)
     install_user = models.EmailField(
         null=False,
         blank=False,
-        help_text="User who installed the sensor.",
+        help_text="User who installed the tank.",
     )
 
     uninstall_date = models.DateField(null=True, blank=True, default=None)
@@ -279,7 +350,7 @@ class SensorInstall(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text="User who retrieved the sensor.",
+        help_text="User who retrieved the tank.",
     )
 
     status = models.CharField(
@@ -295,24 +366,24 @@ class SensorInstall(models.Model):
     created_by = models.EmailField(
         null=False,
         blank=False,
-        help_text="User who created the sensor fleet.",
+        help_text="User who created the tank fleet.",
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
-    objects = SensorInstallManager()
+    objects = TankInstallManager()
 
     class Meta:
-        verbose_name = "Sensor Install"
-        verbose_name_plural = "Sensor Installs"
+        verbose_name = "Tank Install"
+        verbose_name_plural = "Tank Installs"
         ordering = ["-modified_date"]
 
         indexes = [
             # models.Index(fields=["status"]),  # we never filter only by status
-            models.Index(fields=["sensor"]),
+            models.Index(fields=["tank"]),
             models.Index(fields=["station"]),
-            models.Index(fields=["sensor", "station"]),
+            models.Index(fields=["tank", "station"]),
         ]
 
         constraints = [
@@ -338,11 +409,11 @@ class SensorInstall(models.Model):
                 | Q(install_date__lte=F("uninstall_date")),
                 name="install_before_or_equal_retrieval",
             ),
-            # only one installed sensor per sensor at a time
+            # only one installed tank per tank at a time
             models.UniqueConstraint(
-                fields=["sensor"],
+                fields=["tank"],
                 condition=Q(status=InstallStatus.INSTALLED),
-                name="unique_installed_per_sensor",
+                name="unique_installed_per_tank",
             ),
             # install_date <= expiracy_memory_date if set
             CheckConstraint(
@@ -359,4 +430,4 @@ class SensorInstall(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"[STATUS: {self.status.upper()}]: Sensor: {self.sensor.id}"
+        return f"[STATUS: {self.status.upper()}]: Tank: {self.tank.id}"

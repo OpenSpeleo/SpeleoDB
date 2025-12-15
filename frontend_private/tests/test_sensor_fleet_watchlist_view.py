@@ -22,7 +22,7 @@ from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
 from speleodb.api.v1.tests.factories import SensorInstallFactory
 from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models.sensor import InstallStatus
+from speleodb.gis.models.enums import InstallStatus
 from speleodb.users.tests.factories import UserFactory
 
 
