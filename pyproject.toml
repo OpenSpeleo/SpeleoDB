@@ -1,3 +1,6 @@
+[tool.uv.sources]
+django-celery-beat = { git = "https://github.com/celery/django-celery-beat", rev = "bd429063cbb227c00905e7693c38895e44ff8e47" }
+
 # ==== UV Settings ==== #
 [project]
 name = "SpeleoDB_Repo"
@@ -39,7 +42,7 @@ dependencies = [
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
     "jsonschema-rs==0.37.4", # https://github.com/Stranger6667/jsonschema
-    "orjson==3.11.4",        # https://github.com/ijl/orjson
+    "orjson==3.11.5",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
     # ------------------------------------------------------------------------------
@@ -54,17 +57,17 @@ dependencies = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django==5.2.9",                    # https://www.djangoproject.com/
-    "django-allauth==65.13.1",          # https://github.com/pennersr/django-allauth
-    "django-countries==8.2.0",          # https://github.com/SmileyChris/django-countries/
-    "django-dynamic-raw-id==4.4",       # https://github.com/lincolnloop/django-dynamic-raw-id
-    "django-environ==0.12.0",           # https://github.com/joke2k/django-environ
-    "django-hijack==3.7.4",             # https://github.com/django-hijack/django-hijack/
-    "django-js-reverse==0.10.2",        # https://github.com/vintasoftware/django-js-reverse
-    "django-model-utils==5.0.0",        # https://github.com/jazzband/django-model-utils
-    "django-polymorphic==4.1.0",        # https://github.com/jazzband/django-polymorphic
-    "django-rest-polymorphic==0.1.10",  # https://github.com/denisorehovsky/django-rest-polymorphic
-    "django-storages[s3]==1.14.6",      # https://github.com/jschneier/django-storages
+    "django==6.0",                     # https://www.djangoproject.com/
+    "django-allauth==65.13.1",         # https://github.com/pennersr/django-allauth
+    "django-countries==8.2.0",         # https://github.com/SmileyChris/django-countries/
+    "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
+    "django-environ==0.12.0",          # https://github.com/joke2k/django-environ
+    "django-hijack==3.7.4",            # https://github.com/django-hijack/django-hijack/
+    "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
+    "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
+    "django-polymorphic==4.2.0",       # https://github.com/jazzband/django-polymorphic
+    "django-rest-polymorphic==0.1.10", # https://github.com/denisorehovsky/django-rest-polymorphic
+    "django-storages[s3]==1.14.6",     # https://github.com/jschneier/django-storages
 
     # Django REST Framework
     # ------------------------------------------------------------------------------
@@ -74,8 +77,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.41.6", # https://github.com/boto/botocore
-    "boto3==1.42.0",    # https://github.com/boto/boto3
+    "botocore==1.42.4", # https://github.com/boto/botocore
+    "boto3==1.42.4",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -86,14 +89,14 @@ dependencies = [
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.46.0", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.47.0", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
 local = [
     "Werkzeug[watchdog]==3.1.4", # https://github.com/pallets/werkzeug
     "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
-    "psycopg[binary]==3.2.13",   # https://github.com/psycopg/psycopg
+    "psycopg[binary]==3.3.2",    # https://github.com/psycopg/psycopg
 
     # Testing
     # ------------------------------------------------------------------------------
@@ -102,12 +105,12 @@ local = [
     "mypy==1.18.2",         # https://github.com/python/mypy
     "parameterized==0.9.0", # https://github.com/wolever/parameterized
     "pytest-sugar==1.1.1",  # https://github.com/Frozenball/pytest-sugar
-    "pytest==9.0.1",        # https://github.com/pytest-dev/pytest
+    "pytest==9.0.2",        # https://github.com/pytest-dev/pytest
 
     # Typing
     # ------------------------------------------------------------------------------
-    "djangorestframework-stubs[compatible-mypy]==3.16.5", # https://github.com/typeddjango/djangorestframework-stubs
-    "django-stubs[compatible-mypy]==5.2.7",               # https://github.com/typeddjango/django-stubs
+    "djangorestframework-stubs[compatible-mypy]==3.16.6", # https://github.com/typeddjango/djangorestframework-stubs
+    "django-stubs[compatible-mypy]==5.2.8",               # https://github.com/typeddjango/django-stubs
     "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
     "types-cachetools==6.2.0.20251022",                   # https://github.com/python/typeshed
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
@@ -120,7 +123,7 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.14.7",      # https://github.com/astral-sh/ruff
+    "ruff==0.14.8",      # https://github.com/astral-sh/ruff
     "coverage==7.12.0",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
     "pre-commit==4.5.0", # https://github.com/pre-commit/pre-commit
@@ -136,7 +139,7 @@ local = [
 production = [
     "gunicorn==23.0.0", # https://github.com/benoitc/gunicorn
     # "granian==2.5.2",  # https://github.com/emmett-framework/granian
-    "psycopg[c]==3.2.13", # https://github.com/psycopg/psycopg
+    "psycopg[c]==3.3.2", # https://github.com/psycopg/psycopg
 
     # Django
     # ------------------------------------------------------------------------------
@@ -159,9 +162,6 @@ filterwarnings = [
     "ignore:.*builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
     "ignore:.*builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
     "ignore:.*builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
-    "ignore:.*FORMS_URLFIELD_ASSUME_HTTPS.*:django.utils.deprecation.RemovedInDjango60Warning",
-    "ignore::django.utils.deprecation.RemovedInDjango60Warning",
-    "ignore:.*FORMS_URLFIELD_ASSUME_HTTPS.*:django.utils.deprecation.RemovedInDjango60Warning",
 ]
 
 # ==== Coverage ====
