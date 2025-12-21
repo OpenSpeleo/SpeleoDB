@@ -8,6 +8,7 @@ from typing import Any
 
 from rest_framework import serializers
 
+from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
@@ -16,7 +17,6 @@ from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
-from speleodb.gis.models.enums import InstallStatus
 from speleodb.users.models import User
 
 if TYPE_CHECKING:

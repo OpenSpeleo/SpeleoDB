@@ -3,10 +3,6 @@
 # NOTE: We need to preserve this exact import order to prevent import loops.
 # ruff: noqa: I001
 
-# Enums
-from speleodb.gis.models.enums import InstallStatus
-from speleodb.gis.models.enums import OperationalStatus
-
 # Project Related Models
 from speleodb.gis.models.project_geojson import ProjectGeoJSON
 
@@ -49,9 +45,7 @@ __all__ = [
     "ExperimentUserPermission",
     "GISProjectView",
     "GISView",
-    "InstallStatus",
     "Landmark",
-    "OperationalStatus",
     "ProjectGeoJSON",
     "Sensor",
     "SensorFleet",

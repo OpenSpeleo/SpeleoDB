@@ -15,10 +15,10 @@ from django.db.models import Q
 from django.db.models import QuerySet
 from django.utils import timezone
 
+from speleodb.common.enums import InstallStatus
+from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
-from speleodb.gis.models.enums import InstallStatus
-from speleodb.gis.models.enums import OperationalStatus
 from speleodb.users.models import User
 
 if TYPE_CHECKING:

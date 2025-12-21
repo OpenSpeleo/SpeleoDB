@@ -9,8 +9,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.utils import IntegrityError
 
+from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models import OperationalStatus
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission

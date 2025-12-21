@@ -8,6 +8,7 @@ from datetime import date
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -17,9 +18,10 @@ from django.db.models import Q
 from django.db.models import QuerySet
 from django.utils import timezone
 
+from speleodb.common.enums import InstallStatus
+from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models.enums import InstallStatus
-from speleodb.gis.models.enums import OperationalStatus
+from speleodb.common.enums import UnitSystem
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -131,11 +133,12 @@ class Tank(models.Model):
         validators=[MinValueValidator(0)],
     )
 
-    pressure_unit = models.CharField(
+    unit_system = models.CharField(
         max_length=10,
         null=False,
         blank=False,
-        help_text="Tank pressure unit (e.g., 'PSI' or 'BAR')",
+        choices=UnitSystem.choices,
+        help_text="Tank pressure unit Imperial (PSI) or Metric (BAR)",
     )
 
     fleet = models.ForeignKey(
@@ -175,11 +178,37 @@ class Tank(models.Model):
             CheckConstraint(
                 condition=F("o2_percentage") + F("he_percentage") <= 100,  # noqa: PLR2004  # pyright: ignore[reportOperatorIssue]
                 name="o2_he_sum_lte_100",
-            )
+            ),
+            CheckConstraint(
+                condition=(
+                    Q(unit_system=UnitSystem.METRIC, pressure__lte=400)
+                    | Q(unit_system=UnitSystem.IMPERIAL, pressure__lte=5000)
+                ),
+                name="pressure_matches_unit_system",
+            ),
         ]
 
     def __str__(self) -> str:
         return f"Tank: {self.name} [Status: {self.status.upper()}]"
+
+    def clean(self):
+        super().clean()
+
+        match self.unit_system:
+            case UnitSystem.METRIC:
+                if self.pressure > 400:  # noqa: PLR2004
+                    raise ValidationError(
+                        {"pressure": "Maximum pressure for BAR is 400."}
+                    )
+
+            case UnitSystem.IMPERIAL:
+                if self.pressure > 5000:  # noqa: PLR2004
+                    raise ValidationError(
+                        {"pressure": "Maximum pressure for PSI is 5000."}
+                    )
+
+            case _:
+                raise ValidationError({"unit_system": "Invalid unit system."})
 
 
 class TankFleetUserPermission(models.Model):
