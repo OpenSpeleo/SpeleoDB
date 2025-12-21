@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.db import models
+
 from speleodb.utils.decorators import classproperty
 from speleodb.utils.django_base_models import BaseIntegerChoices
 
@@ -54,3 +56,22 @@ class PermissionLevel(BaseIntegerChoices):
             for member in PermissionLevel.members  # type: ignore[arg-type]
             if member.value > PermissionLevel.WEB_VIEWER.value
         ]
+
+
+class InstallStatus(models.TextChoices):
+    INSTALLED = "installed", "Installed"
+    RETRIEVED = "retrieved", "Retrieved"
+    LOST = "lost", "Lost"
+    ABANDONED = "abandoned", "Abandoned"
+
+
+class OperationalStatus(models.TextChoices):
+    FUNCTIONAL = "functional", "Functional"
+    BROKEN = "broken", "Broken"
+    LOST = "lost", "Lost"
+    ABANDONED = "abandoned", "Abandoned"
+
+
+class UnitSystem(models.TextChoices):
+    METRIC = "metric", "Metric"
+    IMPERIAL = "imperial", "Imperial"

@@ -41,15 +41,15 @@ from speleodb.api.v1.serializers import SensorFleetSerializer
 from speleodb.api.v1.serializers import SensorFleetUserPermissionSerializer
 from speleodb.api.v1.serializers import SensorInstallSerializer
 from speleodb.api.v1.serializers import SensorSerializer
+from speleodb.common.enums import InstallStatus
+from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models import OperationalStatus
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
-from speleodb.gis.models.enums import InstallStatus
 from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import BadRequestError

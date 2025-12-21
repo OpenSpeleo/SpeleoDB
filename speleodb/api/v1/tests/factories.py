@@ -17,10 +17,11 @@ from factory import Faker
 from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
+from speleodb.common.enums import InstallStatus
+from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
-from speleodb.gis.models import OperationalStatus
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
@@ -33,7 +34,6 @@ from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceMonitoringNetwork
 from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
 from speleodb.gis.models import SurfaceStation
-from speleodb.gis.models.enums import InstallStatus
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.plugins.models import PluginRelease
