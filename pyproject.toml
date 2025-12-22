@@ -143,7 +143,7 @@ production = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django-anymail[mailersend]==13.1", # https://github.com/anymail/django-anymail
+    "django-anymail[mailersend]==14.0", # https://github.com/anymail/django-anymail
 ]
 
 # Django
