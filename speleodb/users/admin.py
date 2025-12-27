@@ -71,7 +71,7 @@ class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):  # type: ignore[typ
         "last_login",
     ]
     search_fields = ["name", "email"]
-    ordering = ["email"]
+    ordering = ["-last_login"]
     list_filter = (
         "is_staff",
         "is_superuser",
