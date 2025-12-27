@@ -50,7 +50,10 @@ class Artifact:
         return self.file.content_type
 
     def read(self) -> bytes:
-        return self.file.read()  # type: ignore[no-any-return]
+        self.file.seek(0)
+        data = self.file.read()
+        self.file.seek(0)
+        return data  # type: ignore[no-any-return]
 
     def write(self, path: Path) -> None:
         if self._path is not None:

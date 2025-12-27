@@ -189,9 +189,7 @@ class ArianeTMLFileProcessor(BaseFileProcessor):
 
         target_path = self.storage_folder / filename
 
-        bytes_io = io.BytesIO()
-        bytes_io.write(artifact.read())
-        bytes_io.seek(0)
+        bytes_io = io.BytesIO(artifact.read())
 
         new_hash = metadata_invariant_zip_hash(bytes_io)
 
