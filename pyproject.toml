@@ -77,8 +77,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.42.11", # https://github.com/boto/botocore
-    "boto3==1.42.11",    # https://github.com/boto/boto3
+    "botocore==1.42.14", # https://github.com/boto/botocore
+    "boto3==1.42.14",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ dependencies = [
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.47.0", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.48.0", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
@@ -123,10 +123,10 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.14.9",      # https://github.com/astral-sh/ruff
+    "ruff==0.14.10",      # https://github.com/astral-sh/ruff
     "coverage==7.13.0",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
-    "pre-commit==4.5.0", # https://github.com/pre-commit/pre-commit
+    "pre-commit==4.5.1", # https://github.com/pre-commit/pre-commit
 
     # Django
     # ------------------------------------------------------------------------------
@@ -143,7 +143,7 @@ production = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django-anymail[mailersend]==13.1", # https://github.com/anymail/django-anymail
+    "django-anymail[mailersend]==14.0", # https://github.com/anymail/django-anymail
 ]
 
 # Django
