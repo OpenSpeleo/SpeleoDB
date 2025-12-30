@@ -68,7 +68,7 @@ repos:
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
-    rev: 0.9.18
+    rev: 0.9.20
     hooks:
       - id: uv-lock
         args: ["--check"]
@@ -84,7 +84,7 @@ repos:
         args: ["-iii", "-ll"]
 
   - repo: https://github.com/pysentry/pysentry-pre-commit
-    rev: v0.3.12
+    rev: v0.3.13
     hooks:
       - id: pysentry
         args:

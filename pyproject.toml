@@ -41,19 +41,19 @@ dependencies = [
 
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
-    "jsonschema-rs==0.37.4", # https://github.com/Stranger6667/jsonschema
+    "jsonschema-rs==0.38.1", # https://github.com/Stranger6667/jsonschema
     "orjson==3.11.5",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
     # ------------------------------------------------------------------------------
-    "mnemo-lib==0.0.7",      # https://github.com/OpenSpeleo/pytool_mnemo_lib
-    "compass-lib==0.0.2",    # https://github.com/OpenSpeleo/pytool_compass_lib
-    "openspeleo-lib==0.0.8", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
+    "mnemo-lib==0.0.7",       # https://github.com/OpenSpeleo/pytool_mnemo_lib
+    "compass-lib==0.0.2",     # https://github.com/OpenSpeleo/pytool_compass_lib
+    "openspeleo-lib==0.0.11", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 
     # Git Management
     # ------------------------------------------------------------------------------
     "GitPython==3.1.45",    # https://github.com/gitpython-developers/GitPython
-    "python-gitlab==7.0.0", # https://python-gitlab.readthedocs.io/en/stable/
+    "python-gitlab==7.1.0", # https://python-gitlab.readthedocs.io/en/stable/
 
     # Django
     # ------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ dependencies = [
     "django-hijack==3.7.4",            # https://github.com/django-hijack/django-hijack/
     "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
-    "django-polymorphic==4.4.1",       # https://github.com/jazzband/django-polymorphic
+    "django-polymorphic==4.5.1",       # https://github.com/jazzband/django-polymorphic
     "django-rest-polymorphic==0.1.10", # https://github.com/denisorehovsky/django-rest-polymorphic
     "django-storages[s3]==1.14.6",     # https://github.com/jschneier/django-storages
 
@@ -77,8 +77,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.42.14", # https://github.com/boto/botocore
-    "boto3==1.42.14",    # https://github.com/boto/boto3
+    "botocore==1.42.17", # https://github.com/boto/botocore
+    "boto3==1.42.17",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ local = [
     # ------------------------------------------------------------------------------
     "djangorestframework-stubs[compatible-mypy]==3.16.6", # https://github.com/typeddjango/djangorestframework-stubs
     "django-stubs[compatible-mypy]==5.2.8",               # https://github.com/typeddjango/django-stubs
-    "celery-types==0.23.0",                               # https://github.com/sbdchd/celery-types
+    "celery-types==0.24.0",                               # https://github.com/sbdchd/celery-types
     "types-cachetools==6.2.0.20251022",                   # https://github.com/python/typeshed
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
     "types-pytz==2025.2.0.20251108",                      # https://github.com/python/typeshed
@@ -123,8 +123,8 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.14.10",      # https://github.com/astral-sh/ruff
-    "coverage==7.13.0",  # https://github.com/nedbat/coveragepy
+    "ruff==0.14.10",     # https://github.com/astral-sh/ruff
+    "coverage==7.13.1",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
     "pre-commit==4.5.1", # https://github.com/pre-commit/pre-commit
 
