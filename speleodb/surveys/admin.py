@@ -128,7 +128,7 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 class ProjectCommitAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = ("id", "project", "author_name", "author_email", "authored_date")
     search_fields = ("id", "author_name", "author_email", "message")
-    list_filter = ("project",)
+    list_filter = ("project", "author_email")
     ordering = ("-authored_date",)
 
     fields = (
