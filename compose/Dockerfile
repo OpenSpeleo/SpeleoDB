@@ -48,6 +48,7 @@ ENV UV_PYTHON_DOWNLOADS=0
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=.workdir/test_wheels/,target=.workdir/test_wheels/ \
     uv sync --frozen --extra ${BUILD_ENV}
 
 COPY ./compose/entrypoint /entrypoint

@@ -30,7 +30,8 @@ Procfile
 .ruff_cache
 .venv
 .vscode
-.workdir
+.workdir/*
+!.workdir/**/*.whl
 .uv
 .venv
 docs
