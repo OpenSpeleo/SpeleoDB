@@ -30,8 +30,9 @@ Procfile
 .ruff_cache
 .venv
 .vscode
-.workdir/*
-!.workdir/**/*.whl
+.workdir/emails/
+.workdir/git_projects/
+.workdir/tmp_dl_dir/
 .uv
 .venv
 docs
