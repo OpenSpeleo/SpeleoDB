@@ -13,6 +13,10 @@ export const State = {
     allLandmarks: new Map(), // Track all Landmarks by ID for easy access
     projectBounds: new Map(), // Track bounds for each project for auto-zoom and fly-to
     networkBounds: new Map(), // Track bounds for each network for auto-zoom and fly-to
+    
+    // Local-only markers (not yet persisted to API)
+    safetyCylinders: new Map(), // Track safety cylinder markers by ID
+    explorationLeads: new Map(), // Track exploration lead markers by ID
 
     // Initializer to reset state if needed
     init: function () {
@@ -25,6 +29,8 @@ export const State = {
         this.allLandmarks = new Map();
         this.projectBounds = new Map();
         this.networkBounds = new Map();
+        this.safetyCylinders = new Map();
+        this.explorationLeads = new Map();
     }
 };
 

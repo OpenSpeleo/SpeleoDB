@@ -4,6 +4,7 @@
 # ruff: noqa: I001
 
 # Project Related Models
+from speleodb.gis.models.explo_lead import ExplorationLead
 from speleodb.gis.models.project_geojson import ProjectGeoJSON
 
 # Landmark Related Models
@@ -43,6 +44,7 @@ __all__ = [
     "Experiment",
     "ExperimentRecord",
     "ExperimentUserPermission",
+    "ExplorationLead",
     "GISProjectView",
     "GISView",
     "Landmark",

@@ -13,6 +13,7 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
+from speleodb.gis.models import ExplorationLead
 from speleodb.gis.models import GISView
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import Sensor
@@ -209,6 +210,13 @@ class BaseAccessLevel(permissions.BasePermission):
                 )
 
                 return station_perm and fleet_perm
+
+            # ExplorationLead Models
+            # -----------------------------------------------------------------
+
+            case ExplorationLead():
+                # Call on the `SensorFleet` underlying object
+                return self.has_object_permission(request, view, obj.project)
 
             # =============================================================== #
             #                              ERROR                              #
