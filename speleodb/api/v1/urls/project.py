@@ -8,6 +8,8 @@ from django.urls import include
 from django.urls import path
 
 import speleodb.utils.url_converters  # noqa: F401  # Necessary to import the converters
+from speleodb.api.v1.views.exploration_lead import ProjectExplorationLeadsApiView
+from speleodb.api.v1.views.exploration_lead import ProjectExplorationLeadsGeoJSONView
 from speleodb.api.v1.views.file import BlobDownloadView
 from speleodb.api.v1.views.file import FileDownloadAtHashView
 from speleodb.api.v1.views.file import FileDownloadView
@@ -120,6 +122,17 @@ project_base_urlpatterns: list[URLPattern] = [
         "stations/geojson/",
         ProjectStationsGeoJSONView.as_view(),
         name="project-stations-geojson",
+    ),
+    # ======================== EXPLORATION LEADS ======================== #
+    path(
+        "exploration-leads/",
+        ProjectExplorationLeadsApiView.as_view(),
+        name="project-exploration-leads",
+    ),
+    path(
+        "exploration-leads/geojson/",
+        ProjectExplorationLeadsGeoJSONView.as_view(),
+        name="project-exploration-leads-geojson",
     ),
 ]
 

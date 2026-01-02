@@ -1,0 +1,100 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import annotations
+
+import contextlib
+from decimal import InvalidOperation
+from typing import Any
+
+from rest_framework import serializers
+
+from speleodb.gis.models import ExplorationLead
+from speleodb.utils.gps_utils import format_coordinate
+
+
+class ExplorationLeadSerializer(serializers.ModelSerializer[ExplorationLead]):
+    """Serializer for ExplorationLead model."""
+
+    class Meta:
+        model = ExplorationLead
+        fields = [
+            "id",
+            "description",
+            "latitude",
+            "longitude",
+            "project",
+            "created_by",
+            "creation_date",
+            "modified_date",
+        ]
+
+        read_only_fields = [
+            "id",
+            "created_by",
+            "creation_date",
+            "modified_date",
+            "project",
+        ]
+
+    def to_internal_value(self, data: dict[str, Any]) -> Any:
+        """Override to round coordinates before validation."""
+        # Data is immutable - need to copy
+        data = data.copy()
+
+        # Round coordinates if they exist in the data
+        if "latitude" in data and data["latitude"] is not None:
+            with contextlib.suppress(ValueError, TypeError, InvalidOperation):
+                data["latitude"] = format_coordinate(data["latitude"])
+
+        if "longitude" in data and data["longitude"] is not None:
+            with contextlib.suppress(ValueError, TypeError, InvalidOperation):
+                data["longitude"] = format_coordinate(data["longitude"])
+
+        return super().to_internal_value(data)
+
+    def to_representation(self, instance: ExplorationLead) -> dict[str, Any]:
+        """Ensure coordinates are formatted without trailing zeros."""
+        data = super().to_representation(instance)
+
+        if data.get("latitude") is not None:
+            data["latitude"] = format_coordinate(data["latitude"])
+
+        if data.get("longitude") is not None:
+            data["longitude"] = format_coordinate(data["longitude"])
+
+        return data
+
+
+class ExplorationLeadGeoJSONSerializer(serializers.ModelSerializer[ExplorationLead]):
+    """GeoJSON serializer for ExplorationLead - returns GeoJSON-like format for maps."""
+
+    class Meta:
+        model = ExplorationLead
+        fields = [
+            "id",
+            "description",
+            "latitude",
+            "longitude",
+            "created_by",
+            "creation_date",
+            "modified_date",
+        ]
+
+    def to_representation(self, instance: ExplorationLead) -> dict[str, Any]:
+        """Convert to GeoJSON Feature format."""
+        return {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [float(instance.longitude), float(instance.latitude)],
+            },
+            "properties": {
+                "id": str(instance.id),
+                "description": instance.description,
+                "created_by": instance.created_by,
+                "creation_date": instance.creation_date.isoformat(),
+                "modified_date": instance.modified_date.isoformat(),
+                "project": str(instance.project.id),
+            },
+        }
+

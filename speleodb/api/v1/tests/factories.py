@@ -22,6 +22,7 @@ from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
+from speleodb.gis.models import ExplorationLead
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
@@ -188,6 +189,20 @@ class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
 
     creation_date = factory.LazyFunction(timezone.now)
     modified_date = factory.LazyFunction(timezone.now)
+
+
+class ExplorationLeadFactory(DjangoModelFactory[ExplorationLead]):
+    """Factory for creating ExplorationLead instances."""
+
+    id = factory.LazyFunction(uuid.uuid4)
+    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
+    description: str = factory.Faker("text", max_nb_chars=200)  # type: ignore[assignment]
+    latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
+    longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
+    created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
+
+    class Meta:
+        model = ExplorationLead
 
 
 class SubSurfaceStationFactory(DjangoModelFactory[SubSurfaceStation]):
