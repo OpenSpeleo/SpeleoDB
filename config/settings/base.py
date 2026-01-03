@@ -129,6 +129,8 @@ THIRD_PARTY_APPS = [
     # A raw_id_fields widget replacement that handles display of an object's
     # string value on change and can be overridden via a template.
     "dynamic_raw_id",
+    # Allows CSV / Excel export from the Django Admin
+    "import_export",
     # https://github.com/django-hijack/django-hijack
     # With Django Hijack, admins can log in and work on behalf of other users
     # without having to know their credentials.

@@ -12,6 +12,8 @@ from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
 from hijack.contrib.admin import HijackUserAdminMixin
+from import_export import resources
+from import_export.admin import ExportMixin
 
 from speleodb.users.forms import UserAdminChangeForm
 from speleodb.users.forms import UserAdminCreationForm
@@ -31,8 +33,18 @@ if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
     admin.site.login = login_required(admin.site.login)
 
 
+class UserImportExportResource(resources.ModelResource):
+    class Meta:
+        model = User
+        # optional, only specified fields gets exported, else all the fields
+        # fields = ('id', 'price', 'description')
+
+        # optional, describes how order of export
+        # export_order = ('id', 'description', 'price')
+
+
 @admin.register(User)
-class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):  # type: ignore[type-arg]
+class UserAdmin(HijackUserAdminMixin, ExportMixin, auth_admin.UserAdmin):  # type: ignore[type-arg,misc]
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm
     fieldsets = (
@@ -89,6 +101,8 @@ class UserAdmin(HijackUserAdminMixin, auth_admin.UserAdmin):  # type: ignore[typ
             },
         ),
     )
+
+    resource_class = UserImportExportResource
 
     def get_hijack_user(self, obj: User) -> User:
         return obj

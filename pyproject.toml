@@ -64,6 +64,7 @@ dependencies = [
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.12.0",          # https://github.com/joke2k/django-environ
     "django-hijack==3.7.4",            # https://github.com/django-hijack/django-hijack/
+    "django-import-export==4.3.14",    # https://github.com/django-import-export/django-import-export
     "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
     "django-polymorphic==4.5.1",       # https://github.com/jazzband/django-polymorphic
