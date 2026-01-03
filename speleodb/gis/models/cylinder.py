@@ -31,9 +31,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class TankFleet(models.Model):
-    tanks: models.QuerySet[Tank]
-    user_permissions: models.QuerySet[TankFleetUserPermission]
+class CylinderFleet(models.Model):
+    cylinders: models.QuerySet[Cylinder]
+    user_permissions: models.QuerySet[CylinderFleetUserPermission]
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -43,13 +43,13 @@ class TankFleet(models.Model):
 
     name = models.CharField(
         max_length=50,
-        help_text="Tank Fleet name (e.g., 'Wakulla Project Tanks')",
+        help_text="Cylinder Fleet name (e.g., 'Wakulla Project Cylinders')",
     )
 
     description = models.TextField(
         blank=True,
         default="",
-        help_text="Optional description of the tank fleet",
+        help_text="Optional description of the cylinder fleet",
     )
 
     is_active = models.BooleanField(default=True)
@@ -58,26 +58,26 @@ class TankFleet(models.Model):
     created_by = models.EmailField(
         null=False,
         blank=False,
-        help_text="User who created the tank fleet.",
+        help_text="User who created the cylinder fleet.",
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Tank Fleet"
-        verbose_name_plural = "Tank Fleets"
+        verbose_name = "Cylinder Fleet"
+        verbose_name_plural = "Cylinder Fleets"
         ordering = ["-modified_date"]
         indexes = [
             models.Index(fields=["is_active"]),
         ]
 
     def __str__(self) -> str:
-        return f"Tank Fleet: {self.name}"
+        return f"Cylinder Fleet: {self.name}"
 
 
-class Tank(models.Model):
-    installs: models.QuerySet[TankInstall]
+class Cylinder(models.Model):
+    installs: models.QuerySet[CylinderInstall]
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -87,25 +87,25 @@ class Tank(models.Model):
 
     name = models.CharField(
         max_length=50,
-        help_text="Tank name (e.g., 'Tank #023')",
+        help_text="Cylinder name (e.g., 'Cylinder #023')",
     )
 
     owner = models.CharField(
         max_length=255,
         blank=True,
-        help_text="Tank owner (e.g., 'John Doe')",
+        help_text="Cylinder owner (e.g., 'John Doe')",
     )
 
     notes = models.TextField(
         blank=True,
         default="",
-        help_text="Optional notes for the tank",
+        help_text="Optional notes for the cylinder",
     )
 
     type = models.CharField(
         max_length=100,
         blank=True,
-        help_text="Tank type/model (e.g., 'AL80, AL40')",
+        help_text="Cylinder type/model (e.g., 'AL80, AL40')",
     )
 
     o2_percentage = models.DecimalField(
@@ -129,7 +129,7 @@ class Tank(models.Model):
     pressure = models.IntegerField(
         null=False,
         blank=False,
-        help_text="Tank pressure in PSI or BARs (e.g., '3000')",
+        help_text="Cylinder pressure in PSI or BARs (e.g., '3000')",
         validators=[MinValueValidator(0)],
     )
 
@@ -138,12 +138,12 @@ class Tank(models.Model):
         null=False,
         blank=False,
         choices=UnitSystem.choices,
-        help_text="Tank pressure unit Imperial (PSI) or Metric (BAR)",
+        help_text="Cylinder pressure unit Imperial (PSI) or Metric (BAR)",
     )
 
     fleet = models.ForeignKey(
-        TankFleet,
-        related_name="tanks",
+        CylinderFleet,
+        related_name="cylinders",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
@@ -161,7 +161,7 @@ class Tank(models.Model):
     created_by = models.EmailField(
         null=False,
         blank=False,
-        help_text="User who created the tank fleet.",
+        help_text="User who created the cylinder fleet.",
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)
@@ -189,7 +189,7 @@ class Tank(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"Tank: {self.name} [Status: {self.status.upper()}]"
+        return f"Cylinder: {self.name} [Status: {self.status.upper()}]"
 
     def clean(self):
         super().clean()
@@ -211,19 +211,19 @@ class Tank(models.Model):
                 raise ValidationError({"unit_system": "Invalid unit system."})
 
 
-class TankFleetUserPermission(models.Model):
+class CylinderFleetUserPermission(models.Model):
     id: int
 
     user = models.ForeignKey(
         User,
-        related_name="tankfleet_permissions",
+        related_name="cylinderfleet_permissions",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
     )
 
-    tank_fleet = models.ForeignKey(
-        TankFleet,
+    cylinder_fleet = models.ForeignKey(
+        CylinderFleet,
         related_name="user_permissions",
         on_delete=models.CASCADE,
         blank=False,
@@ -251,17 +251,17 @@ class TankFleetUserPermission(models.Model):
     )
 
     class Meta:
-        verbose_name = "Tank Fleet - User Permission"
-        verbose_name_plural = "Tank Fleet - User Permissions"
-        unique_together = ("user", "tank_fleet")
+        verbose_name = "Cylinder Fleet - User Permission"
+        verbose_name_plural = "Cylinder Fleet - User Permissions"
+        unique_together = ("user", "cylinder_fleet")
         indexes = [
             models.Index(fields=["user", "is_active"]),
-            models.Index(fields=["tank_fleet", "is_active"]),
-            models.Index(fields=["user", "tank_fleet", "is_active"]),
+            models.Index(fields=["cylinder_fleet", "is_active"]),
+            models.Index(fields=["user", "cylinder_fleet", "is_active"]),
         ]
 
     def __str__(self) -> str:
-        return f"{self.user} => {self.tank_fleet} [{self.level}]"
+        return f"{self.user} => {self.cylinder_fleet} [{self.level}]"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
@@ -282,10 +282,10 @@ class TankFleetUserPermission(models.Model):
         return PermissionLevel.from_value(self.level).label
 
 
-class TankInstallQuerySet(models.QuerySet["TankInstall"]):
-    def due_for_retrieval(self, days: int | None = None) -> QuerySet[TankInstall]:
+class CylinderInstallQuerySet(models.QuerySet["CylinderInstall"]):
+    def due_for_retrieval(self, days: int | None = None) -> QuerySet[CylinderInstall]:
         """
-        Returns TankInstalls that are due for retrieval.
+        Returns CylinderInstalls that are due for retrieval.
 
         Behavior:
         - days=None → STRICT: only dates strictly in the past (expired)
@@ -317,29 +317,29 @@ class TankInstallQuerySet(models.QuerySet["TankInstall"]):
         )
 
 
-class TankInstallManager(models.Manager["TankInstall"]):
-    def due_for_retrieval(self, days: int | None = None) -> QuerySet[TankInstall]:
-        return TankInstallQuerySet(self.model, using=self._db).due_for_retrieval(
+class CylinderInstallManager(models.Manager["CylinderInstall"]):
+    def due_for_retrieval(self, days: int | None = None) -> QuerySet[CylinderInstall]:
+        return CylinderInstallQuerySet(self.model, using=self._db).due_for_retrieval(
             days=days
         )
 
 
-class TankInstall(models.Model):
+class CylinderInstall(models.Model):
     id = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
         primary_key=True,
     )
 
-    tank = models.ForeignKey(
-        Tank,
+    cylinder = models.ForeignKey(
+        Cylinder,
         related_name="installs",
         on_delete=models.CASCADE,
         blank=False,
         null=False,
     )
 
-    # Tank Coordinates
+    # Cylinder Coordinates
     latitude = models.DecimalField(
         max_digits=10,
         decimal_places=7,
@@ -362,14 +362,14 @@ class TankInstall(models.Model):
     last_check_user = models.EmailField(
         null=False,
         blank=False,
-        help_text="User who last checked the tank.",
+        help_text="User who last checked the cylinder.",
     )
 
     install_date = models.DateField(null=False, blank=False)
     install_user = models.EmailField(
         null=False,
         blank=False,
-        help_text="User who installed the tank.",
+        help_text="User who installed the cylinder.",
     )
 
     uninstall_date = models.DateField(null=True, blank=True, default=None)
@@ -379,7 +379,7 @@ class TankInstall(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text="User who retrieved the tank.",
+        help_text="User who retrieved the cylinder.",
     )
 
     status = models.CharField(
@@ -395,24 +395,24 @@ class TankInstall(models.Model):
     created_by = models.EmailField(
         null=False,
         blank=False,
-        help_text="User who created the tank fleet.",
+        help_text="User who created the cylinder fleet.",
     )
 
     creation_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
-    objects = TankInstallManager()
+    objects = CylinderInstallManager()
 
     class Meta:
-        verbose_name = "Tank Install"
-        verbose_name_plural = "Tank Installs"
+        verbose_name = "Cylinder Install"
+        verbose_name_plural = "Cylinder Installs"
         ordering = ["-modified_date"]
 
         indexes = [
             # models.Index(fields=["status"]),  # we never filter only by status
-            models.Index(fields=["tank"]),
+            models.Index(fields=["cylinder"]),
             models.Index(fields=["station"]),
-            models.Index(fields=["tank", "station"]),
+            models.Index(fields=["cylinder", "station"]),
         ]
 
         constraints = [
@@ -438,11 +438,11 @@ class TankInstall(models.Model):
                 | Q(install_date__lte=F("uninstall_date")),
                 name="install_before_or_equal_retrieval",
             ),
-            # only one installed tank per tank at a time
+            # only one installed cylinder per cylinder at a time
             models.UniqueConstraint(
-                fields=["tank"],
+                fields=["cylinder"],
                 condition=Q(status=InstallStatus.INSTALLED),
-                name="unique_installed_per_tank",
+                name="unique_installed_per_cylinder",
             ),
             # install_date <= expiracy_memory_date if set
             CheckConstraint(
@@ -459,4 +459,4 @@ class TankInstall(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"[STATUS: {self.status.upper()}]: Tank: {self.tank.id}"
+        return f"[STATUS: {self.status.upper()}]: Cylinder: {self.cylinder.id}"

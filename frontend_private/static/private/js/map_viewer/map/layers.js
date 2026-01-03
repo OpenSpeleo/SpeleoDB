@@ -998,16 +998,16 @@ export const Layers = {
         if (!map || markerImagesLoaded) return;
 
         try {
-            // Load pre-colored orange tank SVG for safety cylinder
-            const tankImage = new Image(32, 32);
-            tankImage.src = '/static/private/media/tank_orange.svg';
+            // Load pre-colored orange cylinder SVG for safety cylinder
+            const cylinderImage = new Image(32, 32);
+            cylinderImage.src = '/static/private/media/cylinder_orange.svg';
             await new Promise((resolve, reject) => {
-                tankImage.onload = resolve;
-                tankImage.onerror = reject;
+                cylinderImage.onload = resolve;
+                cylinderImage.onerror = reject;
             });
 
             if (!map.hasImage('safety-cylinder-icon')) {
-                map.addImage('safety-cylinder-icon', tankImage);
+                map.addImage('safety-cylinder-icon', cylinderImage);
             }
 
             // Load exploration lead SVG
@@ -1112,7 +1112,7 @@ export const Layers = {
                 data: geojson
             });
 
-            // Add layer using the tank icon image
+            // Add layer using the cylinder icon image
             if (map.hasImage('safety-cylinder-icon')) {
                 map.addLayer({
                     id: layerId,

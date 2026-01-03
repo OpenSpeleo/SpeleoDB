@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         items.push({
                             label: 'Install Safety Cylinder',
                             subtitle: `On ${lineName} (${snapCheck.pointType} point)`,
-                            icon: '<img src="/static/private/media/tank_orange.svg" style="width:20px;height:20px;">',
+                            icon: '<img src="/static/private/media/cylinder_orange.svg" style="width:20px;height:20px;">',
                             onClick: () => {
                                 const markerId = crypto.randomUUID();
                                 Layers.addSafetyCylinderMarker(markerId, snapCheck.coordinates, lineName);
@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. Load Data
     map.on('load', async () => {
-        // Load custom marker images (tank icon for safety cylinders)
+        // Load custom marker images (cylinder icon for safety cylinders)
         await Layers.loadMarkerImages();
         
         // Initialize Projects Layers visibility
