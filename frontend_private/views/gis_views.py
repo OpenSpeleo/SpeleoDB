@@ -6,11 +6,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Prefetch
 from django.shortcuts import redirect
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 
 from frontend_private.views.base import AuthenticatedTemplateView
+from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
 
 if TYPE_CHECKING:
@@ -60,7 +62,14 @@ class _BaseGISViewView(AuthenticatedTemplateView):
 
     def get_gis_view_data(self, user: User, gis_view_id: str) -> dict[str, Any]:
         """Get GIS view and verify ownership."""
-        gis_view = GISView.objects.prefetch_related("project_views__project").get(
+        gis_view = GISView.objects.prefetch_related(
+            Prefetch(
+                "project_views",
+                queryset=GISProjectView.objects.select_related("project").order_by(
+                    "project__name"
+                ),
+            )
+        ).get(
             id=gis_view_id,
             owner=user,
         )
