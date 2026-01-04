@@ -68,7 +68,9 @@
                 // Docker
                 "ms-azuretools.vscode-docker",
                 // Env
-                "IronGeek.vscode-env"
+                "IronGeek.vscode-env",
+                // EML Viewer
+                "joel-harkes.emlviewer"
             ]
         }
     },

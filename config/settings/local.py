@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+import os
+from typing import TYPE_CHECKING
+
+from django.core.mail.backends.filebased import EmailBackend
+from django.utils import timezone
+
 from .base import *  # noqa: F403
 from .base import AWS_STORAGE_BUCKET_NAME
 from .base import INSTALLED_APPS
 from .base import LOGGING
 from .base import MIDDLEWARE
 from .base import env
+
+if TYPE_CHECKING:
+    from typing import Any
 
 # GENERAL
 # ------------------------------------------------------------------------------
@@ -63,10 +72,25 @@ CACHES = {
 
 # EMAIL
 # ------------------------------------------------------------------------------
+
+
+class EmailEMLBackend(EmailBackend):
+    """
+    Class that writes email into a specified location, using the `.eml` extension,
+    rather than the default `.log` one
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        timestamp = timezone.now().strftime("%Y%m%d-%H%M%S")
+        fname = f"{timestamp}-{abs(id(self))}.eml"
+        self._fname = os.path.join(self.file_path, fname)  # type: ignore[attr-defined]  # noqa: PTH118
+
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 EMAIL_BACKEND = env(
     "DJANGO_EMAIL_BACKEND",
-    default="django.core.mail.backends.filebased.EmailBackend",  # pyright: ignore[reportArgumentType]
+    default="config.settings.local.EmailEMLBackend",
 )
 EMAIL_FILE_PATH = "./.workdir/emails"
 

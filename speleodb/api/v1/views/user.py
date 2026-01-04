@@ -78,7 +78,12 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
         user = request.user
         token, _ = Token.objects.get_or_create(user=user)
 
-        return NoWrapResponse({"token": token.key})
+        return NoWrapResponse(
+            {
+                "user": user.email,
+                "token": token.key,
+            }
+        )
 
     def _fetch_token(self, request: Request, refresh_token: bool) -> Response:
         if not request.user.is_authenticated:
