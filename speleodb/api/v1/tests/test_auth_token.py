@@ -28,9 +28,8 @@ class TestTokenAuth(BaseAPITestCase):
         assert response.status_code == status.HTTP_200_OK, response.data
 
         target = {
-            "success": True,
             "token": self.token.key,
-            "url": f"http://testserver{endpoint}",
+            "user": self.user.email,
         }
 
         for key, val in target.items():
@@ -78,19 +77,15 @@ class TestTokenAuth(BaseAPITestCase):
             method,
         )
 
-        token = response.data.pop("token")
+        data = response.data
+
+        assert data["user"] == self.user.email
+
+        token = response.data["token"]
         if method.upper() != "POST":
             assert self.token.key != token, (self.token.key, token)
         else:
             assert self.token.key == token, (self.token.key, token)
-
-        target = {
-            "success": True,
-            "url": f"http://testserver{endpoint}",
-        }
-
-        for key, val in target.items():
-            assert val == response.data[key], response.data
 
     def test_wrong_password(self) -> None:
         response = self.client.post(

@@ -75,7 +75,7 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
                 data={"error": "Not authenticated"},
             )
 
-        user = request.user
+        user = self.get_user()
         token, _ = Token.objects.get_or_create(user=user)
 
         return NoWrapResponse(
@@ -105,7 +105,10 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
         token, created = Token.objects.get_or_create(user=user)
 
         return NoWrapResponse(
-            {"token": token.key},
+            {
+                "user": user.email,
+                "token": token.key,
+            },
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
