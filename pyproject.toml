@@ -49,7 +49,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "mnemo-lib==0.0.7",       # https://github.com/OpenSpeleo/pytool_mnemo_lib
     "compass-lib==0.0.2",     # https://github.com/OpenSpeleo/pytool_compass_lib
-    "openspeleo-lib==0.0.12", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
+    "openspeleo-lib==0.0.13", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 
     # Git Management
     # ------------------------------------------------------------------------------
