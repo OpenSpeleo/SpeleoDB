@@ -53,7 +53,7 @@ dependencies = [
 
     # Git Management
     # ------------------------------------------------------------------------------
-    "GitPython==3.1.45",    # https://github.com/gitpython-developers/GitPython
+    "GitPython==3.1.46",    # https://github.com/gitpython-developers/GitPython
     "python-gitlab==7.1.0", # https://python-gitlab.readthedocs.io/en/stable/
 
     # Django
