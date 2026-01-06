@@ -14,6 +14,13 @@ export const State = {
     projectBounds: new Map(), // Track bounds for each project for auto-zoom and fly-to
     networkBounds: new Map(), // Track bounds for each network for auto-zoom and fly-to
 
+    // GPS Tracks state
+    gpsTrackLayerStates: new Map(), // Track visibility state for each GPS track (default: all OFF)
+    gpsTrackCache: new Map(), // Cache downloaded GeoJSON data by track ID
+    gpsTrackLoadingStates: new Map(), // Track which GPS tracks are currently loading
+    allGPSTrackLayers: new Map(), // Track all layer IDs for each GPS track
+    gpsTrackBounds: new Map(), // Track bounds for each GPS track for fly-to
+
     // Initializer to reset state if needed
     init: function () {
         this.projectLayerStates = new Map();
@@ -25,6 +32,12 @@ export const State = {
         this.allLandmarks = new Map();
         this.projectBounds = new Map();
         this.networkBounds = new Map();
+        // GPS Tracks
+        this.gpsTrackLayerStates = new Map();
+        this.gpsTrackCache = new Map();
+        this.gpsTrackLoadingStates = new Map();
+        this.allGPSTrackLayers = new Map();
+        this.gpsTrackBounds = new Map();
     }
 };
 

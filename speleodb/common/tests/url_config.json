@@ -546,6 +546,18 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gps_tracks/",
+        "module": "speleodb.api.v1.views.gps_track.UserGPSTracks",
+        "name": "api:v1:user-gps-tracks",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/import/gpx/",
+        "module": "speleodb.api.v1.views.gpx_import.GPXImportView",
+        "name": "api:v1:gpx-import",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/landmarks/",
         "module": "speleodb.api.v1.views.landmark.LandmarkAPIView",
         "name": "api:v1:landmarks",

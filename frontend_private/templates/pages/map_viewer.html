@@ -58,12 +58,12 @@
                     <span class="hidden xs:block ml-2">Landmarks</span>
                 </button>
 
-                <!-- Context Menu Help -->
-                <button id="context-menu-help-button" onclick="showContextMenuHelp()" class="btn bg-sky-500 hover:bg-sky-600 text-white">
+                <!-- Import GPX -->
+                <button id="import-gpx-button" onclick="showImportGPXModal()" class="btn bg-red-600 hover:bg-red-700 text-white">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                     </svg>
-                    <span class="hidden xs:block ml-2">Right Click</span>
+                    <span class="hidden xs:block ml-2">Import GPX</span>
                 </button>
 
             </div>
@@ -211,13 +211,18 @@
     <!-- Menu items will be populated dynamically -->
 </div>
 
-<!-- Context Menu Help Modal -->
-<div id="context-menu-help-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl">
+<!-- Import GPX Modal -->
+<div id="import-gpx-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-lg">
         <!-- Modal Header -->
         <div class="flex items-center justify-between p-6 border-b border-slate-600">
-            <h2 class="text-xl font-semibold text-white">Map Interaction Guide</h2>
-            <button type="button" onclick="hideContextMenuHelp()" class="text-slate-400 hover:text-white transition-colors">
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                <h2 class="text-xl font-semibold text-white">Import GPX File</h2>
+            </div>
+            <button type="button" onclick="hideImportGPXModal()" class="text-slate-400 hover:text-white transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
@@ -225,99 +230,287 @@
         </div>
 
         <!-- Modal Body -->
-        <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <div class="p-6">
+            <!-- Drop Zone -->
+            <div id="gpx-drop-zone" class="file-upload-area border-2 border-dashed border-slate-500 rounded-lg p-8 text-center transition-all duration-200">
+                <input type="file" id="gpx-file-input" accept=".gpx" class="hidden">
+                <svg class="w-12 h-12 mx-auto text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                <p class="text-slate-300 mb-2">Drag and drop your GPX file here</p>
+                <p class="text-slate-500 text-sm mb-4">or</p>
+                <button type="button" onclick="document.getElementById('gpx-file-input').click()" class="btn-primary px-6 py-2">
+                    Browse Files
+                </button>
+                <p class="text-slate-500 text-xs mt-4">Only .gpx files are accepted</p>
+            </div>
 
-            <!-- Mouse Actions -->
+            <!-- Selected File Display -->
+            <div id="gpx-selected-file" class="hidden mt-4 p-4 bg-slate-700/50 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
             <div>
-                <h3 class="text-lg font-semibold text-white mb-3">🎯 Mouse Actions</h3>
-                <div class="space-y-2 ml-4">
-                    <div class="flex items-center space-x-2">
-                        <span class="text-emerald-400 font-medium">Left Click:</span>
-                        <span class="text-slate-300">Select and view station/Landmark details</span>
+                            <p id="gpx-file-name" class="text-white font-medium"></p>
+                            <p id="gpx-file-size" class="text-slate-400 text-sm"></p>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-emerald-400 font-medium">Right Click:</span>
-                        <span class="text-slate-300">Open context menu for actions</span>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-emerald-400 font-medium">Drag & Drop:</span>
-                        <span class="text-slate-300">Move stations/Landmarks to new locations (with write access)</span>
-                    </div>
+                    <button type="button" onclick="clearGPXFile()" class="text-slate-400 hover:text-red-400 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
 
-            <!-- Magnetic Snap -->
-            <div>
-                <h3 class="text-lg font-semibold text-white mb-3">🧲 Magnetic Snap System</h3>
-                <div class="space-y-2 ml-4 text-slate-300 text-sm">
-                    <p>
-                        Stations automatically snap to the 
-                        <span class="text-emerald-400 font-medium">start or end points</span> 
-                        of survey lines within 10 meters.
-                    </p>
-                </div>
+            <!-- Error Message -->
+            <div id="gpx-error-message" class="hidden mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+                <p class="text-red-300 text-sm" id="gpx-error-text"></p>
             </div>
 
-            <!-- Keyboard Shortcuts -->
-            <div>
-                <h3 class="text-lg font-semibold text-white mb-3">⌨️ Keyboard Shortcuts</h3>
-                <div class="space-y-2 ml-4">
-                    <div class="flex items-center space-x-2">
-                        <kbd class="px-2 py-1 bg-slate-600 rounded text-xs font-mono">ESC</kbd>
-                        <span class="text-slate-300">Close modals and cancel operations</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <kbd class="px-2 py-1 bg-slate-600 rounded text-xs font-mono">Enter</kbd>
-                        <span class="text-slate-300">Confirm actions in modals</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tips -->
-            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                <h4 class="text-blue-300 font-semibold mb-2">💡 Pro Tips</h4>
-                <ul class="text-blue-200 text-sm space-y-1">
-                    <li>• Stations appear when zoomed in (zoom level 14+)</li>
-                    <li>• Use the project panel to show/hide different survey projects</li>
-                    <li>• Station names must be unique within each project</li>
-                    <li>• All actions are saved automatically</li>
-                    <li>• Toggle between "By Survey" and "By Depth" coloring modes</li>
-                </ul>
+            <!-- Upload Button -->
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="hideImportGPXModal()" class="btn-secondary px-6 py-2">
+                    Cancel
+                </button>
+                <button type="button" id="gpx-upload-btn" onclick="uploadGPXFile()" disabled class="btn-primary px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                    <span id="gpx-upload-spinner" class="loading-spinner-inline" style="display: none;"></span>
+                    <span id="gpx-upload-text">Import GPX</span>
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// Context Menu Help Functions
-window.showContextMenuHelp = function() {
-    const modal = document.getElementById('context-menu-help-modal');
+// GPX Import Functions
+let selectedGPXFile = null;
+
+window.showImportGPXModal = function() {
+    const modal = document.getElementById('import-gpx-modal');
     if (modal) {
         modal.classList.remove('hidden');
+        clearGPXFile();
     }
 }
 
-window.hideContextMenuHelp = function() {
-    const modal = document.getElementById('context-menu-help-modal');
+window.hideImportGPXModal = function() {
+    const modal = document.getElementById('import-gpx-modal');
     if (modal) {
         modal.classList.add('hidden');
+        clearGPXFile();
     }
+}
+
+window.clearGPXFile = function() {
+    selectedGPXFile = null;
+    document.getElementById('gpx-file-input').value = '';
+    document.getElementById('gpx-drop-zone').classList.remove('hidden');
+    document.getElementById('gpx-selected-file').classList.add('hidden');
+    document.getElementById('gpx-error-message').classList.add('hidden');
+    document.getElementById('gpx-upload-btn').disabled = true;
+    // Reset upload button state
+    document.getElementById('gpx-upload-text').textContent = 'Import GPX';
+    document.getElementById('gpx-upload-spinner').style.display = 'none';
+}
+
+function showGPXError(message) {
+    const errorDiv = document.getElementById('gpx-error-message');
+    const errorText = document.getElementById('gpx-error-text');
+    errorText.textContent = message;
+    errorDiv.classList.remove('hidden');
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function handleGPXFile(file) {
+    document.getElementById('gpx-error-message').classList.add('hidden');
+    
+    // Validate extension
+    if (!file.name.toLowerCase().endsWith('.gpx')) {
+        showGPXError('Invalid file type. Please select a .gpx file.');
+        return;
+    }
+    
+    selectedGPXFile = file;
+    
+    // Show file info
+    document.getElementById('gpx-file-name').textContent = file.name;
+    document.getElementById('gpx-file-size').textContent = formatFileSize(file.size);
+    document.getElementById('gpx-drop-zone').classList.add('hidden');
+    document.getElementById('gpx-selected-file').classList.remove('hidden');
+    document.getElementById('gpx-upload-btn').disabled = false;
+}
+
+// File input change handler
+document.getElementById('gpx-file-input')?.addEventListener('change', function(e) {
+    if (e.target.files && e.target.files[0]) {
+        handleGPXFile(e.target.files[0]);
+    }
+});
+
+// Drag and drop handlers
+const dropZone = document.getElementById('gpx-drop-zone');
+
+dropZone?.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.classList.add('dragover');
+});
+
+dropZone?.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.classList.remove('dragover');
+});
+
+dropZone?.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.classList.remove('dragover');
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleGPXFile(e.dataTransfer.files[0]);
+    }
+});
+
+window.uploadGPXFile = async function() {
+    if (!selectedGPXFile) return;
+    
+    const uploadBtn = document.getElementById('gpx-upload-btn');
+    const uploadText = document.getElementById('gpx-upload-text');
+    const uploadSpinner = document.getElementById('gpx-upload-spinner');
+    
+    // Show loading state
+    uploadBtn.disabled = true;
+    uploadText.textContent = 'Importing...';
+    uploadSpinner.style.display = 'inline-block';
+    document.getElementById('gpx-error-message').classList.add('hidden');
+    
+    try {
+        const headers = new Headers();
+        headers.append('X-CSRFToken', window.SPELEO_CONTEXT?.csrfToken || '');
+        
+        const formData = new FormData();
+        formData.append('file', selectedGPXFile, selectedGPXFile.name);
+        
+        const requestOptions = {
+            method: 'PUT',
+            headers: headers,
+            body: formData,
+            credentials: 'same-origin',
+            redirect: 'follow'
+        };
+        
+        const response = await fetch(Urls['api:v1:gpx-import'](), requestOptions);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || data.error || data.detail || 'Import failed');
+        }
+        
+        if (data.success) {
+            const landmarksCreated = data.data?.landmarks_created || 0;
+            const tracksCreated = data.data?.gps_tracks_created || 0;
+            
+            if (landmarksCreated > 0 || tracksCreated > 0) {
+                // Success - show message and reload
+                hideImportGPXModal();
+                showImportSuccessModal(landmarksCreated, tracksCreated);
+            } else {
+                // Nothing imported - show warning
+                hideImportGPXModal();
+                showImportWarningModal();
+            }
+        } else {
+            throw new Error(data.message || 'Import failed');
+        }
+        
+    } catch (error) {
+        console.error('GPX import error:', error);
+        showGPXError(error.message || 'Failed to import GPX file');
+        
+        // Reset button
+        uploadBtn.disabled = false;
+        uploadText.textContent = 'Import GPX';
+        uploadSpinner.style.display = 'none';
+    }
+}
+
+function showImportSuccessModal(landmarks, tracks) {
+    const parts = [];
+    if (tracks > 0) parts.push(`${tracks} GPS track${tracks > 1 ? 's' : ''}`);
+    if (landmarks > 0) parts.push(`${landmarks} landmark${landmarks > 1 ? 's' : ''}`);
+    
+    const message = `Successfully imported ${parts.join(' and ')}!`;
+    
+    const modalHtml = `
+        <div id="gpx-success-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-800 rounded-xl shadow-2xl border border-emerald-500/50 w-full max-w-md p-6 text-center">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-2">Import Successful!</h3>
+                <p class="text-slate-300 mb-4">${message}</p>
+                <p class="text-slate-400 text-sm">Page will reload in 2 seconds...</p>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    setTimeout(() => {
+        window.location.reload();
+    }, 2000);
+}
+
+function showImportWarningModal() {
+    const modalHtml = `
+        <div id="gpx-warning-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-800 rounded-xl shadow-2xl border border-amber-500/50 w-full max-w-md p-6 text-center">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-2">Nothing New to Import</h3>
+                <p class="text-slate-300 mb-6">This GPX file does not contain any new landmarks or GPS tracks that aren't already in the system.</p>
+                <button type="button" onclick="document.getElementById('gpx-warning-modal').remove()" class="btn-primary px-6 py-2">
+                    OK
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
 // Close on escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        const helpModal = document.getElementById('context-menu-help-modal');
-        if (helpModal && !helpModal.classList.contains('hidden')) {
-            hideContextMenuHelp();
+        const gpxModal = document.getElementById('import-gpx-modal');
+        if (gpxModal && !gpxModal.classList.contains('hidden')) {
+            hideImportGPXModal();
+        }
+        const warningModal = document.getElementById('gpx-warning-modal');
+        if (warningModal) {
+            warningModal.remove();
         }
     }
 });
 
 // Close when clicking outside modal content
-document.getElementById('context-menu-help-modal')?.addEventListener('click', function(e) {
+document.getElementById('import-gpx-modal')?.addEventListener('click', function(e) {
     if (e.target === this) {
-        hideContextMenuHelp();
+        hideImportGPXModal();
     }
 });
 </script>

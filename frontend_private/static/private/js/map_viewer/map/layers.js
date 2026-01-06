@@ -21,6 +21,9 @@ const ZOOM_LEVELS = {
     // Subsurface Stations
     SUBSURFACE_STATION_SYMBOL: 10,
     SUBSURFACE_STATION_LABEL: 14,
+
+    // GPS Tracks
+    GPS_TRACK_LINE: 8,
 };
 
 // Helper to ensure altitude zero (defined locally or imported if moved to Utils)
@@ -206,6 +209,168 @@ export const Layers = {
         } catch (e) {
             return true;
         }
+    },
+
+    // GPS tracks default to OFF (false) - explicit true required to be visible
+    // No persistence - visibility is session-only
+    isGPSTrackVisible: function (trackId) {
+        try {
+            return State.gpsTrackLayerStates.get(String(trackId)) === true;
+        } catch (e) {
+            return false; // Default to OFF
+        }
+    },
+
+    // Check if GPS track is currently loading
+    isGPSTrackLoading: function (trackId) {
+        return State.gpsTrackLoadingStates.get(String(trackId)) === true;
+    },
+
+    // Set GPS track loading state
+    setGPSTrackLoading: function (trackId, isLoading) {
+        State.gpsTrackLoadingStates.set(String(trackId), isLoading);
+        // Dispatch event for UI updates
+        window.dispatchEvent(new CustomEvent('speleo:gps-track-loading-changed', {
+            detail: { trackId, isLoading }
+        }));
+    },
+
+    // Toggle GPS track visibility - handles lazy loading of GeoJSON
+    toggleGPSTrackVisibility: async function (trackId, isVisible, trackUrl) {
+        const tid = String(trackId);
+
+        // Update in-memory state (no persistence)
+        State.gpsTrackLayerStates.set(tid, isVisible);
+
+        if (isVisible) {
+            // Check if we need to download the GeoJSON (lazy loading)
+            if (!State.gpsTrackCache.has(tid)) {
+                // Start loading
+                this.setGPSTrackLoading(tid, true);
+
+                try {
+                    console.log(`🔄 Downloading GPS track GeoJSON: ${trackId}`);
+                    const response = await fetch(trackUrl);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const geojsonData = await response.json();
+
+                    // Cache the data
+                    State.gpsTrackCache.set(tid, geojsonData);
+                    console.log(`✅ Cached GPS track GeoJSON: ${trackId}`);
+
+                    // Add the layer to the map
+                    await this.addGPSTrackLayer(tid, geojsonData);
+                } catch (e) {
+                    console.error(`❌ Failed to download GPS track ${trackId}:`, e);
+                    // Revert visibility state on error
+                    State.gpsTrackLayerStates.set(tid, false);
+                    this.setGPSTrackLoading(tid, false);
+                    return;
+                }
+
+                this.setGPSTrackLoading(tid, false);
+            } else {
+                // Data is cached - just show the existing layers
+                this.showGPSTrackLayers(tid, true);
+            }
+        } else {
+            // Hide the layers (don't remove - keep cached)
+            this.showGPSTrackLayers(tid, false);
+        }
+    },
+
+    // Show/hide GPS track layers
+    showGPSTrackLayers: function (trackId, isVisible) {
+        const map = State.map;
+        if (!map || !map.getStyle()) return;
+
+        const layers = State.allGPSTrackLayers.get(String(trackId)) || [];
+        layers.forEach(layerId => {
+            if (map.getLayer(layerId)) {
+                map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
+            }
+        });
+    },
+
+    // Add GPS track GeoJSON layers to the map
+    addGPSTrackLayer: async function (trackId, geojsonData) {
+        const map = State.map;
+        if (!map) return;
+
+        const tid = String(trackId);
+        const sourceId = `gps-track-source-${tid}`;
+        const lineLayerId = `gps-track-line-${tid}`;
+        const pointsLayerId = `gps-track-points-${tid}`;
+
+        // Remove existing layers and source if they exist
+        if (map.getLayer(pointsLayerId)) map.removeLayer(pointsLayerId);
+        if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+
+        // Get color for this track
+        const color = Colors.getGPSTrackColor(tid);
+
+        // Add source
+        map.addSource(sourceId, {
+            type: 'geojson',
+            data: geojsonData,
+            generateId: true
+        });
+
+        // Track layers for this GPS track
+        if (!State.allGPSTrackLayers.has(tid)) {
+            State.allGPSTrackLayers.set(tid, []);
+        }
+        const trackLayers = State.allGPSTrackLayers.get(tid);
+
+        // GPS track line - simple dotted pattern for clear distinction from survey lines
+        map.addLayer({
+            id: lineLayerId,
+            type: 'line',
+            source: sourceId,
+            filter: ['==', '$type', 'LineString'],
+            minzoom: ZOOM_LEVELS.GPS_TRACK_LINE,
+            layout: {
+                'line-join': 'round',
+                'line-cap': 'round'
+            },
+            paint: {
+                'line-color': color,
+                'line-width': ['interpolate', ['linear'], ['zoom'], 6, 3, 10, 4, 14, 5, 18, 7],
+                'line-opacity': 1,
+                // Simple dots: tiny dash with gap creates dotted effect
+                'line-dasharray': [0.1, 1.5]
+            }
+        });
+        trackLayers.push(lineLayerId);
+
+        // Calculate and store bounds for fly-to functionality
+        const bounds = new mapboxgl.LngLatBounds();
+        if (geojsonData && geojsonData.features) {
+            geojsonData.features.forEach(feature => {
+                if (feature.geometry && feature.geometry.coordinates) {
+                    // Helper to extend bounds recursively
+                    const extend = (coords) => {
+                        if (typeof coords[0] === 'number') {
+                            bounds.extend(coords);
+                        } else {
+                            coords.forEach(extend);
+                        }
+                    };
+                    extend(feature.geometry.coordinates);
+                }
+            });
+        }
+
+        if (!bounds.isEmpty()) {
+            State.gpsTrackBounds.set(tid, bounds);
+            console.log(`📍 Calculated bounds for GPS track ${trackId}`);
+        }
+
+        console.log(`📍 Added GPS track layers for ${trackId}`);
+
+        // Reorder layers to ensure proper z-ordering
+        this.reorderLayers();
     },
 
     toggleNetworkVisibility: function (networkId, isVisible) {
@@ -890,14 +1055,15 @@ export const Layers = {
     },
 
     /**
-     * Ensure stations, surface stations, and Landmarks are rendered on top of survey lines.
+     * Ensure stations, surface stations, Landmarks, and GPS tracks are rendered correctly.
+     * GPS tracks should be below survey lines but visible.
      * Call this after all layers are loaded to fix z-ordering.
      */
     reorderLayers: function () {
         const map = State.map;
         if (!map) return;
 
-        console.log('🔄 Reordering layers to ensure stations/Landmarks are on top...');
+        console.log('🔄 Reordering layers to ensure proper z-ordering...');
 
         // Get all layer IDs
         const style = map.getStyle();
@@ -905,7 +1071,9 @@ export const Layers = {
 
         const allLayerIds = style.layers.map(l => l.id);
 
-        // Find station circle layers, station label layers, surface station layers, and Landmark layers
+        // Find all layer types
+        const gpsTrackLineLayers = allLayerIds.filter(id => id.startsWith('gps-track-line-'));
+        const gpsTrackPointLayers = allLayerIds.filter(id => id.startsWith('gps-track-points-'));
         const stationCircleLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-circles') && !id.includes('surface-'));
         const stationLabelLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-labels') && !id.includes('surface-'));
         const surfaceStationSymbolLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && !id.includes('-labels'));
@@ -913,8 +1081,27 @@ export const Layers = {
         const landmarkLayers = allLayerIds.filter(id => id.startsWith('landmarks-'));
 
         // Move layers to top in order (later moves go on top)
+        // Order: GPS track lines -> GPS track points -> subsurface stations -> surface stations -> Landmarks
 
-        // First move subsurface station circles (will be under labels)
+        // GPS track line layers
+        gpsTrackLineLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // GPS track point layers
+        gpsTrackPointLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // Subsurface station circles
         stationCircleLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
@@ -923,7 +1110,7 @@ export const Layers = {
             }
         });
 
-        // Then move subsurface station labels
+        // Subsurface station labels
         stationLabelLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
@@ -932,7 +1119,7 @@ export const Layers = {
             }
         });
 
-        // Then move surface station symbols
+        // Surface station symbols
         surfaceStationSymbolLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
@@ -941,7 +1128,7 @@ export const Layers = {
             }
         });
 
-        // Then move surface station labels
+        // Surface station labels
         surfaceStationLabelLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
@@ -950,7 +1137,7 @@ export const Layers = {
             }
         });
 
-        // Finally move Landmark layers (on top of everything)
+        // Landmark layers (on top of everything)
         landmarkLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);

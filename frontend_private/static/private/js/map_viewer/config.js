@@ -7,6 +7,9 @@ export const Config = {
     // Private storage for networks loaded from API
     _networks: null,
 
+    // Private storage for GPS tracks loaded from API
+    _gpsTracks: null,
+
     get projects() {
         return this._projects || [];
     },
@@ -21,6 +24,14 @@ export const Config = {
 
     get networkIds() {
         return this.networks.map(n => n.id);
+    },
+
+    get gpsTracks() {
+        return this._gpsTracks || [];
+    },
+
+    get gpsTrackIds() {
+        return this.gpsTracks.map(t => t.id);
     },
 
     // Load projects from API (call this early in initialization)
@@ -199,5 +210,38 @@ export const Config = {
         console.log(`✅ ${this._projects.length} projects with GeoJSON available for map viewer`);
     },
     VISIBILITY_PREFS_STORAGE_KEY: 'speleo_project_visibility',
-    NETWORK_VISIBILITY_PREFS_STORAGE_KEY: 'speleo_network_visibility'
+    NETWORK_VISIBILITY_PREFS_STORAGE_KEY: 'speleo_network_visibility',
+
+    // Load GPS tracks from API (call this early in initialization)
+    async loadGPSTracks() {
+        if (this._gpsTracks) {
+            return this._gpsTracks;
+        }
+
+        try {
+            console.log('🔄 Loading GPS tracks from API...');
+            const response = await API.getGPSTracks();
+
+            if (response && response.success && Array.isArray(response.data)) {
+                // Map API response to expected format
+                this._gpsTracks = response.data.map(t => ({
+                    id: t.id,
+                    name: t.name,
+                    file: t.file, // URL to download the GeoJSON
+                    sha256_hash: t.sha256_hash,
+                    creation_date: t.creation_date,
+                    modified_date: t.modified_date,
+                }));
+                console.log(`✅ Loaded ${this._gpsTracks.length} GPS tracks from API`);
+            } else {
+                console.error('❌ Invalid GPS tracks response:', response);
+                this._gpsTracks = [];
+            }
+        } catch (error) {
+            console.error('❌ Failed to load GPS tracks from API:', error);
+            this._gpsTracks = [];
+        }
+
+        return this._gpsTracks;
+    }
 };

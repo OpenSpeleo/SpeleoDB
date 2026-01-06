@@ -189,6 +189,14 @@ export const API = {
 
     updateStationSensorInstalls: (stationId, installId, formData) =>
         apiRequest(Urls['api:v1:station-sensor-install-detail'](stationId, installId), 'PATCH', formData, true),
+
+    // GPS Tracks
+    getGPSTracks: () =>
+        apiRequest(Urls['api:v1:user-gps-tracks']()),
+
+    // GPX Import
+    importGPX: (formData) =>
+        apiRequest(Urls['api:v1:gpx-import'](), 'PUT', formData, true),
 };
 
 

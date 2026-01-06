@@ -98,12 +98,8 @@ class AttachmentStorage(S3Storage):
     custom_domain = False
 
 
-class GeoJSONStorage(S3Storage):
-    """Private S3 storage for GeoJSON uploads.
-
-    Files are stored under the "geojson/" prefix; the model's upload_to
-    callable should place them into "project.id/commit.sha/" subfolder.
-    """
+class BaseGeoJSONStorage(S3Storage):
+    """Private S3 storage for GeoJSON uploads."""
 
     # NOTE: This class can **not** inherit from BaseS3Storage because it uses a
     # different `get_available_name()` that generates a path based on the project ID
@@ -115,11 +111,28 @@ class GeoJSONStorage(S3Storage):
     # Cache control for performance
     object_parameters = BaseS3Storage.object_parameters
 
-    location = "geojson"
     default_acl = "private"
 
     # Use signed URLs for private files
     custom_domain = False
+
+
+class GeoJSONStorage(S3Storage):
+    """
+    Files are stored under the "geojson/" prefix; the model's upload_to
+    callable should place them into "project.id/commit.sha/" subfolder.
+    """
+
+    location = "geojson"
+
+
+class GPSTrackStorage(S3Storage):
+    """
+    Files are stored under the "gps_tracks/" prefix; the model's upload_to
+    callable should place them directly into the folder.
+    """
+
+    location = "gps_tracks"
 
 
 class S3StaticStorage(S3Storage):

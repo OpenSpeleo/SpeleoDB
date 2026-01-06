@@ -6,6 +6,9 @@
 # Project Related Models
 from speleodb.gis.models.project_geojson import ProjectGeoJSON
 
+# GPS Track Related Models
+from speleodb.gis.models.gps_track import GPSTrack
+
 # Landmark Related Models
 from speleodb.gis.models.landmark import Landmark
 
@@ -47,6 +50,7 @@ __all__ = [
     "ExperimentUserPermission",
     "GISProjectView",
     "GISView",
+    "GPSTrack",
     "InstallStatus",
     "Landmark",
     "ProjectGeoJSON",

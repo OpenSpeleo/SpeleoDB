@@ -15,6 +15,7 @@ import { LandmarkUI } from './landmarks/ui.js';
 import { Utils } from './utils.js';
 import { ContextMenu } from './components/context_menu.js';
 import { ProjectPanel } from './components/project_panel.js';
+import { GPSTracksPanel } from './components/gps_tracks_panel.js';
 import { API } from './api.js';
 
 // Global entry point
@@ -24,9 +25,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. Initialize State
     State.init();
 
-    // 2. Load Projects and Networks from API (needed for permissions and lists)
+    // 2. Load Projects, Networks, and GPS Tracks from API (needed for permissions and lists)
     await Config.loadProjects();
     await Config.loadNetworks();
+    await Config.loadGPSTracks();
 
     // 3. Initialize Map
     const token = window.SPELEO_CONTEXT?.mapboxToken || '';
@@ -307,6 +309,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Initialize Project Panel (now shows only projects with GeoJSON)
         ProjectPanel.init();
+
+        // Initialize GPS Tracks Panel (collapsed by default, all tracks OFF)
+        GPSTracksPanel.init();
 
         // Load user tags and colors for tag management
         StationTags.init();

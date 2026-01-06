@@ -26,6 +26,9 @@ const PALETTE = [
 // Persistent per-project color assignment to avoid reusing first color
 const projectColorMap = new Map();
 
+// Persistent per-GPS-track color assignment (separate from projects)
+const gpsTrackColorMap = new Map();
+
 export const Colors = {
     PALETTE,
 
@@ -41,9 +44,30 @@ export const Colors = {
         return color;
     },
 
+    // Helper to get consistent GPS track color (separate color space from projects)
+    // Uses reversed palette to maximize visual distinction from project colors
+    getGPSTrackColor: function(trackId) {
+        if (gpsTrackColorMap.has(trackId)) {
+            return gpsTrackColorMap.get(trackId);
+        }
+        // Use the next available color, offset and reversed to differ from projects
+        const index = gpsTrackColorMap.size;
+        // Start from a different part of the palette (offset by 10) and reverse order
+        const reversedPalette = [...PALETTE].reverse();
+        const offsetIndex = (index + 5) % reversedPalette.length;
+        const color = reversedPalette[offsetIndex];
+        gpsTrackColorMap.set(trackId, color);
+        return color;
+    },
+
     // Reset color assignments (useful for testing)
     resetColorMap: function() {
         projectColorMap.clear();
+    },
+
+    // Reset GPS track color assignments
+    resetGPSTrackColorMap: function() {
+        gpsTrackColorMap.clear();
     },
 
     // Interpolation expression for depth
