@@ -26,7 +26,6 @@ from rest_framework.generics import GenericAPIView
 
 from speleodb.gis.models import GPSTrack
 from speleodb.gis.models import Landmark
-from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
@@ -37,42 +36,6 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
-
-
-def handle_exception(
-    exception: Exception,
-    message: str,
-    status_code: int,
-    format_assoc: dict[Format, bool],
-    project: Project,
-) -> ErrorResponse:
-    additional_errors = []
-    # Cleanup created formats
-    for f_obj, created in format_assoc.items():
-        if created:
-            try:
-                f_obj.delete()
-            except Exception:  # noqa: BLE001
-                additional_errors.append(
-                    "Error during removal of created new format association"
-                )
-
-    # Reset project state
-    try:
-        project.git_repo.reset_and_remove_untracked()
-    except Exception:  # noqa: BLE001
-        additional_errors.append(
-            "Error during resetting of the project to HEAD and removal of untracked "
-            "files."
-        )
-
-    error_msg = message.format(exception)
-
-    if additional_errors:
-        error_msg += " - Additional Errors During Exception Handling: "
-        error_msg += ", ".join(additional_errors)
-
-    return ErrorResponse({"error": error_msg}, status=status_code)
 
 
 class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):

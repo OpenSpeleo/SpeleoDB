@@ -7,6 +7,7 @@ import uuid
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import UniqueConstraint
 
 
 class Landmark(models.Model):
@@ -73,6 +74,12 @@ class Landmark(models.Model):
             models.Index(fields=["name"]),  # For name lookups
             models.Index(fields=["creation_date"]),  # For recent Landmarks
             models.Index(fields=["user"]),  # For user's Landmarks
+        ]
+        constraints = [
+            UniqueConstraint(
+                fields=["latitude", "longitude", "user"],
+                name="unique_landmark_per_user",
+            )
         ]
 
     def __str__(self) -> str:

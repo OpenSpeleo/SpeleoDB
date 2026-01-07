@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from django.db import transaction
 
 from speleodb.gis.models import Landmark
 from speleodb.users.models import User
@@ -185,19 +187,19 @@ class TestLandmarkModel:
         _ = Landmark.objects.create(
             name="Cave C",
             latitude=0.0,
-            longitude=0.0,
+            longitude=1.0,
             user=user,
         )
         _ = Landmark.objects.create(
             name="Arch A",
             latitude=0.0,
-            longitude=0.0,
+            longitude=2.0,
             user=user,
         )
         _ = Landmark.objects.create(
             name="Bridge B",
             latitude=0.0,
-            longitude=0.0,
+            longitude=3.0,
             user=user,
         )
 
@@ -240,3 +242,22 @@ class TestLandmarkModel:
 
         assert landmark.description == ""
         landmark.full_clean()  # Should not raise
+
+    def test_unique_landmark_per_user(self, user: User) -> None:
+        """Test that blank description is allowed."""
+        Landmark.objects.create(
+            name="No Description Landmark",
+            latitude=10.0,
+            longitude=20.0,
+            user=user,
+            description="",
+        )
+
+        with transaction.atomic(), pytest.raises(IntegrityError):
+            Landmark.objects.create(
+                name="No Description Landmark",
+                latitude=10.0,
+                longitude=20.0,
+                user=user,
+                description="",
+            )

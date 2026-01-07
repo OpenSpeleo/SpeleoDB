@@ -12,6 +12,7 @@ from botocore.exceptions import NoCredentialsError
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import UniqueConstraint
 
 from speleodb.surveys.fields import Sha256Field
 from speleodb.users.models import User
@@ -52,7 +53,6 @@ class GPSTrack(models.Model):
     )
 
     sha256_hash = Sha256Field(
-        unique=True,
         blank=False,
         null=False,
         verbose_name="SHA256 hash of the `geojson file`",
@@ -77,6 +77,12 @@ class GPSTrack(models.Model):
             models.Index(fields=["sha256_hash"]),
         ]
         ordering = ["-creation_date"]
+        constraints = [
+            UniqueConstraint(
+                fields=["sha256_hash", "user"],
+                name="unique_gps_track_per_user",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"[GPS Track] {self.user.name} @ {self.creation_date}"
