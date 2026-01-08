@@ -88,12 +88,6 @@ class GPSTrack(models.Model):
         return f"[GPS Track] {self.user.name} @ {self.creation_date}"
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        """Enforce immutability: once created, cannot be updated."""
-        # Use _state.adding to check if this is a new object
-        # (pk is always set due to OneToOneField)
-        if not self._state.adding:
-            raise ValidationError("GPSTrack objects are immutable once created.")
-
         # Ensure the `hash` is properly set.
         self._set_file_hash()
 

@@ -548,7 +548,13 @@
     {
         "url": "/api/v1/gps_tracks/",
         "module": "speleodb.api.v1.views.gps_track.UserGPSTracks",
-        "name": "api:v1:user-gps-tracks",
+        "name": "api:v1:gps-tracks",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gps_tracks/<uuid:id>/",
+        "module": "speleodb.api.v1.views.gps_track.GPSTrackSpecificAPIView",
+        "name": "api:v1:gps-track-detail",
         "decorators": ""
     },
     {
@@ -1107,6 +1113,12 @@
         "url": "/private/gis_views/",
         "module": "frontend_private.views.gis_views.GISViewListingView",
         "name": "private:gis_views",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gps-tracks/",
+        "module": "frontend_private.views.gps_tracks.GPSTrackListView",
+        "name": "private:gps_tracks",
         "decorators": ""
     },
     {

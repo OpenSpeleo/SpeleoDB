@@ -273,33 +273,30 @@
                                 </a>
                             </li>
 
-                            <!-- New Project -->
-                            {% if request.url_name == 'project_new' %}
+                            <!-- My GPS Tracks -->
+                            {% if request.url_name|is_in_list:"gps_tracks" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:project_new' %}">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gps_tracks' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:project_new' %}">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:gps_tracks' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="fill-current text-{{stroke_color}}-400 shrink-0 h-6 w-6" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round" viewBox="4.25 2.25 15.5 19.5">
-                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                                <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-                                                <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
-                                                <path d="M12 11l0 6" />
-                                                <path d="M9 14l6 0" />
-                                              </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">New Project</span>
+                                            <svg class="shrink-0 h-6 w-6" viewBox="0 13.8 297 269.5">
+                                                <path class="fill-current text-{{stroke_color}}-400" d="M198.5 155.4a290 290 0 0 1-33.5 37.4 24.9 24.9 0 0 1-33 0 290 290 0 0 1-33.5-37.4H40.8a10 10 0 0 0-9.6 7.2L.4 270.6a10 10 0 0 0 9.6 12.6h277a10 10 0 0 0 9.6-12.7l-30.8-107.9a10 10 0 0 0-9.6-7.2h-57.7zM72 233.2a8 8 0 0 1-11.3 0 8 8 0 0 1 0-11.3 8 8 0 0 1 11.3 0 8 8 0 0 1 0 11.3zm16.4-9.5a8 8 0 1 1-5.2-15 8 8 0 0 1 5.2 15zM108 221h-.3a8 8 0 1 1 .3 0zm29.5-.4a8 8 0 1 1-15-5.7 8 8 0 0 1 15 5.7zm19.1 12a8 8 0 1 1-13.4-8.5 8 8 0 0 1 13.4 8.6zm22 5.2a8 8 0 1 1-15.7-2.5 8 8 0 0 1 15.8 2.5zm16.7 5-2.1.3a8 8 0 0 1-2.1-15.7 8 8 0 1 1 4.2 15.4zm22.7-10.5a8 8 0 0 1-11-2.3 8 8 0 1 1 11 2.3zm18.5-15.6a8 8 0 0 1-11.3 0 8 8 0 0 1-2.4-5.6 8 8 0 0 1 13.6-5.6 8 8 0 0 1 0 11.2z" />
+                                                <path class="fill-current text-{{stroke_color}}-400" d="M142.6 180.8a9 9 0 0 0 11.8 0c2.4-2 58-51.7 58-103a64 64 0 0 0-127.9 0c0 51.3 55.7 101 58 103zm-18-103a24 24 0 0 1 23.9-24 24 24 0 0 1 0 48 24 24 0 0 1-23.8-24z" />
+                                            </svg>
+                                            <span class="text-sm font-medium ml-3 duration-200">My GPS Tracks</span>
                                         </div>
                                     </div>
                                 </a>
                             </li>
 
                             <!-- My Survey Projects -->
-                            {% if request.url_name|is_in_list:"projects,project_details,project_upload,project_user_permissions,project_team_permissions,project_mutexes,project_revisions,project_revision_explorer,project_danger_zone" %}
+                            {% if request.url_name|is_in_list:"projects,project_new,project_details,project_upload,project_user_permissions,project_team_permissions,project_mutexes,project_revisions,project_revision_explorer,project_danger_zone" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:projects' %}">
@@ -346,7 +343,7 @@
 
                             <hr class="mt-5 mb-5" style="border-color: rgb(255 255 255 / 30%); border-style: dotted;">
 
-                            <!-- My GIS Experiments -->
+                            <!-- GIS Experiments -->
                             {% if request.url_name|is_in_list:"experiments,experiment_new,experiment_details,experiment_danger_zone,experiment_gis_integration,experiment_user_permissions,experiment_data_viewer" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
@@ -368,13 +365,13 @@
                                                 <path d="M12 21a6 6 0 0 0 3.715 -10.712"></path>
                                             </svg>
 
-                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Experiments</span>
+                                            <span class="text-sm font-medium ml-3 duration-200">GIS Experiments</span>
                                         </div>
                                     </div>
                                 </a>
                             </li>
 
-                            <!-- My GIS Sensors -->
+                            <!-- GIS Sensors -->
                             {% if request.url_name|is_in_list:"sensor_fleets,sensor_fleet_new,sensor_fleet_details,sensor_fleet_danger_zone,sensor_fleet_user_permissions" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
@@ -399,7 +396,7 @@
                                                 <path d="M10 21v-2"></path>
                                             </svg>
 
-                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Sensor Fleets</span>
+                                            <span class="text-sm font-medium ml-3 duration-200">GIS Sensor Fleets</span>
                                         </div>
                                     </div>
                                 </a>
@@ -421,13 +418,13 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                                             </svg>
 
-                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Station Tags</span>
+                                            <span class="text-sm font-medium ml-3 duration-200">GIS Station Tags</span>
                                         </div>
                                     </div>
                                 </a>
                             </li>
 
-                            <!-- My GIS Surface Monitoring -->
+                            <!-- GIS Surface Monitoring -->
                             {% if request.url_name|is_in_list:"surface_networks,surface_network_new,surface_network_details,surface_network_user_permissions" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
@@ -439,26 +436,18 @@
                             {% endif %}
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="2.5 2.5 19 19">
-                                                <path d="M5 5m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z"></path>
-                                                <path d="M9 9h6v6h-6z"></path>
-                                                <path d="M3 10h2"></path>
-                                                <path d="M3 14h2"></path>
-                                                <path d="M10 3v2"></path>
-                                                <path d="M14 3v2"></path>
-                                                <path d="M21 10h-2"></path>
-                                                <path d="M21 14h-2"></path>
-                                                <path d="M14 21v-2"></path>
-                                                <path d="M10 21v-2"></path>
+                                            <svg class="shrink-0 h-6 w-6 stroke-none fill-current text-{{stroke_color}}-400" viewBox="1 2.1 14 12.9">
+                                                <path d="M8.5 14V8.5H9a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h.5V14H1v1h14v-1ZM7 5.5h2v2H7Z"/>
+                                                <path d="M4.7 9.1a3.5 3.5 0 0 1 0-5.2l.6.7a2.5 2.5 0 0 0 0 3.8Zm6.6 0-.6-.7a2.5 2.5 0 0 0 0-3.8l.6-.7a3.5 3.5 0 0 1 0 5.2Z"/>
+                                                <path d="M3.2 10.9a5.5 5.5 0 0 1 0-8.8l.6.8a4.5 4.5 0 0 0 0 7.2Zm9.6 0-.6-.8a4.5 4.5 0 0 0 0-7.2l.6-.8a5.5 5.5 0 0 1 0 8.8Z"/>
                                             </svg>
-
-                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Surface Monitoring</span>
+                                            <span class="text-sm font-medium ml-3 duration-200">GIS Surface Monitoring</span>
                                         </div>
                                     </div>
                                 </a>
                             </li>
 
-                            <!-- My GIS Views -->
+                            <!-- GIS Views -->
                             {% if request.url_name|is_in_list:"gis_views,gis_view_new,gis_view_details,gis_view_gis_integration,gis_view_danger_zone" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
@@ -474,13 +463,13 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                                             </svg>
 
-                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Views</span>
+                                            <span class="text-sm font-medium ml-3 duration-200">GIS Views</span>
                                         </div>
                                     </div>
                                 </a>
                             </li>
 
-                            <!-- My Survey Map -->
+                            <!-- Survey Map -->
                             {% if request.url_name == 'map_viewer' %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
@@ -501,7 +490,7 @@
                                                 <path d="M19 12l2 0"></path>
                                             </svg>
 
-                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Survey Map</span>
+                                            <span class="text-sm font-medium ml-3 duration-200">GIS Survey Map</span>
                                         </div>
                                     </div>
                                 </a>

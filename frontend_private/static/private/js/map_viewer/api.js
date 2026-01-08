@@ -192,7 +192,7 @@ export const API = {
 
     // GPS Tracks
     getGPSTracks: () =>
-        apiRequest(Urls['api:v1:user-gps-tracks']()),
+        apiRequest(Urls['api:v1:gps-tracks']()),
 
     // GPX Import
     importGPX: (formData) =>

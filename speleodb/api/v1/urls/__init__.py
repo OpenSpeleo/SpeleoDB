@@ -14,6 +14,7 @@ from speleodb.api.v1.urls.experiment_records import (
 from speleodb.api.v1.urls.file_import import urlpatterns as file_import_urlpatterns
 from speleodb.api.v1.urls.gis import urlpatterns as gis_urlpatterns
 from speleodb.api.v1.urls.gis_view import urlpatterns as gis_view_urlpatterns
+from speleodb.api.v1.urls.gps_track import urlpatterns as gps_track_urlpatterns
 from speleodb.api.v1.urls.landmark import urlpatterns as landmark_urlpatterns
 from speleodb.api.v1.urls.log_entry import urlpatterns as log_entry_urlpatterns
 from speleodb.api.v1.urls.project import urlpatterns as project_urlpatterns
@@ -29,7 +30,6 @@ from speleodb.api.v1.urls.team import urlpatterns as team_urlpatterns
 from speleodb.api.v1.urls.tools import urlpatterns as tool_urlpatterns
 from speleodb.api.v1.urls.user import urlpatterns as user_urlpatterns
 from speleodb.api.v1.views.announcement import PublicAnnouncementApiView
-from speleodb.api.v1.views.gps_track import UserGPSTracks
 from speleodb.api.v1.views.plugin_release import PluginReleasesApiView
 
 app_name = "v1"
@@ -49,7 +49,7 @@ urlpatterns: list[URLResolver | URLPattern] = [
     path("experiment_records/", include(experiment_record_urlpatterns)),
     path("gis-ogc/", include((gis_urlpatterns, "gis-ogc"), namespace="gis-ogc")),
     path("gis_view/", include(gis_view_urlpatterns)),
-    path("gps_tracks/", UserGPSTracks.as_view(), name="user-gps-tracks"),
+    path("gps_tracks/", include(gps_track_urlpatterns)),
     path("import/", include(file_import_urlpatterns)),
     path("logs/", include(log_entry_urlpatterns)),
     path("landmarks/", include(landmark_urlpatterns)),

@@ -14,6 +14,7 @@ from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import GISView
+from speleodb.gis.models import GPSTrack
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
@@ -316,6 +317,36 @@ class LandmarkOwnershipPermission(permissions.BasePermission):
         # Check if the object has a created_by field and if it matches the user
         if not isinstance(obj, Landmark):
             raise TypeError(f"Expected a `Landmark` object, got {type(obj)}")
+
+        return obj.user == request.user
+
+
+# =============== GPS Track =============== #
+
+
+class GPSTrackOwnershipPermission(permissions.BasePermission):
+    """
+    Permission class specifically for GPSTrack ownership.
+    - Users can only see/modify their own GPSTrack.
+    - No sharing or public access to GPSTrack
+    """
+
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        if request.user and request.user.is_authenticated:
+            return True
+
+        raise NotAuthenticated("Authentication credentials were not provided.")
+
+    def has_object_permission(
+        self,
+        request: AuthenticatedDRFRequest,  # type: ignore[override]
+        view: APIView,
+        obj: GPSTrack,
+    ) -> bool:
+        """Users can only access Landmarks they created."""
+        # Check if the object has a created_by field and if it matches the user
+        if not isinstance(obj, GPSTrack):
+            raise TypeError(f"Expected a `GPSTrack` object, got {type(obj)}")
 
         return obj.user == request.user
 

@@ -1,0 +1,612 @@
+{% extends "base_private.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Mobile card layout for GPS tracks */
+    @media (max-width: 768px) {
+        .tracks-table {
+            display: none;
+        }
+        
+        .tracks-cards {
+            display: block;
+        }
+        
+        .track-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .track-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .track-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .track-card-title {
+            flex: 1;
+            margin-right: 12px;
+        }
+        
+        .track-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .track-card-body {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .track-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .track-card-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        
+        .track-card-value {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+            text-align: right;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .tracks-table {
+            display: block;
+        }
+        
+        .tracks-cards {
+            display: none;
+        }
+    }
+
+    .track-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.2) 100%);
+        border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+
+        {% csrf_token %}
+
+        <!-- Page header -->
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+
+            <!-- Left: Title -->
+            <div class="mb-4 mr-40 sm:mb-0">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
+                    My GPS Tracks
+                </h1>
+                <p class="text-slate-400 mt-2">
+                    Import and manage your scouting hikes on the GIS Survey Map using a GPX file (GPS Exchange Format), 
+                    a universal file that stores geographic data like waypoints, routes, and tracks. The file can be obtained
+                    from GPS-enabled devices: Smart watch, Smartphone, Handheld GPS, etc.
+                </p>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+                <!-- Import GPX -->
+                <button id="import-gpx-button" onclick="showImportGPXModal()" class="btn bg-red-600 hover:bg-red-700 text-white">
+                    <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span class="hidden xs:block ml-2">Import GPX</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Mobile Cards View -->
+        <div class="tracks-cards">
+            <div id="tracks-cards-container" class="p-4">
+                <!-- Loading state -->
+                <div class="text-center py-12 text-slate-400">
+                    <svg class="w-12 h-12 mx-auto mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <p>Loading GPS tracks...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="tracks-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+            <div>
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full text-slate-300">
+                        <!-- Table header -->
+                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                            <tr>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-12">
+                                    <div class="font-semibold text-center">#</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-left">Track Name</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-48">
+                                    <div class="font-semibold text-center">Creation Date</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-32">
+                                    <div class="font-semibold text-center">Actions</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <!-- Table body -->
+                        <tbody id="tracks-table-body" class="text-sm divide-y divide-slate-200 divide-slate-700">
+                            <!-- Loading state -->
+                            <tr>
+                                <td colspan="4" class="px-2 py-8 text-center text-slate-400">
+                                    <svg class="w-12 h-12 mx-auto mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    <p>Loading GPS tracks...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<!-- Edit GPS Track Modal -->
+<div id="edit-track-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+    <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
+        <!-- Modal header -->
+        <div class="px-6 py-4 border-b border-slate-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-semibold text-slate-100">Edit GPS Track</h3>
+                <button class="btn-close-edit-modal text-slate-400 hover:text-slate-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal body -->
+        <form id="edit-track-form">
+            <input type="hidden" id="edit-track-id" name="track_id" value="">
+            
+            <div class="px-6 py-4 space-y-4">
+                <!-- Track Name -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2" for="edit-track-name">
+                        Track Name <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" id="edit-track-name" name="name" required
+                           class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" 
+                           placeholder="e.g., Morning Hike to Cave Entrance">
+                    <p class="mt-2 text-sm text-slate-500">
+                        Give your GPS track a descriptive name to easily identify it later.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Modal footer -->
+            <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+                <button type="button" class="btn-close-edit-modal px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete GPS Track Confirmation Modal -->
+<div id="delete-track-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+    <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
+        <!-- Modal header -->
+        <div class="px-6 py-4 border-b border-slate-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-semibold text-slate-100">Delete GPS Track</h3>
+                <button class="btn-close-delete-modal text-slate-400 hover:text-slate-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal body -->
+        <div class="px-6 py-4">
+            <input type="hidden" id="delete-track-id" value="">
+            
+            <div class="flex items-start space-x-4">
+                <div class="flex-shrink-0">
+                    <svg class="w-12 h-12 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <p class="text-slate-300 text-lg font-medium mb-2">Are you sure you want to delete this GPS track?</p>
+                    <div id="delete-track-info" class="mb-3"></div>
+                    <p class="text-slate-400 text-sm">
+                        This will permanently remove the GPS track from your account. This action cannot be undone.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal footer -->
+        <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+            <button type="button" class="btn-close-delete-modal px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                Cancel
+            </button>
+            <button type="button" id="btn-confirm-delete" class="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
+                Delete Track
+            </button>
+        </div>
+    </div>
+</div>
+
+{% include 'snippets/modal_gpx_import.html' %}
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+
+{% endblock content %}
+
+{% block extra_js %}
+<script src="{% url 'url_reverse.js' %}"></script>
+{% endblock extra_js %}
+
+{% block inline_extra_js %}
+<script>
+$(document).ready(function() {
+    // Global variables
+    let allTracks = [];
+
+    // Initialize GPX Import module
+    GPXImport.init("{{ csrf_token }}");
+
+    // Utility: Get CSRF Token
+    function getCSRFToken() {
+        return $('input[name^=csrfmiddlewaretoken]').val();
+    }
+
+    // Format date for display
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // Load all GPS tracks
+    function loadTracks() {
+        $.ajax({
+            url: '{% url "api:v1:gps-tracks" %}',
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    allTracks = response.data;
+                    renderTracks();
+                } else {
+                    $("#modal_error_txt").text("Failed to load GPS tracks");
+                    $("#modal_error").css('display', 'flex');
+                }
+            },
+            error: function() {
+                $("#modal_error_txt").text("Error loading GPS tracks");
+                $("#modal_error").css('display', 'flex');
+            }
+        });
+    }
+
+    // Render tracks in table and cards
+    function renderTracks() {
+        const tableBody = $('#tracks-table-body');
+        const cardsContainer = $('#tracks-cards-container');
+
+        if (allTracks.length === 0) {
+            const emptyStateHtml = `
+                <svg class="w-16 h-16 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                </svg>
+                <p class="text-lg font-medium">No GPS tracks yet</p>
+                <p class="text-sm mt-1">Import a GPX file to add your first GPS track</p>
+            `;
+            
+            tableBody.html(`
+                <tr>
+                    <td colspan="4" class="px-2 py-8 text-center text-slate-400">
+                        ${emptyStateHtml}
+                    </td>
+                </tr>
+            `);
+            cardsContainer.html(`
+                <div class="text-center py-12 text-slate-400">
+                    ${emptyStateHtml}
+                </div>
+            `);
+            return;
+        }
+
+        // Render table rows
+        let tableHtml = '';
+        allTracks.forEach((track, index) => {
+            tableHtml += `
+                <tr>
+                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                        <div class="text-center font-medium text-slate-100">${index + 1}</div>
+                    </td>
+                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="track-icon">
+                                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                </svg>
+                            </div>
+                            <div class="font-medium text-slate-100">${escapeHtml(track.name)}</div>
+                        </div>
+                    </td>
+                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                        <div class="text-center text-slate-400 text-sm">
+                            ${formatDate(track.creation_date)}
+                        </div>
+                    </td>
+                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                        <div class="flex items-center justify-center gap-2">
+                            <!-- Edit Button -->
+                            <button class="btn-edit-track cursor-pointer" data-track-id="${track.id}" title="Edit track name">
+                                <svg class="h-6 w-6 stroke-current text-amber-500 hover:text-amber-400" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                    <path d="M13.5 6.5l4 4" />
+                                </svg>
+                            </button>
+                            <!-- Delete Button -->
+                            <button class="btn-delete-track cursor-pointer" data-track-id="${track.id}" title="Delete track">
+                                <svg class="h-6 w-6 stroke-current text-rose-500 hover:text-rose-400" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M18 6l-12 12" />
+                                    <path d="M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        tableBody.html(tableHtml);
+
+        // Render mobile cards
+        let cardsHtml = '';
+        allTracks.forEach(track => {
+            cardsHtml += `
+                <div class="track-card">
+                    <div class="track-card-header">
+                        <div class="track-card-title flex items-center gap-3">
+                            <div class="track-icon">
+                                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                </svg>
+                            </div>
+                            <div class="text-lg font-semibold text-slate-100">${escapeHtml(track.name)}</div>
+                        </div>
+                        <div class="track-card-actions">
+                            <button class="btn-edit-track w-10 h-10 shrink-0 flex items-center justify-center bg-amber-600 hover:bg-amber-500 rounded-full transition" data-track-id="${track.id}">
+                                <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor">
+                                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                    <path d="M13.5 6.5l4 4" />
+                                </svg>
+                            </button>
+                            <button class="btn-delete-track w-10 h-10 shrink-0 flex items-center justify-center bg-rose-600 hover:bg-rose-500 rounded-full transition" data-track-id="${track.id}">
+                                <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor">
+                                    <path d="M18 6l-12 12" />
+                                    <path d="M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="track-card-body">
+                        <div class="track-card-row">
+                            <span class="track-card-label">Created</span>
+                            <span class="track-card-value">${formatDate(track.creation_date)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        cardsContainer.html(cardsHtml);
+
+        // Attach event handlers
+        attachEventHandlers();
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Attach event handlers to dynamically created elements
+    function attachEventHandlers() {
+        $('.btn-edit-track').off('click').on('click', function() {
+            const trackId = $(this).data('track-id');
+            openEditModal(trackId);
+        });
+
+        $('.btn-delete-track').off('click').on('click', function() {
+            const trackId = $(this).data('track-id');
+            openDeleteModal(trackId);
+        });
+    }
+
+    // Open edit track modal
+    function openEditModal(trackId) {
+        const track = allTracks.find(t => t.id === trackId);
+        if (!track) return;
+
+        $('#edit-track-id').val(track.id);
+        $('#edit-track-name').val(track.name);
+        
+        $('#edit-track-modal').css('display', 'flex').removeClass('hidden');
+    }
+
+    // Close edit modal
+    $('.btn-close-edit-modal').click(function() {
+        $('#edit-track-modal').css('display', 'none').addClass('hidden');
+    });
+
+    // Handle form submission (edit)
+    $('#edit-track-form').submit(function(e) {
+        e.preventDefault();
+
+        const trackId = $('#edit-track-id').val();
+        const name = $('#edit-track-name').val().trim();
+
+        if (!name) {
+            $("#modal_error_txt").text("Please enter a track name");
+            $("#modal_error").css('display', 'flex');
+            return false;
+        }
+
+        $.ajax({
+            url: Urls['api:v1:gps-track-detail'](trackId),
+            method: 'PATCH',
+            data: JSON.stringify({ name: name }),
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
+            },
+            success: function(response) {
+                $("#modal_success_txt").text("GPS track updated successfully!");
+                $("#modal_success").css('display', 'flex');
+                
+                $('#edit-track-modal').css('display', 'none').addClass('hidden');
+                
+                // Refresh tracks list from API
+                loadTracks();
+            },
+            error: function(xhr) {
+                let errorMessage = "Failed to update GPS track";
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                $("#modal_error_txt").text(errorMessage);
+                $("#modal_error").css('display', 'flex');
+            }
+        });
+
+        return false;
+    });
+
+    // Open delete confirmation modal
+    function openDeleteModal(trackId) {
+        const track = allTracks.find(t => t.id === trackId);
+        if (!track) return;
+
+        $('#delete-track-id').val(track.id);
+        $('#delete-track-info').html(`
+            <div class="flex items-center gap-2 bg-slate-700/50 rounded-lg p-3">
+                <div class="track-icon">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                    </svg>
+                </div>
+                <span class="text-slate-100 font-medium">${escapeHtml(track.name)}</span>
+            </div>
+        `);
+        
+        $('#delete-track-modal').css('display', 'flex').removeClass('hidden');
+    }
+
+    // Close delete modal
+    $('.btn-close-delete-modal').click(function() {
+        $('#delete-track-modal').css('display', 'none').addClass('hidden');
+    });
+
+    // Handle delete confirmation
+    $('#btn-confirm-delete').click(function() {
+        const trackId = $('#delete-track-id').val();
+        if (!trackId) return;
+
+        $.ajax({
+            url: Urls['api:v1:gps-track-detail'](trackId),
+            method: 'DELETE',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
+            },
+            success: function() {
+                $("#modal_success_txt").text("GPS track deleted successfully!");
+                $("#modal_success").css('display', 'flex');
+                
+                $('#delete-track-modal').css('display', 'none').addClass('hidden');
+                
+                // Refresh tracks list from API
+                loadTracks();
+            },
+            error: function(xhr) {
+                let errorMessage = "Failed to delete GPS track";
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                $("#modal_error_txt").text(errorMessage);
+                $("#modal_error").css('display', 'flex');
+            }
+        });
+    });
+
+    // Modal backdrop click handlers
+    $("body").click(function() {
+        if ($("#modal_success").is(":visible")) {
+            $("#modal_success").hide();
+        }
+        if ($("#modal_error").is(":visible")) {
+            $("#modal_error").hide();
+        }
+    });
+
+    // Load tracks on page load
+    loadTracks();
+});
+</script>
+{% endblock inline_extra_js %}

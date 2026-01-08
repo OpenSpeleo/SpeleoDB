@@ -2071,8 +2071,17 @@ span.flatpickr-weekday {
   margin-right: 0.75rem;
 }
 
+.mr-32 {
+  margin-right: 8rem;
+}
+
+
 .mr-4 {
   margin-right: 1rem;
+}
+
+.mr-40 {
+  margin-right: 10rem;
 }
 
 .mr-5 {
@@ -3456,6 +3465,16 @@ span.flatpickr-weekday {
 .bg-blue-900 {
   --tw-bg-opacity: 1;
   background-color: rgb(30 58 138 / var(--tw-bg-opacity));
+}
+
+.bg-cyan-600 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(8 145 178 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-cyan-500:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(6 182 212/var(--tw=-bg-opacity));
 }
 
 .bg-emerald-100 {

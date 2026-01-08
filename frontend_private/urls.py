@@ -21,6 +21,7 @@ from frontend_private.views import GISViewDangerZoneView
 from frontend_private.views import GISViewDetailsView
 from frontend_private.views import GISViewGISIntegrationView
 from frontend_private.views import GISViewListingView
+from frontend_private.views import GPSTrackListView
 from frontend_private.views import MapViewerView
 from frontend_private.views import NewExperimentView
 from frontend_private.views import NewGISViewView
@@ -238,6 +239,8 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("gis_views/", GISViewListingView.as_view(), name="gis_views"),
     path("gis_view/new/", NewGISViewView.as_view(), name="gis_view_new"),
     path("gis_view/<uuid:gis_view_id>/", include(gis_view_patterns)),
+    # GPS Tracks
+    path("gps-tracks/", GPSTrackListView.as_view(), name="gps_tracks"),
     # Map Viewer URLs
     path("map_viewer/", MapViewerView.as_view(), name="map_viewer"),
     # Tool URLs

@@ -10,6 +10,7 @@ from frontend_private.views.gis_views import GISViewDetailsView
 from frontend_private.views.gis_views import GISViewGISIntegrationView
 from frontend_private.views.gis_views import GISViewListingView
 from frontend_private.views.gis_views import NewGISViewView
+from frontend_private.views.gps_tracks import GPSTrackListView
 from frontend_private.views.map import MapViewerView
 from frontend_private.views.project import NewProjectView
 from frontend_private.views.project import ProjectDangerZoneView
@@ -65,6 +66,7 @@ __all__ = [
     "GISViewDetailsView",
     "GISViewGISIntegrationView",
     "GISViewListingView",
+    "GPSTrackListView",
     "MapViewerView",
     "NewExperimentView",
     "NewGISViewView",

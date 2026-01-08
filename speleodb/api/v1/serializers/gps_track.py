@@ -8,6 +8,12 @@ from speleodb.gis.models import GPSTrack
 
 
 class GPSTrackSerializer(serializers.ModelSerializer[GPSTrack]):
+    class Meta:
+        model = GPSTrack
+        fields = ["id", "name", "creation_date", "modified_date"]
+
+
+class GPSTrackWithFileSerializer(serializers.ModelSerializer[GPSTrack]):
     file = serializers.SerializerMethodField()
 
     class Meta:

@@ -18,6 +18,7 @@ from speleodb.api.v1.serializers.git import GitCommitSerializer
 from speleodb.api.v1.serializers.git import GitFileListSerializer
 from speleodb.api.v1.serializers.git import GitFileSerializer
 from speleodb.api.v1.serializers.gps_track import GPSTrackSerializer
+from speleodb.api.v1.serializers.gps_track import GPSTrackWithFileSerializer
 from speleodb.api.v1.serializers.landmark import LandmarkGeoJSONSerializer
 from speleodb.api.v1.serializers.landmark import LandmarkSerializer
 from speleodb.api.v1.serializers.log_entry import StationLogEntrySerializer
@@ -70,6 +71,7 @@ __all__ = [
     "GISViewDataSerializer",
     "GISViewSerializer",
     "GPSTrackSerializer",
+    "GPSTrackWithFileSerializer",
     "GitCommitListSerializer",
     "GitCommitSerializer",
     "GitFileListSerializer",
