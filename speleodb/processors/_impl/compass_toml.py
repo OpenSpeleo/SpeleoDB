@@ -4,12 +4,10 @@ from functools import cached_property
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing import Annotated
 
 from packaging.version import Version
 from pydantic import UUID4
 from pydantic import BaseModel
-from pydantic import Field
 from pydantic import field_validator
 from tomlkit import array
 from tomlkit import dumps as toml_dumps
@@ -64,8 +62,8 @@ class SpeleoDB(BaseModel):
 
 
 class Project(BaseModel):
-    mak_file: Annotated[str, Field()]
-    dat_files: Annotated[list[str], Field(min_length=1)]
+    mak_file: str
+    dat_files: list[str]
     plt_files: list[str] | None = None
 
     # ------------------------------------------------------------
