@@ -36,7 +36,7 @@ dependencies = [
     "av==16.0.1",            # https://github.com/PyAV-Org/PyAV
     "imageio==2.37.2",       # https://github.com/imageio/imageio
     "imageio-ffmpeg==0.6.0", # https://github.com/imageio/imageio-ffmpeg
-    "Pillow==12.0.0",        # https://github.com/python-pillow/Pillow
+    "Pillow==12.1.0",        # https://github.com/python-pillow/Pillow
     "pillow-heif==1.1.1",    # https://github.com/bigcat88/pillow_heif
     "PyMuPDF==1.26.7",       # https://github.com/pymupdf/PyMuPDF
 
@@ -55,7 +55,7 @@ dependencies = [
 
     # Git Management
     # ------------------------------------------------------------------------------
-    "GitPython==3.1.45",    # https://github.com/gitpython-developers/GitPython
+    "GitPython==3.1.46",    # https://github.com/gitpython-developers/GitPython
     "python-gitlab==7.1.0", # https://python-gitlab.readthedocs.io/en/stable/
 
     # Django
@@ -69,7 +69,7 @@ dependencies = [
     "django-import-export==4.3.14",    # https://github.com/django-import-export/django-import-export
     "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
-    "django-polymorphic==4.5.1",       # https://github.com/jazzband/django-polymorphic
+    "django-polymorphic==4.5.2",       # https://github.com/jazzband/django-polymorphic
     "django-rest-polymorphic==0.1.10", # https://github.com/denisorehovsky/django-rest-polymorphic
     "django-storages[s3]==1.14.6",     # https://github.com/jschneier/django-storages
 
@@ -81,12 +81,12 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.42.17", # https://github.com/boto/botocore
+    "botocore==1.42.21", # https://github.com/boto/botocore
     "boto3==1.42.17",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
-    "celery==5.6.0",             # https://github.com/celery/celery
+    "celery==5.6.2",             # https://github.com/celery/celery
     "django-celery-beat==2.8.1", # https://github.com/celery/django-celery-beat
     "flower==2.0.1",             # https://github.com/mher/flower
     "watchfiles==1.1.1",         # https://github.com/samuelcolvin/watchfiles
