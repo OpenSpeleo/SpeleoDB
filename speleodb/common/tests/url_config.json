@@ -492,6 +492,18 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/exploration-leads/<uuid:id>/",
+        "module": "speleodb.api.v1.views.exploration_lead.ExplorationLeadSpecificApiView",
+        "name": "api:v1:exploration-lead-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/exploration-leads/geojson/",
+        "module": "speleodb.api.v1.views.exploration_lead.AllExploLeadsGeoJSONApiView",
+        "name": "api:v1:exploration-lead-all-geojson",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/gis-ogc/experiment/<gis_token>/",
         "module": "speleodb.api.v1.views.experiment.ExperimentGISApiView",
         "name": "api:v1:gis-ogc:experiment",
@@ -633,6 +645,18 @@
         "url": "/api/v1/projects/<uuid:id>/download/blob/<blobsha:hexsha>/",
         "module": "speleodb.api.v1.views.file.BlobDownloadView",
         "name": "api:v1:project-download-blob",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/exploration-leads/",
+        "module": "speleodb.api.v1.views.exploration_lead.ProjectExplorationLeadsApiView",
+        "name": "api:v1:project-exploration-leads",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/projects/<uuid:id>/exploration-leads/geojson/",
+        "module": "speleodb.api.v1.views.exploration_lead.ProjectExplorationLeadsGeoJSONView",
+        "name": "api:v1:project-exploration-leads-geojson",
         "decorators": ""
     },
     {

@@ -12,7 +12,6 @@ from rest_framework.generics import GenericAPIView
 from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import UserHasLeaderAccess
 from speleodb.api.v1.permissions import UserHasMemberAccess
-from speleodb.api.v1.serializers import SurveyTeamMembershipListSerializer
 from speleodb.api.v1.serializers import SurveyTeamMembershipSerializer
 from speleodb.api.v1.serializers import SurveyTeamSerializer
 from speleodb.api.v1.serializers import UserRequestSerializer
@@ -225,7 +224,7 @@ class TeamMembershipListApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
         user = self.get_user()
         team_mbrshps = SurveyTeamMembership.objects.filter(team=team, is_active=True)
 
-        membership_serializer = SurveyTeamMembershipListSerializer(team_mbrshps)  # type: ignore[arg-type]
+        membership_serializer = SurveyTeamMembershipSerializer(team_mbrshps, many=True)
         team_serializer = SurveyTeamSerializer(team, context={"user": user})
 
         return SuccessResponse(

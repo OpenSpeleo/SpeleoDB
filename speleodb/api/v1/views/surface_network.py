@@ -7,6 +7,10 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Exists
+from django.db.models import IntegerField
+from django.db.models import OuterRef
+from django.db.models import Subquery
 from django.http import Http404
 from rest_framework import permissions
 from rest_framework import status
@@ -19,13 +23,13 @@ from speleodb.api.v1.permissions import SDB_AdminAccess
 from speleodb.api.v1.permissions import SDB_ReadAccess
 from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.serializers.surface_network import (
-    SurfaceMonitoringNetworkListSerializer,
-)
-from speleodb.api.v1.serializers.surface_network import (
     SurfaceMonitoringNetworkSerializer,
 )
 from speleodb.api.v1.serializers.surface_network import (
     SurfaceMonitoringNetworkUserPermissionSerializer,
+)
+from speleodb.api.v1.serializers.surface_network import (
+    SurfaceMonitoringNetworkWithPermSerializer,
 )
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import SurfaceMonitoringNetwork
@@ -63,25 +67,37 @@ class SurfaceMonitoringNetworkApiView(
         """List all networks with user permissions."""
         user = self.get_user()
 
-        # Get all active networks user has access to
-        network_perms = SurfaceMonitoringNetworkUserPermission.objects.filter(
+        perm_qs = SurfaceMonitoringNetworkUserPermission.objects.filter(
+            network=OuterRef("pk"),
             user=user,
             is_active=True,
-            network__is_active=True,
-        ).select_related("network")
+        )
 
-        # Build response data with permission info
-        networks_data = []
-        for perm in network_perms:
-            network = perm.network
-            # Use list serializer for optimized response
-            serializer = SurfaceMonitoringNetworkListSerializer(network)
-            network_data = serializer.data
-            network_data["user_permission_level"] = perm.level
-            network_data["user_permission_level_label"] = perm.level_label
-            networks_data.append(network_data)
+        networks = (
+            SurfaceMonitoringNetwork.objects.filter(is_active=True)
+            .filter(Exists(perm_qs))
+            .annotate(
+                user_permission_level=Subquery(
+                    perm_qs.values("level")[:1],
+                    output_field=IntegerField(),
+                ),
+            )
+        )
 
-        return SuccessResponse(networks_data)
+        # # Build response data with permission info
+        # networks_data = []
+        # for perm in network_perms:
+        #     network = perm.network
+        #     # Use list serializer for optimized response
+        #     serializer = SurfaceMonitoringNetworkWithPermSerializer(network)
+        #     network_data = serializer.data
+        #     network_data["user_permission_level"] = perm.level
+        #     network_data["user_permission_level_label"] = perm.level_label
+        #     networks_data.append(network_data)
+
+        return SuccessResponse(
+            SurfaceMonitoringNetworkWithPermSerializer(networks, many=True).data
+        )
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new network."""

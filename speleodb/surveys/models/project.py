@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from datetime import datetime
     from typing import Self
 
+    from speleodb.gis.models import ExplorationLead
     from speleodb.gis.models import ProjectGeoJSON
     from speleodb.gis.models import SubSurfaceStation
     from speleodb.git_engine.core import GitCommit
@@ -160,6 +161,7 @@ class Project(models.Model):
     _user_permissions: models.QuerySet[UserProjectPermission]
 
     commits: models.QuerySet[ProjectCommit]
+    exploration_leads: models.QuerySet[ExplorationLead]
     geojsons: models.QuerySet[ProjectGeoJSON]
     mutexes: models.QuerySet[ProjectMutex]
     stations: models.QuerySet[SubSurfaceStation]

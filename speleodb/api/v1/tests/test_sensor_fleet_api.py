@@ -28,12 +28,12 @@ from speleodb.api.v1.tests.factories import SensorFleetFactory
 from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
 from speleodb.api.v1.tests.factories import SensorInstallFactory
 from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
+from speleodb.common.enums import InstallStatus
+from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
-from speleodb.gis.models import SensorStatus
-from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.models.user import User
 from speleodb.users.tests.factories import UserFactory
 
@@ -265,12 +265,12 @@ class TestSensorFleetListCreate:
                 {
                     "name": "Sensor 1",
                     "notes": "First sensor",
-                    "status": SensorStatus.FUNCTIONAL,
+                    "status": OperationalStatus.FUNCTIONAL,
                 },
                 {
                     "name": "Sensor 2",
                     "notes": "Second sensor",
-                    "status": SensorStatus.BROKEN,
+                    "status": OperationalStatus.BROKEN,
                 },
             ],
         }
@@ -596,7 +596,7 @@ class TestSensorListCreate:
         data = {
             "name": "New Sensor",
             "notes": "Test notes",
-            "status": SensorStatus.FUNCTIONAL,
+            "status": OperationalStatus.FUNCTIONAL,
         }
 
         response = api_client.post(
@@ -704,7 +704,7 @@ class TestSensorToggleFunctional:
         """Toggle functional status from True to False."""
         sensor = SensorFactory.create(
             fleet=sensor_fleet_with_write,
-            status=SensorStatus.FUNCTIONAL,
+            status=OperationalStatus.FUNCTIONAL,
         )
 
         response = api_client.patch(
@@ -714,7 +714,7 @@ class TestSensorToggleFunctional:
 
         assert response.status_code == status.HTTP_200_OK
         sensor.refresh_from_db()
-        assert sensor.status == SensorStatus.BROKEN
+        assert sensor.status == OperationalStatus.BROKEN
 
     def test_toggle_functional_false_to_true(
         self,
@@ -724,7 +724,7 @@ class TestSensorToggleFunctional:
     ) -> None:
         """Toggle functional status from BROKEN to FUNCTIONAL."""
         sensor = SensorFactory.create(
-            fleet=sensor_fleet_with_write, status=SensorStatus.BROKEN
+            fleet=sensor_fleet_with_write, status=OperationalStatus.BROKEN
         )
 
         response = api_client.patch(
@@ -734,7 +734,7 @@ class TestSensorToggleFunctional:
 
         assert response.status_code == status.HTTP_200_OK
         sensor.refresh_from_db()
-        assert sensor.status == SensorStatus.FUNCTIONAL
+        assert sensor.status == OperationalStatus.FUNCTIONAL
 
     def test_toggle_without_write_permission(
         self,

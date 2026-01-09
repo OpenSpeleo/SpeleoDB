@@ -12,6 +12,7 @@ from typing import Any
 import xlsxwriter
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
+from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -36,7 +37,7 @@ from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import ErrorResponse
-from speleodb.utils.response import GISResponse
+from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
@@ -239,8 +240,8 @@ class ExperimentSpecificApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
             if isinstance(error, ValidationError) and hasattr(error, "detail"):
                 if isinstance(error.detail, dict) and "__all__" in error.detail:
                     constraint_error_dict = error.detail
-            elif hasattr(error, "error_dict") and "__all__" in error.error_dict:
-                constraint_error_dict = error.error_dict
+            elif hasattr(error, "error_dict") and "__all__" in error.error_dict:  # pyright: ignore[reportAttributeAccessIssue]
+                constraint_error_dict = error.error_dict  # pyright: ignore[reportAttributeAccessIssue]
 
             if constraint_error_dict and "__all__" in constraint_error_dict:
                 all_errors = constraint_error_dict["__all__"]
@@ -486,7 +487,7 @@ class ExperimentGISApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
             many=True,
         )
 
-        return GISResponse({"type": "FeatureCollection", "features": serializer.data})
+        return NoWrapResponse(FeatureCollection(serializer.data))  # type: ignore[no-untyped-call]
 
 
 class ExperimentExportExcelApiView(GenericAPIView[Experiment], SDBAPIViewMixin):

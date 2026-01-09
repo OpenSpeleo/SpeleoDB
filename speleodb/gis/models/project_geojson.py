@@ -79,6 +79,10 @@ class ProjectGeoJSON(models.Model):
             raise ValidationError("ProjectGeoJSON objects are immutable once created.")
         return super().save(*args, **kwargs)
 
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        self.file.delete(save=False)
+        return super().delete(*args, **kwargs)
+
     # Backward-compatible properties for legacy code
     @property
     def commit_sha(self) -> str:

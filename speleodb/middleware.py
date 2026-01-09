@@ -20,7 +20,6 @@ from rest_framework.settings import api_settings
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.helpers import get_timestamp
 from speleodb.utils.response import ErrorResponse
-from speleodb.utils.response import GISResponse
 from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SortedResponse
 from speleodb.utils.response import SuccessResponse
@@ -100,15 +99,12 @@ class DRFWrapResponseMiddleware:
                 return wrapped_response
 
             match wrapped_response:
-                case FileResponse() | GISResponse() | StreamingHttpResponse():
+                case NoWrapResponse() | FileResponse() | StreamingHttpResponse():
                     return wrapped_response
 
                 case ErrorResponse():
                     payload.update(wrapped_response.data)
                     exception = True
-
-                case NoWrapResponse():
-                    payload.update(wrapped_response.data)
 
                 case SuccessResponse():
                     payload.update({"data": wrapped_response.data})

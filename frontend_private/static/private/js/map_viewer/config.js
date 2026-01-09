@@ -106,6 +106,20 @@ export const Config = {
         return this._networks;
     },
 
+    // Helper: does the user have read access on a specific project? (excludes WEB_VIEWER)
+    hasProjectReadAccess: function (projectId) {
+        try {
+            const proj = this.projects.find(p => p.id === String(projectId));
+            if (!proj) return false;
+            // READ_ONLY, READ_AND_WRITE, and ADMIN have read access (not WEB_VIEWER)
+            return proj.permissions === 'READ_ONLY' || 
+                   proj.permissions === 'READ_AND_WRITE' || 
+                   proj.permissions === 'ADMIN';
+        } catch (e) {
+            return false;
+        }
+    },
+
     // Helper: does the user have write access on a specific project?
     hasProjectWriteAccess: function (projectId) {
         try {

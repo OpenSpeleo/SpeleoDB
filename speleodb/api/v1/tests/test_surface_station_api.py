@@ -725,7 +725,8 @@ class TestSurfaceStationGeoJSONEndpoint:
             headers={"authorization": setup_with_read["auth"]},
         )
         assert response.status_code == status.HTTP_200_OK
-        data = response.json()["data"]
+
+        data = response.json()
         assert data["type"] == "FeatureCollection"
         assert len(data["features"]) == 1
 
@@ -736,7 +737,7 @@ class TestSurfaceStationGeoJSONEndpoint:
             float(station.longitude),
             float(station.latitude),
         ]
-        assert feature["properties"]["id"] == str(station.id)
+        assert feature["id"] == str(station.id)
         assert feature["properties"]["station_type"] == "surface"
         assert feature["properties"]["network"] == str(setup_with_read["network"].id)
         assert feature["properties"]["project"] is None
@@ -760,7 +761,7 @@ class TestSurfaceStationGeoJSONEndpoint:
             headers={"authorization": setup_with_read["auth"]},
         )
         assert response.status_code == status.HTTP_200_OK
-        data = response.json()["data"]
+        data = response.json()
         assert data["type"] == "FeatureCollection"
         # User should only see their 2 stations
         assert len(data["features"]) == 2  # noqa: PLR2004

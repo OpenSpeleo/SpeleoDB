@@ -12,7 +12,7 @@ from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v1.permissions import SDB_ReadAccess
 from speleodb.api.v1.serializers import GitCommitSerializer
-from speleodb.api.v1.serializers import GitFileListSerializer
+from speleodb.api.v1.serializers import GitFileSerializer
 from speleodb.api.v1.serializers import ProjectCommitSerializer
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.git_engine.core import GitFile
@@ -81,9 +81,10 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
                 commit, context={"project": project}
             )
 
-            file_serializer = GitFileListSerializer(
+            file_serializer = GitFileSerializer(
                 [item for item in commit.tree.traverse() if isinstance(item, GitFile)],  # type: ignore[arg-type]
                 context={"project": project},
+                many=True,
             )
 
             # Important to be done last so that the repo is actualized
@@ -95,7 +96,7 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
                 {
                     "project": project_serializer.data,
                     "commit": commit_serializer.data,
-                    "files": file_serializer.data,
+                    "files": sorted(file_serializer.data, key=lambda file: file.path),
                 }
             )
 

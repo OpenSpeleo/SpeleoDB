@@ -127,23 +127,6 @@ class GitCommitSerializer(serializers.Serializer[GitCommit]):
         return representation
 
 
-class GitCommitListSerializer(serializers.ListSerializer[GitCommit]):
-    """
-    Serializer for a list of Git Commit objects.
-    """
-
-    child = GitCommitSerializer()
-
-    def to_representation(self, data: list[GitCommit]) -> list[Any]:  # type: ignore[override]
-        """
-        Customize the list serialization.
-        """
-        # Sort commits by date (descending) if needed
-        return super().to_representation(
-            sorted(data, key=lambda commit: commit.authored_datetime, reverse=True)
-        )
-
-
 class GitFileSerializer(serializers.Serializer[GitCommit]):
     """
     Serializer for GitFile objects.
@@ -183,18 +166,3 @@ class GitFileSerializer(serializers.Serializer[GitCommit]):
                 kwargs={"id": project.id, "hexsha": obj.hexsha},
             )
         return None
-
-
-class GitFileListSerializer(serializers.ListSerializer[GitFile]):
-    """
-    Serializer for a list of Git Commit objects.
-    """
-
-    child = GitFileSerializer()
-
-    def to_representation(self, data: list[GitFile]) -> list[Any]:  # type: ignore[override]
-        """
-        Customize the list serialization.
-        """
-        # Sort commits by date (descending) if needed
-        return super().to_representation(sorted(data, key=lambda file: file.path))

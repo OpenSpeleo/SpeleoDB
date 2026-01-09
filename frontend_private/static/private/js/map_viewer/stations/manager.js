@@ -29,10 +29,14 @@ export const StationManager = {
         console.log('🔄 Fetching all stations (GeoJSON) via single API call...');
         allStationsFetchPromise = API.getAllStationsGeoJSON()
             .then(response => {
-                if (!response || response.success !== true || !response.data || response.data.type !== 'FeatureCollection' || !Array.isArray(response.data.features)) {
+                if (
+                    !response ||
+                    response.type !== 'FeatureCollection' ||
+                    !Array.isArray(response.features)
+                ) {
                     throw new Error('Invalid all-stations GeoJSON payload');
                 }
-                allStationsGeoJson = response.data;
+                allStationsGeoJson = response;
                 console.log(`✅ Cached ${allStationsGeoJson.features.length} stations from all-stations GeoJSON`);
             })
             .catch(err => {
@@ -67,9 +71,11 @@ export const StationManager = {
 
             // Update State
             features.forEach(feature => {
-                if (feature.properties && feature.properties.id && feature.geometry) {
-                    State.allStations.set(feature.properties.id, {
+                const featureId = feature.id;
+                if (feature.properties && featureId && feature.geometry) {
+                    State.allStations.set(featureId, {
                         ...feature.properties,
+                        id: featureId,
                         latitude: Number(feature.geometry.coordinates[1]),
                         longitude: Number(feature.geometry.coordinates[0]),
                         project: projectId

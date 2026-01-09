@@ -1537,12 +1537,13 @@ wheels = [
 
 [[package]]
 name = "openspeleo-lib"
-version = "0.0.12"
+version = "0.0.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "argparse" },
     { name = "dicttoxml2" },
     { name = "frozendict" },
+    { name = "geojson" },
     { name = "openspeleo-core" },
     { name = "orjson" },
     { name = "pydantic" },
@@ -1551,9 +1552,9 @@ dependencies = [
     { name = "pyproj" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dd/ae/24d82e4f30360d6d10087d3e6de606c9c5a7b4d720dfafda340bbbe3b81e/openspeleo_lib-0.0.12.tar.gz", hash = "sha256:c0728fc249a47ace5b136262a2cb472bbd68a557a1f10a9c3a839e34a56f45bc", size = 23009, upload-time = "2025-12-31T04:52:28.754Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/14/43aa063f744cf78d37379f4508ef22c12cbcd4a51e3ad77b25c9f82a161e/openspeleo_lib-0.0.13.tar.gz", hash = "sha256:8367b3df3bdd6f95463b11dfa20ab51dd4db03bb98cc038c1b671cb707d3052d", size = 23069, upload-time = "2026-01-05T00:08:35.056Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/c2/990b5c29d32470bc04625ea209593ed548bfda8bed87ddc6e00f361a36dd/openspeleo_lib-0.0.12-py3-none-any.whl", hash = "sha256:8ebcb8ff40e52bdb4d5eb6d7c75bef0f51b7bd645e7246b34f769875d24a76a9", size = 29525, upload-time = "2025-12-31T04:52:27.25Z" },
+    { url = "https://files.pythonhosted.org/packages/30/7d/c424b82e8c7b7544a232d240e318d158f30b4ece1ebe5b3b582efbcae1e7/openspeleo_lib-0.0.13-py3-none-any.whl", hash = "sha256:a22f83f7b9c4b6e5437ef70b6bb86b6a2e2206ba021f2d045eed5d1ab5e9cdeb", size = 29647, upload-time = "2026-01-05T00:08:33.73Z" },
 ]
 
 [[package]]
@@ -2423,7 +2424,7 @@ requires-dist = [
     { name = "jsonschema-rs", specifier = "==0.38.1" },
     { name = "mnemo-lib", specifier = "==0.0.7" },
     { name = "mypy", marker = "extra == 'local'", specifier = "==1.19.1" },
-    { name = "openspeleo-lib", specifier = "==0.0.12" },
+    { name = "openspeleo-lib", specifier = "==0.0.13" },
     { name = "orjson", specifier = "==3.11.5" },
     { name = "parameterized", marker = "extra == 'local'", specifier = "==0.9.0" },
     { name = "pillow", specifier = "==12.1.0" },

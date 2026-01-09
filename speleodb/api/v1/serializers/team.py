@@ -53,10 +53,6 @@ class SurveyTeamSerializer(serializers.ModelSerializer[SurveyTeam]):
             return None
 
 
-class SurveyTeamListSerializer(serializers.ListSerializer[SurveyTeamSerializer]):
-    child = SurveyTeamSerializer()
-
-
 class SurveyTeamMembershipSerializer(serializers.ModelSerializer[SurveyTeamMembership]):
     user = serializers.StringRelatedField()  # type: ignore[var-annotated]
     role = CustomChoiceField(choices=SurveyTeamMembershipRole)  # type: ignore[arg-type]
@@ -64,9 +60,3 @@ class SurveyTeamMembershipSerializer(serializers.ModelSerializer[SurveyTeamMembe
     class Meta:
         fields = ("user", "team", "role", "creation_date", "modified_date")
         model = SurveyTeamMembership
-
-
-class SurveyTeamMembershipListSerializer(
-    serializers.ListSerializer[SurveyTeamMembershipSerializer]
-):
-    child = SurveyTeamMembershipSerializer()

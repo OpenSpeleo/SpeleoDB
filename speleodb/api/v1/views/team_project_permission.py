@@ -13,7 +13,6 @@ from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import SDB_AdminAccess
 from speleodb.api.v1.permissions import SDB_ReadAccess
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.api.v1.serializers import ProjectTeamPermissionListSerializer
 from speleodb.api.v1.serializers import ProjectTeamPermissionSerializer
 from speleodb.api.v1.serializers import SurveyTeamSerializer
 from speleodb.api.v1.serializers import TeamRequestSerializer
@@ -43,7 +42,9 @@ class ProjectTeamPermissionListApiView(GenericAPIView[Project], SDBAPIViewMixin)
         team_permissions = project.team_permissions
 
         project_serializer = ProjectSerializer(project, context={"user": user})
-        permission_serializer = ProjectTeamPermissionListSerializer(team_permissions)  # type: ignore[arg-type]
+        permission_serializer = ProjectTeamPermissionSerializer(
+            team_permissions, many=True
+        )
 
         return SuccessResponse(
             {

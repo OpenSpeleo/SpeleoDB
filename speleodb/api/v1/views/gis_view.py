@@ -12,6 +12,7 @@ from django.core.cache import cache
 from django.db.models import Q
 from django.http import Http404
 from django.http import StreamingHttpResponse
+from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -25,7 +26,7 @@ from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.ogc_models import OGCLayerList
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
-from speleodb.utils.response import GISResponse
+from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
@@ -98,7 +99,7 @@ class OGCGISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
         request: Request,
         *args: Any,
         **kwargs: Any,
-    ) -> GISResponse:
+    ) -> NoWrapResponse:
         """Return GeoJSON signed URLs for the view."""
 
         gis_view = self.get_object()
@@ -117,7 +118,7 @@ class OGCGISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
 
         ogc_layers: OGCLayerList = OGCLayerList.model_validate({"layers": data})
 
-        return GISResponse(ogc_layers.to_ogc_collections(request=request))
+        return NoWrapResponse(ogc_layers.to_ogc_collections(request=request))
 
 
 class BaseOGCGISViewCollectionApiView(GenericAPIView[GISView], SDBAPIViewMixin):
@@ -157,11 +158,11 @@ class OGCGISViewCollectionApiView(BaseOGCGISViewCollectionApiView):
         commit_sha: str,
         *args: Any,
         **kwargs: Any,
-    ) -> GISResponse:
+    ) -> NoWrapResponse:
         """Return GeoJSON signed URLs for the view."""
         project_geojson = self.get_geojson_object(commit_sha=commit_sha)
 
-        return GISResponse(
+        return NoWrapResponse(
             {
                 "id": project_geojson.commit.id,
                 "title": project_geojson.project.name,
@@ -207,14 +208,13 @@ class OGCGISViewCollectionItemApiView(BaseOGCGISViewCollectionApiView):
                 with project_geojson.file.open("rb") as f:
                     features = orjson.loads(f.read()).get("features", [])
 
-                    data = {
-                        "type": "FeatureCollection",
-                        "features": [
+                    data = FeatureCollection(  # type: ignore[no-untyped-call]
+                        [
                             feature
                             for feature in features
                             if feature.get("geometry", {}).get("type") == "LineString"
-                        ],
-                    }
+                        ]
+                    )
 
                 return orjson.dumps(data)
 

@@ -32,8 +32,7 @@ class TestTokenAuth(BaseAPITestCase):
             "user": self.user.email,
         }
 
-        for key, val in target.items():
-            assert val == response.data[key], response.data
+        assert response.data == target
 
     @parameterized.expand(["Token", "Bearer"])
     def test_token_auth_works(self, token_header: str) -> None:

@@ -12,7 +12,6 @@ from rest_framework.generics import GenericAPIView
 from speleodb.api.v1.permissions import SDB_AdminAccess
 from speleodb.api.v1.permissions import SDB_ReadAccess
 from speleodb.api.v1.serializers import ExperimentSerializer
-from speleodb.api.v1.serializers import ExperimentUserPermissionListSerializer
 from speleodb.api.v1.serializers import ExperimentUserPermissionSerializer
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
@@ -44,7 +43,9 @@ class ExperimentUserPermissionListApiView(GenericAPIView[Experiment], SDBAPIView
         permissions = experiment.user_permissions.prefetch_related("user")
 
         experiment_serializer = self.get_serializer(experiment)
-        permission_serializer = ExperimentUserPermissionListSerializer(permissions)
+        permission_serializer = ExperimentUserPermissionSerializer(
+            permissions, many=True
+        )
 
         return SuccessResponse(
             {

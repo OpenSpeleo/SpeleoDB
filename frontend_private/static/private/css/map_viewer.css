@@ -1175,6 +1175,23 @@ select.form-input:focus {
     margin: 8px 0;
 }
 
+/* Safety Cylinder and Exploration Lead marker icons in context menu */
+.context-menu-item .context-menu-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* High-viz orange for safety cylinder icon in menu */
+.context-menu-item[data-action="safety-cylinder"] .context-menu-icon {
+    color: #FF6B00;
+}
+
+/* Red for exploration lead icon in menu */
+.context-menu-item[data-action="exploration-lead"] .context-menu-icon {
+    color: #EF4444;
+}
+
 /* Drag Confirmation Modal */
 .drag-confirm-modal {
     position: fixed;

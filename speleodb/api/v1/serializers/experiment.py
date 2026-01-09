@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from geojson import Feature  # type: ignore[attr-defined]
+from geojson import Point  # type: ignore[attr-defined]
 from pydantic import ValidationError as PydanticValidationError
 from rest_framework import serializers
 from rest_framework.fields import Field as DRFField
@@ -547,18 +549,14 @@ class ExperimentRecordGISSerializer(serializers.Serializer[ExperimentRecord]):
 
     def to_representation(self, instance: ExperimentRecord) -> dict[str, Any]:
         """Convert to GeoJSON Feature format."""
-        return {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    float(instance.station.longitude),
-                    float(instance.station.latitude),
-                ],
-            },
-            "properties": {
+        return Feature(  # type: ignore[no-untyped-call]
+            id=str(instance.id),
+            geometry=Point(
+                (float(instance.station.longitude), float(instance.station.latitude))
+            ),  # type: ignore[no-untyped-call]
+            properties={
                 "station_id": str(instance.station.id),
                 "station_name": instance.station.name,
                 **instance.data,
             },
-        }
+        )

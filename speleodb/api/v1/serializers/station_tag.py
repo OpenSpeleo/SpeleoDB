@@ -58,16 +58,6 @@ class StationTagSerializer(serializers.ModelSerializer[StationTag]):
         return super().create(validated_data)
 
 
-class StationTagListSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Serializer to return list of predefined colors."""
-
-    colors = serializers.ListField(child=serializers.CharField())
-
-    def to_representation(self, instance: Any) -> dict[str, list[str]]:
-        """Return predefined colors."""
-        return {"colors": StationTag.get_predefined_colors()}
-
-
 class StationTagBulkSerializer(serializers.Serializer):  # type: ignore[type-arg]
     """Serializer for bulk tag operations."""
 

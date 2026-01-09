@@ -12,11 +12,48 @@ import { SurfaceStationManager } from './surface_stations/manager.js';
 import { SurfaceStationUI } from './surface_stations/ui.js';
 import { LandmarkManager } from './landmarks/manager.js';
 import { LandmarkUI } from './landmarks/ui.js';
+import { ExplorationLeadManager } from './exploration_leads/manager.js';
+import { ExplorationLeadUI } from './exploration_leads/ui.js';
 import { Utils } from './utils.js';
 import { ContextMenu } from './components/context_menu.js';
 import { ProjectPanel } from './components/project_panel.js';
 import { GPSTracksPanel } from './components/gps_tracks_panel.js';
 import { API } from './api.js';
+
+// Parse URL parameters for initial map position
+// Usage: ?goto=LAT,LONG (e.g., ?goto=38.1234,-85.5678)
+// Silently returns null values if format is invalid
+function getUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const gotoParam = params.get('goto');
+    
+    // No goto param specified
+    if (!gotoParam) {
+        return { lat: null, long: null };
+    }
+    
+    const parts = gotoParam.split(',');
+    
+    // Must have exactly 2 parts (LAT,LONG)
+    if (parts.length !== 2) {
+        return { lat: null, long: null };
+    }
+    
+    const lat = parseFloat(parts[0].trim());
+    const long = parseFloat(parts[1].trim());
+    
+    // Both must be valid floats
+    if (isNaN(lat) || isNaN(long)) {
+        return { lat: null, long: null };
+    }
+    
+    // Validate lat/long ranges
+    if (lat < -90 || lat > 90 || long < -180 || long > 180) {
+        return { lat: null, long: null };
+    }
+
+    return { lat, long };
+}
 
 // Global entry point
 document.addEventListener('DOMContentLoaded', async () => {
@@ -69,6 +106,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         },
         onLandmarkClick: (landmarkId) => LandmarkUI.openDetailsModal(landmarkId),
+        onExplorationLeadClick: (leadId) => ExplorationLeadUI.showDetailsModal(leadId),
+        onSafetyCylinderClick: (cylinderId) => {
+            // TODO: Implement safety cylinder details modal if needed
+            console.log('Safety cylinder clicked:', cylinderId);
+        },
         onStationDrag: (stationId, projectId, newCoords) => {
             Layers.updateStationPosition(projectId, stationId, newCoords);
         },
@@ -82,6 +124,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         onLandmarkDragEnd: (landmarkId, newCoords, originalCoords) => {
             // Show Landmark drag confirm modal
             showLandmarkDragConfirmModal(landmarkId, newCoords, originalCoords);
+        },
+        onMarkerDragEnd: (markerType, markerId, snapResult, originalCoords) => {
+            // Show marker drag confirm modal (same pattern as stations)
+            showMarkerDragConfirmModal(markerType, markerId, snapResult, originalCoords);
         },
         onContextMenu: (event, type, data) => {
             const items = [];
@@ -156,6 +202,62 @@ document.addEventListener('DOMContentLoaded', async () => {
                     onClick: () => LandmarkUI.showDeleteConfirmModal(landmark || data.feature.properties)
                 });
 
+            } else if (type === 'safety-cylinder') {
+                // Get Safety Cylinder data
+                const marker = State.safetyCylinders.get(data.id);
+                const coords = marker?.coordinates || data.feature?.geometry?.coordinates;
+                const markerLat = coords?.[1]?.toFixed(7) || 'N/A';
+                const markerLng = coords?.[0]?.toFixed(7) || 'N/A';
+                const lineName = marker?.lineName || 'Survey Line';
+
+                // Copy GPS Coordinates
+                items.push({
+                    label: 'Copy GPS Coordinates',
+                    subtitle: `${markerLat}, ${markerLng}`,
+                    icon: '📋',
+                    onClick: () => Utils.copyToClipboard(`${markerLat}, ${markerLng}`)
+                });
+
+                // Delete Safety Cylinder
+                items.push({
+                    label: 'Delete Safety Cylinder',
+                    subtitle: `On ${lineName}`,
+                    icon: '🗑️',
+                    onClick: () => showDeleteMarkerModal('safety-cylinder', data.id, lineName)
+                });
+
+            } else if (type === 'exploration-lead') {
+                // Get Exploration Lead data
+                const marker = State.explorationLeads.get(data.id);
+                const coords = marker?.coordinates || data.feature?.geometry?.coordinates;
+                const markerLat = coords?.[1]?.toFixed(7) || 'N/A';
+                const markerLng = coords?.[0]?.toFixed(7) || 'N/A';
+                const lineName = marker?.lineName || 'Survey Line';
+
+                // Open Details
+                items.push({
+                    label: 'Open Details',
+                    subtitle: marker?.description ? marker.description.substring(0, 30) + '...' : 'View/Edit lead',
+                    icon: '<img src="/static/private/media/exploration_lead.svg" style="width:20px;height:20px;">',
+                    onClick: () => ExplorationLeadUI.showDetailsModal(data.id)
+                });
+
+                // Copy GPS Coordinates
+                items.push({
+                    label: 'Copy GPS Coordinates',
+                    subtitle: `${markerLat}, ${markerLng}`,
+                    icon: '📋',
+                    onClick: () => Utils.copyToClipboard(`${markerLat}, ${markerLng}`)
+                });
+
+                // Delete Exploration Lead
+                items.push({
+                    label: 'Delete Exploration Lead',
+                    subtitle: `On ${lineName}`,
+                    icon: '🗑️',
+                    onClick: () => ExplorationLeadUI.showDeleteConfirmModal(data.id, lineName)
+                });
+
             } else {
                 // Right-click on empty map area
                 const coords = data.coordinates;
@@ -173,8 +275,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         disabled: true
                     });
                 } else {
-                    // Check write access for the detected project
+                    // Near a survey line - show all line-related options
                     const nearestProjectId = snapCheck.projectId;
+                    const lineName = snapCheck.lineName || 'Survey Line';
                     const canCreate = nearestProjectId && Config.hasProjectWriteAccess(nearestProjectId);
 
                     if (canCreate) {
@@ -186,8 +289,46 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                     } else {
                         items.push({
-                            label: 'No write access',
-                            subtitle: "Can't create a station for this project",
+                            label: 'Create Station',
+                            subtitle: "No write access for this project",
+                            icon: '🔒',
+                            disabled: true
+                        });
+                    }
+
+                    if (canCreate) {
+                        items.push({
+                            label: 'Install Safety Cylinder',
+                            subtitle: `On ${lineName} (${snapCheck.pointType} point)`,
+                            icon: '<img src="/static/private/media/cylinder_orange.svg" style="width:20px;height:20px;">',
+                            onClick: () => {
+                                const markerId = crypto.randomUUID();
+                                Layers.addSafetyCylinderMarker(markerId, snapCheck.coordinates, lineName);
+                                Utils.showNotification('success', `Safety cylinder installed on ${lineName}`);
+                            }
+                        });
+                    } else {
+                        items.push({
+                            label: 'Install Safety Cylinder',
+                            subtitle: "No write access for this project",
+                            icon: '🔒',
+                            disabled: true
+                        });
+                    }
+
+                    if (canCreate) {
+                        items.push({
+                            label: 'Mark Exploration Lead',
+                            subtitle: `On ${lineName} (${snapCheck.pointType} point)`,
+                            icon: '<img src="/static/private/media/exploration_lead.svg" style="width:20px;height:20px;">',
+                            onClick: () => {
+                                ExplorationLeadUI.showCreateModal(snapCheck.coordinates, lineName, nearestProjectId);
+                            }
+                        });
+                    } else {
+                        items.push({
+                            label: 'Mark Exploration Lead',
+                            subtitle: "No write access for this project",
                             icon: '🔒',
                             disabled: true
                         });
@@ -286,6 +427,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. Load Data
     map.on('load', async () => {
+        // Load custom marker images (cylinder icon for safety cylinders)
+        await Layers.loadMarkerImages();
+
         // Initialize Projects Layers visibility
         Layers.loadProjectVisibilityPrefs();
 
@@ -399,11 +543,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Error loading Landmarks', e);
         }
 
+        // Load Exploration Leads for all projects
+        try {
+            await ExplorationLeadManager.loadAllLeads();
+            Layers.refreshExplorationLeadsLayer();
+            Layers.reorderLayers();
+            console.log('✅ Exploration leads loaded');
+        } catch (e) {
+            console.error('Error loading Exploration Leads', e);
+        }
+
         // Create depth scale dynamically
         createDepthScale();
 
-        // Auto-zoom to fit all project bounds
-        if (State.projectBounds.size > 0) {
+        // Check for URL parameters to fly to a specific location
+        const urlParams = getUrlParams();
+
+        if (urlParams.lat !== null && urlParams.long !== null) {
+            // Fly to the specified coordinates from URL
+            console.log(`🎯 Flying to URL coordinates: ${urlParams.lat}, ${urlParams.long}`);
+            map.flyTo({
+                center: [urlParams.long, urlParams.lat],
+                zoom: 18,
+                essential: true
+            });
+        } else if (State.projectBounds.size > 0) {
+            // Auto-zoom to fit all project bounds
             const allBounds = new mapboxgl.LngLatBounds();
             State.projectBounds.forEach(bounds => {
                 allBounds.extend(bounds);
@@ -839,6 +1004,183 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('drag-confirm-modal').onclick = (e) => {
             if (e.target.id === 'drag-confirm-modal') {
                 Layers.updateStationPosition(projectId, stationId, originalCoords);
+                e.target.remove();
+            }
+        };
+    }
+
+    // Delete marker confirmation modal
+    function showDeleteMarkerModal(markerType, markerId, lineName) {
+        const typeLabel = markerType === 'safety-cylinder' ? 'Safety Cylinder' : 'Exploration Lead';
+        const typeIcon = markerType === 'safety-cylinder' ? '🛢️' : '❗';
+
+        const modalHtml = `
+            <div id="delete-marker-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
+                    <div class="p-6">
+                        <div class="flex items-center justify-center mb-4">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl" 
+                                 style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                                🗑️
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white text-center mb-2">Delete ${typeLabel}</h3>
+                        <p class="text-slate-300 text-center mb-6">
+                            Are you sure you want to delete this ${typeLabel.toLowerCase()} on "${lineName}"?
+                        </p>
+                        
+                        <div class="flex gap-3">
+                            <button id="delete-marker-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
+                                Cancel
+                            </button>
+                            <button id="delete-marker-confirm-btn" class="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg transition-colors">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove any existing modal
+        const existingModal = document.getElementById('delete-marker-modal');
+        if (existingModal) existingModal.remove();
+
+        // Add modal to DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Setup handlers
+        document.getElementById('delete-marker-cancel-btn').onclick = () => {
+            document.getElementById('delete-marker-modal').remove();
+        };
+
+        document.getElementById('delete-marker-confirm-btn').onclick = () => {
+            if (markerType === 'safety-cylinder') {
+                Layers.removeSafetyCylinderMarker(markerId);
+            } else {
+                Layers.removeExplorationLeadMarker(markerId);
+            }
+            Utils.showNotification('success', `${typeLabel} deleted`);
+            document.getElementById('delete-marker-modal').remove();
+        };
+
+        // Close on backdrop click
+        document.getElementById('delete-marker-modal').onclick = (e) => {
+            if (e.target.id === 'delete-marker-modal') {
+                e.target.remove();
+            }
+        };
+    }
+
+    // Marker drag confirmation modal (shared for safety-cylinder and exploration-lead)
+    function showMarkerDragConfirmModal(markerType, markerId, snapResult, originalCoords) {
+        const marker = markerType === 'safety-cylinder'
+            ? State.safetyCylinders.get(markerId)
+            : State.explorationLeads.get(markerId);
+        const typeLabel = markerType === 'safety-cylinder' ? 'Safety Cylinder' : 'Exploration Lead';
+        const typeIcon = markerType === 'safety-cylinder' ? '🛢️' : '❗';
+        const lineName = marker?.lineName || snapResult.lineName || 'Survey Line';
+        const finalCoords = snapResult.coordinates;
+
+        const modalHtml = `
+            <div id="marker-drag-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
+                    <div class="p-6">
+                        <div class="flex items-center justify-center mb-4">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl" 
+                                 style="background: linear-gradient(135deg, ${snapResult.snapped ? '#10b981, #059669' : '#f59e0b, #d97706'});">
+                                ${snapResult.snapped ? '🧲' : '📍'}
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white text-center mb-2">Move ${typeLabel}</h3>
+                        <p class="text-slate-300 text-center mb-6">
+                            Move this ${typeLabel.toLowerCase()} to the new location?
+                        </p>
+                        
+                        <div class="bg-slate-700/50 rounded-lg p-4 space-y-2 mb-6">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Type:</span>
+                                <span class="text-white">${typeIcon} ${typeLabel}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">New Location:</span>
+                                <span class="text-white font-mono">${finalCoords[1].toFixed(7)}, ${finalCoords[0].toFixed(7)}</span>
+                            </div>
+                            ${snapResult.snapped ? `
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-400">Snapped to:</span>
+                                    <span class="text-emerald-400">🧲 ${snapResult.lineName} (${snapResult.pointType})</span>
+                                </div>
+                            ` : `
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-400">Warning:</span>
+                                    <span class="text-amber-400">⚠️ Not snapped - will revert</span>
+                                </div>
+                            `}
+                        </div>
+                        
+                        <div class="flex gap-3">
+                            <button id="marker-drag-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
+                                Cancel
+                            </button>
+                            <button id="marker-drag-confirm-btn" class="flex-1 px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white rounded-lg transition-colors" ${!snapResult.snapped ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                                Move ${typeLabel}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove any existing modal
+        const existingModal = document.getElementById('marker-drag-confirm-modal');
+        if (existingModal) existingModal.remove();
+
+        // Add modal to DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Setup handlers
+        const revertPosition = () => {
+            if (markerType === 'safety-cylinder') {
+                Layers.updateSafetyCylinderPosition(markerId, originalCoords);
+            } else {
+                Layers.updateExplorationLeadPosition(markerId, originalCoords);
+            }
+        };
+
+        document.getElementById('marker-drag-cancel-btn').onclick = () => {
+            revertPosition();
+            document.getElementById('marker-drag-confirm-modal').remove();
+        };
+
+        document.getElementById('marker-drag-confirm-btn').onclick = async () => {
+            if (snapResult.snapped) {
+                try {
+                    // Update to final snapped position
+                    if (markerType === 'safety-cylinder') {
+                        Layers.updateSafetyCylinderPosition(markerId, finalCoords);
+                        Utils.showNotification('success', `${typeLabel} moved to ${snapResult.lineName}`);
+                    } else {
+                        // Update exploration lead via API
+                        await ExplorationLeadManager.moveLead(markerId, finalCoords);
+                        Layers.updateExplorationLeadPosition(markerId, finalCoords);
+                        Utils.showNotification('success', `${typeLabel} moved to ${snapResult.lineName}`);
+                    }
+                } catch (error) {
+                    console.error(`Error moving ${typeLabel}:`, error);
+                    Utils.showNotification('error', `Failed to move ${typeLabel}`);
+                    revertPosition();
+                }
+            } else {
+                revertPosition();
+            }
+            document.getElementById('marker-drag-confirm-modal').remove();
+        };
+
+        // Close on backdrop click (revert)
+        document.getElementById('marker-drag-confirm-modal').onclick = (e) => {
+            if (e.target.id === 'marker-drag-confirm-modal') {
+                revertPosition();
                 e.target.remove();
             }
         };

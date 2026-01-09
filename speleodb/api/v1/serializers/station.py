@@ -8,6 +8,8 @@ from typing import Any
 from typing import TypeVar
 
 from django.core.exceptions import ValidationError
+from geojson import Feature  # type: ignore[attr-defined]
+from geojson import Point  # type: ignore[attr-defined]
 from rest_framework import serializers
 
 from speleodb.gis.models import Station
@@ -282,14 +284,10 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
         elif isinstance(instance, SurfaceStation):
             station_type = "surface"
 
-        return {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [float(instance.longitude), float(instance.latitude)],
-            },
-            "properties": {
-                "id": str(instance.id),
+        return Feature(  # type: ignore[no-untyped-call]
+            id=str(instance.id),
+            geometry=Point((float(instance.longitude), float(instance.latitude))),  # type: ignore[no-untyped-call]
+            properties={
                 "name": instance.name,
                 "description": instance.description,
                 "created_by": instance.created_by,
@@ -308,4 +306,4 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
                 ),
                 "tag": tag,
             },
-        }
+        )

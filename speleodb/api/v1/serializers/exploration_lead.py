@@ -10,84 +10,88 @@ from geojson import Feature  # type: ignore[attr-defined]
 from geojson import Point  # type: ignore[attr-defined]
 from rest_framework import serializers
 
-from speleodb.gis.models import Landmark
+from speleodb.gis.models import ExplorationLead
 from speleodb.utils.gps_utils import format_coordinate
 
 
-class LandmarkSerializer(serializers.ModelSerializer[Landmark]):
-    """Serializer for Landmark with all details."""
-
-    user = serializers.EmailField(source="user.email", read_only=True)
+class ExplorationLeadSerializer(serializers.ModelSerializer[ExplorationLead]):
+    """Serializer for ExplorationLead model."""
 
     class Meta:
-        model = Landmark
-        fields = "__all__"
-        read_only_fields = [
+        model = ExplorationLead
+        fields = [
             "id",
+            "description",
+            "latitude",
+            "longitude",
+            "project",
+            "created_by",
             "creation_date",
             "modified_date",
-            "user",
         ]
 
-    def create(self, validated_data: Any) -> Landmark:
-        """Create a new Landmark and set user from request user."""
-        request = self.context.get("request")
-        if request and hasattr(request, "user") and request.user.is_authenticated:
-            validated_data["user"] = request.user
-
-        return super().create(validated_data)
+        read_only_fields = [
+            "id",
+            "created_by",
+            "creation_date",
+            "modified_date",
+            "project",
+        ]
 
     def to_internal_value(self, data: dict[str, Any]) -> Any:
         """Override to round coordinates before validation."""
-
         # Data is immutable - need to copy
         data = data.copy()
 
         # Round coordinates if they exist in the data
         if "latitude" in data and data["latitude"] is not None:
             with contextlib.suppress(ValueError, TypeError, InvalidOperation):
-                # Let the field validation handle the error
                 data["latitude"] = format_coordinate(data["latitude"])
 
         if "longitude" in data and data["longitude"] is not None:
             with contextlib.suppress(ValueError, TypeError, InvalidOperation):
-                # Let the field validation handle the error
                 data["longitude"] = format_coordinate(data["longitude"])
 
         return super().to_internal_value(data)
 
-    def to_representation(self, instance: Landmark) -> dict[str, Any]:
-        """Ensure coordinates are rounded to 7 decimal places."""
+    def to_representation(self, instance: ExplorationLead) -> dict[str, Any]:
+        """Ensure coordinates are formatted without trailing zeros."""
         data = super().to_representation(instance)
+
         if data.get("latitude") is not None:
             data["latitude"] = format_coordinate(data["latitude"])
+
         if data.get("longitude") is not None:
             data["longitude"] = format_coordinate(data["longitude"])
+
         return data
 
 
-class LandmarkGeoJSONSerializer(serializers.ModelSerializer[Landmark]):
-    """Map serializer for Landmarks - returns GeoJSON-like format."""
+class ExplorationLeadGeoJSONSerializer(serializers.ModelSerializer[ExplorationLead]):
+    """GeoJSON serializer for ExplorationLead - returns GeoJSON-like format for maps."""
 
     class Meta:
-        model = Landmark
+        model = ExplorationLead
         fields = [
             "id",
-            "name",
             "description",
             "latitude",
             "longitude",
-            "user",
+            "created_by",
             "creation_date",
+            "modified_date",
         ]
 
-    def to_representation(self, instance: Landmark) -> dict[str, Any]:
-        """Convert to GeoJSON Feature format."""
+    def to_representation(self, instance: ExplorationLead) -> dict[str, Any]:
+        """Convert to GeoJSON Feature"""
         return Feature(  # type: ignore[no-untyped-call]
             id=str(instance.id),
             geometry=Point((float(instance.longitude), float(instance.latitude))),  # type: ignore[no-untyped-call]
             properties={
-                "name": instance.name,
                 "description": instance.description,
+                "created_by": instance.created_by,
+                "creation_date": instance.creation_date.isoformat(),
+                "modified_date": instance.modified_date.isoformat(),
+                "project": str(instance.project.id),
             },
         )

@@ -7,6 +7,7 @@ from typing import Any
 
 from django.db import IntegrityError
 from django.db.models.query import QuerySet
+from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -34,6 +35,7 @@ from speleodb.gis.models import SurfaceStation
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
+from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
@@ -87,9 +89,7 @@ class StationsGeoJSONApiView(BaseStationsApiView):
         stations = self.get_queryset()
         serializer = self.get_serializer(stations, many=True)
 
-        return SuccessResponse(
-            {"type": "FeatureCollection", "features": serializer.data}
-        )
+        return NoWrapResponse(FeatureCollection(serializer.data))  # type: ignore[no-untyped-call]
 
 
 class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
@@ -213,9 +213,7 @@ class ProjectStationsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixin):
 
         serializer = self.get_serializer(stations, many=True)
 
-        return SuccessResponse(
-            {"type": "FeatureCollection", "features": serializer.data}
-        )
+        return NoWrapResponse(FeatureCollection(serializer.data))  # type: ignore[no-untyped-call]
 
 
 # ================ SURFACE STATION VIEWS ================ #
@@ -270,9 +268,7 @@ class SurfaceStationsGeoJSONApiView(BaseSurfaceStationsApiView):
         stations = self.get_queryset()
         serializer = self.get_serializer(stations, many=True)
 
-        return SuccessResponse(
-            {"type": "FeatureCollection", "features": serializer.data}
-        )
+        return NoWrapResponse(FeatureCollection(serializer.data))  # type: ignore[no-untyped-call]
 
 
 class NetworkStationsApiView(GenericAPIView[SurfaceMonitoringNetwork], SDBAPIViewMixin):
@@ -354,6 +350,4 @@ class NetworkStationsGeoJSONView(
 
         serializer = self.get_serializer(stations, many=True)
 
-        return SuccessResponse(
-            {"type": "FeatureCollection", "features": serializer.data}
-        )
+        return NoWrapResponse(FeatureCollection(serializer.data))  # type: ignore[no-untyped-call]

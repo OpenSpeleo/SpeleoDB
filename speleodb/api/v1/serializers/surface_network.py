@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 from typing import Any
 
 from rest_framework import serializers
@@ -11,6 +12,10 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import SurfaceMonitoringNetwork
 from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
 from speleodb.users.models import User
+
+if TYPE_CHECKING:
+    from django_stubs_ext import StrOrPromise
+
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +65,13 @@ class SurfaceMonitoringNetworkSerializer(
         return network
 
 
-class SurfaceMonitoringNetworkListSerializer(
+class SurfaceMonitoringNetworkWithPermSerializer(
     serializers.ModelSerializer[SurfaceMonitoringNetwork]
 ):
     """Optimized serializer for listing networks with user permission level."""
 
     user_permission_level = serializers.IntegerField(read_only=True, required=False)
-    user_permission_level_label = serializers.CharField(read_only=True, required=False)
+    user_permission_level_label = serializers.SerializerMethodField()
 
     class Meta:
         model = SurfaceMonitoringNetwork
@@ -82,6 +87,14 @@ class SurfaceMonitoringNetworkListSerializer(
             "user_permission_level_label",
         ]
         read_only_fields = fields
+
+    def get_user_permission_level_label(
+        self, obj: SurfaceMonitoringNetwork
+    ) -> StrOrPromise | None:
+        if perm_lvl := getattr(obj, "user_permission_level", None):
+            return PermissionLevel.from_value(perm_lvl).label
+
+        return None
 
 
 class SurfaceMonitoringNetworkUserPermissionSerializer(

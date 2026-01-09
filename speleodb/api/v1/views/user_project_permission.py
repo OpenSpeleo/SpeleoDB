@@ -12,7 +12,6 @@ from rest_framework.generics import GenericAPIView
 from speleodb.api.v1.permissions import SDB_AdminAccess
 from speleodb.api.v1.permissions import SDB_ReadAccess
 from speleodb.api.v1.serializers import ProjectSerializer
-from speleodb.api.v1.serializers import ProjectUserPermissionListSerializer
 from speleodb.api.v1.serializers import ProjectUserPermissionSerializer
 from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import Project
@@ -44,7 +43,7 @@ class ProjectUserPermissionListApiView(GenericAPIView[Project], SDBAPIViewMixin)
         permissions = project.user_permissions
 
         project_serializer = ProjectSerializer(project, context={"user": user})
-        permission_serializer = ProjectUserPermissionListSerializer(permissions)  # type: ignore[arg-type]
+        permission_serializer = ProjectUserPermissionSerializer(permissions, many=True)  # type: ignore[arg-type]
 
         return SuccessResponse(
             {

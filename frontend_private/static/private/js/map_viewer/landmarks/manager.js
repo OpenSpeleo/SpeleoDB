@@ -6,23 +6,23 @@ export const LandmarkManager = {
     async loadAllLandmarks() {
         try {
             console.log('📍 Loading all Landmarks...');
-            const response = await API.getAllLandmarksGeoJSON();
+            const landmarkData = await API.getAllLandmarksGeoJSON();
 
-            // API returns { success: true, data: { type: "FeatureCollection", features: [...] } }
-            if (!response || response.success !== true || !response.data) {
+            if (!landmarkData) {
                 throw new Error('Invalid Landmark GeoJSON response');
             }
 
-            const landmarkData = response.data;
             const features = landmarkData.features || [];
 
             State.allLandmarks.clear();
             features.forEach(feature => {
-                if (feature.properties && feature.properties.id) {
+                const featureId = feature.id;
+                if (feature.properties && featureId) {
                     const coords = feature.geometry?.coordinates;
                     if (Array.isArray(coords) && coords.length >= 2) {
-                        State.allLandmarks.set(feature.properties.id, {
+                        State.allLandmarks.set(featureId, {
                             ...feature.properties,
+                            id: featureId,
                             latitude: Number(coords[1]),
                             longitude: Number(coords[0]),
                             coordinates: coords,
