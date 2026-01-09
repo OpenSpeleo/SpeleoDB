@@ -30,11 +30,13 @@ export const SurfaceStationManager = {
         console.log('🔄 Fetching all surface stations (GeoJSON) via single API call...');
         allSurfaceStationsFetchPromise = API.getAllSurfaceStationsGeoJSON()
             .then(response => {
-                if (!response || response.success !== true || !response.data ||
-                    response.data.type !== 'FeatureCollection' || !Array.isArray(response.data.features)) {
+                if (!response ||
+                    response.type !== 'FeatureCollection' ||
+                    !Array.isArray(response.features)
+                ) {
                     throw new Error('Invalid all-surface-stations GeoJSON payload');
                 }
-                allSurfaceStationsGeoJson = response.data;
+                allSurfaceStationsGeoJson = response;
                 console.log(`✅ Cached ${allSurfaceStationsGeoJson.features.length} surface stations from all-surface-stations GeoJSON`);
             })
             .catch(err => {
@@ -62,9 +64,12 @@ export const SurfaceStationManager = {
 
             // Update State
             features.forEach(feature => {
-                if (feature.properties && feature.properties.id && feature.geometry) {
-                    State.allSurfaceStations.set(feature.properties.id, {
+                const featureId = feature.id;
+                if (feature.properties && featureId && feature.geometry) {
+                    State.allSurfaceStations.set(
+                        featureId, {
                         ...feature.properties,
+                        id: featureId,
                         latitude: Number(feature.geometry.coordinates[1]),
                         longitude: Number(feature.geometry.coordinates[0]),
                         network: networkId,

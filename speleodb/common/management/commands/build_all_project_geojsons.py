@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import logging
-import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
@@ -22,6 +21,8 @@ from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 
 if TYPE_CHECKING:
+    import argparse
+
     from openspeleo_lib.models import Survey
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,16 @@ class Command(BaseCommand):
         "production servers to reduce user waiting time."
     )
 
-    def handle(self, *args: Any, **kwargs: Any) -> None:
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--force_recompute",
+            action="store_true",
+            help=(
+                "Ignore that the GeoJSON file already exists, recompute and overwrite."
+            ),
+        )
+
+    def handle(self, *, force_recompute: bool = False, **kwargs: Any) -> None:
         for project in Project.objects.filter(exclude_geojson=False).order_by(
             "-modified_date"
         ):
@@ -45,15 +55,20 @@ class Command(BaseCommand):
 
                 for commit in git_repo.commits:
                     with contextlib.suppress(ProjectGeoJSON.DoesNotExist):
-                        _ = ProjectGeoJSON.objects.get(
+                        obj = ProjectGeoJSON.objects.get(
                             # Globally unique. Does not need to specify the project
                             commit__id=commit.hexsha,
                         )
-                        logger.info(
-                            f"GeoJSON for commit {commit.hexsha} already exists. "
-                            "Skipping ..."
-                        )
-                        continue
+
+                        if not force_recompute:
+                            logger.info(
+                                f"GeoJSON for commit {commit.hexsha} already exists. "
+                                "Skipping ..."
+                            )
+                            continue
+
+                        # Force remove the GeoJSON file
+                        obj.delete()
 
                     logger.info(
                         f"Processing commit: {commit.hexsha} - {commit.date_dt}"

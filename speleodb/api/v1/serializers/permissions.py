@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from django.db.models import QuerySet
 from rest_framework import serializers
 
 from speleodb.common.enums import PermissionLevel
@@ -38,18 +37,6 @@ class ProjectTeamPermissionSerializer(
         model = TeamProjectPermission
 
 
-class ProjectUserPermissionListSerializer(
-    serializers.ListSerializer[UserProjectPermission]
-):
-    child = ProjectUserPermissionSerializer()
-
-
-class ProjectTeamPermissionListSerializer(
-    serializers.ListSerializer[TeamProjectPermission]
-):
-    child = ProjectTeamPermissionSerializer()
-
-
 class ExperimentUserPermissionSerializer(
     serializers.ModelSerializer[ExperimentUserPermission]
 ):
@@ -59,9 +46,3 @@ class ExperimentUserPermissionSerializer(
     class Meta:
         fields = ("user", "level", "creation_date", "modified_date")
         model = ExperimentUserPermission
-
-
-class ExperimentUserPermissionListSerializer(
-    serializers.ListSerializer[QuerySet[ExperimentUserPermission]]
-):
-    child = ExperimentUserPermissionSerializer()

@@ -115,21 +115,21 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         )
 
         assert response.status_code == status.HTTP_200_OK
-        geojson_data = response.data["data"]
+        geojson_data = response.data
 
         # Verify GeoJSON format for map display
         assert geojson_data["type"] == "FeatureCollection"
         assert len(geojson_data["features"]) == 1
 
-        feature = geojson_data["features"][0]
-        assert feature["type"] == "Feature"
-        assert feature["geometry"]["type"] == "Point"
-        assert feature["geometry"]["coordinates"] == [
-            float(station_data["longitude"]),
-            float(station_data["latitude"]),
-        ]
-        assert feature["properties"]["id"] == station_id
-        assert feature["properties"]["name"] == station_data["name"]
+        for feature in geojson_data["features"]:
+            assert feature["id"] == station_id
+            assert feature["type"] == "Feature"
+            assert feature["geometry"]["type"] == "Point"
+            assert feature["geometry"]["coordinates"] == [
+                float(station_data["longitude"]),
+                float(station_data["latitude"]),
+            ]
+            assert feature["properties"]["name"] == station_data["name"]
 
     def test_station_position_update_workflow(self) -> None:
         """Test updating station position via drag & drop (as frontend does)."""
@@ -335,8 +335,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
         )
 
         assert response.status_code == status.HTTP_200_OK
-        geojson_data = response.data["data"]
-        assert len(geojson_data["features"]) == 0
+        assert len(response.data["features"]) == 0
 
     def test_multiple_stations_workflow(self) -> None:
         """Test workflow with multiple stations in a project."""
@@ -398,7 +397,8 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
                 self.level,
                 self.permission_type,
             )
-            geojson_data = response.data["data"]
+
+            geojson_data = response.data
             assert len(geojson_data["features"]) == 3  # noqa: PLR2004
 
             # Verify each station in the map data
@@ -583,7 +583,8 @@ class TestMapViewerWithFixtures(TransactionTestCase):
         )
 
         assert response.status_code == status.HTTP_200_OK
-        geojson_data = response.json()["data"]
+
+        geojson_data = response.json()
         assert len(geojson_data["features"]) == 3  # noqa: PLR2004
 
         # Verify coordinates match expected cave survey locations
@@ -657,7 +658,8 @@ class TestMapViewerWithFixtures(TransactionTestCase):
         )
 
         assert response.status_code == status.HTTP_200_OK
-        geojson_data = response.json()["data"]
+
+        geojson_data = response.json()
         assert len(geojson_data["features"]) == len(station_names)
 
         # Verify all names are present

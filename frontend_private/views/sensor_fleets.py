@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 
 from frontend_private.views.base import AuthenticatedTemplateView
+from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
@@ -29,7 +30,6 @@ from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
-from speleodb.gis.models.sensor import InstallStatus
 from speleodb.utils.pydantic_utils import NotFutureDate  # noqa: TC001
 
 if TYPE_CHECKING:

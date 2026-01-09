@@ -11,6 +11,9 @@ from speleodb.api.v1.urls.experiment import urlpatterns as experiment_urlpattern
 from speleodb.api.v1.urls.experiment_records import (
     urlpatterns as experiment_record_urlpatterns,
 )
+from speleodb.api.v1.urls.exploration_lead import (
+    urlpatterns as exploration_lead_urlpatterns,
+)
 from speleodb.api.v1.urls.file_import import urlpatterns as file_import_urlpatterns
 from speleodb.api.v1.urls.gis import urlpatterns as gis_urlpatterns
 from speleodb.api.v1.urls.gis_view import urlpatterns as gis_view_urlpatterns
@@ -47,6 +50,7 @@ urlpatterns: list[URLResolver | URLPattern] = [
     ),
     path("experiments/", include(experiment_urlpatterns)),
     path("experiment_records/", include(experiment_record_urlpatterns)),
+    path("exploration-leads/", include(exploration_lead_urlpatterns)),
     path("gis-ogc/", include((gis_urlpatterns, "gis-ogc"), namespace="gis-ogc")),
     path("gis_view/", include(gis_view_urlpatterns)),
     path("gps_tracks/", include(gps_track_urlpatterns)),

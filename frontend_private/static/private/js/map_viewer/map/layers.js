@@ -4,23 +4,32 @@ import { Colors } from './colors.js';
 import { DepthUtils } from './depth.js';
 import { Geometry } from './geometry.js';
 
+// Track whether custom marker images have been loaded
+let markerImagesLoaded = false;
+
 const ZOOM_LEVELS = {
     // Survey GeoJSONs
     PROJECT_LINE: 8,
-    PROJECT_LINE_LABEL: 13,
+    PROJECT_LINE_LABEL: 14,
     PROJECT_ENTRY_SYMBOL: 10,
 
     // Landmarks
-    LANDMARK_SYMBOL: 10,
-    LANDMARK_LABEL: 14,
+    LANDMARK_SYMBOL: 12,
+    LANDMARK_LABEL: 16,
 
     // Surface Stations
-    SURFACE_STATION_SYMBOL: 10,
-    SURFACE_STATION_LABEL: 14,
+    SURFACE_STATION_SYMBOL: 12,
+    SURFACE_STATION_LABEL: 16,
 
     // Subsurface Stations
-    SUBSURFACE_STATION_SYMBOL: 10,
-    SUBSURFACE_STATION_LABEL: 14,
+    SUBSURFACE_STATION_SYMBOL: 12,
+    SUBSURFACE_STATION_LABEL: 16,
+
+    // Safety Cylinders
+    SAFETY_CYLINDER_SYMBOL: 14,
+
+    // Exploration Leads
+    EXPLORATION_LEAD_SYMBOL: 14,
 
     // GPS Tracks
     GPS_TRACK_LINE: 8,
@@ -668,8 +677,12 @@ export const Layers = {
             return;
         }
 
-        // Ensure color property is set on each feature for data-driven styling
+        // Ensure id and color properties are set on each feature
+        // Mapbox requires promoteId for string IDs - copy feature.id to properties.id
         data.features.forEach(feature => {
+            if (feature.id && !feature.properties.id) {
+                feature.properties.id = feature.id;
+            }
             if (!feature.properties.color) {
                 // Use tag color if available, otherwise use default orange
                 const tag = feature.properties.tag;
@@ -679,7 +692,8 @@ export const Layers = {
 
         map.addSource(sourceId, {
             type: 'geojson',
-            data: data
+            data: data,
+            promoteId: 'id'
         });
 
         // Add Circle Layer
@@ -760,9 +774,17 @@ export const Layers = {
             return;
         }
 
+        // Mapbox requires promoteId for string IDs - copy feature.id to properties.id
+        data.features.forEach(feature => {
+            if (feature.id && !feature.properties.id) {
+                feature.properties.id = feature.id;
+            }
+        });
+
         map.addSource(sourceId, {
             type: 'geojson',
-            data: data
+            data: data,
+            promoteId: 'id'
         });
 
         // Landmark symbol layer (triangle marker visible from far zoom)
@@ -835,8 +857,12 @@ export const Layers = {
             return;
         }
 
-        // Ensure color property is set on each feature for data-driven styling
+        // Ensure id and color properties are set on each feature
+        // Mapbox requires promoteId for string IDs - copy feature.id to properties.id
         data.features.forEach(feature => {
+            if (feature.id && !feature.properties.id) {
+                feature.properties.id = feature.id;
+            }
             if (!feature.properties.color) {
                 // Use tag color if available, otherwise use default orange
                 const tag = feature.properties.tag;
@@ -846,7 +872,8 @@ export const Layers = {
 
         map.addSource(sourceId, {
             type: 'geojson',
-            data: data
+            data: data,
+            promoteId: 'id'
         });
 
         // Add Diamond Symbol Layer (◆)
@@ -917,7 +944,7 @@ export const Layers = {
         const source = map.getSource(sourceId);
         if (source && source._data) {
             const data = source._data;
-            const feature = data.features.find(f => f.properties.id === stationId);
+            const feature = data.features.find(f => f.id === stationId);
             if (feature) {
                 feature.geometry.coordinates = newCoords;
                 source.setData(data);
@@ -940,7 +967,7 @@ export const Layers = {
         const source = map.getSource(sourceId);
         if (source && source._data) {
             const data = source._data;
-            const feature = data.features.find(f => f.properties.id === stationId);
+            const feature = data.features.find(f => f.id === stationId);
             if (feature) {
                 feature.properties.color = color;
                 source.setData(data);
@@ -956,7 +983,7 @@ export const Layers = {
         const source = map.getSource(sourceId);
         if (source && source._data) {
             const data = source._data;
-            const feature = data.features.find(f => f.properties.id === stationId);
+            const feature = data.features.find(f => f.id === stationId);
             if (feature) {
                 // Update all provided properties
                 Object.assign(feature.properties, properties);
@@ -977,7 +1004,7 @@ export const Layers = {
         const source = map.getSource(sourceId);
         if (source && source._data) {
             const data = source._data;
-            const feature = data.features.find(f => f.properties.id === stationId);
+            const feature = data.features.find(f => f.id === stationId);
             if (feature) {
                 feature.geometry.coordinates = newCoords;
                 source.setData(data);
@@ -1000,7 +1027,7 @@ export const Layers = {
         const source = map.getSource(sourceId);
         if (source && source._data) {
             const data = source._data;
-            const feature = data.features.find(f => f.properties.id === stationId);
+            const feature = data.features.find(f => f.id === stationId);
             if (feature) {
                 feature.properties.color = color;
                 source.setData(data);
@@ -1017,7 +1044,7 @@ export const Layers = {
         const source = map.getSource(sourceId);
         if (source && source._data) {
             const data = source._data;
-            const feature = data.features.find(f => f.properties.id === stationId);
+            const feature = data.features.find(f => f.id === stationId);
             if (feature) {
                 // Update all provided properties
                 Object.assign(feature.properties, properties);
@@ -1033,7 +1060,7 @@ export const Layers = {
         const source = map.getSource('landmarks-source');
         if (source && source._data) {
             const data = source._data;
-            const feature = data.features.find(f => f.properties.id === landmarkId);
+            const feature = data.features.find(f => f.id === landmarkId);
             if (feature) {
                 feature.geometry.coordinates = originalCoords;
                 source.setData(data);
@@ -1079,6 +1106,8 @@ export const Layers = {
         const surfaceStationSymbolLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && !id.includes('-labels'));
         const surfaceStationLabelLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && id.includes('-labels'));
         const landmarkLayers = allLayerIds.filter(id => id.startsWith('landmarks-'));
+        const safetyCylinderLayers = allLayerIds.filter(id => id.startsWith('safety-cylinders'));
+        const explorationLeadLayers = allLayerIds.filter(id => id.startsWith('exploration-leads'));
 
         // Move layers to top in order (later moves go on top)
         // Order: GPS track lines -> GPS track points -> subsurface stations -> surface stations -> Landmarks
@@ -1137,7 +1166,24 @@ export const Layers = {
             }
         });
 
-        // Landmark layers (on top of everything)
+        // Move safety cylinder and exploration lead layers
+        safetyCylinderLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        explorationLeadLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // Finally move Landmark layers (on top of everything)
         landmarkLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
@@ -1147,5 +1193,369 @@ export const Layers = {
         });
 
         console.log('✅ Layer reordering complete');
+    },
+
+    /**
+     * Load custom marker images from SVG files
+     */
+    loadMarkerImages: async function () {
+        const map = State.map;
+        if (!map || markerImagesLoaded) return;
+
+        try {
+            // Load pre-colored orange cylinder SVG for safety cylinder
+            const cylinderImage = new Image(32, 32);
+            cylinderImage.src = '/static/private/media/cylinder_orange.svg';
+            await new Promise((resolve, reject) => {
+                cylinderImage.onload = resolve;
+                cylinderImage.onerror = reject;
+            });
+
+            if (!map.hasImage('safety-cylinder-icon')) {
+                map.addImage('safety-cylinder-icon', cylinderImage);
+            }
+
+            // Load exploration lead SVG
+            const leadImage = new Image(32, 32);
+            leadImage.src = '/static/private/media/exploration_lead.svg';
+            await new Promise((resolve, reject) => {
+                leadImage.onload = resolve;
+                leadImage.onerror = reject;
+            });
+
+            if (!map.hasImage('exploration-lead-icon')) {
+                map.addImage('exploration-lead-icon', leadImage);
+            }
+
+            markerImagesLoaded = true;
+            console.log('✅ Custom marker images loaded from SVG files');
+        } catch (e) {
+            console.error('❌ Error loading marker images:', e);
+        }
+    },
+
+    /**
+     * Add a safety cylinder marker to the map
+     */
+    addSafetyCylinderMarker: function (id, coordinates, lineName = 'Survey Line') {
+        const map = State.map;
+        if (!map) return;
+
+        // Store in state
+        State.safetyCylinders.set(id, {
+            id,
+            coordinates,
+            lineName,
+            createdAt: new Date().toISOString()
+        });
+
+        // Refresh the safety cylinders layer
+        this.refreshSafetyCylindersLayer();
+        this.reorderLayers();
+
+        console.log(`🛢️ Safety cylinder added: ${id} at ${coordinates}`);
+    },
+
+    /**
+     * Add an exploration lead marker to the map
+     */
+    addExplorationLeadMarker: function (id, coordinates, lineName = 'Survey Line', description = '', projectId = null) {
+        const map = State.map;
+        if (!map) return;
+
+        // Store in state
+        State.explorationLeads.set(id, {
+            id,
+            coordinates,
+            lineName,
+            description,
+            projectId,
+            createdAt: new Date().toISOString()
+        });
+
+        // Refresh the exploration leads layer
+        this.refreshExplorationLeadsLayer();
+        this.reorderLayers();
+
+        console.log(`⚠️ Exploration lead added: ${id} at ${coordinates}`);
+    },
+
+    /**
+     * Refresh the safety cylinders layer with current state
+     */
+    refreshSafetyCylindersLayer: function () {
+        const map = State.map;
+        if (!map) return;
+
+        const sourceId = 'safety-cylinders-source';
+        const layerId = 'safety-cylinders-layer';
+
+        // Build GeoJSON from state
+        // Mapbox requires promoteId for string IDs - include id in properties
+        const features = Array.from(State.safetyCylinders.values()).map(marker => ({
+            type: 'Feature',
+            id: marker.id,
+            geometry: {
+                type: 'Point',
+                coordinates: marker.coordinates
+            },
+            properties: {
+                id: marker.id,
+                lineName: marker.lineName
+            }
+        }));
+
+        const geojson = {
+            type: 'FeatureCollection',
+            features
+        };
+
+        // Update or create source
+        if (map.getSource(sourceId)) {
+            map.getSource(sourceId).setData(geojson);
+        } else {
+            map.addSource(sourceId, {
+                type: 'geojson',
+                data: geojson,
+                promoteId: 'id'
+            });
+
+            // Add layer using the cylinder icon image
+            if (map.hasImage('safety-cylinder-icon')) {
+                map.addLayer({
+                    id: layerId,
+                    type: 'symbol',
+                    source: sourceId,
+                    minzoom: ZOOM_LEVELS.SAFETY_CYLINDER_SYMBOL,
+                    layout: {
+                        'icon-image': 'safety-cylinder-icon',
+                        'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.8, 18, 1.2],
+                        'icon-allow-overlap': true,
+                        'icon-ignore-placement': true
+                    },
+                    paint: {
+                        'icon-opacity': 1
+                    }
+                });
+            } else {
+                // Fallback: use a text symbol if image not loaded
+                map.addLayer({
+                    id: layerId,
+                    type: 'symbol',
+                    source: sourceId,
+                    minzoom: ZOOM_LEVELS.SAFETY_CYLINDER_SYMBOL,
+                    layout: {
+                        'text-field': '🛢️',
+                        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                        'text-size': ['interpolate', ['linear'], ['zoom'], 14, 18, 18, 26],
+                        'text-allow-overlap': true,
+                        'text-ignore-placement': true
+                    },
+                    paint: {
+                        'text-color': '#FF6B00',
+                        'text-halo-color': '#ffffff',
+                        'text-halo-width': 2,
+                        'text-opacity': 1,
+                        'icon-opacity': 1
+                    }
+                });
+            }
+        }
+    },
+
+    /**
+     * Refresh the exploration leads layer with current state
+     */
+    refreshExplorationLeadsLayer: function () {
+        const map = State.map;
+        if (!map) return;
+
+        const sourceId = 'exploration-leads-source';
+        const layerId = 'exploration-leads-layer';
+
+        // Build GeoJSON from state
+        // Mapbox requires promoteId for string IDs - include id in properties
+        const features = Array.from(State.explorationLeads.values()).map(marker => ({
+            type: 'Feature',
+            id: marker.id,
+            geometry: {
+                type: 'Point',
+                coordinates: marker.coordinates
+            },
+            properties: {
+                id: marker.id,
+                lineName: marker.lineName
+            }
+        }));
+
+        const geojson = {
+            type: 'FeatureCollection',
+            features
+        };
+
+        // Update or create source
+        if (map.getSource(sourceId)) {
+            map.getSource(sourceId).setData(geojson);
+        } else {
+            map.addSource(sourceId, {
+                type: 'geojson',
+                data: geojson,
+                promoteId: 'id'
+            });
+
+            // Add layer with red exclamation mark icon
+            if (map.hasImage('exploration-lead-icon')) {
+                map.addLayer({
+                    id: layerId,
+                    type: 'symbol',
+                    source: sourceId,
+                    minzoom: ZOOM_LEVELS.EXPLORATION_LEAD_SYMBOL,
+                    layout: {
+                        'icon-image': 'exploration-lead-icon',
+                        'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.4, 18, 0.6],
+                        'icon-allow-overlap': true,
+                        'icon-ignore-placement': true
+                    },
+                    paint: {
+                        'icon-opacity': 1
+                    }
+                });
+            } else {
+                // Fallback: use a circle marker if image not loaded
+                map.addLayer({
+                    id: layerId,
+                    type: 'circle',
+                    source: sourceId,
+                    minzoom: ZOOM_LEVELS.EXPLORATION_LEAD_SYMBOL,
+                    paint: {
+                        'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 8, 18, 12],
+                        'circle-color': '#EF4444',
+                        'circle-stroke-width': 2,
+                        'circle-stroke-color': '#ffffff',
+                        'circle-opacity': 1
+                    }
+                });
+            }
+        }
+    },
+
+    /**
+     * Remove a safety cylinder marker
+     */
+    removeSafetyCylinderMarker: function (id) {
+        State.safetyCylinders.delete(id);
+        this.refreshSafetyCylindersLayer();
+        console.log(`🛢️ Safety cylinder removed: ${id}`);
+    },
+
+    /**
+     * Remove an exploration lead marker
+     */
+    removeExplorationLeadMarker: function (id) {
+        State.explorationLeads.delete(id);
+        this.refreshExplorationLeadsLayer();
+        console.log(`⚠️ Exploration lead removed: ${id}`);
+    },
+
+    /**
+     * Update safety cylinder position (for drag)
+     */
+    updateSafetyCylinderPosition: function (markerId, newCoords) {
+        const marker = State.safetyCylinders.get(markerId);
+        if (marker) {
+            marker.coordinates = newCoords;
+            this.refreshSafetyCylindersLayer();
+        }
+    },
+
+    /**
+     * Update exploration lead position (for drag)
+     */
+    updateExplorationLeadPosition: function (markerId, newCoords) {
+        const marker = State.explorationLeads.get(markerId);
+        if (marker) {
+            marker.coordinates = newCoords;
+            this.refreshExplorationLeadsLayer();
+        }
+    },
+
+    /**
+     * Show marker drag highlight - adds a colored circle behind the marker
+     * @param {string} markerType - 'safety-cylinder' or 'exploration-lead'
+     * @param {Array} coordinates - [lng, lat]
+     * @param {boolean} isSnapped - whether currently snapped (green=snapped, amber=not)
+     */
+    showMarkerDragHighlight: function (markerType, coordinates, isSnapped) {
+        const map = State.map;
+        if (!map) return;
+
+        const highlightId = 'marker-drag-highlight';
+        const highlightSourceId = 'marker-drag-highlight-source';
+        const color = isSnapped ? '#10b981' : '#f59e0b'; // Same colors as stations
+
+        const geojson = {
+            type: 'FeatureCollection',
+            features: [{
+                type: 'Feature',
+                geometry: { type: 'Point', coordinates }
+            }]
+        };
+
+        if (map.getSource(highlightSourceId)) {
+            map.getSource(highlightSourceId).setData(geojson);
+            if (map.getLayer(highlightId)) {
+                map.setPaintProperty(highlightId, 'circle-color', color);
+            }
+        } else {
+            map.addSource(highlightSourceId, { type: 'geojson', data: geojson });
+            map.addLayer({
+                id: highlightId,
+                type: 'circle',
+                source: highlightSourceId,
+                paint: {
+                    'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 18, 18, 28],
+                    'circle-color': color,
+                    'circle-opacity': 0.4,
+                    'circle-stroke-width': 3,
+                    'circle-stroke-color': color,
+                    'circle-stroke-opacity': 0.8
+                }
+            });
+        }
+    },
+
+    /**
+     * Hide marker drag highlight
+     */
+    hideMarkerDragHighlight: function () {
+        const map = State.map;
+        if (!map) return;
+
+        const highlightId = 'marker-drag-highlight';
+        const highlightSourceId = 'marker-drag-highlight-source';
+
+        if (map.getLayer(highlightId)) {
+            map.removeLayer(highlightId);
+        }
+        if (map.getSource(highlightSourceId)) {
+            map.removeSource(highlightSourceId);
+        }
+    },
+
+    /**
+     * Set marker visual feedback during drag (wrapper for highlight)
+     */
+    setMarkerDragFeedback: function (markerType, opacity, isSnapped, coordinates) {
+        // Show highlight circle at current position
+        if (coordinates) {
+            this.showMarkerDragHighlight(markerType, coordinates, isSnapped);
+        }
+    },
+
+    /**
+     * Reset marker visual feedback after drag
+     */
+    resetMarkerDragFeedback: function (markerType) {
+        this.hideMarkerDragHighlight();
     }
 };

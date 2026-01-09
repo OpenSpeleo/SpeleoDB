@@ -178,6 +178,9 @@ class TestLandmarkGeoJSONSerializer:
         assert "geometry" in data
         assert "properties" in data
 
+        # Check ID
+        assert data["id"] == str(landmark.id)
+
         # Check geometry
         geometry = data["geometry"]
         assert geometry["type"] == "Point"
@@ -185,7 +188,6 @@ class TestLandmarkGeoJSONSerializer:
 
         # Check properties
         properties = data["properties"]
-        assert properties["id"] == str(landmark.id)
         assert properties["name"] == "Test Landmark"
         assert properties["description"] == "Test description"
 

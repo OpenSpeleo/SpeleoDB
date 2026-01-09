@@ -17,14 +17,16 @@ from factory import Faker
 from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
+from speleodb.common.enums import InstallStatus
+from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
+from speleodb.gis.models import ExplorationLead
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
-from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationLogEntry
 from speleodb.gis.models import StationResource
@@ -35,7 +37,6 @@ from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
 from speleodb.gis.models import SurfaceStation
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
-from speleodb.gis.models.sensor import InstallStatus
 from speleodb.plugins.models import PluginRelease
 from speleodb.plugins.models import PublicAnnoucement
 from speleodb.plugins.models.platform_base import OperatingSystemEnum
@@ -188,6 +189,20 @@ class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
 
     creation_date = factory.LazyFunction(timezone.now)
     modified_date = factory.LazyFunction(timezone.now)
+
+
+class ExplorationLeadFactory(DjangoModelFactory[ExplorationLead]):
+    """Factory for creating ExplorationLead instances."""
+
+    id = factory.LazyFunction(uuid.uuid4)
+    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
+    description: str = factory.Faker("text", max_nb_chars=200)  # type: ignore[assignment]
+    latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
+    longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
+    created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
+
+    class Meta:
+        model = ExplorationLead
 
 
 class SubSurfaceStationFactory(DjangoModelFactory[SubSurfaceStation]):
@@ -562,7 +577,7 @@ class SensorFactory(DjangoModelFactory[Sensor]):
 
     name: str = factory.Sequence(lambda n: f"Sensor {n:03d}")  # type: ignore[assignment]
     notes: str = factory.Faker("text", max_nb_chars=100)  # type: ignore[assignment]
-    status = SensorStatus.FUNCTIONAL
+    status = OperationalStatus.FUNCTIONAL
     fleet: SensorFleet = factory.SubFactory(SensorFleetFactory)  # type: ignore[assignment]
     created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
         lambda _: UserFactory.create().email

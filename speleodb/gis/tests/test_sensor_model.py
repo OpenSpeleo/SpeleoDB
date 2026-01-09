@@ -9,11 +9,11 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.utils import IntegrityError
 
+from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
-from speleodb.gis.models import SensorStatus
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -197,7 +197,7 @@ class TestSensorModel:
         sensor = Sensor.objects.create(
             name="Temperature Sensor #001",
             notes="Monitors cave temperature",
-            status=SensorStatus.FUNCTIONAL,
+            status=OperationalStatus.FUNCTIONAL,
             fleet=sensor_fleet,
             created_by=user.email,
         )
@@ -207,7 +207,7 @@ class TestSensorModel:
         assert sensor.id is not None
         assert sensor.name == "Temperature Sensor #001"
         assert sensor.notes == "Monitors cave temperature"
-        assert sensor.status == SensorStatus.FUNCTIONAL
+        assert sensor.status == OperationalStatus.FUNCTIONAL
         assert sensor.created_by == user.email
         assert sensor.creation_date is not None
         assert sensor.modified_date is not None
@@ -225,16 +225,16 @@ class TestSensorModel:
         assert sensor.id is not None
         assert sensor.name == "Minimal Sensor"
         assert sensor.notes == ""  # Default value
-        assert sensor.status == SensorStatus.FUNCTIONAL  # Default value
+        assert sensor.status == OperationalStatus.FUNCTIONAL  # Default value
 
     def test_sensor_string_representation_functional(self, sensor: Sensor) -> None:
         """Test the string representation of a functional sensor."""
-        sensor.status = SensorStatus.FUNCTIONAL
+        sensor.status = OperationalStatus.FUNCTIONAL
         assert str(sensor) == "Sensor: Flow Meter #023 [Status: FUNCTIONAL]"
 
     def test_sensor_string_representation_not_functional(self, sensor: Sensor) -> None:
         """Test the string representation of a non-functional sensor."""
-        sensor.status = SensorStatus.BROKEN
+        sensor.status = OperationalStatus.BROKEN
         assert str(sensor) == "Sensor: Flow Meter #023 [Status: BROKEN]"
 
     def test_sensor_name_max_length(
@@ -271,7 +271,7 @@ class TestSensorModel:
             created_by=user.email,
         )
 
-        assert sensor.status == SensorStatus.FUNCTIONAL
+        assert sensor.status == OperationalStatus.FUNCTIONAL
 
     def test_timestamps_auto_update(self, sensor: Sensor) -> None:
         """Test that timestamps are automatically managed."""

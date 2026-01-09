@@ -22,17 +22,17 @@ try {
             break;
         }
     }
-    
+
     // If standard error keys not found, check for field-specific validation errors
     if (!found && data.responseJSON) {
         var error_msg = "";
         for (var field_name in data.responseJSON) {
             var field_errors = data.responseJSON[field_name];
-            
+
             // Handle array of error messages
             if (Array.isArray(field_errors)) {
                 error_msg += "<b>" + field_name + ":</b><br>";
-                field_errors.forEach(function(err) {
+                field_errors.forEach(function (err) {
                     error_msg += "- " + err + "<br>";
                 });
             }
@@ -48,25 +48,21 @@ try {
                 }
             }
         }
-        
+
         if (error_msg) {
             $("#modal_error_txt").html(error_msg);
             found = true;
         }
     }
-    
+
     if (!found) {
         throw new Error("No Error Key Found");
     }
 } catch (exception) {
-    console.log("Hemlo 1");
     error_msg = `<b>[Status ${data.status}] An error occurred:</b> \`${data.statusText}\`<br>
     Please email: <a class="underline" href="mailto:contact@speleodb.org">contact@speleodb.org</a>`;
-    console.log("Hemlo 2");
     console.error(error_msg, exception.message);
-    console.log("Hemlo 3");
     $("#modal_error_txt").html(error_msg);
-    console.log("Hemlo 4");
 } finally {
     // Code that will run regardless of success or error
     $("#modal_error").css('display', 'flex');

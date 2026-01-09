@@ -12,7 +12,6 @@ from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v1.permissions import SDB_WriteAccess
-from speleodb.api.v1.serializers.station_tag import StationTagListSerializer
 from speleodb.api.v1.serializers.station_tag import StationTagSerializer
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationTag
@@ -148,7 +147,6 @@ class StationTagColorsApiView(GenericAPIView[StationTag], SDBAPIViewMixin):
     """
 
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = StationTagListSerializer
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get list of predefined colors."""

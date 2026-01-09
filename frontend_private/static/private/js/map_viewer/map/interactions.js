@@ -32,11 +32,13 @@ export const Interactions = {
 
             for (const feature of features) {
                 if (!feature.layer || !feature.layer.id) continue;
-                // Check for subsurface stations, surface stations, and Landmarks
+                // Check for subsurface stations, surface stations, Landmarks, and custom markers
                 if (feature.layer.id.includes('stations-') ||
                     feature.layer.id.startsWith('surface-stations-') ||
                     feature.layer.id === 'landmarks-layer' ||
-                    feature.layer.id === 'landmarks-labels') {
+                    feature.layer.id === 'landmarks-labels' ||
+                    feature.layer.id === 'safety-cylinders-layer' ||
+                    feature.layer.id === 'exploration-leads-layer') {
                     isInteractive = true;
                     break;
                 }
@@ -61,7 +63,7 @@ export const Interactions = {
             );
 
             if (stationFeature) {
-                const stationId = stationFeature.properties.id;
+                const stationId = stationFeature.id;
                 if (this.handlers.onStationClick) {
                     this.handlers.onStationClick(stationId, 'subsurface');
                 }
@@ -76,7 +78,7 @@ export const Interactions = {
             );
 
             if (surfaceStationFeature) {
-                const stationId = surfaceStationFeature.properties.id;
+                const stationId = surfaceStationFeature.id;
                 if (this.handlers.onStationClick) {
                     this.handlers.onStationClick(stationId, 'surface');
                 }
@@ -89,9 +91,35 @@ export const Interactions = {
             );
 
             if (poiFeature) {
-                const landmarkId = poiFeature.properties.id;
+                const landmarkId = poiFeature.id;
                 if (this.handlers.onLandmarkClick) {
                     this.handlers.onLandmarkClick(landmarkId);
+                }
+                return;
+            }
+
+            // Check for Exploration Leads
+            const explorationLeadFeature = features.find(f =>
+                f.layer && f.layer.id === 'exploration-leads-layer'
+            );
+
+            if (explorationLeadFeature) {
+                const leadId = explorationLeadFeature.id;
+                if (this.handlers.onExplorationLeadClick) {
+                    this.handlers.onExplorationLeadClick(leadId);
+                }
+                return;
+            }
+
+            // Check for Safety Cylinders
+            const safetyCylinderFeature = features.find(f =>
+                f.layer && f.layer.id === 'safety-cylinders-layer'
+            );
+
+            if (safetyCylinderFeature) {
+                const cylinderId = safetyCylinderFeature.id;
+                if (this.handlers.onSafetyCylinderClick) {
+                    this.handlers.onSafetyCylinderClick(cylinderId);
                 }
                 return;
             }
@@ -109,7 +137,7 @@ export const Interactions = {
         let isDragging = false;
         let hasMoved = false;
         let draggedFeatureId = null;
-        let draggedType = null; // 'station' or 'landmark'
+        let draggedType = null; // 'station', 'landmark', 'safety-cylinder', 'exploration-lead'
         let originalCoords = null;
         let mouseDownPoint = null;
         let currentSnapResult = null;
@@ -117,6 +145,9 @@ export const Interactions = {
         let originalColor = null;
 
         const self = this;
+
+        // Types that snap to survey line endpoints (like stations)
+        const SNAPPABLE_TYPES = ['station', 'safety-cylinder', 'exploration-lead'];
 
         map.on('mousedown', (e) => {
             if (e.originalEvent.button !== 0) return; // Only left click
@@ -135,7 +166,7 @@ export const Interactions = {
                     isPotentialDrag = true;
                     hasMoved = false;
                     isDragging = false;
-                    draggedFeatureId = stationFeature.properties.id;
+                    draggedFeatureId = stationFeature.id;
                     draggedType = 'station';
                     originalCoords = stationFeature.geometry.coordinates.slice();
                     mouseDownPoint = e.point;
@@ -149,6 +180,46 @@ export const Interactions = {
                 }
             }
 
+            // Check Safety Cylinder
+            const safetyCylinderFeature = features.find(f =>
+                f.layer && f.layer.id === 'safety-cylinders-layer'
+            );
+
+            if (safetyCylinderFeature) {
+                isPotentialDrag = true;
+                hasMoved = false;
+                isDragging = false;
+                draggedFeatureId = safetyCylinderFeature.id;
+                draggedType = 'safety-cylinder';
+                originalCoords = safetyCylinderFeature.geometry.coordinates.slice();
+                mouseDownPoint = e.point;
+                draggedProjectId = null;
+                currentSnapResult = null;
+
+                map.dragPan.disable();
+                return;
+            }
+
+            // Check Exploration Lead
+            const explorationLeadFeature = features.find(f =>
+                f.layer && f.layer.id === 'exploration-leads-layer'
+            );
+
+            if (explorationLeadFeature) {
+                isPotentialDrag = true;
+                hasMoved = false;
+                isDragging = false;
+                draggedFeatureId = explorationLeadFeature.id;
+                draggedType = 'exploration-lead';
+                originalCoords = explorationLeadFeature.geometry.coordinates.slice();
+                mouseDownPoint = e.point;
+                draggedProjectId = null;
+                currentSnapResult = null;
+
+                map.dragPan.disable();
+                return;
+            }
+
             // Check Landmark
             const poiFeature = features.find(f =>
                 f.layer && f.layer.id === 'landmarks-layer'
@@ -159,7 +230,7 @@ export const Interactions = {
                 isPotentialDrag = true;
                 hasMoved = false;
                 isDragging = false;
-                draggedFeatureId = poiFeature.properties.id;
+                draggedFeatureId = poiFeature.id;
                 draggedType = 'landmark';
                 originalCoords = poiFeature.geometry.coordinates.slice();
                 mouseDownPoint = e.point;
@@ -196,7 +267,8 @@ export const Interactions = {
 
             const coords = [e.lngLat.lng, e.lngLat.lat];
 
-            if (draggedType === 'station') {
+            // Handle snappable types (station, safety-cylinder, exploration-lead)
+            if (SNAPPABLE_TYPES.includes(draggedType)) {
                 // Check for snap
                 const snapResult = Geometry.findMagneticSnapPoint(coords, null);
                 currentSnapResult = snapResult;
@@ -204,15 +276,24 @@ export const Interactions = {
                 // Use snapped coordinates if snapping
                 const displayCoords = snapResult.snapped ? snapResult.coordinates : coords;
 
-                // Update visual position
-                Layers.updateStationPosition(draggedProjectId, draggedFeatureId, displayCoords);
+                // Update visual position and feedback based on type
+                if (draggedType === 'station') {
+                    Layers.updateStationPosition(draggedProjectId, draggedFeatureId, displayCoords);
+                    const newColor = snapResult.snapped ? '#10b981' : '#f59e0b';
+                    Layers.updateStationColor(draggedProjectId, draggedFeatureId, newColor);
+                } else if (draggedType === 'safety-cylinder' || draggedType === 'exploration-lead') {
+                    // Update position
+                    if (draggedType === 'safety-cylinder') {
+                        Layers.updateSafetyCylinderPosition(draggedFeatureId, displayCoords);
+                    } else {
+                        Layers.updateExplorationLeadPosition(draggedFeatureId, displayCoords);
+                    }
+                    // Visual feedback: show colored highlight circle (green=snapped, amber=not)
+                    Layers.setMarkerDragFeedback(draggedType, null, snapResult.snapped, displayCoords);
+                }
 
                 // Show snap indicator
                 Geometry.showSnapIndicator(displayCoords, map, snapResult.snapped);
-
-                // Update station color to indicate snap status
-                const newColor = snapResult.snapped ? '#10b981' : '#f59e0b'; // Green if snapped, amber if not
-                Layers.updateStationColor(draggedProjectId, draggedFeatureId, newColor);
 
             } else if (draggedType === 'landmark') {
                 // Landmarks don't snap to survey lines
@@ -236,11 +317,10 @@ export const Interactions = {
             map.doubleClickZoom.enable();
 
             if (wasDragging) {
-                if (draggedType === 'station') {
-                    // Calculate final snap result
-                    const finalCoords = [e.lngLat.lng, e.lngLat.lat];
-                    const snapResult = Geometry.findMagneticSnapPoint(finalCoords, null);
+                const finalCoords = [e.lngLat.lng, e.lngLat.lat];
+                const snapResult = Geometry.findMagneticSnapPoint(finalCoords, null);
 
+                if (draggedType === 'station') {
                     // Restore original color (will be updated after confirm/cancel)
                     Layers.updateStationColor(draggedProjectId, draggedFeatureId, originalColor || '#fb923c');
 
@@ -253,8 +333,20 @@ export const Interactions = {
                             originalCoords
                         );
                     }
+                } else if (draggedType === 'safety-cylinder' || draggedType === 'exploration-lead') {
+                    // Reset visual feedback
+                    Layers.resetMarkerDragFeedback(draggedType);
+
+                    // Call handler with snap result (same pattern as stations)
+                    if (self.handlers.onMarkerDragEnd) {
+                        self.handlers.onMarkerDragEnd(
+                            draggedType,
+                            draggedFeatureId,
+                            snapResult,
+                            originalCoords
+                        );
+                    }
                 } else if (draggedType === 'landmark') {
-                    const finalCoords = [e.lngLat.lng, e.lngLat.lat];
                     if (self.handlers.onLandmarkDragEnd) {
                         self.handlers.onLandmarkDragEnd(draggedFeatureId, finalCoords, originalCoords);
                     }
@@ -295,7 +387,7 @@ export const Interactions = {
             if (stationFeature) {
                 if (this.handlers.onContextMenu) {
                     this.handlers.onContextMenu(e, 'station', {
-                        id: stationFeature.properties.id,
+                        id: stationFeature.id,
                         feature: stationFeature,
                         stationType: 'subsurface'
                     });
@@ -313,7 +405,7 @@ export const Interactions = {
             if (surfaceStationFeature) {
                 if (this.handlers.onContextMenu) {
                     this.handlers.onContextMenu(e, 'surface-station', {
-                        id: surfaceStationFeature.properties.id,
+                        id: surfaceStationFeature.id,
                         feature: surfaceStationFeature,
                         stationType: 'surface'
                     });
@@ -329,8 +421,38 @@ export const Interactions = {
             if (poiFeature) {
                 if (this.handlers.onContextMenu) {
                     this.handlers.onContextMenu(e, 'landmark', {
-                        id: poiFeature.properties.id,
+                        id: poiFeature.id,
                         feature: poiFeature
+                    });
+                }
+                return;
+            }
+
+            // Check Safety Cylinder
+            const safetyCylinderFeature = features.find(f =>
+                f.layer && f.layer.id === 'safety-cylinders-layer'
+            );
+
+            if (safetyCylinderFeature) {
+                if (this.handlers.onContextMenu) {
+                    this.handlers.onContextMenu(e, 'safety-cylinder', {
+                        id: safetyCylinderFeature.id,
+                        feature: safetyCylinderFeature
+                    });
+                }
+                return;
+            }
+
+            // Check Exploration Lead
+            const explorationLeadFeature = features.find(f =>
+                f.layer && f.layer.id === 'exploration-leads-layer'
+            );
+
+            if (explorationLeadFeature) {
+                if (this.handlers.onContextMenu) {
+                    this.handlers.onContextMenu(e, 'exploration-lead', {
+                        id: explorationLeadFeature.id,
+                        feature: explorationLeadFeature
                     });
                 }
                 return;

@@ -14,10 +14,11 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
 from django.db.models import Case
 from django.db.models import Count
+from django.db.models import Exists
+from django.db.models import IntegerField
 from django.db.models import OuterRef
 from django.db.models import Prefetch
 from django.db.models import Q
-from django.db.models import QuerySet
 from django.db.models import Subquery
 from django.db.models import Value
 from django.db.models import When
@@ -36,20 +37,20 @@ from speleodb.api.v1.permissions import IsReadOnly
 from speleodb.api.v1.permissions import SDB_AdminAccess
 from speleodb.api.v1.permissions import SDB_ReadAccess
 from speleodb.api.v1.permissions import SDB_WriteAccess
-from speleodb.api.v1.serializers import SensorFleetListSerializer
 from speleodb.api.v1.serializers import SensorFleetSerializer
 from speleodb.api.v1.serializers import SensorFleetUserPermissionSerializer
+from speleodb.api.v1.serializers import SensorFleetWithPermSerializer
 from speleodb.api.v1.serializers import SensorInstallSerializer
 from speleodb.api.v1.serializers import SensorSerializer
+from speleodb.common.enums import InstallStatus
+from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.gis.models import SensorInstall
-from speleodb.gis.models import SensorStatus
 from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
-from speleodb.gis.models.sensor import InstallStatus
 from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import BadRequestError
@@ -81,30 +82,26 @@ class SensorFleetApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
         """List all sensor fleets with user permissions."""
         user = self.get_user()
 
-        # Get all active fleets user has access to with sensor count
-        fleet_perms: QuerySet[SensorFleetUserPermission] = (
-            SensorFleetUserPermission.objects.filter(
-                user=user,
-                is_active=True,
-                sensor_fleet__is_active=True,
-            )
-            .select_related("sensor_fleet")
-            .annotate(sensor_count=Count("sensor_fleet__sensors"))
+        perm_qs = SensorFleetUserPermission.objects.filter(
+            sensor_fleet=OuterRef("pk"),
+            user=user,
+            is_active=True,
         )
 
-        # Build response data with permission info
-        fleets_data = []
-        for perm in fleet_perms:
-            fleet = perm.sensor_fleet
-            # Use list serializer for optimized response
-            serializer = SensorFleetListSerializer(fleet)
-            fleet_data = serializer.data
-            fleet_data["sensor_count"] = perm.sensor_count  # type: ignore[attr-defined]
-            fleet_data["user_permission_level"] = perm.level
-            fleet_data["user_permission_level_label"] = perm.level_label
-            fleets_data.append(fleet_data)
+        fleets = (
+            SensorFleet.objects.filter(is_active=True)
+            .filter(Exists(perm_qs))
+            .annotate(
+                sensor_count=Count("sensors", distinct=True),
+                user_permission_level=Subquery(
+                    perm_qs.values("level")[:1],
+                    output_field=IntegerField(),
+                ),
+            )
+            .distinct()
+        )
 
-        return SuccessResponse(fleets_data)
+        return SuccessResponse(SensorFleetWithPermSerializer(fleets, many=True).data)
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new sensor fleet."""
@@ -330,10 +327,10 @@ class SensorToggleFunctionalApiView(GenericAPIView[Sensor], SDBAPIViewMixin):
         """Toggle the sensor status."""
         sensor = self.get_object()
 
-        if sensor.status == SensorStatus.FUNCTIONAL:
-            sensor.status = SensorStatus.BROKEN
+        if sensor.status == OperationalStatus.FUNCTIONAL:
+            sensor.status = OperationalStatus.BROKEN
         else:
-            sensor.status = SensorStatus.FUNCTIONAL
+            sensor.status = OperationalStatus.FUNCTIONAL
 
         sensor.save()
 
@@ -1092,10 +1089,10 @@ class StationSensorInstallSpecificApiView(
 
                 match new_status:
                     case InstallStatus.LOST:
-                        sensor_install.sensor.status = SensorStatus.LOST
+                        sensor_install.sensor.status = OperationalStatus.LOST
                         sensor_install.sensor.save()
                     case InstallStatus.ABANDONED:
-                        sensor_install.sensor.status = SensorStatus.ABANDONED
+                        sensor_install.sensor.status = OperationalStatus.ABANDONED
                         sensor_install.sensor.save()
                     case _:
                         pass

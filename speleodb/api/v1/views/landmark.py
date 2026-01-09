@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -15,6 +16,7 @@ from speleodb.api.v1.serializers.landmark import LandmarkSerializer
 from speleodb.gis.models import Landmark
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
+from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
@@ -134,6 +136,5 @@ class LandmarkGeoJSONView(GenericAPIView[Landmark], SDBAPIViewMixin):
 
         # Use the map serializer to convert to GeoJSON format
         serializer = self.get_serializer(landmarks, many=True)
-        features = serializer.data
 
-        return SuccessResponse({"type": "FeatureCollection", "features": features})
+        return NoWrapResponse(FeatureCollection(serializer.data))  # type: ignore[no-untyped-call]

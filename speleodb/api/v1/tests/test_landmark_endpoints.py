@@ -385,8 +385,8 @@ class TestLandmarkEndpoints:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["data"]["type"] == "FeatureCollection"
-        assert len(data["data"]["features"]) == 0
+        assert data["type"] == "FeatureCollection"
+        assert len(data["features"]) == 0
 
     def test_geojson_endpoint_coordinate_format(
         self, api_client: APIClient, landmark: Landmark, user: User
@@ -397,7 +397,7 @@ class TestLandmarkEndpoints:
         response = api_client.get(url)
 
         data = response.json()
-        feature = data["data"]["features"][0]
+        feature = data["features"][0]
         coordinates = feature["geometry"]["coordinates"]
 
         # GeoJSON format is [longitude, latitude]

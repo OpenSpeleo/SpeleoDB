@@ -13,9 +13,7 @@ from speleodb.api.v1.serializers.gis_view import GISProjectViewSerializer
 from speleodb.api.v1.serializers.gis_view import GISViewCreateUpdateSerializer
 from speleodb.api.v1.serializers.gis_view import GISViewDataSerializer
 from speleodb.api.v1.serializers.gis_view import GISViewSerializer
-from speleodb.api.v1.serializers.git import GitCommitListSerializer
 from speleodb.api.v1.serializers.git import GitCommitSerializer
-from speleodb.api.v1.serializers.git import GitFileListSerializer
 from speleodb.api.v1.serializers.git import GitFileSerializer
 from speleodb.api.v1.serializers.gps_track import GPSTrackSerializer
 from speleodb.api.v1.serializers.gps_track import GPSTrackWithFileSerializer
@@ -23,13 +21,8 @@ from speleodb.api.v1.serializers.landmark import LandmarkGeoJSONSerializer
 from speleodb.api.v1.serializers.landmark import LandmarkSerializer
 from speleodb.api.v1.serializers.log_entry import StationLogEntrySerializer
 from speleodb.api.v1.serializers.password import PasswordChangeSerializer
-from speleodb.api.v1.serializers.permissions import (
-    ExperimentUserPermissionListSerializer,
-)
 from speleodb.api.v1.serializers.permissions import ExperimentUserPermissionSerializer
-from speleodb.api.v1.serializers.permissions import ProjectTeamPermissionListSerializer
 from speleodb.api.v1.serializers.permissions import ProjectTeamPermissionSerializer
-from speleodb.api.v1.serializers.permissions import ProjectUserPermissionListSerializer
 from speleodb.api.v1.serializers.permissions import ProjectUserPermissionSerializer
 from speleodb.api.v1.serializers.plugin_release import PluginReleaseSerializer
 from speleodb.api.v1.serializers.project import ProjectGeoJSONFileSerializer
@@ -47,13 +40,11 @@ from speleodb.api.v1.serializers.request_serializers import UserRequestSerialize
 from speleodb.api.v1.serializers.request_serializers import (
     UserRequestWithTeamRoleSerializer,
 )
-from speleodb.api.v1.serializers.sensor_fleet import SensorFleetListSerializer
 from speleodb.api.v1.serializers.sensor_fleet import SensorFleetSerializer
 from speleodb.api.v1.serializers.sensor_fleet import SensorFleetUserPermissionSerializer
+from speleodb.api.v1.serializers.sensor_fleet import SensorFleetWithPermSerializer
 from speleodb.api.v1.serializers.sensor_fleet import SensorInstallSerializer
 from speleodb.api.v1.serializers.sensor_fleet import SensorSerializer
-from speleodb.api.v1.serializers.team import SurveyTeamListSerializer
-from speleodb.api.v1.serializers.team import SurveyTeamMembershipListSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamMembershipSerializer
 from speleodb.api.v1.serializers.team import SurveyTeamSerializer
 from speleodb.api.v1.serializers.user import UserSerializer
@@ -63,7 +54,6 @@ __all__ = [
     "ExperimentRecordGISSerializer",
     "ExperimentRecordSerializer",
     "ExperimentSerializer",
-    "ExperimentUserPermissionListSerializer",
     "ExperimentUserPermissionSerializer",
     "GISProjectViewInputSerializer",
     "GISProjectViewSerializer",
@@ -72,9 +62,7 @@ __all__ = [
     "GISViewSerializer",
     "GPSTrackSerializer",
     "GPSTrackWithFileSerializer",
-    "GitCommitListSerializer",
     "GitCommitSerializer",
-    "GitFileListSerializer",
     "GitFileSerializer",
     "LandmarkGeoJSONSerializer",
     "LandmarkSerializer",
@@ -84,20 +72,16 @@ __all__ = [
     "ProjectGeoJSONCommitSerializer",
     "ProjectGeoJSONFileSerializer",
     "ProjectSerializer",
-    "ProjectTeamPermissionListSerializer",
     "ProjectTeamPermissionSerializer",
-    "ProjectUserPermissionListSerializer",
     "ProjectUserPermissionSerializer",
     "ProjectWithGeoJsonSerializer",
     "PublicAnnoucementSerializer",
-    "SensorFleetListSerializer",
     "SensorFleetSerializer",
     "SensorFleetUserPermissionSerializer",
+    "SensorFleetWithPermSerializer",
     "SensorInstallSerializer",
     "SensorSerializer",
     "StationLogEntrySerializer",
-    "SurveyTeamListSerializer",
-    "SurveyTeamMembershipListSerializer",
     "SurveyTeamMembershipSerializer",
     "SurveyTeamSerializer",
     "TeamRequestSerializer",

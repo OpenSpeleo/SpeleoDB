@@ -4,6 +4,7 @@
 # ruff: noqa: I001
 
 # Project Related Models
+from speleodb.gis.models.explo_lead import ExplorationLead
 from speleodb.gis.models.project_geojson import ProjectGeoJSON
 
 # GPS Track Related Models
@@ -37,8 +38,6 @@ from speleodb.gis.models.sensor import Sensor
 from speleodb.gis.models.sensor import SensorFleet
 from speleodb.gis.models.sensor import SensorFleetUserPermission
 from speleodb.gis.models.sensor import SensorInstall
-from speleodb.gis.models.sensor import InstallStatus
-from speleodb.gis.models.sensor import SensorStatus
 
 # GIS View Models
 from speleodb.gis.models.view import GISView
@@ -48,6 +47,7 @@ __all__ = [
     "Experiment",
     "ExperimentRecord",
     "ExperimentUserPermission",
+    "ExplorationLead",
     "GISProjectView",
     "GISView",
     "GPSTrack",
@@ -58,7 +58,6 @@ __all__ = [
     "SensorFleet",
     "SensorFleetUserPermission",
     "SensorInstall",
-    "SensorStatus",
     "Station",
     "StationLogEntry",
     "StationResource",

@@ -152,6 +152,25 @@ export const API = {
     getAllProjectsGeoJSON: () =>
         apiRequest(Urls['api:v1:all-projects-geojson']()),
 
+    // Exploration Leads
+    getProjectExplorationLeadsGeoJSON: (projectId) =>
+        apiRequest(Urls['api:v1:project-exploration-leads-geojson'](projectId)),
+
+    getAllProjectExplorationLeadsGeoJSON: () =>
+        apiRequest(Urls['api:v1:exploration-lead-all-geojson']()),
+
+    getProjectExplorationLeads: (projectId) =>
+        apiRequest(Urls['api:v1:project-exploration-leads'](projectId)),
+
+    createExplorationLead: (projectId, leadData) =>
+        apiRequest(Urls['api:v1:project-exploration-leads'](projectId), 'POST', leadData),
+
+    updateExplorationLead: (leadId, leadData) =>
+        apiRequest(Urls['api:v1:exploration-lead-detail'](leadId), 'PATCH', leadData),
+
+    deleteExplorationLead: (leadId) =>
+        apiRequest(Urls['api:v1:exploration-lead-detail'](leadId), 'DELETE'),
+
     // Sensor-Fleets
     getSensorFleets: () =>
         apiRequest(Urls['api:v1:sensor-fleets']()),
