@@ -51,6 +51,9 @@ export const LandmarkManager = {
             // Refresh list and update map
             const featureCollection = await this.loadAllLandmarks();
             Layers.addLandmarkLayer(featureCollection);
+            
+            // Ensure landmarks are rendered on top
+            Layers.reorderLayers();
 
             return landmarkData;
         } catch (error) {
@@ -66,6 +69,9 @@ export const LandmarkManager = {
             // Refresh list and update map
             const featureCollection = await this.loadAllLandmarks();
             Layers.addLandmarkLayer(featureCollection);
+            
+            // Ensure landmarks are rendered on top
+            Layers.reorderLayers();
 
             return result;
         } catch (error) {

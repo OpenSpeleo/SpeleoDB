@@ -316,7 +316,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Load user tags and colors for tag management
         StationTags.init();
 
-        // Load Stations and GeoJSON for each project
+        // Load Stations and GeoJSON for each project with progress tracking
+        const totalProjects = Config.projects.length;
+        let loadedProjects = 0;
+        const progressEl = document.getElementById('loading-progress');
+        
+        const updateProgress = () => {
+            if (progressEl) {
+                progressEl.textContent = `Downloading ${loadedProjects}/${totalProjects} Projects`;
+            }
+        };
+        
+        // Initial progress display
+        updateProgress();
+        
         const loadPromises = Config.projects.map(async (project) => {
             const projectPromises = [];
 
@@ -339,10 +352,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (geojsonUrl) {
                 projectPromises.push(
                     Layers.addProjectGeoJSON(project.id, geojsonUrl)
+                        .then(() => {
+                            loadedProjects++;
+                            updateProgress();
+                        })
                         .catch(e => {
                             console.error(`Error loading GeoJSON for ${project.name}`, e);
+                            // Still count as loaded (even on error) to keep progress moving
+                            loadedProjects++;
+                            updateProgress();
                         })
                 );
+            } else {
+                // No GeoJSON URL - count immediately
+                loadedProjects++;
+                updateProgress();
             }
 
             return Promise.all(projectPromises);
@@ -519,6 +543,58 @@ document.addEventListener('DOMContentLoaded', async () => {
             Layers.addSurfaceStationLayer(networkId, { type: 'FeatureCollection', features: stations });
             // Ensure stations remain on top of survey lines
             Layers.reorderLayers();
+        }
+    });
+
+    // Listen for Landmark Refresh Events (e.g., after GPX import)
+    window.addEventListener('speleo:refresh-landmarks', async () => {
+        console.log('📍 Refreshing landmarks...');
+        try {
+            const landmarksData = await LandmarkManager.loadAllLandmarks();
+            Layers.addLandmarkLayer(landmarksData);
+            Layers.reorderLayers();
+            Utils.showNotification('success', 'Landmarks refreshed');
+        } catch (e) {
+            console.error('Error refreshing Landmarks', e);
+        }
+    });
+
+    // Listen for GPS Tracks Refresh Events (e.g., after GPX import)
+    window.addEventListener('speleo:refresh-gps-tracks', async (e) => {
+        const { deactivateAll } = e.detail || {};
+        console.log('🛤️ Refreshing GPS tracks...');
+        try {
+            // Clear the existing GPS track cache
+            State.gpsTrackCache.clear();
+            
+            // Deactivate all visible GPS tracks
+            if (deactivateAll) {
+                State.gpsTrackLayerStates.forEach((isVisible, trackId) => {
+                    if (isVisible) {
+                        Layers.showGPSTrackLayers(trackId, false);
+                        State.gpsTrackLayerStates.set(trackId, false);
+                    }
+                });
+            }
+            
+            // Reset Config's internal GPS tracks cache to force reload
+            Config._gpsTracks = null;
+            
+            // Reload GPS tracks from API
+            await Config.loadGPSTracks();
+            
+            // Refresh the GPS tracks panel - check if panel exists
+            const panelExists = document.getElementById('gps-tracks-panel');
+            if (panelExists) {
+                GPSTracksPanel.refreshList();
+            } else if (Config.gpsTracks.length > 0) {
+                // Panel doesn't exist but we now have tracks - initialize it
+                GPSTracksPanel.init();
+            }
+            
+            Utils.showNotification('success', 'GPS tracks refreshed');
+        } catch (e) {
+            console.error('Error refreshing GPS tracks', e);
         }
     });
 

@@ -53,7 +53,15 @@ export const LandmarkUI = {
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-medium text-white">All Landmarks</h3>
-                        <span class="text-sm text-slate-400">${totalLandmarks} Landmark${totalLandmarks !== 1 ? 's' : ''} total</span>
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm text-slate-400">${totalLandmarks} Landmark${totalLandmarks !== 1 ? 's' : ''} total</span>
+                            <button id="create-landmark-manual-btn" class="btn-primary text-sm py-2 px-4 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                Create Landmark
+                            </button>
+                        </div>
                     </div>
                 </div>
         `;
@@ -142,6 +150,15 @@ export const LandmarkUI = {
                 }
             });
         });
+
+        // Attach event listener to create button
+        const createBtn = document.getElementById('create-landmark-manual-btn');
+        if (createBtn) {
+            createBtn.addEventListener('click', () => {
+                document.getElementById('landmark-manager-modal').classList.add('hidden');
+                this.openCreateModalManual();
+            });
+        }
     },
 
     openDetailsModal(landmarkId, isNewlyCreated = false) {
@@ -162,7 +179,6 @@ export const LandmarkUI = {
                 </div>
                 <div class="bg-slate-700/50 rounded-lg p-4 space-y-2">
                     <p class="text-slate-300"><strong>Coordinates:</strong> ${Number(landmark.latitude).toFixed(7)}, ${Number(landmark.longitude).toFixed(7)}</p>
-                    <p class="text-slate-300"><strong>Created by:</strong> ${landmark.created_by || 'Unknown'}</p>
                     <p class="text-slate-300"><strong>Created:</strong> ${landmark.creation_date ? new Date(landmark.creation_date).toLocaleDateString() : 'Unknown'}</p>
                 </div>
             </div>` :
@@ -231,20 +247,127 @@ export const LandmarkUI = {
         });
     },
 
+    openCreateModalManual() {
+        const formHtml = `
+            <form id="create-landmark-manual-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
+                    <input type="text" id="landmark-name-manual" required class="form-input" placeholder="Enter landmark name">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                    <textarea id="landmark-description-manual" rows="3" class="form-input form-textarea" placeholder="Optional description"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Latitude * <span class="text-xs text-slate-500">(e.g., 38.8977)</span></label>
+                        <input type="number" id="landmark-latitude-manual" required step="any" min="-90" max="90" class="form-input" placeholder="Latitude (-90 to 90)">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Longitude * <span class="text-xs text-slate-500">(e.g., -77.0365)</span></label>
+                        <input type="number" id="landmark-longitude-manual" required step="any" min="-180" max="180" class="form-input" placeholder="Longitude (-180 to 180)">
+                    </div>
+                </div>
+                <div id="landmark-coord-error" class="hidden text-red-400 text-sm p-2 bg-red-500/10 rounded-lg"></div>
+            </form>`;
+
+        const footer = `
+            <button data-close-modal="create-landmark-manual-modal" class="btn-secondary">Cancel</button>
+            <button form="create-landmark-manual-form" type="submit" class="btn-primary">Create Landmark</button>
+        `;
+
+        const html = Modal.base('create-landmark-manual-modal', 'Create Landmark', formHtml, footer, 'max-w-md');
+
+        Modal.open('create-landmark-manual-modal', html, () => {
+            document.getElementById('landmark-name-manual').focus();
+            document.getElementById('create-landmark-manual-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('landmark-name-manual').value.trim();
+                const description = document.getElementById('landmark-description-manual').value.trim();
+                const latStr = document.getElementById('landmark-latitude-manual').value;
+                const lonStr = document.getElementById('landmark-longitude-manual').value;
+                const errorEl = document.getElementById('landmark-coord-error');
+
+                // Validate name
+                if (!name) {
+                    errorEl.textContent = 'Please enter a landmark name.';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+
+                // Validate coordinates
+                const lat = parseFloat(latStr);
+                const lon = parseFloat(lonStr);
+
+                if (isNaN(lat) || lat < -90 || lat > 90) {
+                    errorEl.textContent = 'Latitude must be a number between -90 and 90.';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+
+                if (isNaN(lon) || lon < -180 || lon > 180) {
+                    errorEl.textContent = 'Longitude must be a number between -180 and 180.';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+
+                errorEl.classList.add('hidden');
+
+                try {
+                    const landmark = await LandmarkManager.createLandmark({
+                        name,
+                        description,
+                        latitude: lat,
+                        longitude: lon
+                    });
+                    Utils.showNotification('success', 'Landmark created!');
+                    
+                    // Close the modal first so user can see the map
+                    Modal.close('create-landmark-manual-modal');
+                    
+                    // Fly to the newly created landmark
+                    if (window.goToLandmark) {
+                        window.goToLandmark(landmark.id, lat, lon);
+                    }
+                } catch (err) {
+                    errorEl.textContent = err.message || 'Failed to create landmark.';
+                    errorEl.classList.remove('hidden');
+                }
+            };
+        });
+    },
+
     openEditModal(landmarkId) {
         const landmark = State.allLandmarks.get(landmarkId);
         if (!landmark) return;
+
+        // Escape HTML for textarea content
+        const escapeHtml = (str) => {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        };
 
         const formHtml = `
             <form id="edit-landmark-form" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
-                    <input type="text" id="edit-landmark-name" required value="${landmark.name}" class="form-input">
+                    <input type="text" id="edit-landmark-name" required value="${escapeHtml(landmark.name)}" class="form-input">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
-                    <textarea id="edit-landmark-description" rows="3" class="form-input form-textarea">${landmark.description || ''}</textarea>
+                    <textarea id="edit-landmark-description" rows="3" class="form-input form-textarea">${escapeHtml(landmark.description)}</textarea>
                 </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Latitude <span class="text-xs text-slate-500">(-90 to 90)</span></label>
+                        <input type="number" id="edit-landmark-latitude" step="any" min="-90" max="90" value="${Number(landmark.latitude).toFixed(7)}" class="form-input" placeholder="Latitude">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Longitude <span class="text-xs text-slate-500">(-180 to 180)</span></label>
+                        <input type="number" id="edit-landmark-longitude" step="any" min="-180" max="180" value="${Number(landmark.longitude).toFixed(7)}" class="form-input" placeholder="Longitude">
+                    </div>
+                </div>
+                <div id="edit-landmark-error" class="hidden text-red-400 text-sm p-2 bg-red-500/10 rounded-lg"></div>
             </form>`;
 
         const footer = `
@@ -257,17 +380,58 @@ export const LandmarkUI = {
         Modal.open('edit-landmark-modal', html, () => {
             document.getElementById('edit-landmark-form').onsubmit = async (e) => {
                 e.preventDefault();
+                const errorEl = document.getElementById('edit-landmark-error');
+                
+                const name = document.getElementById('edit-landmark-name').value.trim();
+                const description = document.getElementById('edit-landmark-description').value.trim();
+                const latStr = document.getElementById('edit-landmark-latitude').value;
+                const lonStr = document.getElementById('edit-landmark-longitude').value;
+
+                // Validate name
+                if (!name) {
+                    errorEl.textContent = 'Please enter a landmark name.';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+
+                // Validate coordinates
+                const lat = parseFloat(latStr);
+                const lon = parseFloat(lonStr);
+
+                if (isNaN(lat) || lat < -90 || lat > 90) {
+                    errorEl.textContent = 'Latitude must be a number between -90 and 90.';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+
+                if (isNaN(lon) || lon < -180 || lon > 180) {
+                    errorEl.textContent = 'Longitude must be a number between -180 and 180.';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+
+                errorEl.classList.add('hidden');
+
                 try {
                     await LandmarkManager.updateLandmark(landmarkId, {
-                        name: document.getElementById('edit-landmark-name').value.trim(),
-                        description: document.getElementById('edit-landmark-description').value.trim()
+                        name,
+                        description,
+                        latitude: lat,
+                        longitude: lon
                     });
                     Utils.showNotification('success', 'Landmark updated');
+                    
+                    // Close modals first so user can see the map
                     Modal.close('edit-landmark-modal');
                     Modal.close('landmark-details-modal');
-                    this.openDetailsModal(landmarkId);
+                    
+                    // Fly to the landmark's (potentially new) location
+                    if (window.goToLandmark) {
+                        window.goToLandmark(landmarkId, lat, lon);
+                    }
                 } catch (err) {
-                    Utils.showNotification('error', err.message);
+                    errorEl.textContent = err.message || 'Failed to update landmark.';
+                    errorEl.classList.remove('hidden');
                 }
             };
         });

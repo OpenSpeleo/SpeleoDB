@@ -101,6 +101,16 @@ input[type="number"] {
     margin-bottom: 8px;
 }
 
+.loading-progress {
+    color: #38bdf8;
+    /* sky-400 */
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    min-height: 22px;
+    text-align: center;
+}
+
 .loading-subtext {
     color: #94a3b8;
     /* slate-400 */

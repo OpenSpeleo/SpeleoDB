@@ -86,7 +86,7 @@
         </div>
         <h3 class="text-xl font-semibold text-white mb-2">Import Successful!</h3>
         <p id="gpx-success-message" class="text-slate-300 mb-4"></p>
-        <p class="text-slate-400 text-sm">Page will reload in 2 seconds...</p>
+        <p id="gpx-success-reload-text" class="text-slate-400 text-sm">Refreshing map data...</p>
     </div>
 </div>
 
@@ -318,13 +318,29 @@ window.GPXImport = (function() {
         
         const messageEl = document.getElementById('gpx-success-message');
         const modal = document.getElementById('gpx-success-modal');
+        const reloadText = document.getElementById('gpx-success-reload-text');
         
         if (messageEl) messageEl.textContent = message;
+        if (reloadText) reloadText.textContent = 'Refreshing map data...';
         if (modal) modal.classList.remove('hidden');
         
+        // Dispatch events to refresh data without full page reload
+        // Refresh landmarks if any were imported
+        if (landmarks > 0) {
+            window.dispatchEvent(new CustomEvent('speleo:refresh-landmarks'));
+        }
+        
+        // Refresh GPS tracks if any were imported
+        if (tracks > 0) {
+            window.dispatchEvent(new CustomEvent('speleo:refresh-gps-tracks', {
+                detail: { deactivateAll: true }
+            }));
+        }
+        
+        // Close success modal after a short delay
         setTimeout(() => {
-            window.location.reload();
-        }, 2000);
+            if (modal) modal.classList.add('hidden');
+        }, 2500);
     }
     
     function showWarningModal() {
