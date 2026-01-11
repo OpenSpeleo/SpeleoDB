@@ -98,7 +98,7 @@ dependencies = [
 
 [project.optional-dependencies]
 local = [
-    "Werkzeug[watchdog]==3.1.4", # https://github.com/pallets/werkzeug
+    "werkzeug[watchdog]==3.1.5", # https://github.com/pallets/werkzeug
     "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
     "psycopg[binary]==3.3.2",    # https://github.com/psycopg/psycopg
 
