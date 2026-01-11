@@ -9,3 +9,6 @@ class UsersConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "speleodb.users"
     verbose_name = "Users"
+
+    def ready(self) -> None:
+        import speleodb.users.signals  # noqa: F401, PLC0415

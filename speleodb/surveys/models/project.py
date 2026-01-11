@@ -9,9 +9,8 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 
-from cachetools import TTLCache
-from cachetools import cached
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
@@ -253,19 +252,23 @@ class Project(models.Model):
             return self._prefetched_commits[0] if self._prefetched_commits else None
         return self.commits.order_by("-authored_date").first()
 
-    @cached(cache=TTLCache(maxsize=1, ttl=300))
-    def _active_mutex(self) -> ProjectMutex | None:
-        if hasattr(self, "_prefetched_active_mutex"):
-            return (
-                self._prefetched_active_mutex[0]
-                if self._prefetched_active_mutex
-                else None
-            )
-        return self.mutexes.filter(is_active=True).select_related("user").first()
-
     @property
     def active_mutex(self) -> ProjectMutex | None:
-        return self._active_mutex()
+        from speleodb.surveys.models import ProjectMutex  # noqa: PLC0415
+
+        cache_key = f"project:{self.pk}:active_mutex_id"
+
+        mutex_id = cache.get(cache_key)
+        if mutex_id is None:
+            mutex_id = (
+                self.mutexes.filter(is_active=True).values_list("id", flat=True).first()
+            )
+            cache.set(cache_key, mutex_id, timeout=300)
+
+        if mutex_id is None:
+            return None
+
+        return ProjectMutex.objects.select_related("user").get(pk=mutex_id)
 
     @property
     def commit_count(self) -> int:
@@ -294,8 +297,6 @@ class Project(models.Model):
 
             _ = ProjectMutex.objects.create(project=self, user=user)
 
-        self.void_mutex_cache()
-
     def release_mutex(self, user: User, comment: str = "") -> None:
         if (active_mutex := self.active_mutex) is None:
             # if nobody owns the project, returns without error.
@@ -306,8 +307,6 @@ class Project(models.Model):
 
         # AutoSave in the background
         active_mutex.release_mutex(user=user, comment=comment)
-
-        self.void_mutex_cache()
 
     def get_best_permission(
         self, user: User
@@ -503,6 +502,4 @@ class Project(models.Model):
         """Refresh the GeoJSON data for this project."""
         # This method will be implemented by the refresh_project_geojson task
         # to populate the geojson field
-
-    def void_mutex_cache(self) -> None:
-        self._active_mutex.cache_clear()
+        raise NotImplementedError

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from cachetools import TTLCache
 from cachetools import cached
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django_countries.fields import CountryField
@@ -18,6 +19,10 @@ if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise
 
     from speleodb.surveys.models import TeamProjectPermission
+
+
+def membership_cache_key(team_id: int, user_id: int) -> str:
+    return f"survey_team:{team_id}:membership:{user_id}"
 
 
 class SurveyTeam(models.Model):
@@ -51,9 +56,22 @@ class SurveyTeam(models.Model):
     def __str__(self) -> str:
         return str(self.name)
 
-    @cached(cache=TTLCache(maxsize=100, ttl=300))
     def get_membership(self, user: User) -> SurveyTeamMembership:
-        return self.memberships.get(user=user, is_active=True)
+        key = membership_cache_key(team_id=self.pk, user_id=user.pk)
+
+        membership_id = cache.get(key)
+        if membership_id is None:
+            membership_id = (
+                self.memberships.filter(user=user, is_active=True)
+                .values_list("id", flat=True)
+                .first()
+            )
+            cache.set(key, membership_id, timeout=300)
+
+        if membership_id is None:
+            raise ObjectDoesNotExist
+
+        return SurveyTeamMembership.objects.select_related("user").get(pk=membership_id)
 
     def get_member_count(self) -> int:
         return self.get_all_memberships().count()
@@ -79,9 +97,6 @@ class SurveyTeam(models.Model):
             )
         except ObjectDoesNotExist:
             return False
-
-    def void_membership_cache(self) -> None:
-        self.get_membership.cache_clear()
 
 
 class SurveyTeamMembershipRole(BaseIntegerChoices):

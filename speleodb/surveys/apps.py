@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
-
 from django.apps import AppConfig
 
 
@@ -13,5 +11,4 @@ class SurveysConfig(AppConfig):
     verbose_name = "Surveys"
 
     def ready(self) -> None:
-        with contextlib.suppress(ImportError):
-            import speleodb.surveys.signals  # noqa: F401, PLC0415
+        import speleodb.surveys.signals  # noqa: F401, PLC0415
