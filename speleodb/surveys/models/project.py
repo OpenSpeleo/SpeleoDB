@@ -253,7 +253,7 @@ class Project(models.Model):
             return self._prefetched_commits[0] if self._prefetched_commits else None
         return self.commits.order_by("-authored_date").first()
 
-    @cached(cache=TTLCache(maxsize=1, ttl=300))
+    # @cached(cache=TTLCache(maxsize=1, ttl=300))
     def _active_mutex(self) -> ProjectMutex | None:
         if hasattr(self, "_prefetched_active_mutex"):
             return (
@@ -505,4 +505,5 @@ class Project(models.Model):
         # to populate the geojson field
 
     def void_mutex_cache(self) -> None:
-        self._active_mutex.cache_clear()
+        # self._active_mutex.cache_clear()
+        pass
