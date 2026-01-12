@@ -33,7 +33,7 @@ dependencies = [
 
     # Media Processing
     # ------------------------------------------------------------------------------
-    "av==16.0.1",            # https://github.com/PyAV-Org/PyAV
+    "av==16.1.0",            # https://github.com/PyAV-Org/PyAV
     "imageio==2.37.2",       # https://github.com/imageio/imageio
     "imageio-ffmpeg==0.6.0", # https://github.com/imageio/imageio-ffmpeg
     "Pillow==12.1.0",        # https://github.com/python-pillow/Pillow
