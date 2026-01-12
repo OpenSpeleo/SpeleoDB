@@ -9,8 +9,6 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 
-from cachetools import TTLCache
-from cachetools import cached
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError

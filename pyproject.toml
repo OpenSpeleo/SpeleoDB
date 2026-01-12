@@ -33,7 +33,7 @@ dependencies = [
 
     # Media Processing
     # ------------------------------------------------------------------------------
-    "av==16.0.1",            # https://github.com/PyAV-Org/PyAV
+    "av==16.1.0",            # https://github.com/PyAV-Org/PyAV
     "imageio==2.37.2",       # https://github.com/imageio/imageio
     "imageio-ffmpeg==0.6.0", # https://github.com/imageio/imageio-ffmpeg
     "Pillow==12.1.0",        # https://github.com/python-pillow/Pillow
@@ -60,16 +60,16 @@ dependencies = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django==6.0",                     # https://www.djangoproject.com/
+    "django==6.0.1",                     # https://www.djangoproject.com/
     "django-allauth==65.13.1",         # https://github.com/pennersr/django-allauth
     "django-countries==8.2.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.12.0",          # https://github.com/joke2k/django-environ
-    "django-hijack==3.7.4",            # https://github.com/django-hijack/django-hijack/
-    "django-import-export==4.3.14",    # https://github.com/django-import-export/django-import-export
+    "django-hijack==3.7.6",            # https://github.com/django-hijack/django-hijack/
+    "django-import-export==4.4.0",    # https://github.com/django-import-export/django-import-export
     "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
-    "django-polymorphic==4.6.0",       # https://github.com/jazzband/django-polymorphic
+    "django-polymorphic==4.9.0",       # https://github.com/jazzband/django-polymorphic
     "django-rest-polymorphic==0.1.10", # https://github.com/denisorehovsky/django-rest-polymorphic
     "django-storages[s3]==1.14.6",     # https://github.com/jschneier/django-storages
 
@@ -81,8 +81,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.42.24", # https://github.com/boto/botocore
-    "boto3==1.42.24",    # https://github.com/boto/boto3
+    "botocore==1.42.25", # https://github.com/boto/botocore
+    "boto3==1.42.25",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -93,7 +93,7 @@ dependencies = [
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.48.0", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.49.0", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
@@ -127,7 +127,7 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.14.10",     # https://github.com/astral-sh/ruff
+    "ruff==0.14.11",     # https://github.com/astral-sh/ruff
     "coverage==7.13.1",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
     "pre-commit==4.5.1", # https://github.com/pre-commit/pre-commit
