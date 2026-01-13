@@ -564,6 +564,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/import/kml_kmz/",
+        "module": "speleodb.api.v1.views.kml_kmz_import.KML_KMZ_ImportView",
+        "name": "api:v1:kml-kmz-import",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/landmarks/",
         "module": "speleodb.api.v1.views.landmark.LandmarkAPIView",
         "name": "api:v1:landmarks",

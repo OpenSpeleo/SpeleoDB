@@ -1,0 +1,713 @@
+<!-- Data Import Modal -->
+<div id="import-data-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="import-modal-container bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-6 border-b border-slate-600 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                <h2 class="text-xl font-semibold text-white">Import Data</h2>
+            </div>
+            <button type="button" onclick="DataImport.hideModal()" class="text-slate-400 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-slate-600 flex-shrink-0">
+            <button type="button" id="import-tab-gpx" onclick="DataImport.switchTab('gpx')" 
+                class="flex-1 px-6 py-4 text-white font-medium border-b-2 border-cyan-400 bg-slate-700/50 transition-all flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                </svg>
+                GPX File
+            </button>
+            <button type="button" id="import-tab-kml" onclick="DataImport.switchTab('kml')" 
+                class="flex-1 px-6 py-4 text-slate-400 font-medium border-b-2 border-transparent hover:text-white hover:bg-slate-700/30 transition-all flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                KML/KMZ (Google Earth)
+            </button>
+        </div>
+
+        <!-- Tab Content - Scrollable -->
+        <div class="modal-scroll-content">
+            <!-- GPX Tab Content -->
+            <div id="import-content-gpx" class="p-6">
+                <div class="mb-4">
+                    <p class="text-slate-300 text-sm">
+                        Import waypoints and tracks from a GPX file. Waypoints will be imported as <strong class="text-blue-400">Landmarks</strong>, 
+                        and tracks will be imported as <strong class="text-cyan-400">GPS Tracks</strong>.
+                    </p>
+                </div>
+
+                <!-- Drop Zone -->
+                <div id="gpx-drop-zone" class="file-upload-area border-2 border-dashed border-slate-500 rounded-lg p-8 text-center transition-all duration-200 hover:border-cyan-400">
+                    <input type="file" id="gpx-file-input" accept=".gpx" class="hidden">
+                    <svg class="w-12 h-12 mx-auto text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <p class="text-slate-300 mb-2">Drag and drop your GPX file here</p>
+                    <p class="text-slate-500 text-sm mb-4">or</p>
+                    <button type="button" onclick="document.getElementById('gpx-file-input').click()" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors">
+                        Browse Files
+                    </button>
+                    <p class="text-slate-500 text-xs mt-4">Only .gpx files are accepted</p>
+                </div>
+
+                <!-- Selected File Display -->
+                <div id="gpx-selected-file" class="hidden mt-4 p-4 bg-slate-700/50 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <div>
+                                <p id="gpx-file-name" class="text-white font-medium"></p>
+                                <p id="gpx-file-size" class="text-slate-400 text-sm"></p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="DataImport.clearGPXFile()" class="text-slate-400 hover:text-red-400 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="gpx-error-message" class="hidden mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+                    <p class="text-red-300 text-sm" id="gpx-error-text"></p>
+                </div>
+
+                <!-- Upload Button -->
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" onclick="DataImport.hideModal()" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" id="gpx-upload-btn" onclick="DataImport.uploadGPX()" disabled class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                        <span id="gpx-upload-spinner" class="hidden">
+                            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                        <span id="gpx-upload-text">Import GPX</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- KML/KMZ Tab Content -->
+            <div id="import-content-kml" class="p-6 hidden">
+                <div class="mb-6">
+                    <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div>
+                                <p class="text-blue-300 font-medium mb-1">Landmarks Only</p>
+                                <p class="text-slate-300 text-sm">
+                                    KML/KMZ import only supports <strong class="text-blue-400">Placemarks (Landmarks)</strong>.<br>
+                                    Tracks and routes from KML/KMZ files are not imported.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="kml-instructions-panel" class="rounded-lg collapsible-panel border border-slate-600 hover:border-amber-500/50 transition-colors">
+                        <button type="button" id="kml-instructions-toggle"
+                            class="w-full p-4 cursor-pointer flex items-center justify-between text-white font-medium bg-slate-700/70 hover:bg-slate-600/70 rounded-lg transition-all">
+                            <span class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                </svg>
+                                <span>How to Export from Google Earth Pro</span>
+                                <span class="text-xs text-slate-400 font-normal ml-1">(click to expand)</span>
+                            </span>
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-slate-600 text-amber-400">
+                                <svg class="w-4 h-4 collapsible-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </span>
+                        </button>
+                        <ol class="collapsible-content text-slate-300 text-sm space-y-2 list-decimal list-inside px-4 py-4 bg-slate-800/50 border-t border-slate-600">
+                            <li>Open <strong>Google Earth Pro</strong> on your computer</li>
+                            <li>In the left sidebar, expand <strong>"My Places"</strong></li>
+                            <li>Right-click on the folder or placemarks you want to export</li>
+                            <li>Select <strong>"Save Place As..."</strong></li>
+                            <li>Choose <strong>KML (.kml)</strong> or <strong>KMZ (.kmz)</strong> format</li>
+                            <li>Save the file and upload it below</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Drop Zone -->
+                <div id="kml-drop-zone" class="file-upload-area border-2 border-dashed border-slate-500 rounded-lg p-8 text-center transition-all duration-200 hover:border-amber-400">
+                    <input type="file" id="kml-file-input" accept=".kml,.kmz" class="hidden">
+                    <svg class="w-12 h-12 mx-auto text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <p class="text-slate-300 mb-2">Drag and drop your KML or KMZ file here</p>
+                    <p class="text-slate-500 text-sm mb-4">or</p>
+                    <button type="button" onclick="document.getElementById('kml-file-input').click()" class="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors">
+                        Browse Files
+                    </button>
+                    <p class="text-slate-500 text-xs mt-4">Only .kml and .kmz files are accepted</p>
+                </div>
+
+                <!-- Selected File Display -->
+                <div id="kml-selected-file" class="hidden mt-4 p-4 bg-slate-700/50 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div>
+                                <p id="kml-file-name" class="text-white font-medium"></p>
+                                <p id="kml-file-size" class="text-slate-400 text-sm"></p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="DataImport.clearKMLFile()" class="text-slate-400 hover:text-red-400 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="kml-error-message" class="hidden mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+                    <p class="text-red-300 text-sm" id="kml-error-text"></p>
+                </div>
+
+                <!-- Upload Button -->
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" onclick="DataImport.hideModal()" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" id="kml-upload-btn" onclick="DataImport.uploadKML()" disabled class="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                        <span id="kml-upload-spinner" class="hidden">
+                            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                        <span id="kml-upload-text">Import KML/KMZ</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Success Modal -->
+<div id="import-success-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-xl shadow-2xl border border-emerald-500/50 w-full max-w-md p-6 text-center">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+            <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-white mb-2">Import Successful!</h3>
+        <p id="import-success-message" class="text-slate-300 mb-4"></p>
+        <p id="import-success-reload-text" class="text-slate-400 text-sm">Refreshing map data...</p>
+    </div>
+</div>
+
+<!-- Import Warning Modal -->
+<div id="import-warning-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-xl shadow-2xl border border-amber-500/50 w-full max-w-md p-6 text-center">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
+            <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-white mb-2">Nothing New to Import</h3>
+        <p id="import-warning-message" class="text-slate-300 mb-6">This file does not contain any new landmarks or GPS tracks that aren't already in the system.</p>
+        <button type="button" onclick="DataImport.hideWarningModal()" class="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors">
+            OK
+        </button>
+    </div>
+</div>
+
+<script>
+// Data Import Module - Unified interface for GPX and KML/KMZ imports
+window.DataImport = (function() {
+    let selectedGPXFile = null;
+    let selectedKMLFile = null;
+    let csrfToken = '';
+    let currentTab = 'gpx';
+    
+    // Initialize with CSRF token
+    function init(token) {
+        csrfToken = token;
+        setupEventListeners();
+    }
+    
+    function setupEventListeners() {
+        // GPX file input
+        const gpxFileInput = document.getElementById('gpx-file-input');
+        const gpxDropZone = document.getElementById('gpx-drop-zone');
+        
+        if (gpxFileInput) {
+            gpxFileInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) {
+                    handleGPXFile(e.target.files[0]);
+                }
+            });
+        }
+        
+        if (gpxDropZone) {
+            gpxDropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('border-cyan-400', 'bg-slate-700/50');
+            });
+            
+            gpxDropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.remove('border-cyan-400', 'bg-slate-700/50');
+            });
+            
+            gpxDropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.remove('border-cyan-400', 'bg-slate-700/50');
+                
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handleGPXFile(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        // KML file input
+        const kmlFileInput = document.getElementById('kml-file-input');
+        const kmlDropZone = document.getElementById('kml-drop-zone');
+        
+        if (kmlFileInput) {
+            kmlFileInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) {
+                    handleKMLFile(e.target.files[0]);
+                }
+            });
+        }
+        
+        if (kmlDropZone) {
+            kmlDropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('border-amber-400', 'bg-slate-700/50');
+            });
+            
+            kmlDropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.remove('border-amber-400', 'bg-slate-700/50');
+            });
+            
+            kmlDropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.remove('border-amber-400', 'bg-slate-700/50');
+                
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handleKMLFile(e.dataTransfer.files[0]);
+                }
+            });
+        }
+        
+        // Close on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const importModal = document.getElementById('import-data-modal');
+                if (importModal && !importModal.classList.contains('hidden')) {
+                    hideModal();
+                }
+                hideWarningModal();
+            }
+        });
+        
+        // Close when clicking outside modal content
+        const importModal = document.getElementById('import-data-modal');
+        if (importModal) {
+            importModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideModal();
+                }
+            });
+        }
+
+        // Setup collapsible instructions toggle
+        const instructionsToggle = document.getElementById('kml-instructions-toggle');
+        if (instructionsToggle) {
+            instructionsToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                toggleInstructions();
+            });
+        }
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        
+        const gpxTab = document.getElementById('import-tab-gpx');
+        const kmlTab = document.getElementById('import-tab-kml');
+        const gpxContent = document.getElementById('import-content-gpx');
+        const kmlContent = document.getElementById('import-content-kml');
+        
+        if (tab === 'gpx') {
+            gpxTab.classList.add('text-white', 'border-cyan-400', 'bg-slate-700/50');
+            gpxTab.classList.remove('text-slate-400', 'border-transparent');
+            kmlTab.classList.remove('text-white', 'border-amber-400', 'bg-slate-700/50');
+            kmlTab.classList.add('text-slate-400', 'border-transparent');
+            gpxContent.classList.remove('hidden');
+            kmlContent.classList.add('hidden');
+        } else {
+            kmlTab.classList.add('text-white', 'border-amber-400', 'bg-slate-700/50');
+            kmlTab.classList.remove('text-slate-400', 'border-transparent');
+            gpxTab.classList.remove('text-white', 'border-cyan-400', 'bg-slate-700/50');
+            gpxTab.classList.add('text-slate-400', 'border-transparent');
+            kmlContent.classList.remove('hidden');
+            gpxContent.classList.add('hidden');
+        }
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    
+    function handleGPXFile(file) {
+        document.getElementById('gpx-error-message').classList.add('hidden');
+        
+        // Validate extension
+        if (!file.name.toLowerCase().endsWith('.gpx')) {
+            showGPXError('Invalid file type. Please select a .gpx file.');
+            return;
+        }
+        
+        selectedGPXFile = file;
+        
+        // Show file info
+        document.getElementById('gpx-file-name').textContent = file.name;
+        document.getElementById('gpx-file-size').textContent = formatFileSize(file.size);
+        document.getElementById('gpx-drop-zone').classList.add('hidden');
+        document.getElementById('gpx-selected-file').classList.remove('hidden');
+        document.getElementById('gpx-upload-btn').disabled = false;
+    }
+
+    function handleKMLFile(file) {
+        document.getElementById('kml-error-message').classList.add('hidden');
+        
+        const fileName = file.name.toLowerCase();
+        // Validate extension
+        if (!fileName.endsWith('.kml') && !fileName.endsWith('.kmz')) {
+            showKMLError('Invalid file type. Please select a .kml or .kmz file.');
+            return;
+        }
+        
+        selectedKMLFile = file;
+        
+        // Show file info
+        document.getElementById('kml-file-name').textContent = file.name;
+        document.getElementById('kml-file-size').textContent = formatFileSize(file.size);
+        document.getElementById('kml-drop-zone').classList.add('hidden');
+        document.getElementById('kml-selected-file').classList.remove('hidden');
+        document.getElementById('kml-upload-btn').disabled = false;
+    }
+    
+    function showGPXError(message) {
+        const errorDiv = document.getElementById('gpx-error-message');
+        const errorText = document.getElementById('gpx-error-text');
+        errorText.textContent = message;
+        errorDiv.classList.remove('hidden');
+    }
+
+    function showKMLError(message) {
+        const errorDiv = document.getElementById('kml-error-message');
+        const errorText = document.getElementById('kml-error-text');
+        errorText.textContent = message;
+        errorDiv.classList.remove('hidden');
+    }
+    
+    function showModal() {
+        const modal = document.getElementById('import-data-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            clearGPXFile();
+            clearKMLFile();
+            switchTab('gpx');
+        }
+    }
+    
+    function hideModal() {
+        const modal = document.getElementById('import-data-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            clearGPXFile();
+            clearKMLFile();
+        }
+    }
+    
+    function hideWarningModal() {
+        const modal = document.getElementById('import-warning-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+    
+    function clearGPXFile() {
+        selectedGPXFile = null;
+        const fileInput = document.getElementById('gpx-file-input');
+        if (fileInput) fileInput.value = '';
+        
+        const dropZone = document.getElementById('gpx-drop-zone');
+        const selectedFile = document.getElementById('gpx-selected-file');
+        const errorMessage = document.getElementById('gpx-error-message');
+        const uploadBtn = document.getElementById('gpx-upload-btn');
+        
+        if (dropZone) dropZone.classList.remove('hidden');
+        if (selectedFile) selectedFile.classList.add('hidden');
+        if (errorMessage) errorMessage.classList.add('hidden');
+        if (uploadBtn) uploadBtn.disabled = true;
+        
+        // Reset upload button state
+        const uploadText = document.getElementById('gpx-upload-text');
+        const uploadSpinner = document.getElementById('gpx-upload-spinner');
+        if (uploadText) uploadText.textContent = 'Import GPX';
+        if (uploadSpinner) uploadSpinner.classList.add('hidden');
+    }
+
+    function clearKMLFile() {
+        selectedKMLFile = null;
+        const fileInput = document.getElementById('kml-file-input');
+        if (fileInput) fileInput.value = '';
+        
+        const dropZone = document.getElementById('kml-drop-zone');
+        const selectedFile = document.getElementById('kml-selected-file');
+        const errorMessage = document.getElementById('kml-error-message');
+        const uploadBtn = document.getElementById('kml-upload-btn');
+        
+        if (dropZone) dropZone.classList.remove('hidden');
+        if (selectedFile) selectedFile.classList.add('hidden');
+        if (errorMessage) errorMessage.classList.add('hidden');
+        if (uploadBtn) uploadBtn.disabled = true;
+        
+        // Reset upload button state
+        const uploadText = document.getElementById('kml-upload-text');
+        const uploadSpinner = document.getElementById('kml-upload-spinner');
+        if (uploadText) uploadText.textContent = 'Import KML/KMZ';
+        if (uploadSpinner) uploadSpinner.classList.add('hidden');
+    }
+    
+    async function uploadGPX() {
+        if (!selectedGPXFile) return;
+        
+        const uploadBtn = document.getElementById('gpx-upload-btn');
+        const uploadText = document.getElementById('gpx-upload-text');
+        const uploadSpinner = document.getElementById('gpx-upload-spinner');
+        
+        // Show loading state
+        uploadBtn.disabled = true;
+        uploadText.textContent = 'Importing...';
+        uploadSpinner.classList.remove('hidden');
+        document.getElementById('gpx-error-message').classList.add('hidden');
+        
+        try {
+            const headers = new Headers();
+            headers.append('X-CSRFToken', csrfToken);
+            
+            const formData = new FormData();
+            formData.append('file', selectedGPXFile, selectedGPXFile.name);
+            
+            const requestOptions = {
+                method: 'PUT',
+                headers: headers,
+                body: formData,
+                credentials: 'same-origin',
+                redirect: 'follow'
+            };
+            
+            const response = await fetch(Urls['api:v1:gpx-import'](), requestOptions);
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || data.error || data.detail || 'Import failed');
+            }
+            
+            if (data.success) {
+                const landmarksCreated = data.data?.landmarks_created || 0;
+                const tracksCreated = data.data?.gps_tracks_created || 0;
+                
+                if (landmarksCreated > 0 || tracksCreated > 0) {
+                    // Success - show message and reload
+                    hideModal();
+                    showSuccessModal(landmarksCreated, tracksCreated, 'gpx');
+                } else {
+                    // Nothing imported - show warning
+                    hideModal();
+                    showWarningModal('gpx');
+                }
+            } else {
+                throw new Error(data.message || 'Import failed');
+            }
+            
+        } catch (error) {
+            console.error('GPX import error:', error);
+            showGPXError(error.message || 'Failed to import GPX file');
+            
+            // Reset button
+            uploadBtn.disabled = false;
+            uploadText.textContent = 'Import GPX';
+            uploadSpinner.classList.add('hidden');
+        }
+    }
+
+    async function uploadKML() {
+        if (!selectedKMLFile) return;
+        
+        const uploadBtn = document.getElementById('kml-upload-btn');
+        const uploadText = document.getElementById('kml-upload-text');
+        const uploadSpinner = document.getElementById('kml-upload-spinner');
+        
+        // Show loading state
+        uploadBtn.disabled = true;
+        uploadText.textContent = 'Importing...';
+        uploadSpinner.classList.remove('hidden');
+        document.getElementById('kml-error-message').classList.add('hidden');
+        
+        try {
+            const headers = new Headers();
+            headers.append('X-CSRFToken', csrfToken);
+            
+            const formData = new FormData();
+            formData.append('file', selectedKMLFile, selectedKMLFile.name);
+            
+            const requestOptions = {
+                method: 'PUT',
+                headers: headers,
+                body: formData,
+                credentials: 'same-origin',
+                redirect: 'follow'
+            };
+            
+            const response = await fetch(Urls['api:v1:kml-kmz-import'](), requestOptions);
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || data.error || data.detail || 'Import failed');
+            }
+            
+            if (data.success) {
+                const landmarksCreated = data.data?.landmarks_created || 0;
+                
+                if (landmarksCreated > 0) {
+                    // Success - show message and reload landmarks
+                    hideModal();
+                    showSuccessModal(landmarksCreated, 0, 'kml');
+                } else {
+                    // Nothing imported - show warning
+                    hideModal();
+                    showWarningModal('kml');
+                }
+            } else {
+                throw new Error(data.message || 'Import failed');
+            }
+            
+        } catch (error) {
+            console.error('KML/KMZ import error:', error);
+            showKMLError(error.message || 'Failed to import KML/KMZ file');
+            
+            // Reset button
+            uploadBtn.disabled = false;
+            uploadText.textContent = 'Import KML/KMZ';
+            uploadSpinner.classList.add('hidden');
+        }
+    }
+    
+    function showSuccessModal(landmarks, tracks, type) {
+        const parts = [];
+        if (tracks > 0) parts.push(`${tracks} GPS track${tracks > 1 ? 's' : ''}`);
+        if (landmarks > 0) parts.push(`${landmarks} landmark${landmarks > 1 ? 's' : ''}`);
+        
+        const message = `Successfully imported ${parts.join(' and ')}!`;
+        
+        const messageEl = document.getElementById('import-success-message');
+        const modal = document.getElementById('import-success-modal');
+        const reloadText = document.getElementById('import-success-reload-text');
+        
+        if (messageEl) messageEl.textContent = message;
+        if (reloadText) reloadText.textContent = 'Refreshing map data...';
+        if (modal) modal.classList.remove('hidden');
+        
+        // Dispatch events to refresh data without full page reload
+        // Refresh landmarks if any were imported
+        if (landmarks > 0) {
+            window.dispatchEvent(new CustomEvent('speleo:refresh-landmarks'));
+        }
+        
+        // Refresh GPS tracks if any were imported (only for GPX)
+        if (tracks > 0) {
+            window.dispatchEvent(new CustomEvent('speleo:refresh-gps-tracks', {
+                detail: { deactivateAll: true }
+            }));
+        }
+        
+        // Close success modal after a short delay
+        setTimeout(() => {
+            if (modal) modal.classList.add('hidden');
+        }, 2500);
+    }
+    
+    function showWarningModal(type) {
+        const modal = document.getElementById('import-warning-modal');
+        const messageEl = document.getElementById('import-warning-message');
+        
+        if (type === 'kml') {
+            if (messageEl) messageEl.textContent = "This KML/KMZ file does not contain any new landmarks that aren't already in the system.";
+        } else {
+            if (messageEl) messageEl.textContent = "This GPX file does not contain any new landmarks or GPS tracks that aren't already in the system.";
+        }
+        
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function toggleInstructions() {
+        const panel = document.getElementById('kml-instructions-panel');
+        if (panel) {
+            panel.classList.toggle('is-open');
+        }
+    }
+    
+    // Public API
+    return {
+        init: init,
+        showModal: showModal,
+        hideModal: hideModal,
+        hideWarningModal: hideWarningModal,
+        clearGPXFile: clearGPXFile,
+        clearKMLFile: clearKMLFile,
+        uploadGPX: uploadGPX,
+        uploadKML: uploadKML,
+        switchTab: switchTab,
+        toggleInstructions: toggleInstructions
+    };
+})();
+
+// Global function for button onclick
+window.showImportDataModal = function() {
+    DataImport.showModal();
+};
+
+// Legacy support - keep showImportGPXModal working
+window.showImportGPXModal = function() {
+    DataImport.showModal();
+};
+</script>

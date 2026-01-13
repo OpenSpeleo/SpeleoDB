@@ -14,6 +14,9 @@ export const State = {
     projectBounds: new Map(), // Track bounds for each project for auto-zoom and fly-to
     networkBounds: new Map(), // Track bounds for each network for auto-zoom and fly-to
 
+    // Landmark visibility state (default: true = visible)
+    landmarksVisible: true,
+
     // GPS Tracks state
     gpsTrackLayerStates: new Map(), // Track visibility state for each GPS track (default: all OFF)
     gpsTrackCache: new Map(), // Cache downloaded GeoJSON data by track ID
@@ -32,6 +35,7 @@ export const State = {
         this.allLandmarks = new Map();
         this.projectBounds = new Map();
         this.networkBounds = new Map();
+        this.landmarksVisible = true;
         // GPS Tracks
         this.gpsTrackLayerStates = new Map();
         this.gpsTrackCache = new Map();

@@ -32,6 +32,15 @@
                     <span id="color-mode-label" class="hidden xs:block ml-1">Color: By Survey</span>
                 </button>
 
+                <!-- Landmarks Toggle: button-sized, explicit label -->
+                <button id="landmarks-toggle-button" class="btn bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2" type="button">
+                    <label class="toggle-switch m-0">
+                        <input id="landmarks-toggle" type="checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="hidden xs:block ml-1">Landmarks</span>
+                </button>
+
                 <!-- Station Management button -->
                 <button id="station-manager-button" onclick="window.openSurveyStationManager()" class="btn bg-orange-500 hover:bg-orange-600 text-white">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
@@ -58,12 +67,12 @@
                     <span class="hidden xs:block ml-2">Landmarks</span>
                 </button>
 
-                <!-- Import GPX -->
-                <button id="import-gpx-button" onclick="showImportGPXModal()" class="btn bg-red-600 hover:bg-red-700 text-white">
+                <!-- Import Data -->
+                <button id="import-data-button" onclick="showImportDataModal()" class="btn bg-red-600 hover:bg-red-700 text-white" title="Import GPX, KML, KMZ files (Google Earth)">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                     </svg>
-                    <span class="hidden xs:block ml-2">Import GPX</span>
+                    <span class="hidden xs:block ml-2">Import GPS</span>
                 </button>
 
             </div>
@@ -212,7 +221,7 @@
     <!-- Menu items will be populated dynamically -->
 </div>
 
-{% include 'snippets/modal_gpx_import.html' %}
+{% include 'snippets/modal_data_import.html' %}
 {% endblock content %}
 
 {% block extra_js %}
@@ -228,9 +237,9 @@
         mapboxToken: "{{ mapbox_api_token }}"
     };
     
-    // Initialize GPX Import module
+    // Initialize Data Import module
     document.addEventListener('DOMContentLoaded', function() {
-        GPXImport.init("{{ csrf_token }}");
+        DataImport.init("{{ csrf_token }}");
     });
 </script>
 <script type="module" src="{% static 'private/js/map_viewer/main.js' %}"></script>

@@ -4600,6 +4600,11 @@ span.flatpickr-weekday {
   color: rgb(30 58 138 / var(--tw-text-opacity));
 }
 
+.text-cyan-400 {
+  --tw-text-opacity: 1;
+  color: rgb(34 211 238 / var(--tw-text-opacity));
+}
+
 .text-emerald-100 {
   --tw-text-opacity: 1;
   color: rgb(209 250 229 / var(--tw-text-opacity));

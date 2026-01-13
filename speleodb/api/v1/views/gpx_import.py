@@ -91,26 +91,30 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
             )
         # ~~~~~~~~~~~~~~~~~~~~ END of Form Data Validation ~~~~~~~~~~~~~~~~~~~~ #
 
+        # ~~~~~~~~~~~~~~~~~~~~~ START of parsing GPX file ~~~~~~~~~~~~~~~~~~~~~ #
+
         landmarks_created = 0
         gps_tracks_created = 0
 
-        # ~~~~~~~~~~~~~~~~~ START of writing files to project ~~~~~~~~~~~~~~~~~ #
         try:
             with file.open(mode="r") as f:
                 gpx = gpxpy.parse(f)
 
             # 1. First let's extract the Waypoints and convert them to Landmarks
             for waypoint in gpx.waypoints:
-                ldmk, created = Landmark.objects.get_or_create(
+                # Skip if Landmark already exists.
+                _, created = Landmark.objects.get_or_create(
                     latitude=waypoint.latitude,
                     longitude=waypoint.longitude,
                     user=user,
+                    defaults={
+                        "name": (
+                            waypoint.name or f"Imported on {timezone.now().isoformat()}"
+                        ),
+                        "description": waypoint.description or "",
+                    },
                 )
                 if created:
-                    ldmk.name = (
-                        waypoint.name or f"Imported on {timezone.now().isoformat()}"
-                    )
-                    ldmk.save(update_fields=["name"])
                     landmarks_created += 1
 
             # 2. Let's extract the track and convert them to individual GPSTrack\
@@ -152,19 +156,26 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
                 )
 
                 with contextlib.suppress(IntegrityError, ValidationError):
-                    _ = GPSTrack.objects.create(
-                        name=track.name or f"Imported on {timezone.now().isoformat()}",
+                    # Skip if Landmark already exists.
+                    _, created = GPSTrack.objects.get_or_create(
                         file=geojson_f,
                         user=user,
+                        defaults={
+                            "name": (
+                                track.name
+                                or f"Imported on {timezone.now().isoformat()}"
+                            ),
+                        },
                     )
-                    gps_tracks_created += 1
+                    if created:
+                        gps_tracks_created += 1
 
         except Exception as e:
             if settings.DEBUG:
                 raise
 
             return ErrorResponse(
-                f"There has been a problem converting the GPX file: {e}",
+                f"There has been a problem importing the GPX file: {e}",
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

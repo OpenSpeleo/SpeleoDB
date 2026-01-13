@@ -427,6 +427,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup UI listeners
     MapCore.setupColorModeToggle(map);
 
+    // Setup Landmarks Toggle
+    const landmarksToggle = document.getElementById('landmarks-toggle');
+    const landmarksToggleButton = document.getElementById('landmarks-toggle-button');
+    if (landmarksToggle && landmarksToggleButton) {
+        // Prevent button click from toggling
+        landmarksToggleButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            landmarksToggle.checked = !landmarksToggle.checked;
+            Layers.toggleLandmarkVisibility(landmarksToggle.checked);
+        });
+
+        // Handle direct checkbox change
+        landmarksToggle.addEventListener('change', (e) => {
+            e.stopPropagation();
+            Layers.toggleLandmarkVisibility(landmarksToggle.checked);
+        });
+    }
+
     // Setup Landmark Manager Button (backup to onclick in HTML)
     const landmarkManagerButton = document.getElementById('landmark-manager-button');
     if (landmarkManagerButton && !landmarkManagerButton.onclick) {

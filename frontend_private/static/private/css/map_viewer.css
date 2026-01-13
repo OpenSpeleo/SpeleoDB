@@ -1524,6 +1524,52 @@ select.form-input:focus {
     border-color: transparent;
 }
 
+/* Import Data Modal */
+.import-modal-container {
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.import-modal-container > .flex-shrink-0,
+.import-modal-container > div:first-child,
+.import-modal-container > div:nth-child(2) {
+    flex-shrink: 0;
+}
+
+.import-modal-container .modal-scroll-content {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0; /* Important: allows flex child to shrink below content size */
+}
+
+/* Collapsible Instructions Panel */
+.collapsible-panel {
+    overflow: hidden;
+}
+
+.collapsible-panel .collapsible-content {
+    display: none;
+}
+
+.collapsible-panel.is-open .collapsible-content {
+    display: block;
+}
+
+.collapsible-panel .collapsible-chevron {
+    transition: transform 0.2s ease;
+}
+
+.collapsible-panel.is-open .collapsible-chevron {
+    transform: rotate(180deg);
+}
+
+/* Hide the "(click to expand)" hint when panel is open */
+.collapsible-panel.is-open .text-xs.text-slate-400 {
+    display: none;
+}
+
 /* Mobile optimizations - keep desktop unchanged */
 @media (max-width: 640px) {
 
@@ -1532,6 +1578,8 @@ select.form-input:focus {
     #station-manager-button,
     #landmark-manager-button,
     #import-gpx-button,
+    #import-data-button,
+    #landmarks-toggle-button,
     #refresh-button {
         display: none !important;
     }

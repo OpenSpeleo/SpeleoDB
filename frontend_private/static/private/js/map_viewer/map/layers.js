@@ -765,6 +765,9 @@ export const Layers = {
             data: data
         });
 
+        // Determine initial visibility based on state
+        const visibility = State.landmarksVisible ? 'visible' : 'none';
+
         // Landmark symbol layer (triangle marker visible from far zoom)
         map.addLayer({
             id: 'landmarks-layer',
@@ -776,7 +779,8 @@ export const Layers = {
                 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
                 'text-size': ['interpolate', ['linear'], ['zoom'], 6, 10, 10, 14, 14, 20, 18, 28],
                 'text-allow-overlap': true,
-                'text-ignore-placement': true
+                'text-ignore-placement': true,
+                'visibility': visibility
             },
             paint: {
                 'text-color': '#3b82f6',
@@ -798,7 +802,8 @@ export const Layers = {
                 'text-offset': [0, 1.5],
                 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 10, 14, 12, 18, 14],
                 'text-anchor': 'top',
-                'text-allow-overlap': false
+                'text-allow-overlap': false,
+                'visibility': visibility
             },
             paint: {
                 'text-color': '#3b82f6',
@@ -806,6 +811,26 @@ export const Layers = {
                 'text-halo-width': 1.5
             }
         });
+    },
+
+    toggleLandmarkVisibility: function (isVisible) {
+        State.landmarksVisible = isVisible;
+
+        if (State.map && State.map.getStyle()) {
+            const layerIds = ['landmarks-layer', 'landmarks-labels'];
+
+            layerIds.forEach(layerId => {
+                if (State.map.getLayer(layerId)) {
+                    State.map.setLayoutProperty(
+                        layerId,
+                        'visibility',
+                        isVisible ? 'visible' : 'none'
+                    );
+                }
+            });
+
+            console.log(`📍 Landmarks visibility: ${isVisible ? 'visible' : 'hidden'}`);
+        }
     },
 
     // Surface Station Layer - uses diamond (◆) symbol instead of circle
