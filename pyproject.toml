@@ -61,18 +61,19 @@ dependencies = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django==6.0.1",                     # https://www.djangoproject.com/
+    "django==6.0.1",                   # https://www.djangoproject.com/
     "django-allauth==65.13.1",         # https://github.com/pennersr/django-allauth
     "django-countries==8.2.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.12.0",          # https://github.com/joke2k/django-environ
     "django-hijack==3.7.6",            # https://github.com/django-hijack/django-hijack/
-    "django-import-export==4.4.0",    # https://github.com/django-import-export/django-import-export
+    "django-import-export==4.4.0",     # https://github.com/django-import-export/django-import-export
     "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
     "django-polymorphic==4.9.0",       # https://github.com/jazzband/django-polymorphic
     "django-rest-polymorphic==0.1.10", # https://github.com/denisorehovsky/django-rest-polymorphic
     "django-storages[s3]==1.14.6",     # https://github.com/jschneier/django-storages
+    "django-tailwind==4.3.1",          # https://github.com/timonweb/django-tailwind
 
     # Django REST Framework
     # ------------------------------------------------------------------------------

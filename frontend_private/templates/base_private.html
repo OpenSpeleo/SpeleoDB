@@ -1,10 +1,11 @@
 {% load static %}
+{% load static debug_version %}
 
 {% load is_in_list %}
 {% load set_var %}
 
 <!DOCTYPE html>
-<html lang="en-us" class="scroll-smooth">
+<html lang="en" class="dark scroll-smooth" style="color-scheme: dark;">
 
 <head>
     <meta charset="utf-8">
@@ -29,7 +30,7 @@
     />
     {% endif %} {% endcomment %}
 
-    <link href="{% static 'private/css/style.css' %}" rel="stylesheet">
+    <link href="{% static 'private/css/style.css' %}{% maybe_debug_version %}" rel="stylesheet">
     <link href="{% static 'private/css/custom.css' %}" rel="stylesheet">
 
     <style>
@@ -609,7 +610,7 @@
         <div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
 
             <!-- Site header -->
-            <header class="sticky top-0 bg-white bg-[#182235] border-b border-slate-200 border-slate-700 z-30">
+            <header class="sticky top-0 bg-[#182235] border-b border-slate-200 border-slate-700 z-30">
                 <div class="px-4 sm:px-6 lg:px-8">
                     <div class="flex items-center justify-between h-16 -mb-px">
 

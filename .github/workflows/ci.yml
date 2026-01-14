@@ -53,6 +53,11 @@ jobs:
       - name: Install Dependencies
         run: uv sync --extra local --frozen
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: cd tailwind_css/static_src && npm ci
+
       # Consider using pre-commit.ci for open source project
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1

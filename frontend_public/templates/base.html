@@ -1,4 +1,6 @@
 {% load static %}
+{% load static debug_version %}
+
 <!DOCTYPE html>
 <html lang="en-us" class="scroll-smooth">
 
@@ -33,8 +35,8 @@
         referrerpolicy="no-referrer" 
     /> {% endcomment %}
     {% endif %}
-
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    
+    <link href="{% static 'css/style.css' %}{% maybe_debug_version %}" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
 
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">

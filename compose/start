@@ -5,4 +5,13 @@ set -o pipefail
 set -o nounset
 
 python manage.py migrate
+
+# Start Tailwind watcher in background
+python manage.py tailwind install
+python manage.py tailwind start &
+
+# Forward SIGTERM/SIGINT to children
+trap "kill 0" SIGINT SIGTERM
+
+# Run Django dev server (foreground, PID 1)
 exec python manage.py runserver_plus 0000:8000

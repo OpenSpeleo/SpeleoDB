@@ -249,10 +249,6 @@ input[type="number"] {
 }
 
 /* Ensure station modal overlays map markers (which may use high z-index) */
-#station-modal {
-    z-index: 10 !important;
-}
-
 #station-modal-container {
     max-height: 85dvh;
 }
@@ -1478,7 +1474,8 @@ select.form-input:focus {
 
 .gps-track-button:hover {
     background: rgba(71, 85, 105, 0.9);
-    border-color: rgba(6, 182, 212, 0.5); /* cyan-500 */
+    border-color: rgba(6, 182, 212, 0.5);
+    /* cyan-500 */
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -1532,16 +1529,17 @@ select.form-input:focus {
     flex-direction: column;
 }
 
-.import-modal-container > .flex-shrink-0,
-.import-modal-container > div:first-child,
-.import-modal-container > div:nth-child(2) {
+.import-modal-container>.flex-shrink-0,
+.import-modal-container>div:first-child,
+.import-modal-container>div:nth-child(2) {
     flex-shrink: 0;
 }
 
 .import-modal-container .modal-scroll-content {
     flex: 1 1 auto;
     overflow-y: auto;
-    min-height: 0; /* Important: allows flex child to shrink below content size */
+    min-height: 0;
+    /* Important: allows flex child to shrink below content size */
 }
 
 /* Collapsible Instructions Panel */

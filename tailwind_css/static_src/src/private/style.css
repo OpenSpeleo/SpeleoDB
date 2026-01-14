@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=fallback');
+
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+
+/* Additional styles */
+@import 'additional-styles/utility-patterns.css';
+@import 'additional-styles/flatpickr.css';
+
+@import 'tailwindcss/utilities';
+
+/* See Alpine.js: https://github.com/alpinejs/alpine#x-cloak */
+[x-cloak=""] {
+    display: none;
+}
+
+@media screen and (max-width: theme('screens.lg')) {
+    [x-cloak="lg"] {
+        display: none;
+    }
+}
+
+:root {
+    --border-width-thin: 1px;
+    --border-width-medium: 2px;
+    --border-width-thick: 4px;
+    --border-opacity-subtle: 0.3;
+    --border-opacity-medium: 0.5;
+    --border-opacity-full: 1;
+}
+
+/* ------------------- Permission Level Color Code ---------------------- */
+
+/* Admin & Team Leader*/
+
+.bg-pastel-orange {
+    --tw-bg-opacity: 1;
+    color: white;
+    background-color: rgb(255 140 23 / var(--tw-bg-opacity));
+}
+
+/* Read and Write */
+
+.bg-pastel-navy {
+    --tw-bg-opacity: 1;
+    color: white;
+    background-color: rgb(62 71 114 / var(--tw-bg-opacity));
+}
+
+/* Read Only */
+
+.bg-pastel-beige {
+    --tw-bg-opacity: 1;
+    color: #1e1e1e;
+    background-color: rgb(241 214 162 / var(--tw-bg-opacity));
+}
+
+/* Web Viewer */
+
+.bg-pastel-grey {
+    --tw-bg-opacity: 1;
+    color: #1e1e1e;
+    background-color: rgb(238 238 238 / var(--tw-bg-opacity));
+}
+
+/* Team Member */
+.bg-pastel-purple {
+    --tw-bg-opacity: 1;
+    color: white;
+    background-color: rgb(120 71 175 / var(--tw-bg-opacity));
+}
+
+/* ---------------------------------------------------------------------- */

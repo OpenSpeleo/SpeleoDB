@@ -320,16 +320,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const totalProjects = Config.projects.length;
         let loadedProjects = 0;
         const progressEl = document.getElementById('loading-progress');
-        
+
         const updateProgress = () => {
             if (progressEl) {
                 progressEl.textContent = `Downloading ${loadedProjects}/${totalProjects} Projects`;
             }
         };
-        
+
         // Initial progress display
         updateProgress();
-        
+
         const loadPromises = Config.projects.map(async (project) => {
             const projectPromises = [];
 
@@ -584,7 +584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             // Clear the existing GPS track cache
             State.gpsTrackCache.clear();
-            
+
             // Deactivate all visible GPS tracks
             if (deactivateAll) {
                 State.gpsTrackLayerStates.forEach((isVisible, trackId) => {
@@ -594,13 +594,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
             }
-            
+
             // Reset Config's internal GPS tracks cache to force reload
             Config._gpsTracks = null;
-            
+
             // Reload GPS tracks from API
             await Config.loadGPSTracks();
-            
+
             // Refresh the GPS tracks panel - check if panel exists
             const panelExists = document.getElementById('gps-tracks-panel');
             if (panelExists) {
@@ -609,7 +609,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Panel doesn't exist but we now have tracks - initialize it
                 GPSTracksPanel.init();
             }
-            
+
             Utils.showNotification('success', 'GPS tracks refreshed');
         } catch (e) {
             console.error('Error refreshing GPS tracks', e);

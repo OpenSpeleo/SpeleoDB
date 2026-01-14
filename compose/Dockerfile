@@ -31,6 +31,16 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libpq-dev \
     # Translations dependencies
     gettext \
+    # Automatic Reloads
+    watchman \
+    # cleaning up unused files
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install NodeJS
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get update && apt-get install --no-install-recommends -y \
+    nodejs \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*

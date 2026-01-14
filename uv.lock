@@ -819,6 +819,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-tailwind"
+version = "4.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/df/8a/2eb6adbc65a459c592b10dfb5375ccce220474ea514ef3f897effd4c5b96/django_tailwind-4.3.1.tar.gz", hash = "sha256:7c8be0bf181695c18356a6ba79d0b5c9379ea3336439eaf1b8647ed420631d94", size = 12275, upload-time = "2025-10-29T20:01:47.718Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/47/1a4719918b97013764323eaa7b5a87a414de0d5c2548a68f43e27e7afb3a/django_tailwind-4.3.1-py3-none-any.whl", hash = "sha256:439d183e5c35d49a208a12d9554d0f1cae6c85e5f133b299f0f4a1785aa6f78c", size = 19480, upload-time = "2025-10-29T20:01:46.593Z" },
+]
+
+[[package]]
 name = "django-timezone-field"
 version = "7.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2305,6 +2317,7 @@ dependencies = [
     { name = "django-redis" },
     { name = "django-rest-polymorphic" },
     { name = "django-storages", extra = ["s3"] },
+    { name = "django-tailwind" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
     { name = "fastkml", extra = ["lxml"] },
@@ -2403,6 +2416,7 @@ requires-dist = [
     { name = "django-silk", extras = ["formatting"], marker = "extra == 'local'", specifier = "==5.4.3" },
     { name = "django-storages", extras = ["s3"], specifier = "==1.14.6" },
     { name = "django-stubs", extras = ["compatible-mypy"], marker = "extra == 'local'", specifier = "==5.2.8" },
+    { name = "django-tailwind", specifier = "==4.3.1" },
     { name = "djangorestframework", specifier = "==3.16.1" },
     { name = "djangorestframework-stubs", extras = ["compatible-mypy"], marker = "extra == 'local'", specifier = "==3.16.6" },
     { name = "djlint", marker = "extra == 'local'", specifier = "==1.36.4" },

@@ -135,6 +135,40 @@ repos:
         language: system
         pass_filenames: false
 
+  # ========================================================================= #
+  #                               TAILWIND CSS                                #
+  # ========================================================================= #
+
+  - repo: local
+    hooks:
+      - id: check-css-stability
+        name: Check Django Tailwind CSS consistency
+        entry: |
+          bash -c '
+            FILES=(
+              "frontend_public/static/css/style.css"
+              "frontend_private/static/private/css/style.css"
+            )
+
+            hash_files() {
+              sha256sum "${FILES[@]}" | sha256sum | awk "{print \$1}"
+            }
+
+            HASH_BEFORE=$(hash_files)
+            pushd tailwind_css/static_src && npm run pre-commit && popd > /dev/null
+            HASH_AFTER=$(hash_files)
+
+            if [ "$HASH_BEFORE" != "$HASH_AFTER" ]; then
+              echo "❌ One or more CSS files changed after running \`tailwind build\`:"
+              for f in "${FILES[@]}"; do
+                echo "  - $f"
+              done
+              exit 1
+            fi
+          '
+        language: system
+        pass_filenames: false
+
 # sets up .pre-commit-ci.yaml to ensure pre-commit dependencies stay up to date
 ci:
   autoupdate_schedule: weekly
