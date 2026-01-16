@@ -297,7 +297,7 @@
                             </li>
 
                             <!-- My Survey Projects -->
-                            {% if request.url_name|is_in_list:"projects,project_new,project_details,project_upload,project_user_permissions,project_team_permissions,project_mutexes,project_revisions,project_revision_explorer,project_danger_zone" %}
+                            {% if request.url_name|is_in_list:"projects,project_new,project_details,project_upload,project_user_permissions,project_team_permissions,project_mutexes,project_revisions,project_revision_explorer,project_danger_zone,project_git_instructions" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:projects' %}">
