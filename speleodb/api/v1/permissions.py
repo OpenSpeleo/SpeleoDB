@@ -10,6 +10,10 @@ from rest_framework import permissions
 from rest_framework.exceptions import NotAuthenticated
 
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import Cylinder
+from speleodb.gis.models import CylinderFleet
+from speleodb.gis.models import CylinderFleetUserPermission
+from speleodb.gis.models import CylinderInstall
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
@@ -109,6 +113,19 @@ class BaseAccessLevel(permissions.BasePermission):
                 except ObjectDoesNotExist:
                     return False
 
+            case CylinderFleet():
+                try:
+                    return (
+                        CylinderFleetUserPermission.objects.get(
+                            user=request.user,
+                            cylinder_fleet=obj,
+                            is_active=True,
+                        ).level
+                        >= self.MIN_ACCESS_LEVEL
+                    )
+                except ObjectDoesNotExist:
+                    return False
+
             case Experiment():
                 try:
                     return (
@@ -190,9 +207,17 @@ class BaseAccessLevel(permissions.BasePermission):
                 # Call on the `SensorFleet` underlying object
                 return self.has_object_permission(request, view, obj.fleet)
 
+            case Cylinder():
+                # Call on the `CylinderFleet` underlying object
+                return self.has_object_permission(request, view, obj.fleet)
+
             case SensorFleetUserPermission():
                 # Call on the `SensorFleet` underlying object
                 return self.has_object_permission(request, view, obj.sensor_fleet)
+
+            case CylinderFleetUserPermission():
+                # Call on the `CylinderFleet` underlying object
+                return self.has_object_permission(request, view, obj.cylinder_fleet)
 
             # SensorFleet & Station Models
             # -----------------------------------------------------------------
@@ -211,6 +236,10 @@ class BaseAccessLevel(permissions.BasePermission):
                 )
 
                 return station_perm and fleet_perm
+
+            case CylinderInstall():
+                # Call on the `CylinderFleet` underlying object
+                return self.has_object_permission(request, view, obj.cylinder.fleet)
 
             # ExplorationLead Models
             # -----------------------------------------------------------------

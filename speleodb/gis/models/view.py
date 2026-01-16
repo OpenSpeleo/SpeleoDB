@@ -260,7 +260,6 @@ class GISProjectView(models.Model):
     class Meta:
         verbose_name = "GIS Project View"
         verbose_name_plural = "GIS Project Views"
-        unique_together = [("gis_view", "project")]
         ordering = ["creation_date"]
         indexes = [
             models.Index(fields=["gis_view"])
@@ -273,6 +272,10 @@ class GISProjectView(models.Model):
                     Q(use_latest=True) | Q(commit_sha__isnull=False, commit_sha__gt="")
                 ),
                 name="gisview_must_specify_commit_or_latest",
+            ),
+            models.UniqueConstraint(
+                fields=["gis_view", "project"],
+                name="%(app_label)s_%(class)s_project_gis_view_unique",
             ),
         ]
 

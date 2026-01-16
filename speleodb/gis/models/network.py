@@ -113,11 +113,16 @@ class SurfaceMonitoringNetworkUserPermission(models.Model):
     class Meta:
         verbose_name = "Monitoring Network - User Permission"
         verbose_name_plural = "Monitoring Network - User Permissions"
-        unique_together = ("user", "network")
         indexes = [
             models.Index(fields=["user", "is_active"]),
             models.Index(fields=["network", "is_active"]),
             models.Index(fields=["user", "network", "is_active"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "network"],
+                name="%(app_label)s_%(class)s_user_network_perm_unique",
+            ),
         ]
 
     def __str__(self) -> str:

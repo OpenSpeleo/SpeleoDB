@@ -243,7 +243,6 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
 
-                                        {% comment %} A user can not edit/delete their own membership. Must be another LEADER {% endcomment %}
                                         {% if membership.user != user and is_team_leader %}
                                             {% set can_edit = True %}
                                         {% else %}

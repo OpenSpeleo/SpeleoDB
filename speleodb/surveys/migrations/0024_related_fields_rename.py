@@ -44,12 +44,20 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='teamprojectpermission',
             name='project',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='_team_permissions', to='surveys.project'),
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, 
+                related_name='_team_permissions', 
+                to='surveys.project'
+            ),
         ),
         migrations.AlterField(
             model_name='teamprojectpermission',
             name='target',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='project_permissions', to='users.surveyteam'),
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, 
+                related_name='project_permissions', 
+                to='users.surveyteam'
+            ),
         ),
         migrations.AlterField(
             model_name='userprojectpermission',

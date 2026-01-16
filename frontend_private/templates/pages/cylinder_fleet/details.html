@@ -1,0 +1,631 @@
+{% extends "pages/cylinder_fleet/base.html" %}
+{% load static %}
+
+{% block right_panel %}
+<div class="grow">
+
+    <form id="cylinder_fleet_details_form" autocomplete="off">
+
+        <fieldset {% if not has_write_access %}disabled{% endif %}>
+
+            {% csrf_token %}
+
+            <!-- Panel body -->
+            <div class="p-6 space-y-6">
+                <h2 class="text-2xl text-slate-100 font-bold mb-5">Fleet Settings</h2>
+
+                <!-- Fleet Name & Description -->
+                <section>
+                    <div class="flex flex-wrap mt-5 gap-4">
+                        <div class="w-full lg:flex-1">
+                            <label class="block text-sm font-medium mb-1" for="name">Fleet Name:<span
+                                    class="text-rose-600"> *</span></label>
+                            <input id="name" name="name" class="form-input max-w-full w-full" type="text"
+                                value="{{ cylinder_fleet.name }}" />
+                        </div>
+                    </div>
+
+                    <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                        <div class="w-full">
+                            <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                            <textarea id="description" name="description"
+                                class="form-textarea max-w-full w-full focus:border-slate-300"
+                                rows="4">{% if cylinder_fleet.description %}{{ cylinder_fleet.description }}{% endif %}</textarea>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Cylinders Management -->
+                <section>
+                    <div class="mt-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold text-slate-100">Cylinders in this Fleet</h3>
+                            <div class="flex gap-2">
+                                <a href="{% url 'api:v1:cylinder-fleet-cylinders-export' fleet_id=cylinder_fleet.id %}"
+                                    class="btn-sm bg-green-500 hover:bg-green-400 text-white border border-slate-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" viewBox="4.5 2.5 15 19">
+                                        <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
+                                        <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path>
+                                        <path d="M8 11h8v7h-8z"></path>
+                                        <path d="M8 15h8"></path>
+                                        <path d="M11 11v7"></path>
+                                    </svg>
+                                    Export to Excel
+                                </a>
+                                {% if has_write_access %}
+                                <button type="button" id="add_cylinder_btn"
+                                    class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                                    <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                                    </svg>
+                                    Add Cylinder
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Cylinders List -->
+                        {% if cylinders %}
+                        {% include 'snippets/cylinder_table.html' with cylinders=cylinders table_id='cylinders_table' show_actions=True has_write_access=has_write_access show_count=True %}
+                        {% else %}
+                        <div
+                            class="text-center py-12 bg-slate-900/20 rounded-lg border-2 border-dashed border-slate-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-slate-600 mb-3"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <p class="text-slate-500 mb-4">No cylinders in this fleet yet</p>
+                            {% if has_write_access %}
+                            <button type="button" id="add_first_cylinder_btn"
+                                class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                                <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
+                                    viewBox="0 0 16 16">
+                                    <path
+                                        d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                                </svg>
+                                Add First Cylinder
+                            </button>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Panel footer -->
+            <footer>
+                <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+                    <div class="flex self-end">
+                        <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
+                            href="{% url 'private:cylinder_fleets' %}">Cancel</a>
+                        <button type="button" id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+                    </div>
+                </div>
+            </footer>
+
+        </fieldset>
+
+    </form>
+
+
+    {% include 'snippets/modal_success.html' %}
+    {% include 'snippets/modal_error.html' %}
+
+    <!-- Add/Edit Cylinder Modal -->
+    <div id="cylinder_modal"
+        class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4"
+        style="display: none;">
+        <div class="relative bg-slate-800 rounded-lg max-w-3xl w-full shadow-2xl border border-slate-600">
+            <!-- Modal header -->
+            <div class="px-6 py-4 border-b border-slate-700">
+                <div class="flex items-center justify-between">
+                    <h3 id="cylinder_modal_title" class="text-xl font-semibold text-slate-100">Add Cylinder</h3>
+                    <button id="cylinder_modal_close_x" class="text-slate-400 hover:text-slate-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal body -->
+            <div class="px-6 py-4 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Cylinder Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_name">
+                            Cylinder Name
+                        </label>
+                        <input type="text" id="modal_cylinder_name"
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            placeholder="e.g., Cylinder #023">
+                    </div>
+                    <!-- Serial -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_serial">
+                            Serial
+                        </label>
+                        <input type="text" id="modal_cylinder_serial"
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            placeholder="Serial number">
+                    </div>
+                    <!-- Brand -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_brand">
+                            Brand
+                        </label>
+                        <input type="text" id="modal_cylinder_brand"
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            placeholder="Luxfer, Catalina...">
+                    </div>
+                    <!-- Owner -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_owner">
+                            Owner
+                        </label>
+                        <input type="text" id="modal_cylinder_owner"
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            placeholder="Owner name">
+                    </div>
+                    <!-- Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_type">
+                            Type
+                        </label>
+                        <input type="text" id="modal_cylinder_type"
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            placeholder="AL80, AL40...">
+                    </div>
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_status">
+                            Status <span class="text-rose-500">*</span>
+                        </label>
+                        <select id="modal_cylinder_status"
+                            class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                            <option value="functional">✓ Functional</option>
+                            <option value="needs_service">🧰 Needs Service</option>
+                            <option value="broken">✗ Broken</option>
+                            <option value="lost">⚠ Lost</option>
+                            <option value="abandoned">⊘ Abandoned</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- O2 -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_o2">
+                            O2 % <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="number" id="modal_cylinder_o2" min="0" max="100" required
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            placeholder="21">
+                    </div>
+                    <!-- He -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_he">
+                            He % <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="number" id="modal_cylinder_he" min="0" max="100" required
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            placeholder="0">
+                    </div>
+                    <!-- Pressure -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_pressure">
+                            Pressure <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="number" id="modal_cylinder_pressure" min="0" required
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            placeholder="3000">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Unit System -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_unit_system">
+                            Unit System <span class="text-rose-500">*</span>
+                        </label>
+                        <select id="modal_cylinder_unit_system"
+                            class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                            <option value="metric">Metric (BAR)</option>
+                            <option value="imperial">Imperial (PSI)</option>
+                        </select>
+                    </div>
+                    <!-- Visual Inspection -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_visual_date">
+                            Last Visual Inspection
+                        </label>
+                        <input type="date" id="modal_cylinder_visual_date"
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                    <!-- Hydro Test -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_hydro_date">
+                            Last Hydrostatic Test
+                        </label>
+                        <input type="date" id="modal_cylinder_hydro_date"
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="modal_cylinder_use_anode" class="form-checkbox">
+                    <label class="text-sm text-slate-300" for="modal_cylinder_use_anode">Uses anode protection</label>
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_notes">
+                        Notes
+                    </label>
+                    <textarea id="modal_cylinder_notes" rows="3"
+                        class="form-textarea w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        placeholder="Optional notes about this cylinder"></textarea>
+                </div>
+            </div>
+
+            <!-- Modal footer -->
+            <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+                <button type="button" id="cylinder_modal_cancel"
+                    class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                    Cancel
+                </button>
+                <button type="button" id="cylinder_modal_save"
+                    class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
+                    Save Cylinder
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Cylinder Confirmation Modal -->
+    <div id="delete_cylinder_modal"
+        class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4"
+        style="display: none;">
+        <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
+            <!-- Modal header -->
+            <div class="px-6 py-4 border-b border-slate-700">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-semibold text-slate-100">Delete Cylinder</h3>
+                    <button id="delete_modal_close_x" class="text-slate-400 hover:text-slate-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal body -->
+            <div class="px-6 py-4">
+                <input type="hidden" id="delete_cylinder_id" value="">
+
+                <div class="flex items-start space-x-4">
+                    <div class="flex-shrink-0">
+                        <svg class="w-12 h-12 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                            </path>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-slate-300 text-lg font-medium mb-2">Are you sure you want to delete this cylinder?
+                        </p>
+                        <p class="text-slate-400 text-sm">
+                            This action cannot be undone.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal footer -->
+            <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+                <button type="button" id="delete_modal_cancel"
+                    class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                    Cancel
+                </button>
+                <button type="button" id="delete_modal_confirm"
+                    class="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
+                    Delete Cylinder
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock right_panel %}
+
+{% block extra_js %}
+<script src="{% url 'url_reverse.js' %}"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+{% endblock extra_js %}
+
+{% block inline_extra_js %}
+<script>
+    $(window).on('load', function () {
+        let currentCylinderId = null; // For edit mode
+
+        // Initialize DataTables for sortable table
+        {% if cylinders %}
+        $('#cylinders_table').DataTable({
+            paging: false,
+            searching: false,
+            info: false,
+            order: [[0, 'asc']], // Default sort by cylinder name
+            columnDefs: [
+                {% if has_write_access %}
+                { targets: -1, orderable: false }, // Disable sorting on Actions column
+                {% endif %}
+            ],
+        });
+        {% endif %}
+
+        function openCylinderModal() {
+            $('#cylinder_modal').css('display', 'flex').removeClass('hidden');
+        }
+
+        function closeCylinderModal() {
+            $('#cylinder_modal').css('display', 'none').addClass('hidden');
+        }
+
+        // Open modal for adding cylinder
+        $('#add_cylinder_btn, #add_first_cylinder_btn').click(function () {
+            currentCylinderId = null;
+            $('#cylinder_modal_title').text('Add Cylinder');
+            $('#modal_cylinder_name').val('');
+            $('#modal_cylinder_serial').val('');
+            $('#modal_cylinder_brand').val('');
+            $('#modal_cylinder_owner').val('');
+            $('#modal_cylinder_type').val('');
+            $('#modal_cylinder_notes').val('');
+            $('#modal_cylinder_o2').val('21');
+            $('#modal_cylinder_he').val('0');
+            $('#modal_cylinder_pressure').val('');
+            $('#modal_cylinder_unit_system').val('metric');
+            $('#modal_cylinder_status').val('functional');
+            $('#modal_cylinder_visual_date').val('');
+            $('#modal_cylinder_hydro_date').val('');
+            $('#modal_cylinder_use_anode').prop('checked', false);
+            openCylinderModal();
+        });
+
+        // Open modal for editing cylinder
+        $(document).on('click', '.edit-cylinder-btn', function () {
+            currentCylinderId = $(this).data('cylinder-id');
+            const button = $(this);
+
+            $('#cylinder_modal_title').text('Edit Cylinder');
+            $('#modal_cylinder_name').val(button.data('cylinder-name') || '');
+            $('#modal_cylinder_serial').val(button.data('cylinder-serial') || '');
+            $('#modal_cylinder_brand').val(button.data('cylinder-brand') || '');
+            $('#modal_cylinder_owner').val(button.data('cylinder-owner') || '');
+            $('#modal_cylinder_type').val(button.data('cylinder-type') || '');
+            $('#modal_cylinder_notes').val(button.data('cylinder-notes') || '');
+            $('#modal_cylinder_o2').val(button.data('cylinder-o2') ?? '');
+            $('#modal_cylinder_he').val(button.data('cylinder-he') ?? '');
+            $('#modal_cylinder_pressure').val(button.data('cylinder-pressure') ?? '');
+            $('#modal_cylinder_unit_system').val(button.data('cylinder-unit-system') || 'metric');
+            $('#modal_cylinder_status').val(button.data('cylinder-status') || 'functional');
+            $('#modal_cylinder_visual_date').val(button.data('cylinder-visual-date') || '');
+            $('#modal_cylinder_hydro_date').val(button.data('cylinder-hydro-date') || '');
+            $('#modal_cylinder_use_anode').prop('checked', button.data('cylinder-use-anode') === true);
+            openCylinderModal();
+        });
+
+        // Close modal handlers
+        $('#cylinder_modal_cancel, #cylinder_modal_close_x').click(function () {
+            closeCylinderModal();
+        });
+
+        $('#delete_modal_cancel, #delete_modal_close_x').click(function () {
+            $('#delete_cylinder_modal').css('display', 'none').addClass('hidden');
+        });
+
+        // Save cylinder (Add or Edit)
+        $('#cylinder_modal_save').click(function () {
+            const o2 = $('#modal_cylinder_o2').val();
+            const he = $('#modal_cylinder_he').val();
+            const pressure = $('#modal_cylinder_pressure').val();
+
+            if (!o2 || !he || !pressure) {
+                $("#modal_error_txt").html("O2, He, and Pressure are required.");
+                $("#modal_error").css('display', 'flex');
+                return;
+            }
+
+            const cylinderData = {
+                name: $('#modal_cylinder_name').val().trim(),
+                serial: $('#modal_cylinder_serial').val().trim(),
+                brand: $('#modal_cylinder_brand').val().trim(),
+                owner: $('#modal_cylinder_owner').val().trim(),
+                type: $('#modal_cylinder_type').val().trim(),
+                notes: $('#modal_cylinder_notes').val().trim(),
+                o2_percentage: parseInt(o2, 10),
+                he_percentage: parseInt(he, 10),
+                pressure: parseInt(pressure, 10),
+                unit_system: $('#modal_cylinder_unit_system').val(),
+                status: $('#modal_cylinder_status').val(),
+                last_visual_inspection_date: $('#modal_cylinder_visual_date').val() || null,
+                last_hydrostatic_test_date: $('#modal_cylinder_hydro_date').val() || null,
+                use_anode: $('#modal_cylinder_use_anode').is(':checked'),
+            };
+
+            // Get CSRF token
+            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
+
+            if (currentCylinderId) {
+                // EDIT MODE - Real API Call
+                $.ajax({
+                    url: Urls['api:v1:cylinder-detail'](currentCylinderId),
+                    method: 'PUT',
+                    data: JSON.stringify(cylinderData),
+                    contentType: 'application/json; charset=utf-8',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    success: function () {
+                        $("#modal_success_txt").html("Cylinder updated successfully.");
+                        $("#modal_success").css('display', 'flex');
+                        closeCylinderModal();
+                        setTimeout(() => location.reload(), 2000);
+                    },
+                    error: function (xhr) {
+                        const response = xhr.responseJSON || {};
+                        let errorMsg = 'Failed to update cylinder.';
+
+                        if (response.errors) {
+                            const firstError = Object.values(response.errors)[0];
+                            errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
+                        } else if (response.error) {
+                            errorMsg = response.error;
+                        }
+
+                        $("#modal_error_txt").html(errorMsg);
+                        $("#modal_error").css('display', 'flex');
+                    }
+                });
+            } else {
+                // ADD MODE - Real API Call
+                $.ajax({
+                    url: "{% url 'api:v1:cylinder-fleet-cylinders' fleet_id=cylinder_fleet.id %}",
+                    method: 'POST',
+                    data: JSON.stringify(cylinderData),
+                    contentType: 'application/json; charset=utf-8',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    success: function () {
+                        $("#modal_success_txt").html("Cylinder added successfully.");
+                        $("#modal_success").css('display', 'flex');
+                        closeCylinderModal();
+                        setTimeout(() => location.reload(), 2000);
+                    },
+                    error: function (xhr) {
+                        const response = xhr.responseJSON || {};
+                        let errorMsg = 'Failed to add cylinder.';
+
+                        if (response.errors) {
+                            const firstError = Object.values(response.errors)[0];
+                            errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
+                        } else if (response.error) {
+                            errorMsg = response.error;
+                        }
+
+                        $("#modal_error_txt").html(errorMsg);
+                        $("#modal_error").css('display', 'flex');
+                    }
+                });
+            }
+        });
+
+        // Open delete cylinder modal
+        $(document).on('click', '.delete-cylinder-btn', function () {
+            const cylinderId = $(this).data('cylinder-id');
+            $('#delete_cylinder_id').val(cylinderId);
+            $('#delete_cylinder_modal').css('display', 'flex').removeClass('hidden');
+        });
+
+        // Confirm delete cylinder
+        $('#delete_modal_confirm').click(function () {
+            const cylinderId = $('#delete_cylinder_id').val();
+            if (!cylinderId) return;
+
+            // Get CSRF token
+            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
+
+            // REAL API CALL
+            $.ajax({
+                url: Urls['api:v1:cylinder-detail'](cylinderId),
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                success: function () {
+                    $("#modal_success_txt").html("Cylinder deleted successfully.");
+                    $("#modal_success").css('display', 'flex');
+                    $('#delete_cylinder_modal').css('display', 'none').addClass('hidden');
+                    setTimeout(() => location.reload(), 2000);
+                },
+                error: function (xhr) {
+                    const errorMsg = xhr.responseJSON?.error || 'Failed to delete cylinder.';
+                    $("#modal_error_txt").html(errorMsg);
+                    $("#modal_error").css('display', 'flex');
+                    $('#delete_cylinder_modal').css('display', 'none').addClass('hidden');
+                }
+            });
+        });
+
+        // Form submission handler for fleet details
+        $('#btn_submit').click(function (e) {
+            e.preventDefault();
+
+            const name = $('#name').val().trim();
+            const description = $('#description').val().trim();
+
+            if (!name) {
+                $("#modal_error_txt").html("Fleet name is required.");
+                $("#modal_error").css('display', 'flex');
+                return false;
+            }
+
+            const dataObject = {
+                name: name,
+                description: description
+            };
+
+            // Get CSRF token
+            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
+
+            // REAL API CALL
+            $.ajax({
+                url: Urls['api:v1:cylinder-fleet-detail']('{{ cylinder_fleet.id }}'),
+                method: 'PUT',
+                data: JSON.stringify(dataObject),
+                contentType: 'application/json; charset=utf-8',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                success: function () {
+                    $("#modal_success_txt").html("The cylinder fleet has been updated.");
+                    $("#modal_success").css('display', 'flex');
+                    window.setTimeout(function () {
+                        window.location.reload();
+                    }, 2000);
+                },
+                error: function (xhr) {
+                    const response = xhr.responseJSON || {};
+                    let errorMsg = 'Failed to update fleet.';
+
+                    if (response.errors) {
+                        const firstError = Object.values(response.errors)[0];
+                        errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
+                    } else if (response.error) {
+                        errorMsg = response.error;
+                    }
+
+                    $("#modal_error_txt").html(errorMsg);
+                    $("#modal_error").css('display', 'flex');
+                }
+            });
+
+            return false;
+        });
+
+        // Close modal handlers
+        $('#modal_error button, #modal_success button').click(function () {
+            $(this).closest('.fixed').fadeOut(200);
+        });
+    });
+
+</script>
+{% endblock inline_extra_js %}

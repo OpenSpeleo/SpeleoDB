@@ -744,11 +744,16 @@ class ExperimentUserPermission(models.Model):
     class Meta:
         verbose_name = "Experiment - User Permission"
         verbose_name_plural = "Experiment - User Permissions"
-        unique_together = ("user", "experiment")
         indexes = [
             models.Index(fields=["user", "is_active"]),
             models.Index(fields=["experiment", "is_active"]),
             models.Index(fields=["user", "experiment", "is_active"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "experiment"],
+                name="%(app_label)s_%(class)s_user_experiment_perm_unique",
+            ),
         ]
 
     def __str__(self) -> str:

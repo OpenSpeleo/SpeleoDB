@@ -132,9 +132,14 @@ class SurveyTeamMembership(models.Model):
     )
 
     class Meta:
-        unique_together = ("user", "team")
         verbose_name = "Team Membership"
         verbose_name_plural = "Team Memberships"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "team"],
+                name="%(app_label)s_%(class)s_user_team_membership_unique",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.user} => {self.team} [{self.role_label}]"

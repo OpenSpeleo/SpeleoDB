@@ -67,6 +67,7 @@ class InstallStatus(models.TextChoices):
 
 class OperationalStatus(models.TextChoices):
     FUNCTIONAL = "functional", "Functional"
+    NEEDS_SERVICE = "needs_service", "Needs Service"
     BROKEN = "broken", "Broken"
     LOST = "lost", "Lost"
     ABANDONED = "abandoned", "Abandoned"

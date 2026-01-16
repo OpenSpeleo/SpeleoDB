@@ -1,0 +1,174 @@
+{% comment %}
+Reusable cylinder table snippet.
+
+Parameters:
+- cylinders: List of cylinder objects
+- table_id: ID for the table (default: "cylinders_table")
+- show_actions: Whether to show action buttons (default: False)
+- has_write_access: Whether user has write access (for conditional display)
+- empty_message: Message to show when no cylinders (default: "No cylinders")
+- show_count: Whether to show cylinder count (default: True)
+{% endcomment %}
+
+{% if cylinders %}
+<div class="bg-slate-900/20 rounded-lg border border-slate-700 overflow-hidden">
+    <table id="{{ table_id|default:'cylinders_table' }}" class="table-auto w-full">
+        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/40">
+            <tr>
+                <th class="px-4 py-3" style="text-align: center !important;">Cylinder</th>
+                <th class="px-4 py-3" style="text-align: center !important;">Status</th>
+                <th class="px-4 py-3" style="text-align: center !important;">Gas Mix</th>
+                <th class="px-4 py-3" style="text-align: center !important;">Pressure</th>
+                <th class="px-4 py-3" style="text-align: center !important;">Last Visual</th>
+                <th class="px-4 py-3" style="text-align: center !important;">Last Hydro</th>
+                <th class="px-4 py-3" style="text-align: center !important;">Project</th>
+                <th class="px-4 py-3" style="text-align: center !important;">Location</th>
+                <th class="px-4 py-3" style="text-align: center !important;">Installed</th>
+                <th class="px-4 py-3" style="text-align: center !important;">Map</th>
+                {% if show_actions|default:False and has_write_access|default:False %}
+                <th class="px-4 py-3" style="text-align: center !important;">Actions</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody class="text-sm divide-y divide-slate-700" id="{{ table_id|default:'cylinders_table' }}_body">
+            {% for cylinder in cylinders %}
+            <tr class="cylinder-row" data-cylinder-id="{{ cylinder.id }}">
+                <td class="px-4 py-3">
+                    <div class="font-medium text-slate-100">
+                        {% if cylinder.name %}{{ cylinder.name }}{% else %}<span class="text-slate-500">(Unnamed)</span>{% endif %}
+                    </div>
+                    <div class="text-xs text-slate-400 mt-1">
+                        {% if cylinder.serial %}Serial: {{ cylinder.serial }}{% else %}Serial: —{% endif %}
+                        {% if cylinder.brand %} • {{ cylinder.brand }}{% endif %}
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-center">
+                    {% if cylinder.status == "functional" %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        ✓ Functional
+                    </span>
+                    {% elif cylinder.status == "needs_service" %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        🧰 Needs Service
+                    </span>
+                    {% elif cylinder.status == "broken" %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        ✗ Broken
+                    </span>
+                    {% elif cylinder.status == "lost" %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        ⚠ Lost
+                    </span>
+                    {% elif cylinder.status == "abandoned" %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        ⊘ Abandoned
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-300">
+                    {% if cylinder.o2_percentage == 100 %}
+                        Oxygen
+                    {% elif cylinder.he_percentage == 0 %}
+                        NX{{ cylinder.o2_percentage }}
+                    {% else %}
+                        {{ cylinder.o2_percentage }}/{{ cylinder.he_percentage }}
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-300">
+                    {% if cylinder.unit_system == "imperial" %}
+                        {{ cylinder.pressure }} PSI
+                    {% else %}
+                        {{ cylinder.pressure }} BAR
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-300">
+                    {{ cylinder.last_visual_inspection_date|date:"Y-m-d"|default:"-" }}
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-300">
+                    {{ cylinder.last_hydrostatic_test_date|date:"Y-m-d"|default:"-" }}
+                </td>
+                {% with install=cylinder.active_installs|first %}
+                <td class="px-4 py-3 text-sm text-slate-300 text-center">
+                    {% if install and install.project %}
+                        {{ install.project.name }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-300 text-center">
+                    {% if install %}
+                        {{ install.location_name|default:"-" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-300 text-center">
+                    {{ install.install_date|date:"Y-m-d"|default:"-" }}
+                </td>
+                <td class="px-4 py-3 text-sm text-center">
+                    {% if install %}
+                        <a href="{% url 'private:map_viewer' %}?goto={{ install.latitude }},{{ install.longitude }}"
+                           class="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors"
+                           target="_blank"
+                           title="View on map">
+                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                            </svg>
+                            See on Map
+                        </a>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                {% endwith %}
+                {% if show_actions|default:False and has_write_access|default:False %}
+                <td class="px-4 py-3">
+                    <div class="flex items-center justify-center gap-2">
+                        <button type="button"
+                            class="edit-cylinder-btn text-xs px-2 py-1 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300"
+                            data-cylinder-id="{{ cylinder.id }}"
+                            data-cylinder-name="{{ cylinder.name }}"
+                            data-cylinder-serial="{{ cylinder.serial }}"
+                            data-cylinder-brand="{{ cylinder.brand }}"
+                            data-cylinder-owner="{{ cylinder.owner }}"
+                            data-cylinder-type="{{ cylinder.type }}"
+                            data-cylinder-notes="{{ cylinder.notes }}"
+                            data-cylinder-o2="{{ cylinder.o2_percentage }}"
+                            data-cylinder-he="{{ cylinder.he_percentage }}"
+                            data-cylinder-pressure="{{ cylinder.pressure }}"
+                            data-cylinder-unit-system="{{ cylinder.unit_system }}"
+                            data-cylinder-use-anode="{% if cylinder.use_anode %}true{% else %}false{% endif %}"
+                            data-cylinder-visual-date="{{ cylinder.last_visual_inspection_date|date:'Y-m-d' }}"
+                            data-cylinder-hydro-date="{{ cylinder.last_hydrostatic_test_date|date:'Y-m-d' }}"
+                            data-cylinder-status="{{ cylinder.status }}">
+                            Edit
+                        </button>
+                        <button type="button"
+                            class="delete-cylinder-btn text-xs px-2 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300"
+                            data-cylinder-id="{{ cylinder.id }}">
+                            Delete
+                        </button>
+                    </div>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if show_count|default:True %}
+<div class="mt-3 text-sm text-slate-400">
+    Total cylinders: <span class="font-semibold text-slate-300" id="cylinder_count">{{ cylinders|length }}</span>
+</div>
+{% endif %}
+{% else %}
+<div
+    class="text-center py-12 bg-slate-900/20 rounded-lg border-2 border-dashed border-slate-700">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-slate-600 mb-3"
+        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+    <p class="text-slate-500 mb-4">{{ empty_message|default:"No cylinders" }}</p>
+</div>
+{% endif %}

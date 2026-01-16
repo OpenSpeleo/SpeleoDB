@@ -43,7 +43,20 @@ from speleodb.gis.models.sensor import SensorInstall
 from speleodb.gis.models.view import GISView
 from speleodb.gis.models.view import GISProjectView
 
+# Cylinder Models
+from speleodb.gis.models.cylinder import Cylinder
+from speleodb.gis.models.cylinder import CylinderFleet
+from speleodb.gis.models.cylinder import CylinderFleetUserPermission
+from speleodb.gis.models.cylinder import CylinderInstall
+from speleodb.gis.models.cylinder import CylinderPressureCheck
+
+
 __all__ = [
+    "Cylinder",
+    "CylinderFleet",
+    "CylinderFleetUserPermission",
+    "CylinderInstall",
+    "CylinderPressureCheck",
     "Experiment",
     "ExperimentRecord",
     "ExperimentUserPermission",
@@ -51,7 +64,6 @@ __all__ = [
     "GISProjectView",
     "GISView",
     "GPSTrack",
-    "InstallStatus",
     "Landmark",
     "ProjectGeoJSON",
     "Sensor",

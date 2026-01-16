@@ -90,7 +90,7 @@ class ExplorationLeadSpecificApiView(GenericAPIView[ExplorationLead], SDBAPIView
         | (IsReadOnly & SDB_ReadAccess)
     ]
     lookup_field = "id"
-    serializer_class = ExplorationLeadSerializer  # type: ignore[assignment]
+    serializer_class = ExplorationLeadSerializer
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get exploration lead details."""
@@ -163,7 +163,7 @@ class AllExploLeadsGeoJSONApiView(GenericAPIView[ExplorationLead], SDBAPIViewMix
     """
 
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = ExplorationLeadGeoJSONSerializer  # type: ignore[assignment]
+    serializer_class = ExplorationLeadGeoJSONSerializer
 
     def get_queryset(self) -> QuerySet[ExplorationLead]:
         """Get only stations that the user has access to."""

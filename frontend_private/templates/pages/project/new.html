@@ -97,22 +97,6 @@
                                 </div>
                             </section>
 
-                            {% comment %} <!-- Visibility -->
-                            <section>
-                                <div class="flex flex-wrap mt-5 gap-4">
-                                    <div class="mr-2">
-                                        <label class="block text-sm font-medium mb-1" for="visibility">Visibility:<span class="text-rose-600"> *</span></label>
-                                        <select id="visibility" name="visibility" class="form-select max-w-full w-full">
-                                            <option disabled selected value>Select an option...</option>
-                                        {% get_visibility_scopes as visibility_scopes %}
-                                        {% for visibility_scope in visibility_scopes %}
-                                            <option value="{{ visibility_scope }}">{{ visibility_scope|title }}</option>
-                                        {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                            </section> {% endcomment %}
-
                         </div>
 
                         <!-- Panel footer -->

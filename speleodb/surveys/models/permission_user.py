@@ -29,9 +29,14 @@ class UserProjectPermission(BasePermissionModel):
     class Meta:
         verbose_name = "Project - User Permission"
         verbose_name_plural = "Project - User Permissions"
-        unique_together = ("target", "project")
         indexes = [
             models.Index(fields=["target"]),
             models.Index(fields=["project"]),
             # models.Index(fields=["target", "project"]), # Present via unique constraint  # noqa: E501
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["target", "project"],
+                name="%(app_label)s_%(class)s_user_project_unique",
+            ),
         ]

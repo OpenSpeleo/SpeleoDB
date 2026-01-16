@@ -13,7 +13,6 @@ from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import CheckConstraint
-from django.db.models import ExpressionWrapper
 from django.db.models import F
 from django.db.models import Q
 from django.db.models import QuerySet
@@ -23,6 +22,7 @@ from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import UnitSystem
+from speleodb.surveys.models import Project
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -89,6 +89,19 @@ class Cylinder(models.Model):
     name = models.CharField(
         max_length=50,
         help_text="Cylinder name (e.g., 'Cylinder #023')",
+        blank=True,
+    )
+
+    serial = models.CharField(
+        max_length=15,
+        help_text="Cylinder Serial Number",
+        blank=True,
+    )
+
+    brand = models.CharField(
+        max_length=50,
+        help_text="Cylinder Brand: Luxfer, Catalina, etc.",
+        blank=True,
     )
 
     owner = models.CharField(
@@ -99,7 +112,6 @@ class Cylinder(models.Model):
 
     notes = models.TextField(
         blank=True,
-        default="",
         help_text="Optional notes for the cylinder",
     )
 
@@ -109,18 +121,14 @@ class Cylinder(models.Model):
         help_text="Cylinder type/model (e.g., 'AL80, AL40')",
     )
 
-    o2_percentage = models.DecimalField(
-        max_digits=3,
-        decimal_places=0,
+    o2_percentage = models.IntegerField(
         null=False,
         blank=False,
         help_text="O2 percentage (e.g., '21%')",
         validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
     )
 
-    he_percentage = models.DecimalField(
-        max_digits=3,
-        decimal_places=0,
+    he_percentage = models.IntegerField(
         null=False,
         blank=False,
         help_text="He percentage (e.g., '79%')",
@@ -150,6 +158,11 @@ class Cylinder(models.Model):
         null=False,
     )
 
+    use_anode = models.BooleanField(default=False)
+
+    last_visual_inspection_date = models.DateField(null=True, blank=True)
+    last_hydrostatic_test_date = models.DateField(null=True, blank=True)
+
     status = models.CharField(
         max_length=20,
         choices=OperationalStatus,
@@ -176,14 +189,10 @@ class Cylinder(models.Model):
             models.Index(fields=["fleet", "status"]),
         ]
 
-        gas_mix_wrapper = ExpressionWrapper(
-            F("o2_percentage") + F("he_percentage"),
-            output_field=models.IntegerField(),
-        )
-
         constraints = [
-            CheckConstraint(
-                condition=Q(gas_mix_wrapper__lte=100),
+            models.CheckConstraint(
+                # Convoluted and only way to do: (O2 + He) <= 100%
+                condition=Q(o2_percentage__lte=100 - F("he_percentage")),
                 name="o2_he_sum_lte_100",
             ),
             CheckConstraint(
@@ -217,76 +226,9 @@ class Cylinder(models.Model):
             case _:
                 raise ValidationError({"unit_system": "Invalid unit system."})
 
-
-class CylinderFleetUserPermission(models.Model):
-    id: int
-
-    user = models.ForeignKey(
-        User,
-        related_name="cylinderfleet_permissions",
-        on_delete=models.CASCADE,
-        blank=False,
-        null=False,
-    )
-
-    cylinder_fleet = models.ForeignKey(
-        CylinderFleet,
-        related_name="user_permissions",
-        on_delete=models.CASCADE,
-        blank=False,
-        null=False,
-    )
-
-    level = models.IntegerField(
-        choices=PermissionLevel.choices_no_webviewer,
-        default=PermissionLevel.READ_ONLY,
-        null=False,
-        blank=False,
-    )
-
-    is_active = models.BooleanField(default=True)
-
-    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
-    modified_date = models.DateTimeField(auto_now=True, editable=False)
-
-    deactivated_by = models.ForeignKey(
-        User,
-        on_delete=models.RESTRICT,
-        blank=True,
-        null=True,
-        default=None,
-    )
-
-    class Meta:
-        verbose_name = "Cylinder Fleet - User Permission"
-        verbose_name_plural = "Cylinder Fleet - User Permissions"
-        unique_together = ("user", "cylinder_fleet")
-        indexes = [
-            models.Index(fields=["user", "is_active"]),
-            models.Index(fields=["cylinder_fleet", "is_active"]),
-            models.Index(fields=["user", "cylinder_fleet", "is_active"]),
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.user} => {self.cylinder_fleet} [{self.level}]"
-
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}: {self}>"
-
-    def deactivate(self, deactivated_by: User) -> None:
-        self.is_active = False
-        self.deactivated_by = deactivated_by
-        self.save()
-
-    def reactivate(self, level: PermissionLevel) -> None:
-        self.is_active = True
-        self.deactivated_by = None
-        self.level = level
-        self.save()
-
     @property
-    def level_label(self) -> StrOrPromise:
-        return PermissionLevel.from_value(self.level).label
+    def n2_percentage(self) -> int:
+        return 100 - self.o2_percentage - self.he_percentage
 
 
 class CylinderInstallQuerySet(models.QuerySet["CylinderInstall"]):
@@ -332,6 +274,8 @@ class CylinderInstallManager(models.Manager["CylinderInstall"]):
 
 
 class CylinderInstall(models.Model):
+    pressure_checks: QuerySet[CylinderPressureCheck]
+
     id = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -365,11 +309,41 @@ class CylinderInstall(models.Model):
         validators=[MinValueValidator(-180), MaxValueValidator(180)],
     )
 
-    last_check_date = models.DateField(null=False, blank=False)
-    last_check_user = models.EmailField(
+    notes = models.TextField(
+        blank=True,
+        default="",
+        help_text="Optional notes for the cylinder install",
+    )
+
+    location_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Name of the location where the cylinder is installed",
+    )
+
+    project = models.ForeignKey(
+        Project,
+        related_name="cylinder_installs",
+        on_delete=models.CASCADE,
         null=False,
         blank=False,
-        help_text="User who last checked the cylinder.",
+        help_text="Project where the cylinder is installed",
+    )
+
+    distance_from_entry = models.IntegerField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Distance from the entry of the location",
+    )
+
+    unit_system = models.CharField(
+        max_length=10,
+        null=False,
+        blank=False,
+        default=UnitSystem.METRIC,
+        choices=UnitSystem.choices,
+        help_text="Distance unit. Imperial: Feet, Metric: Meters",
     )
 
     install_date = models.DateField(null=False, blank=False)
@@ -381,8 +355,7 @@ class CylinderInstall(models.Model):
 
     uninstall_date = models.DateField(null=True, blank=True, default=None)
     uninstall_user = models.EmailField(  # noqa: DJ001
-        # must be null not blank to not fail the condition
-        # `retrieval_fields_match_is_retrieved`
+        # must be null not blank to not fail DB conditions
         null=True,
         blank=True,
         default=None,
@@ -394,9 +367,6 @@ class CylinderInstall(models.Model):
         choices=InstallStatus,
         default=InstallStatus.INSTALLED,
     )
-
-    expiracy_memory_date = models.DateField(null=True, blank=True)
-    expiracy_battery_date = models.DateField(null=True, blank=True)
 
     # Metadata
     created_by = models.EmailField(
@@ -418,8 +388,8 @@ class CylinderInstall(models.Model):
         indexes = [
             # models.Index(fields=["status"]),  # we never filter only by status
             models.Index(fields=["cylinder"]),
-            models.Index(fields=["station"]),
-            models.Index(fields=["cylinder", "station"]),
+            models.Index(fields=["latitude", "longitude"]),
+            models.Index(fields=["cylinder", "status"]),
         ]
 
         constraints = [
@@ -437,33 +407,150 @@ class CylinderInstall(models.Model):
                         uninstall_user__isnull=True,
                     )
                 ),
-                name="uninstall_fields_match_is_installed",
+                name="cylinder_uninstall_fields_match_is_installed",
             ),
             # install_date <= uninstall_date
             CheckConstraint(
                 condition=Q(uninstall_date__isnull=True)
                 | Q(install_date__lte=F("uninstall_date")),
-                name="install_before_or_equal_retrieval",
+                name="cylinder_install_before_or_equal_retrieval",
             ),
             # only one installed cylinder per cylinder at a time
             models.UniqueConstraint(
                 fields=["cylinder"],
                 condition=Q(status=InstallStatus.INSTALLED),
-                name="unique_installed_per_cylinder",
-            ),
-            # install_date <= expiracy_memory_date if set
-            CheckConstraint(
-                condition=Q(expiracy_memory_date__isnull=True)
-                | Q(install_date__lte=F("expiracy_memory_date")),
-                name="install_before_or_equal_memory_expiracy",
-            ),
-            # install_date <= expiracy_battery_date if set
-            CheckConstraint(
-                condition=Q(expiracy_battery_date__isnull=True)
-                | Q(install_date__lte=F("expiracy_battery_date")),
-                name="install_before_or_equal_battery_expiracy",
+                name="%(app_label)s_%(class)s_installed_per_cylinder_unique",
             ),
         ]
 
     def __str__(self) -> str:
         return f"[STATUS: {self.status.upper()}]: Cylinder: {self.cylinder.id}"
+
+
+class CylinderPressureCheck(models.Model):
+    id = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        primary_key=True,
+    )
+
+    user = models.EmailField(
+        blank=True,
+        help_text="User who did the pressure check.",
+    )
+
+    notes = models.TextField(
+        blank=True,
+        default="",
+        help_text="Optional notes for the cylinder pressure check",
+    )
+
+    pressure = models.IntegerField(
+        null=False,
+        blank=False,
+        help_text="Cylinder pressure in PSI or BARs (e.g., '3000')",
+        validators=[MinValueValidator(0)],
+    )
+
+    unit_system = models.CharField(
+        max_length=10,
+        null=False,
+        blank=False,
+        choices=UnitSystem.choices,
+        help_text="Cylinder pressure unit Imperial (PSI) or Metric (BAR)",
+    )
+
+    check_date = models.DateField(null=False, blank=False)
+
+    install = models.ForeignKey(
+        CylinderInstall,
+        related_name="pressure_checks",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    creation_date = models.DateTimeField(auto_now_add=True)
+    modified_date = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return (
+            f"[Pressure Check]: Cylinder <{self.install.cylinder_id}>: {self.pressure} "
+            f"{'PSI' if self.unit_system == UnitSystem.IMPERIAL else 'BAR'}"
+        )
+
+
+class CylinderFleetUserPermission(models.Model):
+    id: int
+
+    user = models.ForeignKey(
+        User,
+        related_name="cylinderfleet_permissions",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    cylinder_fleet = models.ForeignKey(
+        CylinderFleet,
+        related_name="user_permissions",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    level = models.IntegerField(
+        choices=PermissionLevel.choices_no_webviewer,
+        default=PermissionLevel.READ_ONLY,
+        null=False,
+        blank=False,
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
+    modified_date = models.DateTimeField(auto_now=True, editable=False)
+
+    deactivated_by = models.ForeignKey(
+        User,
+        on_delete=models.RESTRICT,
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    class Meta:
+        verbose_name = "Cylinder Fleet - User Permission"
+        verbose_name_plural = "Cylinder Fleet - User Permissions"
+        indexes = [
+            models.Index(fields=["user", "is_active"]),
+            models.Index(fields=["cylinder_fleet", "is_active"]),
+            models.Index(fields=["user", "cylinder_fleet", "is_active"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "cylinder_fleet"],
+                name="unique_user_fleet_permission",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} => {self.cylinder_fleet} [{self.level}]"
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}: {self}>"
+
+    def deactivate(self, deactivated_by: User) -> None:
+        self.is_active = False
+        self.deactivated_by = deactivated_by
+        self.save()
+
+    def reactivate(self, level: PermissionLevel) -> None:
+        self.is_active = True
+        self.deactivated_by = None
+        self.level = level
+        self.save()
+
+    @property
+    def level_label(self) -> StrOrPromise:
+        return PermissionLevel.from_value(self.level).label

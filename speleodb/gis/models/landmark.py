@@ -78,7 +78,7 @@ class Landmark(models.Model):
         constraints = [
             UniqueConstraint(
                 fields=["latitude", "longitude", "user"],
-                name="unique_landmark_per_user",
+                name="%(app_label)s_%(class)s_landmark_per_user_unique",
             )
         ]
 

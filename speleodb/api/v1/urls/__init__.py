@@ -7,6 +7,13 @@ from django.urls import URLResolver
 from django.urls import include
 from django.urls import path
 
+from speleodb.api.v1.urls.cylinder import urlpatterns as cylinder_urlpatterns
+from speleodb.api.v1.urls.cylinder_fleet import (
+    urlpatterns as cylinder_fleet_urlpatterns,
+)
+from speleodb.api.v1.urls.cylinder_install import (
+    urlpatterns as cylinder_install_urlpatterns,
+)
 from speleodb.api.v1.urls.experiment import urlpatterns as experiment_urlpatterns
 from speleodb.api.v1.urls.experiment_records import (
     urlpatterns as experiment_record_urlpatterns,
@@ -59,6 +66,9 @@ urlpatterns: list[URLResolver | URLPattern] = [
     path("landmarks/", include(landmark_urlpatterns)),
     path("projects/", include(project_urlpatterns)),
     path("resources/", include(resource_urlpatterns)),
+    path("cylinder-fleets/", include(cylinder_fleet_urlpatterns)),
+    path("cylinder-installs/", include(cylinder_install_urlpatterns)),
+    path("cylinders/", include(cylinder_urlpatterns)),
     path("sensor-fleets/", include(sensor_fleet_urlpatterns)),
     path("sensors/", include(sensor_urlpatterns)),
     path("stations/", include(station_urlpatterns)),

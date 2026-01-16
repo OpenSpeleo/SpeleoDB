@@ -456,6 +456,84 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/cylinder-fleets/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetApiView",
+        "name": "api:v1:cylinder-fleets",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetSpecificApiView",
+        "name": "api:v1:cylinder-fleet-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/cylinders/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderApiView",
+        "name": "api:v1:cylinder-fleet-cylinders",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/cylinders/export/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetExportExcelApiView",
+        "name": "api:v1:cylinder-fleet-cylinders-export",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/cylinders/watchlist/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetWatchlistApiView",
+        "name": "api:v1:cylinder-fleet-watchlist",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/cylinders/watchlist/export/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetWatchlistExportExcelApiView",
+        "name": "api:v1:cylinder-fleet-watchlist-export",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/permissions/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetPermissionApiView",
+        "name": "api:v1:cylinder-fleet-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-installs/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderInstallApiView",
+        "name": "api:v1:cylinder-installs",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-installs/<uuid:install_id>/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderInstallSpecificApiView",
+        "name": "api:v1:cylinder-install-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-installs/<uuid:install_id>/pressure-checks/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderPressureCheckApiView",
+        "name": "api:v1:cylinder-install-pressure-checks",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-installs/<uuid:install_id>/pressure-checks/<uuid:check_id>/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderPressureCheckSpecificApiView",
+        "name": "api:v1:cylinder-pressure-check-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinder-installs/geojson/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderInstallGeoJSONApiView",
+        "name": "api:v1:cylinder-installs-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/cylinders/<uuid:id>/",
+        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderSpecificApiView",
+        "name": "api:v1:cylinder-detail",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/experiment_records/<uuid:id>/",
         "module": "speleodb.api.v1.views.experiment.ExperimentRecordSpecificApiView",
         "name": "api:v1:experiment-records-detail",
@@ -1065,6 +1143,48 @@
         "url": "/private/auth-token/",
         "module": "frontend_private.views.user.AuthTokenView",
         "name": "private:user_authtoken",
+        "decorators": ""
+    },
+    {
+        "url": "/private/cylinder-fleet/<uuid:fleet_id>/",
+        "module": "frontend_private.views.cylinder_fleets.CylinderFleetDetailsView",
+        "name": "private:cylinder_fleet_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/cylinder-fleet/<uuid:fleet_id>/danger_zone/",
+        "module": "frontend_private.views.cylinder_fleets.CylinderFleetDangerZoneView",
+        "name": "private:cylinder_fleet_danger_zone",
+        "decorators": ""
+    },
+    {
+        "url": "/private/cylinder-fleet/<uuid:fleet_id>/history/",
+        "module": "frontend_private.views.cylinder_fleets.CylinderFleetHistoryView",
+        "name": "private:cylinder_fleet_history",
+        "decorators": ""
+    },
+    {
+        "url": "/private/cylinder-fleet/<uuid:fleet_id>/permissions/",
+        "module": "frontend_private.views.cylinder_fleets.CylinderFleetUserPermissionsView",
+        "name": "private:cylinder_fleet_user_permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/cylinder-fleet/<uuid:fleet_id>/watchlist/",
+        "module": "frontend_private.views.cylinder_fleets.CylinderFleetWatchlistView",
+        "name": "private:cylinder_fleet_watchlist",
+        "decorators": ""
+    },
+    {
+        "url": "/private/cylinder-fleet/new/",
+        "module": "frontend_private.views.cylinder_fleets.NewCylinderFleetView",
+        "name": "private:cylinder_fleet_new",
+        "decorators": ""
+    },
+    {
+        "url": "/private/cylinder-fleets/",
+        "module": "frontend_private.views.cylinder_fleets.CylinderFleetListingView",
+        "name": "private:cylinder_fleets",
         "decorators": ""
     },
     {

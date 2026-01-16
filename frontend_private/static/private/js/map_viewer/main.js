@@ -14,6 +14,7 @@ import { LandmarkManager } from './landmarks/manager.js';
 import { LandmarkUI } from './landmarks/ui.js';
 import { ExplorationLeadManager } from './exploration_leads/manager.js';
 import { ExplorationLeadUI } from './exploration_leads/ui.js';
+import { CylinderInstalls } from './stations/cylinders.js';
 import { Utils } from './utils.js';
 import { ContextMenu } from './components/context_menu.js';
 import { ProjectPanel } from './components/project_panel.js';
@@ -108,8 +109,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         onLandmarkClick: (landmarkId) => LandmarkUI.openDetailsModal(landmarkId),
         onExplorationLeadClick: (leadId) => ExplorationLeadUI.showDetailsModal(leadId),
         onSafetyCylinderClick: (cylinderId) => {
-            // TODO: Implement safety cylinder details modal if needed
-            console.log('Safety cylinder clicked:', cylinderId);
+            // Open cylinder details modal for installed cylinders
+            CylinderInstalls.showCylinderDetails(cylinderId);
         },
         onStationDrag: (stationId, projectId, newCoords) => {
             Layers.updateStationPosition(projectId, stationId, newCoords);
@@ -238,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 items.push({
                     label: 'Open Details',
                     subtitle: marker?.description ? marker.description.substring(0, 30) + '...' : 'View/Edit lead',
-                    icon: '<img src="/static/private/media/exploration_lead.svg" style="width:20px;height:20px;">',
+                    icon: `<img src="${window.SPELEO_CONTEXT.icons.explorationLead}" style="width:20px;height:20px;">`,
                     onClick: () => ExplorationLeadUI.showDetailsModal(data.id)
                 });
 
@@ -266,8 +267,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Check if we can create a station here (need snap point within radius)
                 const snapCheck = Geometry.findNearestSnapPointWithinRadius(coords, Geometry.getSnapRadius());
 
-                if (!snapCheck.snapped || (snapCheck.projectId && !Layers.isProjectVisible(snapCheck.projectId))) {
-                    // Can't create station - too far from survey line
+                // Need to be snapped to a survey line with a valid project ID
+                const hasValidSnap = snapCheck.snapped && snapCheck.projectId && Layers.isProjectVisible(snapCheck.projectId);
+                
+                if (!hasValidSnap) {
+                    // Can't create station - too far from survey line or no project context
                     items.push({
                         label: 'Create Station',
                         subtitle: "Can't create a station at this location. Too far from the line",
@@ -296,31 +300,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                     }
 
-                    if (canCreate) {
-                        items.push({
-                            label: 'Install Safety Cylinder',
-                            subtitle: `On ${lineName} (${snapCheck.pointType} point)`,
-                            icon: '<img src="/static/private/media/cylinder_orange.svg" style="width:20px;height:20px;">',
-                            onClick: () => {
-                                const markerId = crypto.randomUUID();
-                                Layers.addSafetyCylinderMarker(markerId, snapCheck.coordinates, lineName);
-                                Utils.showNotification('success', `Safety cylinder installed on ${lineName}`);
-                            }
-                        });
-                    } else {
-                        items.push({
-                            label: 'Install Safety Cylinder',
-                            subtitle: "No write access for this project",
-                            icon: '🔒',
-                            disabled: true
-                        });
-                    }
+                    // Install Safety Cylinder - uses new persistent cylinder system
+                    items.push({
+                        label: 'Install Safety Cylinder',
+                        subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
+                        icon: `<img src="${window.SPELEO_CONTEXT.icons.cylinderOrange}" style="width:20px;height:20px;">`,
+                        onClick: () => {
+                            CylinderInstalls.showInstallModal(snapCheck.coordinates, lineName, nearestProjectId);
+                        }
+                    });
 
                     if (canCreate) {
                         items.push({
                             label: 'Mark Exploration Lead',
                             subtitle: `On ${lineName} (${snapCheck.pointType} point)`,
-                            icon: '<img src="/static/private/media/exploration_lead.svg" style="width:20px;height:20px;">',
+                            icon: `<img src="${window.SPELEO_CONTEXT.icons.explorationLead}" style="width:20px;height:20px;">`,
                             onClick: () => {
                                 ExplorationLeadUI.showCreateModal(snapCheck.coordinates, lineName, nearestProjectId);
                             }
@@ -551,6 +545,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('✅ Exploration leads loaded');
         } catch (e) {
             console.error('Error loading Exploration Leads', e);
+        }
+
+        // Load Cylinder Installs (safety cylinders from fleets)
+        try {
+            await Layers.loadCylinderInstalls();
+            console.log('✅ Cylinder installs loaded');
+        } catch (e) {
+            console.error('Error loading Cylinder Installs', e);
         }
 
         // Create depth scale dynamically
@@ -788,6 +790,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.openLandmarkManager = () => LandmarkUI.openManagerModal();
     window.LandmarkUI = LandmarkUI; // Expose for inline HTML onclicks
     window.StationUI = StationUI; // Expose for inline HTML onclicks
+    window.CylinderInstalls = CylinderInstalls; // Expose for cylinder install modals
+    window.refreshCylinderInstallsLayer = () => Layers.refreshCylinderInstallsLayer();
+    window.API = API; // Expose API for cylinder install and other modules
+    
+    // Listen for cylinder refresh events from the cylinder module
+    document.addEventListener('speleo:refresh-cylinder-installs', () => {
+        Layers.refreshCylinderInstallsLayer();
+    });
+    
+    // Close station modal function (used by cylinder install modal and others)
+    window.closeStationModal = () => {
+        const modal = document.getElementById('station-modal');
+        if (modal) modal.classList.add('hidden');
+    };
 
     // Expose snap debugging functions (like old implementation)
     window.getSnapInfo = () => Geometry.getSnapInfo();

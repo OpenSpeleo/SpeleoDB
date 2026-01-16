@@ -57,10 +57,15 @@ class StationTag(models.Model):
         verbose_name = "Station Tag"
         verbose_name_plural = "Station Tags"
         ordering = ["user", "name"]
-        unique_together = ("user", "name")
         indexes = [
             models.Index(fields=["user"]),
             # models.Index(fields=["user", "name"]),  # present via unique_together
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "name"],
+                name="%(app_label)s_%(class)s_user_tag_unique",
+            ),
         ]
 
     def __str__(self) -> str:

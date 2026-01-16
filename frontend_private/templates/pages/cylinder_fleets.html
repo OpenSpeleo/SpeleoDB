@@ -1,0 +1,275 @@
+{% extends "base_private.html" %}
+{% load static %}
+
+{% load countries %}
+{% load set_var %}
+{% load str_format %}
+
+{% block extra_css %}
+<style>
+    /* Mobile card layout for cylinder fleets */
+    @media (max-width: 768px) {
+        .cylinder-fleets-table {
+            display: none;
+        }
+        
+        .cylinder-fleets-cards {
+            display: block;
+        }
+        
+        .cylinder-fleet-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .cylinder-fleet-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .cylinder-fleet-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .cylinder-fleet-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            flex: 1;
+            margin-right: 12px;
+        }
+        
+        .cylinder-fleet-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .cylinder-fleet-card-body {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .cylinder-fleet-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .cylinder-fleet-card-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        
+        .cylinder-fleet-card-value {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+            text-align: right;
+        }
+        
+        .cylinder-fleet-card-badge {
+            text-align: right;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .cylinder-fleets-table {
+            display: block;
+        }
+        
+        .cylinder-fleets-cards {
+            display: none;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+
+        <!-- Page header -->
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+
+            <!-- Left: Title -->
+            <div class="mb-4 sm:mb-0">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
+                    My Cylinder Fleets
+                </h1>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+
+                <!-- Create Cylinder Fleet button -->
+                <a href="{% url 'private:cylinder_fleet_new' %}" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                    <svg class="w-4 h-4 fill-current opacity-50 shrink-0" viewBox="0 0 16 16">
+                        <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                    </svg>
+                    <span class="ml-2">Create Cylinder Fleet</span>
+                </a>
+
+            </div>
+
+        </div>
+
+        <!-- Mobile Cards View -->
+        <div class="cylinder-fleets-cards">
+            <div class="p-4">
+                {% for fleet_perm in cylinderfleet_perms %}
+                <div class="cylinder-fleet-card">
+                    <div class="cylinder-fleet-card-header">
+                        <div class="cylinder-fleet-card-title">{{ fleet_perm.cylinder_fleet.name }}</div>
+                        <div class="cylinder-fleet-card-actions">
+                            <a href="{% url 'private:cylinder_fleet_details' fleet_id=fleet_perm.cylinder_fleet.id %}" class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition">
+                                <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="View">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="cylinder-fleet-card-body">
+                        <div class="cylinder-fleet-card-row">
+                            <span class="cylinder-fleet-card-label">Cylinders</span>
+                            <span class="cylinder-fleet-card-value">
+                                {{ fleet_perm.cylinder_fleet.cylinders.count }}
+                            </span>
+                        </div>
+                        <div class="cylinder-fleet-card-row">
+                            <span class="cylinder-fleet-card-label">Created By</span>
+                            <span class="cylinder-fleet-card-value">
+                                {{ fleet_perm.cylinder_fleet.created_by }}
+                            </span>
+                        </div>
+                        <div class="cylinder-fleet-card-row">
+                            <span class="cylinder-fleet-card-label">Permission</span>
+                            <div class="cylinder-fleet-card-badge">
+                                {% if fleet_perm.level_label == "READ_ONLY" %}
+                                    {% set bg_color = 'bg-pastel-beige' %}
+                                {% elif fleet_perm.level_label == "READ_AND_WRITE" %}
+                                    {% set bg_color = 'bg-pastel-navy' %}
+                                {% elif fleet_perm.level_label == "ADMIN" %}
+                                    {% set bg_color = 'bg-pastel-orange' %}
+                                {% else %}
+                                    {% set bg_color = '' %}
+                                {% endif %}
+                                <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 {{ bg_color }}">
+                                    {{ fleet_perm.level_label|normalize }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="cylinder-fleet-card-row">
+                            <span class="cylinder-fleet-card-label">Created</span>
+                            <span class="cylinder-fleet-card-value">{{ fleet_perm.cylinder_fleet.creation_date|date:"Y/m/d" }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="cylinder-fleets-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+
+            <div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full text-slate-300">
+                        <!-- Table header -->
+                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                            <tr>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
+                                    <div class="font-semibold text-center">Fleet Name</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Cylinders</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Created By</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Permission</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                    <div class="font-semibold text-center">Created</div>
+                                </th>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                </th>
+                            </tr>
+                        </thead>
+                        <!-- Table body -->
+                        <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
+                            {% for fleet_perm in cylinderfleet_perms %}
+                                <!-- Row -->
+                                <tr>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
+                                        <div class="text-center">
+                                            <div class="font-medium text-slate-100">{{ fleet_perm.cylinder_fleet.name }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="text-center">{{ fleet_perm.cylinder_fleet.cylinders.count }}</div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="text-center">{{ fleet_perm.cylinder_fleet.created_by }}</div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="text-center">
+                                            {% if fleet_perm.level_label == "READ_ONLY" %}
+                                                {% set bg_color = 'bg-pastel-beige' %}
+                                            {% elif fleet_perm.level_label == "READ_AND_WRITE" %}
+                                                {% set bg_color = 'bg-pastel-navy' %}
+                                            {% elif fleet_perm.level_label == "ADMIN" %}
+                                                {% set bg_color = 'bg-pastel-orange' %}
+                                            {% else %}
+                                                {% set bg_color = '' %}
+                                            {% endif %}
+                                            <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 {{ bg_color }}">
+                                                {{ fleet_perm.level_label|normalize }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="text-center">
+                                            {{ fleet_perm.cylinder_fleet.creation_date|date:"Y/m/d" }}
+                                        </div>
+                                    </td>
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
+                                        <div class="flex items-center text-slate-800">
+                                            {% set margin_left = '52' %} <!-- 40 + 12 -->
+                                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3" style="margin-left: {{ margin_left }}px;">
+                                                <a href="{% url 'private:cylinder_fleet_details' fleet_id=fleet_perm.cylinder_fleet.id %}">
+                                                    <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="Icon Open">
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+
+{% endblock content %}

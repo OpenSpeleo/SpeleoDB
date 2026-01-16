@@ -130,13 +130,15 @@ class Format(models.Model):
     objects: models.Manager[Format] = NoUpdateQuerySet.as_manager()
 
     class Meta:
-        unique_together = (
-            "project",
-            "_format",
-        )
         indexes = [
             indexes.Index(fields=["project"]),
             # indexes.Index(fields=["project", "_format"]), # Present via unique constraint  # noqa: E501
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "_format"],
+                name="%(app_label)s_%(class)s_project_format_unique",
+            ),
         ]
 
     def __repr__(self) -> str:

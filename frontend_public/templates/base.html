@@ -18,7 +18,6 @@
 
     {% if debug %}
     <link rel="stylesheet" href="{% static 'css/vendors/aos.css' %}">
-    {% comment %} <link rel="stylesheet" href="{% static 'css/vendors/swiper-bundle.min.css' %}" /> {% endcomment %}
     {% else %}
     <link 
         rel="stylesheet" 
@@ -27,13 +26,6 @@
         crossorigin="anonymous" 
         referrerpolicy="no-referrer" 
     />
-    {% comment %} <link 
-        rel="stylesheet" 
-        href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/8.4.7/swiper-bundle.min.css" 
-        integrity="sha512-N2IsWuKsBYYiHNYdaEuK4eaRJ0onfUG+cdZilndYaMEhUGQq/McsFU75q3N+jbJUNXm6O+K52DRrK+bSpBGj0w==" 
-        crossorigin="anonymous" 
-        referrerpolicy="no-referrer" 
-    /> {% endcomment %}
     {% endif %}
     
     <link href="{% static 'css/style.css' %}{% maybe_debug_version %}" rel="stylesheet">
@@ -211,7 +203,6 @@
     <script src="{% static 'js/vendors/jquery-3.7.1.js' %}"></script>
     <script src="{% static 'js/vendors/alpinejs.min.js' %}" defer></script>
     <script src="{% static 'js/vendors/aos.js' %}"></script>
-    {% comment %} <script src="{% static 'js/vendors/swiper-bundle.min.js' %}"></script> {% endcomment %}
     {% else %}
     <script 
         src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" 
@@ -231,12 +222,6 @@
         crossorigin="anonymous" 
         referrerpolicy="no-referrer">
     </script>
-    {% comment %} <script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/8.4.7/swiper-bundle.min.js" 
-        integrity="sha512-h5Vv+n+z0eRnlJoUlWMZ4PLQv4JfaCVtgU9TtRjNYuNltS5QCqi4D4eZn4UkzZZuG2p4VBz3YIlsB7A2NVrbww==" 
-        crossorigin="anonymous" 
-        referrerpolicy="no-referrer">
-    </script> {% endcomment %}
     {% endif %}
 
     <script src="{% static 'js/main.js' %}"></script>

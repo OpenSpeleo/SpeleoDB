@@ -4,6 +4,15 @@ from __future__ import annotations
 
 from speleodb.api.v1.serializers.announcement import PublicAnnoucementSerializer
 from speleodb.api.v1.serializers.authtoken import AuthTokenSerializer
+from speleodb.api.v1.serializers.cylinder_fleet import CylinderFleetSerializer
+from speleodb.api.v1.serializers.cylinder_fleet import (
+    CylinderFleetUserPermissionSerializer,
+)
+from speleodb.api.v1.serializers.cylinder_fleet import CylinderFleetWithPermSerializer
+from speleodb.api.v1.serializers.cylinder_fleet import CylinderInstallGeoJSONSerializer
+from speleodb.api.v1.serializers.cylinder_fleet import CylinderInstallSerializer
+from speleodb.api.v1.serializers.cylinder_fleet import CylinderPressureCheckSerializer
+from speleodb.api.v1.serializers.cylinder_fleet import CylinderSerializer
 from speleodb.api.v1.serializers.experiment import ExperimentRecordGISSerializer
 from speleodb.api.v1.serializers.experiment import ExperimentRecordSerializer
 from speleodb.api.v1.serializers.experiment import ExperimentSerializer
@@ -51,6 +60,13 @@ from speleodb.api.v1.serializers.user import UserSerializer
 
 __all__ = [
     "AuthTokenSerializer",
+    "CylinderFleetSerializer",
+    "CylinderFleetUserPermissionSerializer",
+    "CylinderFleetWithPermSerializer",
+    "CylinderInstallGeoJSONSerializer",
+    "CylinderInstallSerializer",
+    "CylinderPressureCheckSerializer",
+    "CylinderSerializer",
     "ExperimentRecordGISSerializer",
     "ExperimentRecordSerializer",
     "ExperimentSerializer",

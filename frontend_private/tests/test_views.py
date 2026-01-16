@@ -15,6 +15,8 @@ from rest_framework import status
 from speleodb.api.v1.tests.base_testcase import BaseProjectTestCaseMixin
 from speleodb.api.v1.tests.base_testcase import BaseUserTestCaseMixin
 from speleodb.api.v1.tests.base_testcase import PermissionType
+from speleodb.api.v1.tests.factories import CylinderFleetFactory
+from speleodb.api.v1.tests.factories import CylinderFleetUserPermissionFactory
 from speleodb.api.v1.tests.factories import SensorFleetFactory
 from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
@@ -233,6 +235,41 @@ class SensorFleetViewsTest(BaseTestCase):
             "sensor_fleet_details",
             "sensor_fleet_history",
             "sensor_fleet_user_permissions",
+        ]
+    )
+    def test_view_with_fleet_id(self, view_name: str) -> None:
+        self.execute_test(
+            view_name,
+            {"fleet_id": self.fleet.id},
+        )
+
+
+class CylinderFleetViewsTest(BaseTestCase):
+    """Tests for Cylinder Fleet frontend views."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.fleet = CylinderFleetFactory.create()
+        CylinderFleetUserPermissionFactory.create(
+            user=self.user,
+            cylinder_fleet=self.fleet,
+            level=PermissionLevel.READ_ONLY,
+        )
+
+    @parameterized.expand(
+        [
+            "cylinder_fleets",
+            "cylinder_fleet_new",
+        ]
+    )
+    def test_view_with_no_args(self, view_name: str) -> None:
+        self.execute_test(view_name)
+
+    @parameterized.expand(
+        [
+            "cylinder_fleet_details",
+            "cylinder_fleet_history",
+            "cylinder_fleet_user_permissions",
         ]
     )
     def test_view_with_fleet_id(self, view_name: str) -> None:

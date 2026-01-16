@@ -20,6 +20,12 @@ from rest_framework.authtoken.models import Token
 from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
+from speleodb.common.enums import UnitSystem
+from speleodb.gis.models import Cylinder
+from speleodb.gis.models import CylinderFleet
+from speleodb.gis.models import CylinderFleetUserPermission
+from speleodb.gis.models import CylinderInstall
+from speleodb.gis.models import CylinderPressureCheck
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import ExplorationLead
@@ -685,3 +691,129 @@ class SensorInstallFactory(DjangoModelFactory[SensorInstall]):
             status=InstallStatus.ABANDONED,
             **kwargs,
         )
+
+
+# ================ CYLINDER FLEET FACTORIES ================ #
+
+
+class CylinderFleetFactory(DjangoModelFactory[CylinderFleet]):
+    """Factory for creating CylinderFleet instances."""
+
+    class Meta:
+        model = CylinderFleet
+
+    name: str = factory.Sequence(lambda n: f"Cylinder Fleet {n:03d}")  # type: ignore[assignment]
+    description: str = factory.Faker(  # type: ignore[assignment]
+        "text", max_nb_chars=200
+    )
+    is_active = True
+    created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+
+
+class CylinderFactory(DjangoModelFactory[Cylinder]):
+    """Factory for creating Cylinder instances."""
+
+    class Meta:
+        model = Cylinder
+
+    name: str = factory.Sequence(lambda n: f"Cylinder {n:03d}")  # type: ignore[assignment]
+    serial: str = factory.Sequence(lambda n: f"SN-{n:05d}")  # type: ignore[assignment]
+    brand: str = factory.Faker("company")  # type: ignore[assignment]
+    owner: str = factory.Faker("name")  # type: ignore[assignment]
+    notes: str = factory.Faker("text", max_nb_chars=100)  # type: ignore[assignment]
+    type: str = factory.Faker("word")  # type: ignore[assignment]
+    o2_percentage = 21
+    he_percentage = 0
+    pressure = 3000
+    unit_system = UnitSystem.IMPERIAL
+    fleet: CylinderFleet = factory.SubFactory(CylinderFleetFactory)  # type: ignore[assignment]
+    status = OperationalStatus.FUNCTIONAL
+    created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+
+
+class CylinderFleetUserPermissionFactory(
+    DjangoModelFactory[CylinderFleetUserPermission]
+):
+    """Factory for creating CylinderFleetUserPermission instances."""
+
+    class Meta:
+        model = CylinderFleetUserPermission
+
+    level = PermissionLevel.READ_AND_WRITE
+    user: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
+    cylinder_fleet: CylinderFleet = factory.SubFactory(CylinderFleetFactory)  # type: ignore[assignment]
+
+
+class CylinderInstallFactory(DjangoModelFactory[CylinderInstall]):
+    """Factory for creating CylinderInstall instances."""
+
+    class Meta:
+        model = CylinderInstall
+
+    cylinder: Cylinder = factory.SubFactory(CylinderFactory)  # type: ignore[assignment]
+    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
+    location_name: str = factory.Faker("city")  # type: ignore[assignment]
+    latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
+    longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
+    install_date = factory.LazyFunction(timezone.localdate)
+    install_user: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+    status = InstallStatus.INSTALLED
+    uninstall_date: date | None = None
+    uninstall_user: str | None = None
+    created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+
+    @classmethod
+    def create_uninstalled(
+        cls,
+        cylinder: Cylinder | None = None,
+        install_status: InstallStatus = InstallStatus.RETRIEVED,
+        **kwargs: Any,
+    ) -> CylinderInstall:
+        """Create a retrieved cylinder install."""
+
+        assert install_status != InstallStatus.INSTALLED, (
+            "Status must not be INSTALLED for uninstalled installs."
+        )
+
+        if cylinder is None:
+            cylinder = CylinderFactory.create()
+
+        install_date = kwargs.get("install_date", timezone.localdate())
+        uninstall_date = kwargs.get("uninstall_date", install_date + timedelta(days=30))
+
+        return cls.create(
+            cylinder=cylinder,
+            status=install_status,
+            install_date=install_date,
+            uninstall_date=uninstall_date,
+            uninstall_user=kwargs.get("uninstall_user", UserFactory.create().email),
+            **{
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["install_date", "uninstall_date", "uninstall_user"]
+            },
+        )
+
+
+class CylinderPressureCheckFactory(DjangoModelFactory[CylinderPressureCheck]):
+    """Factory for creating CylinderPressureCheck instances."""
+
+    class Meta:
+        model = CylinderPressureCheck
+
+    install: CylinderInstall = factory.SubFactory(CylinderInstallFactory)  # type: ignore[assignment]
+    user: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+    notes: str = factory.Faker("text", max_nb_chars=100)  # type: ignore[assignment]
+    pressure: int = factory.Faker("random_int", min=1000, max=3000)  # type: ignore[assignment]
+    unit_system = UnitSystem.IMPERIAL
+    check_date: date = factory.Faker("date_object")  # type: ignore[assignment]

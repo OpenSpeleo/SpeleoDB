@@ -9,6 +9,12 @@ from django.urls import path
 
 import speleodb.utils.url_converters  # noqa: F401  # Necessary to import the converters
 from frontend_private.views import AuthTokenView
+from frontend_private.views import CylinderFleetDangerZoneView
+from frontend_private.views import CylinderFleetDetailsView
+from frontend_private.views import CylinderFleetHistoryView
+from frontend_private.views import CylinderFleetListingView
+from frontend_private.views import CylinderFleetUserPermissionsView
+from frontend_private.views import CylinderFleetWatchlistView
 from frontend_private.views import DashboardView
 from frontend_private.views import ExperimentDangerZoneView
 from frontend_private.views import ExperimentDataViewerView
@@ -23,6 +29,7 @@ from frontend_private.views import GISViewGISIntegrationView
 from frontend_private.views import GISViewListingView
 from frontend_private.views import GPSTrackListView
 from frontend_private.views import MapViewerView
+from frontend_private.views import NewCylinderFleetView
 from frontend_private.views import NewExperimentView
 from frontend_private.views import NewGISViewView
 from frontend_private.views import NewProjectView
@@ -128,6 +135,30 @@ experiment_patterns = [
     ),
 ]
 
+cylinder_fleet_patterns = [
+    path("", CylinderFleetDetailsView.as_view(), name="cylinder_fleet_details"),
+    path(
+        "danger_zone/",
+        CylinderFleetDangerZoneView.as_view(),
+        name="cylinder_fleet_danger_zone",
+    ),
+    path(
+        "permissions/",
+        CylinderFleetUserPermissionsView.as_view(),
+        name="cylinder_fleet_user_permissions",
+    ),
+    path(
+        "history/",
+        CylinderFleetHistoryView.as_view(),
+        name="cylinder_fleet_history",
+    ),
+    path(
+        "watchlist/",
+        CylinderFleetWatchlistView.as_view(),
+        name="cylinder_fleet_watchlist",
+    ),
+]
+
 sensor_fleet_patterns = [
     path("", SensorFleetDetailsView.as_view(), name="sensor_fleet_details"),
     path(
@@ -219,6 +250,14 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("experiments/", ExperimentListingView.as_view(), name="experiments"),
     path("experiment/new/", NewExperimentView.as_view(), name="experiment_new"),
     path("experiment/<uuid:experiment_id>/", include(experiment_patterns)),
+    # Cylinder Fleets URLs
+    path(
+        "cylinder-fleets/", CylinderFleetListingView.as_view(), name="cylinder_fleets"
+    ),
+    path(
+        "cylinder-fleet/new/", NewCylinderFleetView.as_view(), name="cylinder_fleet_new"
+    ),
+    path("cylinder-fleet/<uuid:fleet_id>/", include(cylinder_fleet_patterns)),
     # Sensor Fleets URLs
     path("sensor-fleets/", SensorFleetListingView.as_view(), name="sensor_fleets"),
     path("sensor-fleet/new/", NewSensorFleetView.as_view(), name="sensor_fleet_new"),

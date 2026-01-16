@@ -171,11 +171,16 @@ class SensorFleetUserPermission(models.Model):
     class Meta:
         verbose_name = "Sensor Fleet - User Permission"
         verbose_name_plural = "Sensor Fleet - User Permissions"
-        unique_together = ("user", "sensor_fleet")
         indexes = [
             models.Index(fields=["user", "is_active"]),
             models.Index(fields=["sensor_fleet", "is_active"]),
             models.Index(fields=["user", "sensor_fleet", "is_active"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "sensor_fleet"],
+                name="%(app_label)s_%(class)s_user_sensor_fleet_perm_unique",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -274,8 +279,7 @@ class SensorInstall(models.Model):
 
     uninstall_date = models.DateField(null=True, blank=True, default=None)
     uninstall_user = models.EmailField(  # noqa: DJ001
-        # must be null not blank to not fail the condition
-        # `retrieval_fields_match_is_retrieved`
+        # must be null not blank to not fail DB conditions
         null=True,
         blank=True,
         default=None,
@@ -330,19 +334,19 @@ class SensorInstall(models.Model):
                         uninstall_user__isnull=True,
                     )
                 ),
-                name="uninstall_fields_match_is_installed",
+                name="sensor_uninstall_fields_match_is_installed",
             ),
             # install_date <= uninstall_date
             CheckConstraint(
                 condition=Q(uninstall_date__isnull=True)
                 | Q(install_date__lte=F("uninstall_date")),
-                name="install_before_or_equal_retrieval",
+                name="sensor_install_before_or_equal_retrieval",
             ),
             # only one installed sensor per sensor at a time
             models.UniqueConstraint(
                 fields=["sensor"],
                 condition=Q(status=InstallStatus.INSTALLED),
-                name="unique_installed_per_sensor",
+                name="%(app_label)s_%(class)s_installed_per_sensor_unique",
             ),
             # install_date <= expiracy_memory_date if set
             CheckConstraint(

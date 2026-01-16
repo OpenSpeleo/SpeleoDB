@@ -218,6 +218,29 @@
     </div>
 </main>
 
+<!-- Cylinder Install/Details Modal -->
+<div id="cylinder-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl max-h-[85vh] flex flex-col">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-4 border-b border-slate-600 flex-shrink-0">
+            <h2 id="cylinder-modal-title" class="text-xl font-semibold text-white flex items-center gap-3">
+                <img src="{% static 'private/media/cylinder_orange.svg' %}" class="w-6 h-6">
+                Safety Cylinder
+            </h2>
+            <button id="cylinder-modal-close" class="text-slate-400 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Modal Content - Scrollable -->
+        <div id="cylinder-modal-content" class="flex-1 overflow-y-auto p-6">
+            <!-- Content will be loaded dynamically -->
+        </div>
+    </div>
+</div>
+
 <!-- Context Menu (outside main for proper fixed positioning) -->
 <div id="context-menu" class="context-menu">
     <!-- Menu items will be populated dynamically -->
@@ -236,7 +259,12 @@
     // Context bridge - defined BEFORE the module loads to ensure availability
     window.SPELEO_CONTEXT = {
         csrfToken: "{{ csrf_token }}",
-        mapboxToken: "{{ mapbox_api_token }}"
+        mapboxToken: "{{ mapbox_api_token }}",
+        // Static media URLs for use in JavaScript
+        icons: {
+            cylinderOrange: "{% static 'private/media/cylinder_orange.svg' %}",
+            explorationLead: "{% static 'private/media/exploration_lead.svg' %}"
+        }
     };
     
     // Initialize Data Import module

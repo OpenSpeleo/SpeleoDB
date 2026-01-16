@@ -30,12 +30,15 @@ class TeamProjectPermission(BasePermissionModel):
     class Meta:
         verbose_name = "Project - Team Permission"
         verbose_name_plural = "Project - Team Permissions"
-        unique_together = ("target", "project")
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(level__in=PermissionLevel.values_no_admin),
                 name="%(app_label)s_%(class)s_level_is_valid",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["target", "project"],
+                name="%(app_label)s_%(class)s_team_project_unique",
+            ),
         ]
         indexes = [
             models.Index(fields=["target"]),

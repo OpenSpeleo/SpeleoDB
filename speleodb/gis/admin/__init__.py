@@ -4,6 +4,11 @@
 
 from __future__ import annotations
 
+from speleodb.gis.admin.cylinder import CylinderAdmin
+from speleodb.gis.admin.cylinder import CylinderFleetAdmin
+from speleodb.gis.admin.cylinder import CylinderFleetUserPermissionAdmin
+from speleodb.gis.admin.cylinder import CylinderInstallAdmin
+from speleodb.gis.admin.cylinder import CylinderPressureCheckAdmin
 from speleodb.gis.admin.experiment import ExperimentAdmin
 from speleodb.gis.admin.experiment import ExperimentRecordAdmin
 from speleodb.gis.admin.explo_lead import ExplorationLeadAdmin
@@ -22,6 +27,11 @@ from speleodb.gis.admin.view import GISProjectViewAdmin
 from speleodb.gis.admin.view import GISViewAdmin
 
 __all__ = [
+    "CylinderAdmin",
+    "CylinderFleetAdmin",
+    "CylinderFleetUserPermissionAdmin",
+    "CylinderInstallAdmin",
+    "CylinderPressureCheckAdmin",
     "ExperimentAdmin",
     "ExperimentRecordAdmin",
     "ExplorationLeadAdmin",

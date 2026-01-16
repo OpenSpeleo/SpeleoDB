@@ -246,10 +246,6 @@
                                 </td>
                                 <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
 
-                                    {% comment %} 
-                                    A user can not edit/delete their own permission. Must be another ADMIN
-                                    {% endcomment %}
-
                                     {% if permission.user != user and has_admin_access %}
                                         {% set can_edit = True %}
                                     {% else %}

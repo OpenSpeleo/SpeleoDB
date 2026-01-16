@@ -216,6 +216,63 @@ export const API = {
     // GPX Import
     importGPX: (formData) =>
         apiRequest(Urls['api:v1:gpx-import'](), 'PUT', formData, true),
+
+    // ================== CYLINDER FLEETS ================== //
+
+    // Cylinder Fleets
+    getCylinderFleets: () =>
+        apiRequest(Urls['api:v1:cylinder-fleets']()),
+
+    getCylinderFleetDetails: (fleetId) =>
+        apiRequest(Urls['api:v1:cylinder-fleet-detail'](fleetId)),
+
+    getCylinderFleetCylinders: (fleetId) =>
+        apiRequest(Urls['api:v1:cylinder-fleet-cylinders'](fleetId)),
+
+    // Cylinder Installs
+    getCylinderInstalls: (params = {}) => {
+        let url = Urls['api:v1:cylinder-installs']();
+        const queryParams = [];
+        if (params.cylinder_id) queryParams.push(`cylinder_id=${params.cylinder_id}`);
+        if (params.fleet_id) queryParams.push(`fleet_id=${params.fleet_id}`);
+        if (params.status) queryParams.push(`status=${params.status}`);
+        if (queryParams.length > 0) url += '?' + queryParams.join('&');
+        return apiRequest(url);
+    },
+
+    getCylinderInstallsGeoJSON: () =>
+        apiRequest(Urls['api:v1:cylinder-installs-geojson']()),
+
+    getAllCylinderInstallsGeoJSON: () =>
+        apiRequest(Urls['api:v1:cylinder-installs-geojson']()),
+
+    createCylinderInstall: (installData) =>
+        apiRequest(Urls['api:v1:cylinder-installs'](), 'POST', installData),
+
+    getCylinderInstallDetails: (installId) =>
+        apiRequest(Urls['api:v1:cylinder-install-detail'](installId)),
+
+    updateCylinderInstall: (installId, installData) =>
+        apiRequest(Urls['api:v1:cylinder-install-detail'](installId), 'PATCH', installData),
+
+    deleteCylinderInstall: (installId) =>
+        apiRequest(Urls['api:v1:cylinder-install-detail'](installId), 'DELETE'),
+
+    // Cylinder Pressure Checks
+    getCylinderPressureChecks: (installId) =>
+        apiRequest(Urls['api:v1:cylinder-install-pressure-checks'](installId)),
+
+    createCylinderPressureCheck: (installId, checkData) =>
+        apiRequest(Urls['api:v1:cylinder-install-pressure-checks'](installId), 'POST', checkData),
+
+    getCylinderPressureCheckDetails: (installId, checkId) =>
+        apiRequest(Urls['api:v1:cylinder-pressure-check-detail'](installId, checkId)),
+
+    updateCylinderPressureCheck: (installId, checkId, checkData) =>
+        apiRequest(Urls['api:v1:cylinder-pressure-check-detail'](installId, checkId), 'PATCH', checkData),
+
+    deleteCylinderPressureCheck: (installId, checkId) =>
+        apiRequest(Urls['api:v1:cylinder-pressure-check-detail'](installId, checkId), 'DELETE'),
 };
 
 

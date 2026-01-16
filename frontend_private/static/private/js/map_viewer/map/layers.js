@@ -3,6 +3,7 @@ import { State } from '../state.js';
 import { Colors } from './colors.js';
 import { DepthUtils } from './depth.js';
 import { Geometry } from './geometry.js';
+import { API } from '../api.js';
 
 // Track whether custom marker images have been loaded
 let markerImagesLoaded = false;
@@ -1230,7 +1231,7 @@ export const Layers = {
         try {
             // Load pre-colored orange cylinder SVG for safety cylinder
             const cylinderImage = new Image(32, 32);
-            cylinderImage.src = '/static/private/media/cylinder_orange.svg';
+            cylinderImage.src = window.SPELEO_CONTEXT.icons.cylinderOrange;
             await new Promise((resolve, reject) => {
                 cylinderImage.onload = resolve;
                 cylinderImage.onerror = reject;
@@ -1242,7 +1243,7 @@ export const Layers = {
 
             // Load exploration lead SVG
             const leadImage = new Image(32, 32);
-            leadImage.src = '/static/private/media/exploration_lead.svg';
+            leadImage.src = window.SPELEO_CONTEXT.icons.explorationLead;
             await new Promise((resolve, reject) => {
                 leadImage.onload = resolve;
                 leadImage.onerror = reject;
@@ -1582,5 +1583,121 @@ export const Layers = {
      */
     resetMarkerDragFeedback: function (markerType) {
         this.hideMarkerDragHighlight();
+    },
+
+    /**
+     * Load and display installed cylinders from the API
+     * Fetches GeoJSON data for all installed cylinders the user has access to
+     */
+    loadCylinderInstalls: async function () {
+        const map = State.map;
+        if (!map) return;
+
+        try {
+            console.log('🔄 Loading cylinder installs...');
+            // GeoJSON endpoint returns raw FeatureCollection via NoWrapResponse
+            const geojsonData = await API.getAllCylinderInstallsGeoJSON();
+            
+            if (
+                geojsonData &&
+                geojsonData.type === 'FeatureCollection' &&
+                Array.isArray(geojsonData.features)
+            ) {
+                this.addCylinderInstallsLayer(geojsonData);
+                console.log(`✅ Loaded ${geojsonData.features.length} cylinder installs`);
+            } else {
+                console.log('⚠️ No cylinder installs to display or invalid response format');
+            }
+        } catch (e) {
+            console.error('❌ Failed to load cylinder installs:', e);
+        }
+    },
+
+    /**
+     * Add cylinder installs layer to the map
+     */
+    addCylinderInstallsLayer: function (geojsonData) {
+        const map = State.map;
+        if (!map) return;
+
+        const sourceId = 'cylinder-installs-source';
+        const layerId = 'cylinder-installs-layer';
+
+        console.log(`🛢️ Adding ${geojsonData.features?.length || 0} cylinder installs to map`);
+
+        // Remove existing layer and source if they exist (for refresh)
+        if (map.getLayer(layerId)) {
+            map.removeLayer(layerId);
+        }
+        if (map.getSource(sourceId)) {
+            map.removeSource(sourceId);
+        }
+
+        if (!geojsonData.features || geojsonData.features.length === 0) {
+            console.log('🛢️ No cylinder installs to display');
+            return;
+        }
+
+        // Ensure id property is set on each feature for Mapbox promoteId
+        geojsonData.features.forEach(feature => {
+            if (feature.id && !feature.properties.id) {
+                feature.properties.id = feature.id;
+            }
+        });
+
+        map.addSource(sourceId, {
+            type: 'geojson',
+            data: geojsonData,
+            promoteId: 'id'
+        });
+
+        // Use cylinder icon if loaded, otherwise fallback
+        if (map.hasImage('safety-cylinder-icon')) {
+            map.addLayer({
+                id: layerId,
+                type: 'symbol',
+                source: sourceId,
+                minzoom: ZOOM_LEVELS.SAFETY_CYLINDER_SYMBOL,
+                layout: {
+                    'icon-image': 'safety-cylinder-icon',
+                    'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.8, 18, 1.2],
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true
+                },
+                paint: {
+                    'icon-opacity': 1
+                }
+            });
+        } else {
+            // Fallback to text symbol
+            map.addLayer({
+                id: layerId,
+                type: 'symbol',
+                source: sourceId,
+                minzoom: ZOOM_LEVELS.SAFETY_CYLINDER_SYMBOL,
+                layout: {
+                    'text-field': '🛢️',
+                    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                    'text-size': ['interpolate', ['linear'], ['zoom'], 14, 18, 18, 26],
+                    'text-allow-overlap': true,
+                    'text-ignore-placement': true
+                },
+                paint: {
+                    'text-color': '#FF6B00',
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 2
+                }
+            });
+        }
+
+        // Reorder to ensure proper z-ordering
+        this.reorderLayers();
+    },
+
+    /**
+     * Refresh cylinder installs layer (called after install/uninstall)
+     */
+    refreshCylinderInstallsLayer: async function () {
+        await this.loadCylinderInstalls();
     }
 };

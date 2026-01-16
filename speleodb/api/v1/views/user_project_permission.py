@@ -43,7 +43,7 @@ class ProjectUserPermissionListApiView(GenericAPIView[Project], SDBAPIViewMixin)
         permissions = project.user_permissions
 
         project_serializer = ProjectSerializer(project, context={"user": user})
-        permission_serializer = ProjectUserPermissionSerializer(permissions, many=True)  # type: ignore[arg-type]
+        permission_serializer = ProjectUserPermissionSerializer(permissions, many=True)
 
         return SuccessResponse(
             {

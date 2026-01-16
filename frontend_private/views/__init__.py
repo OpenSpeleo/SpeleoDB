@@ -1,3 +1,10 @@
+from frontend_private.views.cylinder_fleets import CylinderFleetDangerZoneView
+from frontend_private.views.cylinder_fleets import CylinderFleetDetailsView
+from frontend_private.views.cylinder_fleets import CylinderFleetHistoryView
+from frontend_private.views.cylinder_fleets import CylinderFleetListingView
+from frontend_private.views.cylinder_fleets import CylinderFleetUserPermissionsView
+from frontend_private.views.cylinder_fleets import CylinderFleetWatchlistView
+from frontend_private.views.cylinder_fleets import NewCylinderFleetView
 from frontend_private.views.experiments import ExperimentDangerZoneView
 from frontend_private.views.experiments import ExperimentDataViewerView
 from frontend_private.views.experiments import ExperimentDetailsView
@@ -54,6 +61,12 @@ from frontend_private.views.user import StationTagsView
 
 __all__ = [
     "AuthTokenView",
+    "CylinderFleetDangerZoneView",
+    "CylinderFleetDetailsView",
+    "CylinderFleetHistoryView",
+    "CylinderFleetListingView",
+    "CylinderFleetUserPermissionsView",
+    "CylinderFleetWatchlistView",
     "DashboardView",
     "ExperimentDangerZoneView",
     "ExperimentDataViewerView",
@@ -68,6 +81,7 @@ __all__ = [
     "GISViewListingView",
     "GPSTrackListView",
     "MapViewerView",
+    "NewCylinderFleetView",
     "NewExperimentView",
     "NewGISViewView",
     "NewProjectView",

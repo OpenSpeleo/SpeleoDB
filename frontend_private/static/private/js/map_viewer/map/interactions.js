@@ -38,6 +38,7 @@ export const Interactions = {
                     feature.layer.id === 'landmarks-layer' ||
                     feature.layer.id === 'landmarks-labels' ||
                     feature.layer.id === 'safety-cylinders-layer' ||
+                    feature.layer.id === 'cylinder-installs-layer' ||
                     feature.layer.id === 'exploration-leads-layer') {
                     isInteractive = true;
                     break;
@@ -111,9 +112,9 @@ export const Interactions = {
                 return;
             }
 
-            // Check for Safety Cylinders
+            // Check for Safety Cylinders (both temporary markers and persistent installs)
             const safetyCylinderFeature = features.find(f =>
-                f.layer && f.layer.id === 'safety-cylinders-layer'
+                f.layer && (f.layer.id === 'safety-cylinders-layer' || f.layer.id === 'cylinder-installs-layer')
             );
 
             if (safetyCylinderFeature) {

@@ -80,7 +80,7 @@ class GPSTrack(models.Model):
         constraints = [
             UniqueConstraint(
                 fields=["sha256_hash", "user"],
-                name="unique_gps_track_per_user",
+                name="%(app_label)s_%(class)s_gps_track_per_user_unique",
             )
         ]
 

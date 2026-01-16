@@ -286,9 +286,6 @@
 
                                     {% else %}
 
-                                        {% comment %} 
-                                        A user can not edit/delete their own permission. Must be another ADMIN
-                                        {% endcomment %}
                                         {% if permission.user != user and is_project_admin %}
                                             {% set can_edit = True %}
                                         {% else %}

@@ -31,6 +31,9 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='teamprojectpermission',
-            constraint=models.CheckConstraint(condition=models.Q(('level__in', [0, 1, 2])), name='surveys_teamprojectpermission_level_is_valid'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('level__in', [0, 1, 2])), 
+                name='surveys_teamprojectpermission_level_is_valid'
+            ),
         ),
     ]
