@@ -7,8 +7,6 @@ from operator import attrgetter
 from typing import TYPE_CHECKING
 from typing import ClassVar
 
-from cachetools import TTLCache
-from cachetools import cached
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models import BooleanField
@@ -16,6 +14,8 @@ from django.db.models import CharField
 from django.db.models import EmailField
 from django_countries.fields import CountryField
 
+from speleodb.common.caching import UserProjectPermissionCache
+from speleodb.common.caching import UserProjectPermissionInfo
 from speleodb.users.managers import UserManager
 from speleodb.utils.exceptions import NotAuthorizedError
 
@@ -148,23 +148,19 @@ class User(AbstractUser):
         """Returns a sorted list of `TeamPermission` or `UserPermission` by project
         name. The method finds the best permission (user or team) for each project."""
 
-        user_permissions, team_permissions = self._fetch_permissions()
+        user_permissions, team_permissions = self.fetch_all_project_permissions()
 
         return filter_permissions_by_best([*user_permissions, *team_permissions])
 
-    @cached(cache=TTLCache(maxsize=100, ttl=300))
-    def _fetch_permissions(
-        self, project: Project | None = None
+    def fetch_all_project_permissions(
+        self,
     ) -> tuple[QuerySet[UserProjectPermission], QuerySet[TeamProjectPermission]]:
         from speleodb.surveys.models import TeamProjectPermission  # noqa: PLC0415
-
-        project_filter = {"project": project} if project else {}
 
         # -------------------------- USER PERMISSIONS -------------------------- #
 
         user_permissions = self.project_user_permissions.filter(
             is_active=True,
-            **project_filter,
         ).select_related("project")
 
         # -------------------------- TEAM PERMISSIONS -------------------------- #
@@ -173,22 +169,70 @@ class User(AbstractUser):
             target__memberships__user=self,
             target__memberships__is_active=True,
             is_active=True,
-            **project_filter,
         ).select_related("project")
 
         return user_permissions, team_permissions
 
-    @cached(cache=TTLCache(maxsize=100, ttl=300))
+    def _fetch_project_permission_ids(
+        self, project: Project
+    ) -> UserProjectPermissionInfo:
+        from speleodb.surveys.models import TeamProjectPermission  # noqa: PLC0415
+
+        if (ids := UserProjectPermissionCache.get(self.pk, project.pk)) is not None:
+            return ids
+
+        user_perm_id = (
+            self.project_user_permissions.filter(
+                project=project,
+                is_active=True,
+            )
+            .values_list("id", flat=True)
+            .first()
+        )
+
+        team_perm_ids = TeamProjectPermission.objects.filter(
+            target__memberships__user=self,
+            target__memberships__is_active=True,
+            project=project,
+            is_active=True,
+        ).values_list("id", flat=True)
+
+        rslt = UserProjectPermissionInfo(
+            user=user_perm_id,
+            teams=list(team_perm_ids),
+        )
+
+        UserProjectPermissionCache.set(self.pk, project.pk, payload=rslt)
+        return rslt
+
     def get_best_permission(
         self, project: Project
-    ) -> TeamProjectPermission | UserProjectPermission:
-        try:
-            user_permissions, team_permissions = self._fetch_permissions(project)
-            return filter_permissions_by_best([*user_permissions, *team_permissions])[0]
-        except IndexError as e:
-            raise NotAuthorizedError(
-                "The user does not have access to the project"
-            ) from e
+    ) -> UserProjectPermission | TeamProjectPermission:
+        from speleodb.surveys.models import TeamProjectPermission  # noqa: PLC0415
+        from speleodb.surveys.models import UserProjectPermission  # noqa: PLC0415
+
+        perm_nfo = self._fetch_project_permission_ids(project)
+
+        permissions: list[UserProjectPermission | TeamProjectPermission] = []
+
+        if user_id := perm_nfo.user:
+            permissions.extend(
+                UserProjectPermission.objects.filter(id=user_id).select_related(
+                    "target", "project"
+                )
+            )
+
+        if team_ids := perm_nfo.teams:
+            permissions.extend(
+                TeamProjectPermission.objects.filter(id__in=team_ids).select_related(
+                    "target", "project"
+                )
+            )
+
+        if not permissions:
+            raise NotAuthorizedError("The user does not have access to the project")
+
+        return filter_permissions_by_best(permissions)[0]
 
     @property
     def active_mutexes(self) -> models.QuerySet[ProjectMutex]:
@@ -196,7 +240,3 @@ class User(AbstractUser):
 
     def has_beta_access(self) -> bool:
         return self.is_beta_tester or self.is_superuser or self.is_staff
-
-    def void_permission_cache(self) -> None:
-        self._fetch_permissions.cache_clear()
-        self.get_best_permission.cache_clear()

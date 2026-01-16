@@ -47,7 +47,6 @@ class ProjectAcquireApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
         # Refresh the `modified_date` field
         project.save()
-        project.void_mutex_cache()
 
         serializer = ProjectSerializer(project, context={"user": user})
         return SuccessResponse(serializer.data)
@@ -77,7 +76,6 @@ class ProjectReleaseApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
         # Refresh the `modified_date` field
         project.save()
-        project.void_mutex_cache()
 
         serializer = ProjectSerializer(project, context={"user": user})
         return SuccessResponse(serializer.data)

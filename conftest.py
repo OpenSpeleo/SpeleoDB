@@ -6,8 +6,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from django.core.cache import cache
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from _pytest.config import Config
     from _pytest.config.argparsing import Parser
     from _pytest.nodes import Item
@@ -57,3 +60,12 @@ def pytest_configure(config: Config) -> None:
     config.addinivalue_line(
         "markers", "skip_if_offline: mark test to be skip in offline test mode."
     )
+
+
+@pytest.fixture(autouse=True)
+def clear_cache_between_tests() -> Generator[None]:
+    """Fixture to clear the Django cache after each test function runs."""
+    yield
+
+    # Clear django cache after the yield runs as teardown
+    cache.clear()

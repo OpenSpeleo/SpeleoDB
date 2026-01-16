@@ -94,9 +94,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
             perm.deactivate(deactivated_by=user)
 
         project.is_active = False
-        project.save()
-
-        user.void_permission_cache()
+        project.save(update_fields="is_active")
 
         return SuccessResponse({"id": str(project.id)})
 
@@ -114,6 +112,7 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
             Project.objects.with_commits()  # pyright: ignore[reportAttributeAccessIssue]
             .with_commit_count()  # pyright: ignore[reportAttributeAccessIssue]
             .with_active_mutex()  # pyright: ignore[reportAttributeAccessIssue]
+            .prefetch_related("_formats")
             .filter(id__in=project_ids)
         )
 
@@ -135,9 +134,6 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
             serializer = self.get_serializer(data=data, context={"user": user})
             if serializer.is_valid():
                 serializer.save()
-
-                user.void_permission_cache()
-
                 return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
             return ErrorResponse(

@@ -157,8 +157,6 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
 
         permission.save()
 
-        target_user.void_permission_cache()
-
         permission_serializer = ProjectUserPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
 
@@ -186,8 +184,8 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        target_user: User = perm_data["user"]
         try:
-            target_user: User = perm_data["user"]
             permission = UserProjectPermission.objects.get(
                 project=project,
                 target=target_user,
@@ -206,8 +204,6 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
 
         permission.level = perm_data["level"]
         permission.save()
-
-        target_user.void_permission_cache()
 
         permission_serializer = ProjectUserPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
@@ -260,8 +256,6 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
 
         # Refresh the `modified_date` field
         project.save()
-
-        target_user.void_permission_cache()
 
         return SuccessResponse(
             {

@@ -37,8 +37,8 @@ def copy_user_email_reverse(apps, schema_editor):
 
     for model in [Project, Station, StationResource]:
         for obj in model.objects.all():
-            if obj.created_by:  # this is now the email string
-                user = User.objects.filter(email=obj.created_by).first()
+            if obj.created_by_email:  # this is now the email string
+                user = User.objects.filter(email=obj.created_by_email).first()
                 if user:
                     obj.created_by_id = user.id
                     obj.save(update_fields=['created_by_id'])

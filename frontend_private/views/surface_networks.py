@@ -33,7 +33,7 @@ class SurfaceNetworkListingView(AuthenticatedTemplateView):
     ) -> HttpResponse:
         context = self.get_context_data(**kwargs)
 
-        context["network_perms"] = (
+        context["network_perms"] = list(
             SurfaceMonitoringNetworkUserPermission.objects.filter(
                 user=request.user,
                 is_active=True,
@@ -132,9 +132,11 @@ class SurfaceNetworkUserPermissionsView(_BaseSurfaceNetworkView):
         except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:surface_networks"))
 
-        data["permissions"] = SurfaceMonitoringNetworkUserPermission.objects.filter(
-            network=data["network"], is_active=True
-        ).prefetch_related("user")
+        data["permissions"] = list(
+            SurfaceMonitoringNetworkUserPermission.objects.filter(
+                network=data["network"], is_active=True
+            ).prefetch_related("user")
+        )
 
         return super().get(request, *args, **data, **kwargs)
 

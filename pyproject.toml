@@ -13,7 +13,6 @@ dependencies = [
     # Utils
     # ------------------------------------------------------------------------------
     "argon2-cffi==25.1.0",  # https://github.com/hynek/argon2-cffi
-    "cachetools==6.2.4",    # https://github.com/tkem/cachetools
     "dict-hash==1.3.7",     # https://github.com/LucaCappelletti94/dict_hash
     "python-dotenv==1.2.1", # https://github.com/theskumar/python-dotenv
     "pytz==2025.2",         # https://github.com/stub42/pytz
@@ -118,7 +117,6 @@ local = [
     "djangorestframework-stubs[compatible-mypy]==3.16.6", # https://github.com/typeddjango/djangorestframework-stubs
     "django-stubs[compatible-mypy]==5.2.8",               # https://github.com/typeddjango/django-stubs
     "celery-types==0.24.0",                               # https://github.com/sbdchd/celery-types
-    "types-cachetools==6.2.0.20251022",                   # https://github.com/python/typeshed
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
     "types-pytz==2025.2.0.20251108",                      # https://github.com/python/typeshed
 

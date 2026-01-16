@@ -150,19 +150,19 @@
         <!-- Mobile Cards View -->
         <div class="projects-cards">
             <div class="p-4">
-                {% for permission in filtered_permissions %}
+                {% for proj_data in projects_data %}
                 <div class="project-card">
                     <div class="project-card-header">
-                        <div class="project-card-title">{{ permission.project.name }}</div>
+                        <div class="project-card-title">{{ proj_data.project.name }}</div>
                         <div class="project-card-actions">
-                            {% if permission.project.active_mutex %}
-                            {% if permission.project.mutex_owner == user or permission.level_label == "ADMIN" %}
+                            {% if proj_data.active_mutex %}
+                            {% if proj_data.active_mutex.user == user or proj_data.level_label == "ADMIN" %}
                             <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded-full cursor-pointer">
-                                <img class="btn-unlock" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ permission.project.id }}" width="28" height="28" alt="Unlock">
+                                <img class="btn-unlock" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ proj_data.project.id }}" width="28" height="28" alt="Unlock">
                             </div>
                             {% endif %}
                             {% endif %}
-                            <a href="{% url 'private:project_details' project_id=permission.project.id %}" class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition">
+                            <a href="{% url 'private:project_details' project_id=proj_data.project.id %}" class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition">
                                 <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="View">
                             </a>
                         </div>
@@ -171,8 +171,8 @@
                         <div class="project-card-row">
                             <span class="project-card-label">Software</span>
                             <div class="project-card-badge">
-                                {% get_project_type_color permission.project.type as type_bg_color %}
-                                {% get_project_type_display permission.project.type as type_display %}
+                                {% get_project_type_color proj_data.project.type as type_bg_color %}
+                                {% get_project_type_display proj_data.project.type as type_display %}
                                 <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 text-white {{ type_bg_color }}">
                                     {{ type_display }}
                                 </div>
@@ -180,52 +180,58 @@
                         </div>
                         <div class="project-card-row">
                             <span class="project-card-label">Collaborators</span>
-                            <span class="project-card-value">{{ permission.project.collaborator_count }}</span>
+                            <span class="project-card-value">{{ proj_data.project.collaborator_count }}</span>
                         </div>
                         <div class="project-card-row">
                             <span class="project-card-label">Revisions</span>
-                            <span class="project-card-value" id="async_revision_mobile_{{ permission.project.id }}">
-                                <img data-id="async_revision_mobile_{{ permission.project.id }}" data-project_id="{{permission.project.id}}"
+                            <span class="project-card-value" id="async_revision_mobile_{{ proj_data.project.id }}">
+                                <img data-id="async_revision_mobile_{{ proj_data.project.id }}" data-project_id="{{proj_data.project.id}}"
                                 class="async_revision inline-flex filter invert-[0.5] sepia saturate-[5] hue-rotate-[203deg] w-6" src="{% static 'private/media/spinner.svg' %}">
                             </span>
                         </div>
                         <div class="project-card-row">
                             <span class="project-card-label">Permission</span>
                             <div class="project-card-badge">
-                                {% if permission.level_label == "WEB_VIEWER" %}
+                                {% if proj_data.level_label == "WEB_VIEWER" %}
                                     {% set bg_color = 'bg-pastel-grey' %}
-                                {% elif permission.level_label == "READ_ONLY" %}
+                                {% elif proj_data.level_label == "READ_ONLY" %}
                                     {% set bg_color = 'bg-pastel-beige' %}
-                                {% elif permission.level_label == "READ_AND_WRITE" %}
+                                {% elif proj_data.level_label == "READ_AND_WRITE" %}
                                     {% set bg_color = 'bg-pastel-navy' %}
-                                {% elif permission.level_label == "ADMIN" %}
+                                {% elif proj_data.level_label == "ADMIN" %}
                                     {% set bg_color = 'bg-pastel-orange' %}
                                 {% else %}
                                     {% set bg_color = '' %}
                                 {% endif %}
                                 <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 {{ bg_color }}">
-                                    {{ permission.level_label|normalize }}
+                                    {{ proj_data.level_label|normalize }}
                                 </div>
                             </div>
                         </div>
                         <div class="project-card-row">
                             <span class="project-card-label">Last Edit</span>
-                            <span class="project-card-value">{{ permission.project.modified_date|date:"Y/m/d" }}</span>
+                            <span class="project-card-value">{{ proj_data.project.modified_date|date:"Y/m/d" }}</span>
                         </div>
-                        {% if permission.project.mutex_owner %}
+                        {% if proj_data.active_mutex.user %}
                         <div class="project-card-row">
                             <span class="project-card-label">Current Editor</span>
-                            <span class="project-card-value" style="font-size: 13px;">{{ permission.project.mutex_owner.email }}</span>
+                            <span class="project-card-value" style="font-size: 13px;">{{ proj_data.active_mutex.user.email }}</span>
                         </div>
                         <div class="project-card-row">
                             <span class="project-card-label">Editing Since</span>
-                            <span class="project-card-value">{{ permission.project.mutex_dt|date:"Y/m/d" }}</span>
+                            <span class="project-card-value">
+                                {% if proj_data.active_mutex %}
+                                    {{ proj_data.active_mutex.created_date|date:"Y/m/d" }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </span>
                         </div>
                         {% endif %}
-                        {% if permission.project.latitude and permission.project.longitude %}
+                        {% if proj_data.project.latitude and proj_data.project.longitude %}
                         <div class="project-card-row">
                             <span class="project-card-label">GPS Coordinates</span>
-                            <a href="https://www.google.com/maps/place/{{permission.project.latitude}},{{permission.project.longitude}}"
+                            <a href="https://www.google.com/maps/place/{{proj_data.project.latitude}},{{proj_data.project.longitude}}"
                             target="_blank" class="text-sky-400 hover:text-sky-300 text-sm">
                                 View on Map
                             </a>
@@ -281,18 +287,18 @@
                         </thead>
                         <!-- Table body -->
                         <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
-                            {% for permission in filtered_permissions %}
+                            {% for proj_data in projects_data %}
                                 <!-- Row -->
                                 <tr>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
                                         <div class="text-center">
-                                            <div class="font-medium text-slate-100">{{ permission.project.name }}</div>
+                                            <div class="font-medium text-slate-100">{{ proj_data.project.name }}</div>
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% get_project_type_color permission.project.type as type_bg_color %}
-                                            {% get_project_type_display permission.project.type as type_display %}
+                                            {% get_project_type_color proj_data.project.type as type_bg_color %}
+                                            {% get_project_type_display proj_data.project.type as type_display %}
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 text-white {{ type_bg_color }}">
                                                 {{ type_display }}
                                             </div>
@@ -300,37 +306,37 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {{ permission.project.collaborator_count }}
+                                            {{ proj_data.project.collaborator_count }}
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
-                                        <div class="text-center" id="async_revision_desktop_{{ permission.project.id }}">
-                                            <img data-id="async_revision_desktop_{{ permission.project.id }}" data-project_id="{{permission.project.id}}"
+                                        <div class="text-center" id="async_revision_desktop_{{ proj_data.project.id }}">
+                                            <img data-id="async_revision_desktop_{{ proj_data.project.id }}" data-project_id="{{proj_data.project.id}}"
                                             class="async_revision inline-flex filter invert-[0.5] saturate-[5] hue-rotate-[203deg] w-6" src="{% static 'private/media/spinner.svg' %}">
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% if permission.level_label == "WEB_VIEWER" %}
+                                            {% if proj_data.level_label == "WEB_VIEWER" %}
                                                 {% set bg_color = 'bg-pastel-grey' %}
-                                            {% elif permission.level_label == "READ_ONLY" %}
+                                            {% elif proj_data.level_label == "READ_ONLY" %}
                                                 {% set bg_color = 'bg-pastel-beige' %}
-                                            {% elif permission.level_label == "READ_AND_WRITE" %}
+                                            {% elif proj_data.level_label == "READ_AND_WRITE" %}
                                                 {% set bg_color = 'bg-pastel-navy' %}
-                                            {% elif permission.level_label == "ADMIN" %}
+                                            {% elif proj_data.level_label == "ADMIN" %}
                                                 {% set bg_color = 'bg-pastel-orange' %}
                                             {% else %}
                                                 {% set bg_color = '' %}
                                             {% endif %}
                                             <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 {{ bg_color }}">
-                                                {{ permission.level_label|normalize }}
+                                                {{ proj_data.level_label|normalize }}
                                             </div>
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% if permission.project.latitude and permission.project.longitude %}
-                                                <a href="https://www.google.com/maps/place/{{permission.project.latitude}},{{permission.project.longitude}}"
+                                            {% if proj_data.project.latitude and proj_data.project.longitude %}
+                                                <a href="https://www.google.com/maps/place/{{proj_data.project.latitude}},{{proj_data.project.longitude}}"
                                                 target="_blank" class="text-sky-500">
                                                     Google Maps
                                                 </a>
@@ -341,13 +347,13 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {{ permission.project.modified_date|date:"Y/m/d" }}
+                                            {{ proj_data.project.modified_date|date:"Y/m/d" }}
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% if permission.project.mutex_owner %}
-                                                {{ permission.project.mutex_owner.email }}
+                                            {% if proj_data.active_mutex.user %}
+                                                {{ proj_data.active_mutex.user.email }}
                                             {% else %}
                                             -
                                             {% endif %}
@@ -355,8 +361,8 @@
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
-                                            {% if permission.project.mutex_dt %}
-                                                {{ permission.project.mutex_dt|date:"Y/m/d" }}
+                                            {% if proj_data.active_mutex %}
+                                                {{ proj_data.active_mutex.created_date|date:"Y/m/d" }}
                                             {% else %}
                                             -
                                             {% endif %}
@@ -365,16 +371,16 @@
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="flex items-center text-slate-800">
                                             {% set margin_left = '52' %} <!-- 40 + 12 -->
-                                            {% if permission.project.active_mutex %}
-                                            {% if permission.project.mutex_owner == user or permission.level_label == "ADMIN" %}
+                                            {% if proj_data.active_mutex %}
+                                            {% if proj_data.active_mutex.user == user or proj_data.level_label == "ADMIN" %}
                                             <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3 cursor-pointer">
-                                                <img class="btn-unlock" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ permission.project.id }}" width="35" height="35" alt="Icon Unlock">
+                                                <img class="btn-unlock" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ proj_data.project.id }}" width="35" height="35" alt="Icon Unlock">
                                             </div>
                                             {% set margin_left = '0' %}
                                             {% endif %}
                                             {% endif %}
                                             <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3" style="margin-left: {{ margin_left }}px;">
-                                                <a href="{% url 'private:project_details' project_id=permission.project.id %}">
+                                                <a href="{% url 'private:project_details' project_id=proj_data.project.id %}">
                                                     <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="Icon Open">
                                                 </a>
                                             </div>

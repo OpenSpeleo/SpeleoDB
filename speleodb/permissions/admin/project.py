@@ -15,8 +15,6 @@ if TYPE_CHECKING:
     from django import forms
     from django.http import HttpRequest
 
-    from speleodb.users.models import SurveyTeam
-    from speleodb.users.models import User
 
 # ruff: noqa: SLF001
 
@@ -62,14 +60,3 @@ class PermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
         # Refresh the `modified_date` field
         obj.project.save()
-
-        match obj:
-            case TeamProjectPermission():
-                team: SurveyTeam = obj.target
-                # Recurively void permission cache for all team members
-                for membership in team.get_all_memberships():
-                    membership.user.void_permission_cache()
-
-            case UserProjectPermission():
-                user: User = obj.target
-                user.void_permission_cache()

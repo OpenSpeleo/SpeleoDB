@@ -37,7 +37,7 @@ class GISViewListingView(AuthenticatedTemplateView):
         context = self.get_context_data(**kwargs)
 
         # Get all active GIS views owned by the user
-        context["gis_views"] = (
+        context["gis_views"] = list(
             GISView.objects.filter(owner=request.user)
             .prefetch_related("project_views__project")
             .order_by("-modified_date")

@@ -15,12 +15,16 @@ from rest_framework.authtoken.models import Token
 from frontend_private.views.base import AuthenticatedTemplateView
 from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectMutex
 from speleodb.surveys.models import TeamProjectPermission
 from speleodb.users.models import SurveyTeam
+from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
 from speleodb.utils.exceptions import NotAuthorizedError
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from django.http import HttpResponse
     from django.http.response import HttpResponseRedirectBase
     from django_stubs_ext import StrOrPromise
@@ -62,6 +66,13 @@ class UserAccessLevel:
         return self.level.label
 
 
+@dataclass
+class ProjectInfoData:
+    level_label: StrOrPromise
+    project: Project
+    active_mutex: ProjectMutex | None
+
+
 class ProjectListingView(AuthenticatedTemplateView):
     template_name = "pages/projects.html"
 
@@ -73,15 +84,37 @@ class ProjectListingView(AuthenticatedTemplateView):
     ) -> HttpResponse:
         context = self.get_context_data(**kwargs)
         # Filter out projects where user only has WEB_VIEWER access
-
-        # Ensuring we don't get phantom cached permissions
-        request.user.void_permission_cache()
-
-        context["filtered_permissions"] = [
+        perms = [
             perm
             for perm in request.user.permissions
             if perm.level > PermissionLevel.WEB_VIEWER
         ]
+
+        projects = {
+            project.pk: project
+            for project in (
+                Project.objects.with_collaborator_count()  # pyright: ignore[reportAttributeAccessIssue]
+                .with_active_mutex()
+                .filter(
+                    id__in=[perm.project_id for perm in perms]  # pyright: ignore[reportAttributeAccessIssue]
+                )
+            )
+        }
+
+        context["projects_data"] = [
+            ProjectInfoData(
+                level_label=perm.level_label,
+                project=projects[perm.project_id],  # pyright: ignore[reportAttributeAccessIssue]
+                active_mutex=(
+                    mtx[0]
+                    if (mtx := projects[perm.project_id]._prefetched_active_mutex[:1])  # noqa: SLF001 # pyright: ignore[reportAttributeAccessIssue]
+                    else None
+                )
+                or None,
+            )
+            for perm in perms
+        ]
+
         return self.render_to_response(context)
 
 
@@ -91,7 +124,7 @@ class NewProjectView(AuthenticatedTemplateView):
 
 class _BaseProjectView(AuthenticatedTemplateView):
     def get_project_data(self, user: User, project_id: str) -> dict[str, Any]:
-        project = Project.objects.get(id=project_id)
+        project = Project.objects.with_active_mutex().get(id=project_id)  # pyright: ignore[reportAttributeAccessIssue]
 
         # Check if user only has WEB_VIEWER access
         try:
@@ -127,6 +160,8 @@ class ProjectUploadView(_BaseProjectView):
         except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
+        project: Project = data["project"]
+
         data["limit_individual_filesize"] = (
             settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
         )
@@ -134,12 +169,10 @@ class ProjectUploadView(_BaseProjectView):
         data["limit_number_files"] = settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT
 
         # Redirect users who don't own the mutex
-        mutex = data["project"].active_mutex
+        mutex = project.active_mutex
         if mutex is None or mutex.user != request.user:
             return redirect(
-                reverse(
-                    "private:project_mutexes", kwargs={"project_id": data["project"].id}
-                )
+                reverse("private:project_mutexes", kwargs={"project_id": project.id})
             )
 
         return super().get(request, *args, **data, **kwargs)
@@ -201,26 +234,35 @@ class ProjectUserPermissionsView(_BaseProjectView):
         except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:projects"))
 
+        project: Project = data["project"]
+
         # Collecting all the `user` aka. direct permissions of the project
         user_permissions = [
             UserAccessLevel(user=perm.target, level=perm.level)
-            for perm in data["project"].user_permissions
+            for perm in project.user_permissions
         ]
 
         filtered_team_permissions: list[UserAccessLevel] = []
 
         # Scanning through all the team memberships to collect users who get
         # project access via team permission.
-        team_permissions: list[TeamProjectPermission] = data["project"].team_permissions
+        team_map: dict[UUID, TeamProjectPermission] = {
+            team_perm.target_id: team_perm  # pyright: ignore[reportAttributeAccessIssue]
+            for team_perm in project.team_permissions
+        }
 
         filtered_team_permissions = [
             UserAccessLevel(
                 user=membership.user,
-                level=team_permission.level,
-                team=team_permission.target,
+                level=team_map[membership.team_id].level,  # pyright: ignore[reportAttributeAccessIssue]
+                team=team_map[membership.team_id].target,  # pyright: ignore[reportAttributeAccessIssue]
             )
-            for team_permission in team_permissions
-            for membership in team_permission.target.get_all_memberships()
+            for membership in SurveyTeamMembership.objects.select_related(
+                "user"
+            ).filter(
+                team__in=list(team_map.keys()),
+                is_active=True,
+            )
         ]
 
         # Keeping the best permission for each user
@@ -257,6 +299,7 @@ class ProjectTeamPermissionsView(_BaseProjectView):
             return redirect(reverse("private:projects"))
 
         project: Project = data["project"]
+
         data["permissions"] = project.team_permissions
 
         project_teams = SurveyTeam.objects.filter(
@@ -289,10 +332,9 @@ class ProjectMutexesView(_BaseProjectView):
 
         project: Project = data["project"]
 
-        data["mutexes"] = (
-            project.mutexes.all().select_related("user").order_by("-creation_date")
+        data["mutexes"] = list(
+            project.mutexes.select_related("user").order_by("-creation_date")
         )
-
         return super().get(request, *args, **data, **kwargs)
 
 

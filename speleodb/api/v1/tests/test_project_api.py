@@ -237,7 +237,7 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
             "active_mutex"
         ]
         assert mutex.closing_comment == test_comment, (mutex, test_comment)
-        assert mutex.closing_user == self.user, (mutex, self.user)
+        assert mutex.closing_user == self.user.email, (mutex, self.user)
         assert not mutex.is_active
 
     def test_fail_acquire_readonly_project(self) -> None:

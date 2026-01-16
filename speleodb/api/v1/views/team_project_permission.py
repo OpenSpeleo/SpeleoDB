@@ -145,10 +145,6 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
         # Refresh the `modified_date` field
         project.save()
 
-        # Recurively void permission cache for all team members
-        for membership in target_team.get_all_memberships():
-            membership.user.void_permission_cache()
-
         permission_serializer = ProjectTeamPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
 
@@ -199,10 +195,6 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
         # Refresh the `modified_date` field
         project.save()
 
-        # Recurively void permission cache for all team members
-        for membership in target_team.get_all_memberships():
-            membership.user.void_permission_cache()
-
         permission_serializer = ProjectTeamPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
 
@@ -249,10 +241,6 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
 
         # Refresh the `modified_date` field
         project.save()
-
-        # Recurively void permission cache for all team members
-        for membership in target_team.get_all_memberships():
-            membership.user.void_permission_cache()
 
         project_serializer = ProjectSerializer(project, context={"user": user})
 

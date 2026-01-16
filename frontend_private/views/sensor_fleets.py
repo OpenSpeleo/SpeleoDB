@@ -51,11 +51,13 @@ class SensorFleetListingView(AuthenticatedTemplateView):
     ) -> HttpResponse:
         context = self.get_context_data(**kwargs)
 
-        context["sensorfleet_perms"] = SensorFleetUserPermission.objects.filter(
-            user=request.user,
-            is_active=True,
-            sensor_fleet__is_active=True,
-        ).prefetch_related("sensor_fleet")
+        context["sensorfleet_perms"] = list(
+            SensorFleetUserPermission.objects.filter(
+                user=request.user,
+                is_active=True,
+                sensor_fleet__is_active=True,
+            ).prefetch_related("sensor_fleet")
+        )
         return self.render_to_response(context)
 
 

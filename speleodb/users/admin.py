@@ -154,5 +154,3 @@ class SurveyTeamMembershipAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
         # Refresh the `modified_date` field
         obj.team.save()
-        obj.team.void_membership_cache()
-        obj.user.void_permission_cache()

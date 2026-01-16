@@ -15,8 +15,10 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import IntegerField
 from django.db.models import Prefetch
 from django.db.models import Q
+from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.db.utils import IntegrityError
 from django.utils import timezone
@@ -56,6 +58,44 @@ class ProjectQuerySet(models.QuerySet["Project"]):
                 "commits",
                 queryset=latest_commit_qs,
                 to_attr="_prefetched_commits",
+            )
+        )
+
+    def with_collaborator_count(self) -> Self:
+        from speleodb.surveys.models import TeamProjectPermission  # noqa: PLC0415
+        from speleodb.surveys.models import UserProjectPermission  # noqa: PLC0415
+        from speleodb.users.models import SurveyTeamMembership  # noqa: PLC0415
+
+        project_table = Project._meta.db_table  # noqa: SLF001
+        survey_team_membrshp_table = SurveyTeamMembership._meta.db_table  # noqa: SLF001
+        team_proj_perm_table = TeamProjectPermission._meta.db_table  # noqa: SLF001
+        user_proj_perm_table = UserProjectPermission._meta.db_table  # noqa: SLF001
+
+        return self.annotate(
+            _prefetched_collaborator_count=Coalesce(
+                RawSQL(  # noqa: S611
+                    f"""
+                    SELECT COUNT(*) FROM (
+                        SELECT upp.target_id
+                        FROM {user_proj_perm_table} upp
+                        WHERE upp.project_id = {project_table}.id
+                        AND upp.is_active = TRUE
+
+                        UNION
+
+                        SELECT stm.user_id
+                        FROM {survey_team_membrshp_table} stm
+                        JOIN {team_proj_perm_table} tpp
+                        ON tpp.target_id = stm.team_id
+                        WHERE tpp.project_id = {project_table}.id
+                        AND tpp.is_active = TRUE
+                        AND stm.is_active = TRUE
+                    ) u
+                    """,  # noqa: S608
+                    [],
+                ),
+                0,
+                output_field=IntegerField(),
             )
         )
 
@@ -251,7 +291,6 @@ class Project(models.Model):
             return self._prefetched_commits[0] if self._prefetched_commits else None
         return self.commits.order_by("-authored_date").first()
 
-    # @cached(cache=TTLCache(maxsize=1, ttl=300))
     def _active_mutex(self) -> ProjectMutex | None:
         if hasattr(self, "_prefetched_active_mutex"):
             return (
@@ -259,6 +298,7 @@ class Project(models.Model):
                 if self._prefetched_active_mutex
                 else None
             )
+
         return self.mutexes.filter(is_active=True).select_related("user").first()
 
     @property
@@ -292,8 +332,6 @@ class Project(models.Model):
 
             _ = ProjectMutex.objects.create(project=self, user=user)
 
-        self.void_mutex_cache()
-
     def release_mutex(self, user: User, comment: str = "") -> None:
         if (active_mutex := self.active_mutex) is None:
             # if nobody owns the project, returns without error.
@@ -304,8 +342,6 @@ class Project(models.Model):
 
         # AutoSave in the background
         active_mutex.release_mutex(user=user, comment=comment)
-
-        self.void_mutex_cache()
 
     def get_best_permission(
         self, user: User
@@ -348,6 +384,9 @@ class Project(models.Model):
 
     @property
     def collaborator_count(self) -> int:
+        if hasattr(self, "_prefetched_collaborator_count"):
+            return self._prefetched_collaborator_count  # type: ignore[no-any-return]
+
         from speleodb.surveys.models import UserProjectPermission  # noqa: PLC0415
         from speleodb.users.models import SurveyTeamMembership  # noqa: PLC0415
 
@@ -485,7 +524,7 @@ class Project(models.Model):
 
     @property
     def formats(self) -> models.QuerySet[Format]:
-        return self._formats.all().order_by("_format")
+        return self._formats.all()
 
     @property
     def formats_downloadable(self) -> list[Format]:
@@ -501,7 +540,4 @@ class Project(models.Model):
         """Refresh the GeoJSON data for this project."""
         # This method will be implemented by the refresh_project_geojson task
         # to populate the geojson field
-
-    def void_mutex_cache(self) -> None:
-        # self._active_mutex.cache_clear()
-        pass
+        raise NotImplementedError

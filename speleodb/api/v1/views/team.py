@@ -54,7 +54,6 @@ class TeamApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
         if serializer.is_valid():
             serializer.save()
 
-            user.void_permission_cache()
             return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
         return ErrorResponse(

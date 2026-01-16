@@ -58,15 +58,15 @@ class TestWebViewerRestrictions(TestCase):
 
         assert response.status_code == status.HTTP_200_OK
 
-        # Check that filtered_permissions is in context
-        assert "filtered_permissions" in response.context
-        filtered_permissions = response.context["filtered_permissions"]
+        # Check that projects_data is in context
+        assert "projects_data" in response.context
+        projects_data = response.context["projects_data"]
 
         # Should have 3 projects (excluding WEBVIEWER)
-        assert len(filtered_permissions) == 3  # noqa: PLR2004
+        assert len(projects_data) == 3  # noqa: PLR2004
 
         # WEBVIEWER project should not be in the list
-        project_ids = [perm.project.id for perm in filtered_permissions]
+        project_ids = [proj_data.project.id for proj_data in projects_data]
         assert self.project_webviewer.id not in project_ids
         assert self.project_readonly.id in project_ids
         assert self.project_readwrite.id in project_ids

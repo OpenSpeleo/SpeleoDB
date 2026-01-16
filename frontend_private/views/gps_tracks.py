@@ -25,7 +25,7 @@ class GPSTrackListView(AuthenticatedTemplateView):
     ) -> HttpResponse:
         context = self.get_context_data(**kwargs)
 
-        context["gps_tracks"] = GPSTrack.objects.filter(user=request.user)
+        context["gps_tracks"] = list(GPSTrack.objects.filter(user=request.user))
         return self.render_to_response(context)
 
 

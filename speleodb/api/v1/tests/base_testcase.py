@@ -42,9 +42,6 @@ class BaseUserTestCaseMixin(TestCase):
         self.user = UserFactory.create()
         self.token = TokenFactory.create(user=self.user)
 
-        # Clear caches to avoid carrying over values from one test to the other.
-        self.user.void_permission_cache()
-
 
 class BaseAPITestCase(BaseUserTestCaseMixin):
     """API-enabled TestCase Token authentication"""

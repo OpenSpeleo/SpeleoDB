@@ -215,7 +215,7 @@
                     {% if mutex.closing_user or mutex.closing_comment %}
                     <div class="timeline-footer">
                         {% if mutex.closing_user %}
-                        <div><span class="timeline-footer-label">Unlocked by:</span> {{ mutex.closing_user.email }}</div>
+                        <div><span class="timeline-footer-label">Unlocked by:</span> {{ mutex.closing_user }}</div>
                         {% endif %}
                         {% if mutex.closing_comment %}
                         <div style="margin-top: 4px;"><span class="timeline-footer-label">Comment:</span> {{ mutex.closing_comment }}</div>
@@ -280,7 +280,7 @@
                                         <div class="text-center">{{ mutex.modified_date|date:"Y/m/d H:i" }}</div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                                        <div class="text-center">{% if mutex.closing_user %}{{ mutex.closing_user.email }}{% endif %}</div>
+                                        <div class="text-center">{% if mutex.closing_user %}{{ mutex.closing_user }}{% endif %}</div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                         <div class="text-center">{{ mutex.closing_comment }}</div>

@@ -35,11 +35,13 @@ class ExperimentListingView(AuthenticatedTemplateView):
     ) -> HttpResponse:
         context = self.get_context_data(**kwargs)
 
-        context["experiment_perms"] = ExperimentUserPermission.objects.filter(
-            user=request.user,
-            is_active=True,
-            experiment__is_active=True,
-        ).prefetch_related("experiment")
+        context["experiment_perms"] = list(
+            ExperimentUserPermission.objects.filter(
+                user=request.user,
+                is_active=True,
+                experiment__is_active=True,
+            ).prefetch_related("experiment")
+        )
         return self.render_to_response(context)
 
 
@@ -208,9 +210,11 @@ class ExperimentUserPermissionsView(_BaseExperimentView):
         except (ObjectDoesNotExist, PermissionError):
             return redirect(reverse("private:experiments"))
 
-        data["permissions"] = ExperimentUserPermission.objects.filter(
-            experiment=data["experiment"], is_active=True
-        ).prefetch_related("user")
+        data["permissions"] = list(
+            ExperimentUserPermission.objects.filter(
+                experiment=data["experiment"], is_active=True
+            ).prefetch_related("user")
+        )
 
         return super().get(request, *args, **data, **kwargs)
 

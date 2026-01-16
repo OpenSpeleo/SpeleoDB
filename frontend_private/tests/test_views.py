@@ -160,14 +160,17 @@ class ProjectViewsTest(BaseProjectTestCaseMixin, BaseTestCase):
         match project_is_locked:
             case True:
                 if self.level in [
-                    PermissionLevel.READ_ONLY,
+                    PermissionLevel.WEB_VIEWER,
                     PermissionLevel.READ_ONLY,
                 ]:
                     return  # this user can not acquire the lock
+
                 self.project.acquire_mutex(self.user)
                 expected_status = status.HTTP_200_OK
+
             case False:
                 expected_status = status.HTTP_302_FOUND
+
             case None:
                 # somebody has acquired the lock
                 user = UserFactory.create()
