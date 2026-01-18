@@ -94,7 +94,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
             perm.deactivate(deactivated_by=user)
 
         project.is_active = False
-        project.save(update_fields="is_active")
+        project.save(update_fields=["is_active"])
 
         return SuccessResponse({"id": str(project.id)})
 
