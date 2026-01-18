@@ -96,7 +96,9 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
                 {
                     "project": project_serializer.data,
                     "commit": commit_serializer.data,
-                    "files": sorted(file_serializer.data, key=lambda file: file.path),
+                    "files": sorted(
+                        file_serializer.data, key=lambda file: file["path"]
+                    ),
                 }
             )
 
