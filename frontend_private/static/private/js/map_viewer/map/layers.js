@@ -1223,35 +1223,32 @@ export const Layers = {
 
     /**
      * Load custom marker images from SVG files
+     * Uses map.loadImage() for proper CORS handling with S3/CDN hosted assets
      */
     loadMarkerImages: async function () {
         const map = State.map;
         if (!map || markerImagesLoaded) return;
 
+        // Helper to load image using Mapbox's loadImage (handles CORS properly)
+        const loadImage = (url) => {
+            return new Promise((resolve, reject) => {
+                map.loadImage(url, (error, image) => {
+                    if (error) reject(error);
+                    else resolve(image);
+                });
+            });
+        };
+
         try {
             // Load pre-colored orange cylinder SVG for safety cylinder
-            const cylinderImage = new Image(32, 32);
-            cylinderImage.crossOrigin = 'anonymous';
-            cylinderImage.src = window.SPELEO_CONTEXT.icons.cylinderOrange;
-            await new Promise((resolve, reject) => {
-                cylinderImage.onload = resolve;
-                cylinderImage.onerror = reject;
-            });
-
             if (!map.hasImage('safety-cylinder-icon')) {
+                const cylinderImage = await loadImage(window.SPELEO_CONTEXT.icons.cylinderOrange);
                 map.addImage('safety-cylinder-icon', cylinderImage);
             }
 
             // Load exploration lead SVG
-            const leadImage = new Image(32, 32);
-            leadImage.crossOrigin = 'anonymous';
-            leadImage.src = window.SPELEO_CONTEXT.icons.explorationLead;
-            await new Promise((resolve, reject) => {
-                leadImage.onload = resolve;
-                leadImage.onerror = reject;
-            });
-
             if (!map.hasImage('exploration-lead-icon')) {
+                const leadImage = await loadImage(window.SPELEO_CONTEXT.icons.explorationLead);
                 map.addImage('exploration-lead-icon', leadImage);
             }
 
@@ -1367,13 +1364,14 @@ export const Layers = {
                 });
             } else {
                 // Fallback: use a text symbol if image not loaded
+                // Note: Using ● (U+25CF) instead of emoji - Mapbox doesn't support glyphs > 65535
                 map.addLayer({
                     id: layerId,
                     type: 'symbol',
                     source: sourceId,
                     minzoom: ZOOM_LEVELS.SAFETY_CYLINDER_SYMBOL,
                     layout: {
-                        'text-field': '🛢️',
+                        'text-field': '●',
                         'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
                         'text-size': ['interpolate', ['linear'], ['zoom'], 14, 18, 18, 26],
                         'text-allow-overlap': true,
@@ -1672,13 +1670,14 @@ export const Layers = {
             });
         } else {
             // Fallback to text symbol
+            // Note: Using ● (U+25CF) instead of emoji - Mapbox doesn't support glyphs > 65535
             map.addLayer({
                 id: layerId,
                 type: 'symbol',
                 source: sourceId,
                 minzoom: ZOOM_LEVELS.SAFETY_CYLINDER_SYMBOL,
                 layout: {
-                    'text-field': '🛢️',
+                    'text-field': '●',
                     'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
                     'text-size': ['interpolate', ['linear'], ['zoom'], 14, 18, 18, 26],
                     'text-allow-overlap': true,
