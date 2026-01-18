@@ -1231,6 +1231,7 @@ export const Layers = {
         try {
             // Load pre-colored orange cylinder SVG for safety cylinder
             const cylinderImage = new Image(32, 32);
+            cylinderImage.crossOrigin = 'anonymous';
             cylinderImage.src = window.SPELEO_CONTEXT.icons.cylinderOrange;
             await new Promise((resolve, reject) => {
                 cylinderImage.onload = resolve;
@@ -1243,6 +1244,7 @@ export const Layers = {
 
             // Load exploration lead SVG
             const leadImage = new Image(32, 32);
+            leadImage.crossOrigin = 'anonymous';
             leadImage.src = window.SPELEO_CONTEXT.icons.explorationLead;
             await new Promise((resolve, reject) => {
                 leadImage.onload = resolve;
