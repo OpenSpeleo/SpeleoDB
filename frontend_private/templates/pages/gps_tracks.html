@@ -605,6 +605,11 @@ $(document).ready(function() {
         }
     });
 
+    // Listen for GPX import event to refresh tracks
+    window.addEventListener('speleo:refresh-gps-tracks', function() {
+        loadTracks();
+    });
+
     // Load tracks on page load
     loadTracks();
 });
