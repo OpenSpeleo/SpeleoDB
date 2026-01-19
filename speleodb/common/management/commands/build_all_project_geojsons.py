@@ -12,6 +12,7 @@ from typing import Any
 import orjson
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management.base import BaseCommand
+from openspeleo_lib.errors import EmptySurveyError
 from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import ArianeInterface
@@ -94,6 +95,14 @@ class Command(BaseCommand):
                                         survey: Survey = ArianeInterface.from_file(
                                             tmp_file
                                         )
+
+                                    except EmptySurveyError:
+                                        logger.info(
+                                            "Empty survey. No shots for project "
+                                            f"`{project.id}`. Skipping GeoJSON..."
+                                        )
+                                        continue
+
                                     except OSError:
                                         logger.error(  # noqa: TRY400
                                             f"Error processing file {file.path} in "
@@ -103,6 +112,14 @@ class Command(BaseCommand):
 
                                     try:
                                         geojson_data = survey_to_geojson(survey)
+
+                                    except NoKnownAnchorError:
+                                        logger.info(
+                                            "No known GPS anchor was found for project "
+                                            f"`{project.id}`. Skipping GeoJSON..."
+                                        )
+                                        continue
+
                                     except Exception:  # noqa: BLE001
                                         logger.error(  # noqa: TRY400
                                             f"Error processing file {file.path} in "

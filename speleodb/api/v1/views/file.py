@@ -25,6 +25,7 @@ from django.http import HttpResponse
 from django.urls import reverse
 from drf_spectacular.utils import extend_schema
 from git.exc import GitCommandError
+from openspeleo_lib.errors import EmptySurveyError
 from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import ArianeInterface
@@ -348,6 +349,13 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                 except NoKnownAnchorError:
                                     logger.info(
                                         "No known GPS anchor was found for project "
+                                        f"`{project.id}`. Skipping GeoJSON..."
+                                    )
+                                    continue
+
+                                except EmptySurveyError:
+                                    logger.info(
+                                        "Empty survey. No shots for project "
                                         f"`{project.id}`. Skipping GeoJSON..."
                                     )
                                     continue
