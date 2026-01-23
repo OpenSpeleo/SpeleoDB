@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.conf import settings
 from rest_framework import serializers
 
 from speleodb.gis.models import StationLogEntry
@@ -40,7 +41,7 @@ class StationLogEntrySerializer(serializers.ModelSerializer[StationLogEntry]):
 
         # Validate file size (max 5MBs)
         if file_field:
-            max_size = 5 * 1024 * 1024  # 5MB in bytes
+            max_size = settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT * 1024 * 1024
             if file_field.size > max_size:
                 raise serializers.ValidationError(
                     {"file": "File size cannot exceed 5MB."}

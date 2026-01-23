@@ -57,7 +57,7 @@ function openCylinderModal(title = 'Safety Cylinder') {
     }
     if (titleEl) {
         titleEl.innerHTML = `
-            <img src="${window.SPELEO_CONTEXT.icons.cylinderOrange}" class="w-6 h-6">
+            <img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-6 h-6">
             ${escapeHtml(title)}
         `;
     }
@@ -185,7 +185,7 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
                     </button>
                     <button type="button" onclick="window.CylinderInstalls.handleInstall()"
                         class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2">
-                        <img src="${window.SPELEO_CONTEXT.icons.cylinderOrange}" class="w-4 h-4 filter brightness-200">
+                        <img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-4 h-4 filter brightness-200">
                         Install Cylinder
                     </button>
                 </div>

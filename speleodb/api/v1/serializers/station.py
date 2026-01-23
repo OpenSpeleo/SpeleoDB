@@ -7,6 +7,7 @@ from decimal import InvalidOperation
 from typing import Any
 from typing import TypeVar
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from geojson import Feature  # type: ignore[attr-defined]
 from geojson import Point  # type: ignore[attr-defined]
@@ -88,7 +89,11 @@ class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
 
                 # Validate file size (max 5MBs)
                 if file_field:
-                    max_size = 5 * 1024 * 1024  # 5MB in bytes
+                    max_size = (
+                        settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
+                        * 1024
+                        * 1024
+                    )
                     if file_field.size > max_size:
                         raise serializers.ValidationError(
                             {"file": "File size cannot exceed 5MB."}
@@ -214,6 +219,17 @@ class SubSurfaceStationSerializer(
             "tag",
         ]
 
+    def validate_type(self, value: str) -> str:
+        """Prevent type from being changed during updates (only settable on
+        creation)."""
+        if self.instance is not None:
+            # This is an update - only allow if type matches existing value
+            if self.instance.type != value:
+                raise serializers.ValidationError(
+                    "Station type cannot be changed once created."
+                )
+        return value
+
 
 class SubSurfaceStationWithResourcesSerializer(SubSurfaceStationSerializer):
     """Serializer for subsurface stations with resources."""
@@ -250,7 +266,11 @@ class SurfaceStationWithResourcesSerializer(SurfaceStationSerializer):
 
 
 class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
-    """Map serializer for stations - returns GeoJSON-like format."""
+    """Map serializer for stations - returns GeoJSON-like format.
+
+    Note: The `type` field is specific to SubSurfaceStation and is added
+    dynamically in to_representation(), not declared in fields.
+    """
 
     class Meta:
         model = Station
@@ -279,10 +299,18 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
 
         # Determine station type for frontend identification
         station_type = "unknown"
-        if isinstance(instance, SubSurfaceStation):
-            station_type = "subsurface"
-        elif isinstance(instance, SurfaceStation):
-            station_type = "surface"
+        subsurf_station_type = None
+
+        match instance:
+            case SubSurfaceStation():
+                station_type = "subsurface"
+                subsurf_station_type = instance.type
+
+            case SurfaceStation():
+                station_type = "surface"
+
+            case _:
+                raise TypeError(f"Unexpected Station type received: {type(instance)}")
 
         return Feature(  # type: ignore[no-untyped-call]
             id=str(instance.id),
@@ -305,5 +333,6 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
                     else None
                 ),
                 "tag": tag,
+                "type": subsurf_station_type,  # Science / Artifact / Bone
             },
         )

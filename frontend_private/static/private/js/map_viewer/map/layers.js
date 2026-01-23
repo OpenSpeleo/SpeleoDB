@@ -422,16 +422,11 @@ export const Layers = {
         }
 
         // Update Map Layers
+        // All station layers (circles, bone-icons, artifact-icons, labels) are tracked in allProjectLayers
         if (State.map && State.map.getStyle()) {
             const layers = State.allProjectLayers.get(pid) || [];
 
-            // Also include the stations layer
-            const stationCirclesId = `stations-${pid}-circles`;
-            const stationLabelsId = `stations-${pid}-labels`;
-
-            const allTargetLayers = [...layers, stationCirclesId, stationLabelsId];
-
-            allTargetLayers.forEach(layerId => {
+            layers.forEach(layerId => {
                 if (State.map.getLayer(layerId)) {
                     State.map.setLayoutProperty(
                         layerId,
@@ -658,17 +653,19 @@ export const Layers = {
 
         const sourceId = `stations-source-${projectId}`;
         const circleLayerId = `stations-${projectId}-circles`;
+        const biologyLayerId = `stations-${projectId}-biology-icons`;
+        const boneLayerId = `stations-${projectId}-bone-icons`;
+        const artifactLayerId = `stations-${projectId}-artifact-icons`;
         const labelLayerId = `stations-${projectId}-labels`;
 
         console.log(`📍 Adding ${data.features?.length || 0} stations to map for project ${projectId}`);
 
-        // Remove existing layer and source if they exist (for refresh)
-        if (map.getLayer(labelLayerId)) {
-            map.removeLayer(labelLayerId);
-        }
-        if (map.getLayer(circleLayerId)) {
-            map.removeLayer(circleLayerId);
-        }
+        // Remove existing layers and source if they exist (for refresh)
+        [labelLayerId, artifactLayerId, boneLayerId, biologyLayerId, circleLayerId].forEach(layerId => {
+            if (map.getLayer(layerId)) {
+                map.removeLayer(layerId);
+            }
+        });
         if (map.getSource(sourceId)) {
             map.removeSource(sourceId);
         }
@@ -697,12 +694,17 @@ export const Layers = {
             promoteId: 'id'
         });
 
-        // Add Circle Layer
+        // Add Circle Layer for Science stations (type is null, undefined, or 'science')
         // Use data-driven color from feature properties
         map.addLayer({
             id: circleLayerId,
             type: 'circle',
             source: sourceId,
+            filter: ['any',
+                ['!', ['has', 'type']],
+                ['==', ['get', 'type'], null],
+                ['==', ['get', 'type'], 'science']
+            ],
             minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
             paint: {
                 'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 5, 18, 8],
@@ -713,7 +715,67 @@ export const Layers = {
             }
         });
 
-        // Add Label Layer
+        // Add Biology Station Icon Layer (for type === 'biology')
+        if (map.hasImage('biology-station-icon')) {
+            map.addLayer({
+                id: biologyLayerId,
+                type: 'symbol',
+                source: sourceId,
+                filter: ['==', ['get', 'type'], 'biology'],
+                minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
+                layout: {
+                    'icon-image': 'biology-station-icon',
+                    'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 18, 1.0],
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true
+                },
+                paint: {
+                    'icon-opacity': 1
+                }
+            });
+        }
+
+        // Add Bone Station Icon Layer (for type === 'bone')
+        if (map.hasImage('bone-station-icon')) {
+            map.addLayer({
+                id: boneLayerId,
+                type: 'symbol',
+                source: sourceId,
+                filter: ['==', ['get', 'type'], 'bone'],
+                minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
+                layout: {
+                    'icon-image': 'bone-station-icon',
+                    'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 18, 1.0],
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true
+                },
+                paint: {
+                    'icon-opacity': 1
+                }
+            });
+        }
+
+        // Add Artifact Station Icon Layer (for type === 'artifact')
+        if (map.hasImage('artifact-station-icon')) {
+            map.addLayer({
+                id: artifactLayerId,
+                type: 'symbol',
+                source: sourceId,
+                filter: ['==', ['get', 'type'], 'artifact'],
+                minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
+                layout: {
+                    'icon-image': 'artifact-station-icon',
+                    'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 18, 1.0],
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true
+                },
+                paint: {
+                    'icon-opacity': 1
+                }
+            });
+        }
+
+        // Add Label Layer for all station types
         map.addLayer({
             id: labelLayerId,
             type: 'symbol',
@@ -740,14 +802,20 @@ export const Layers = {
             State.allProjectLayers.set(String(projectId), []);
         }
         const projectLayers = State.allProjectLayers.get(String(projectId));
-        if (!projectLayers.includes(circleLayerId)) {
-            projectLayers.push(circleLayerId, labelLayerId);
-        }
+        const newLayers = [circleLayerId, biologyLayerId, boneLayerId, artifactLayerId, labelLayerId];
+        newLayers.forEach(layerId => {
+            if (!projectLayers.includes(layerId)) {
+                projectLayers.push(layerId);
+            }
+        });
 
         // Respect initial visibility
         if (!this.isProjectVisible(projectId)) {
-            map.setLayoutProperty(circleLayerId, 'visibility', 'none');
-            map.setLayoutProperty(labelLayerId, 'visibility', 'none');
+            newLayers.forEach(layerId => {
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', 'none');
+                }
+            });
         }
     },
 
@@ -1128,6 +1196,9 @@ export const Layers = {
         const gpsTrackLineLayers = allLayerIds.filter(id => id.startsWith('gps-track-line-'));
         const gpsTrackPointLayers = allLayerIds.filter(id => id.startsWith('gps-track-points-'));
         const stationCircleLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-circles') && !id.includes('surface-'));
+        const stationBiologyIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-biology-icons'));
+        const stationBoneIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-bone-icons'));
+        const stationArtifactIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-artifact-icons'));
         const stationLabelLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-labels') && !id.includes('surface-'));
         const surfaceStationSymbolLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && !id.includes('-labels'));
         const surfaceStationLabelLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && id.includes('-labels'));
@@ -1156,8 +1227,35 @@ export const Layers = {
             }
         });
 
-        // Subsurface station circles
+        // Subsurface station circles (science stations)
         stationCircleLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // Subsurface station biology icons
+        stationBiologyIconLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // Subsurface station bone icons
+        stationBoneIconLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // Subsurface station artifact icons
+        stationArtifactIconLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
             } catch (e) {
@@ -1242,14 +1340,32 @@ export const Layers = {
         try {
             // Load pre-colored orange cylinder SVG for safety cylinder
             if (!map.hasImage('safety-cylinder-icon')) {
-                const cylinderImage = await loadImage(window.SPELEO_CONTEXT.icons.cylinderOrange);
+                const cylinderImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.cylinderOrange);
                 map.addImage('safety-cylinder-icon', cylinderImage);
             }
 
             // Load exploration lead SVG
             if (!map.hasImage('exploration-lead-icon')) {
-                const leadImage = await loadImage(window.SPELEO_CONTEXT.icons.explorationLead);
+                const leadImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.explorationLead);
                 map.addImage('exploration-lead-icon', leadImage);
+            }
+
+            // Load biology icon for biology stations
+            if (!map.hasImage('biology-station-icon')) {
+                const biologyImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.biology);
+                map.addImage('biology-station-icon', biologyImage);
+            }
+
+            // Load bone icon for bone stations
+            if (!map.hasImage('bone-station-icon')) {
+                const boneImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.bone);
+                map.addImage('bone-station-icon', boneImage);
+            }
+
+            // Load artifact icon for artifact stations
+            if (!map.hasImage('artifact-station-icon')) {
+                const artifactImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.artifact);
+                map.addImage('artifact-station-icon', artifactImage);
             }
 
             markerImagesLoaded = true;
@@ -1278,7 +1394,7 @@ export const Layers = {
         this.refreshSafetyCylindersLayer();
         this.reorderLayers();
 
-        console.log(`🛢️ Safety cylinder added: ${id} at ${coordinates}`);
+        console.log(`Safety cylinder added: ${id} at ${coordinates}`);
     },
 
     /**
@@ -1471,7 +1587,7 @@ export const Layers = {
     removeSafetyCylinderMarker: function (id) {
         State.safetyCylinders.delete(id);
         this.refreshSafetyCylindersLayer();
-        console.log(`🛢️ Safety cylinder removed: ${id}`);
+        console.log(`Safety cylinder removed: ${id}`);
     },
 
     /**
@@ -1485,12 +1601,30 @@ export const Layers = {
 
     /**
      * Update safety cylinder position (for drag)
+     * Handles both temporary markers (safety-cylinders-layer) and persistent installs (cylinder-installs-layer)
      */
     updateSafetyCylinderPosition: function (markerId, newCoords) {
+        // Try temporary markers first
         const marker = State.safetyCylinders.get(markerId);
         if (marker) {
             marker.coordinates = newCoords;
             this.refreshSafetyCylindersLayer();
+            return;
+        }
+        
+        // Try cylinder installs (persistent)
+        const map = State.map;
+        if (!map) return;
+        
+        const sourceId = 'cylinder-installs-source';
+        const source = map.getSource(sourceId);
+        if (source && source._data) {
+            const data = source._data;
+            const feature = data.features.find(f => f.id === markerId || f.properties?.id === markerId);
+            if (feature) {
+                feature.geometry.coordinates = newCoords;
+                source.setData(data);
+            }
         }
     },
 
@@ -1623,7 +1757,7 @@ export const Layers = {
         const sourceId = 'cylinder-installs-source';
         const layerId = 'cylinder-installs-layer';
 
-        console.log(`🛢️ Adding ${geojsonData.features?.length || 0} cylinder installs to map`);
+        console.log(`Adding ${geojsonData.features?.length || 0} cylinder installs to map`);
 
         // Remove existing layer and source if they exist (for refresh)
         if (map.getLayer(layerId)) {
@@ -1634,7 +1768,7 @@ export const Layers = {
         }
 
         if (!geojsonData.features || geojsonData.features.length === 0) {
-            console.log('🛢️ No cylinder installs to display');
+            console.log('No cylinder installs to display');
             return;
         }
 

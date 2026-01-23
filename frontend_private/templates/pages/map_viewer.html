@@ -224,7 +224,7 @@
         <!-- Modal Header -->
         <div class="flex items-center justify-between p-4 border-b border-slate-600 flex-shrink-0">
             <h2 id="cylinder-modal-title" class="text-xl font-semibold text-white flex items-center gap-3">
-                <img src="{% static 'private/media/cylinder_orange.svg' %}" class="w-6 h-6">
+                <img src="{% static 'private/media/cylinder-orange-icon.png' %}" class="w-6 h-6">
                 Safety Cylinder
             </h2>
             <button id="cylinder-modal-close" class="text-slate-400 hover:text-white transition-colors">
@@ -257,13 +257,17 @@
 {% block inline_extra_js %}
 <script>
     // Context bridge - defined BEFORE the module loads to ensure availability
-    window.SPELEO_CONTEXT = {
+    window.MAPVIEWER_CONTEXT = {
         csrfToken: "{{ csrf_token }}",
         mapboxToken: "{{ mapbox_api_token }}",
         // Static media URLs for use in JavaScript
         icons: {
-            cylinderOrange: "{% static 'private/media/cylinder_orange.png' %}",
-            explorationLead: "{% static 'private/media/exploration_lead.png' %}"
+            cylinderOrange: "{% static 'private/media/cylinder-orange-icon.png' %}",
+            explorationLead: "{% static 'private/media/exploration-lead-icon.png' %}",
+            bone: "{% static 'private/media/bones-icon.png' %}",
+            artifact: "{% static 'private/media/artifact-icon.png' %}",
+            science: "{% static 'private/media/microscope-icon.png' %}",
+            biology: "{% static 'private/media/fish-icon.png' %}",
         }
     };
     

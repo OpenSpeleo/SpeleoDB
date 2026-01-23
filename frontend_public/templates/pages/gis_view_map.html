@@ -68,7 +68,7 @@
 {% block inline_extra_js %}
 <script>
     // Context bridge - defined BEFORE the module loads to ensure availability
-    window.SPELEO_CONTEXT = {
+    window.MAPVIEWER_CONTEXT = {
         csrfToken: "{{ csrf_token }}",
         mapboxToken: "{{ mapbox_api_token }}",
         viewMode: "public",

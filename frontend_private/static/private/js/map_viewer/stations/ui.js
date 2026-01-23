@@ -115,6 +115,17 @@ export const StationUI = {
                     // Get tag color for marker or use default
                     const markerColor = (station.tag && station.tag.color) ? station.tag.color : '#fb923c';
                     
+                    // Station type badge
+                    const typeLabels = {
+                        'science': { label: 'Science', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+                        'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
+                        'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+                        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-slate-500/20 text-slate-200 border-slate-400/30' }
+                    };
+                    const stationType = station.type || 'science';
+                    const typeInfo = typeLabels[stationType] || typeLabels['science'];
+                    const typeBadge = `<span class="text-xs px-1.5 py-0.5 rounded border ${typeInfo.color}">${typeInfo.icon}</span>`;
+                    
                     html += `
                         <div class="bg-slate-700/50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
                             <div class="flex items-center justify-between">
@@ -122,6 +133,7 @@ export const StationUI = {
                                     <div class="w-3 h-3 rounded-full border-2 border-white shadow-md flex-shrink-0" style="background: ${markerColor};"></div>
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2 flex-wrap">
+                                            ${typeBadge}
                                             <h5 class="text-white font-medium">${station.name}</h5>
                                             ${station.tag && station.tag.name && station.tag.color ? `
                                                 <span class="station-tag text-xs" style="background-color: ${station.tag.color}; padding: 2px 8px;">
@@ -195,7 +207,13 @@ export const StationUI = {
         });
     },
 
-    showCreateStationModal(coordinates, projectId) {
+    /**
+     * Show modal to create a new station
+     * @param {Array} coordinates - [lng, lat] coordinates
+     * @param {string} projectId - Project ID
+     * @param {string} stationType - Station type: 'science', 'artifact', or 'bone'
+     */
+    showCreateStationModal(coordinates, projectId, stationType = 'science') {
         // Snap to nearest vertex (start/end point) within radius
         const snap = Geometry.findNearestSnapPointWithinRadius(coordinates, Geometry.getSnapRadius());
         
@@ -208,8 +226,24 @@ export const StationUI = {
         const snappedCoords = snap.coordinates;
         const detectedProjectId = snap.projectId || projectId;
         
+        // Determine title and icon based on station type
+        const typeLabels = {
+            'science': { label: 'Science Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-6 h-6">`, color: 'text-orange-400' },
+            'biology': { label: 'Biology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-6 h-6">`, color: 'text-cyan-400' },
+            'artifact': { label: 'Artifact Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-6 h-6">`, color: 'text-amber-400' },
+            'bone': { label: 'Bones Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-6 h-6">`, color: 'text-slate-200' }
+        };
+        const typeInfo = typeLabels[stationType] || typeLabels['science'];
+        
         const formHtml = `
             <form id="create-station-form" class="space-y-4">
+                <div class="flex items-center gap-3 mb-4 p-3 bg-slate-700/50 rounded-lg border border-slate-600/50">
+                    <span class="text-2xl">${typeInfo.icon}</span>
+                    <div>
+                        <div class="text-white font-medium">${typeInfo.label}</div>
+                        <div class="text-xs text-slate-400">Type cannot be changed after creation</div>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
                     <input type="text" id="station-name" required class="form-input" placeholder="Enter station name">
@@ -232,10 +266,10 @@ export const StationUI = {
 
         const footer = `
             <button data-close-modal="create-station-modal" class="btn-secondary">Cancel</button>
-            <button form="create-station-form" type="submit" class="btn-primary">Create Station</button>
+            <button form="create-station-form" type="submit" class="btn-primary">Create ${typeInfo.label}</button>
         `;
 
-        const html = Modal.base('create-station-modal', 'Create Station', formHtml, footer, 'max-w-md');
+        const html = Modal.base('create-station-modal', `Create ${typeInfo.label}`, formHtml, footer, 'max-w-md');
 
         Modal.open('create-station-modal', html, () => {
             document.getElementById('station-name').focus();
@@ -250,9 +284,10 @@ export const StationUI = {
                         name,
                         description: document.getElementById('station-description').value.trim(),
                         latitude: snappedCoords[1],
-                        longitude: snappedCoords[0]
+                        longitude: snappedCoords[0],
+                        type: stationType
                     });
-                    Utils.showNotification('success', 'Station created!');
+                    Utils.showNotification('success', `${typeInfo.label} created!`);
                     Modal.close('create-station-modal');
                     StationDetails.openModal(station.id, detectedProjectId, true);
                 } catch (err) {

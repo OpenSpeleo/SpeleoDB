@@ -23,7 +23,7 @@ import { Config } from '../private/js/map_viewer/config.js';
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 SpeleoDB Public GIS View Viewer Initializing...');
 
-    const context = window.SPELEO_CONTEXT || {};
+    const context = window.MAPVIEWER_CONTEXT || {};
 
     // Validate context for public view mode
     if (context.viewMode !== 'public' || !context.gisToken) {

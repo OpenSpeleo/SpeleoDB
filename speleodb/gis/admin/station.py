@@ -143,12 +143,14 @@ class SubSurfaceStationAdmin(BaseStationAdmin):
     list_display = (
         BaseStationAdmin.list_display[0],  # pyright: ignore[reportGeneralTypeIssues]
         "project",
+        "type",
         *BaseStationAdmin.list_display[1:],
     )  # type: ignore[assignment]
+    list_filter = ["type", *BaseStationAdmin.list_filter]
     ordering = ("project", "name")
     search_fields = (*BaseStationAdmin.search_fields, "project__name")  # type: ignore[assignment]
 
     fieldsets = (
-        ("Basic Information", {"fields": ("project", "name", "description")}),
+        ("Basic Information", {"fields": ("project", "type", "name", "description")}),
         *BaseStationAdmin.fieldsets,  # pyright: ignore[reportOptionalIterable]
     )  # type: ignore[assignment]

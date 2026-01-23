@@ -27,7 +27,7 @@ export const ExplorationLeadUI = {
                 </div>
                 <div class="bg-slate-700/50 rounded-lg p-3 text-sm text-slate-300">
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="text-red-400">❗</span>
+                        <img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-4 h-4">
                         <span>Location: ${lineName}</span>
                     </div>
                     <div class="text-xs text-slate-400 mt-1">
@@ -117,7 +117,7 @@ export const ExplorationLeadUI = {
                 <!-- Location info -->
                 <div class="bg-slate-700/50 rounded-lg p-4">
                     <div class="flex items-center gap-2 mb-2">
-                        <img src="${window.SPELEO_CONTEXT.icons.explorationLead}" class="w-6 h-6">
+                        <img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-6 h-6">
                         <span class="text-white font-medium">Exploration Lead</span>
                     </div>
                     <div class="text-sm text-slate-300">

@@ -32,14 +32,19 @@ export const Interactions = {
 
             for (const feature of features) {
                 if (!feature.layer || !feature.layer.id) continue;
-                // Check for subsurface stations, surface stations, Landmarks, and custom markers
-                if (feature.layer.id.includes('stations-') ||
-                    feature.layer.id.startsWith('surface-stations-') ||
-                    feature.layer.id === 'landmarks-layer' ||
-                    feature.layer.id === 'landmarks-labels' ||
-                    feature.layer.id === 'safety-cylinders-layer' ||
-                    feature.layer.id === 'cylinder-installs-layer' ||
-                    feature.layer.id === 'exploration-leads-layer') {
+                const layerId = feature.layer.id;
+                // Check for subsurface stations (circles, biology/bone/artifact icons), 
+                // surface stations, Landmarks, and custom markers
+                if ((layerId.startsWith('stations-') && 
+                     (layerId.endsWith('-circles') || layerId.endsWith('-biology-icons') ||
+                      layerId.endsWith('-bone-icons') || layerId.endsWith('-artifact-icons') || 
+                      layerId.endsWith('-labels'))) ||
+                    layerId.startsWith('surface-stations-') ||
+                    layerId === 'landmarks-layer' ||
+                    layerId === 'landmarks-labels' ||
+                    layerId === 'safety-cylinders-layer' ||
+                    layerId === 'cylinder-installs-layer' ||
+                    layerId === 'exploration-leads-layer') {
                     isInteractive = true;
                     break;
                 }
@@ -55,11 +60,12 @@ export const Interactions = {
 
             const features = map.queryRenderedFeatures(e.point);
 
-            // Check for Subsurface Stations (circles)
+            // Check for Subsurface Stations (circles, biology/bone/artifact icons)
             const stationFeature = features.find(f =>
                 f.layer && f.layer.id &&
                 f.layer.id.startsWith('stations-') &&
-                f.layer.id.endsWith('-circles') &&
+                (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') || 
+                 f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons')) &&
                 !f.layer.id.startsWith('surface-')
             );
 
@@ -148,7 +154,7 @@ export const Interactions = {
         const self = this;
 
         // Types that snap to survey line endpoints (like stations)
-        const SNAPPABLE_TYPES = ['station', 'safety-cylinder', 'exploration-lead'];
+        const SNAPPABLE_TYPES = ['station', 'safety-cylinder', 'cylinder-install', 'exploration-lead'];
 
         map.on('mousedown', (e) => {
             if (e.originalEvent.button !== 0) return; // Only left click
@@ -156,9 +162,11 @@ export const Interactions = {
             const features = map.queryRenderedFeatures(e.point);
             if (!features.length) return;
 
-            // Check Station
+            // Check Station (circles, biology/bone/artifact icons)
             const stationFeature = features.find(f =>
-                f.layer && f.layer.id && f.layer.id.startsWith('stations-') && f.layer.id.endsWith('-circles')
+                f.layer && f.layer.id && f.layer.id.startsWith('stations-') && 
+                (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') || 
+                 f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons'))
             );
 
             if (stationFeature) {
@@ -181,7 +189,7 @@ export const Interactions = {
                 }
             }
 
-            // Check Safety Cylinder
+            // Check Safety Cylinder (temporary markers)
             const safetyCylinderFeature = features.find(f =>
                 f.layer && f.layer.id === 'safety-cylinders-layer'
             );
@@ -193,6 +201,26 @@ export const Interactions = {
                 draggedFeatureId = safetyCylinderFeature.id;
                 draggedType = 'safety-cylinder';
                 originalCoords = safetyCylinderFeature.geometry.coordinates.slice();
+                mouseDownPoint = e.point;
+                draggedProjectId = null;
+                currentSnapResult = null;
+
+                map.dragPan.disable();
+                return;
+            }
+            
+            // Check Cylinder Install (persistent from database)
+            const cylinderInstallFeature = features.find(f =>
+                f.layer && f.layer.id === 'cylinder-installs-layer'
+            );
+
+            if (cylinderInstallFeature) {
+                isPotentialDrag = true;
+                hasMoved = false;
+                isDragging = false;
+                draggedFeatureId = cylinderInstallFeature.id;
+                draggedType = 'cylinder-install';
+                originalCoords = cylinderInstallFeature.geometry.coordinates.slice();
                 mouseDownPoint = e.point;
                 draggedProjectId = null;
                 currentSnapResult = null;
@@ -260,8 +288,6 @@ export const Interactions = {
                 isDragging = true;
                 map.getCanvas().style.cursor = 'grabbing';
                 map.doubleClickZoom.disable();
-
-                console.log(`🫳 Started dragging ${draggedType}: ${draggedFeatureId}`);
             }
 
             if (!isDragging) return;
@@ -282,15 +308,15 @@ export const Interactions = {
                     Layers.updateStationPosition(draggedProjectId, draggedFeatureId, displayCoords);
                     const newColor = snapResult.snapped ? '#10b981' : '#f59e0b';
                     Layers.updateStationColor(draggedProjectId, draggedFeatureId, newColor);
-                } else if (draggedType === 'safety-cylinder' || draggedType === 'exploration-lead') {
+                } else if (draggedType === 'safety-cylinder' || draggedType === 'cylinder-install' || draggedType === 'exploration-lead') {
                     // Update position
-                    if (draggedType === 'safety-cylinder') {
+                    if (draggedType === 'safety-cylinder' || draggedType === 'cylinder-install') {
                         Layers.updateSafetyCylinderPosition(draggedFeatureId, displayCoords);
                     } else {
                         Layers.updateExplorationLeadPosition(draggedFeatureId, displayCoords);
                     }
                     // Visual feedback: show colored highlight circle (green=snapped, amber=not)
-                    Layers.setMarkerDragFeedback(draggedType, null, snapResult.snapped, displayCoords);
+                    Layers.setMarkerDragFeedback(draggedType === 'cylinder-install' ? 'safety-cylinder' : draggedType, null, snapResult.snapped, displayCoords);
                 }
 
                 // Show snap indicator
@@ -334,9 +360,9 @@ export const Interactions = {
                             originalCoords
                         );
                     }
-                } else if (draggedType === 'safety-cylinder' || draggedType === 'exploration-lead') {
+                } else if (draggedType === 'safety-cylinder' || draggedType === 'cylinder-install' || draggedType === 'exploration-lead') {
                     // Reset visual feedback
-                    Layers.resetMarkerDragFeedback(draggedType);
+                    Layers.resetMarkerDragFeedback(draggedType === 'cylinder-install' ? 'safety-cylinder' : draggedType);
 
                     // Call handler with snap result (same pattern as stations)
                     if (self.handlers.onMarkerDragEnd) {
@@ -377,11 +403,12 @@ export const Interactions = {
         map.on('contextmenu', (e) => {
             const features = map.queryRenderedFeatures(e.point);
 
-            // Check Subsurface Station
+            // Check Subsurface Station (circles, bone icons, artifact icons)
             const stationFeature = features.find(f =>
                 f.layer && f.layer.id &&
                 f.layer.id.startsWith('stations-') &&
-                f.layer.id.endsWith('-circles') &&
+                (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') || 
+                 f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons')) &&
                 !f.layer.id.startsWith('surface-')
             );
 

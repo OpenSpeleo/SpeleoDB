@@ -76,3 +76,10 @@ class OperationalStatus(models.TextChoices):
 class UnitSystem(models.TextChoices):
     METRIC = "metric", "Metric"
     IMPERIAL = "imperial", "Imperial"
+
+
+class SubSurfaceStationType(models.TextChoices):
+    ARTIFACT = "artifact", "Artifact"
+    BIOLOGY = "biology", "Biology"
+    BONE = "bone", "Bone"
+    SCIENCE = "science", "Science"

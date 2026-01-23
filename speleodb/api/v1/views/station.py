@@ -21,7 +21,6 @@ from speleodb.api.v1.permissions import SDB_ReadAccess
 from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.serializers.station import StationGeoJSONSerializer
 from speleodb.api.v1.serializers.station import StationSerializer
-from speleodb.api.v1.serializers.station import StationWithResourcesSerializer
 from speleodb.api.v1.serializers.station import SubSurfaceStationSerializer
 from speleodb.api.v1.serializers.station import SubSurfaceStationWithResourcesSerializer
 from speleodb.api.v1.serializers.station import SurfaceStationSerializer
@@ -101,9 +100,28 @@ class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
     ]
     lookup_field = "id"
 
+    def _get_serializer_for_station(
+        self, station: Station, with_resources: bool = False
+    ) -> type[ModelSerializer[Station]]:
+        """Get the appropriate serializer class based on station type."""
+        match station:
+            case SubSurfaceStation():
+                if with_resources:
+                    return SubSurfaceStationWithResourcesSerializer  # type: ignore[return-value]
+                return SubSurfaceStationSerializer  # type: ignore[return-value]
+            case SurfaceStation():
+                if with_resources:
+                    return SurfaceStationWithResourcesSerializer  # type: ignore[return-value]
+                return SurfaceStationSerializer  # type: ignore[return-value]
+            case _:
+                raise TypeError(f"Unexpected station type received: {type(station)}")
+
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station = self.get_object()
-        serializer = StationWithResourcesSerializer(station)
+        serializer_class = self._get_serializer_for_station(
+            station, with_resources=True
+        )
+        serializer = serializer_class(station)
 
         return SuccessResponse(serializer.data)
 
@@ -111,7 +129,10 @@ class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
         self, request: Request, partial: bool, *args: Any, **kwargs: Any
     ) -> Response:
         station = self.get_object()
-        serializer = StationSerializer(station, data=request.data, partial=partial)
+        serializer_class = self._get_serializer_for_station(
+            station, with_resources=False
+        )
+        serializer = serializer_class(station, data=request.data, partial=partial)
         if serializer.is_valid():
             serializer.save()
             return SuccessResponse(serializer.data)

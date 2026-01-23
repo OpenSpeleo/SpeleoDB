@@ -2,6 +2,7 @@ import { API } from '../api.js';
 import { Utils } from '../utils.js';
 import { Config } from '../config.js';
 import { State } from '../state.js';
+import { createProgressBarHTML, UploadProgressController } from '../components/upload.js';
 
 // Photo lightbox state
 let currentPhotoUrl = null;
@@ -24,7 +25,7 @@ export const StationResources = {
         const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
         const isSurfaceStation = station?.network || station?.station_type === 'surface';
         currentProjectId = station?.project || station?.network;
-        
+
         // Use appropriate permission check based on station type
         let hasWriteAccess, hasAdminAccess;
         if (isSurfaceStation) {
@@ -42,7 +43,7 @@ export const StationResources = {
             // Fetch resources from API
             const response = await API.getStationResources(stationId);
             let resources = [];
-            
+
             if (response && response.success && response.data) {
                 resources = response.data;
             } else if (Array.isArray(response)) {
@@ -124,7 +125,7 @@ export const StationResources = {
 
     renderResourceCard(resource, hasWriteAccess, hasAdminAccess) {
         const isDemoStation = resource.is_demo || (resource.id && String(resource.id).startsWith('demo-'));
-        
+
         return `
             <div class="resource-card p-5 bg-slate-800/20 border border-slate-600/50 rounded-lg hover:bg-slate-700/30 transition-colors">
                 <div class="flex justify-between items-start mb-3">
@@ -365,7 +366,7 @@ export const StationResources = {
                                     </svg>
                                     <p class="text-slate-300 text-sm mb-2">Click to select file or drag and drop</p>
                                     <input type="file" name="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.mp4,.mov,.avi,.webm">
-                                    <p class="text-slate-400 text-xs">Max file size: 10MB • Images, videos, documents accepted</p>
+                                    <p class="text-slate-400 text-xs">Max file size: 500MB • Images, videos, documents accepted</p>
                                 </div>
                             </div>
                             
@@ -374,7 +375,9 @@ export const StationResources = {
                                 <textarea id="text-content" name="text_content" class="form-input form-textarea" rows="6" placeholder="Enter your notes..."></textarea>
                             </div>
                             
-                            <div class="flex gap-3">
+                            ${createProgressBarHTML('resource-upload')}
+                            
+                            <div id="resource-form-buttons" class="flex gap-3">
                                 <button type="submit" id="resource-submit-btn" class="btn-primary">
                                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -461,9 +464,9 @@ export const StationResources = {
     },
 
     updateFileDisplay(fileContainer, file) {
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = 500 * 1024 * 1024; // 500MB
         if (file.size > maxSize) {
-            Utils.showNotification('error', 'File size cannot exceed 10MB');
+            Utils.showNotification('error', 'File size cannot exceed 500MB');
             const fileInput = fileContainer.querySelector('input[type="file"]');
             if (fileInput) fileInput.value = '';
             return;
@@ -478,7 +481,7 @@ export const StationResources = {
 
         // Keep the existing file input (which has the file) and just update the visual display
         const existingFileInput = fileContainer.querySelector('input[type="file"]');
-        
+
         // Clear the container but preserve the file input
         const textDiv = fileContainer.querySelector('.text-center');
         if (textDiv) {
@@ -486,7 +489,7 @@ export const StationResources = {
             if (existingFileInput && existingFileInput.parentNode === textDiv) {
                 textDiv.removeChild(existingFileInput);
             }
-            
+
             textDiv.innerHTML = `
                 <svg class="w-12 h-12 text-green-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -496,12 +499,12 @@ export const StationResources = {
                 <p class="text-slate-400 text-xs">${fileSize}</p>
                 <p class="text-sky-400 text-xs mt-2 cursor-pointer hover:underline" id="change-file-link">Click to change file</p>
             `;
-            
+
             // Re-append the original file input (with the file still attached)
             if (existingFileInput) {
                 textDiv.appendChild(existingFileInput);
             }
-            
+
             // Add click handler for "change file" link
             const changeLink = textDiv.querySelector('#change-file-link');
             if (changeLink && existingFileInput) {
@@ -515,15 +518,34 @@ export const StationResources = {
 
     async saveResource(stationId, form) {
         const submitBtn = document.getElementById('resource-submit-btn');
+        const buttonsContainer = document.getElementById('resource-form-buttons');
         const originalContent = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = 'Saving...';
 
         const formData = new FormData(form);
+        
+        // Check if this is a file upload (photo, video, document) vs text-only (note)
+        const resourceType = formData.get('resource_type');
+        const hasFile = formData.get('file') && formData.get('file').size > 0;
 
         try {
-            const response = await API.createStationResource(stationId, formData);
+            let response;
             
+            // Use progress upload for file-based resources
+            if (hasFile && ['photo', 'video', 'document'].includes(resourceType)) {
+                const uploadController = new UploadProgressController('resource-upload');
+                buttonsContainer.classList.add('hidden');
+                
+                response = await uploadController.upload(
+                    Urls['api:v1:station-resources'](stationId),
+                    formData,
+                    'POST'
+                );
+            } else {
+                response = await API.createStationResource(stationId, formData);
+            }
+
             if (response && (response.success || response.data || response.id)) {
                 Utils.showNotification('success', 'Resource saved successfully!');
                 this.render(stationId, document.getElementById('station-modal-content'));
@@ -535,6 +557,7 @@ export const StationResources = {
             Utils.showNotification('error', error.message || 'Failed to save resource');
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalContent;
+            buttonsContainer.classList.remove('hidden');
         }
     },
 
@@ -600,7 +623,9 @@ export const StationResources = {
                                 </div>
                             ` : ''}
                             
-                            <div class="flex gap-3">
+                            ${createProgressBarHTML('resource-edit-upload')}
+                            
+                            <div id="edit-form-buttons" class="flex gap-3">
                                 <button type="submit" id="edit-resource-submit-btn" class="btn-primary">💾 Save Changes</button>
                                 <button type="button" id="cancel-edit-btn" class="btn-secondary">Cancel</button>
                             </div>
@@ -645,15 +670,33 @@ export const StationResources = {
 
     async updateResource(stationId, resourceId, form) {
         const submitBtn = document.getElementById('edit-resource-submit-btn');
+        const buttonsContainer = document.getElementById('edit-form-buttons');
         const originalContent = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = 'Saving...';
 
         const formData = new FormData(form);
+        
+        // Check if a new file is being uploaded
+        const hasFile = formData.get('file') && formData.get('file').size > 0;
 
         try {
-            const response = await API.updateStationResource(resourceId, formData);
+            let response;
             
+            // Use progress upload if there's a file being uploaded
+            if (hasFile) {
+                const uploadController = new UploadProgressController('resource-edit-upload');
+                buttonsContainer.classList.add('hidden');
+                
+                response = await uploadController.upload(
+                    Urls['api:v1:resource-detail'](resourceId),
+                    formData,
+                    'PATCH'
+                );
+            } else {
+                response = await API.updateStationResource(resourceId, formData);
+            }
+
             if (response && (response.success || response.data || response.id)) {
                 Utils.showNotification('success', 'Resource updated successfully!');
                 this.render(stationId, document.getElementById('station-modal-content'));
@@ -665,13 +708,14 @@ export const StationResources = {
             Utils.showNotification('error', error.message || 'Failed to update resource');
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalContent;
+            buttonsContainer.classList.remove('hidden');
         }
     },
 
     // ===== DELETE CONFIRMATION =====
     openDeleteConfirm(stationId, resourceId) {
         const self = this;
-        
+
         // Use cached resources for instant access
         const resource = cachedResources.find(r => String(r.id) === String(resourceId));
 
@@ -723,7 +767,7 @@ export const StationResources = {
         // Handle all clicks via event delegation on the modal
         modal.addEventListener('click', async (e) => {
             e.stopPropagation();
-            
+
             // Backdrop click to close
             if (e.target === modal) {
                 modal.remove();
@@ -775,13 +819,13 @@ export const StationResources = {
     openPhotoLightbox(url, title) {
         // Store reference to this for event handlers
         const self = this;
-        
+
         // Remove any existing lightbox first to prevent conflicts
         const existingLightbox = document.getElementById('photo-lightbox');
         if (existingLightbox) {
             existingLightbox.remove();
         }
-        
+
         currentPhotoUrl = url;
         currentPhotoTitle = title || 'Photo';
 
@@ -885,7 +929,7 @@ export const StationResources = {
     openVideoModal(url, title) {
         // Store reference to this for event handlers
         const self = this;
-        
+
         const modal = document.createElement('div');
         modal.id = 'video-modal';
         modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-black/95';
@@ -952,7 +996,7 @@ export const StationResources = {
     openNoteViewer(noteData) {
         // Store reference to this for event handlers
         const self = this;
-        
+
         currentNoteContent = noteData.content;
 
         const modal = document.createElement('div');
@@ -1061,7 +1105,7 @@ export const StationResources = {
         navigator.clipboard.writeText(currentNoteContent).then(() => {
             const btn = document.querySelector('[data-copy-note]');
             if (!btn) return;
-            
+
             const originalHTML = btn.innerHTML;
             btn.innerHTML = `
                 <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

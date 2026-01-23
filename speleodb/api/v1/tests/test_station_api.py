@@ -45,6 +45,7 @@ class TestUnauthenticatedStationAPIAuthentication(BaseAPIProjectTestCase):
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
+            "type": "science",
         }
         response = self.client.post(
             reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
@@ -139,6 +140,7 @@ class TestStationAPIPermissions(BaseAPIProjectTestCase):
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
+            "type": "science",
         }
 
         response = self.client.post(
@@ -224,6 +226,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
             "description": "Main cave entrance",
             "latitude": "45.14908328409823490234567",
             "longitude": "-123.876032940239093049235432",
+            "type": "science",
         }
 
         response = self.client.post(
@@ -347,7 +350,8 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
 
         match method:
             case "PUT":
-                data.update(latitude=12.3, longitude=-30.23)
+                # PUT requires all fields including type (must match existing)
+                data.update(latitude=12.3, longitude=-30.23, type="science")
                 client_method = self.client.put
 
             case "PATCH":
@@ -418,6 +422,7 @@ class TestStationValidation(BaseAPIProjectTestCase):
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
+            "type": "science",
         }
 
         response = self.client.post(
@@ -442,6 +447,7 @@ class TestStationValidation(BaseAPIProjectTestCase):
             "description": "Test station",
             "latitude": "99.9999999",  # Invalid latitude (>90)
             "longitude": "-180.0000000",  # Valid longitude (at boundary)
+            "type": "science",
         }
 
         response = self.client.post(
@@ -468,6 +474,7 @@ class TestStationValidation(BaseAPIProjectTestCase):
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
+            "type": "science",
         }
 
         response = self.client.post(
@@ -551,6 +558,7 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
             "description": "High precision test",
             "latitude": "45.12345678901234567890",  # More than 7 decimal places
             "longitude": "-123.98765432109876543210",
+            "type": "science",
         }
 
         response = self.client.post(
@@ -578,6 +586,7 @@ class TestStationEdgeCases(BaseAPIProjectTestCase):
             "description": "",
             "latitude": "45.1234567",
             "longitude": "-123.8765432",
+            "type": "science",
         }
 
         response = self.client.post(
@@ -631,6 +640,7 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 "description": self.fake.text(max_nb_chars=200),
                 "latitude": str(round(random.uniform(-90, 90), 7)),
                 "longitude": str(round(random.uniform(-180, 180), 7)),
+                "type": "science",
             }
 
             response = self.client.post(
@@ -662,6 +672,7 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 "description": "Unicode test",
                 "latitude": "45.1234567",
                 "longitude": "-123.8765432",
+                "type": "science",
             }
 
             response = self.client.post(
@@ -704,6 +715,7 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 "description": f"Special char test {i}",
                 "latitude": str(45.1 + i * 0.01),
                 "longitude": str(-123.8 + i * 0.01),
+                "type": "science",
             }
 
             response = self.client.post(
@@ -739,6 +751,7 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 "description": payload,
                 "latitude": "45.1234567",
                 "longitude": "-123.8765432",
+                "type": "science",
             }
 
             response = self.client.post(
@@ -774,6 +787,7 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 "description": f"Coordinates: {lat}, {lng}",
                 "latitude": str(lat),
                 "longitude": str(lng),
+                "type": "science",
             }
 
             response = self.client.post(
@@ -823,6 +837,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "description": "Coordinate rounding test",
             "latitude": "45.123456789012345",  # 15 decimal places
             "longitude": "-123.987654321098765",  # 15 decimal places
+            "type": "science",
         }
 
         response = self.client.post(
@@ -851,6 +866,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "description": "Precision preservation test",
             "latitude": "45.123",  # 3 decimal places
             "longitude": "-123.9876543",  # 7 decimal places
+            "type": "science",
         }
 
         response = self.client.post(
@@ -920,6 +936,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
                 "description": f"Extreme coords: {lat}, {lng}",
                 "latitude": lat,
                 "longitude": lng,
+                "type": "science",
             }
 
             response = self.client.post(
@@ -944,6 +961,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "description": "Negative coordinate rounding",
             "latitude": "-45.123456789012345",  # Negative with many decimals
             "longitude": "-123.987654321098765",  # Negative with many decimals
+            "type": "science",
         }
 
         response = self.client.post(
@@ -972,6 +990,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "description": "Scientific notation test",
             "latitude": "4.5123456e1",  # 45.123456 in scientific notation
             "longitude": "-1.23987654e2",  # -123.987654 in scientific notation
+            "type": "science",
         }
 
         response = self.client.post(
@@ -1011,6 +1030,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
                 "description": f"Boundary test {i}",
                 "latitude": input_val,
                 "longitude": "0",
+                "type": "science",
             }
 
             response = self.client.post(
@@ -1039,6 +1059,7 @@ class TestStationCoordinateRounding(BaseAPIProjectTestCase):
             "description": "Total digits test",
             "latitude": "123.1234567",  # 10 total digits (3 + 7)
             "longitude": "-12.12345678",  # 10 total digits with extra decimal
+            "type": "science",
         }
 
         response = self.client.post(

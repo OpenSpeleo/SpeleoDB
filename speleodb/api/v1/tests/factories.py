@@ -225,6 +225,7 @@ class SubSurfaceStationFactory(DjangoModelFactory[SubSurfaceStation]):
     latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
     longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
     created_by: str = factory.LazyAttribute(lambda _: UserFactory.create().email)  # type: ignore[assignment]
+    type: str = "science"  # Default to science for backwards compatibility
 
     class Meta:
         model = SubSurfaceStation

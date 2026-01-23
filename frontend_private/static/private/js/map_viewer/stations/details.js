@@ -16,7 +16,19 @@ let currentStationId = null;
 let currentProjectId = null;
 let currentNetworkId = null;
 let currentStationType = 'subsurface';  // 'subsurface' or 'surface'
+let currentSubsurfaceType = null;  // 'science', 'biology', 'bone', or 'artifact' (only for subsurface)
 let activeTab = 'details';
+
+// Helper to get station type label and icon
+function getStationTypeInfo(subsurfaceType) {
+    const typeLabels = {
+        'science': { label: 'Science', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-4 h-4 align-middle inline">`, color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+        'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-4 h-4 align-middle inline">`, color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
+        'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-4 h-4 align-middle inline">`, color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-4 h-4 align-middle inline">`, color: 'bg-slate-500/20 text-slate-200 border-slate-400/30' }
+    };
+    return typeLabels[subsurfaceType] || typeLabels['science'];
+}
 
 export const StationDetails = {
     currentStationId: null,
@@ -36,11 +48,17 @@ export const StationDetails = {
         this.currentStationId = stationId;
         currentStationType = stationType;
 
+        // Pre-set subsurface type from State if available (will be confirmed in loadStationDetails)
+        // For surface stations, subsurface type is always null
         if (stationType === 'surface') {
+            currentSubsurfaceType = null;
             currentNetworkId = parentId || (State.allSurfaceStations.get(stationId)?.network) || Config.networks[0]?.id;
             currentProjectId = null;
         } else {
-            currentProjectId = parentId || (State.allStations.get(stationId)?.project) || Config.projects[0]?.id;
+            // Try to get type from State to avoid flicker
+            const stationFromState = stationId ? State.allStations.get(stationId) : null;
+            currentSubsurfaceType = stationFromState?.type || 'science';
+            currentProjectId = parentId || stationFromState?.project || Config.projects[0]?.id;
             currentNetworkId = null;
         }
 
@@ -93,31 +111,7 @@ export const StationDetails = {
             this.switchTab('details');
             await this.loadStationDetails(stationId, stationType === 'surface' ? currentNetworkId : currentProjectId, stationType);
 
-            // Show a special message if newly created
-            if (isNewlyCreated) {
-                setTimeout(() => {
-                    const content = document.getElementById('station-modal-content');
-                    if (content && content.innerHTML) {
-                        // Use insertAdjacentHTML to prepend without destroying existing event handlers
-                        content.insertAdjacentHTML('afterbegin', `
-                            <div class="bg-emerald-500/20 border border-emerald-500/50 rounded-lg p-4 m-6 flex items-center justify-between">
-                                <div class="flex items-center">
-                                    <span class="text-2xl mr-3">🎉</span>
-                                    <div>
-                                        <div class="text-emerald-200 font-semibold">Station Created Successfully!</div>
-                                        <div class="text-emerald-100 text-sm mt-1">You can now add photos, videos, notes, and other resources.</div>
-                                    </div>
-                                </div>
-                                <button onclick="this.parentElement.style.display='none'" class="text-emerald-300 hover:text-emerald-100">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        `);
-                    }
-                }, 500);
-            }
+     
         } else {
             console.log(`📋 Showing empty station details`);
             this.switchTab('details');
@@ -147,6 +141,38 @@ export const StationDetails = {
 
         // Setup mobile dropdown
         this.setupTabSelect();
+
+        // Update tab visibility based on station type
+        this.updateTabVisibility();
+    },
+
+    /**
+     * Update tab visibility based on current station type.
+     * Biology, Bone, and Artifact stations should not show Experiments and Sensor Management tabs.
+     */
+    updateTabVisibility() {
+        const hideTabs = currentSubsurfaceType === 'biology' || currentSubsurfaceType === 'bone' || currentSubsurfaceType === 'artifact';
+        const tabsToHide = ['experiments', 'sensor-management'];
+
+        // Update button tabs
+        const tabButtons = document.querySelectorAll('#station-modal-tabs .tab-btn');
+        tabButtons.forEach(btn => {
+            const tab = btn.dataset.tab;
+            if (tabsToHide.includes(tab)) {
+                btn.style.display = hideTabs ? 'none' : '';
+            }
+        });
+
+        // Update mobile dropdown
+        const selectEl = document.getElementById('station-tab-select');
+        if (selectEl) {
+            Array.from(selectEl.options).forEach(option => {
+                if (tabsToHide.includes(option.value)) {
+                    option.style.display = hideTabs ? 'none' : '';
+                    option.disabled = hideTabs;
+                }
+            });
+        }
     },
 
     setupTabSelect() {
@@ -360,6 +386,16 @@ export const StationDetails = {
                 stateMap.set(stationId, station);
             }
 
+            // Track subsurface station type for tab visibility
+            if (stationType === 'subsurface') {
+                currentSubsurfaceType = station.type || 'science';
+            } else {
+                currentSubsurfaceType = null;  // Surface stations don't have this type
+            }
+
+            // Update tab visibility based on station type
+            this.updateTabVisibility();
+
             // Display the station details
             this.displayStationDetails(station, parentId, stationType);
 
@@ -381,10 +417,17 @@ export const StationDetails = {
 
         const isSurfaceStation = stationType === 'surface';
 
-        // Update title
+        // Update title with station type badge for subsurface stations
         const isDemoStation = station.is_demo || (station.id && String(station.id).startsWith('demo-'));
-        const stationTypeLabel = isSurfaceStation ? 'Surface Station' : 'Station';
-        modalTitle.innerHTML = `${stationTypeLabel}: ${station.name}${isDemoStation ? ' <span class="demo-badge">DEMO</span>' : ''}`;
+        let stationTypeLabel = isSurfaceStation ? 'Surface Station' : 'Station';
+        let typeBadge = '';
+
+        if (!isSurfaceStation && station.type) {
+            const typeInfo = getStationTypeInfo(station.type);
+            typeBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-medium border ${typeInfo.color}">${typeInfo.icon} ${typeInfo.label}</span>`;
+        }
+
+        modalTitle.innerHTML = `${stationTypeLabel}: ${station.name}${typeBadge}${isDemoStation ? ' <span class="demo-badge">DEMO</span>' : ''}`;
 
         // Determine access based on station type
         let hasWriteAccess, hasAdminAccess, parentName, parentType;
@@ -410,6 +453,26 @@ export const StationDetails = {
                 ? '<div class="text-xs text-slate-400 mt-2">🖱️ Drag this station to move it or use magnetic snap to nearby survey lines</div>'
                 : '<div class="text-xs text-amber-300 mt-2">🔒 Read-only access - moving stations is disabled</div>');
 
+        // Station type info section (only for subsurface stations)
+        let stationTypeSection = '';
+        if (!isSurfaceStation && station.type) {
+            const typeInfo = getStationTypeInfo(station.type);
+            stationTypeSection = `
+                <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600/50 mb-4">
+                    <h4 class="text-white font-semibold mb-2 flex items-center">
+                        <span class="mr-2">${typeInfo.icon}</span>
+                        Station Type
+                    </h4>
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1 rounded-full text-sm font-medium border ${typeInfo.color}">
+                            ${typeInfo.label} Station
+                        </span>
+                        <span class="text-xs text-slate-400">(cannot be modified)</span>
+                    </div>
+                </div>
+            `;
+        }
+
         const snapInfo = `
             <div class="mt-3 bg-slate-700/50 p-3 rounded-lg border border-slate-500/30">
                 <strong class="text-slate-300">📍 Station Location:</strong>
@@ -434,6 +497,7 @@ export const StationDetails = {
                         </div>
                         
                         <div class="p-8 space-y-6">
+                            ${stationTypeSection}
                             ${station.description ? `<p class="text-slate-300 text-lg leading-relaxed bg-slate-800/30 p-4 rounded-lg border">${station.description}</p>` : ''}
                             
                             <!-- Tag Section -->

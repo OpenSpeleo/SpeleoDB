@@ -2,6 +2,7 @@ import { API } from '../api.js';
 import { Utils } from '../utils.js';
 import { Config } from '../config.js';
 import { State } from '../state.js';
+import { createProgressBarHTML, UploadProgressController } from '../components/upload.js';
 
 // Track current context for log operations
 let currentStationId = null;
@@ -241,7 +242,8 @@ export const StationLogs = {
                                     <input id="log-attachment" type="file" class="hidden" accept="image/*,video/*,.pdf,.csv,.txt,.doc,.docx">
                                 </div>
                             </div>
-                            <div class="flex items-center justify-end gap-3 pt-2">
+                            ${createProgressBarHTML('log-upload')}
+                            <div id="log-form-buttons" class="flex items-center justify-end gap-3 pt-2">
                                 <button type="button" id="cancel-log-btn" class="btn-secondary">Cancel</button>
                                 <button id="log-submit-btn" type="submit" class="btn-primary">
                                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -292,6 +294,7 @@ export const StationLogs = {
         form.onsubmit = async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('log-submit-btn');
+            const buttonsContainer = document.getElementById('log-form-buttons');
             const originalContent = submitBtn.innerHTML;
             submitBtn.disabled = true;
             submitBtn.innerHTML = 'Submitting...';
@@ -300,12 +303,26 @@ export const StationLogs = {
             formData.append('title', document.getElementById('log-title').value.trim());
             formData.append('notes', document.getElementById('log-notes').value.trim());
             
-            if (fileInput.files.length > 0) {
+            const hasFile = fileInput.files.length > 0;
+            if (hasFile) {
                 formData.append('attachment', fileInput.files[0]);
             }
 
             try {
-                await API.createStationLog(stationId, formData);
+                // Use progress upload for files, regular API for text-only
+                if (hasFile) {
+                    const uploadController = new UploadProgressController('log-upload');
+                    buttonsContainer.classList.add('hidden');
+                    
+                    await uploadController.upload(
+                        Urls['api:v1:station-logs'](stationId),
+                        formData,
+                        'POST'
+                    );
+                } else {
+                    await API.createStationLog(stationId, formData);
+                }
+                
                 Utils.showNotification('success', 'Journal entry created successfully');
                 modal.remove();
                 
@@ -316,6 +333,7 @@ export const StationLogs = {
                 Utils.showNotification('error', error.message || 'Failed to create journal entry');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalContent;
+                buttonsContainer.classList.remove('hidden');
             }
         };
 

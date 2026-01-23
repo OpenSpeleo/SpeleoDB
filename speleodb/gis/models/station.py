@@ -11,6 +11,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from polymorphic.models import PolymorphicModel
 
+from speleodb.common.enums import SubSurfaceStationType
 from speleodb.gis.models import StationTag
 from speleodb.gis.models import SurfaceMonitoringNetwork
 
@@ -116,6 +117,14 @@ class SubSurfaceStation(Station):
         on_delete=models.CASCADE,
         blank=False,
         null=False,
+    )
+
+    type = models.CharField(
+        max_length=10,
+        null=False,
+        blank=False,
+        choices=SubSurfaceStationType.choices,
+        help_text="Type of SubSurfaceStation",
     )
 
     class Meta:

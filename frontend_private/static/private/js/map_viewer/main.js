@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await Config.loadGPSTracks();
 
     // 3. Initialize Map
-    const token = window.SPELEO_CONTEXT?.mapboxToken || '';
+    const token = window.MAPVIEWER_CONTEXT?.mapboxToken || '';
     if (!token) {
         console.error('Mapbox token not found');
         Utils.showNotification('error', 'Map configuration missing');
@@ -149,10 +149,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Delete Station (if admin access)
                 if (station && Config.hasProjectAdminAccess && Config.hasProjectAdminAccess(station.project)) {
+                    // Get appropriate label and icon based on station type
+                    const typeLabels = {
+                        'science': { label: 'Delete Science Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-5 h-5 grayscale opacity-70">` },
+                        'biology': { label: 'Delete Biology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-5 h-5 grayscale opacity-70">` },
+                        'artifact': { label: 'Delete Artifact Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-5 h-5 grayscale opacity-70">` },
+                        'bone': { label: 'Delete Bones Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-5 h-5 grayscale opacity-70">` }
+                    };
+                    const stationType = station.type || 'science';
+                    const typeInfo = typeLabels[stationType] || typeLabels['science'];
+                    
                     items.push({
-                        label: 'Delete Station',
+                        label: typeInfo.label,
                         subtitle: station.name,
-                        icon: '🗑️',
+                        icon: typeInfo.icon,
                         onClick: () => StationDetails.confirmDelete(station, 'subsurface')
                     });
                 }
@@ -239,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 items.push({
                     label: 'Open Details',
                     subtitle: marker?.description ? marker.description.substring(0, 30) + '...' : 'View/Edit lead',
-                    icon: `<img src="${window.SPELEO_CONTEXT.icons.explorationLead}" style="width:20px;height:20px;">`,
+                    icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-5 h-5">`,
                     onClick: () => ExplorationLeadUI.showDetailsModal(data.id)
                 });
 
@@ -273,9 +283,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!hasValidSnap) {
                     // Can't create station - too far from survey line or no project context
                     items.push({
-                        label: 'Create Station',
+                        label: 'Create Science Station',
                         subtitle: "Can't create a station at this location. Too far from the line",
-                        icon: '📌',
+                        icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-5 h-5 opacity-50">`,
                         disabled: true
                     });
                 } else {
@@ -285,15 +295,40 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const canCreate = nearestProjectId && Config.hasProjectWriteAccess(nearestProjectId);
 
                     if (canCreate) {
+                        // Create Science Station (default)
                         items.push({
-                            label: 'Create Station',
+                            label: 'Create Science Station',
                             subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                            icon: '📌',
-                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId)
+                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-5 h-5">`,
+                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'science')
+                        });
+
+                        // Create Biology Station
+                        items.push({
+                            label: 'Create Biology Station',
+                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
+                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-5 h-5">`,
+                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'biology')
+                        });
+
+                        // Create Artifact Station
+                        items.push({
+                            label: 'Create Artifact Station',
+                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
+                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-5 h-5">`,
+                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'artifact')
+                        });
+
+                        // Create Bones Station
+                        items.push({
+                            label: 'Create Bones Station',
+                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
+                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-5 h-5">`,
+                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'bone')
                         });
                     } else {
                         items.push({
-                            label: 'Create Station',
+                            label: 'Create Science Station',
                             subtitle: "No write access for this project",
                             icon: '🔒',
                             disabled: true
@@ -304,7 +339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     items.push({
                         label: 'Install Safety Cylinder',
                         subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                        icon: `<img src="${window.SPELEO_CONTEXT.icons.cylinderOrange}" style="width:20px;height:20px;">`,
+                        icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-5 h-5">`,
                         onClick: () => {
                             CylinderInstalls.showInstallModal(snapCheck.coordinates, lineName, nearestProjectId);
                         }
@@ -314,7 +349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         items.push({
                             label: 'Mark Exploration Lead',
                             subtitle: `On ${lineName} (${snapCheck.pointType} point)`,
-                            icon: `<img src="${window.SPELEO_CONTEXT.icons.explorationLead}" style="width:20px;height:20px;">`,
+                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-5 h-5">`,
                             onClick: () => {
                                 ExplorationLeadUI.showCreateModal(snapCheck.coordinates, lineName, nearestProjectId);
                             }
@@ -1028,7 +1063,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Delete marker confirmation modal
     function showDeleteMarkerModal(markerType, markerId, lineName) {
         const typeLabel = markerType === 'safety-cylinder' ? 'Safety Cylinder' : 'Exploration Lead';
-        const typeIcon = markerType === 'safety-cylinder' ? '🛢️' : '❗';
 
         const modalHtml = `
             <div id="delete-marker-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1088,14 +1122,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // Marker drag confirmation modal (shared for safety-cylinder and exploration-lead)
+    // Marker drag confirmation modal (shared for safety-cylinder, cylinder-install, and exploration-lead)
     function showMarkerDragConfirmModal(markerType, markerId, snapResult, originalCoords) {
-        const marker = markerType === 'safety-cylinder'
-            ? State.safetyCylinders.get(markerId)
-            : State.explorationLeads.get(markerId);
-        const typeLabel = markerType === 'safety-cylinder' ? 'Safety Cylinder' : 'Exploration Lead';
-        const typeIcon = markerType === 'safety-cylinder' ? '🛢️' : '❗';
-        const lineName = marker?.lineName || snapResult.lineName || 'Survey Line';
+        // Get type label and icon based on marker type
+        let typeLabel, typeIcon;
+        if (markerType === 'safety-cylinder' || markerType === 'cylinder-install') {
+            typeLabel = 'Cylinder';
+            typeIcon = `<img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-5 h-5 inline">`;
+        } else {
+            typeLabel = 'Exploration Lead';
+            typeIcon = `<img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-5 h-5 inline">`;
+        }
         const finalCoords = snapResult.coordinates;
 
         const modalHtml = `
@@ -1157,7 +1194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Setup handlers
         const revertPosition = () => {
-            if (markerType === 'safety-cylinder') {
+            if (markerType === 'safety-cylinder' || markerType === 'cylinder-install') {
                 Layers.updateSafetyCylinderPosition(markerId, originalCoords);
             } else {
                 Layers.updateExplorationLeadPosition(markerId, originalCoords);
@@ -1174,6 +1211,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     // Update to final snapped position
                     if (markerType === 'safety-cylinder') {
+                        // Temporary marker - just update locally
+                        Layers.updateSafetyCylinderPosition(markerId, finalCoords);
+                        Utils.showNotification('success', `${typeLabel} moved to ${snapResult.lineName}`);
+                    } else if (markerType === 'cylinder-install') {
+                        // Persistent install - update via API
+                        await API.updateCylinderInstall(markerId, {
+                            latitude: finalCoords[1],
+                            longitude: finalCoords[0]
+                        });
                         Layers.updateSafetyCylinderPosition(markerId, finalCoords);
                         Utils.showNotification('success', `${typeLabel} moved to ${snapResult.lineName}`);
                     } else {

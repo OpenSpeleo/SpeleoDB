@@ -141,7 +141,14 @@ export const Geometry = {
         
         // Check if it's a station layer
         if (feature.layer.id.startsWith('stations-')) {
-            const projectId = feature.layer.id.replace('stations-', '').replace('-circles', '').replace('-labels', '');
+            // Remove the 'stations-' prefix and any layer type suffix
+            const projectId = feature.layer.id
+                .replace('stations-', '')
+                .replace('-circles', '')
+                .replace('-labels', '')
+                .replace('-biology-icons', '')
+                .replace('-bone-icons', '')
+                .replace('-artifact-icons', '');
             return projectId;
         }
         

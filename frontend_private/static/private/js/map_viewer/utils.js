@@ -6,7 +6,7 @@ export const Utils = {
             .split('; ')
             .find(row => row.startsWith('csrftoken='))
             ?.split('=')[1];
-        return cookieValue || (window.SPELEO_CONTEXT ? window.SPELEO_CONTEXT.csrfToken : '');
+        return cookieValue || (window.MAPVIEWER_CONTEXT ? window.MAPVIEWER_CONTEXT.csrfToken : '');
     },
 
     formatDateString: function(dateStr) {
