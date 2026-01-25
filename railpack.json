@@ -31,6 +31,7 @@
   },
   "deploy": {
     "aptPackages": [
+      "ffmpeg",
       "git",
       "libpq5"
     ]
