@@ -8,7 +8,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import BinaryIO
 
-import imageio
+import ffmpeg
 from django.core.files.base import ContentFile
 from PIL import Image
 from PIL import ImageDraw
@@ -30,66 +30,61 @@ class VideoProcessor:
         return Path(filename).suffix.lower() in VideoProcessor.VIDEO_EXTENSIONS
 
     @staticmethod
-    def extract_thumbnail(
-        video_file: BinaryIO, time_offset: float = 1.0
-    ) -> ContentFile[bytes]:
-        """
-        Extract a thumbnail from video at specified time offset.
-
-        Uses imageio-ffmpeg for real frame extraction.
-
-        Args:
-            video_file: File-like object containing the video
-            time_offset: Time in seconds to extract frame
-
-        Returns:
-            ContentFile containing the thumbnail image in JPEG format
-        """
-        # Reset file pointer
-        video_file.seek(0)
-
-        # Read video and extract frame
-        # Note: imageio needs a filename or path, so we'll save to temp file
+    def extract_thumbnail(video_file: BinaryIO) -> ContentFile[bytes]:
         with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_file = Path(tmp_dir) / "temp_video.mp4"
-            with tmp_file.open(mode="wb") as f:
-                f.write(video_file.read())
+            tmp_dir_path = Path(tmp_dir)
+            input_path = tmp_dir_path / "input.mp4"
+            frame_path = tmp_dir_path / "frame.jpg"
 
-            # Get video reader
-            with imageio.get_reader(tmp_file.resolve()) as reader:
-                # Get video metadata
-                fps = reader.get_meta_data().get("fps", 30)  # type: ignore[attr-defined]
-                frame_number = int(time_offset * fps)
+            # Stream to disk (no full RAM load)
+            video_file.seek(0)
+            with input_path.open("wb") as f:
+                for chunk in iter(lambda: video_file.read(1024 * 1024), b""):
+                    f.write(chunk)
 
-                # Read the specific frame
-                frame = None
-                for i, current_frame in enumerate(reader):  # type: ignore[var-annotated,arg-type]
-                    frame = current_frame
-                    if i >= frame_number:
-                        break
+            try:
+                # Open the file with ffmpeg
+                stream = ffmpeg.input(str(input_path))  # type: ignore[no-untyped-call]
 
-                if frame is None:
-                    raise ValueError("No frames found in video")
+                # Accurate frame selection (safe for short / 1-frame videos)
+                stream = ffmpeg.filter(stream, "thumbnail")
 
-                # Convert numpy array to PIL Image
-                img = Image.fromarray(frame)
+                stream = ffmpeg.output(
+                    stream,
+                    str(frame_path),
+                    vframes=1,
+                    format="image2",
+                    vcodec="mjpeg",
+                    **{"q:v": 2},
+                )
+                stdout, stderr = ffmpeg.run(
+                    stream,
+                    capture_stdout=True,
+                    capture_stderr=True,
+                )
+            except ffmpeg.Error as e:
+                raise RuntimeError("Error extracting the thumbnail with ffmpeg") from e
 
-                # Resize to max 300x200 maintaining aspect ratio
-                img.thumbnail((300, 200), Image.Resampling.LANCZOS)
+            if not frame_path.exists():
+                raise FileNotFoundError(
+                    f"FFMPEG did not generate the thumbnail:\n"
+                    f"{stdout.decode()=}\n{stderr.decode()=}"
+                )
 
-                # Add play button overlay
-                img = VideoProcessor._add_play_button_overlay(img)
+            img = Image.open(frame_path)
+            img.thumbnail((300, 200), Image.Resampling.LANCZOS)
+            img = VideoProcessor._add_play_button_overlay(img)  # type: ignore[assignment]
 
-                # Save to buffer
-                buffer = BytesIO()
-                img.save(buffer, format="JPEG", quality=85)
-                buffer.seek(0)
+            buffer = BytesIO()
+            img.save(buffer, format="JPEG", quality=85)
+            buffer.seek(0)
 
-                logger.info("Successfully extracted video thumbnail using imageio")
-                return ContentFile(buffer.read())
+            return ContentFile(buffer.read())
 
     @staticmethod
-    def _add_play_button_overlay(img: Image.Image) -> Image.Image:
+    def _add_play_button_overlay(
+        img: Image.Image,
+    ) -> Image.Image:
         """Add a semi-transparent play button overlay to the image."""
         # Create a copy to avoid modifying the original
         img = img.copy()

@@ -67,7 +67,9 @@ class TestVideoProcessor:
         fake_video = BytesIO(b"not a video")
 
         # Should raise an exception
-        with pytest.raises(OSError, match="Could not load meta information"):
+        with pytest.raises(
+            RuntimeError, match="Error extracting the thumbnail with ffmpeg"
+        ):
             VideoProcessor.extract_thumbnail(fake_video)
 
     def test_add_play_button_overlay(self) -> None:

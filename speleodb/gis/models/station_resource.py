@@ -212,7 +212,7 @@ class StationResource(models.Model):
 
             except Exception as e:
                 raise ValidationError(
-                    "Error in the miniature generation process"
+                    f"Error in the miniature generation process: {e}"
                 ) from e
 
         super().save()
@@ -366,6 +366,7 @@ class StationResource(models.Model):
             return
 
         self.file.open("rb")
+
         # Extract thumbnail from video
         miniature_content = VideoProcessor.extract_thumbnail(self.file)
 
