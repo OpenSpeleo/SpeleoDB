@@ -133,7 +133,7 @@ local = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django-debug-toolbar==6.1.0",    # https://github.com/jazzband/django-debug-toolbar
+    "django-debug-toolbar==6.2.0",    # https://github.com/jazzband/django-debug-toolbar
     "django-extensions==4.1",         # https://github.com/django-extensions/django-extensions
     "django-schema-viewer==0.5.3",    # https://github.com/pikhovkin/django-schema-viewer
     "django-silk[formatting]==5.4.3", # https://github.com/jazzband/django-silk
