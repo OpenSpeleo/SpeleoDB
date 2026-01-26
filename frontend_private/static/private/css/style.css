@@ -3453,6 +3453,10 @@ span.flatpickr-weekday:is(.dark *){
   border-color: rgb(51 65 85 / var(--tw-border-opacity, 1));
 }
 
+.border-stone-500\/30{
+  border-color: rgb(120 113 108 / 0.3);
+}
+
 .border-transparent{
   border-color: transparent;
 }
@@ -3793,6 +3797,10 @@ span.flatpickr-weekday:is(.dark *){
 
 .bg-slate-900\/90{
   background-color: rgb(15 23 42 / 0.9);
+}
+
+.bg-stone-500\/20{
+  background-color: rgb(120 113 108 / 0.2);
 }
 
 .bg-violet-600{
@@ -4386,6 +4394,16 @@ span.flatpickr-weekday:is(.dark *){
 .text-slate-800{
   --tw-text-opacity: 1;
   color: rgb(30 41 59 / var(--tw-text-opacity, 1));
+}
+
+.text-stone-300{
+  --tw-text-opacity: 1;
+  color: rgb(214 211 209 / var(--tw-text-opacity, 1));
+}
+
+.text-stone-400{
+  --tw-text-opacity: 1;
+  color: rgb(168 162 158 / var(--tw-text-opacity, 1));
 }
 
 .text-white{

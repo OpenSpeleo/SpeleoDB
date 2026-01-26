@@ -99,6 +99,22 @@ class TestSubSurfaceStationTypeModel:
         assert station.type == SubSurfaceStationType.BIOLOGY
         assert station.type == "biology"
 
+    def test_create_geology_station(self, project: Project, user: User) -> None:
+        """Test creating a station with type 'geology'."""
+        station = SubSurfaceStation.objects.create(
+            project=project,
+            name="Geology Station 1",
+            description="Test geology station",
+            latitude="45.123456",
+            longitude="-123.456789",
+            created_by=user.email,
+            type=SubSurfaceStationType.GEOLOGY,
+        )
+
+        assert station.id is not None
+        assert station.type == SubSurfaceStationType.GEOLOGY
+        assert station.type == "geology"
+
     def test_type_field_is_required(self, project: Project, user: User) -> None:
         """Test that type field is required (no default in model)."""
         station = SubSurfaceStation(
@@ -159,6 +175,7 @@ class TestSubSurfaceStationTypeModel:
         assert len(SubSurfaceStationType.BIOLOGY) <= 10  # noqa: PLR2004
         assert len(SubSurfaceStationType.BONE) <= 10  # noqa: PLR2004
         assert len(SubSurfaceStationType.ARTIFACT) <= 10  # noqa: PLR2004
+        assert len(SubSurfaceStationType.GEOLOGY) <= 10  # noqa: PLR2004
 
     def test_all_station_type_choices_valid(self, project: Project, user: User) -> None:
         """Test that all enum choices create valid stations."""
@@ -203,6 +220,13 @@ class TestSubSurfaceStationTypeModel:
         )
         assert station.type == "biology"
 
+    def test_station_factory_with_geology_type(self, project: Project) -> None:
+        """Test that factory can create geology stations."""
+        station = SubSurfaceStationFactory.create(
+            project=project, type=SubSurfaceStationType.GEOLOGY
+        )
+        assert station.type == "geology"
+
     def test_type_field_can_be_queried(self, project: Project) -> None:
         """Test that stations can be filtered by type."""
         science_station = SubSurfaceStationFactory.create(
@@ -217,6 +241,9 @@ class TestSubSurfaceStationTypeModel:
         artifact_station = SubSurfaceStationFactory.create(
             project=project, type=SubSurfaceStationType.ARTIFACT, name="Artifact"
         )
+        geology_station = SubSurfaceStationFactory.create(
+            project=project, type=SubSurfaceStationType.GEOLOGY, name="Geology"
+        )
 
         # Query by type
         science_qs = SubSurfaceStation.objects.filter(
@@ -229,11 +256,15 @@ class TestSubSurfaceStationTypeModel:
         artifact_qs = SubSurfaceStation.objects.filter(
             type=SubSurfaceStationType.ARTIFACT
         )
+        geology_qs = SubSurfaceStation.objects.filter(
+            type=SubSurfaceStationType.GEOLOGY
+        )
 
         assert science_station in science_qs
         assert biology_station in biology_qs
         assert bone_station in bone_qs
         assert artifact_station in artifact_qs
+        assert geology_station in geology_qs
 
     def test_type_field_updates_modified_date(
         self, project: Project, user: User
@@ -265,6 +296,7 @@ class TestSubSurfaceStationTypeModel:
         assert SubSurfaceStationType.BIOLOGY == "biology"  # type: ignore[comparison-overlap]
         assert SubSurfaceStationType.BONE == "bone"  # type: ignore[comparison-overlap]
         assert SubSurfaceStationType.ARTIFACT == "artifact"  # type: ignore[comparison-overlap]
+        assert SubSurfaceStationType.GEOLOGY == "geology"  # type: ignore[comparison-overlap]
 
     def test_type_field_choices_enum_labels(self) -> None:
         """Test SubSurfaceStationType enum labels."""
@@ -273,3 +305,4 @@ class TestSubSurfaceStationTypeModel:
         assert choices["biology"] == "Biology"
         assert choices["bone"] == "Bone"
         assert choices["artifact"] == "Artifact"
+        assert choices["geology"] == "Geology"

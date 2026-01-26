@@ -75,6 +75,18 @@ class TestSubSurfaceStationSerializerType:
         serializer = SubSurfaceStationSerializer(data=data)
         assert serializer.is_valid(), serializer.errors
 
+    def test_serializer_accepts_geology_type_on_create(self) -> None:
+        """Test that serializer accepts 'geology' type during creation."""
+        data = {
+            "name": "Geology Station",
+            "description": "Test geology station",
+            "latitude": "45.1234567",
+            "longitude": "-123.4567890",
+            "type": "geology",
+        }
+        serializer = SubSurfaceStationSerializer(data=data)
+        assert serializer.is_valid(), serializer.errors
+
     def test_serializer_rejects_invalid_type_on_create(self) -> None:
         """Test that serializer rejects invalid type during creation."""
         data = {
@@ -212,6 +224,20 @@ class TestStationGeoJSONSerializerType:
         assert data["properties"]["type"] == "biology"
         assert data["properties"]["station_type"] == "subsurface"
 
+    def test_geojson_serializer_includes_type_for_geology(
+        self, project: Project
+    ) -> None:
+        """Test that GeoJSON serializer includes type for geology stations."""
+        station = SubSurfaceStationFactory.create(
+            project=project, type=SubSurfaceStationType.GEOLOGY
+        )
+
+        serializer = StationGeoJSONSerializer(instance=station)
+        data = serializer.data
+
+        assert data["properties"]["type"] == "geology"
+        assert data["properties"]["station_type"] == "subsurface"
+
     def test_geojson_serializer_geometry_correct(self, project: Project) -> None:
         """Test that GeoJSON serializer produces correct geometry."""
         station = SubSurfaceStationFactory.create(
@@ -247,14 +273,17 @@ class TestStationGeoJSONSerializerType:
         artifact = SubSurfaceStationFactory.create(
             project=project, type=SubSurfaceStationType.ARTIFACT, name="Artifact"
         )
+        geology = SubSurfaceStationFactory.create(
+            project=project, type=SubSurfaceStationType.GEOLOGY, name="Geology"
+        )
 
-        stations = [science, biology, bone, artifact]
+        stations = [science, biology, bone, artifact, geology]
         serializer = StationGeoJSONSerializer(instance=stations, many=True)
         data = serializer.data
 
         assert len(data) == len(stations)
         types = {item["properties"]["type"] for item in data}
-        assert types == {"science", "biology", "bone", "artifact"}
+        assert types == {"science", "biology", "bone", "artifact", "geology"}
 
 
 @pytest.mark.django_db

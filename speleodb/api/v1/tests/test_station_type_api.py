@@ -73,6 +73,7 @@ class TestStationTypeCreation(BaseAPIProjectTestCase):
             ("biology", SubSurfaceStationType.BIOLOGY),
             ("bone", SubSurfaceStationType.BONE),
             ("artifact", SubSurfaceStationType.ARTIFACT),
+            ("geology", SubSurfaceStationType.GEOLOGY),
         ]
     )
     def test_create_station_with_type(self, type_value: str, expected: str) -> None:
@@ -350,6 +351,11 @@ class TestStationTypeRetrieval(BaseAPIProjectTestCase):
             type=SubSurfaceStationType.ARTIFACT,
             name="Artifact Station",
         )
+        SubSurfaceStationFactory.create(
+            project=self.project,
+            type=SubSurfaceStationType.GEOLOGY,
+            name="Geology Station",
+        )
 
         response = self.client.get(
             reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
@@ -362,10 +368,10 @@ class TestStationTypeRetrieval(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK
         stations_data = response.json()["data"]
-        assert len(stations_data) == 4  # noqa: PLR2004
+        assert len(stations_data) == 5  # noqa: PLR2004
 
         types = {s["type"] for s in stations_data}
-        assert types == {"science", "biology", "bone", "artifact"}
+        assert types == {"science", "biology", "bone", "artifact", "geology"}
 
 
 @parameterized_class(
@@ -472,6 +478,8 @@ class TestStationTypeValidationEdgeCases(BaseAPIProjectTestCase):
             ("Bone",),  # Mixed case
             ("ARTIFACT",),  # Uppercase
             ("Artifact",),  # Mixed case
+            ("GEOLOGY",),  # Uppercase
+            ("Geology",),  # Mixed case
         ]
     )
     def test_type_case_sensitive(self, type_value: str) -> None:

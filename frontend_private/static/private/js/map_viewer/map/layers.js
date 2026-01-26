@@ -656,12 +656,13 @@ export const Layers = {
         const biologyLayerId = `stations-${projectId}-biology-icons`;
         const boneLayerId = `stations-${projectId}-bone-icons`;
         const artifactLayerId = `stations-${projectId}-artifact-icons`;
+        const geologyLayerId = `stations-${projectId}-geology-icons`;
         const labelLayerId = `stations-${projectId}-labels`;
 
         console.log(`📍 Adding ${data.features?.length || 0} stations to map for project ${projectId}`);
 
         // Remove existing layers and source if they exist (for refresh)
-        [labelLayerId, artifactLayerId, boneLayerId, biologyLayerId, circleLayerId].forEach(layerId => {
+        [labelLayerId, geologyLayerId, artifactLayerId, boneLayerId, biologyLayerId, circleLayerId].forEach(layerId => {
             if (map.getLayer(layerId)) {
                 map.removeLayer(layerId);
             }
@@ -775,6 +776,26 @@ export const Layers = {
             });
         }
 
+        // Add Geology Station Icon Layer (for type === 'geology')
+        if (map.hasImage('geology-station-icon')) {
+            map.addLayer({
+                id: geologyLayerId,
+                type: 'symbol',
+                source: sourceId,
+                filter: ['==', ['get', 'type'], 'geology'],
+                minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
+                layout: {
+                    'icon-image': 'geology-station-icon',
+                    'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 18, 1.0],
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true
+                },
+                paint: {
+                    'icon-opacity': 1
+                }
+            });
+        }
+
         // Add Label Layer for all station types
         map.addLayer({
             id: labelLayerId,
@@ -802,7 +823,7 @@ export const Layers = {
             State.allProjectLayers.set(String(projectId), []);
         }
         const projectLayers = State.allProjectLayers.get(String(projectId));
-        const newLayers = [circleLayerId, biologyLayerId, boneLayerId, artifactLayerId, labelLayerId];
+        const newLayers = [circleLayerId, biologyLayerId, boneLayerId, artifactLayerId, geologyLayerId, labelLayerId];
         newLayers.forEach(layerId => {
             if (!projectLayers.includes(layerId)) {
                 projectLayers.push(layerId);
@@ -1199,6 +1220,7 @@ export const Layers = {
         const stationBiologyIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-biology-icons'));
         const stationBoneIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-bone-icons'));
         const stationArtifactIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-artifact-icons'));
+        const stationGeologyIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-geology-icons'));
         const stationLabelLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-labels') && !id.includes('surface-'));
         const surfaceStationSymbolLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && !id.includes('-labels'));
         const surfaceStationLabelLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && id.includes('-labels'));
@@ -1256,6 +1278,15 @@ export const Layers = {
 
         // Subsurface station artifact icons
         stationArtifactIconLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might not exist
+            }
+        });
+
+        // Subsurface station geology icons
+        stationGeologyIconLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
             } catch (e) {
@@ -1366,6 +1397,12 @@ export const Layers = {
             if (!map.hasImage('artifact-station-icon')) {
                 const artifactImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.artifact);
                 map.addImage('artifact-station-icon', artifactImage);
+            }
+
+            // Load geology icon for geology stations
+            if (!map.hasImage('geology-station-icon')) {
+                const geologyImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.geology);
+                map.addImage('geology-station-icon', geologyImage);
             }
 
             markerImagesLoaded = true;

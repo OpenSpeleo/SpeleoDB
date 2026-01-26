@@ -27,27 +27,27 @@ import { API } from './api.js';
 function getUrlParams() {
     const params = new URLSearchParams(window.location.search);
     const gotoParam = params.get('goto');
-    
+
     // No goto param specified
     if (!gotoParam) {
         return { lat: null, long: null };
     }
-    
+
     const parts = gotoParam.split(',');
-    
+
     // Must have exactly 2 parts (LAT,LONG)
     if (parts.length !== 2) {
         return { lat: null, long: null };
     }
-    
+
     const lat = parseFloat(parts[0].trim());
     const long = parseFloat(parts[1].trim());
-    
+
     // Both must be valid floats
     if (isNaN(lat) || isNaN(long)) {
         return { lat: null, long: null };
     }
-    
+
     // Validate lat/long ranges
     if (lat < -90 || lat > 90 || long < -180 || long > 180) {
         return { lat: null, long: null };
@@ -154,11 +154,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         'science': { label: 'Delete Science Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-5 h-5 grayscale opacity-70">` },
                         'biology': { label: 'Delete Biology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-5 h-5 grayscale opacity-70">` },
                         'artifact': { label: 'Delete Artifact Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-5 h-5 grayscale opacity-70">` },
-                        'bone': { label: 'Delete Bones Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-5 h-5 grayscale opacity-70">` }
+                        'bone': { label: 'Delete Bones Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-5 h-5 grayscale opacity-70">` },
+                        'geology': { label: 'Delete Geology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-5 h-5 grayscale opacity-70">` }
                     };
                     const stationType = station.type || 'science';
                     const typeInfo = typeLabels[stationType] || typeLabels['science'];
-                    
+
                     items.push({
                         label: typeInfo.label,
                         subtitle: station.name,
@@ -279,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Need to be snapped to a survey line with a valid project ID
                 const hasValidSnap = snapCheck.snapped && snapCheck.projectId && Layers.isProjectVisible(snapCheck.projectId);
-                
+
                 if (!hasValidSnap) {
                     // Can't create station - too far from survey line or no project context
                     items.push({
@@ -295,12 +296,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const canCreate = nearestProjectId && Config.hasProjectWriteAccess(nearestProjectId);
 
                     if (canCreate) {
-                        // Create Science Station (default)
+
+                        // Create Artifact Station
                         items.push({
-                            label: 'Create Science Station',
+                            label: 'Create Artifact Station',
                             subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-5 h-5">`,
-                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'science')
+                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-5 h-5">`,
+                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'artifact')
                         });
 
                         // Create Biology Station
@@ -311,14 +313,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'biology')
                         });
 
-                        // Create Artifact Station
-                        items.push({
-                            label: 'Create Artifact Station',
-                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-5 h-5">`,
-                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'artifact')
-                        });
-
                         // Create Bones Station
                         items.push({
                             label: 'Create Bones Station',
@@ -326,6 +320,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                             icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-5 h-5">`,
                             onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'bone')
                         });
+
+                        // Create Geology Station
+                        items.push({
+                            label: 'Create Geology Station',
+                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
+                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-5 h-5">`,
+                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'geology')
+                        });
+
+                        // Create Science Station (default)
+                        items.push({
+                            label: 'Create Science Station',
+                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
+                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-5 h-5">`,
+                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'science')
+                        });
+
                     } else {
                         items.push({
                             label: 'Create Science Station',
@@ -828,12 +839,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.CylinderInstalls = CylinderInstalls; // Expose for cylinder install modals
     window.refreshCylinderInstallsLayer = () => Layers.refreshCylinderInstallsLayer();
     window.API = API; // Expose API for cylinder install and other modules
-    
+
     // Listen for cylinder refresh events from the cylinder module
     document.addEventListener('speleo:refresh-cylinder-installs', () => {
         Layers.refreshCylinderInstallsLayer();
     });
-    
+
     // Close station modal function (used by cylinder install modal and others)
     window.closeStationModal = () => {
         const modal = document.getElementById('station-modal');

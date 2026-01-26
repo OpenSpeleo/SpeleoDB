@@ -25,7 +25,8 @@ function getStationTypeInfo(subsurfaceType) {
         'science': { label: 'Science', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-4 h-4 align-middle inline">`, color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
         'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-4 h-4 align-middle inline">`, color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
         'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-4 h-4 align-middle inline">`, color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-4 h-4 align-middle inline">`, color: 'bg-slate-500/20 text-slate-200 border-slate-400/30' }
+        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-4 h-4 align-middle inline">`, color: 'bg-slate-500/20 text-slate-200 border-slate-400/30' },
+        'geology': { label: 'Geology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-4 h-4 align-middle inline">`, color: 'bg-stone-500/20 text-stone-300 border-stone-500/30' }
     };
     return typeLabels[subsurfaceType] || typeLabels['science'];
 }
@@ -148,10 +149,10 @@ export const StationDetails = {
 
     /**
      * Update tab visibility based on current station type.
-     * Biology, Bone, and Artifact stations should not show Experiments and Sensor Management tabs.
+     * Biology, Bone, Artifact, and Geology stations should not show Experiments and Sensor Management tabs.
      */
     updateTabVisibility() {
-        const hideTabs = currentSubsurfaceType === 'biology' || currentSubsurfaceType === 'bone' || currentSubsurfaceType === 'artifact';
+        const hideTabs = currentSubsurfaceType === 'biology' || currentSubsurfaceType === 'bone' || currentSubsurfaceType === 'artifact' || currentSubsurfaceType === 'geology';
         const tabsToHide = ['experiments', 'sensor-management'];
 
         // Update button tabs

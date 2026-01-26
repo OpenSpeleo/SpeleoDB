@@ -82,4 +82,5 @@ class SubSurfaceStationType(models.TextChoices):
     ARTIFACT = "artifact", "Artifact"
     BIOLOGY = "biology", "Biology"
     BONE = "bone", "Bone"
+    GEOLOGY = "geology", "Geology"
     SCIENCE = "science", "Science"

@@ -120,7 +120,8 @@ export const StationUI = {
                         'science': { label: 'Science', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
                         'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
                         'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-                        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-slate-500/20 text-slate-200 border-slate-400/30' }
+                        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-slate-500/20 text-slate-200 border-slate-400/30' },
+                        'geology': { label: 'Geology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-stone-500/20 text-stone-300 border-stone-500/30' }
                     };
                     const stationType = station.type || 'science';
                     const typeInfo = typeLabels[stationType] || typeLabels['science'];
@@ -231,7 +232,8 @@ export const StationUI = {
             'science': { label: 'Science Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-6 h-6">`, color: 'text-orange-400' },
             'biology': { label: 'Biology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-6 h-6">`, color: 'text-cyan-400' },
             'artifact': { label: 'Artifact Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-6 h-6">`, color: 'text-amber-400' },
-            'bone': { label: 'Bones Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-6 h-6">`, color: 'text-slate-200' }
+            'bone': { label: 'Bones Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-6 h-6">`, color: 'text-slate-200' },
+            'geology': { label: 'Geology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-6 h-6">`, color: 'text-stone-400' }
         };
         const typeInfo = typeLabels[stationType] || typeLabels['science'];
         
