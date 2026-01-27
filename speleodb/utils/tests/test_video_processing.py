@@ -85,4 +85,4 @@ class TestVideoProcessor:
         assert result.mode == "RGB"
 
         # Check that it's different from the original (overlay was added)
-        assert list(test_img.getdata()) != list(result.getdata())
+        assert list(test_img.get_flattened_data()) != list(result.get_flattened_data())

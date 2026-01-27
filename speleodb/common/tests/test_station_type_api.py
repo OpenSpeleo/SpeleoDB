@@ -76,7 +76,9 @@ class TestStationTypeCreation(BaseAPIProjectTestCase):
             ("geology", SubSurfaceStationType.GEOLOGY),
         ]
     )
-    def test_create_station_with_type(self, type_value: str, expected: str) -> None:
+    def test_create_station_with_type(
+        self, type_value: str, expected: SubSurfaceStationType
+    ) -> None:
         """Test creating stations with each valid type."""
         data = {
             "name": f"Station_{type_value}_{str(uuid.uuid4())[:8]}",
