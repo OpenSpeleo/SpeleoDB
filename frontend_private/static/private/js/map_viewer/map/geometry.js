@@ -139,17 +139,10 @@ export const Geometry = {
     findProjectForFeature: function(feature, map, allProjectLayers) {
         if (!feature.layer || !feature.layer.id) return null;
         
-        // Check if it's a station layer
+        // Check if it's a station layer - extract UUID from layer ID
         if (feature.layer.id.startsWith('stations-')) {
-            // Remove the 'stations-' prefix and any layer type suffix
-            const projectId = feature.layer.id
-                .replace('stations-', '')
-                .replace('-circles', '')
-                .replace('-labels', '')
-                .replace('-biology-icons', '')
-                .replace('-bone-icons', '')
-                .replace('-artifact-icons', '');
-            return projectId;
+            const uuidMatch = feature.layer.id.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+            return uuidMatch ? uuidMatch[0] : null;
         }
         
         // Check if it's a project layer

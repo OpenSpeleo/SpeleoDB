@@ -25,24 +25,32 @@ export const Interactions = {
         this.setupContextMenu(map);
     },
 
+    // Query padding in pixels for interactive feature detection
+    QUERY_PADDING: 8,
+
     setupHoverEffects: function (map) {
         map.on('mousemove', (e) => {
-            const features = map.queryRenderedFeatures(e.point);
+            // Use padded query box for better hit detection on icons
+            const padding = this.QUERY_PADDING;
+            const queryBox = [
+                [e.point.x - padding, e.point.y - padding],
+                [e.point.x + padding, e.point.y + padding]
+            ];
+            const features = map.queryRenderedFeatures(queryBox);
             let isInteractive = false;
 
             for (const feature of features) {
                 if (!feature.layer || !feature.layer.id) continue;
                 const layerId = feature.layer.id;
-                // Check for subsurface stations (circles, biology/bone/artifact icons), 
+                // Check for subsurface stations (circles, biology/bone/artifact/geology icons), 
                 // surface stations, Landmarks, and custom markers
                 if ((layerId.startsWith('stations-') && 
                      (layerId.endsWith('-circles') || layerId.endsWith('-biology-icons') ||
                       layerId.endsWith('-bone-icons') || layerId.endsWith('-artifact-icons') || 
-                      layerId.endsWith('-labels'))) ||
+                      layerId.endsWith('-geology-icons') || layerId.endsWith('-labels'))) ||
                     layerId.startsWith('surface-stations-') ||
                     layerId === 'landmarks-layer' ||
                     layerId === 'landmarks-labels' ||
-                    layerId === 'safety-cylinders-layer' ||
                     layerId === 'cylinder-installs-layer' ||
                     layerId === 'exploration-leads-layer') {
                     isInteractive = true;
@@ -58,14 +66,21 @@ export const Interactions = {
         map.on('click', (e) => {
             if (e.defaultPrevented) return;
 
-            const features = map.queryRenderedFeatures(e.point);
+            // Use padded query box for better hit detection on icons
+            const padding = this.QUERY_PADDING;
+            const queryBox = [
+                [e.point.x - padding, e.point.y - padding],
+                [e.point.x + padding, e.point.y + padding]
+            ];
+            const features = map.queryRenderedFeatures(queryBox);
 
-            // Check for Subsurface Stations (circles, biology/bone/artifact icons)
+            // Check for Subsurface Stations (circles, biology/bone/artifact/geology icons)
             const stationFeature = features.find(f =>
                 f.layer && f.layer.id &&
                 f.layer.id.startsWith('stations-') &&
                 (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') || 
-                 f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons')) &&
+                 f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons') ||
+                 f.layer.id.endsWith('-geology-icons')) &&
                 !f.layer.id.startsWith('surface-')
             );
 
@@ -118,15 +133,15 @@ export const Interactions = {
                 return;
             }
 
-            // Check for Safety Cylinders (both temporary markers and persistent installs)
-            const safetyCylinderFeature = features.find(f =>
-                f.layer && (f.layer.id === 'safety-cylinders-layer' || f.layer.id === 'cylinder-installs-layer')
+            // Check for Cylinder Installs (persistent from database)
+            const cylinderInstallFeature = features.find(f =>
+                f.layer && f.layer.id === 'cylinder-installs-layer'
             );
 
-            if (safetyCylinderFeature) {
-                const cylinderId = safetyCylinderFeature.id;
-                if (this.handlers.onSafetyCylinderClick) {
-                    this.handlers.onSafetyCylinderClick(cylinderId);
+            if (cylinderInstallFeature) {
+                const cylinderId = cylinderInstallFeature.id;
+                if (this.handlers.onCylinderInstallClick) {
+                    this.handlers.onCylinderInstallClick(cylinderId);
                 }
                 return;
             }
@@ -144,7 +159,7 @@ export const Interactions = {
         let isDragging = false;
         let hasMoved = false;
         let draggedFeatureId = null;
-        let draggedType = null; // 'station', 'landmark', 'safety-cylinder', 'exploration-lead'
+        let draggedType = null; // 'station', 'landmark', 'cylinder-install', 'exploration-lead'
         let originalCoords = null;
         let mouseDownPoint = null;
         let currentSnapResult = null;
@@ -154,19 +169,26 @@ export const Interactions = {
         const self = this;
 
         // Types that snap to survey line endpoints (like stations)
-        const SNAPPABLE_TYPES = ['station', 'safety-cylinder', 'cylinder-install', 'exploration-lead'];
+        const SNAPPABLE_TYPES = ['station', 'cylinder-install', 'exploration-lead'];
 
         map.on('mousedown', (e) => {
             if (e.originalEvent.button !== 0) return; // Only left click
 
-            const features = map.queryRenderedFeatures(e.point);
+            // Use padded query box for better hit detection on icons (same as click/hover)
+            const padding = self.QUERY_PADDING;
+            const queryBox = [
+                [e.point.x - padding, e.point.y - padding],
+                [e.point.x + padding, e.point.y + padding]
+            ];
+            const features = map.queryRenderedFeatures(queryBox);
             if (!features.length) return;
 
-            // Check Station (circles, biology/bone/artifact icons)
+            // Check Station (circles, biology/bone/artifact/geology icons)
             const stationFeature = features.find(f =>
                 f.layer && f.layer.id && f.layer.id.startsWith('stations-') && 
                 (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') || 
-                 f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons'))
+                 f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons') ||
+                 f.layer.id.endsWith('-geology-icons'))
             );
 
             if (stationFeature) {
@@ -189,26 +211,6 @@ export const Interactions = {
                 }
             }
 
-            // Check Safety Cylinder (temporary markers)
-            const safetyCylinderFeature = features.find(f =>
-                f.layer && f.layer.id === 'safety-cylinders-layer'
-            );
-
-            if (safetyCylinderFeature) {
-                isPotentialDrag = true;
-                hasMoved = false;
-                isDragging = false;
-                draggedFeatureId = safetyCylinderFeature.id;
-                draggedType = 'safety-cylinder';
-                originalCoords = safetyCylinderFeature.geometry.coordinates.slice();
-                mouseDownPoint = e.point;
-                draggedProjectId = null;
-                currentSnapResult = null;
-
-                map.dragPan.disable();
-                return;
-            }
-            
             // Check Cylinder Install (persistent from database)
             const cylinderInstallFeature = features.find(f =>
                 f.layer && f.layer.id === 'cylinder-installs-layer'
@@ -294,7 +296,7 @@ export const Interactions = {
 
             const coords = [e.lngLat.lng, e.lngLat.lat];
 
-            // Handle snappable types (station, safety-cylinder, exploration-lead)
+            // Handle snappable types (station, cylinder-install, exploration-lead)
             if (SNAPPABLE_TYPES.includes(draggedType)) {
                 // Check for snap
                 const snapResult = Geometry.findMagneticSnapPoint(coords, null);
@@ -308,15 +310,15 @@ export const Interactions = {
                     Layers.updateStationPosition(draggedProjectId, draggedFeatureId, displayCoords);
                     const newColor = snapResult.snapped ? '#10b981' : '#f59e0b';
                     Layers.updateStationColor(draggedProjectId, draggedFeatureId, newColor);
-                } else if (draggedType === 'safety-cylinder' || draggedType === 'cylinder-install' || draggedType === 'exploration-lead') {
+                } else if (draggedType === 'cylinder-install' || draggedType === 'exploration-lead') {
                     // Update position
-                    if (draggedType === 'safety-cylinder' || draggedType === 'cylinder-install') {
-                        Layers.updateSafetyCylinderPosition(draggedFeatureId, displayCoords);
+                    if (draggedType === 'cylinder-install') {
+                        Layers.updateCylinderInstallPosition(draggedFeatureId, displayCoords);
                     } else {
                         Layers.updateExplorationLeadPosition(draggedFeatureId, displayCoords);
                     }
                     // Visual feedback: show colored highlight circle (green=snapped, amber=not)
-                    Layers.setMarkerDragFeedback(draggedType === 'cylinder-install' ? 'safety-cylinder' : draggedType, null, snapResult.snapped, displayCoords);
+                    Layers.setMarkerDragFeedback(draggedType, null, snapResult.snapped, displayCoords);
                 }
 
                 // Show snap indicator
@@ -360,9 +362,9 @@ export const Interactions = {
                             originalCoords
                         );
                     }
-                } else if (draggedType === 'safety-cylinder' || draggedType === 'cylinder-install' || draggedType === 'exploration-lead') {
+                } else if (draggedType === 'cylinder-install' || draggedType === 'exploration-lead') {
                     // Reset visual feedback
-                    Layers.resetMarkerDragFeedback(draggedType === 'cylinder-install' ? 'safety-cylinder' : draggedType);
+                    Layers.resetMarkerDragFeedback(draggedType);
 
                     // Call handler with snap result (same pattern as stations)
                     if (self.handlers.onMarkerDragEnd) {
@@ -401,14 +403,21 @@ export const Interactions = {
 
     setupContextMenu: function (map) {
         map.on('contextmenu', (e) => {
-            const features = map.queryRenderedFeatures(e.point);
+            // Use padded query box for better hit detection on icons (same as hover/click)
+            const padding = this.QUERY_PADDING;
+            const queryBox = [
+                [e.point.x - padding, e.point.y - padding],
+                [e.point.x + padding, e.point.y + padding]
+            ];
+            const features = map.queryRenderedFeatures(queryBox);
 
-            // Check Subsurface Station (circles, bone icons, artifact icons)
+            // Check Subsurface Station (circles, biology/bone/artifact/geology icons)
             const stationFeature = features.find(f =>
                 f.layer && f.layer.id &&
                 f.layer.id.startsWith('stations-') &&
                 (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') || 
-                 f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons')) &&
+                 f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons') ||
+                 f.layer.id.endsWith('-geology-icons')) &&
                 !f.layer.id.startsWith('surface-')
             );
 
@@ -456,16 +465,16 @@ export const Interactions = {
                 return;
             }
 
-            // Check Safety Cylinder
-            const safetyCylinderFeature = features.find(f =>
-                f.layer && f.layer.id === 'safety-cylinders-layer'
+            // Check Cylinder Install (persistent from database)
+            const cylinderInstallFeature = features.find(f =>
+                f.layer && f.layer.id === 'cylinder-installs-layer'
             );
 
-            if (safetyCylinderFeature) {
+            if (cylinderInstallFeature) {
                 if (this.handlers.onContextMenu) {
-                    this.handlers.onContextMenu(e, 'safety-cylinder', {
-                        id: safetyCylinderFeature.id,
-                        feature: safetyCylinderFeature
+                    this.handlers.onContextMenu(e, 'cylinder-install', {
+                        id: cylinderInstallFeature.id,
+                        feature: cylinderInstallFeature
                     });
                 }
                 return;

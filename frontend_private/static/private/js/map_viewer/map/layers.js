@@ -26,11 +26,12 @@ const ZOOM_LEVELS = {
     SUBSURFACE_STATION_SYMBOL: 12,
     SUBSURFACE_STATION_LABEL: 16,
 
-    // Safety Cylinders
-    SAFETY_CYLINDER_SYMBOL: 14,
+    // Cylinder Installs
+    CYLINDER_INSTALL_SYMBOL: 12,
+    CYLINDER_INSTALL_LABEL: 16,
 
     // Exploration Leads
-    EXPLORATION_LEAD_SYMBOL: 14,
+    EXPLORATION_LEAD_SYMBOL: 12,
 
     // GPS Tracks
     GPS_TRACK_LINE: 8,
@@ -1225,7 +1226,7 @@ export const Layers = {
         const surfaceStationSymbolLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && !id.includes('-labels'));
         const surfaceStationLabelLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && id.includes('-labels'));
         const landmarkLayers = allLayerIds.filter(id => id.startsWith('landmarks-'));
-        const safetyCylinderLayers = allLayerIds.filter(id => id.startsWith('safety-cylinders'));
+        const cylinderInstallLayers = allLayerIds.filter(id => id.startsWith('cylinder-installs'));
         const explorationLeadLayers = allLayerIds.filter(id => id.startsWith('exploration-leads'));
 
         // Move layers to top in order (later moves go on top)
@@ -1321,8 +1322,8 @@ export const Layers = {
             }
         });
 
-        // Move safety cylinder and exploration lead layers
-        safetyCylinderLayers.forEach(layerId => {
+        // Move cylinder install and exploration lead layers
+        cylinderInstallLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
             } catch (e) {
@@ -1369,10 +1370,10 @@ export const Layers = {
         };
 
         try {
-            // Load pre-colored orange cylinder SVG for safety cylinder
-            if (!map.hasImage('safety-cylinder-icon')) {
+            // Load pre-colored orange cylinder SVG for cylinder installs
+            if (!map.hasImage('cylinder-icon')) {
                 const cylinderImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.cylinderOrange);
-                map.addImage('safety-cylinder-icon', cylinderImage);
+                map.addImage('cylinder-icon', cylinderImage);
             }
 
             // Load exploration lead SVG
@@ -1413,28 +1414,6 @@ export const Layers = {
     },
 
     /**
-     * Add a safety cylinder marker to the map
-     */
-    addSafetyCylinderMarker: function (id, coordinates, lineName = 'Survey Line') {
-        const map = State.map;
-        if (!map) return;
-
-        // Store in state
-        State.safetyCylinders.set(id, {
-            id,
-            coordinates,
-            lineName,
-            createdAt: new Date().toISOString()
-        });
-
-        // Refresh the safety cylinders layer
-        this.refreshSafetyCylindersLayer();
-        this.reorderLayers();
-
-        console.log(`Safety cylinder added: ${id} at ${coordinates}`);
-    },
-
-    /**
      * Add an exploration lead marker to the map
      */
     addExplorationLeadMarker: function (id, coordinates, lineName = 'Survey Line', description = '', projectId = null) {
@@ -1456,90 +1435,6 @@ export const Layers = {
         this.reorderLayers();
 
         console.log(`⚠️ Exploration lead added: ${id} at ${coordinates}`);
-    },
-
-    /**
-     * Refresh the safety cylinders layer with current state
-     */
-    refreshSafetyCylindersLayer: function () {
-        const map = State.map;
-        if (!map) return;
-
-        const sourceId = 'safety-cylinders-source';
-        const layerId = 'safety-cylinders-layer';
-
-        // Build GeoJSON from state
-        // Mapbox requires promoteId for string IDs - include id in properties
-        const features = Array.from(State.safetyCylinders.values()).map(marker => ({
-            type: 'Feature',
-            id: marker.id,
-            geometry: {
-                type: 'Point',
-                coordinates: marker.coordinates
-            },
-            properties: {
-                id: marker.id,
-                lineName: marker.lineName
-            }
-        }));
-
-        const geojson = {
-            type: 'FeatureCollection',
-            features
-        };
-
-        // Update or create source
-        if (map.getSource(sourceId)) {
-            map.getSource(sourceId).setData(geojson);
-        } else {
-            map.addSource(sourceId, {
-                type: 'geojson',
-                data: geojson,
-                promoteId: 'id'
-            });
-
-            // Add layer using the cylinder icon image
-            if (map.hasImage('safety-cylinder-icon')) {
-                map.addLayer({
-                    id: layerId,
-                    type: 'symbol',
-                    source: sourceId,
-                    minzoom: ZOOM_LEVELS.SAFETY_CYLINDER_SYMBOL,
-                    layout: {
-                        'icon-image': 'safety-cylinder-icon',
-                        'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.8, 18, 1.2],
-                        'icon-allow-overlap': true,
-                        'icon-ignore-placement': true
-                    },
-                    paint: {
-                        'icon-opacity': 1
-                    }
-                });
-            } else {
-                // Fallback: use a text symbol if image not loaded
-                // Note: Using ● (U+25CF) instead of emoji - Mapbox doesn't support glyphs > 65535
-                map.addLayer({
-                    id: layerId,
-                    type: 'symbol',
-                    source: sourceId,
-                    minzoom: ZOOM_LEVELS.SAFETY_CYLINDER_SYMBOL,
-                    layout: {
-                        'text-field': '●',
-                        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-                        'text-size': ['interpolate', ['linear'], ['zoom'], 14, 18, 18, 26],
-                        'text-allow-overlap': true,
-                        'text-ignore-placement': true
-                    },
-                    paint: {
-                        'text-color': '#FF6B00',
-                        'text-halo-color': '#ffffff',
-                        'text-halo-width': 2,
-                        'text-opacity': 1,
-                        'icon-opacity': 1
-                    }
-                });
-            }
-        }
     },
 
     /**
@@ -1619,15 +1514,6 @@ export const Layers = {
     },
 
     /**
-     * Remove a safety cylinder marker
-     */
-    removeSafetyCylinderMarker: function (id) {
-        State.safetyCylinders.delete(id);
-        this.refreshSafetyCylindersLayer();
-        console.log(`Safety cylinder removed: ${id}`);
-    },
-
-    /**
      * Remove an exploration lead marker
      */
     removeExplorationLeadMarker: function (id) {
@@ -1637,19 +1523,9 @@ export const Layers = {
     },
 
     /**
-     * Update safety cylinder position (for drag)
-     * Handles both temporary markers (safety-cylinders-layer) and persistent installs (cylinder-installs-layer)
+     * Update cylinder install position (for drag)
      */
-    updateSafetyCylinderPosition: function (markerId, newCoords) {
-        // Try temporary markers first
-        const marker = State.safetyCylinders.get(markerId);
-        if (marker) {
-            marker.coordinates = newCoords;
-            this.refreshSafetyCylindersLayer();
-            return;
-        }
-        
-        // Try cylinder installs (persistent)
+    updateCylinderInstallPosition: function (markerId, newCoords) {
         const map = State.map;
         if (!map) return;
         
@@ -1678,7 +1554,7 @@ export const Layers = {
 
     /**
      * Show marker drag highlight - adds a colored circle behind the marker
-     * @param {string} markerType - 'safety-cylinder' or 'exploration-lead'
+     * @param {string} markerType - 'cylinder-install' or 'exploration-lead'
      * @param {Array} coordinates - [lng, lat]
      * @param {boolean} isSnapped - whether currently snapped (green=snapped, amber=not)
      */
@@ -1809,10 +1685,21 @@ export const Layers = {
             return;
         }
 
-        // Ensure id property is set on each feature for Mapbox promoteId
+        // Clear and populate the cylinder installs cache
+        State.cylinderInstalls.clear();
         geojsonData.features.forEach(feature => {
+            // Ensure id property is set on each feature for Mapbox promoteId
             if (feature.id && !feature.properties.id) {
                 feature.properties.id = feature.id;
+            }
+            // Cache cylinder install data by ID
+            const id = feature.id || feature.properties.id;
+            if (id) {
+                State.cylinderInstalls.set(id, {
+                    id,
+                    coordinates: feature.geometry.coordinates,
+                    ...feature.properties
+                });
             }
         });
 
@@ -1823,14 +1710,14 @@ export const Layers = {
         });
 
         // Use cylinder icon if loaded, otherwise fallback
-        if (map.hasImage('safety-cylinder-icon')) {
+        if (map.hasImage('cylinder-icon')) {
             map.addLayer({
                 id: layerId,
                 type: 'symbol',
                 source: sourceId,
-                minzoom: ZOOM_LEVELS.SAFETY_CYLINDER_SYMBOL,
+                minzoom: ZOOM_LEVELS.CYLINDER_INSTALL_SYMBOL,
                 layout: {
-                    'icon-image': 'safety-cylinder-icon',
+                    'icon-image': 'cylinder-icon',
                     'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.8, 18, 1.2],
                     'icon-allow-overlap': true,
                     'icon-ignore-placement': true
@@ -1846,7 +1733,7 @@ export const Layers = {
                 id: layerId,
                 type: 'symbol',
                 source: sourceId,
-                minzoom: ZOOM_LEVELS.SAFETY_CYLINDER_SYMBOL,
+                minzoom: ZOOM_LEVELS.CYLINDER_INSTALL_SYMBOL,
                 layout: {
                     'text-field': '●',
                     'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
@@ -1861,6 +1748,43 @@ export const Layers = {
                 }
             });
         }
+
+        // Add label layer for cylinder installs
+        const labelLayerId = 'cylinder-installs-labels';
+        if (map.getLayer(labelLayerId)) {
+            map.removeLayer(labelLayerId);
+        }
+        
+        map.addLayer({
+            id: labelLayerId,
+            type: 'symbol',
+            source: sourceId,
+            minzoom: ZOOM_LEVELS.CYLINDER_INSTALL_LABEL,
+            layout: {
+                'text-field': [
+                    'concat',
+                    ['get', 'install_date'],
+                    ' @ ',
+                    ['to-string', ['get', 'pressure']],
+                    ' ',
+                    ['case',
+                        ['==', ['get', 'pressure_unit_system'], 'imperial'], 'PSI',
+                        'BAR'
+                    ]
+                ],
+                'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+                'text-size': 11,
+                'text-offset': [0, 1.5],
+                'text-anchor': 'top',
+                'text-allow-overlap': false,
+                'text-ignore-placement': false
+            },
+            paint: {
+                'text-color': '#000000',
+                'text-halo-color': '#ffffff',
+                'text-halo-width': 1.5
+            }
+        });
 
         // Reorder to ensure proper z-ordering
         this.reorderLayers();

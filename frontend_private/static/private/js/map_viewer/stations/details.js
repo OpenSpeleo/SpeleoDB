@@ -109,14 +109,12 @@ export const StationDetails = {
 
         if (stationId) {
             console.log(`📋 Loading existing ${stationType} station: ${stationId}`);
-            this.switchTab('details');
-            await this.loadStationDetails(stationId, stationType === 'surface' ? currentNetworkId : currentProjectId, stationType);
-
-     
         } else {
             console.log(`📋 Showing empty station details`);
-            this.switchTab('details');
         }
+        
+        // switchTab('details') will call loadStationDetails if stationId is set
+        this.switchTab('details');
     },
 
     initializeTabs() {

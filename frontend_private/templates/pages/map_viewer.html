@@ -224,7 +224,7 @@
         <!-- Modal Header -->
         <div class="flex items-center justify-between p-4 border-b border-slate-600 flex-shrink-0">
             <h2 id="cylinder-modal-title" class="text-xl font-semibold text-white flex items-center gap-3">
-                <img src="{% static 'private/media/cylinder-orange-icon.png' %}" class="w-6 h-6">
+                <img id="cylinder-modal-icon" class="w-6 h-6" crossorigin="anonymous">
                 Safety Cylinder
             </h2>
             <button id="cylinder-modal-close" class="text-slate-400 hover:text-white transition-colors">
@@ -273,8 +273,14 @@
         }
     };
     
-    // Initialize Data Import module
+    // Initialize Data Import module and set icon sources
     document.addEventListener('DOMContentLoaded', function() {
+        // Set icon sources from MAPVIEWER_CONTEXT (ensures single source of truth)
+        const cylinderIcon = document.getElementById('cylinder-modal-icon');
+        if (cylinderIcon) {
+            cylinderIcon.src = window.MAPVIEWER_CONTEXT.icons.cylinderOrange;
+        }
+        
         DataImport.init("{{ csrf_token }}");
     });
 </script>

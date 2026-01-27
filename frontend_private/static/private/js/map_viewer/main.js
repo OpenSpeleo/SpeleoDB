@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         onLandmarkClick: (landmarkId) => LandmarkUI.openDetailsModal(landmarkId),
         onExplorationLeadClick: (leadId) => ExplorationLeadUI.showDetailsModal(leadId),
-        onSafetyCylinderClick: (cylinderId) => {
+        onCylinderInstallClick: (cylinderId) => {
             // Open cylinder details modal for installed cylinders
             CylinderInstalls.showCylinderDetails(cylinderId);
         },
@@ -133,268 +133,193 @@ document.addEventListener('DOMContentLoaded', async () => {
         onContextMenu: (event, type, data) => {
             const items = [];
 
-            if (type === 'station') {
-                // Get subsurface station data for coordinates
-                const station = State.allStations.get(data.id);
-                const stationLat = station?.latitude?.toFixed(7) || 'N/A';
-                const stationLng = station?.longitude?.toFixed(7) || 'N/A';
-
-                // Copy GPS Coordinates
-                items.push({
-                    label: 'Copy GPS Coordinates',
-                    subtitle: `${stationLat}, ${stationLng}`,
-                    icon: '📋',
-                    onClick: () => Utils.copyToClipboard(`${stationLat}, ${stationLng}`)
-                });
-
-                // Delete Station (if admin access)
-                if (station && Config.hasProjectAdminAccess && Config.hasProjectAdminAccess(station.project)) {
-                    // Get appropriate label and icon based on station type
-                    const typeLabels = {
-                        'science': { label: 'Delete Science Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-5 h-5 grayscale opacity-70">` },
-                        'biology': { label: 'Delete Biology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-5 h-5 grayscale opacity-70">` },
-                        'artifact': { label: 'Delete Artifact Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-5 h-5 grayscale opacity-70">` },
-                        'bone': { label: 'Delete Bones Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-5 h-5 grayscale opacity-70">` },
-                        'geology': { label: 'Delete Geology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-5 h-5 grayscale opacity-70">` }
-                    };
-                    const stationType = station.type || 'science';
-                    const typeInfo = typeLabels[stationType] || typeLabels['science'];
-
-                    items.push({
-                        label: typeInfo.label,
-                        subtitle: station.name,
-                        icon: typeInfo.icon,
-                        onClick: () => StationDetails.confirmDelete(station, 'subsurface')
-                    });
-                }
-
-            } else if (type === 'surface-station') {
-                // Get surface station data for coordinates
-                const station = State.allSurfaceStations.get(data.id);
-                const stationLat = station?.latitude?.toFixed(7) || 'N/A';
-                const stationLng = station?.longitude?.toFixed(7) || 'N/A';
-
-                // Copy GPS Coordinates
-                items.push({
-                    label: 'Copy GPS Coordinates',
-                    subtitle: `${stationLat}, ${stationLng}`,
-                    icon: '📋',
-                    onClick: () => Utils.copyToClipboard(`${stationLat}, ${stationLng}`)
-                });
-
-                // Delete Surface Station (if network admin access)
-                if (station && Config.hasNetworkAdminAccess(station.network)) {
-                    items.push({
-                        label: 'Delete Surface Station',
-                        subtitle: station.name,
-                        icon: '🗑️',
-                        onClick: () => StationDetails.confirmDelete(station, 'surface')
-                    });
-                }
-
-            } else if (type === 'landmark') {
-                // Get Landmark data
-                const landmark = State.allLandmarks.get(data.id);
-                const landmarkLat = landmark?.latitude?.toFixed(7) || data.feature?.properties?.latitude?.toFixed(7) || 'N/A';
-                const landmarkLong = landmark?.longitude?.toFixed(7) || data.feature?.properties?.longitude?.toFixed(7) || 'N/A';
-                const landmarkName = landmark?.name || data.feature?.properties?.name || 'Landmark';
-                // Copy GPS Coordinates
-                items.push({
-                    label: 'Copy GPS Coordinates',
-                    subtitle: `${landmarkLat}, ${landmarkLong}`,
-                    icon: '📋',
-                    onClick: () => Utils.copyToClipboard(`${landmarkLat}, ${landmarkLong}`)
-                });
-
-                // Delete Landmark (any authenticated user can manage their Landmarks)
-                items.push({
-                    label: 'Delete Landmark',
-                    subtitle: landmarkName,
-                    icon: '🗑️',
-                    onClick: () => LandmarkUI.showDeleteConfirmModal(landmark || data.feature.properties)
-                });
-
-            } else if (type === 'safety-cylinder') {
-                // Get Safety Cylinder data
-                const marker = State.safetyCylinders.get(data.id);
-                const coords = marker?.coordinates || data.feature?.geometry?.coordinates;
-                const markerLat = coords?.[1]?.toFixed(7) || 'N/A';
-                const markerLng = coords?.[0]?.toFixed(7) || 'N/A';
-                const lineName = marker?.lineName || 'Survey Line';
-
-                // Copy GPS Coordinates
-                items.push({
-                    label: 'Copy GPS Coordinates',
-                    subtitle: `${markerLat}, ${markerLng}`,
-                    icon: '📋',
-                    onClick: () => Utils.copyToClipboard(`${markerLat}, ${markerLng}`)
-                });
-
-                // Delete Safety Cylinder
-                items.push({
-                    label: 'Delete Safety Cylinder',
-                    subtitle: `On ${lineName}`,
-                    icon: '🗑️',
-                    onClick: () => showDeleteMarkerModal('safety-cylinder', data.id, lineName)
-                });
-
-            } else if (type === 'exploration-lead') {
-                // Get Exploration Lead data
-                const marker = State.explorationLeads.get(data.id);
-                const coords = marker?.coordinates || data.feature?.geometry?.coordinates;
-                const markerLat = coords?.[1]?.toFixed(7) || 'N/A';
-                const markerLng = coords?.[0]?.toFixed(7) || 'N/A';
-                const lineName = marker?.lineName || 'Survey Line';
-
-                // Open Details
-                items.push({
-                    label: 'Open Details',
-                    subtitle: marker?.description ? marker.description.substring(0, 30) + '...' : 'View/Edit lead',
-                    icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-5 h-5">`,
-                    onClick: () => ExplorationLeadUI.showDetailsModal(data.id)
-                });
-
-                // Copy GPS Coordinates
-                items.push({
-                    label: 'Copy GPS Coordinates',
-                    subtitle: `${markerLat}, ${markerLng}`,
-                    icon: '📋',
-                    onClick: () => Utils.copyToClipboard(`${markerLat}, ${markerLng}`)
-                });
-
-                // Delete Exploration Lead
-                items.push({
-                    label: 'Delete Exploration Lead',
-                    subtitle: `On ${lineName}`,
-                    icon: '🗑️',
-                    onClick: () => ExplorationLeadUI.showDeleteConfirmModal(data.id, lineName)
-                });
-
+            // Use feature coordinates when right-clicking on a feature, otherwise use mouse position
+            let latitude, longitude, coords;
+            if (data.feature && data.feature.geometry && data.feature.geometry.coordinates) {
+                // Feature coordinates are [longitude, latitude]
+                const featureCoords = data.feature.geometry.coordinates;
+                longitude = parseFloat(featureCoords[0]).toFixed(7);
+                latitude = parseFloat(featureCoords[1]).toFixed(7);
+                coords = [longitude, latitude];
             } else {
-                // Right-click on empty map area
-                const coords = data.coordinates;
-                const lngLat = { lat: coords[1], lng: coords[0] };
-
-                // Check if we can create a station here (need snap point within radius)
-                const snapCheck = Geometry.findNearestSnapPointWithinRadius(coords, Geometry.getSnapRadius());
-
-                // Need to be snapped to a survey line with a valid project ID
-                const hasValidSnap = snapCheck.snapped && snapCheck.projectId && Layers.isProjectVisible(snapCheck.projectId);
-
-                if (!hasValidSnap) {
-                    // Can't create station - too far from survey line or no project context
-                    items.push({
-                        label: 'Create Science Station',
-                        subtitle: "Can't create a station at this location. Too far from the line",
-                        icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-5 h-5 opacity-50">`,
-                        disabled: true
-                    });
-                } else {
-                    // Near a survey line - show all line-related options
-                    const nearestProjectId = snapCheck.projectId;
-                    const lineName = snapCheck.lineName || 'Survey Line';
-                    const canCreate = nearestProjectId && Config.hasProjectWriteAccess(nearestProjectId);
-
-                    if (canCreate) {
-
-                        // Create Artifact Station
-                        items.push({
-                            label: 'Create Artifact Station',
-                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-5 h-5">`,
-                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'artifact')
-                        });
-
-                        // Create Biology Station
-                        items.push({
-                            label: 'Create Biology Station',
-                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-5 h-5">`,
-                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'biology')
-                        });
-
-                        // Create Bones Station
-                        items.push({
-                            label: 'Create Bones Station',
-                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-5 h-5">`,
-                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'bone')
-                        });
-
-                        // Create Geology Station
-                        items.push({
-                            label: 'Create Geology Station',
-                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-5 h-5">`,
-                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'geology')
-                        });
-
-                        // Create Science Station (default)
-                        items.push({
-                            label: 'Create Science Station',
-                            subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-5 h-5">`,
-                            onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, 'science')
-                        });
-
-                    } else {
-                        items.push({
-                            label: 'Create Science Station',
-                            subtitle: "No write access for this project",
-                            icon: '🔒',
-                            disabled: true
-                        });
-                    }
-
-                    // Install Safety Cylinder - uses new persistent cylinder system
-                    items.push({
-                        label: 'Install Safety Cylinder',
-                        subtitle: `At ${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                        icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-5 h-5">`,
-                        onClick: () => {
-                            CylinderInstalls.showInstallModal(snapCheck.coordinates, lineName, nearestProjectId);
-                        }
-                    });
-
-                    if (canCreate) {
-                        items.push({
-                            label: 'Mark Exploration Lead',
-                            subtitle: `On ${lineName} (${snapCheck.pointType} point)`,
-                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-5 h-5">`,
-                            onClick: () => {
-                                ExplorationLeadUI.showCreateModal(snapCheck.coordinates, lineName, nearestProjectId);
-                            }
-                        });
-                    } else {
-                        items.push({
-                            label: 'Mark Exploration Lead',
-                            subtitle: "No write access for this project",
-                            icon: '🔒',
-                            disabled: true
-                        });
-                    }
-                }
-
-                // Landmark creation is always available for authenticated users
-                items.push({
-                    label: 'Create Landmark',
-                    subtitle: 'Landmark',
-                    icon: '📍',
-                    onClick: () => LandmarkUI.openCreateModal(coords)
-                });
-
-                items.push('-');
-
-                // Copy Coordinates
-                items.push({
-                    label: 'Copy Coordinates',
-                    subtitle: `${lngLat.lat.toFixed(7)}, ${lngLat.lng.toFixed(7)}`,
-                    icon: '📋',
-                    onClick: () => Utils.copyToClipboard(`${lngLat.lat.toFixed(7)}, ${lngLat.lng.toFixed(7)}`)
-                });
+                // Fallback to mouse position for map background clicks
+                latitude = event.lngLat.lat.toFixed(7);
+                longitude = event.lngLat.lng.toFixed(7);
+                coords = [longitude, latitude];
             }
 
-            if (items.length > 0) ContextMenu.show(event.point.x, event.point.y, items);
+            // Get appropriate label and icon based on station type
+            const typeLabels = {
+                'artifact': { label: 'Artifact Station', icon: window.MAPVIEWER_CONTEXT.icons.artifact },
+                'biology': { label: 'Biology Station', icon: window.MAPVIEWER_CONTEXT.icons.biology },
+                'bone': { label: 'Bones Station', icon: window.MAPVIEWER_CONTEXT.icons.bone },
+                'geology': { label: 'Geology Station', icon: window.MAPVIEWER_CONTEXT.icons.geology },
+                'science': { label: 'Science Station', icon: window.MAPVIEWER_CONTEXT.icons.science },
+            };
+
+            switch (type) {
+                case "station":
+                    // Get subsurface station data for coordinates
+                    const station = State.allStations.get(data.id);
+                    if (!station) break;
+
+                    const typeInfo = typeLabels[station.type];
+
+                    // Delete Station (if admin access)
+                    if (Config.hasProjectAdminAccess(station.project)) {
+                        items.push({
+                            label: `Delete ${typeInfo.label}`,
+                            subtitle: station.name,
+                            icon: `<img src="${typeInfo.icon}" class="w-5 h-5 grayscale opacity-70">`,
+                            onClick: () => StationDetails.confirmDelete(station, 'subsurface')
+                        });
+                    } else {
+                        items.push({
+                            label: `Can not delete ${typeInfo.label} - Need ADMIN access`,
+                            subtitle: station.name,
+                            icon: '🔒',
+                            disabled: true
+                        });
+                    }
+                    break;
+
+                case "surface-station":
+                    // Get surface station data for coordinates
+                    const surface_station = State.allSurfaceStations.get(data.id);
+
+                    // Delete Surface Station (if network admin access)
+                    if (surface_station && Config.hasNetworkAdminAccess(surface_station.network)) {
+                        items.push({
+                            label: 'Delete Surface Station',
+                            subtitle: surface_station.name,
+                            icon: '🗑️',
+                            onClick: () => StationDetails.confirmDelete(surface_station, 'surface')
+                        });
+                    }
+
+                    break;
+
+                case "landmark":
+                    // Get Landmark data
+                    const landmark = State.allLandmarks.get(data.id);
+                    const landmarkName = landmark?.name || data.feature?.properties?.name || 'Landmark';
+
+                    // Delete Landmark (any authenticated user can manage their Landmarks)
+                    items.push({
+                        label: 'Delete Landmark',
+                        subtitle: landmarkName,
+                        icon: '🗑️',
+                        onClick: () => LandmarkUI.showDeleteConfirmModal(landmark || data.feature.properties)
+                    });
+                    break;
+
+                case "cylinder-install":
+                    // No action to perform
+                    break;
+
+                case "exploration-lead":
+                    // Get Exploration Lead data
+                    const explo_lead = State.explorationLeads.get(data.id);
+                    var lineName = explo_lead?.lineName || 'Survey Line';
+
+                    // Delete Exploration Lead
+                    items.push({
+                        label: 'Delete Exploration Lead',
+                        subtitle: `On ${lineName}`,
+                        icon: '🗑️',
+                        onClick: () => ExplorationLeadUI.showDeleteConfirmModal(data.id, lineName)
+                    });
+                    break;
+
+                default:
+                    // Right-click on empty map area
+
+                    // Check if we can create a station here (need snap point within radius)
+                    const snapCheck = Geometry.findNearestSnapPointWithinRadius(coords, Geometry.getSnapRadius());
+
+                    // Need to be snapped to a survey line with a valid project ID
+                    const hasValidSnap = snapCheck.snapped && snapCheck.projectId && Layers.isProjectVisible(snapCheck.projectId);
+
+                    if (hasValidSnap) {
+                        // Near a survey line - show all line-related options
+                        const nearestProjectId = snapCheck.projectId;
+                        const lineName = snapCheck.lineName || 'Survey Line';
+                        const canCreate = nearestProjectId && Config.hasProjectWriteAccess(nearestProjectId);
+
+                        if (canCreate) {
+                            Object.entries(typeLabels).forEach(([key, val]) => {
+                                items.push({
+                                    label: `Create ${val.label}`,
+                                    subtitle: `At ${latitude}, ${longitude}`,
+                                    icon: `<img src="${val.icon}" class="w-5 h-5">`,
+                                    onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, key)
+                                });
+                            });
+
+                            items.push({
+                                label: 'Mark Exploration Lead',
+                                subtitle: `On ${lineName} (${snapCheck.pointType} point)`,
+                                icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-5 h-5">`,
+                                onClick: () => {
+                                    ExplorationLeadUI.showCreateModal(snapCheck.coordinates, lineName, nearestProjectId);
+                                }
+                            });
+
+                        } else {
+                            Object.entries(typeLabels).forEach(([key, val]) => {
+                                items.push({
+                                    label: `Create ${val.label}`,
+                                    subtitle: "No write access for this project",
+                                    icon: '🔒',
+                                    disabled: true
+                                });
+                            });
+
+                            items.push({
+                                label: 'Mark Exploration Lead',
+                                subtitle: "No write access for this project",
+                                icon: '🔒',
+                                disabled: true
+                            });
+                        }
+
+                        // Install Safety Cylinder - uses new persistent cylinder system
+                        items.push({
+                            label: 'Install Safety Cylinder',
+                            subtitle: `At ${latitude}, ${longitude}`,
+                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-5 h-5">`,
+                            onClick: () => {
+                                CylinderInstalls.showInstallModal(snapCheck.coordinates, lineName, nearestProjectId);
+                            }
+                        });
+                    }
+                    else {
+                        // Landmark creation is always available for authenticated users
+                        items.push({
+                            label: 'Create Landmark',
+                            subtitle: 'Landmark',
+                            icon: '📍',
+                            onClick: () => LandmarkUI.openCreateModal(coords)
+                        });
+                    }
+                    break;
+
+            }
+
+            if (items.length > 0) {
+                items.push('-');
+            }
+
+            // Copy Coordinates
+            items.push({
+                label: 'Copy Coordinates',
+                subtitle: `${latitude}, ${longitude}`,
+                icon: '📋',
+                onClick: () => Utils.copyToClipboard(`${latitude}, ${longitude}`)
+            });
+
+            ContextMenu.show(event.point.x, event.point.y, items);
+
         }
     });
 
@@ -1071,9 +996,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // Delete marker confirmation modal
+    // Delete marker confirmation modal (for exploration leads)
     function showDeleteMarkerModal(markerType, markerId, lineName) {
-        const typeLabel = markerType === 'safety-cylinder' ? 'Safety Cylinder' : 'Exploration Lead';
+        const typeLabel = 'Exploration Lead';
 
         const modalHtml = `
             <div id="delete-marker-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1116,11 +1041,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         document.getElementById('delete-marker-confirm-btn').onclick = () => {
-            if (markerType === 'safety-cylinder') {
-                Layers.removeSafetyCylinderMarker(markerId);
-            } else {
-                Layers.removeExplorationLeadMarker(markerId);
-            }
+            Layers.removeExplorationLeadMarker(markerId);
             Utils.showNotification('success', `${typeLabel} deleted`);
             document.getElementById('delete-marker-modal').remove();
         };
@@ -1133,11 +1054,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // Marker drag confirmation modal (shared for safety-cylinder, cylinder-install, and exploration-lead)
+    // Marker drag confirmation modal (shared for cylinder-install and exploration-lead)
     function showMarkerDragConfirmModal(markerType, markerId, snapResult, originalCoords) {
         // Get type label and icon based on marker type
         let typeLabel, typeIcon;
-        if (markerType === 'safety-cylinder' || markerType === 'cylinder-install') {
+        if (markerType === 'cylinder-install') {
             typeLabel = 'Cylinder';
             typeIcon = `<img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-5 h-5 inline">`;
         } else {
@@ -1205,8 +1126,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Setup handlers
         const revertPosition = () => {
-            if (markerType === 'safety-cylinder' || markerType === 'cylinder-install') {
-                Layers.updateSafetyCylinderPosition(markerId, originalCoords);
+            if (markerType === 'cylinder-install') {
+                Layers.updateCylinderInstallPosition(markerId, originalCoords);
             } else {
                 Layers.updateExplorationLeadPosition(markerId, originalCoords);
             }
@@ -1221,17 +1142,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (snapResult.snapped) {
                 try {
                     // Update to final snapped position
-                    if (markerType === 'safety-cylinder') {
-                        // Temporary marker - just update locally
-                        Layers.updateSafetyCylinderPosition(markerId, finalCoords);
-                        Utils.showNotification('success', `${typeLabel} moved to ${snapResult.lineName}`);
-                    } else if (markerType === 'cylinder-install') {
+                    if (markerType === 'cylinder-install') {
                         // Persistent install - update via API
                         await API.updateCylinderInstall(markerId, {
                             latitude: finalCoords[1],
                             longitude: finalCoords[0]
                         });
-                        Layers.updateSafetyCylinderPosition(markerId, finalCoords);
+                        Layers.updateCylinderInstallPosition(markerId, finalCoords);
                         Utils.showNotification('success', `${typeLabel} moved to ${snapResult.lineName}`);
                     } else {
                         // Update exploration lead via API

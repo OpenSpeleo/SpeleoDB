@@ -15,8 +15,10 @@ export const State = {
     networkBounds: new Map(), // Track bounds for each network for auto-zoom and fly-to
     
     // Local-only markers (not yet persisted to API)
-    safetyCylinders: new Map(), // Track safety cylinder markers by ID
     explorationLeads: new Map(), // Track exploration lead markers by ID
+
+    // Cylinder installs (persistent from database)
+    cylinderInstalls: new Map(), // Track cylinder installs by ID for easy access
 
     // Landmark visibility state (default: true = visible)
     landmarksVisible: true,
@@ -40,8 +42,8 @@ export const State = {
         this.projectBounds = new Map();
         this.networkBounds = new Map();
         this.landmarksVisible = true;
-        this.safetyCylinders = new Map();
         this.explorationLeads = new Map();
+        this.cylinderInstalls = new Map();
         // GPS Tracks
         this.gpsTrackLayerStates = new Map();
         this.gpsTrackCache = new Map();
