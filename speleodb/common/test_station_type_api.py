@@ -177,7 +177,7 @@ class TestStationTypeModification(BaseAPIProjectTestCase):
             level=self.level,
             permission_type=self.permission_type,
         )
-        # Create a sennsor station to test modifications
+        # Create a sensor station to test modifications
         self.station = SubSurfaceStationFactory.create(
             project=self.project,
             type=SubSurfaceStationType.SENSOR,
@@ -432,14 +432,10 @@ class TestStationTypeGeoJSON(BaseAPIProjectTestCase):
     def test_all_stations_geojson_includes_types(self) -> None:
         """Test that all-stations GeoJSON endpoint includes types."""
         SubSurfaceStationFactory.create(
-            project=self.project,
-            type=SubSurfaceStationType.SENSOR,
-            name="Sensor Station",
+            project=self.project, type=SubSurfaceStationType.SENSOR, name="Sensor"
         )
         SubSurfaceStationFactory.create(
-            project=self.project,
-            type=SubSurfaceStationType.BONE,
-            name="Bone Station",
+            project=self.project, type=SubSurfaceStationType.BONE, name="Bone"
         )
 
         response = self.client.get(

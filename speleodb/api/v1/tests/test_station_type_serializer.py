@@ -27,14 +27,14 @@ def project() -> Project:
 class TestSubSurfaceStationSerializerType:
     """Test cases for SubSurfaceStationSerializer type field handling."""
 
-    def test_serializer_accepts_science_type_on_create(self) -> None:
-        """Test that serializer accepts 'science' type during creation."""
+    def test_serializer_accepts_sensor_type_on_create(self) -> None:
+        """Test that serializer accepts 'sensor' type during creation."""
         data = {
-            "name": "Science Station",
-            "description": "Test science station",
+            "name": "Sensor Station",
+            "description": "Test sensor station",
             "latitude": "45.1234567",
             "longitude": "-123.4567890",
-            "type": "science",
+            "type": "sensor",
         }
         serializer = SubSurfaceStationSerializer(data=data)
         assert serializer.is_valid(), serializer.errors
@@ -104,7 +104,7 @@ class TestSubSurfaceStationSerializerType:
         """Test that serializer rejects type change during update."""
         # Create an existing station
         station = SubSurfaceStationFactory.create(
-            project=project, type=SubSurfaceStationType.SCIENCE
+            project=project, type=SubSurfaceStationType.SENSOR
         )
 
         # Try to update the type
@@ -121,7 +121,7 @@ class TestSubSurfaceStationSerializerType:
     ) -> None:
         """Test that serializer allows updates to other fields without type."""
         station = SubSurfaceStationFactory.create(
-            project=project, type=SubSurfaceStationType.SCIENCE
+            project=project, type=SubSurfaceStationType.SENSOR
         )
 
         # Update only name and description
@@ -151,12 +151,13 @@ class TestSubSurfaceStationSerializerType:
     def test_serializer_allows_same_type_on_update(self, project: Project) -> None:
         """Test that serializer allows same type value on update (no actual change)."""
         station = SubSurfaceStationFactory.create(
-            project=project, type=SubSurfaceStationType.SCIENCE
+            project=project,
+            type=SubSurfaceStationType.SENSOR,
         )
 
         # Try to "update" with the same type - should succeed
         # because no actual change is happening
-        data = {"type": "science"}
+        data = {"type": "sensor"}
         serializer = SubSurfaceStationSerializer(
             instance=station, data=data, partial=True
         )
@@ -167,12 +168,13 @@ class TestSubSurfaceStationSerializerType:
 class TestStationGeoJSONSerializerType:
     """Test cases for StationGeoJSONSerializer type field handling."""
 
-    def test_geojson_serializer_includes_type_for_science(
+    def test_geojson_serializer_includes_type_for_sensor(
         self, project: Project
     ) -> None:
-        """Test that GeoJSON serializer includes type for science stations."""
+        """Test that GeoJSON serializer includes type for sensor stations."""
         station = SubSurfaceStationFactory.create(
-            project=project, type=SubSurfaceStationType.SCIENCE
+            project=project,
+            type=SubSurfaceStationType.SENSOR,
         )
 
         serializer = StationGeoJSONSerializer(instance=station)
@@ -181,7 +183,7 @@ class TestStationGeoJSONSerializerType:
         # GeoJSON Feature structure
         assert data["type"] == "Feature"
         assert "properties" in data
-        assert data["properties"]["type"] == "science"
+        assert data["properties"]["type"] == "sensor"
         assert data["properties"]["station_type"] == "subsurface"
 
     def test_geojson_serializer_includes_type_for_bone(self, project: Project) -> None:
@@ -242,7 +244,7 @@ class TestStationGeoJSONSerializerType:
         """Test that GeoJSON serializer produces correct geometry."""
         station = SubSurfaceStationFactory.create(
             project=project,
-            type=SubSurfaceStationType.SCIENCE,
+            type=SubSurfaceStationType.SENSOR,
             latitude=45.123456,
             longitude=-123.456789,
         )
@@ -261,8 +263,8 @@ class TestStationGeoJSONSerializerType:
     def test_geojson_serializer_batch_includes_types(self, project: Project) -> None:
         """Test that GeoJSON serializer handles multiple stations with different
         types."""
-        science = SubSurfaceStationFactory.create(
-            project=project, type=SubSurfaceStationType.SCIENCE, name="Science"
+        sensor = SubSurfaceStationFactory.create(
+            project=project, type=SubSurfaceStationType.SENSOR, name="Sensor"
         )
         biology = SubSurfaceStationFactory.create(
             project=project, type=SubSurfaceStationType.BIOLOGY, name="Biology"
@@ -277,13 +279,13 @@ class TestStationGeoJSONSerializerType:
             project=project, type=SubSurfaceStationType.GEOLOGY, name="Geology"
         )
 
-        stations = [science, biology, bone, artifact, geology]
+        stations = [sensor, biology, bone, artifact, geology]
         serializer = StationGeoJSONSerializer(instance=stations, many=True)
         data = serializer.data
 
         assert len(data) == len(stations)
         types = {item["properties"]["type"] for item in data}
-        assert types == {"science", "biology", "bone", "artifact", "geology"}
+        assert types == {"sensor", "biology", "bone", "artifact", "geology"}
 
 
 @pytest.mark.django_db
@@ -324,7 +326,7 @@ class TestSubSurfaceStationSerializerTypeEdgeCases:
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.4567890",
-            "type": "SCIENCE",  # Should be lowercase
+            "type": "SENSOR",  # Should be lowercase
         }
         serializer = SubSurfaceStationSerializer(data=data)
         assert not serializer.is_valid()
@@ -337,7 +339,7 @@ class TestSubSurfaceStationSerializerTypeEdgeCases:
             "description": "Test station",
             "latitude": "45.1234567",
             "longitude": "-123.4567890",
-            "type": " science ",  # With whitespace
+            "type": " sensor ",  # With whitespace
         }
         serializer = SubSurfaceStationSerializer(data=data)
         assert not serializer.is_valid()
@@ -346,7 +348,7 @@ class TestSubSurfaceStationSerializerTypeEdgeCases:
     def test_full_update_with_type_rejected(self, project: Project) -> None:
         """Test that full update (PUT) with type is rejected."""
         station = SubSurfaceStationFactory.create(
-            project=project, type=SubSurfaceStationType.SCIENCE
+            project=project, type=SubSurfaceStationType.SENSOR
         )
 
         # Full update data

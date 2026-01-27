@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 'biology': { label: 'Biology Station', icon: window.MAPVIEWER_CONTEXT.icons.biology },
                 'bone': { label: 'Bones Station', icon: window.MAPVIEWER_CONTEXT.icons.bone },
                 'geology': { label: 'Geology Station', icon: window.MAPVIEWER_CONTEXT.icons.geology },
-                'science': { label: 'Science Station', icon: window.MAPVIEWER_CONTEXT.icons.science },
+                'sensor': { label: 'Sensor Station', icon: window.MAPVIEWER_CONTEXT.icons.sensor },
             };
 
             switch (type) {

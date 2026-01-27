@@ -114,19 +114,19 @@ export const StationUI = {
                 projectStations.forEach(station => {
                     // Get tag color for marker or use default
                     const markerColor = (station.tag && station.tag.color) ? station.tag.color : '#fb923c';
-                    
+
                     // Station type badge
                     const typeLabels = {
-                        'science': { label: 'Science', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+                        'sensor': { label: 'Sensor', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.sensor}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
                         'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
                         'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
                         'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-slate-500/20 text-slate-200 border-slate-400/30' },
                         'geology': { label: 'Geology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-stone-500/20 text-stone-300 border-stone-500/30' }
                     };
-                    const stationType = station.type || 'science';
-                    const typeInfo = typeLabels[stationType] || typeLabels['science'];
+                    const stationType = station.type;
+                    const typeInfo = typeLabels[stationType];
                     const typeBadge = `<span class="text-xs px-1.5 py-0.5 rounded border ${typeInfo.color}">${typeInfo.icon}</span>`;
-                    
+
                     html += `
                         <div class="bg-slate-700/50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
                             <div class="flex items-center justify-between">
@@ -196,7 +196,7 @@ export const StationUI = {
                     }
                     return;
                 }
-                
+
                 // Open station details
                 const stationId = el.dataset.stationId;
                 const projectId = el.dataset.projectId;
@@ -212,31 +212,31 @@ export const StationUI = {
      * Show modal to create a new station
      * @param {Array} coordinates - [lng, lat] coordinates
      * @param {string} projectId - Project ID
-     * @param {string} stationType - Station type: 'science', 'artifact', or 'bone'
+     * @param {string} stationType - Station type: 'sensor', 'artifact', 'geology', 'biology' or 'bone'
      */
-    showCreateStationModal(coordinates, projectId, stationType = 'science') {
+    showCreateStationModal(coordinates, projectId, stationType) {
         // Snap to nearest vertex (start/end point) within radius
         const snap = Geometry.findNearestSnapPointWithinRadius(coordinates, Geometry.getSnapRadius());
-        
+
         if (!snap.snapped) {
             Utils.showNotification('warning', "Can't create a station at this location. Too far from survey line endpoints.");
             return;
         }
-        
+
         // Use snapped coordinates and detected project
         const snappedCoords = snap.coordinates;
         const detectedProjectId = snap.projectId || projectId;
-        
+
         // Determine title and icon based on station type
         const typeLabels = {
-            'science': { label: 'Science Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.science}" class="w-6 h-6">`, color: 'text-orange-400' },
+            'sensor': { label: 'Sensor Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.sensor}" class="w-6 h-6">`, color: 'text-orange-400' },
             'biology': { label: 'Biology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-6 h-6">`, color: 'text-cyan-400' },
             'artifact': { label: 'Artifact Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-6 h-6">`, color: 'text-amber-400' },
             'bone': { label: 'Bones Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-6 h-6">`, color: 'text-slate-200' },
             'geology': { label: 'Geology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-6 h-6">`, color: 'text-stone-400' }
         };
-        const typeInfo = typeLabels[stationType] || typeLabels['science'];
-        
+        const typeInfo = typeLabels[stationType];
+
         const formHtml = `
             <form id="create-station-form" class="space-y-4">
                 <div class="flex items-center gap-3 mb-4 p-3 bg-slate-700/50 rounded-lg border border-slate-600/50">
@@ -275,12 +275,12 @@ export const StationUI = {
 
         Modal.open('create-station-modal', html, () => {
             document.getElementById('station-name').focus();
-            
+
             document.getElementById('create-station-form').onsubmit = async (e) => {
                 e.preventDefault();
                 const name = document.getElementById('station-name').value.trim();
                 if (!name) return;
-                
+
                 try {
                     const station = await StationManager.createStation(detectedProjectId, {
                         name,
@@ -298,20 +298,20 @@ export const StationUI = {
             };
         });
     },
-    
+
     showDragConfirmModal(snapResult, onConfirm, onCancel) {
         const content = `
             <p class="text-slate-300 mb-4">Move station to new location?</p>
             ${snapResult ? `<div class="bg-emerald-900/30 text-emerald-400 px-3 py-1 rounded-full text-xs inline-block border border-emerald-500/30">Snapped to line</div>` : ''}
         `;
-        
+
         const footer = `
             <button id="drag-cancel-btn" class="btn-secondary">Cancel</button>
             <button id="drag-confirm-btn" class="btn-primary">Move</button>
         `;
-        
+
         const html = Modal.base('drag-confirm-modal', 'Confirm Move', content, footer, 'max-w-sm');
-        
+
         Modal.open('drag-confirm-modal', html, () => {
             document.getElementById('drag-cancel-btn').onclick = () => {
                 Modal.close('drag-confirm-modal');

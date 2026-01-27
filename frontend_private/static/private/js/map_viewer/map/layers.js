@@ -696,7 +696,7 @@ export const Layers = {
             promoteId: 'id'
         });
 
-        // Add Circle Layer for Science stations (type is null, undefined, or 'science')
+        // Add Circle Layer for Sensor stations (type is null, undefined, or 'sensor')
         // Use data-driven color from feature properties
         map.addLayer({
             id: circleLayerId,
@@ -705,7 +705,7 @@ export const Layers = {
             filter: ['any',
                 ['!', ['has', 'type']],
                 ['==', ['get', 'type'], null],
-                ['==', ['get', 'type'], 'science']
+                ['==', ['get', 'type'], 'sensor']
             ],
             minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
             paint: {
@@ -1250,7 +1250,7 @@ export const Layers = {
             }
         });
 
-        // Subsurface station circles (science stations)
+        // Subsurface station circles (sensor stations)
         stationCircleLayers.forEach(layerId => {
             try {
                 map.moveLayer(layerId);
@@ -1528,7 +1528,7 @@ export const Layers = {
     updateCylinderInstallPosition: function (markerId, newCoords) {
         const map = State.map;
         if (!map) return;
-        
+
         const sourceId = 'cylinder-installs-source';
         const source = map.getSource(sourceId);
         if (source && source._data) {
@@ -1644,7 +1644,7 @@ export const Layers = {
             console.log('🔄 Loading cylinder installs...');
             // GeoJSON endpoint returns raw FeatureCollection via NoWrapResponse
             const geojsonData = await API.getAllCylinderInstallsGeoJSON();
-            
+
             if (
                 geojsonData &&
                 geojsonData.type === 'FeatureCollection' &&
@@ -1754,7 +1754,7 @@ export const Layers = {
         if (map.getLayer(labelLayerId)) {
             map.removeLayer(labelLayerId);
         }
-        
+
         map.addLayer({
             id: labelLayerId,
             type: 'symbol',

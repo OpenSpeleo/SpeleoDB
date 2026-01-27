@@ -35,21 +35,21 @@ def user() -> User:
 class TestSubSurfaceStationTypeModel:
     """Test cases for SubSurfaceStation type field at model level."""
 
-    def test_create_science_station(self, project: Project, user: User) -> None:
-        """Test creating a station with type 'science'."""
+    def test_create_sensor_station(self, project: Project, user: User) -> None:
+        """Test creating a station with type 'sensor'."""
         station = SubSurfaceStation.objects.create(
             project=project,
-            name="Science Station 1",
-            description="Test science station",
+            name="Sensor Station 1",
+            description="Test sensor station",
             latitude="45.123456",
             longitude="-123.456789",
             created_by=user.email,
-            type=SubSurfaceStationType.SCIENCE,
+            type=SubSurfaceStationType.SENSOR,
         )
 
         assert station.id is not None
-        assert station.type == SubSurfaceStationType.SCIENCE
-        assert station.type == "science"
+        assert station.type == SubSurfaceStationType.SENSOR
+        assert station.type == "sensor"
 
     def test_create_bone_station(self, project: Project, user: User) -> None:
         """Test creating a station with type 'bone'."""
@@ -171,7 +171,7 @@ class TestSubSurfaceStationTypeModel:
     def test_type_field_max_length(self) -> None:
         """Test that type field respects max_length constraint."""
         # The max_length is 10 - all valid choices are within this
-        assert len(SubSurfaceStationType.SCIENCE) <= 10  # noqa: PLR2004
+        assert len(SubSurfaceStationType.SENSOR) <= 10  # noqa: PLR2004
         assert len(SubSurfaceStationType.BIOLOGY) <= 10  # noqa: PLR2004
         assert len(SubSurfaceStationType.BONE) <= 10  # noqa: PLR2004
         assert len(SubSurfaceStationType.ARTIFACT) <= 10  # noqa: PLR2004
@@ -197,7 +197,14 @@ class TestSubSurfaceStationTypeModel:
     def test_station_factory_default_type(self, project: Project) -> None:
         """Test that factory creates stations with default type."""
         station = SubSurfaceStationFactory.create(project=project)
-        assert station.type == "science"
+        assert station.type == "sensor"
+
+    def test_station_factory_with_sensor_type(self, project: Project) -> None:
+        """Test that factory can create bone stations."""
+        station = SubSurfaceStationFactory.create(
+            project=project, type=SubSurfaceStationType.SENSOR
+        )
+        assert station.type == "sensor"
 
     def test_station_factory_with_bone_type(self, project: Project) -> None:
         """Test that factory can create bone stations."""
@@ -229,8 +236,8 @@ class TestSubSurfaceStationTypeModel:
 
     def test_type_field_can_be_queried(self, project: Project) -> None:
         """Test that stations can be filtered by type."""
-        science_station = SubSurfaceStationFactory.create(
-            project=project, type=SubSurfaceStationType.SCIENCE, name="Science"
+        sensor_station = SubSurfaceStationFactory.create(
+            project=project, type=SubSurfaceStationType.SENSOR, name="Sensor"
         )
         biology_station = SubSurfaceStationFactory.create(
             project=project, type=SubSurfaceStationType.BIOLOGY, name="Biology"
@@ -246,9 +253,7 @@ class TestSubSurfaceStationTypeModel:
         )
 
         # Query by type
-        science_qs = SubSurfaceStation.objects.filter(
-            type=SubSurfaceStationType.SCIENCE
-        )
+        sensor_qs = SubSurfaceStation.objects.filter(type=SubSurfaceStationType.SENSOR)
         biology_qs = SubSurfaceStation.objects.filter(
             type=SubSurfaceStationType.BIOLOGY
         )
@@ -260,7 +265,7 @@ class TestSubSurfaceStationTypeModel:
             type=SubSurfaceStationType.GEOLOGY
         )
 
-        assert science_station in science_qs
+        assert sensor_station in sensor_qs
         assert biology_station in biology_qs
         assert bone_station in bone_qs
         assert artifact_station in artifact_qs
@@ -277,7 +282,7 @@ class TestSubSurfaceStationTypeModel:
             latitude="45.123456",
             longitude="-123.456789",
             created_by=user.email,
-            type=SubSurfaceStationType.SCIENCE,
+            type=SubSurfaceStationType.SENSOR,
         )
         original_modified = station.modified_date
 
@@ -292,7 +297,7 @@ class TestSubSurfaceStationTypeModel:
 
     def test_type_field_choices_enum_values(self) -> None:
         """Test SubSurfaceStationType enum values."""
-        assert SubSurfaceStationType.SCIENCE == "science"  # type: ignore[comparison-overlap]
+        assert SubSurfaceStationType.SENSOR == "sensor"  # type: ignore[comparison-overlap]
         assert SubSurfaceStationType.BIOLOGY == "biology"  # type: ignore[comparison-overlap]
         assert SubSurfaceStationType.BONE == "bone"  # type: ignore[comparison-overlap]
         assert SubSurfaceStationType.ARTIFACT == "artifact"  # type: ignore[comparison-overlap]
@@ -301,7 +306,7 @@ class TestSubSurfaceStationTypeModel:
     def test_type_field_choices_enum_labels(self) -> None:
         """Test SubSurfaceStationType enum labels."""
         choices = dict(SubSurfaceStationType.choices)
-        assert choices["science"] == "Science"
+        assert choices["sensor"] == "Sensor"
         assert choices["biology"] == "Biology"
         assert choices["bone"] == "Bone"
         assert choices["artifact"] == "Artifact"

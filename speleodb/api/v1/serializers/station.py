@@ -333,6 +333,6 @@ class StationGeoJSONSerializer(serializers.ModelSerializer[Station]):
                     else None
                 ),
                 "tag": tag,
-                "type": subsurf_station_type,  # Science / Artifact / Bone
+                "type": subsurf_station_type,  # SubSurfaceStationType
             },
         )

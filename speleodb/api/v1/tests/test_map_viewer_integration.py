@@ -69,7 +69,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
             "description": "Created via right-click context menu with magnetic snap",
             "latitude": "20.194500",
             "longitude": "-87.497500",
-            "type": "science",
+            "type": "sensor",
         }
 
         # Create station via API (as frontend would do)
@@ -483,7 +483,7 @@ class TestMapViewerIntegration(BaseAPIProjectTestCase):
                     "name": "Test",
                     "latitude": "1.0",
                     "longitude": "1.0",
-                    "type": "science",
+                    "type": "sensor",
                 }
             ),
             content_type="application/json",
@@ -644,7 +644,7 @@ class TestMapViewerWithFixtures(TransactionTestCase):
                         "description": f"Survey station {name}",
                         "latitude": str(20.1945 + len(created_stations) * 0.0001),
                         "longitude": str(-87.4975 + len(created_stations) * 0.0001),
-                        "type": "science",
+                        "type": "sensor",
                     }
                 ),
                 headers={"authorization": self.auth},
