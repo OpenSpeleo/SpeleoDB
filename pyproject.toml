@@ -71,7 +71,7 @@ dependencies = [
     "django-polymorphic==4.10.5",      # https://github.com/jazzband/django-polymorphic
     "django-rest-polymorphic==0.1.10", # https://github.com/denisorehovsky/django-rest-polymorphic
     "django-storages[s3]==1.14.6",     # https://github.com/jschneier/django-storages
-    "django-tailwind==4.3.1",          # https://github.com/timonweb/django-tailwind
+    "django-tailwind==4.4.2",          # https://github.com/timonweb/django-tailwind
 
     # Django REST Framework
     # ------------------------------------------------------------------------------

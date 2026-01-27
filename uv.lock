@@ -811,14 +811,15 @@ wheels = [
 
 [[package]]
 name = "django-tailwind"
-version = "4.3.1"
+version = "4.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
+    { name = "pytailwindcss" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/df/8a/2eb6adbc65a459c592b10dfb5375ccce220474ea514ef3f897effd4c5b96/django_tailwind-4.3.1.tar.gz", hash = "sha256:7c8be0bf181695c18356a6ba79d0b5c9379ea3336439eaf1b8647ed420631d94", size = 12275, upload-time = "2025-10-29T20:01:47.718Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/21/86fda52a8d0f8d2f31d32982ee4d9cc4f29c868dbeb52412e430d083d126/django_tailwind-4.4.2.tar.gz", hash = "sha256:b3a3eb2d22cbb8c17565898fb68ccedcf806542b04fe4107bdfec7035d582819", size = 13965, upload-time = "2025-12-05T18:23:41.028Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/87/47/1a4719918b97013764323eaa7b5a87a414de0d5c2548a68f43e27e7afb3a/django_tailwind-4.3.1-py3-none-any.whl", hash = "sha256:439d183e5c35d49a208a12d9554d0f1cae6c85e5f133b299f0f4a1785aa6f78c", size = 19480, upload-time = "2025-10-29T20:01:46.593Z" },
+    { url = "https://files.pythonhosted.org/packages/02/ed/85113d22ab4268600542152bc4b5512abb1204552b90e04848ebc496aa5c/django_tailwind-4.4.2-py3-none-any.whl", hash = "sha256:0e4a2836cb36e8952700457d049fadb8743583017cef80fa3a374f8597c289f4", size = 23358, upload-time = "2025-12-05T18:23:39.462Z" },
 ]
 
 [[package]]
@@ -1960,6 +1961,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pytailwindcss"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/90/b83df1eae67f3f22c59ca3f6df67d7a2591bb27157f04a173bd1f164d3e0/pytailwindcss-0.3.0.tar.gz", hash = "sha256:1f71dd64020aacb40608dfe8725ca441c772016c344f757ccbc74b8b6143027d", size = 5527, upload-time = "2025-10-29T19:13:42.155Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ca/59/e7b86790c4558cfa0344c424219fe17d371b70273044b9a2d163ce1d3f44/pytailwindcss-0.3.0-py3-none-any.whl", hash = "sha256:a9b770ad3c0a0f40073052bcfe81a060b550fed38af614a472f5aa7bb85fa8aa", size = 7502, upload-time = "2025-10-29T19:13:41.109Z" },
+]
+
+[[package]]
 name = "pytest"
 version = "9.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2401,7 +2411,7 @@ requires-dist = [
     { name = "django-silk", extras = ["formatting"], marker = "extra == 'local'", specifier = "==5.4.3" },
     { name = "django-storages", extras = ["s3"], specifier = "==1.14.6" },
     { name = "django-stubs", extras = ["compatible-mypy"], marker = "extra == 'local'", specifier = "==5.2.9" },
-    { name = "django-tailwind", specifier = "==4.3.1" },
+    { name = "django-tailwind", specifier = "==4.4.2" },
     { name = "djangorestframework", specifier = "==3.16.1" },
     { name = "djangorestframework-stubs", extras = ["compatible-mypy"], marker = "extra == 'local'", specifier = "==3.16.7" },
     { name = "djlint", marker = "extra == 'local'", specifier = "==1.36.4" },
