@@ -44,11 +44,13 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "name",
         "owner",
         "token_preview",
+        "allow_precise_zoom",
         "project_count",
         "creation_date",
     ]
 
     list_filter = [
+        "allow_precise_zoom",
         "creation_date",
         "owner",
     ]
@@ -71,6 +73,7 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     fields = [
         "name",
         "description",
+        "allow_precise_zoom",
         "owner",
         "id",
         "gis_token",
@@ -87,7 +90,7 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         """Hide readonly metadata fields when creating a new view."""
         if obj is None:  # Creating new object
             # Only show editable fields
-            return ["name", "description", "owner"]
+            return ["name", "description", "allow_precise_zoom", "owner"]
 
         # Editing existing object - show all fields
         return super().get_fields(request, obj)  # type: ignore[return-value]

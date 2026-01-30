@@ -84,6 +84,7 @@ class TestGISViewDataSerializer(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Test View",
             description="Test description",
+            allow_precise_zoom=True,
             owner=self.user,
         )
 
@@ -93,9 +94,11 @@ class TestGISViewDataSerializer(BaseAPITestCase):
         assert "view_id" in data
         assert "view_name" in data
         assert "description" in data
+        assert "allow_precise_zoom" in data
         assert "geojson_files" in data
         assert data["view_name"] == "Test View"
         assert data["description"] == "Test description"
+        assert data["allow_precise_zoom"] is True
         assert isinstance(data["geojson_files"], list)
 
     def test_serializer_with_geojson_files(self) -> None:
@@ -105,6 +108,7 @@ class TestGISViewDataSerializer(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "a" * 40
@@ -142,6 +146,7 @@ class TestGISViewDataSerializer(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "a" * 40
@@ -185,6 +190,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         # Create GeoJSON
@@ -239,6 +245,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "a" * 40
@@ -274,6 +281,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         # Create multiple GeoJSONs
@@ -324,6 +332,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         sha1 = "a" * 40
@@ -376,6 +385,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Empty View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         client = self.client_class()
@@ -396,6 +406,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         sha1 = "a" * 40
@@ -442,6 +453,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Test View",
             description="Test description",
+            allow_precise_zoom=True,
             owner=self.user,
         )
 
@@ -480,16 +492,19 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         assert "view_id" in response_data
         assert "view_name" in response_data
         assert "description" in response_data
+        assert "allow_precise_zoom" in response_data
         assert "geojson_files" in response_data
 
         # Verify values
         assert response_data["view_name"] == "Test View"
         assert response_data["description"] == "Test description"
+        assert response_data["allow_precise_zoom"] is True
 
         # Verify types
         assert isinstance(response_data["view_id"], str)
         assert isinstance(response_data["view_name"], str)
         assert isinstance(response_data["description"], str)
+        assert isinstance(response_data["allow_precise_zoom"], bool)
         assert isinstance(response_data["geojson_files"], list)
 
         # Verify geojson_file structure
@@ -507,6 +522,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "a" * 40
@@ -552,6 +568,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
             name="Test View",
             description="",  # Empty description
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         client = self.client_class()
@@ -648,6 +665,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Public Test View",
             description="A view for public access",
+            allow_precise_zoom=True,
             owner=self.user,
         )
 
@@ -656,9 +674,11 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
 
         assert "view_name" in data
         assert "view_description" in data
+        assert "allow_precise_zoom" in data
         assert "projects" in data
         assert data["view_name"] == "Public Test View"
         assert data["view_description"] == "A view for public access"
+        assert data["allow_precise_zoom"] is True
         assert isinstance(data["projects"], list)
 
     def test_serializer_with_projects(self) -> None:
@@ -668,6 +688,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
             name="View With Projects",
             description="Has projects",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "c" * 40
@@ -704,6 +725,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Latest View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "d" * 40
@@ -735,6 +757,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
             name="Empty View",
             description="No projects",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         serializer = PublicGISViewSerializer(gis_view, context={"expires_in": 3600})
@@ -749,6 +772,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
             name="No Description View",
             description="",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         serializer = PublicGISViewSerializer(gis_view, context={"expires_in": 3600})
@@ -763,6 +787,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Multi-Project View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         sha1 = "e" * 40
@@ -815,6 +840,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Expiration Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "1" * 40
@@ -858,6 +884,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
             name="Public Frontend View",
             description="For frontend map",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "a" * 40
@@ -898,6 +925,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Structure Test View",
             description="Testing structure",
+            allow_precise_zoom=False,
             owner=self.user,
         )
 
@@ -932,11 +960,13 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         # Verify top-level structure
         assert "view_name" in data
         assert "view_description" in data
+        assert "allow_precise_zoom" in data
         assert "projects" in data
 
         # Verify values
         assert data["view_name"] == "Structure Test View"
         assert data["view_description"] == "Testing structure"
+        assert data["allow_precise_zoom"] is False
         assert isinstance(data["projects"], list)
 
         # Verify project structure
@@ -976,6 +1006,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Empty View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         client = self.client_class()
@@ -997,6 +1028,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Multi-Project View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         sha1 = "1" * 40
@@ -1052,6 +1084,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Latest Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         old_sha = "a" * 40
@@ -1103,6 +1136,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Specific Commit View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         old_sha = "1" * 40
@@ -1156,6 +1190,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Partial View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         sha1 = "1" * 40
@@ -1203,6 +1238,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="URL Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "a" * 40
@@ -1243,6 +1279,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Auth Test View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "a" * 40
@@ -1280,6 +1317,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         gis_view = GISView.objects.create(
             name="Another User's View",
             owner=self.user,
+            allow_precise_zoom=False,
         )
 
         commit_sha = "a" * 40

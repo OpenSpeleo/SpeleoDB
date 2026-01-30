@@ -56,6 +56,10 @@ class GISView(models.Model):
         help_text="Optional description of what this view contains",
     )
 
+    allow_precise_zoom = models.BooleanField(
+        help_text="If True, allows users to zoom to the precise location of the cave",
+    )
+
     gis_token = models.CharField(
         "GIS View Token",
         max_length=40,

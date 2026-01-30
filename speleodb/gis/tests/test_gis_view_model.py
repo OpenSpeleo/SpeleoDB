@@ -81,12 +81,14 @@ class TestGISViewModel:
             name="Test View",
             description="A test GIS view",
             owner=user,
+            allow_precise_zoom=True,
         )
 
         assert gis_view.id is not None
         assert gis_view.gis_token is not None
         assert len(gis_view.gis_token) == 40  # noqa: PLR2004
         assert str(gis_view) == f"Test View ({gis_view.gis_token[:8]}...)"
+        assert gis_view.allow_precise_zoom is True
 
     def test_token_is_unique(self) -> None:
         """Test that tokens are unique across GIS views."""
@@ -94,10 +96,12 @@ class TestGISViewModel:
         view1 = GISView.objects.create(
             name="View 1",
             owner=user,
+            allow_precise_zoom=False,
         )
         view2 = GISView.objects.create(
             name="View 2",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         assert view1.gis_token != view2.gis_token
@@ -108,6 +112,7 @@ class TestGISViewModel:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         old_token = gis_view.gis_token
@@ -128,6 +133,7 @@ class TestGISProjectViewModel:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         view_project = GISProjectView.objects.create(
@@ -147,6 +153,7 @@ class TestGISProjectViewModel:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         view_project = GISProjectView.objects.create(
@@ -165,6 +172,7 @@ class TestGISProjectViewModel:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         GISProjectView.objects.create(
@@ -189,6 +197,7 @@ class TestGISProjectViewModel:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         view_project = GISProjectView(
@@ -210,6 +219,7 @@ class TestGISProjectViewModel:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         view_project = GISProjectView(
@@ -230,6 +240,7 @@ class TestGISProjectViewModel:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         view_project = GISProjectView(
@@ -248,6 +259,7 @@ class TestGISProjectViewModel:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         view_project = GISProjectView(
@@ -273,6 +285,7 @@ class TestGISViewIntegration:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         # Create a GeoJSON for the project
@@ -309,6 +322,7 @@ class TestGISViewIntegration:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         # Create multiple GeoJSONs
@@ -356,6 +370,7 @@ class TestGISViewIntegration:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         # Add project with non-existent commit
@@ -400,6 +415,7 @@ class TestGISViewIntegration:
         gis_view = GISView.objects.create(
             name="Test View",
             owner=user,
+            allow_precise_zoom=False,
         )
 
         # Add both projects

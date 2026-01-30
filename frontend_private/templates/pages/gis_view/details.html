@@ -25,11 +25,34 @@
                 </div>
 
                 <!-- Description -->
-                <div>
-                    <label class="block text-sm font-medium mb-1" for="description">Description:</label>
-                    <textarea id="description" name="description" class="form-textarea w-full focus:border-slate-300" rows="4">{{ gis_view.description }}</textarea>
-                </div>
-            </section>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                                    <textarea id="description" name="description" class="form-textarea w-full focus:border-slate-300" rows="4">{{ gis_view.description }}</textarea>
+                                </div>
+
+                                <!-- Allow Precise Zoom Toggle -->
+                                <div class="mt-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex flex-col">
+                                            <label class="text-sm font-medium text-slate-100" for="allow_precise_zoom">
+                                                Allow Precise Zoom
+                                            </label>
+                                            <p class="text-xs text-slate-400 mt-1">
+                                                When enabled, viewers can zoom to the precise location of caves
+                                            </p>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <div class="form-switch">
+                                                <input type="checkbox" id="allow_precise_zoom" name="allow_precise_zoom" class="sr-only" {% if gis_view.allow_precise_zoom %}checked{% endif %} />
+                                                <label class="bg-slate-600" for="allow_precise_zoom">
+                                                    <span class="bg-white shadow-sm" aria-hidden="true"></span>
+                                                    <span class="sr-only">Allow Precise Zoom</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
 
             <!-- Projects Section -->
             <section>
@@ -456,6 +479,7 @@
             return {
                 name: $('#name').val().trim(),
                 description: $('#description').val().trim(),
+                allow_precise_zoom: $('#allow_precise_zoom').is(':checked'),
                 projects: projects
             };
         }

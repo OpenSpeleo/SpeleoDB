@@ -72,7 +72,8 @@
         csrfToken: "{{ csrf_token }}",
         mapboxToken: "{{ mapbox_api_token }}",
         viewMode: "public",
-        gisToken: "{{ gis_token }}"
+        gisToken: "{{ gis_token }}",
+        allowPreciseZoom: {{ gis_view.allow_precise_zoom|yesno:"true,false" }}
     };
 </script>
 <script type="module" src="{% static 'js/gis_view_main.js' %}"></script>

@@ -19,6 +19,8 @@ import { Utils } from '../private/js/map_viewer/utils.js';
 import { ProjectPanel } from '../private/js/map_viewer/components/project_panel.js';
 import { Config } from '../private/js/map_viewer/config.js';
 
+const LIMITED_MAX_ZOOM = 13;
+
 // Global entry point for Public GIS View Map Viewer
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 SpeleoDB Public GIS View Viewer Initializing...');
@@ -43,7 +45,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // Limit max zoom to 12 if precise zoom is not allowed
+    const allowPreciseZoom = context.allowPreciseZoom !== false;
+    const maxZoom = allowPreciseZoom ? 22 : LIMITED_MAX_ZOOM;
+
     const map = MapCore.init(token, 'map');
+    map.setMaxZoom(maxZoom);
 
     // Simple function to set map height
     function setMapHeight() {
@@ -126,7 +133,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
 
                 if (!allBounds.isEmpty()) {
-                    map.fitBounds(allBounds, { padding: 50, maxZoom: 16 });
+                    const fitMaxZoom = allowPreciseZoom ? 16 : LIMITED_MAX_ZOOM;
+                    map.fitBounds(allBounds, { padding: 50, maxZoom: fitMaxZoom });
                 }
             }
 

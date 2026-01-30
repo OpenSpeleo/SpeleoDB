@@ -86,6 +86,7 @@ class GISViewSerializer(serializers.ModelSerializer[GISView]):
             "id",
             "name",
             "description",
+            "allow_precise_zoom",
             "gis_token",
             "owner_email",
             "project_count",
@@ -117,6 +118,7 @@ class GISViewCreateUpdateSerializer(serializers.ModelSerializer[GISView]):
         fields = [
             "name",
             "description",
+            "allow_precise_zoom",
             "projects",
         ]
 
@@ -187,6 +189,9 @@ class GISViewCreateUpdateSerializer(serializers.ModelSerializer[GISView]):
         # Update basic fields
         instance.name = validated_data.get("name", instance.name)
         instance.description = validated_data.get("description", instance.description)
+        instance.allow_precise_zoom = validated_data.get(
+            "allow_precise_zoom", instance.allow_precise_zoom
+        )
         instance.save()
 
         # Replace projects if provided
@@ -253,6 +258,7 @@ class PublicGISViewSerializer(serializers.Serializer[GISView]):
 
     view_name = serializers.CharField(source="name")
     view_description = serializers.CharField(source="description")
+    allow_precise_zoom = serializers.BooleanField()
     projects = serializers.SerializerMethodField()
 
     def get_projects(self, obj: GISView) -> list[dict[str, Any]]:
@@ -276,6 +282,7 @@ class GISViewDataSerializer(serializers.Serializer[GISView]):
     view_id = serializers.SerializerMethodField()
     view_name = serializers.CharField(source="name")
     description = serializers.CharField()
+    allow_precise_zoom = serializers.BooleanField()
     geojson_files = serializers.SerializerMethodField()
 
     def get_view_id(self, obj: GISView) -> str:
