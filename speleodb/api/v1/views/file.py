@@ -334,7 +334,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     with timed_section("Conversion to GeoJSON"):
                         for file in uploaded_files:
                             if (
-                                file.name == "project.tml"
+                                file.name == "ariane.tml"
                                 and not project.exclude_geojson
                             ):
                                 try:
@@ -383,7 +383,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                     logger.exception("Error uploading GeoJSON to S3.")
                                     continue
 
-                                # There can be only one file called `project.tml`
+                                # There can be only one file called `ariane.tml`
                                 # No point to continue the loop.
                                 break
 

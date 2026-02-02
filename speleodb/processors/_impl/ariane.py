@@ -178,7 +178,7 @@ class ArianeTMLFileProcessor(BaseFileProcessor):
     ASSOC_FILEFORMAT = FileFormat.ARIANE_TML
 
     TARGET_FOLDER = None
-    TARGET_SAVE_FILENAME = "project.tml"
+    TARGET_SAVE_FILENAME = "ariane.tml"
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.tml"
 
     def _add_to_project(self, artifact: Artifact) -> list[Path]:
@@ -210,5 +210,5 @@ class ArianeTMLUFileProcessor(BaseFileProcessor):
     ASSOC_FILEFORMAT = FileFormat.ARIANE_TMLU
 
     TARGET_FOLDER = None
-    TARGET_SAVE_FILENAME = "project.tmlu"
+    TARGET_SAVE_FILENAME = "ariane.tmlu"
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.tmlu"

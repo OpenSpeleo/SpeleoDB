@@ -77,7 +77,7 @@ class Command(BaseCommand):
 
                     for file in commit.files:
                         try:
-                            if Path(file.path).suffix != ".tml":
+                            if Path(file.path).name != "ariane.tml":
                                 continue
 
                             # Create a temporary file to store the TML content
@@ -86,7 +86,7 @@ class Command(BaseCommand):
 
                             # Use a temporary directory to avoid conflicts
                             with TemporaryDirectory() as tmp_dir:
-                                tmp_file = Path(tmp_dir) / "project.tml"
+                                tmp_file = Path(tmp_dir) / "ariane.tml"
                                 tmp_file.write_bytes(file.content.getvalue())
                                 logger.info(f"Saved {file.path} to {tmp_file}")
 
