@@ -59,7 +59,7 @@ dependencies = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django==6.0.1",                   # https://www.djangoproject.com/
+    "django==6.0.2",                   # https://www.djangoproject.com/
     "django-allauth==65.14.0",         # https://github.com/pennersr/django-allauth
     "django-countries==8.2.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
