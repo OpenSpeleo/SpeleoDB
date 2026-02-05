@@ -79,7 +79,7 @@ class SurfaceNetworkDetailsView(_BaseSurfaceNetworkView):
                 user=request.user,
                 network_id=network_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:surface_networks"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -100,7 +100,7 @@ class SurfaceNetworkDangerZoneView(_BaseSurfaceNetworkView):
                 user=request.user,
                 network_id=network_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:surface_networks"))
 
         if not data["has_admin_access"]:
@@ -129,7 +129,7 @@ class SurfaceNetworkUserPermissionsView(_BaseSurfaceNetworkView):
                 user=request.user,
                 network_id=network_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:surface_networks"))
 
         data["permissions"] = list(
@@ -156,7 +156,7 @@ class SurfaceNetworkGISView(_BaseSurfaceNetworkView):
                 user=request.user,
                 network_id=network_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:surface_networks"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -175,7 +175,7 @@ class SurfaceNetworkGISView(_BaseSurfaceNetworkView):
                 network_id=network_id,
             )
 
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:surface_networks"))
 
         # Only allow admins to refresh the token

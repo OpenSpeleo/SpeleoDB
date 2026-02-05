@@ -64,7 +64,7 @@ class BaseAccessLevel(permissions.BasePermission):
                 request.user.get_best_permission(project=project).level
                 >= self.MIN_ACCESS_LEVEL
             )
-        except (ObjectDoesNotExist, NotAuthorizedError):
+        except ObjectDoesNotExist, NotAuthorizedError:
             return False
 
     def has_object_permission(

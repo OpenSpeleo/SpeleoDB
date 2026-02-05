@@ -112,7 +112,7 @@ class SensorFleetDetailsView(_BaseSensorFleetView):
                 user=request.user,
                 fleet_id=fleet_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:sensor_fleets"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -133,7 +133,7 @@ class SensorFleetDangerZoneView(_BaseSensorFleetView):
                 user=request.user,
                 fleet_id=fleet_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:sensor_fleets"))
 
         if not data["has_admin_access"]:
@@ -162,7 +162,7 @@ class SensorFleetUserPermissionsView(_BaseSensorFleetView):
                 user=request.user,
                 fleet_id=fleet_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:sensor_fleets"))
 
         data["permissions"] = SensorFleetUserPermission.objects.filter(
@@ -197,7 +197,7 @@ class SensorFleetHistoryView(_BaseSensorFleetView):
                 user=request.user,
                 fleet_id=fleet_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:sensor_fleets"))
 
         # Fetch all installs for this fleet, ordered by modified_date desc
@@ -259,7 +259,7 @@ class SensorFleetWatchlistView(_BaseSensorFleetView):
                 user=request.user,
                 fleet_id=fleet_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:sensor_fleets"))
 
         # Get days parameter from query string, default to 60 (2 months)

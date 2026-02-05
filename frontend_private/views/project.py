@@ -157,7 +157,7 @@ class ProjectUploadView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:projects"))
 
         project: Project = data["project"]
@@ -190,7 +190,7 @@ class ProjectDangerZoneView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:projects"))
 
         if not data["is_project_admin"]:
@@ -213,7 +213,7 @@ class ProjectDetailsView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:projects"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -231,7 +231,7 @@ class ProjectUserPermissionsView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:projects"))
 
         project: Project = data["project"]
@@ -295,7 +295,7 @@ class ProjectTeamPermissionsView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:projects"))
 
         project: Project = data["project"]
@@ -327,7 +327,7 @@ class ProjectMutexesView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:projects"))
 
         project: Project = data["project"]
@@ -350,7 +350,7 @@ class ProjectRevisionHistoryView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:projects"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -369,7 +369,7 @@ class ProjectGitExplorerView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:projects"))
 
         data["hexsha"] = hexsha
@@ -390,7 +390,7 @@ class ProjectGitInstructionsView(_BaseProjectView):
     ) -> HttpResponseRedirectBase | HttpResponse:
         try:
             data = self.get_project_data(user=request.user, project_id=project_id)
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:projects"))
 
         data["auth_token"], _ = Token.objects.get_or_create(user=request.user)

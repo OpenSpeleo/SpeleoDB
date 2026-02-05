@@ -97,7 +97,7 @@ class GISViewDetailsView(_BaseGISViewView):
                 user=request.user,
                 gis_view_id=gis_view_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:gis_views"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -120,7 +120,7 @@ class GISViewGISIntegrationView(_BaseGISViewView):
                 user=request.user,
                 gis_view_id=gis_view_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:gis_views"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -138,7 +138,7 @@ class GISViewGISIntegrationView(_BaseGISViewView):
                 user=request.user,
                 gis_view_id=gis_view_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:gis_views"))
 
         # Handle token refresh
@@ -172,7 +172,7 @@ class GISViewDangerZoneView(_BaseGISViewView):
                 user=request.user,
                 gis_view_id=gis_view_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:gis_views"))
 
         return super().get(request, *args, **data, **kwargs)

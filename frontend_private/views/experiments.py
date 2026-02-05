@@ -99,7 +99,7 @@ class ExperimentDetailsView(_BaseExperimentView):
                 user=request.user,
                 experiment_id=experiment_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:experiments"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -120,7 +120,7 @@ class ExperimentDangerZoneView(_BaseExperimentView):
                 user=request.user,
                 experiment_id=experiment_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:experiments"))
 
         if not data["is_experiment_admin"]:
@@ -149,7 +149,7 @@ class ExperimentGISView(_BaseExperimentView):
                 user=request.user,
                 experiment_id=experiment_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:experiments"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -167,7 +167,7 @@ class ExperimentGISView(_BaseExperimentView):
                 user=request.user,
                 experiment_id=experiment_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:experiments"))
 
         # Only allow admins to refresh the token
@@ -207,7 +207,7 @@ class ExperimentUserPermissionsView(_BaseExperimentView):
                 user=request.user,
                 experiment_id=experiment_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:experiments"))
 
         data["permissions"] = list(
@@ -234,7 +234,7 @@ class ExperimentDataViewerView(_BaseExperimentView):
                 user=request.user,
                 experiment_id=experiment_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:experiments"))
 
         return super().get(request, *args, **data, **kwargs)

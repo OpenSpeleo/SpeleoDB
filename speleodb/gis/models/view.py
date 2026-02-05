@@ -209,7 +209,7 @@ class GISView(models.Model):
                     "project_geojson"
                 ).get_signed_download_url(expires_in=expires_in)
 
-            except (ValidationError, Exception):  # noqa: BLE001
+            except ValidationError, Exception:  # noqa: BLE001
                 logger.exception(
                     "Error generating signed URL for project %s in view %s",
                     geojson_data["project_id"],

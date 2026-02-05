@@ -104,7 +104,7 @@ class CylinderFleetDetailsView(_BaseCylinderFleetView):
                 user=request.user,
                 fleet_id=fleet_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:cylinder_fleets"))
 
         return super().get(request, *args, **data, **kwargs)
@@ -125,7 +125,7 @@ class CylinderFleetDangerZoneView(_BaseCylinderFleetView):
                 user=request.user,
                 fleet_id=fleet_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:cylinder_fleets"))
 
         if not data["has_admin_access"]:
@@ -154,7 +154,7 @@ class CylinderFleetUserPermissionsView(_BaseCylinderFleetView):
                 user=request.user,
                 fleet_id=fleet_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:cylinder_fleets"))
 
         data["permissions"] = CylinderFleetUserPermission.objects.filter(
@@ -191,7 +191,7 @@ class CylinderFleetHistoryView(_BaseCylinderFleetView):
                 user=request.user,
                 fleet_id=fleet_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:cylinder_fleets"))
 
         installs = (
@@ -255,7 +255,7 @@ class CylinderFleetWatchlistView(_BaseCylinderFleetView):
                 user=request.user,
                 fleet_id=fleet_id,
             )
-        except (ObjectDoesNotExist, PermissionError):
+        except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:cylinder_fleets"))
 
         # Get days parameter from query string, default to 60

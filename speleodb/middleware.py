@@ -153,7 +153,7 @@ class DRFWrapResponseMiddleware:
                 response.accepted_media_type = wrapped_response.accepted_media_type  # type: ignore[attr-defined]
                 response.renderer_context = wrapped_response.renderer_context  # type: ignore[attr-defined]
 
-            except (NameError, AttributeError):
+            except NameError, AttributeError:
                 response.accepted_renderer = JSONRenderer()
                 response.accepted_media_type = "application/json"
                 response.renderer_context = {}  # type: ignore[attr-defined]

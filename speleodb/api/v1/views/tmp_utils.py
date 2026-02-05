@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import io
 from datetime import datetime
+from enum import Enum
 from itertools import pairwise
 from typing import TYPE_CHECKING
 from typing import Annotated
 from typing import Literal
 
 import pyIGRF14 as pyIGRF
-from compass_lib.constants import COMPASS_SECTION_SEPARATOR
-from compass_lib.enums import ShotFlag
 from openspeleo_lib.geo_utils import decimal_year
 from pydantic import BaseModel
 from pydantic import Field
@@ -20,6 +19,25 @@ from speleodb.utils.pydantic_utils import NotFutureDate  # noqa: TC001
 
 if TYPE_CHECKING:
     from typing import Any
+
+
+class ShotFlag(Enum):
+    EXCLUDE_PLOTING = "P"
+    EXCLUDE_CLOSURE = "C"
+    EXCLUDE_LENGTH = "L"
+    TOTAL_EXCLUSION = "X"
+    SPLAY = "S"
+
+    __start_token__ = r"#\|"  # noqa: S105
+    __end_token__ = r"#"  # noqa: S105
+
+    @classmethod
+    def reverse(cls, name: Any) -> Enum:
+        return cls._value2member_map_[name]
+
+
+COMPASS_SECTION_SEPARATOR = "\f"  # Form_feed: https://www.ascii-code.com/12
+COMPASS_END_OF_FILE = "\x1a"  # Substitute: https://www.ascii-code.com/26
 
 
 class CompassShot(BaseModel):

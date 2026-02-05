@@ -172,6 +172,6 @@ class Format(models.Model):
     def format(self) -> StrOrPromise:
         return self.raw_format.label
 
-    @format.setter
+    @format.setter  # noqa: A003
     def format(self, fmt: FileFormat) -> None:
         self._format = fmt.value

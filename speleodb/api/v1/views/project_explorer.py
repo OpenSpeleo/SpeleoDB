@@ -102,7 +102,7 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
                 }
             )
 
-        except (ValueError, GitCommitNotFoundError, GitRevBadName):
+        except ValueError, GitCommitNotFoundError, GitRevBadName:
             logger.exception(
                 f"There has been a problem checking out the commit `{hexsha}`"
             )
