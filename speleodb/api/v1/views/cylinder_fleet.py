@@ -564,6 +564,7 @@ class CylinderFleetExportExcelApiView(GenericAPIView[CylinderFleet], SDBAPIViewM
             "Pressure",
             "Unit System",
             "Use Anode",
+            "Manufactured",
             "Last Visual",
             "Last Hydro",
             "Location",
@@ -595,6 +596,9 @@ class CylinderFleetExportExcelApiView(GenericAPIView[CylinderFleet], SDBAPIViewM
                 cylinder.pressure,
                 cylinder.unit_system,
                 "Yes" if cylinder.use_anode else "No",
+                cylinder.manufactured_date.isoformat()
+                if cylinder.manufactured_date
+                else "",
                 cylinder.last_visual_inspection_date.isoformat()
                 if cylinder.last_visual_inspection_date
                 else "",

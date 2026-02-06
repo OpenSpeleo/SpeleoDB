@@ -1164,6 +1164,18 @@
         "decorators": ""
     },
     {
+        "url": "/private/cylinder-fleet/<uuid:fleet_id>/needs-hydro/",
+        "module": "frontend_private.views.cylinder_fleets.CylinderFleetNeedsHydroView",
+        "name": "private:cylinder_fleet_needs_hydro",
+        "decorators": ""
+    },
+    {
+        "url": "/private/cylinder-fleet/<uuid:fleet_id>/needs-visual/",
+        "module": "frontend_private.views.cylinder_fleets.CylinderFleetNeedsVisualView",
+        "name": "private:cylinder_fleet_needs_visual",
+        "decorators": ""
+    },
+    {
         "url": "/private/cylinder-fleet/<uuid:fleet_id>/permissions/",
         "module": "frontend_private.views.cylinder_fleets.CylinderFleetUserPermissionsView",
         "name": "private:cylinder_fleet_user_permissions",

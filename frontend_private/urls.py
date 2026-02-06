@@ -13,6 +13,8 @@ from frontend_private.views import CylinderFleetDangerZoneView
 from frontend_private.views import CylinderFleetDetailsView
 from frontend_private.views import CylinderFleetHistoryView
 from frontend_private.views import CylinderFleetListingView
+from frontend_private.views import CylinderFleetNeedsHydroView
+from frontend_private.views import CylinderFleetNeedsVisualView
 from frontend_private.views import CylinderFleetUserPermissionsView
 from frontend_private.views import CylinderFleetWatchlistView
 from frontend_private.views import DashboardView
@@ -156,6 +158,16 @@ cylinder_fleet_patterns = [
         "watchlist/",
         CylinderFleetWatchlistView.as_view(),
         name="cylinder_fleet_watchlist",
+    ),
+    path(
+        "needs-hydro/",
+        CylinderFleetNeedsHydroView.as_view(),
+        name="cylinder_fleet_needs_hydro",
+    ),
+    path(
+        "needs-visual/",
+        CylinderFleetNeedsVisualView.as_view(),
+        name="cylinder_fleet_needs_visual",
     ),
 ]
 

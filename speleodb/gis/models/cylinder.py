@@ -160,6 +160,7 @@ class Cylinder(models.Model):
 
     use_anode = models.BooleanField(default=False)
 
+    manufactured_date = models.DateField(null=True, blank=True)
     last_visual_inspection_date = models.DateField(null=True, blank=True)
     last_hydrostatic_test_date = models.DateField(null=True, blank=True)
 

@@ -4,7 +4,8 @@ Reusable cylinder table snippet.
 Parameters:
 - cylinders: List of cylinder objects
 - table_id: ID for the table (default: "cylinders_table")
-- show_actions: Whether to show action buttons (default: False)
+- show_actions: Whether to show all action buttons - Edit + Delete (default: False)
+- show_edit: Whether to show only the Edit button (default: False)
 - has_write_access: Whether user has write access (for conditional display)
 - empty_message: Message to show when no cylinders (default: "No cylinders")
 - show_count: Whether to show cylinder count (default: True)
@@ -16,16 +17,17 @@ Parameters:
         <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/40">
             <tr>
                 <th class="px-4 py-3" style="text-align: center !important;">Cylinder</th>
+                <th class="px-4 py-3" style="text-align: center !important;">Type</th>
                 <th class="px-4 py-3" style="text-align: center !important;">Status</th>
                 <th class="px-4 py-3" style="text-align: center !important;">Gas Mix</th>
                 <th class="px-4 py-3" style="text-align: center !important;">Pressure</th>
-                <th class="px-4 py-3" style="text-align: center !important;">Last Visual</th>
-                <th class="px-4 py-3" style="text-align: center !important;">Last Hydro</th>
                 <th class="px-4 py-3" style="text-align: center !important;">Project</th>
                 <th class="px-4 py-3" style="text-align: center !important;">Location</th>
                 <th class="px-4 py-3" style="text-align: center !important;">Installed</th>
                 <th class="px-4 py-3" style="text-align: center !important;">Map</th>
                 {% if show_actions|default:False and has_write_access|default:False %}
+                <th class="px-4 py-3" style="text-align: center !important;">Actions</th>
+                {% elif show_edit|default:False and has_write_access|default:False %}
                 <th class="px-4 py-3" style="text-align: center !important;">Actions</th>
                 {% endif %}
             </tr>
@@ -33,14 +35,13 @@ Parameters:
         <tbody class="text-sm divide-y divide-slate-700" id="{{ table_id|default:'cylinders_table' }}_body">
             {% for cylinder in cylinders %}
             <tr class="cylinder-row" data-cylinder-id="{{ cylinder.id }}">
-                <td class="px-4 py-3">
+                <td class="px-4 py-3 text-center">
                     <div class="font-medium text-slate-100">
                         {% if cylinder.name %}{{ cylinder.name }}{% else %}<span class="text-slate-500">(Unnamed)</span>{% endif %}
                     </div>
-                    <div class="text-xs text-slate-400 mt-1">
-                        {% if cylinder.serial %}Serial: {{ cylinder.serial }}{% else %}Serial: —{% endif %}
-                        {% if cylinder.brand %} • {{ cylinder.brand }}{% endif %}
-                    </div>
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-300 text-center">
+                    {{ cylinder.type|default:"-" }}
                 </td>
                 <td class="px-4 py-3 text-center">
                     {% if cylinder.status == "functional" %}
@@ -65,27 +66,23 @@ Parameters:
                     </span>
                     {% endif %}
                 </td>
-                <td class="px-4 py-3 text-sm text-slate-300">
-                    {% if cylinder.o2_percentage == 100 %}
-                        Oxygen
-                    {% elif cylinder.he_percentage == 0 %}
-                        NX{{ cylinder.o2_percentage }}
-                    {% else %}
+                <td class="px-4 py-3 text-sm text-slate-300 text-center">
+                    {% if cylinder.he_percentage > 0 %}
                         {{ cylinder.o2_percentage }}/{{ cylinder.he_percentage }}
+                    {% elif cylinder.o2_percentage == 100 %}
+                        Oxygen
+                    {% elif cylinder.o2_percentage == 21 %}
+                        Air
+                    {% else %}
+                        NX{{ cylinder.o2_percentage }}
                     {% endif %}
                 </td>
-                <td class="px-4 py-3 text-sm text-slate-300">
+                <td class="px-4 py-3 text-sm text-slate-300 text-center">
                     {% if cylinder.unit_system == "imperial" %}
                         {{ cylinder.pressure }} PSI
                     {% else %}
                         {{ cylinder.pressure }} BAR
                     {% endif %}
-                </td>
-                <td class="px-4 py-3 text-sm text-slate-300">
-                    {{ cylinder.last_visual_inspection_date|date:"Y-m-d"|default:"-" }}
-                </td>
-                <td class="px-4 py-3 text-sm text-slate-300">
-                    {{ cylinder.last_hydrostatic_test_date|date:"Y-m-d"|default:"-" }}
                 </td>
                 {% with install=cylinder.active_installs|first %}
                 <td class="px-4 py-3 text-sm text-slate-300 text-center">
@@ -122,7 +119,7 @@ Parameters:
                 </td>
                 {% endwith %}
                 {% if show_actions|default:False and has_write_access|default:False %}
-                <td class="px-4 py-3">
+                <td class="px-4 py-3 text-center">
                     <div class="flex items-center justify-center gap-2">
                         <button type="button"
                             class="edit-cylinder-btn text-xs px-2 py-1 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300"
@@ -138,6 +135,7 @@ Parameters:
                             data-cylinder-pressure="{{ cylinder.pressure }}"
                             data-cylinder-unit-system="{{ cylinder.unit_system }}"
                             data-cylinder-use-anode="{% if cylinder.use_anode %}true{% else %}false{% endif %}"
+                            data-cylinder-manufactured-date="{{ cylinder.manufactured_date|date:'Y-m-d' }}"
                             data-cylinder-visual-date="{{ cylinder.last_visual_inspection_date|date:'Y-m-d' }}"
                             data-cylinder-hydro-date="{{ cylinder.last_hydrostatic_test_date|date:'Y-m-d' }}"
                             data-cylinder-status="{{ cylinder.status }}">
@@ -149,6 +147,29 @@ Parameters:
                             Delete
                         </button>
                     </div>
+                </td>
+                {% elif show_edit|default:False and has_write_access|default:False %}
+                <td class="px-4 py-3 text-center">
+                    <button type="button"
+                        class="edit-cylinder-btn text-xs px-2 py-1 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300"
+                        data-cylinder-id="{{ cylinder.id }}"
+                        data-cylinder-name="{{ cylinder.name }}"
+                        data-cylinder-serial="{{ cylinder.serial }}"
+                        data-cylinder-brand="{{ cylinder.brand }}"
+                        data-cylinder-owner="{{ cylinder.owner }}"
+                        data-cylinder-type="{{ cylinder.type }}"
+                        data-cylinder-notes="{{ cylinder.notes }}"
+                        data-cylinder-o2="{{ cylinder.o2_percentage }}"
+                        data-cylinder-he="{{ cylinder.he_percentage }}"
+                        data-cylinder-pressure="{{ cylinder.pressure }}"
+                        data-cylinder-unit-system="{{ cylinder.unit_system }}"
+                        data-cylinder-use-anode="{% if cylinder.use_anode %}true{% else %}false{% endif %}"
+                        data-cylinder-manufactured-date="{{ cylinder.manufactured_date|date:'Y-m-d' }}"
+                        data-cylinder-visual-date="{{ cylinder.last_visual_inspection_date|date:'Y-m-d' }}"
+                        data-cylinder-hydro-date="{{ cylinder.last_hydrostatic_test_date|date:'Y-m-d' }}"
+                        data-cylinder-status="{{ cylinder.status }}">
+                        Edit
+                    </button>
                 </td>
                 {% endif %}
             </tr>

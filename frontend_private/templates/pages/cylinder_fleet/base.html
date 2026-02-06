@@ -232,6 +232,28 @@
                                     </svg>
                                     <span>Cylinders Watchlist</span>
                                 </a>
+                                
+                                <a href="{% url 'private:cylinder_fleet_needs_hydro' fleet_id=cylinder_fleet.id %}" 
+                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_needs_hydro' %}active{% endif %}" 
+                                   @click="open = false">
+                                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <path d="M12 3l5 5a7.071 7.071 0 0 1 -10 10l-5 -5a7.071 7.071 0 0 1 10 -10z" />
+                                        <path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                                    </svg>
+                                    <span>Needs Hydro Test</span>
+                                </a>
+                                
+                                <a href="{% url 'private:cylinder_fleet_needs_visual' fleet_id=cylinder_fleet.id %}" 
+                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_needs_visual' %}active{% endif %}" 
+                                   @click="open = false">
+                                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                                        <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
+                                    </svg>
+                                    <span>Needs Visual Inspection</span>
+                                </a>
                             </div>
                             
                             {% if has_admin_access %}
@@ -340,6 +362,50 @@
                                         <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
                                     {% endif %}
                                         Cylinders Watchlist
+                                    </span>
+                                </a>
+                            </li>
+
+                            <!-- Needs Hydro Test -->
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'cylinder_fleet_needs_hydro' %}bg-indigo-500/30{% endif %}" href="{% url 'private:cylinder_fleet_needs_hydro' fleet_id=cylinder_fleet.id %}">
+                                    {% if request.url_name == 'cylinder_fleet_needs_hydro' %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22" fill="none" stroke-width="2">
+                                    {% else %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="0 0 22 22" fill="none" stroke-width="2">
+                                    {% endif %}
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                            <path d="M12 3l5 5a7.071 7.071 0 0 1 -10 10l-5 -5a7.071 7.071 0 0 1 10 -10z" />
+                                            <path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                                        </svg>
+                                    {% if request.url_name == 'cylinder_fleet_needs_hydro' %}
+                                        <span class="text-sm font-medium text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                                    {% endif %}
+                                        Needs Hydro Test
+                                    </span>
+                                </a>
+                            </li>
+
+                            <!-- Needs Visual Inspection -->
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'cylinder_fleet_needs_visual' %}bg-indigo-500/30{% endif %}" href="{% url 'private:cylinder_fleet_needs_visual' fleet_id=cylinder_fleet.id %}">
+                                    {% if request.url_name == 'cylinder_fleet_needs_visual' %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22" fill="none" stroke-width="2">
+                                    {% else %}
+                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="0 0 22 22" fill="none" stroke-width="2">
+                                    {% endif %}
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                            <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                                            <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
+                                        </svg>
+                                    {% if request.url_name == 'cylinder_fleet_needs_visual' %}
+                                        <span class="text-sm font-medium text-indigo-400">
+                                    {% else %}
+                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                                    {% endif %}
+                                        Needs Visual Inspection
                                     </span>
                                 </a>
                             </li>

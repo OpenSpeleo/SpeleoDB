@@ -227,32 +227,41 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <!-- Unit System -->
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_unit_system">
                             Unit System <span class="text-rose-500">*</span>
                         </label>
-                        <select id="modal_cylinder_unit_system"
+                        <select 
+                            id="modal_cylinder_unit_system"
                             class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                            <option value="metric">Metric (BAR)</option>
                             <option value="imperial">Imperial (PSI)</option>
+                            <option value="metric">Metric (BAR)</option>
                         </select>
+                    </div>
+                    <!-- Manufactured Date -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_manufactured_date">
+                            Manufactured
+                        </label>
+                        <input type="month" id="modal_cylinder_manufactured_date"
+                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     </div>
                     <!-- Visual Inspection -->
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_visual_date">
-                            Last Visual Inspection
+                            Last Visual
                         </label>
-                        <input type="date" id="modal_cylinder_visual_date"
+                        <input type="month" id="modal_cylinder_visual_date"
                             class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     </div>
                     <!-- Hydro Test -->
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_hydro_date">
-                            Last Hydrostatic Test
+                            Last Hydro
                         </label>
-                        <input type="date" id="modal_cylinder_hydro_date"
+                        <input type="month" id="modal_cylinder_hydro_date"
                             class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     </div>
                 </div>
@@ -355,6 +364,19 @@
     $(window).on('load', function () {
         let currentCylinderId = null; // For edit mode
 
+        // Helper function to convert full date (YYYY-MM-DD) to month format (YYYY-MM)
+        function dateToMonth(dateStr) {
+            if (!dateStr) return '';
+            // Extract YYYY-MM from YYYY-MM-DD
+            return dateStr.substring(0, 7);
+        }
+
+        // Helper function to convert month (YYYY-MM) to full date (YYYY-MM-01)
+        function monthToDate(monthStr) {
+            if (!monthStr) return null;
+            return monthStr + '-01';
+        }
+
         // Initialize DataTables for sortable table
         {% if cylinders %}
         $('#cylinders_table').DataTable({
@@ -391,8 +413,9 @@
             $('#modal_cylinder_o2').val('21');
             $('#modal_cylinder_he').val('0');
             $('#modal_cylinder_pressure').val('');
-            $('#modal_cylinder_unit_system').val('metric');
+            $('#modal_cylinder_unit_system').val('imperial');
             $('#modal_cylinder_status').val('functional');
+            $('#modal_cylinder_manufactured_date').val('');
             $('#modal_cylinder_visual_date').val('');
             $('#modal_cylinder_hydro_date').val('');
             $('#modal_cylinder_use_anode').prop('checked', false);
@@ -414,10 +437,11 @@
             $('#modal_cylinder_o2').val(button.data('cylinder-o2') ?? '');
             $('#modal_cylinder_he').val(button.data('cylinder-he') ?? '');
             $('#modal_cylinder_pressure').val(button.data('cylinder-pressure') ?? '');
-            $('#modal_cylinder_unit_system').val(button.data('cylinder-unit-system') || 'metric');
+            $('#modal_cylinder_unit_system').val(button.data('cylinder-unit-system') || 'imperial');
             $('#modal_cylinder_status').val(button.data('cylinder-status') || 'functional');
-            $('#modal_cylinder_visual_date').val(button.data('cylinder-visual-date') || '');
-            $('#modal_cylinder_hydro_date').val(button.data('cylinder-hydro-date') || '');
+            $('#modal_cylinder_manufactured_date').val(dateToMonth(button.data('cylinder-manufactured-date')));
+            $('#modal_cylinder_visual_date').val(dateToMonth(button.data('cylinder-visual-date')));
+            $('#modal_cylinder_hydro_date').val(dateToMonth(button.data('cylinder-hydro-date')));
             $('#modal_cylinder_use_anode').prop('checked', button.data('cylinder-use-anode') === true);
             openCylinderModal();
         });
@@ -455,8 +479,9 @@
                 pressure: parseInt(pressure, 10),
                 unit_system: $('#modal_cylinder_unit_system').val(),
                 status: $('#modal_cylinder_status').val(),
-                last_visual_inspection_date: $('#modal_cylinder_visual_date').val() || null,
-                last_hydrostatic_test_date: $('#modal_cylinder_hydro_date').val() || null,
+                manufactured_date: monthToDate($('#modal_cylinder_manufactured_date').val()),
+                last_visual_inspection_date: monthToDate($('#modal_cylinder_visual_date').val()),
+                last_hydrostatic_test_date: monthToDate($('#modal_cylinder_hydro_date').val()),
                 use_anode: $('#modal_cylinder_use_anode').is(':checked'),
             };
 

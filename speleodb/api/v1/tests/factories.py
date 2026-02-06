@@ -730,6 +730,10 @@ class CylinderFactory(DjangoModelFactory[Cylinder]):
     pressure = 3000
     unit_system = UnitSystem.IMPERIAL
     fleet: CylinderFleet = factory.SubFactory(CylinderFleetFactory)  # type: ignore[assignment]
+    use_anode = False
+    manufactured_date: date | None = None
+    last_visual_inspection_date: date | None = None
+    last_hydrostatic_test_date: date | None = None
     status = OperationalStatus.FUNCTIONAL
     created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
         lambda _: UserFactory.create().email

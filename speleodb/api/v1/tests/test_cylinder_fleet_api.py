@@ -13,6 +13,7 @@ Tests cover:
 
 from __future__ import annotations
 
+from datetime import date
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
@@ -629,6 +630,69 @@ class TestCylinderListCreate:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_create_cylinder_with_dates(
+        self,
+        api_client: APIClient,
+        cylinder_fleet_with_write: CylinderFleet,
+        user: User,
+    ) -> None:
+        """User can create cylinder with manufactured and inspection dates."""
+        data = {
+            "name": "Dated Cylinder",
+            "o2_percentage": 32,
+            "he_percentage": 0,
+            "pressure": 3000,
+            "unit_system": UnitSystem.IMPERIAL,
+            "manufactured_date": "2020-06-15",
+            "last_visual_inspection_date": "2023-03-10",
+            "last_hydrostatic_test_date": "2022-08-20",
+        }
+
+        response = api_client.post(
+            reverse(
+                "api:v1:cylinder-fleet-cylinders",
+                kwargs={"fleet_id": cylinder_fleet_with_write.id},
+            ),
+            data=data,
+            format="json",
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["data"]["manufactured_date"] == "2020-06-15"
+        assert response.data["data"]["last_visual_inspection_date"] == "2023-03-10"
+        assert response.data["data"]["last_hydrostatic_test_date"] == "2022-08-20"
+
+    def test_create_cylinder_with_null_dates(
+        self,
+        api_client: APIClient,
+        cylinder_fleet_with_write: CylinderFleet,
+        user: User,
+    ) -> None:
+        """User can create cylinder without optional date fields."""
+        data = {
+            "name": "No Dates Cylinder",
+            "o2_percentage": 21,
+            "he_percentage": 0,
+            "pressure": 3000,
+            "unit_system": UnitSystem.IMPERIAL,
+        }
+
+        response = api_client.post(
+            reverse(
+                "api:v1:cylinder-fleet-cylinders",
+                kwargs={"fleet_id": cylinder_fleet_with_write.id},
+            ),
+            data=data,
+            format="json",
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["data"]["manufactured_date"] is None
+        assert response.data["data"]["last_visual_inspection_date"] is None
+        assert response.data["data"]["last_hydrostatic_test_date"] is None
+
 
 @pytest.mark.django_db
 class TestCylinderRetrieveUpdateDelete:
@@ -668,6 +732,67 @@ class TestCylinderRetrieveUpdateDelete:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["data"]["name"] == "Updated Cylinder"
+
+    def test_update_cylinder_dates(
+        self,
+        api_client: APIClient,
+        cylinder_fleet_with_write: CylinderFleet,
+        user: User,
+    ) -> None:
+        """User can update cylinder date fields."""
+        cylinder = CylinderFactory.create(
+            fleet=cylinder_fleet_with_write,
+            manufactured_date=None,
+        )
+        data = {
+            "manufactured_date": "2019-01-15",
+            "last_visual_inspection_date": "2024-01-10",
+            "last_hydrostatic_test_date": "2023-06-20",
+        }
+
+        response = api_client.patch(
+            reverse("api:v1:cylinder-detail", kwargs={"id": cylinder.id}),
+            data=data,
+            format="json",
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["data"]["manufactured_date"] == "2019-01-15"
+        assert response.data["data"]["last_visual_inspection_date"] == "2024-01-10"
+        assert response.data["data"]["last_hydrostatic_test_date"] == "2023-06-20"
+
+    def test_update_cylinder_clear_dates(
+        self,
+        api_client: APIClient,
+        cylinder_fleet_with_write: CylinderFleet,
+        user: User,
+    ) -> None:
+        """User can clear cylinder date fields by setting to null."""
+
+        cylinder = CylinderFactory.create(
+            fleet=cylinder_fleet_with_write,
+            manufactured_date=date(2020, 1, 1),
+            last_visual_inspection_date=date(2023, 1, 1),
+            last_hydrostatic_test_date=date(2022, 1, 1),
+        )
+        data = {
+            "manufactured_date": None,
+            "last_visual_inspection_date": None,
+            "last_hydrostatic_test_date": None,
+        }
+
+        response = api_client.patch(
+            reverse("api:v1:cylinder-detail", kwargs={"id": cylinder.id}),
+            data=data,
+            format="json",
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["data"]["manufactured_date"] is None
+        assert response.data["data"]["last_visual_inspection_date"] is None
+        assert response.data["data"]["last_hydrostatic_test_date"] is None
 
     def test_update_cylinder_without_write_permission(
         self,

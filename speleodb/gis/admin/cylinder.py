@@ -123,6 +123,7 @@ class CylinderAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "status",
         "gas_mix_display",
         "pressure_display",
+        "manufactured_date",
         "last_visual_inspection_date",
         "last_hydrostatic_test_date",
         "use_anode",
@@ -136,6 +137,9 @@ class CylinderAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "status",
         "unit_system",
         "use_anode",
+        "manufactured_date",
+        "last_visual_inspection_date",
+        "last_hydrostatic_test_date",
         "creation_date",
         "modified_date",
     )
@@ -194,6 +198,14 @@ class CylinderAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "fields": (
                     "pressure",
                     "unit_system",
+                )
+            },
+        ),
+        (
+            "Dates & Inspections",
+            {
+                "fields": (
+                    "manufactured_date",
                     "last_visual_inspection_date",
                     "last_hydrostatic_test_date",
                 )
@@ -216,20 +228,37 @@ class CylinderAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     @admin.display(description="Gas Mix")
     def gas_mix_display(self, obj: Cylinder) -> str:
         """Display gas mix in a compact format."""
-        return (
-            f"O2 {obj.o2_percentage}% / He {obj.he_percentage}% / "
-            f"N2 {obj.n2_percentage}%"
-        )
+        if obj.o2_percentage is None or obj.he_percentage is None:
+            return "-"
+
+        # Trimix: He > 0 => O2/He format
+        if obj.he_percentage > 0:
+            return f"{obj.o2_percentage}/{obj.he_percentage}"
+
+        # Air: 21% O2 and 0% He
+        if obj.o2_percentage == 21:  # noqa: PLR2004
+            return "Air"
+
+        # Pure Oxygen
+        if obj.o2_percentage == 100:  # noqa: PLR2004
+            return "Oxygen"
+
+        # Nitrox: NX{O2}
+        return f"NX{obj.o2_percentage}"
 
     @admin.display(description="Pressure")
     def pressure_display(self, obj: Cylinder) -> str:
         """Display pressure with unit."""
+        if obj.pressure is None or obj.unit_system is None:
+            return "-"
         unit = "PSI" if obj.unit_system == UnitSystem.IMPERIAL else "BAR"
         return f"{obj.pressure} {unit}"
 
     @admin.display(description="N2 %")
-    def n2_percentage(self, obj: Cylinder) -> int:
+    def n2_percentage(self, obj: Cylinder) -> int | str:
         """Display calculated N2 percentage."""
+        if obj.o2_percentage is None or obj.he_percentage is None:
+            return "-"
         return obj.n2_percentage
 
     def save_model(

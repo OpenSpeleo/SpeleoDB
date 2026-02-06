@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import TYPE_CHECKING
 
 import pytest
@@ -76,6 +77,40 @@ class TestCylinderSerializer:
         assert data["latest_install_long"] is None
         assert data["latest_install_date"] is None
         assert data["active_installs"] == []
+
+    def test_serialize_cylinder_with_dates(self, fleet: CylinderFleet) -> None:
+        """Test that date fields are correctly serialized."""
+        manufactured = date(2020, 6, 15)
+        visual = date(2023, 3, 10)
+        hydro = date(2022, 8, 20)
+
+        cylinder = CylinderFactory.create(
+            fleet=fleet,
+            manufactured_date=manufactured,
+            last_visual_inspection_date=visual,
+            last_hydrostatic_test_date=hydro,
+        )
+        serializer = CylinderSerializer(cylinder)
+        data = serializer.data
+
+        assert data["manufactured_date"] == "2020-06-15"
+        assert data["last_visual_inspection_date"] == "2023-03-10"
+        assert data["last_hydrostatic_test_date"] == "2022-08-20"
+
+    def test_serialize_cylinder_with_null_dates(self, fleet: CylinderFleet) -> None:
+        """Test that null date fields are correctly serialized."""
+        cylinder = CylinderFactory.create(
+            fleet=fleet,
+            manufactured_date=None,
+            last_visual_inspection_date=None,
+            last_hydrostatic_test_date=None,
+        )
+        serializer = CylinderSerializer(cylinder)
+        data = serializer.data
+
+        assert data["manufactured_date"] is None
+        assert data["last_visual_inspection_date"] is None
+        assert data["last_hydrostatic_test_date"] is None
 
 
 @pytest.mark.django_db

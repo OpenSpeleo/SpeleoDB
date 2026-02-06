@@ -2,6 +2,8 @@ from frontend_private.views.cylinder_fleets import CylinderFleetDangerZoneView
 from frontend_private.views.cylinder_fleets import CylinderFleetDetailsView
 from frontend_private.views.cylinder_fleets import CylinderFleetHistoryView
 from frontend_private.views.cylinder_fleets import CylinderFleetListingView
+from frontend_private.views.cylinder_fleets import CylinderFleetNeedsHydroView
+from frontend_private.views.cylinder_fleets import CylinderFleetNeedsVisualView
 from frontend_private.views.cylinder_fleets import CylinderFleetUserPermissionsView
 from frontend_private.views.cylinder_fleets import CylinderFleetWatchlistView
 from frontend_private.views.cylinder_fleets import NewCylinderFleetView
@@ -65,6 +67,8 @@ __all__ = [
     "CylinderFleetDetailsView",
     "CylinderFleetHistoryView",
     "CylinderFleetListingView",
+    "CylinderFleetNeedsHydroView",
+    "CylinderFleetNeedsVisualView",
     "CylinderFleetUserPermissionsView",
     "CylinderFleetWatchlistView",
     "DashboardView",

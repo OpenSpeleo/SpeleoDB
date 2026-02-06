@@ -6,6 +6,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING
 from typing import Any
 
+from dateutil.relativedelta import relativedelta
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Prefetch
 from django.db.models.functions import Lower
@@ -241,31 +242,38 @@ class CylinderFleetHistoryView(_BaseCylinderFleetView):
 
 
 class CylinderFleetWatchlistView(_BaseCylinderFleetView):
+    """
+    Base watchlist view that can be configured for different watchlist types:
+    - installed: Cylinders installed for more than X days (configurable)
+    - needs_hydro: Cylinders needing hydrostatic test (last test > 5 years ago)
+    - needs_visual: Cylinders needing visual inspection (last inspection > 1 year ago)
+    """
+
     template_name = "pages/cylinder_fleet/watchlist.html"
 
-    def get(  # type: ignore[override]
+    # Subclasses can override these
+    watchlist_type: str = "installed"
+    page_title: str = "Cylinders Watchlist"
+    section_title: str = "Cylinders Due for Retrieval"
+    empty_message: str = (
+        "No cylinders are due for retrieval within the selected time window."
+    )
+    show_days_filter: bool = True
+
+    def _get_cylinders(
         self,
         request: AuthenticatedHttpRequest,
-        fleet_id: str,
-        *args: Any,
-        **kwargs: Any,
-    ) -> HttpResponseRedirectBase | HttpResponse:
-        try:
-            data = self.get_cylinder_fleet_data(
-                user=request.user,
-                fleet_id=fleet_id,
-            )
-        except ObjectDoesNotExist, PermissionError:
-            return redirect(reverse("private:cylinder_fleets"))
-
+        data: dict[str, Any],
+    ) -> dict[str, int | list[Cylinder]]:
+        """Get cylinders based on installed duration filter."""
         # Get days parameter from query string, default to 60
         days_param = request.GET.get("days", "60")
         try:
             days = int(days_param)
             if days < 0:
-                days = 60  # Default to 60 if invalid
+                days = 60
         except ValueError:
-            days = 60  # Default to 60 if invalid
+            days = 60
 
         today = timezone.localdate()
         cutoff_date = today - timedelta(days=days)
@@ -282,22 +290,125 @@ class CylinderFleetWatchlistView(_BaseCylinderFleetView):
 
         cylinder_ids = due_installs.values_list("cylinder_id", flat=True).distinct()
 
-        cylinders = (
-            data["cylinder_fleet"]
-            .cylinders.filter(id__in=cylinder_ids)
-            .prefetch_related(
-                Prefetch(
-                    "installs",
-                    queryset=CylinderInstall.objects.filter(
-                        status=InstallStatus.INSTALLED
-                    ),
-                    to_attr="active_installs",
+        return {
+            "days": days,
+            "cylinders": (
+                data["cylinder_fleet"]
+                .cylinders.filter(id__in=cylinder_ids)
+                .prefetch_related(
+                    Prefetch(
+                        "installs",
+                        queryset=CylinderInstall.objects.filter(
+                            status=InstallStatus.INSTALLED
+                        ),
+                        to_attr="active_installs",
+                    )
                 )
-            )
-            .order_by(Lower("name"))
-        )
+                .order_by(Lower("name"))
+            ),
+        }
 
-        data["cylinders"] = list(cylinders)
-        data["days"] = days
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        fleet_id: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponseRedirectBase | HttpResponse:
+        try:
+            data = self.get_cylinder_fleet_data(
+                user=request.user,
+                fleet_id=fleet_id,
+            )
+        except ObjectDoesNotExist, PermissionError:
+            return redirect(reverse("private:cylinder_fleets"))
+
+        data.update(self._get_cylinders(request, data))
+
+        data["watchlist_type"] = self.watchlist_type
+        data["page_title"] = self.page_title
+        data["section_title"] = self.section_title
+        data["empty_message"] = self.empty_message
+        data["show_days_filter"] = self.show_days_filter
 
         return super().get(request, *args, **data, **kwargs)
+
+
+class CylinderFleetNeedsHydroView(CylinderFleetWatchlistView):
+    """Cylinders needing hydrostatic test (last test > 5 years ago or never tested)."""
+
+    watchlist_type = "needs_hydro"
+    page_title = "Cylinders Needing Hydrostatic Test"
+    section_title = "Cylinders Due for Hydrostatic Test"
+    empty_message = "No cylinders need hydrostatic testing at this time."
+    show_days_filter = False
+
+    def _get_cylinders(
+        self,
+        request: AuthenticatedHttpRequest,
+        data: dict[str, Any],
+    ) -> dict[str, int | list[Cylinder]]:
+        """Get cylinders with hydro test older than 5 years."""
+
+        today = timezone.localdate()
+        cutoff_date = today - relativedelta(years=5)  # type: ignore[no-untyped-call]
+
+        return {
+            "cylinders": (
+                data["cylinder_fleet"]
+                .cylinders.filter(
+                    last_hydrostatic_test_date__isnull=False,
+                    last_hydrostatic_test_date__lte=cutoff_date,
+                )
+                .prefetch_related(
+                    Prefetch(
+                        "installs",
+                        queryset=CylinderInstall.objects.filter(
+                            status=InstallStatus.INSTALLED
+                        ),
+                        to_attr="active_installs",
+                    )
+                )
+                .order_by("last_hydrostatic_test_date")
+            )
+        }
+
+
+class CylinderFleetNeedsVisualView(CylinderFleetWatchlistView):
+    """Cylinders needing visual inspection (last inspection > 1 year ago or never)."""
+
+    watchlist_type = "needs_visual"
+    page_title = "Cylinders Needing Visual Inspection"
+    section_title = "Cylinders Due for Visual Inspection"
+    empty_message = "No cylinders need visual inspection at this time."
+    show_days_filter = False
+
+    def _get_cylinders(
+        self,
+        request: AuthenticatedHttpRequest,
+        data: dict[str, Any],
+    ) -> dict[str, int | list[Cylinder]]:
+        """Get cylinders with visual inspection older than 1 year."""
+
+        today = timezone.localdate()
+        cutoff_date = today - relativedelta(years=1)  # type: ignore[no-untyped-call]
+
+        return {
+            "cylinders": (
+                data["cylinder_fleet"]
+                .cylinders.filter(
+                    last_visual_inspection_date__isnull=False,
+                    last_visual_inspection_date__lte=cutoff_date,
+                )
+                .prefetch_related(
+                    Prefetch(
+                        "installs",
+                        queryset=CylinderInstall.objects.filter(
+                            status=InstallStatus.INSTALLED
+                        ),
+                        to_attr="active_installs",
+                    )
+                )
+                .order_by("last_visual_inspection_date")
+            )
+        }
