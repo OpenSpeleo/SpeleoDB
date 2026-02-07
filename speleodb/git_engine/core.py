@@ -722,7 +722,13 @@ class GitRepo(Repo):
                 branch_name=settings.DJANGO_GIT_BRANCH_NAME
             )
         except GitBaseError:
-            self.git.checkout("-b", settings.DJANGO_GIT_BRANCH_NAME)
+            try:
+                self.git.checkout("-b", settings.DJANGO_GIT_BRANCH_NAME)
+            except GitCommandError:
+                raise GitBaseError(
+                    "Failed to checkout default branch and pull repository: "
+                    f"{self.remotes.origin.url.split('@')[-1]}"
+                ) from None
 
     def checkout_commit(self, hexsha: str) -> None:
         self._checkout_branch_or_commit_and_maybe_pull(hexsha=hexsha)

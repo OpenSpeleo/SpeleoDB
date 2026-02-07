@@ -62,15 +62,7 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
         user = self.get_user()
         project = self.get_object()
         try:
-            # Checkout default branch and pull repository
-            try:
-                project.checkout_commit_or_default_pull_branch()
-            except GitBaseError:
-                return ErrorResponse(
-                    {"error": f"Problem checking out the commit `{hexsha}`"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-
+            # Checkout default branch and pull repository.
             project.checkout_commit_or_default_pull_branch()
 
             commit = project.git_repo.commit(hexsha)
@@ -102,7 +94,7 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
                 }
             )
 
-        except ValueError, GitCommitNotFoundError, GitRevBadName:
+        except GitBaseError, ValueError, GitCommitNotFoundError, GitRevBadName:
             logger.exception(
                 f"There has been a problem checking out the commit `{hexsha}`"
             )
