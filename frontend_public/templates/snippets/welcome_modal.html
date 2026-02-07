@@ -1,11 +1,11 @@
 {% load static %}
 
-<!-- Welcome Modal for Non-Authenticated Users -->
 {% if not request.user.is_authenticated %}
+<!-- Welcome Modal for Non-Authenticated Users -->
 <div x-data="{ showModal: true }" 
      x-show="showModal" 
      x-cloak
-     class="fixed inset-0 z-9999 flex items-center justify-center p-4 welcome-modal-backdrop"
+     class="fixed inset-0 z-10 flex items-center justify-center p-4 welcome-modal-backdrop"
      style="display: none;"
      @keydown.escape.window="showModal = false">
     
