@@ -76,6 +76,6 @@
         allowPreciseZoom: {{ gis_view.allow_precise_zoom|yesno:"true,false" }}
     };
 </script>
-<script type="module" src="{% static 'js/gis_view_main.js' %}"></script>
+<script src="{% static 'js/dist/gis_view.bundle.js' %}"></script>
 {% endblock inline_extra_js %}
 

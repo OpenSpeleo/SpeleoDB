@@ -65,10 +65,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=.workdir/test_wheels/,target=.workdir/test_wheels/ \
     uv sync --frozen --extra ${BUILD_ENV}
 
-# Pre-Install Tailwind-CSS
-RUN tailwindcss_install && \
-    chmod +x /usr/local/lib/python3.14/site-packages/pytailwindcss/bin/latest/tailwindcss
-
 COPY ./compose/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
 RUN chmod +x /entrypoint

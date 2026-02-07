@@ -303,3 +303,7 @@ test_db.sqlite3.journal
 
 # Debug Logs
 test_log.txt
+
+# esbuild JS bundles (generated from source)
+frontend_private/static/private/js/dist/
+frontend_public/static/js/dist/

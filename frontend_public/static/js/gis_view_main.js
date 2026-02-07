@@ -12,12 +12,12 @@
  * - Auto-zoom to fit all projects
  */
 
-import { State } from '../private/js/map_viewer/state.js';
-import { MapCore } from '../private/js/map_viewer/map/core.js';
-import { Layers } from '../private/js/map_viewer/map/layers.js';
-import { Utils } from '../private/js/map_viewer/utils.js';
-import { ProjectPanel } from '../private/js/map_viewer/components/project_panel.js';
-import { Config } from '../private/js/map_viewer/config.js';
+import { State } from '../../../frontend_private/static/private/js/map_viewer/state.js';
+import { MapCore } from '../../../frontend_private/static/private/js/map_viewer/map/core.js';
+import { Layers } from '../../../frontend_private/static/private/js/map_viewer/map/layers.js';
+import { Utils } from '../../../frontend_private/static/private/js/map_viewer/utils.js';
+import { ProjectPanel } from '../../../frontend_private/static/private/js/map_viewer/components/project_panel.js';
+import { Config } from '../../../frontend_private/static/private/js/map_viewer/config.js';
 
 const LIMITED_MAX_ZOOM = 13;
 

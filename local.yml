@@ -95,7 +95,6 @@ services:
     image: gitlab/gitlab-ce:latest
     container_name: speleodb_gitlab_lab
     privileged: true
-    restart: always
     environment:
       # Root User Credentials: root:WE66dZFgKevGzj31My!5
       GITLAB_ROOT_PASSWORD: WE66dZFgKevGzj31My!5
