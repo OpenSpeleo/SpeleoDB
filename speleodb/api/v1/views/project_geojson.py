@@ -155,7 +155,7 @@ class OGCGISUserCollectionApiView(BaseOGCGISViewCollectionApiView):
 
         return NoWrapResponse(
             {
-                "id": project_geojson.commit,
+                "id": project_geojson.commit_sha,
                 "title": project_geojson.project.name,
                 "description": f"Commit: {project_geojson.commit_sha}",
                 "itemType": "feature",
