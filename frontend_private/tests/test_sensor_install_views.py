@@ -63,8 +63,8 @@ class TestSensorManagementTabRendering(TestCase):
         assert response.status_code == status.HTTP_200_OK
         content = response.content.decode("utf-8")
 
-        # Check that the main.js module is loaded (which imports sensors.js)
-        assert "map_viewer/main.js" in content
+        # Check that the bundled map_viewer JS module is loaded
+        assert "map_viewer.bundle.js" in content
         # Check for sensor management tab option
         assert 'value="sensor-management"' in content or "Sensor Management" in content
 
@@ -93,7 +93,7 @@ class TestSensorManagementTabRendering(TestCase):
 
         # Filter is rendered dynamically by sensors.js module
         # Just verify the module infrastructure is in place
-        assert "map_viewer/main.js" in content
+        assert "map_viewer.bundle.js" in content
         assert "sensor-management" in content
 
     def test_map_viewer_includes_export_excel_button_logic(self) -> None:
@@ -108,7 +108,7 @@ class TestSensorManagementTabRendering(TestCase):
 
         # Export button is rendered dynamically by sensors.js module
         # Just verify the module infrastructure is in place
-        assert "map_viewer/main.js" in content
+        assert "map_viewer.bundle.js" in content
         assert "sensor-management" in content
 
     def test_map_viewer_includes_table_sorting_logic(self) -> None:
@@ -122,7 +122,7 @@ class TestSensorManagementTabRendering(TestCase):
 
         # Sorting logic is in sensors.js module
         # Just verify the module infrastructure is in place
-        assert "map_viewer/main.js" in content
+        assert "map_viewer.bundle.js" in content
         assert "sensor-management" in content
 
 
@@ -214,7 +214,7 @@ class TestSensorHistoryIntegration(TestCase):
 
         # Verify sensor management tab and module infrastructure is present
         assert "sensor-management" in content
-        assert "map_viewer/main.js" in content
+        assert "map_viewer.bundle.js" in content
 
     def test_api_returns_all_status_without_filter(self) -> None:
         """Verify API returns all sensor install status when no filter is applied."""
