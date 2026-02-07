@@ -25,7 +25,6 @@ from django.db.models.functions import Coalesce
 from django.db.utils import IntegrityError
 from django.utils import timezone
 from django_countries.fields import CountryField
-
 from git.exc import GitCommandError
 
 from speleodb.git_engine.core import GitRepo
@@ -504,7 +503,7 @@ class Project(models.Model):
             else:
                 git_repo.checkout_commit(hexsha=hexsha)
 
-        except (GitBaseError, GitCommandError):
+        except GitBaseError, GitCommandError:
             logger.warning(
                 "Failed to checkout/pull for project %s. "
                 "Deleting local copy and re-cloning from scratch.",

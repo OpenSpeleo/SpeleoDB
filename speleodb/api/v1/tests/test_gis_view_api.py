@@ -10,12 +10,15 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 
 from speleodb.api.v1.serializers.gis_view import GISViewDataSerializer
 from speleodb.api.v1.serializers.gis_view import PublicGISProjectViewSerializer
 from speleodb.api.v1.serializers.gis_view import PublicGISViewSerializer
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
+from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
 from speleodb.gis.models import ProjectGeoJSON
@@ -1349,3 +1352,71 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         assert response.status_code == status.HTTP_200_OK
         data = response.json()["data"]
         assert data["view_name"] == "Another User's View"
+
+
+@pytest.mark.django_db
+class TestOGCGISUserCollectionApi(BaseAPITestCase):
+    """Test OGC GIS user-collection endpoint returns JSON-serializable data.
+
+    Regression test: previously the view returned project_geojson.commit
+    (a ProjectCommit model instance) as the ``"id"`` field instead of
+    project_geojson.commit_sha (a string), causing:
+        TypeError: Object of type ProjectCommit is not JSON serializable
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+
+        # The user_token URL converter requires [0-9a-fA-F]{40}, so replace
+        # the token with one that has a hex-compatible key.
+        self.token.delete()
+        self.token = Token.objects.create(
+            user=self.user, key="a1b2c3d4e5f6a7b8c9d0" * 2
+        )
+
+        self.project = ProjectFactory.create(created_by=self.user.email)
+        UserProjectPermissionFactory(
+            target=self.user,
+            level=PermissionLevel.READ_ONLY,
+            project=self.project,
+        )
+
+    def test_user_collection_returns_commit_sha_string(self) -> None:
+        """Call the user-collection endpoint and verify the response ``id``
+        is the commit SHA string, not a ProjectCommit object."""
+
+        commit_sha = "b" * 40
+        create_project_geojson(
+            project=self.project,
+            commit_sha=commit_sha,
+            commit_date=timezone.now(),
+            author_name="Test Author",
+            author_email="test@example.com",
+            message="Test commit",
+            file=temp_geojson_file(),
+        )
+
+        response = self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-collection",
+                kwargs={
+                    "key": self.token.key,
+                    "commit_sha": commit_sha,
+                },
+            )
+        )
+
+        # Without the fix, this returns 500 with:
+        #   TypeError: Object of type ProjectCommit is not JSON serializable
+        assert response.status_code == status.HTTP_200_OK
+
+        data = response.json()
+
+        # Verify the id field is the commit SHA string
+        assert data["id"] == commit_sha
+        assert isinstance(data["id"], str)
+
+        # Verify the rest of the response structure
+        assert "title" in data
+        assert "description" in data
+        assert "links" in data

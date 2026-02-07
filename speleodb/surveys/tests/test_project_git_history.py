@@ -265,3 +265,79 @@ class TestCheckoutCommitOrDefaultBranch(TestCase):
 
         with pytest.raises(ProjectNotFound):
             project.checkout_commit_or_default_pull_branch()
+
+
+@pytest.mark.skip_if_lighttest
+class TestGitRepoCorruptionRecovery(BaseAPIProjectTestCase):
+    """Test that broken git repos are recovered by deleting and re-cloning.
+
+    Regression test: previously, when pull() failed on a broken repo,
+    the fallback checkout also failed, causing an unhandled exception chain
+    that resulted in a 500 error. The fix catches the error, deletes the
+    broken local copy, re-clones from the remote, and retries.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.set_test_project_permission(
+            level=PermissionLevel.ADMIN,
+            permission_type=PermissionType.USER,
+        )
+
+    def test_checkout_recovers_from_broken_remote(self) -> None:
+        """Upload an artifact, break the remote URL so pull() fails, then
+        verify that checkout_commit_or_default_pull_branch recovers
+        gracefully by deleting the local repo and re-cloning."""
+
+        assert TEST_FILE.exists()
+
+        # 1. Upload an artifact to create a real commit
+        self.project.acquire_mutex(self.user)
+
+        with TEST_FILE.open(mode="rb") as file_data:
+            response = self.client.put(
+                reverse(
+                    "api:v1:project-upload",
+                    kwargs={
+                        "id": self.project.id,
+                        "fileformat": FileFormat.ARIANE_TML.label.lower(),
+                    },
+                ),
+                {"artifact": file_data, "message": "Test commit"},
+                format="multipart",
+                headers={"authorization": self.auth},
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+
+        # Verify the git repo exists and is valid
+        git_repo_dir = self.project.git_repo_dir
+        assert git_repo_dir.exists()
+        assert (git_repo_dir / ".git" / "HEAD").exists()
+
+        # 2. Break the repo by pointing the remote to a URL that will never
+        #    resolve.  This makes pull() fail after all retries, without
+        #    corrupting git internals (which could affect the parent repo).
+        git_repo = self.project.git_repo
+        git_repo.git.remote(
+            "set-url", "origin", "https://invalid.example.com/nonexistent.git"
+        )
+
+        # 3. checkout_commit_or_default_pull_branch should recover:
+        #    - pull() fails (unreachable remote) → GitBaseError
+        #    - fallback "git checkout -b master" fails (already exists) →
+        #      GitCommandError, re-raised as GitBaseError
+        #    - Model catches the error, deletes local repo, re-clones from
+        #      GitLab (using the real URL from credentials, not the broken
+        #      local config), and retries successfully.
+        #
+        # Without the fix this raises an unhandled exception.
+        self.project.checkout_commit_or_default_pull_branch()
+
+        # Verify the repo was re-created and is valid
+        assert git_repo_dir.exists()
+        assert (git_repo_dir / ".git" / "HEAD").exists()
+
+        # Verify commits still exist in the database
+        commits = ProjectCommit.objects.filter(project=self.project)
+        assert commits.count() >= 1
