@@ -77,6 +77,17 @@ class TestUserAutocomplete(BaseAPITestCase):
         error_payload = response.json()
         assert error_payload["error"] == "Incorrect query: minimum 3 chars"
 
+    def test_autocomplete_query_user_name(self) -> None:
+        """Regression: querying autocomplete should not raise AssertionError
+        about missing queryset / get_queryset on UserAutocompleteView."""
+        UserFactory.create(email="user_name@example.com", name="user_name")
+        response = self.client.get(
+            self.url,
+            data={"query": "user_name"},
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_200_OK
+
     def test_limit_is_10_and_order_by_email(self) -> None:
         # Create many users
         for i in range(50):

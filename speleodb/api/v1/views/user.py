@@ -174,6 +174,7 @@ class UserAutocompleteView(GenericAPIView[User]):
 
     serializer_class = UserAutocompleteSerializer
     permission_classes = [permissions.IsAuthenticated]
+    queryset = User.objects.all()
 
     @extend_schema(
         parameters=[
