@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import ClassVar
 
 from rest_framework import serializers
 
@@ -12,6 +13,7 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import SurfaceMonitoringNetwork
 from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
 from speleodb.users.models import User
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise
@@ -21,9 +23,11 @@ logger = logging.getLogger(__name__)
 
 
 class SurfaceMonitoringNetworkSerializer(
-    serializers.ModelSerializer[SurfaceMonitoringNetwork]
+    SanitizedFieldsMixin, serializers.ModelSerializer[SurfaceMonitoringNetwork]
 ):
     """Serializer for SurfaceMonitoringNetwork model."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
 
     # Explicitly declare name field to enforce validation
     name = serializers.CharField(

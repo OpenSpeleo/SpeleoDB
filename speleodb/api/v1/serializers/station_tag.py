@@ -4,14 +4,20 @@ from __future__ import annotations
 
 import random
 from typing import Any
+from typing import ClassVar
 
 from rest_framework import serializers
 
 from speleodb.gis.models import StationTag
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 
-class StationTagSerializer(serializers.ModelSerializer[StationTag]):
+class StationTagSerializer(
+    SanitizedFieldsMixin, serializers.ModelSerializer[StationTag]
+):
     """Serializer for StationTag model."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name"]
 
     station_count = serializers.SerializerMethodField()
 

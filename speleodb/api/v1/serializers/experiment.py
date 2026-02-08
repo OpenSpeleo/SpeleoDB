@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from typing import ClassVar
 
 from geojson import Feature  # type: ignore[attr-defined]
 from geojson import Point  # type: ignore[attr-defined]
@@ -18,6 +19,7 @@ from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models.experiment import ExperimentFieldDefinition
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.users.models import User
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +42,12 @@ class ExperimentFieldsField(DRFField):  # type: ignore[type-arg]
         return value
 
 
-class ExperimentSerializer(serializers.ModelSerializer[Experiment]):
+class ExperimentSerializer(
+    SanitizedFieldsMixin, serializers.ModelSerializer[Experiment]
+):
     """Serializer for Experiment model with field processing."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "description", "code"]
 
     # Use custom field that accepts both list (API) and dict (internal)
     experiment_fields = ExperimentFieldsField(required=False, allow_null=True)

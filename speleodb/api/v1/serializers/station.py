@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 from decimal import InvalidOperation
 from typing import Any
+from typing import ClassVar
 from typing import TypeVar
 
 from django.conf import settings
@@ -19,12 +20,16 @@ from speleodb.gis.models import StationResourceType
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
 from speleodb.utils.gps_utils import format_coordinate
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 # Type variable for station types
 T = TypeVar("T", bound=Station)
 
 
-class StationResourceSerializer(serializers.ModelSerializer[StationResource]):
+class StationResourceSerializer(
+    SanitizedFieldsMixin, serializers.ModelSerializer[StationResource]
+):
+    sanitized_fields: ClassVar[list[str]] = ["title", "description", "text_content"]
     """Serializer for StationResource model."""
 
     class Meta:
@@ -172,9 +177,13 @@ class BaseStationSerializerMixin:
 
 
 class StationSerializer(
-    BaseStationSerializerMixin, serializers.ModelSerializer[Station]
+    SanitizedFieldsMixin,
+    BaseStationSerializerMixin,
+    serializers.ModelSerializer[Station],
 ):
     """Serializer for base Station model (read operations)."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
 
     # Override tag field to return nested representation
     tag = serializers.SerializerMethodField()
@@ -199,9 +208,13 @@ class StationWithResourcesSerializer(StationSerializer):
 
 
 class SubSurfaceStationSerializer(
-    BaseStationSerializerMixin, serializers.ModelSerializer[SubSurfaceStation]
+    SanitizedFieldsMixin,
+    BaseStationSerializerMixin,
+    serializers.ModelSerializer[SubSurfaceStation],
 ):
     """Serializer for SubSurfaceStation model (has project field)."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
 
     # Override tag field to return nested representation
     tag = serializers.SerializerMethodField()
@@ -238,9 +251,13 @@ class SubSurfaceStationWithResourcesSerializer(SubSurfaceStationSerializer):
 
 
 class SurfaceStationSerializer(
-    BaseStationSerializerMixin, serializers.ModelSerializer[SurfaceStation]
+    SanitizedFieldsMixin,
+    BaseStationSerializerMixin,
+    serializers.ModelSerializer[SurfaceStation],
 ):
     """Serializer for SurfaceStation model (has network field)."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
 
     # Override tag field to return nested representation
     tag = serializers.SerializerMethodField()

@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 from decimal import InvalidOperation
 from typing import Any
+from typing import ClassVar
 
 from geojson import Feature  # type: ignore[attr-defined]
 from geojson import Point  # type: ignore[attr-defined]
@@ -12,10 +13,15 @@ from rest_framework import serializers
 
 from speleodb.gis.models import ExplorationLead
 from speleodb.utils.gps_utils import format_coordinate
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 
-class ExplorationLeadSerializer(serializers.ModelSerializer[ExplorationLead]):
+class ExplorationLeadSerializer(
+    SanitizedFieldsMixin, serializers.ModelSerializer[ExplorationLead]
+):
     """Serializer for ExplorationLead model."""
+
+    sanitized_fields: ClassVar[list[str]] = ["description"]
 
     class Meta:
         model = ExplorationLead

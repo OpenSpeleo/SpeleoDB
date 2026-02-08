@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import ClassVar
 
 from django.core.exceptions import ObjectDoesNotExist
 from django_countries import countries
@@ -12,9 +13,14 @@ from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.utils.serializer_fields import CustomChoiceField
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 
-class SurveyTeamSerializer(serializers.ModelSerializer[SurveyTeam]):
+class SurveyTeamSerializer(
+    SanitizedFieldsMixin, serializers.ModelSerializer[SurveyTeam]
+):
+    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
+
     country = CustomChoiceField(choices=list(countries))
     role = serializers.SerializerMethodField()
 

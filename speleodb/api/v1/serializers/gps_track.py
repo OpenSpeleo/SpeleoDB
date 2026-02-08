@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from rest_framework import serializers
 
 from speleodb.gis.models import GPSTrack
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 
-class GPSTrackSerializer(serializers.ModelSerializer[GPSTrack]):
+class GPSTrackSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[GPSTrack]):
+    sanitized_fields: ClassVar[list[str]] = ["name"]
+
     class Meta:
         model = GPSTrack
         fields = ["id", "name", "creation_date", "modified_date"]

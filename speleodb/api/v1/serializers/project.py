@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 from decimal import InvalidOperation
 from typing import Any
+from typing import ClassVar
 
 from django_countries import countries
 from rest_framework import serializers
@@ -24,9 +25,11 @@ from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.gps_utils import format_coordinate
 from speleodb.utils.gps_utils import maybe_convert_dms_to_decimal
 from speleodb.utils.serializer_fields import CustomChoiceField
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 
-class ProjectSerializer(serializers.ModelSerializer[Project]):
+class ProjectSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Project]):
+    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
     country = CustomChoiceField(choices=list(countries))
     visibility = CustomChoiceField(
         choices=ProjectVisibility,  # type: ignore[arg-type]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import ClassVar
 
 from allauth.account.models import EmailAddress
 from django.core.validators import validate_email
@@ -11,9 +12,12 @@ from rest_framework import serializers
 
 from speleodb.users.models import User
 from speleodb.utils.serializer_fields import CustomChoiceField
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 
-class UserSerializer(serializers.ModelSerializer[User]):
+class UserSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[User]):
+    sanitized_fields: ClassVar[list[str]] = ["name"]
+
     country = CustomChoiceField(choices=list(countries))
 
     class Meta:

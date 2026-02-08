@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import ClassVar
 
 from rest_framework import serializers
 
@@ -18,6 +19,7 @@ from speleodb.gis.models import CylinderInstall
 from speleodb.gis.models import CylinderPressureCheck
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise
@@ -25,8 +27,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class CylinderSerializer(serializers.ModelSerializer[Cylinder]):
+class CylinderSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Cylinder]):
     """Serializer for Cylinder model."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "brand", "owner", "notes", "type"]
 
     # Make fleet write-only since we pass it via URL
     fleet = serializers.PrimaryKeyRelatedField(
@@ -107,8 +111,12 @@ class CylinderSerializer(serializers.ModelSerializer[Cylinder]):
         return active_installs
 
 
-class CylinderFleetSerializer(serializers.ModelSerializer[CylinderFleet]):
+class CylinderFleetSerializer(
+    SanitizedFieldsMixin, serializers.ModelSerializer[CylinderFleet]
+):
     """Serializer for CylinderFleet model with optional initial cylinders."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
 
     # Explicitly declare name field to enforce validation
     name = serializers.CharField(
@@ -320,8 +328,12 @@ class CylinderFleetUserPermissionSerializer(
         return instance
 
 
-class CylinderInstallSerializer(serializers.ModelSerializer[CylinderInstall]):
+class CylinderInstallSerializer(
+    SanitizedFieldsMixin, serializers.ModelSerializer[CylinderInstall]
+):
     """Serializer for CylinderInstall model."""
+
+    sanitized_fields: ClassVar[list[str]] = ["location_name", "notes"]
 
     # Read-only nested information
     cylinder_id = serializers.UUIDField(source="cylinder.id", read_only=True)

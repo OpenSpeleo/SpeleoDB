@@ -3,15 +3,21 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import ClassVar
 
 from django.conf import settings
 from rest_framework import serializers
 
 from speleodb.gis.models import StationLogEntry
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 
-class StationLogEntrySerializer(serializers.ModelSerializer[StationLogEntry]):
+class StationLogEntrySerializer(
+    SanitizedFieldsMixin, serializers.ModelSerializer[StationLogEntry]
+):
     """Serializer for StationLogEntry model."""
+
+    sanitized_fields: ClassVar[list[str]] = ["title", "notes"]
 
     class Meta:
         model = StationLogEntry

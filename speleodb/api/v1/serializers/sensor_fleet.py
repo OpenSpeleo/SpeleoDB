@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import ClassVar
 
 from rest_framework import serializers
 
@@ -18,6 +19,7 @@ from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
 from speleodb.users.models import User
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise
@@ -27,8 +29,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class SensorSerializer(serializers.ModelSerializer[Sensor]):
+class SensorSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Sensor]):
     """Serializer for Sensor model."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "notes"]
 
     # Make fleet write-only since we pass it via URL
     fleet = serializers.PrimaryKeyRelatedField(
@@ -152,8 +156,12 @@ class SensorSerializer(serializers.ModelSerializer[Sensor]):
         return active_install
 
 
-class SensorFleetSerializer(serializers.ModelSerializer[SensorFleet]):
+class SensorFleetSerializer(
+    SanitizedFieldsMixin, serializers.ModelSerializer[SensorFleet]
+):
     """Serializer for SensorFleet model with optional initial sensors."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
 
     # Explicitly declare name field to enforce validation
     name = serializers.CharField(

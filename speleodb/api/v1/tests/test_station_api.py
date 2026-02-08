@@ -17,6 +17,7 @@ from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Station
+from speleodb.utils.sanitize import sanitize_text
 from speleodb.utils.test_utils import named_product
 
 
@@ -686,9 +687,9 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
                 continue
 
-            # Should handle unicode properly
+            # Should handle unicode properly (sanitization strips combining marks)
             assert response.status_code == status.HTTP_201_CREATED
-            assert response.data["data"]["name"] == name
+            assert response.data["data"]["name"] == sanitize_text(name)
 
     def test_special_characters_in_names(self) -> None:
         """Test station names with special characters."""

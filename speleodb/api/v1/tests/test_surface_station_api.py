@@ -22,6 +22,7 @@ from speleodb.gis.models import Station
 from speleodb.gis.models import SurfaceMonitoringNetwork
 from speleodb.gis.models import SurfaceStation
 from speleodb.users.tests.factories import UserFactory
+from speleodb.utils.sanitize import sanitize_text
 
 pytestmark = pytest.mark.django_db
 
@@ -818,7 +819,7 @@ class TestSurfaceStationFuzzing:
                 content_type="application/json",
             )
             assert response.status_code == status.HTTP_201_CREATED
-            assert response.data["data"]["name"] == name
+            assert response.data["data"]["name"] == sanitize_text(name)
 
     def test_special_characters_in_names(
         self,

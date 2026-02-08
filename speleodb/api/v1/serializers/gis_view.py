@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from typing import ClassVar
 
 from rest_framework import serializers
 
@@ -11,6 +12,7 @@ from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import NotAuthorizedError
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 sha1_regex = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 
@@ -108,8 +110,12 @@ class GISViewSerializer(serializers.ModelSerializer[GISView]):
         return obj.project_views.count()
 
 
-class GISViewCreateUpdateSerializer(serializers.ModelSerializer[GISView]):
+class GISViewCreateUpdateSerializer(
+    SanitizedFieldsMixin, serializers.ModelSerializer[GISView]
+):
     """Serializer for creating/updating GIS views."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
 
     projects = GISProjectViewInputSerializer(many=True, write_only=True)
 

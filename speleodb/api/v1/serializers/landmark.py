@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 from decimal import InvalidOperation
 from typing import Any
+from typing import ClassVar
 
 from geojson import Feature  # type: ignore[attr-defined]
 from geojson import Point  # type: ignore[attr-defined]
@@ -12,10 +13,13 @@ from rest_framework import serializers
 
 from speleodb.gis.models import Landmark
 from speleodb.utils.gps_utils import format_coordinate
+from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 
-class LandmarkSerializer(serializers.ModelSerializer[Landmark]):
+class LandmarkSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Landmark]):
     """Serializer for Landmark with all details."""
+
+    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
 
     user = serializers.EmailField(source="user.email", read_only=True)
 
