@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing
 
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.core import context as _allauth_context
 from django.conf import settings
 from django.contrib.sites.shortcuts import get_current_site
 
@@ -21,7 +22,7 @@ class AccountAdapter(DefaultAccountAdapter):
     def send_mail(
         self, template_prefix: str, email: str, context: dict[str, Any]
     ) -> None:
-        request = globals()["context"].request
+        request = _allauth_context.request
         ctx = {
             "request": request,
             "email": email,
