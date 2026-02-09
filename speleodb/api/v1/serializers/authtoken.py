@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from allauth.account.models import EmailAddress
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
@@ -33,6 +34,10 @@ class AuthTokenSerializer(serializers.Serializer[Token]):
             # backend.)
             if not user:
                 msg = "Unable to log in with provided credentials."
+                raise serializers.ValidationError(msg, code="authorization")
+
+            if not EmailAddress.objects.filter(user=user, verified=True).exists():
+                msg = "Email address has not been verified."
                 raise serializers.ValidationError(msg, code="authorization")
         else:
             msg = 'Must include "email" and "password".'
