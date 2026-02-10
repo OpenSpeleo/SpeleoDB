@@ -7,6 +7,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 import pytest
+from allauth.account.models import EmailAddress
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -41,6 +42,9 @@ class BaseUserTestCaseMixin(TestCase):
         super().setUp()
         self.user = UserFactory.create()
         self.token = TokenFactory.create(user=self.user)
+        EmailAddress.objects.create(
+            user=self.user, email=self.user.email, verified=True, primary=True
+        )
 
 
 class BaseAPITestCase(BaseUserTestCaseMixin):

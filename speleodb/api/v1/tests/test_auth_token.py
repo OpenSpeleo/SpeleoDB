@@ -8,12 +8,33 @@ from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
+from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.test_utils import named_product
 
 USER_TEST_PASSWORD = "YeeOfLittleFaith"  # noqa: S105
 
 
 class TestTokenAuth(BaseAPITestCase):
+    def test_token_retrieval_unverified_email(self) -> None:
+        endpoint = reverse("api:v1:user-auth-token")
+
+        user = UserFactory.create()
+
+        # Reset the user password since the factory sets a random one.
+        user.set_password(USER_TEST_PASSWORD)
+        user.save()
+
+        response = self.client.post(
+            endpoint,
+            {"email": user.email, "password": USER_TEST_PASSWORD},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert (
+            "Email address has not been verified"
+            in response.data["errors"]["non_field_errors"][0]
+        )
+
     def test_token_retrieval_works(self) -> None:
         endpoint = reverse("api:v1:user-auth-token")
 
@@ -85,6 +106,30 @@ class TestTokenAuth(BaseAPITestCase):
             assert self.token.key != token, (self.token.key, token)
         else:
             assert self.token.key == token, (self.token.key, token)
+
+    @parameterized.expand(["POST", "PUT", "PATCH"])
+    def test_token_refresh_unverified_email(self, method: str) -> None:
+        if method not in ["POST", "PUT", "PATCH"]:
+            raise ValueError(f"Method `{method}` is not allowed.")
+
+        user = UserFactory.create()
+
+        # Reset the user password since the factory sets a random one.
+        user.set_password(USER_TEST_PASSWORD)
+        user.save()
+
+        method_fn = getattr(self.client, method.lower())
+
+        endpoint = reverse("api:v1:user-auth-token")
+        response = method_fn(
+            endpoint, {"email": user.email, "password": USER_TEST_PASSWORD}
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert (
+            "Email address has not been verified"
+            in response.data["errors"]["non_field_errors"][0]
+        )
 
     def test_wrong_password(self) -> None:
         response = self.client.post(
