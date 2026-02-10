@@ -154,7 +154,7 @@ class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
         station_id = station.id
 
         # Delete object itself
-        station.delete()  # type: ignore[no-untyped-call]
+        station.delete()
 
         return SuccessResponse({"id": str(station_id)})
 

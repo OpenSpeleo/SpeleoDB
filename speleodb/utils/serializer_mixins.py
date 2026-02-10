@@ -5,8 +5,6 @@ from __future__ import annotations
 from typing import Any
 from typing import ClassVar
 
-from rest_framework import serializers
-
 from speleodb.utils.sanitize import sanitize_text
 
 

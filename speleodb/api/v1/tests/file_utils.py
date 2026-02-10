@@ -11,7 +11,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 def sha256_from_url(url: str) -> str:
     sha256 = hashlib.sha256()
-    with requests.get(url, stream=True, timeout=10) as r:
+    with requests.api.get(url, stream=True, timeout=10) as r:
         r.raise_for_status()  # ensure the request succeeded
         for chunk in r.iter_content(chunk_size=8192):
             if chunk:  # skip keep-alive chunks

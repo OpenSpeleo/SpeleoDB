@@ -194,7 +194,7 @@ class StationTagsManageApiView(GenericAPIView[Station], SDBAPIViewMixin):
 
         # Set tag on station
         station.tag = tag
-        station.save()  # type: ignore[no-untyped-call]
+        station.save()
 
         # Return the tag
         serializer = StationTagSerializer(station.tag)
@@ -206,6 +206,6 @@ class StationTagsManageApiView(GenericAPIView[Station], SDBAPIViewMixin):
 
         # Clear tag from station
         station.tag = None
-        station.save()  # type: ignore[no-untyped-call]
+        station.save()
 
         return SuccessResponse(None)

@@ -53,6 +53,4 @@ def sanitize_text(value: str) -> str:
 
     # 5. Normalise whitespace: collapse runs and strip.
     value = re.sub(r"[ \t]+", " ", value)
-    value = value.strip()
-
-    return value
+    return value.strip()

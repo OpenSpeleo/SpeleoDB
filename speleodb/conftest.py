@@ -77,9 +77,9 @@ def cleanup_database(db: None) -> Generator[None]:
 
     # Delete polymorphic children first to avoid FK constraint violations
     # Use non_polymorphic() to avoid ContentType lookups during deletion
-    SubSurfaceStation.objects.non_polymorphic().all().delete()  # type: ignore[no-untyped-call]
-    SurfaceStation.objects.non_polymorphic().all().delete()  # type: ignore[no-untyped-call]
-    Station.objects.non_polymorphic().all().delete()  # type: ignore[no-untyped-call]
+    SubSurfaceStation.objects.non_polymorphic().all().delete()
+    SurfaceStation.objects.non_polymorphic().all().delete()
+    Station.objects.non_polymorphic().all().delete()
 
     # Delete all other models, excluding ContentType (managed by Django)
     # and polymorphic Station models (already deleted above)

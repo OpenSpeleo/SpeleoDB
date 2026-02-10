@@ -171,7 +171,7 @@ class BaseAccessLevel(permissions.BasePermission):
                 return self.has_object_permission(
                     request,
                     view,
-                    obj.get_real_instance(),  # type: ignore[no-untyped-call]
+                    obj.get_real_instance(),
                 )
 
             case StationResource() | StationLogEntry():
@@ -182,7 +182,7 @@ class BaseAccessLevel(permissions.BasePermission):
                 return self.has_object_permission(
                     request,
                     view,
-                    obj.station.get_real_instance(),  # type: ignore[no-untyped-call]
+                    obj.station.get_real_instance(),
                 )
 
             # SurfaceMonitoringNetwork Models
@@ -226,7 +226,7 @@ class BaseAccessLevel(permissions.BasePermission):
                 station_perm = self.has_object_permission(
                     request,
                     view,
-                    obj.station.get_real_instance(),  # type: ignore[no-untyped-call]
+                    obj.station.get_real_instance(),
                 )
 
                 fleet_perm = self.has_object_permission(

@@ -54,7 +54,10 @@ class TestSanitizeText:
 
     def test_fullwidth_ascii_preserved(self) -> None:
         """Fullwidth latin letters are compatibility characters and preserved."""
-        assert sanitize_text("\uff28\uff45\uff4c\uff4c\uff4f") == "\uff28\uff45\uff4c\uff4c\uff4f"
+        assert (
+            sanitize_text("\uff28\uff45\uff4c\uff4c\uff4f")
+            == "\uff28\uff45\uff4c\uff4c\uff4f"
+        )
 
     def test_trademark_preserved(self) -> None:
         """™ (U+2122) should not be decomposed to TM."""
