@@ -3,16 +3,12 @@
 from __future__ import annotations
 
 import logging
-from io import BytesIO
 from typing import TYPE_CHECKING
 from typing import Any
 
-import orjson
-from django.core.cache import cache
 from django.db.models import Q
 from django.http import Http404
-from django.http import StreamingHttpResponse
-from geojson import FeatureCollection  # type: ignore[attr-defined]
+from django.http import HttpResponseRedirect
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -30,9 +26,6 @@ from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-    from typing import Any
-
     from rest_framework.request import Request
     from rest_framework.response import Response
 
@@ -190,53 +183,10 @@ class OGCGISViewCollectionItemApiView(BaseOGCGISViewCollectionApiView):
         commit_sha: str,
         *args: Any,
         **kwargs: Any,
-    ) -> StreamingHttpResponse:
+    ) -> HttpResponseRedirect:
         project_geojson = self.get_geojson_object(commit_sha=commit_sha)
-
-        buffer = BytesIO()
-
-        cache_key = f"ogc_collections_project_geojson_{project_geojson.commit.id}"
-        cached_content: bytes | None = cache.get(cache_key)
-
-        if cached_content:
-            buffer.write(cached_content)
-            buffer.seek(0)  # rewind to start
-
-        else:
-
-            def geojson_filter() -> bytes:
-                with project_geojson.file.open("rb") as f:
-                    features = orjson.loads(f.read()).get("features", [])
-
-                    data = FeatureCollection(  # type: ignore[no-untyped-call]
-                        [
-                            feature
-                            for feature in features
-                            if feature.get("geometry", {}).get("type") == "LineString"
-                        ]
-                    )
-
-                return orjson.dumps(data)
-
-            data: bytes = geojson_filter()
-            buffer.write(data)
-            buffer.seek(0)  # rewind to start
-
-            # set cache 1 hour
-            cache.set(
-                cache_key,
-                data,
-                timeout=60 * 60,
-            )
-
-        def buffer_stream() -> Generator[bytes, Any]:
-            chunk_size = 4096
-            while chunk := buffer.read(chunk_size):
-                yield chunk
-
-        return StreamingHttpResponse(
-            buffer_stream(),
-            content_type="application/geo+json",
+        return HttpResponseRedirect(
+            project_geojson.get_signed_download_url(expires_in=3600)
         )
 
 
