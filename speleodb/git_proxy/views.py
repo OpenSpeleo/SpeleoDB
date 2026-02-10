@@ -152,8 +152,8 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
 
             for tentative_id in range(2):
                 data = None if request.method == "GET" else request.body
-                gitlab_response = requests.request(
-                    method=request.method,  # type: ignore[arg-type]
+                gitlab_response = requests.api.request(  # type: ignore[no-untyped-call]
+                    method=request.method or "GET",
                     url=target_url,
                     headers=headers,
                     data=data,

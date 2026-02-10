@@ -28,7 +28,7 @@ def get_log_entry_path(instance: StationLogEntry, filename: str) -> str:
 
     # ForeignKey to polymorphic model returns base class by default
     # Call get_real_instance() to get the actual polymorphic child
-    match station := instance.station.get_real_instance():  # type: ignore[no-untyped-call]
+    match station := instance.station.get_real_instance():
         case SubSurfaceStation():
             prefix = f"{station.project.id}"
         case SurfaceStation():
