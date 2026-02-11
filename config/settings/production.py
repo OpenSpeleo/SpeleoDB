@@ -4,7 +4,9 @@
 
 from __future__ import annotations
 
+import base64
 import logging
+import os
 
 import sentry_sdk
 from sentry_sdk.integrations.boto3 import Boto3Integration
@@ -74,6 +76,11 @@ SECURE_CONTENT_TYPE_NOSNIFF = env.bool(
     "DJANGO_SECURE_CONTENT_TYPE_NOSNIFF",
     default=True,  # pyright: ignore[reportArgumentType]
 )
+
+# AWS S3 CONFIGURATION
+# ------------------------------------------------------------------------------
+AWS_CLOUDFRONT_KEY = base64.b64decode(os.environ["AWS_CLOUDFRONT_KEY_B64"]).decode()
+AWS_CLOUDFRONT_KEY_ID = env("AWS_CLOUDFRONT_KEY_ID")
 
 # STATIC & MEDIA
 # ------------------------

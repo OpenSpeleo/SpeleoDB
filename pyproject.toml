@@ -142,6 +142,10 @@ production = [
     # "granian==2.5.2",  # https://github.com/emmett-framework/granian
     "psycopg[c]==3.3.2", # https://github.com/psycopg/psycopg
 
+    # AWS
+    # ------------------------------------------------------------------------------
+    "cryptography==46.0.5", # https://github.com/pyca/cryptography
+
     # Django
     # ------------------------------------------------------------------------------
     "django-anymail[mailersend]==14.0", # https://github.com/anymail/django-anymail
