@@ -11,7 +11,6 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
-from hijack.contrib.admin import HijackUserAdminMixin
 from import_export import resources
 from import_export.admin import ExportMixin
 
@@ -26,6 +25,7 @@ from speleodb.utils.admin_filters import UserCountryFilter
 if TYPE_CHECKING:
     from django.forms.models import ModelForm
     from django.http import HttpRequest
+
 
 if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
     # Force the `admin` sign in process to go through the `django-allauth` workflow:
@@ -43,8 +43,7 @@ class UserImportExportResource(resources.ModelResource):
         # export_order = ('id', 'description', 'price')
 
 
-@admin.register(User)
-class UserAdmin(HijackUserAdminMixin, ExportMixin, auth_admin.UserAdmin):  # type: ignore[type-arg,misc]
+class UserAdminBase(ExportMixin, auth_admin.UserAdmin):  # type: ignore[type-arg,misc]
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm
     fieldsets = (
@@ -104,8 +103,20 @@ class UserAdmin(HijackUserAdminMixin, ExportMixin, auth_admin.UserAdmin):  # typ
 
     resource_class = UserImportExportResource
 
-    def get_hijack_user(self, obj: User) -> User:
-        return obj
+
+if settings.ENABLE_DJANGO_HIJACK:
+    from hijack.contrib.admin import HijackUserAdminMixin
+
+    @admin.register(User)
+    class UserAdmin(HijackUserAdminMixin, UserAdminBase):  # type: ignore[misc]
+        def get_hijack_user(self, obj: User) -> User:
+            return obj
+
+else:
+
+    @admin.register(User)
+    class UserAdmin(UserAdminBase):  # type: ignore[no-redef]
+        pass
 
 
 admin.site.unregister(EmailAddress)

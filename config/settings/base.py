@@ -25,6 +25,8 @@ if READ_DOT_ENV_FILE:
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = env.bool("DJANGO_DEBUG", False)
 DEBUG_GITLAB = env.bool("DJANGO_DEBUG_GITLAB", False)
+ALLOW_USER_DEBUG = env.bool("ALLOW_USER_DEBUG", default=False)  # pyright: ignore[reportArgumentType]
+ENABLE_DJANGO_HIJACK = DEBUG or ALLOW_USER_DEBUG
 
 # Local time zone. Choices are
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -128,14 +130,6 @@ THIRD_PARTY_APPS = [
     "dynamic_raw_id",
     # Allows CSV / Excel export from the Django Admin
     "import_export",
-    # https://github.com/django-hijack/django-hijack
-    # With Django Hijack, admins can log in and work on behalf of other users
-    # without having to know their credentials.
-    # Author's NOTE: Unfortunately this mechanism is necessary for debugging any
-    #                user's issue - being able to see what they see. This needs
-    #                to be used as an absolute last last resort.
-    "hijack",
-    "hijack.contrib.admin",
     # https://github.com/vintasoftware/django-js-reverse
     # Helps to resolve django URL from within JS files
     "django_js_reverse",
@@ -144,6 +138,17 @@ THIRD_PARTY_APPS = [
 if DEBUG:
     THIRD_PARTY_APPS += [
         "schema_viewer",
+    ]
+
+if ENABLE_DJANGO_HIJACK:
+    # https://github.com/django-hijack/django-hijack
+    # With Django Hijack, admins can log in and work on behalf of other users
+    # without having to know their credentials.
+    # Author's NOTE: This mechanism should only be used in local development.
+    #                And should not be turned on in production.
+    THIRD_PARTY_APPS += [
+        "hijack",
+        "hijack.contrib.admin",
     ]
 
 LOCAL_APPS = [
@@ -286,10 +291,15 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     # Before django-hijack to log the correct user
     "speleodb.middleware.LastLoginUpdateMiddleware",
-    "hijack.middleware.HijackUserMiddleware",
     "speleodb.middleware.ViewNameMiddleware",
     "speleodb.middleware.DRFWrapResponseMiddleware",
 ]
+
+if ENABLE_DJANGO_HIJACK:
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index("speleodb.middleware.LastLoginUpdateMiddleware") + 1,
+        "hijack.middleware.HijackUserMiddleware",
+    )
 
 # MAPBOX CONFIGURATION
 # ------------------------------------------------------------------------------
@@ -413,7 +423,7 @@ EMAIL_TIMEOUT = 5
 # DJANGO-HIJACK
 # ------------------------------------------------------------------------------
 # Django Hijack URL.
-HIJACK_URL = "debug_mode/"
+HIJACK_URL: str | None = "debug_mode/" if ENABLE_DJANGO_HIJACK else None
 # Hide notification if `None`.
 HIJACK_INSERT_BEFORE: str | None = None
 

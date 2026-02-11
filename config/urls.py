@@ -29,11 +29,15 @@ urlpatterns = [
         urls_js if settings.DEBUG else cache_page(5 * 60)(urls_js),
         name="url_reverse.js",
     ),
-    # Debuging Tools
-    path(settings.HIJACK_URL, include("hijack.urls", namespace="hijack")),
     # Media files
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
 ]
+
+if "hijack" in settings.INSTALLED_APPS and settings.HIJACK_URL:
+    urlpatterns += [
+        # Debugging tools
+        path(settings.HIJACK_URL, include("hijack.urls", namespace="hijack")),
+    ]
 
 if settings.DEBUG:
     # Static file serving when using Gunicorn + Uvicorn for local web socket development

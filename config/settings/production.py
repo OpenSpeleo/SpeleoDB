@@ -18,6 +18,7 @@ from sentry_sdk.integrations.redis import RedisIntegration
 
 from .base import *  # noqa: F403
 from .base import DATABASES
+from .base import ENABLE_DJANGO_HIJACK
 from .base import INSTALLED_APPS
 from .base import SPECTACULAR_SETTINGS
 from .base import env
@@ -114,7 +115,8 @@ EMAIL_SUBJECT_PREFIX = env(
 # HIJACK
 # ------------------------------------------------------------------------------
 # Django Admin URL regex.
-HIJACK_URL = env("DJANGO_HIJACK_URL")
+if ENABLE_DJANGO_HIJACK:
+    HIJACK_URL = env("DJANGO_HIJACK_URL")
 
 # ADMIN
 # ------------------------------------------------------------------------------
