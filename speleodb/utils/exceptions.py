@@ -6,6 +6,10 @@ from rest_framework import status
 from rest_framework.exceptions import APIException
 
 
+class GeoJSONGenerationError(Exception):
+    """Raised when a survey fails to be converted to GeoJSON."""
+
+
 class BadRequestError(APIException):
     status_code = status.HTTP_400_BAD_REQUEST
     default_detail = "Improper Request."

@@ -40,7 +40,8 @@ from speleodb.api.v1.serializers import UploadSerializer
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
-from speleodb.processors.auto_selector import AutoSelector
+from speleodb.processors import ArianeTMLFileProcessor
+from speleodb.processors import AutoSelector
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
@@ -334,7 +335,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     with timed_section("Conversion to GeoJSON"):
                         for file in uploaded_files:
                             if (
-                                file.name == "ariane.tml"
+                                file.name == ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
                                 and not project.exclude_geojson
                             ):
                                 try:

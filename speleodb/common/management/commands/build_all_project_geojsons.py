@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
@@ -18,8 +19,10 @@ from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import ArianeInterface
 
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.processors import ArianeTMLFileProcessor
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
+from speleodb.utils.exceptions import GeoJSONGenerationError
 
 if TYPE_CHECKING:
     import argparse
@@ -51,6 +54,7 @@ class Command(BaseCommand):
             logger.info("")
             logger.info("-" * 60)
             logger.info(f"Processing Project: {project.id} ~ {project.name}")
+
             try:
                 git_repo = project.git_repo  # load the git project
 
@@ -75,83 +79,60 @@ class Command(BaseCommand):
                         f"Processing commit: {commit.hexsha} - {commit.date_dt}"
                     )
 
-                    for file in commit.files:
-                        try:
-                            if Path(file.path).name != "ariane.tml":
+                    try:
+                        file = commit.tree / ArianeTMLFileProcessor.TARGET_SAVE_FILENAME  # pyright: ignore[reportOperatorIssue]
+
+                    except KeyError:
+                        # tree lookups raise KeyError when the path doesn't exist
+                        logger.warning("No file to process found in this commit")
+                        continue
+
+                    try:
+                        # Create a temporary file to store the TML content
+                        # and then load it into the ArianeInterface
+                        logger.info(f"Processing file: {file.path}")
+
+                        # Use a temporary directory to avoid conflicts
+                        with TemporaryDirectory() as tmp_dir:
+                            tmp_file = Path(tmp_dir) / "object"
+                            # / ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
+
+                            tmp_file.write_bytes(file.content.getvalue())
+                            logger.info(f"Saved {file.path} to {tmp_file}")
+
+                            try:
+                                geojson_data = project.build_geojson(tmp_file)
+                            except GeoJSONGenerationError:
                                 continue
 
-                            # Create a temporary file to store the TML content
-                            # and then load it into the ArianeInterface
-                            logger.info(f"Processing file: {file.path}")
-
-                            # Use a temporary directory to avoid conflicts
-                            with TemporaryDirectory() as tmp_dir:
-                                tmp_file = Path(tmp_dir) / "ariane.tml"
-                                tmp_file.write_bytes(file.content.getvalue())
-                                logger.info(f"Saved {file.path} to {tmp_file}")
-
-                                with contextlib.suppress(NoKnownAnchorError):
-                                    try:
-                                        survey: Survey = ArianeInterface.from_file(
-                                            tmp_file
-                                        )
-
-                                    except EmptySurveyError:
-                                        logger.info(
-                                            "Empty survey. No shots for project "
-                                            f"`{project.id}`. Skipping GeoJSON..."
-                                        )
-                                        continue
-
-                                    except OSError:
-                                        logger.error(  # noqa: TRY400
-                                            f"Error processing file {file.path} in "
-                                            f"commit {commit.hexsha} - Not a valid TML"
-                                        )
-                                        continue
-
-                                    try:
-                                        geojson_data = survey_to_geojson(survey)
-
-                                    except NoKnownAnchorError:
-                                        logger.info(
-                                            "No known GPS anchor was found for project "
-                                            f"`{project.id}`. Skipping GeoJSON..."
-                                        )
-                                        continue
-
-                                    except Exception:  # noqa: BLE001
-                                        logger.error(  # noqa: TRY400
-                                            f"Error processing file {file.path} in "
-                                            f"commit {commit.hexsha} - Not a valid TML"
-                                        )
-                                        continue
-
-                                    geojson_f = SimpleUploadedFile(
-                                        "test.geojson",  # filename
-                                        orjson.dumps(geojson_data),
-                                        content_type="application/geo+json",
-                                    )
-
-                                    commit_obj = (
-                                        ProjectCommit.get_or_create_from_commit(
-                                            project=project,
-                                            commit=commit,
-                                        )
-                                    )
-
-                                    ProjectGeoJSON.objects.create(
-                                        project=project,
-                                        commit=commit_obj,
-                                        file=geojson_f,
-                                    )
-
-                        except Exception:
-                            logger.exception(
-                                f"Error processing file {file.path} in commit "
-                                f"{commit.hexsha}"
+                            geojson_f = SimpleUploadedFile(
+                                "test.geojson",  # filename
+                                orjson.dumps(geojson_data),
+                                content_type="application/geo+json",
                             )
-                            continue
+
+                            commit_obj = ProjectCommit.get_or_create_from_commit(
+                                project=project,
+                                commit=commit,
+                            )
+
+                            ProjectGeoJSON.objects.create(
+                                project=project,
+                                commit=commit_obj,
+                                file=geojson_f,
+                            )
+
+                    except Exception:
+                        logger.exception(
+                            f"Error processing file {file.path} in commit "
+                            f"{commit.hexsha}"
+                        )
+                        continue
 
             except Exception:
                 logger.exception(f"An error occured with project: {project.id}")
+
+            finally:
+                # Clean up the git repository working copy
+                if (git_dir := project.git_repo_dir).exists():
+                    shutil.rmtree(git_dir)

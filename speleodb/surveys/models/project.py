@@ -11,6 +11,14 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 
+from compass_lib.enums import FileExtension
+from compass_lib.geojson import convert_mak_to_geojson
+from compass_lib.geojson import project_to_geojson
+from compass_lib.io import load_project
+from compass_lib.solver.ariane import ArianeSolver
+from compass_lib.solver.lse import LSESolver
+from compass_lib.solver.proportional import ProportionalSolver
+from compass_lib.solver.sparse import SparseSolver
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
@@ -26,20 +34,26 @@ from django.db.utils import IntegrityError
 from django.utils import timezone
 from django_countries.fields import CountryField
 from git.exc import GitCommandError
+from openspeleo_lib.errors import EmptySurveyError
+from openspeleo_lib.geojson import NoKnownAnchorError
+from openspeleo_lib.geojson import survey_to_geojson
+from openspeleo_lib.interfaces import ArianeInterface
 
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import ProjectType
 from speleodb.surveys.models import ProjectVisibility
+from speleodb.utils.exceptions import GeoJSONGenerationError
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.timing_ctx import timed_section
 
-logger = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from datetime import datetime
+    from typing import Any
     from typing import Self
+
+    from openspeleo_lib.models import Survey
 
     from speleodb.gis.models import ExplorationLead
     from speleodb.gis.models import ProjectGeoJSON
@@ -52,6 +66,8 @@ if TYPE_CHECKING:
     from speleodb.surveys.models import UserProjectPermission
     from speleodb.users.models import SurveyTeam
     from speleodb.users.models import User
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectQuerySet(models.QuerySet["Project"]):
@@ -411,19 +427,6 @@ class Project(models.Model):
 
         return direct_user_ids.union(team_user_ids).count()
 
-    def has_write_access(self, user: User) -> bool:
-        from speleodb.common.enums import PermissionLevel  # noqa: PLC0415
-
-        return user.get_best_permission(self).level >= PermissionLevel.READ_AND_WRITE
-
-    def has_admin_access(self, user: User) -> bool:
-        from speleodb.common.enums import PermissionLevel  # noqa: PLC0415
-
-        try:
-            return self.get_user_permission(user=user).level >= PermissionLevel.ADMIN
-        except ObjectDoesNotExist:
-            return False
-
     @property
     def git_repo_dir(self) -> pathlib.Path:
         return pathlib.Path(settings.DJANGO_GIT_PROJECTS_DIR / str(self.id)).resolve()
@@ -480,6 +483,19 @@ class Project(models.Model):
         except RuntimeError:
             #  Gitlab API Error
             return []
+
+    def has_write_access(self, user: User) -> bool:
+        from speleodb.common.enums import PermissionLevel  # noqa: PLC0415
+
+        return user.get_best_permission(self).level >= PermissionLevel.READ_AND_WRITE
+
+    def has_admin_access(self, user: User) -> bool:
+        from speleodb.common.enums import PermissionLevel  # noqa: PLC0415
+
+        try:
+            return self.get_user_permission(user=user).level >= PermissionLevel.ADMIN
+        except ObjectDoesNotExist:
+            return False
 
     def commit_and_push_project(self, message: str, author: User) -> str | None:
         git_repo = self.git_repo
@@ -564,8 +580,50 @@ class Project(models.Model):
             if _format.raw_format not in FileFormat.__excluded_download_formats__
         ]
 
-    def refresh_geojson(self) -> None:
-        """Refresh the GeoJSON data for this project."""
-        # This method will be implemented by the refresh_project_geojson task
-        # to populate the geojson field
-        raise NotImplementedError
+    def build_geojson(self, file: pathlib.Path) -> dict[str, Any]:
+        """Build the GeoJSON from the survey file on disk."""
+        match self.type:
+            case ProjectType.ARIANE:
+                try:
+                    survey: Survey = ArianeInterface.from_file(file)
+                    return survey_to_geojson(survey)
+
+                except EmptySurveyError as e:
+                    logger.error(f"Empty survey. No shots for project `{self.id}`.")  # noqa: TRY400
+                    raise GeoJSONGenerationError from e
+
+                except NoKnownAnchorError as e:
+                    logger.error("No known GPS anchor was found for project.")  # noqa: TRY400
+                    raise GeoJSONGenerationError from e
+
+                except (OSError, Exception) as e:
+                    logger.error(f"Error processing file `{file}`. Not a valid TML")  # noqa: TRY400
+                    raise GeoJSONGenerationError from e
+
+            case ProjectType.COMPASS:
+                try:
+                    project = load_project(file)
+                    return project_to_geojson(
+                        project,
+                        include_stations=False,
+                        include_legs=True,
+                        include_passages=False,
+                        include_anchors=True,
+                        color_by_origin=False,
+                        solver=SparseSolver(),
+                    )
+
+                except FileNotFoundError as e:
+                    logger.error(f"File does not exists `{file}`.")  # noqa: TRY400
+                    raise GeoJSONGenerationError from e
+
+                except Exception as e:
+                    logger.error(  # noqa: TRY400
+                        f"Error processing file `{file}`. Not a valid Compass Project"
+                    )
+                    raise GeoJSONGenerationError from e
+
+            case _:
+                raise GeoJSONGenerationError(
+                    f"This project type is not supported yet: `{self.type}`."
+                )

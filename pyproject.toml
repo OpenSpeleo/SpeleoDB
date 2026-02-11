@@ -1,5 +1,6 @@
 [tool.uv.sources]
 django-celery-beat = { git = "https://github.com/celery/django-celery-beat", rev = "bd429063cbb227c00905e7693c38895e44ff8e47" }
+compass-lib = { git = "https://github.com/OpenSpeleo/pytool_compass_lib.git", rev = "8e7af42d9d4f88d12d3592a8295757941b9e82f4" }
 # openspeleo-lib = { path = ".workdir/test_wheels/openspeleo_lib-0.0.12-py3-none-any.whl" }
 
 # ==== UV Settings ==== #
@@ -49,6 +50,7 @@ dependencies = [
     # Speleo Libraries
     # ------------------------------------------------------------------------------
     "mnemo-lib==0.0.7",       # https://github.com/OpenSpeleo/pytool_mnemo_lib
+    "compass-lib==0.0.5",     # https://github.com/OpenSpeleo/pytool_compass_lib
     "openspeleo-lib==0.0.15", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 
     # Git Management
