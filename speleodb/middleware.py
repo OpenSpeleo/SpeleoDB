@@ -10,7 +10,9 @@ from django.contrib.auth.models import update_last_login
 from django.http import FileResponse
 from django.http import HttpRequest
 from django.http import HttpResponse
+from django.http import HttpResponseRedirect
 from django.http import StreamingHttpResponse
+from django.http.response import HttpResponseRedirectBase
 from django.urls import resolve
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
@@ -99,7 +101,13 @@ class DRFWrapResponseMiddleware:
                 return wrapped_response
 
             match wrapped_response:
-                case NoWrapResponse() | FileResponse() | StreamingHttpResponse():
+                case (
+                    NoWrapResponse()
+                    | FileResponse()
+                    | StreamingHttpResponse()
+                    | HttpResponseRedirect()
+                    | HttpResponseRedirectBase()
+                ):
                     return wrapped_response
 
                 case ErrorResponse():

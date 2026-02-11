@@ -66,9 +66,9 @@ class BaseS3Storage(S3Storage):
             )
 
             # Force HTTP if using a non-SSL endpoint (useful for MinIO local dev)
-            if (
-                isinstance(self.custom_domain, str)
-                and "localhost" in self.custom_domain
+            if isinstance(self.custom_domain, str) and any(
+                pattern in self.custom_domain
+                for pattern in ["localhost", "minio", ".localhost"]
             ):
                 return url.replace("https://", "http://", 1)
 

@@ -123,3 +123,4 @@ jobs:
           AWS_S3_REGION_NAME: ${{ secrets.AWS_S3_REGION_NAME }}
           AWS_STORAGE_BUCKET_NAME: ${{ secrets.AWS_STORAGE_BUCKET_NAME }}
           MAPBOX_API_TOKEN: ${{ secrets.MAPBOX_API_TOKEN }}
+          AWS_S3_CUSTOM_DOMAIN: "${{ secrets.AWS_STORAGE_BUCKET_NAME }}.s3.${{ secrets.AWS_S3_REGION_NAME }}.amazonaws.com"

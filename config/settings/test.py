@@ -61,7 +61,12 @@ TEST_RUNNER = "django.test.runner.DiscoverRunner"
 
 # GITLAB
 # ------------------------------------------------------------------------------
-GITLAB_HTTP_PROTOCOL = "http" if "localhost" in str(GITLAB_HOST_URL) else "https"
+GITLAB_HTTP_PROTOCOL = (
+    "http"
+    if str(GITLAB_HOST_URL)
+    in ["gitlab:9080", "gitlab.localhost:9080", "localhost:9080"]
+    else "https"
+)
 
 # AWS S3 CONFIGURATION
 # ------------------------------------------------------------------------------
