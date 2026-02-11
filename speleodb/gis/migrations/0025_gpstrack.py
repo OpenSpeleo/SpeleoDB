@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('name', models.CharField(help_text='Track name', max_length=255)),
-                ('file', models.FileField(storage=speleodb.utils.storages.GPSTrackStorage(), upload_to=speleodb.gis.models.gps_track.get_geojson_upload_path, validators=[speleodb.utils.validators.GeoJsonValidator()])),
+                ('file', models.FileField(storage=speleodb.utils.storages.GPSTrackStorage(), upload_to=speleodb.gis.models.gps_track.get_gps_track_upload_path, validators=[speleodb.utils.validators.GeoJsonValidator()])),
                 ('sha256_hash', speleodb.surveys.fields.Sha256Field(max_length=64, unique=True, validators=[django.core.validators.RegexValidator(message='Enter a valid sha256 value', regex='^[a-fA-F0-9]{64}$')], verbose_name='SHA256 hash of the `geojson file`')),
                 ('creation_date', models.DateTimeField(auto_now_add=True)),
                 ('modified_date', models.DateTimeField(auto_now=True)),

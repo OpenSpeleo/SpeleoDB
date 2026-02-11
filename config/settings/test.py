@@ -73,6 +73,7 @@ if (s3_endpoint_url := env.str("AWS_S3_ENDPOINT_URL", default=None)) is not None
     AWS_S3_CUSTOM_DOMAIN = (
         f"{AWS_S3_ENDPOINT_URL.replace('http://', '')}/{AWS_STORAGE_BUCKET_NAME}"
     )
+    AWS_QUERYSTRING_AUTH = True
 
 # PASSWORDS
 # ------------------------------------------------------------------------------

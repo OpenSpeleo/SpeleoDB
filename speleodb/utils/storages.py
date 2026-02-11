@@ -9,12 +9,34 @@ from typing import Any
 from django.conf import settings
 from storages.backends.s3 import S3Storage
 
+# ---------------------------------------------------------------------------
+# CloudFront signed-URL support
+# ---------------------------------------------------------------------------
+# In production the CloudFront signing keys are present, so private storage
+# classes keep the custom domain and let django-storages generate CloudFront
+# signed URLs.  In local dev (MinIO) there are no CloudFront keys, so private
+# storage classes disable the custom domain to fall back to S3 presigned URLs.
+_CLOUDFRONT_SIGNING_ENABLED: bool = bool(
+    getattr(settings, "AWS_CLOUDFRONT_KEY", None)
+    and getattr(settings, "AWS_CLOUDFRONT_KEY_ID", None)
+)
+
+# Custom domain to use for private storage classes that need signed URLs.
+#   Production (CloudFront configured) → CloudFront domain → CloudFront signed URLs
+#   Local dev  (no CloudFront)         → False             → S3 presigned URLs
+_PRIVATE_CUSTOM_DOMAIN = (
+    settings.AWS_S3_CUSTOM_DOMAIN
+    if _CLOUDFRONT_SIGNING_ENABLED
+    or not getattr(settings, "AWS_QUERYSTRING_AUTH", True)
+    else False
+)
+
 
 class BaseS3Storage(S3Storage):
     """Base class for S3 storage configurations."""
 
     bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-    custom_domain = settings.AWS_S3_CUSTOM_DOMAIN  # Use CDN/direct S3 URL
+    custom_domain = settings.AWS_S3_CUSTOM_DOMAIN  # Use Cloudfront/S3 Domain
     file_overwrite = False
 
     # Cache control for performance
@@ -58,8 +80,8 @@ class S3MediaStorage(BaseS3Storage):
 
     location = "media/default"  # Base location for media files
     default_acl = "private"
-    # Use signed URLs for private files
-    custom_domain = False  # type: ignore[assignment]
+    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
+    custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
 
 class PersonPhotoStorage(BaseS3Storage):
@@ -94,8 +116,8 @@ class AttachmentStorage(S3Storage):
     location = "attachments"
     default_acl = "private"  # Keep files private for security
 
-    # Use signed URLs for private files
-    custom_domain = False
+    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
+    custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
 
 class BaseGeoJSONStorage(S3Storage):
@@ -113,8 +135,8 @@ class BaseGeoJSONStorage(S3Storage):
 
     default_acl = "private"
 
-    # Use signed URLs for private files
-    custom_domain = False
+    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
+    custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
 
 class GeoJSONStorage(S3Storage):
@@ -123,7 +145,15 @@ class GeoJSONStorage(S3Storage):
     callable should place them into "project.id/commit.sha/" subfolder.
     """
 
+    bucket_name = BaseS3Storage.bucket_name
+    file_overwrite = BaseS3Storage.file_overwrite
+    object_parameters = BaseS3Storage.object_parameters
+
     location = "geojson"
+    default_acl = "private"
+
+    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
+    custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
 
 class GPSTrackStorage(S3Storage):
@@ -132,7 +162,15 @@ class GPSTrackStorage(S3Storage):
     callable should place them directly into the folder.
     """
 
+    bucket_name = BaseS3Storage.bucket_name
+    file_overwrite = BaseS3Storage.file_overwrite
+    object_parameters = BaseS3Storage.object_parameters
+
     location = "gps_tracks"
+    default_acl = "private"
+
+    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
+    custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
 
 class S3StaticStorage(S3Storage):

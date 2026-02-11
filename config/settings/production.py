@@ -77,10 +77,18 @@ SECURE_CONTENT_TYPE_NOSNIFF = env.bool(
     default=True,  # pyright: ignore[reportArgumentType]
 )
 
-# AWS S3 CONFIGURATION
+# AWS S3 / CLOUDFRONT CONFIGURATION
 # ------------------------------------------------------------------------------
+# CloudFront signed-URL credentials: django-storages uses these to produce
+# CloudFront signed URLs for private files instead of S3 presigned URLs.
 AWS_CLOUDFRONT_KEY = base64.b64decode(os.environ["AWS_CLOUDFRONT_KEY_B64"]).decode()
 AWS_CLOUDFRONT_KEY_ID = env("AWS_CLOUDFRONT_KEY_ID")
+AWS_CLOUDFRONT_EXPIRE = 3600
+
+# Enable signed URLs — with the CloudFront keys above, django-storages will
+# produce CloudFront signed URLs (routed through the CDN) rather than
+# S3 presigned URLs (which would bypass CloudFront).
+AWS_QUERYSTRING_AUTH = True
 
 # STATIC & MEDIA
 # ------------------------

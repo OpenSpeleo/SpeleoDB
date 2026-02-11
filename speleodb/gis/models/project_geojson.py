@@ -5,10 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-import boto3
-from botocore.exceptions import BotoCoreError
-from botocore.exceptions import NoCredentialsError
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -109,29 +105,9 @@ class ProjectGeoJSON(models.Model):
         """Return the commit message (backward compatibility)."""
         return self.commit.message
 
-    # S3 signed URL helper
+    # Signed URL helper — delegates to django-storages which produces
+    # CloudFront signed URLs in production or S3 presigned URLs in local dev.
     def get_signed_download_url(self, expires_in: int = 3600) -> str:
         if not self.file:
             raise ValidationError("No file to download.")
-
-        s3_client = boto3.client(  # type: ignore[no-untyped-call]
-            "s3",
-            endpoint_url=getattr(settings, "AWS_S3_ENDPOINT_URL", None),
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_S3_REGION_NAME,
-            use_ssl=getattr(settings, "AWS_S3_USE_SSL", True),
-            verify=getattr(settings, "AWS_S3_VERIFY", True),
-        )
-
-        try:
-            return s3_client.generate_presigned_url(  # type: ignore[no-any-return]
-                ClientMethod="get_object",
-                Params={
-                    "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
-                    "Key": f"{self.file.storage.location}/{self.file.name}",
-                },
-                ExpiresIn=expires_in,
-            )
-        except (NoCredentialsError, BotoCoreError) as exc:  # pragma: no cover - env
-            raise ValidationError("AWS credentials error when signing URL.") from exc
+        return self.file.storage.url(self.file.name, expire=expires_in)  # type: ignore[no-any-return]
