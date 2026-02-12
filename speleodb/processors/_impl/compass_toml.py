@@ -105,6 +105,23 @@ def build_compass_toml_bytes_from_upload_filenames(
     return out.getvalue()
 
 
+def get_compass_mak_filepath(project_root: Path) -> Path:
+    compass_toml_path = project_root / CompassTOML.__FILENAME__
+    if not compass_toml_path.is_file():
+        raise FileNotFoundError(
+            f"Missing `{CompassTOML.__FILENAME__}` in `{project_root}`."
+        )
+
+    cfg = CompassTOML.from_toml(compass_toml_path)
+    mak_path = project_root / cfg.project.mak_file
+    if not mak_path.is_file():
+        raise FileNotFoundError(
+            f"Missing Compass MAK file `{cfg.project.mak_file}` in `{project_root}`."
+        )
+
+    return mak_path
+
+
 def to_tomlkit(value: TomlInput) -> TomlOutput:
     match value:
         case dict():

@@ -48,12 +48,15 @@ from speleodb.processors._impl.compass_toml import CompassTOML
 from speleodb.processors._impl.compass_toml import (
     build_compass_toml_bytes_from_upload_filenames,
 )
+from speleodb.processors._impl.compass_toml import get_compass_mak_filepath
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
+from speleodb.surveys.models import ProjectType
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import FileRejectedError
+from speleodb.utils.exceptions import GeoJSONGenerationError
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import DownloadResponseFromFile
@@ -105,6 +108,25 @@ def handle_exception(
         error_msg += ", ".join(additional_errors)
 
     return ErrorResponse({"error": error_msg}, status=status_code)
+
+
+def create_project_geojson(
+    project: Project, hexsha: str, geojson_data: dict[str, Any]
+) -> None:
+    geojson_f = SimpleUploadedFile(
+        "test.geojson",  # filename
+        orjson.dumps(geojson_data),
+        content_type="application/geo+json",
+    )
+
+    with transaction.atomic():
+        # This object must exist.
+        commit_obj = ProjectCommit.objects.get(id=hexsha)
+        ProjectGeoJSON.objects.create(
+            project=project,
+            commit=commit_obj,
+            file=geojson_f,
+        )
 
 
 class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
@@ -377,6 +399,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                             return HttpResponse(status=304)
 
                     with timed_section("Conversion to GeoJSON"):
+                        generated_geojson = False
                         for file in uploaded_files:
                             if (
                                 file.name == ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
@@ -385,12 +408,6 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                 try:
                                     survey: Survey = ArianeInterface.from_file(file)
                                     geojson_data = survey_to_geojson(survey)
-
-                                    geojson_f = SimpleUploadedFile(
-                                        "test.geojson",  # filename
-                                        orjson.dumps(geojson_data),
-                                        content_type="application/geo+json",
-                                    )
                                 except NoKnownAnchorError:
                                     logger.info(
                                         "No known GPS anchor was found for project "
@@ -410,27 +427,58 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                     continue
 
                                 try:
-                                    with transaction.atomic():
-                                        # This object must exist.
-                                        commit_obj = ProjectCommit.objects.get(
-                                            id=hexsha
-                                        )
-
-                                        ProjectGeoJSON.objects.create(
-                                            project=project,
-                                            commit=commit_obj,
-                                            file=geojson_f,
-                                        )
-
+                                    create_project_geojson(
+                                        project=project,
+                                        hexsha=hexsha,
+                                        geojson_data=geojson_data,
+                                    )
+                                    generated_geojson = True
                                 except ClientError:
-                                    # # This ensures the atomic block is rolled back
-                                    # transaction.set_rollback(True)
                                     logger.exception("Error uploading GeoJSON to S3.")
                                     continue
 
                                 # There can be only one file called `ariane.tml`
                                 # No point to continue the loop.
                                 break
+
+                        if (
+                            not generated_geojson
+                            and not project.exclude_geojson
+                            and project.type == ProjectType.COMPASS
+                        ):
+                            has_compass_upload = any(
+                                file.name == CompassTOML.__FILENAME__
+                                or file.suffix.lower() in {".mak", ".dat", ".plt"}
+                                for file in uploaded_files
+                            )
+
+                            if has_compass_upload:
+                                try:
+                                    mak_file = get_compass_mak_filepath(
+                                        project.git_repo.path
+                                    )
+                                    geojson_data = project.build_geojson(mak_file)
+                                    create_project_geojson(
+                                        project=project,
+                                        hexsha=hexsha,
+                                        geojson_data=geojson_data,
+                                    )
+                                except FileNotFoundError:
+                                    logger.info(
+                                        "Compass project files are incomplete for "
+                                        f"project `{project.id}`. Skipping GeoJSON..."
+                                    )
+                                except GeoJSONGenerationError:
+                                    logger.info(
+                                        "Compass GeoJSON generation failed for "
+                                        f"project `{project.id}`. Skipping GeoJSON..."
+                                    )
+                                except ClientError:
+                                    logger.exception("Error uploading GeoJSON to S3.")
+                                except Exception:
+                                    logger.exception(
+                                        "Error converting Compass to GeoJSON"
+                                    )
 
                     with timed_section("HTTP Success Response Construction"):
                         # Refresh the `modified_date` field

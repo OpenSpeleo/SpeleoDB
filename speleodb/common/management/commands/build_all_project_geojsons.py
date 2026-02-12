@@ -15,13 +15,19 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management.base import BaseCommand
 
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.git_engine.core import GitFile
 from speleodb.processors import ArianeTMLFileProcessor
+from speleodb.processors._impl.compass_toml import CompassTOML
+from speleodb.processors._impl.compass_toml import get_compass_mak_filepath
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
+from speleodb.surveys.models import ProjectType
 from speleodb.utils.exceptions import GeoJSONGenerationError
 
 if TYPE_CHECKING:
     import argparse
+
+    from speleodb.git_engine.core import GitCommit
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +46,60 @@ class Command(BaseCommand):
                 "Ignore that the GeoJSON file already exists, recompute and overwrite."
             ),
         )
+
+    def _materialize_ariane_source(
+        self, commit: GitCommit, tmp_dirpath: Path
+    ) -> Path | None:
+        try:
+            file = commit.tree / ArianeTMLFileProcessor.TARGET_SAVE_FILENAME  # pyright: ignore[reportOperatorIssue]
+        except KeyError:
+            return None
+
+        tmp_file = tmp_dirpath / ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
+        tmp_file.write_bytes(file.content.getvalue())
+        return tmp_file
+
+    def _materialize_compass_source(
+        self, commit: GitCommit, tmp_dirpath: Path
+    ) -> Path | None:
+        files_by_path: dict[str, GitFile] = {
+            str(item.path): item
+            for item in commit.tree.traverse()
+            if isinstance(item, GitFile)
+        }
+
+        compass_toml_file = files_by_path.get(CompassTOML.__FILENAME__)
+        if compass_toml_file is None:
+            return None
+
+        cfg = CompassTOML.from_toml(compass_toml_file.content)
+
+        for rel_path in cfg.files:
+            git_file = files_by_path.get(rel_path)
+            if git_file is None:
+                logger.warning(
+                    "Missing Compass file `%s` in commit `%s`",
+                    rel_path,
+                    commit.hexsha,
+                )
+                return None
+
+            target_path = tmp_dirpath / rel_path
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_bytes(git_file.content.getvalue())
+
+        return get_compass_mak_filepath(tmp_dirpath)
+
+    def _materialize_geojson_source(
+        self, project: Project, commit: GitCommit, tmp_dirpath: Path
+    ) -> Path | None:
+        match project.type:
+            case ProjectType.ARIANE:
+                return self._materialize_ariane_source(commit, tmp_dirpath)
+            case ProjectType.COMPASS:
+                return self._materialize_compass_source(commit, tmp_dirpath)
+            case _:
+                return None
 
     def handle(self, *, force_recompute: bool = False, **kwargs: Any) -> None:
         for project in Project.objects.filter(exclude_geojson=False).order_by(
@@ -74,29 +134,23 @@ class Command(BaseCommand):
                     )
 
                     try:
-                        file = commit.tree / ArianeTMLFileProcessor.TARGET_SAVE_FILENAME  # pyright: ignore[reportOperatorIssue]
-
-                    except KeyError:
-                        # tree lookups raise KeyError when the path doesn't exist
-                        logger.warning("No file to process found in this commit")
-                        continue
-
-                    try:
-                        # Create a temporary file to store the TML content
-                        # and then load it into the ArianeInterface
-                        logger.info(f"Processing file: {file.path}")
-
-                        # Use a temporary directory to avoid conflicts
                         with TemporaryDirectory() as tmp_dir:
-                            tmp_file = Path(tmp_dir) / str(
-                                ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
+                            source_path = self._materialize_geojson_source(
+                                project=project,
+                                commit=commit,
+                                tmp_dirpath=Path(tmp_dir),
                             )
 
-                            tmp_file.write_bytes(file.content.getvalue())
-                            logger.info(f"Saved {file.path} to {tmp_file}")
+                            if source_path is None:
+                                logger.warning(
+                                    "No `%s` source file found in commit `%s`",
+                                    project.type,
+                                    commit.hexsha,
+                                )
+                                continue
 
                             try:
-                                geojson_data = project.build_geojson(tmp_file)
+                                geojson_data = project.build_geojson(source_path)
                             except GeoJSONGenerationError:
                                 continue
 
@@ -119,8 +173,7 @@ class Command(BaseCommand):
 
                     except Exception:
                         logger.exception(
-                            f"Error processing file {file.path} in commit "
-                            f"{commit.hexsha}"
+                            f"Error processing project source in commit {commit.hexsha}"
                         )
                         continue
 
