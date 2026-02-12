@@ -1,0 +1,26 @@
+Unknown Cave
+SURVEY NAME: Main
+SURVEY DATE: 9 15 2010  COMMENT:
+SURVEY TEAM: 
+B. Schulte
+DECLINATION:   -5.07  FORMAT: DDDWLRUDLAaDdNF  CORRECTIONS:  0.00 0.00 0.00  CORRECTIONS2:  0.00 0.00
+
+                FROM                   TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+         Anklebiter1                Main1    10.00     6.00     5.74    12.00     6.00     0.00    -9.90
+               Main1                Main2     8.00     8.00    -7.18    13.00     7.00     1.00     5.00
+               Main2                Main3     4.00    57.00     0.00     0.00     3.00     2.00     5.00
+               Main3                Main4     9.00    53.00     0.00     0.00     3.00     3.00     4.00
+               Main4                Main5     5.00    48.00     0.00     1.00     2.00     4.00     3.00
+               Main5                Main6     5.00    44.00     0.00     0.00     2.00     3.00     4.00
+               Main6                Main7     6.00    30.00    -9.59     0.00     1.00     3.00     7.00
+               Main7                Main8    13.00    24.00     0.00     3.00     1.00     2.00     4.00
+               Main8                Main9    10.00    58.00    -5.74     0.00     3.00     2.00     4.00
+               Main9               Main10     8.00    65.00   -14.48     8.00     2.00     6.00     2.00
+              Main10               Main11     4.00    80.00     0.00     8.00     1.00     3.00     4.00
+              Main11               Main12    10.00    54.00     0.00     7.00     2.00     2.00     7.00
+              Main12               Main13    13.00   119.00     4.41     6.00     2.00     2.00     7.00
+              Main13               Main14     6.00    79.00     9.59     0.00     2.00     3.00     6.00
+              Main14                 HTH1     7.00    40.00   -16.60     1.00     2.00     5.00     4.00
+
+

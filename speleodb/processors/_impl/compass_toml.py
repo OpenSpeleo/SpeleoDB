@@ -3,8 +3,11 @@ from __future__ import annotations
 from functools import cached_property
 from io import BytesIO
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
+from uuid import UUID
 
+from compass_lib.enums import FileExtension
 from packaging.version import Version
 from pydantic import UUID4
 from pydantic import BaseModel
@@ -27,6 +30,81 @@ if TYPE_CHECKING:
 KNOWN_VERSIONS = [Version("0.0.1")]
 
 
+def _normalize_upload_filename(name: str) -> str:
+    normalized = name.replace("\\", "/").strip()
+    if not normalized:
+        return ""
+    return str(PurePosixPath(normalized))
+
+
+def _dedupe_preserve_order(items: list[str]) -> list[str]:
+    return list(dict.fromkeys(items))
+
+
+def split_compass_upload_filenames(
+    filenames: list[str],
+) -> tuple[list[str], list[str], list[str]]:
+    mak_files: list[str] = []
+    dat_files: list[str] = []
+    plt_files: list[str] = []
+
+    for raw_name in filenames:
+        normalized_name = _normalize_upload_filename(raw_name)
+        if not normalized_name:
+            continue
+
+        extension = PurePosixPath(normalized_name).suffix.lower()
+        if extension == FileExtension.MAK.value:
+            mak_files.append(normalized_name)
+        elif extension == FileExtension.DAT.value:
+            dat_files.append(normalized_name)
+        elif extension == FileExtension.PLT.value:
+            plt_files.append(normalized_name)
+
+    return (
+        _dedupe_preserve_order(mak_files),
+        _dedupe_preserve_order(dat_files),
+        _dedupe_preserve_order(plt_files),
+    )
+
+
+def build_compass_config_from_upload_filenames(
+    project_id: UUID | str,
+    filenames: list[str],
+) -> CompassTOML | None:
+    mak_files, dat_files, plt_files = split_compass_upload_filenames(filenames)
+    if not mak_files:
+        return None
+
+    return CompassTOML(
+        speleodb=SpeleodbNFO(
+            id=project_id,
+            version=str(KNOWN_VERSIONS[0]),
+        ),
+        project=ProjectNFO(
+            mak_file=mak_files[0],
+            dat_files=dat_files,
+            plt_files=plt_files,
+        ),
+    )
+
+
+def build_compass_toml_bytes_from_upload_filenames(
+    project_id: UUID | str,
+    filenames: list[str],
+) -> bytes | None:
+    config = build_compass_config_from_upload_filenames(
+        project_id=project_id,
+        filenames=filenames,
+    )
+    if config is None:
+        return None
+
+    out = BytesIO()
+    config.to_toml(out)
+    return out.getvalue()
+
+
 def to_tomlkit(value: TomlInput) -> TomlOutput:
     match value:
         case dict():
@@ -45,9 +123,28 @@ def to_tomlkit(value: TomlInput) -> TomlOutput:
             return value
 
 
-class SpeleoDB(BaseModel):
-    id: UUID4
+class SpeleodbNFO(BaseModel):
+    id: UUID4 | str
     version: str
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def validate_id(cls, v: UUID4 | str) -> UUID4:
+        match v:
+            case UUID():
+                # Already a UUID, just ensure it's v4
+                if v.version != 4:  # noqa: PLR2004
+                    raise ValueError("id must be a valid UUID4")
+                return v
+
+            case str():
+                try:
+                    return UUID(v, version=4)
+                except ValueError as e:
+                    raise ValueError("id must be a valid UUID4 string") from e
+
+            case _:
+                raise TypeError("id must be a UUID4 or a UUID4 string")
 
     # ------------------------------------------------------------
     # Validation: version must be known
@@ -61,7 +158,7 @@ class SpeleoDB(BaseModel):
         return v
 
 
-class Project(BaseModel):
+class ProjectNFO(BaseModel):
     mak_file: str
     dat_files: list[str]
     plt_files: list[str] | None = None
@@ -103,14 +200,14 @@ class Project(BaseModel):
         return v
 
 
-class CompassConfig(BaseModel):
+class CompassTOML(BaseModel):
     __FILENAME__ = "compass.toml"
 
-    speleodb: SpeleoDB
-    project: Project
+    speleodb: SpeleodbNFO
+    project: ProjectNFO
 
     @classmethod
-    def from_toml(cls, source: str | Path | BytesIO) -> CompassConfig:
+    def from_toml(cls, source: str | Path | BytesIO) -> CompassTOML:
         """
         Load & validate a TOML file using tomlkit.
         Keeps comments and formatting structure.
@@ -152,7 +249,7 @@ class CompassConfig(BaseModel):
     @cached_property
     def files(self) -> set[str]:
         return {
-            CompassConfig.__FILENAME__,
+            CompassTOML.__FILENAME__,
             self.project.mak_file,
             *self.project.dat_files,
             *(plt_files if (plt_files := self.project.plt_files) else []),

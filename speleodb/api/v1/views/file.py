@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import logging
 import pathlib
 import random
@@ -42,6 +43,11 @@ from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors import ArianeTMLFileProcessor
 from speleodb.processors import AutoSelector
+from speleodb.processors import CompassManualFileProcessor
+from speleodb.processors._impl.compass_toml import CompassTOML
+from speleodb.processors._impl.compass_toml import (
+    build_compass_toml_bytes_from_upload_filenames,
+)
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
@@ -240,8 +246,41 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
             # ~~~~~~~~~~~~~~~~~ START of writing files to project ~~~~~~~~~~~~~~~~~ #
             format_assoc: dict[Format, bool] = defaultdict(lambda: False)
             project = self.get_object()
+            auto_compass_toml_generated = False
 
             try:
+                if fileformat_f == FileFormat.AUTO:
+                    with timed_section("AUTO - Compass TOML generation"):
+                        compass_toml_bytes = (
+                            build_compass_toml_bytes_from_upload_filenames(
+                                project_id=project.id,
+                                filenames=[
+                                    str(file.name or "")
+                                    for file in files
+                                    if file.name is not None
+                                ],
+                            )
+                        )
+
+                        if compass_toml_bytes is not None:
+                            files = [
+                                file
+                                for file in files
+                                if (file.name or "").lower() != CompassTOML.__FILENAME__
+                            ]
+                            toml_file_obj = io.BytesIO(compass_toml_bytes)
+                            files.append(
+                                InMemoryUploadedFile(
+                                    file=toml_file_obj,
+                                    field_name="artifact",
+                                    name=CompassTOML.__FILENAME__,
+                                    content_type="text/plain",
+                                    size=len(compass_toml_bytes),
+                                    charset="utf-8",
+                                )
+                            )
+                            auto_compass_toml_generated = True
+
                 with timed_section("Git Project - Checkout and Pull"):
                     # Make sure the project is update to ToT (Top of Tree)
                     project.checkout_commit_or_default_pull_branch()
@@ -289,7 +328,12 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
                             with timed_section("File Management"):
                                 if fileformat_f == FileFormat.AUTO:
-                                    target_fileformat = processor.ASSOC_FILEFORMAT
+                                    if auto_compass_toml_generated and isinstance(
+                                        processor, CompassManualFileProcessor
+                                    ):
+                                        target_fileformat = FileFormat.COMPASS_ZIP
+                                    else:
+                                        target_fileformat = processor.ASSOC_FILEFORMAT
                                 else:
                                     target_fileformat = fileformat_f
 

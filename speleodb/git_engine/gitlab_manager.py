@@ -94,6 +94,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         self._gl = gitlab.Gitlab(
             f"{settings.GITLAB_HTTP_PROTOCOL}://{gitlab_creds.instance}",
             private_token=gitlab_creds.token,
+            keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
         )
 
         try:

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitFile
-from speleodb.processors._impl.compass_toml import CompassConfig
+from speleodb.processors._impl.compass_toml import CompassTOML
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import FileFormat
 from speleodb.utils.timing_ctx import timed_section
@@ -37,17 +37,17 @@ class CompassZIPFileProcessor(BaseFileProcessor):
             if not isinstance(item, GitFile):
                 continue
 
-            if item.path.name == CompassConfig.__FILENAME__:
+            if item.path.name == CompassTOML.__FILENAME__:
                 gitfile = item
                 break
 
         else:
             raise FileNotFoundError(
-                f"Impossible to find `{CompassConfig.__FILENAME__}` at commit: "
+                f"Impossible to find `{CompassTOML.__FILENAME__}` at commit: "
                 f"`{commit.hexsha}`."
             )
 
-        compass_cfg = CompassConfig.from_toml(gitfile.content)
+        compass_cfg = CompassTOML.from_toml(gitfile.content)
 
         with zipfile.ZipFile(target_f, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
             commit_files: list[GitFile] = [
@@ -62,7 +62,7 @@ class CompassZIPFileProcessor(BaseFileProcessor):
             if len(commit_files) != len(compass_cfg.files):
                 missing_files = compass_cfg.files - {str(f.path) for f in commit_files}
                 raise RuntimeError(
-                    f"Some files listed in `{CompassConfig.__FILENAME__}` are missing "
+                    f"Some files listed in `{CompassTOML.__FILENAME__}` are missing "
                     f"in commit `{commit.hexsha}`: {missing_files}"
                 )
 
@@ -87,13 +87,13 @@ class CompassZIPFileProcessor(BaseFileProcessor):
                     zip_ref.extractall(unzip_folder)
 
             with timed_section("Decode `compass.toml` and prepare files"):
-                compass_toml_path = unzip_folder / CompassConfig.__FILENAME__
+                compass_toml_path = unzip_folder / CompassTOML.__FILENAME__
                 if not compass_toml_path.is_file():
                     raise FileNotFoundError(
                         "`compass.toml` not found in the provided ZIP file."
                     )
 
-                compass_cfg = CompassConfig.from_toml(compass_toml_path)
+                compass_cfg = CompassTOML.from_toml(compass_toml_path)
 
                 stored_files = [
                     p
@@ -108,7 +108,7 @@ class CompassZIPFileProcessor(BaseFileProcessor):
                     if str(relative_path) not in compass_cfg.files:
                         raise ValueError(
                             f"File `{relative_path}` found in ZIP but not listed in "
-                            f"`{CompassConfig.__FILENAME__}`."
+                            f"`{CompassTOML.__FILENAME__}`."
                         )
 
             copied_files: list[Path] = []

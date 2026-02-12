@@ -13,10 +13,6 @@ from typing import Any
 import orjson
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management.base import BaseCommand
-from openspeleo_lib.errors import EmptySurveyError
-from openspeleo_lib.geojson import NoKnownAnchorError
-from openspeleo_lib.geojson import survey_to_geojson
-from openspeleo_lib.interfaces import ArianeInterface
 
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.processors import ArianeTMLFileProcessor
@@ -26,8 +22,6 @@ from speleodb.utils.exceptions import GeoJSONGenerationError
 
 if TYPE_CHECKING:
     import argparse
-
-    from openspeleo_lib.models import Survey
 
 logger = logging.getLogger(__name__)
 
@@ -94,8 +88,9 @@ class Command(BaseCommand):
 
                         # Use a temporary directory to avoid conflicts
                         with TemporaryDirectory() as tmp_dir:
-                            tmp_file = Path(tmp_dir) / "object"
-                            # / ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
+                            tmp_file = Path(tmp_dir) / str(
+                                ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
+                            )
 
                             tmp_file.write_bytes(file.content.getvalue())
                             logger.info(f"Saved {file.path} to {tmp_file}")

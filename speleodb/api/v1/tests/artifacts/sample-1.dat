@@ -1,0 +1,50 @@
+Unknown Cave
+SURVEY NAME: OldMainLine
+SURVEY DATE: 9 30 2010  COMMENT:
+SURVEY TEAM: 
+John Doe
+DECLINATION:   -5.07  FORMAT: DDDWLRUDLAaDdNF  CORRECTIONS:  0.00 0.00 0.00  CORRECTIONS2:  0.00 0.00
+
+                FROM                   TO   LENGTH  BEARING      INC     LEFT       UP     DOWN    RIGHT   FLAGS  COMMENTS
+
+             PreMain             PreMain1    12.00    46.00    14.48    10.00     8.00     0.00    -9.90
+            PreMain1             PreMain2     5.00    22.00     0.00     6.00     3.00     2.00     2.00
+            PreMain2             PreMain3    13.00    53.00     8.85     5.00     4.00     2.00     0.00
+            PreMain3          Anklebiter1     4.00    48.00     0.00     7.00     4.00     0.00     6.00
+         Anklebiter1                 Able     0.00     0.00    90.00     6.00     4.00     0.00    -9.90
+             PreMain             OldMain1    23.00   129.00   -15.12    -9.90     7.00     0.00     6.00
+            OldMain1             OldMain2    15.00   132.00     3.82     7.00     2.00     0.00     6.00
+            OldMain2             OldMain3    18.00   152.00     0.00     7.00     4.00     0.00     9.00
+            OldMain3             OldMain4    17.00   142.00     0.00     2.00     3.00     0.00    10.00
+            OldMain4             OldMain5    20.00   104.00     2.87     4.00     5.00     0.00     9.00
+            OldMain5             OldMain6    16.00   121.00    -3.58    -9.90     4.00     2.00     7.00
+            OldMain6             OldMain7     6.00   131.00    -9.59     7.00     5.00     0.00     7.00
+            OldMain7             OldMain8    37.00   132.00     1.55     7.00     4.00     0.00     6.00
+            OldMain8             OldMain9    25.00    74.00     0.00     4.00     4.00     0.00    13.00  #| #
+            OldMain9            OldMain10    22.00    62.00     2.61     6.00     8.00     0.00     6.00  #| #
+           OldMain10            OldMain11    12.00    68.00    14.48     6.00     4.00     0.00    10.00  #| #
+           OldMain11            OldMain12    38.00    71.00    -3.02     4.00     4.00     2.00    10.00  #| #
+           OldMain12            OldMain13    42.00    88.00    -2.73    11.00     4.00     1.00     0.00  #| #
+           OldMain13            OldMain14    10.00   107.00     0.00     4.00     3.00     1.00     0.00  #| #
+           OldMain14            OldMain15    29.00    93.00     0.00     3.00     3.00     0.00     3.00  #| #
+           OldMain15            OldMain16     6.00    64.00     0.00     0.00     2.00     0.00     3.00  #| #
+           OldMain16            OldMain17     6.00    30.00     0.00     0.00     2.00     0.00     3.00  #| #
+           OldMain17            OldMain18     7.00    40.00     0.00     0.00     2.00     0.00     4.00  #| #  FAKE
+            OldMain5            OldMain5A     9.00    30.00     0.00    -9.90     4.00     2.00    -9.90
+           OldMain5A            OldMain5B    16.00    40.00    10.81     5.00     4.00     0.00     6.00
+           OldMain5B            OldMain5C    10.00    45.00   -17.46     0.00     1.00     3.00     3.00
+           OldMain5C            OldMain5D     5.00    45.00     0.00     4.00     5.00     3.00     5.00
+           OldMain11           OldMain11A     6.00   121.00    -9.59    -9.90     5.00     3.00    -9.90
+          OldMain11A           OldMain11B    18.00   207.00     0.00     6.00     4.00     0.00     7.00
+          OldMain11B           OldMain11C    26.00   204.00    -4.41     2.00     3.00     3.00     6.00
+          OldMain11C           OldMain11D    10.00   177.00     0.00     3.00     4.00     0.00     7.00
+          OldMain11D           OldMain11E     7.00   155.00     0.00     5.00     2.00     0.00     3.00
+          OldMain11E           OldMain11F    11.00   112.00     0.00     7.00     3.00     0.00     3.00
+          OldMain11F           OldMain11G    10.00    83.00     5.74     7.00     3.00     0.00     2.00
+          OldMain11G           OldMain11H     8.00   152.00     7.18     2.00     3.00     0.00     7.00
+          OldMain11H           OldMain11I     7.00   167.00     0.00     3.00     3.00     0.00     5.00
+          OldMain11I           OldMain11J     5.00    92.00     0.00     1.00     2.00     0.00     3.00
+          OldMain11J           OldMain11K    10.00   202.00    17.46     2.00     2.00     0.00    -9.90
+          OldMain11K           OldMain11L     5.00   202.00     0.00     5.00     3.00     3.00     5.00  FAKE
+
+

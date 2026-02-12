@@ -11,13 +11,8 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 
-from compass_lib.enums import FileExtension
-from compass_lib.geojson import convert_mak_to_geojson
 from compass_lib.geojson import project_to_geojson
 from compass_lib.io import load_project
-from compass_lib.solver.ariane import ArianeSolver
-from compass_lib.solver.lse import LSESolver
-from compass_lib.solver.proportional import ProportionalSolver
 from compass_lib.solver.sparse import SparseSolver
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -516,6 +511,7 @@ class Project(models.Model):
             if hexsha is None:
                 # Make sure the project is update to ToT (Top of Tree)
                 git_repo.checkout_default_branch_and_pull()
+
             else:
                 git_repo.checkout_commit(hexsha=hexsha)
 
