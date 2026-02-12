@@ -594,6 +594,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gis-ogc/user/<user_token:key>/",
+        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserLandingPageApiView",
+        "name": "api:v1:gis-ogc:user-landing",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/gis-ogc/user/<user_token:key>/<gitsha:commit_sha>",
         "module": "speleodb.api.v1.views.project_geojson.OGCGISUserCollectionApiView",
         "name": "api:v1:gis-ogc:user-collection",
@@ -606,9 +612,21 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gis-ogc/user/<user_token:key>/conformance",
+        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserConformanceApiView",
+        "name": "api:v1:gis-ogc:user-conformance",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/gis-ogc/view/<gis_token>",
-        "module": "speleodb.api.v1.views.gis_view.OGCGISViewDataApiView",
+        "module": "speleodb.api.v1.views.gis_view.OGCGISViewCollectionsApiView",
         "name": "api:v1:gis-ogc:view-data",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/view/<gis_token>/",
+        "module": "speleodb.api.v1.views.gis_view.OGCGISViewLandingPageApiView",
+        "name": "api:v1:gis-ogc:view-landing",
         "decorators": ""
     },
     {
@@ -621,6 +639,12 @@
         "url": "/api/v1/gis-ogc/view/<gis_token>/<gitsha:commit_sha>/items",
         "module": "speleodb.api.v1.views.gis_view.OGCGISViewCollectionItemApiView",
         "name": "api:v1:gis-ogc:view-collection-items",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/view/<gis_token>/conformance",
+        "module": "speleodb.api.v1.views.gis_view.OGCGISViewConformanceApiView",
+        "name": "api:v1:gis-ogc:view-conformance",
         "decorators": ""
     },
     {

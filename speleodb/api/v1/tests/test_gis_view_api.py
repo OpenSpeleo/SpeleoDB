@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 
 import orjson
 import pytest
@@ -227,7 +228,7 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         data = response.json()
 
-        assert len(data.get("links", [])) == 4  # noqa: PLR2004
+        assert len(data.get("links", [])) == 3  # noqa: PLR2004
         assert len(data.get("collections", [])) == 1
 
     def test_public_access_with_invalid_token(self) -> None:
@@ -1420,3 +1421,979 @@ class TestOGCGISUserCollectionApi(BaseAPITestCase):
         assert "title" in data
         assert "description" in data
         assert "links" in data
+
+
+# ======================================================================
+# OGC API - Features conformance tests
+# ======================================================================
+
+
+def _temp_linestring_geojson_file() -> SimpleUploadedFile:
+    """Create a GeoJSON with both Point and LineString features."""
+    return SimpleUploadedFile(
+        "test.geojson",
+        orjson.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [-87.5, 20.2],
+                        },
+                        "properties": {"name": "Entrance"},
+                    },
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [
+                                [-87.5, 20.2],
+                                [-87.6, 20.3],
+                                [-87.7, 20.4],
+                            ],
+                        },
+                        "properties": {"name": "Passage A"},
+                    },
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [
+                                [-87.6, 20.3],
+                                [-87.65, 20.35],
+                            ],
+                        },
+                        "properties": {"name": "Passage B"},
+                    },
+                ],
+            }
+        ),
+        content_type="application/geo+json",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Base test case for OGC GIS-View endpoints
+# ---------------------------------------------------------------------------
+
+
+class BaseOGCViewTestCase(BaseAPITestCase):
+    """Common setUp for all OGC GIS-View endpoint tests.
+
+    Provides ``self.project``, ``self.gis_view``, ``self.commit_sha``,
+    and ``self.public_client`` (unauthenticated).
+    """
+
+    project: Project
+    gis_view: GISView
+    commit_sha: str
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.project = ProjectFactory.create()
+        self.gis_view = GISView.objects.create(
+            name="OGC Test View",
+            owner=self.user,
+            allow_precise_zoom=False,
+        )
+        self.commit_sha = "a" * 40
+        create_project_geojson(
+            project=self.project,
+            commit_sha=self.commit_sha,
+            commit_date=timezone.now(),
+            author_name="Test Author",
+            author_email="test@example.com",
+            message="Initial commit",
+            file=_temp_linestring_geojson_file(),
+        )
+        GISProjectView.objects.create(
+            gis_view=self.gis_view,
+            project=self.project,
+            commit_sha=self.commit_sha,
+        )
+        self.public_client = self.client_class()
+
+
+@pytest.mark.django_db
+class TestOGCLandingPage(BaseOGCViewTestCase):
+    """OGC API - Features §7.2: Landing page requirements."""
+
+    def _get_landing(self) -> dict[str, Any]:
+        resp = self.public_client.get(
+            reverse(
+                "api:v1:gis-ogc:view-landing",
+                kwargs={"gis_token": self.gis_view.gis_token},
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        return resp.json()  # type: ignore[no-any-return]
+
+    def test_landing_page_returns_200(self) -> None:
+        self._get_landing()
+
+    def test_landing_page_has_title(self) -> None:
+        data = self._get_landing()
+        assert "title" in data
+        assert isinstance(data["title"], str)
+
+    def test_landing_page_has_links(self) -> None:
+        data = self._get_landing()
+        assert "links" in data
+        assert isinstance(data["links"], list)
+        assert len(data["links"]) >= 3  # noqa: PLR2004  # self, conformance, data
+
+    def test_landing_page_has_self_link(self) -> None:
+        data = self._get_landing()
+        rels = {link["rel"] for link in data["links"]}
+        assert "self" in rels
+
+    def test_landing_page_has_conformance_link(self) -> None:
+        data = self._get_landing()
+        rels = {link["rel"] for link in data["links"]}
+        assert "conformance" in rels
+
+    def test_landing_page_has_data_link(self) -> None:
+        """``rel: data`` must point to the collections endpoint."""
+        data = self._get_landing()
+        data_links = [link for link in data["links"] if link["rel"] == "data"]
+        assert len(data_links) == 1
+        assert data_links[0]["type"] == "application/json"
+
+    def test_landing_page_has_service_desc_link(self) -> None:
+        data = self._get_landing()
+        rels = {link["rel"] for link in data["links"]}
+        assert "service-desc" in rels
+
+    def test_landing_page_all_links_have_required_fields(self) -> None:
+        """Each link object must have href, rel, type."""
+        data = self._get_landing()
+        for link in data["links"]:
+            assert "href" in link, f"Link missing href: {link}"
+            assert "rel" in link, f"Link missing rel: {link}"
+            assert "type" in link, f"Link missing type: {link}"
+
+    def test_landing_page_invalid_token_returns_404(self) -> None:
+        resp = self.public_client.get(
+            reverse(
+                "api:v1:gis-ogc:view-landing",
+                kwargs={"gis_token": "0" * 40},
+            )
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+class TestOGCConformance(BaseOGCViewTestCase):
+    """OGC API - Features §7.4: Conformance declaration requirements."""
+
+    def _get_conformance(self) -> dict[str, Any]:
+        resp = self.public_client.get(
+            reverse(
+                "api:v1:gis-ogc:view-conformance",
+                kwargs={"gis_token": self.gis_view.gis_token},
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        return resp.json()  # type: ignore[no-any-return]
+
+    def test_conformance_returns_200(self) -> None:
+        self._get_conformance()
+
+    def test_conformance_has_conforms_to(self) -> None:
+        data = self._get_conformance()
+        assert "conformsTo" in data
+        assert isinstance(data["conformsTo"], list)
+
+    def test_conformance_declares_core(self) -> None:
+        data = self._get_conformance()
+        assert (
+            "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core"
+            in data["conformsTo"]
+        )
+
+    def test_conformance_declares_geojson(self) -> None:
+        data = self._get_conformance()
+        assert (
+            "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson"
+            in data["conformsTo"]
+        )
+
+    def test_conformance_does_not_declare_filtering(self) -> None:
+        """We intentionally do NOT declare CQL / filter conformance."""
+        data = self._get_conformance()
+        for cls in data["conformsTo"]:
+            assert "filter" not in cls.lower()
+            assert "cql" not in cls.lower()
+
+    def test_conformance_invalid_token_returns_404(self) -> None:
+        resp = self.public_client.get(
+            reverse(
+                "api:v1:gis-ogc:view-conformance",
+                kwargs={"gis_token": "0" * 40},
+            )
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+class TestOGCCollections(BaseOGCViewTestCase):
+    """OGC API - Features §7.13-14: Collections requirements."""
+
+    def _get_collections(self) -> dict[str, Any]:
+        resp = self.public_client.get(
+            reverse(
+                "api:v1:gis-ogc:view-data",
+                kwargs={"gis_token": self.gis_view.gis_token},
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        return resp.json()  # type: ignore[no-any-return]
+
+    def test_collections_returns_200(self) -> None:
+        self._get_collections()
+
+    def test_collections_has_links(self) -> None:
+        data = self._get_collections()
+        assert "links" in data
+        assert isinstance(data["links"], list)
+
+    def test_collections_has_self_link(self) -> None:
+        data = self._get_collections()
+        rels = {link["rel"] for link in data["links"]}
+        assert "self" in rels
+
+    def test_collections_has_collections_array(self) -> None:
+        data = self._get_collections()
+        assert "collections" in data
+        assert isinstance(data["collections"], list)
+        assert len(data["collections"]) >= 1
+
+    def test_collection_has_required_fields(self) -> None:
+        """Each collection must have id, title, links."""
+        data = self._get_collections()
+        for coll in data["collections"]:
+            assert "id" in coll
+            assert "title" in coll
+            assert "links" in coll
+
+    def test_collection_has_self_link(self) -> None:
+        data = self._get_collections()
+        coll = data["collections"][0]
+        rels = {link["rel"] for link in coll["links"]}
+        assert "self" in rels
+
+    def test_collection_has_items_link(self) -> None:
+        data = self._get_collections()
+        coll = data["collections"][0]
+        items_links = [link for link in coll["links"] if link["rel"] == "items"]
+        assert len(items_links) == 1
+        assert items_links[0]["type"] == "application/geo+json"
+
+    def test_collection_items_link_ends_with_items(self) -> None:
+        """The items href must end with /items (not just the collection URL)."""
+        data = self._get_collections()
+        coll = data["collections"][0]
+        items_href = next(
+            link["href"] for link in coll["links"] if link["rel"] == "items"
+        )
+        assert items_href.endswith("/items")
+
+    def test_collection_id_is_commit_sha(self) -> None:
+        data = self._get_collections()
+        coll = data["collections"][0]
+        assert coll["id"] == self.commit_sha
+
+    def test_collection_has_item_type(self) -> None:
+        data = self._get_collections()
+        coll = data["collections"][0]
+        assert coll.get("itemType") == "feature"
+
+
+@pytest.mark.django_db
+class TestOGCSingleCollection(BaseOGCViewTestCase):
+    """OGC API - Features §7.14: Single collection requirements."""
+
+    def _get_collection(self) -> dict[str, Any]:
+        resp = self.public_client.get(
+            reverse(
+                "api:v1:gis-ogc:view-collection",
+                kwargs={
+                    "gis_token": self.gis_view.gis_token,
+                    "commit_sha": self.commit_sha,
+                },
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        return resp.json()  # type: ignore[no-any-return]
+
+    def test_single_collection_returns_200(self) -> None:
+        self._get_collection()
+
+    def test_single_collection_has_id(self) -> None:
+        data = self._get_collection()
+        assert data["id"] == self.commit_sha
+
+    def test_single_collection_has_title(self) -> None:
+        data = self._get_collection()
+        assert "title" in data
+        assert data["title"] == self.project.name
+
+    def test_single_collection_has_self_link(self) -> None:
+        data = self._get_collection()
+        rels = {link["rel"] for link in data["links"]}
+        assert "self" in rels
+
+    def test_single_collection_has_items_link(self) -> None:
+        data = self._get_collection()
+        items_links = [link for link in data["links"] if link["rel"] == "items"]
+        assert len(items_links) == 1
+        assert items_links[0]["type"] == "application/geo+json"
+        assert items_links[0]["href"].endswith("/items")
+
+    def test_single_collection_invalid_sha_returns_404(self) -> None:
+        resp = self.public_client.get(
+            reverse(
+                "api:v1:gis-ogc:view-collection",
+                kwargs={
+                    "gis_token": self.gis_view.gis_token,
+                    "commit_sha": "f" * 40,
+                },
+            )
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+class TestOGCCollectionItems(BaseOGCViewTestCase):
+    """OGC API - Features §7.15-16: /items endpoint requirements."""
+
+    def _get_items_response(self, **extra_kwargs: Any) -> Any:
+        return self.public_client.get(
+            reverse(
+                "api:v1:gis-ogc:view-collection-items",
+                kwargs={
+                    "gis_token": self.gis_view.gis_token,
+                    "commit_sha": self.commit_sha,
+                },
+            ),
+            **extra_kwargs,
+        )
+
+    def test_items_returns_200(self) -> None:
+        resp = self._get_items_response()
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_items_content_type_is_geojson(self) -> None:
+        resp = self._get_items_response()
+        assert "application/geo+json" in resp["Content-Type"]
+
+    def test_items_is_valid_feature_collection(self) -> None:
+        resp = self._get_items_response()
+        data = orjson.loads(b"".join(resp.streaming_content))
+        assert data["type"] == "FeatureCollection"
+        assert "features" in data
+        assert isinstance(data["features"], list)
+
+    def test_items_filters_to_linestring_only(self) -> None:
+        """Proxy must strip non-LineString features for QGIS compatibility."""
+        resp = self._get_items_response()
+        data = orjson.loads(b"".join(resp.streaming_content))
+        for feature in data["features"]:
+            assert feature["geometry"]["type"] == "LineString"
+        # Our fixture has 2 LineStrings and 1 Point -> expect 2
+        assert len(data["features"]) == 2  # noqa: PLR2004
+
+    def test_items_has_etag_header(self) -> None:
+        resp = self._get_items_response()
+        assert "ETag" in resp
+        assert resp["ETag"] == f'"{self.commit_sha}"'
+
+    def test_items_has_cache_control_header(self) -> None:
+        resp = self._get_items_response()
+        assert "Cache-Control" in resp
+        assert "public" in resp["Cache-Control"]
+        assert "max-age=86400" in resp["Cache-Control"]
+
+    def test_items_has_content_disposition_inline(self) -> None:
+        resp = self._get_items_response()
+        assert resp.get("Content-Disposition") == "inline"
+
+    def test_items_conditional_request_returns_304(self) -> None:
+        """If-None-Match with matching ETag should return 304."""
+        etag = f'"{self.commit_sha}"'
+        resp = self._get_items_response(
+            headers={"if-none-match": etag},
+        )
+        assert resp.status_code == status.HTTP_304_NOT_MODIFIED
+        assert resp["ETag"] == etag
+
+    def test_items_conditional_request_mismatched_etag_returns_200(self) -> None:
+        resp = self._get_items_response(
+            headers={"if-none-match": '"wrong"'},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_items_ignores_query_params(self) -> None:
+        """limit, bbox, filter params must be silently ignored."""
+        resp = self.public_client.get(
+            reverse(
+                "api:v1:gis-ogc:view-collection-items",
+                kwargs={
+                    "gis_token": self.gis_view.gis_token,
+                    "commit_sha": self.commit_sha,
+                },
+            )
+            + "?limit=10&bbox=-90,19,-86,21&filter=name%3D%27test%27",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
+        assert len(data["features"]) == 2  # noqa: PLR2004
+
+    def test_items_invalid_commit_returns_404(self) -> None:
+        resp = self.public_client.get(
+            reverse(
+                "api:v1:gis-ogc:view-collection-items",
+                kwargs={
+                    "gis_token": self.gis_view.gis_token,
+                    "commit_sha": "f" * 40,
+                },
+            )
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_items_caching_returns_same_content(self) -> None:
+        """Second request should be served from cache with identical bytes."""
+        resp1 = self._get_items_response()
+        resp2 = self._get_items_response()
+        body1 = b"".join(resp1.streaming_content)
+        body2 = b"".join(resp2.streaming_content)
+        assert body1 == body2
+
+
+@pytest.mark.django_db
+class TestOGCDiscoveryFlow(BaseOGCViewTestCase):
+    """End-to-end: follow the full QGIS-style discovery chain."""
+
+    def test_full_discovery_chain(self) -> None:
+        """Landing -> conformance -> collections -> collection -> items."""
+        client = self.public_client
+        token = self.gis_view.gis_token
+
+        # 1. Landing page
+        landing = client.get(
+            reverse("api:v1:gis-ogc:view-landing", kwargs={"gis_token": token})
+        ).json()
+        assert "links" in landing
+
+        # 2. Follow rel:conformance
+        conf_href = next(
+            link["href"] for link in landing["links"] if link["rel"] == "conformance"
+        )
+        conf = client.get(conf_href).json()
+        assert "conformsTo" in conf
+
+        # 3. Follow rel:data -> collections
+        data_href = next(
+            link["href"] for link in landing["links"] if link["rel"] == "data"
+        )
+        collections = client.get(data_href).json()
+        assert len(collections["collections"]) >= 1
+
+        # 4. Follow collection self link -> single collection
+        coll = collections["collections"][0]
+        self_href = next(
+            link["href"] for link in coll["links"] if link["rel"] == "self"
+        )
+        single = client.get(self_href).json()
+        assert single["id"] == coll["id"]
+
+        # 5. Follow items link -> GeoJSON
+        items_href = next(
+            link["href"] for link in single["links"] if link["rel"] == "items"
+        )
+        items_resp = client.get(items_href)
+        assert items_resp.status_code == status.HTTP_200_OK
+        assert "application/geo+json" in items_resp["Content-Type"]
+
+        geojson = orjson.loads(b"".join(items_resp.streaming_content))  # type: ignore[attr-defined]
+        assert geojson["type"] == "FeatureCollection"
+        assert len(geojson["features"]) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Base test case for OGC User endpoints
+# ---------------------------------------------------------------------------
+
+
+class BaseOGCUserTestCase(BaseAPITestCase):
+    """Common setUp for all OGC User endpoint tests.
+
+    Provides ``self.project``, ``self.commit_sha``, and a hex-compatible
+    ``self.token`` suitable for the ``user_token`` URL converter.
+    """
+
+    project: Project
+    commit_sha: str
+
+    def setUp(self) -> None:
+        super().setUp()
+        # The user_token URL converter requires [0-9a-fA-F]{40}
+        self.token.delete()
+        self.token = Token.objects.create(
+            user=self.user, key="a1b2c3d4e5f6a7b8c9d0" * 2
+        )
+        self.project = ProjectFactory.create(created_by=self.user.email)
+        UserProjectPermissionFactory(
+            target=self.user,
+            level=PermissionLevel.READ_ONLY,
+            project=self.project,
+        )
+        self.commit_sha = "b" * 40
+        create_project_geojson(
+            project=self.project,
+            commit_sha=self.commit_sha,
+            commit_date=timezone.now(),
+            author_name="Test Author",
+            author_email="test@example.com",
+            message="Initial commit",
+            file=_temp_linestring_geojson_file(),
+        )
+
+
+@pytest.mark.django_db
+class TestOGCUserCollections(BaseOGCUserTestCase):
+    """OGC API - Features: user /collections endpoint."""
+
+    def _get_collections(self) -> dict[str, Any]:
+        resp = self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-data",
+                kwargs={"key": self.token.key},
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        return resp.json()  # type: ignore[no-any-return]
+
+    def test_collections_returns_200(self) -> None:
+        self._get_collections()
+
+    def test_collections_has_links(self) -> None:
+        data = self._get_collections()
+        assert "links" in data
+        assert isinstance(data["links"], list)
+
+    def test_collections_has_self_link(self) -> None:
+        data = self._get_collections()
+        rels = {link["rel"] for link in data["links"]}
+        assert "self" in rels
+
+    def test_collections_has_collections_array(self) -> None:
+        data = self._get_collections()
+        assert "collections" in data
+        assert isinstance(data["collections"], list)
+        assert len(data["collections"]) >= 1
+
+    def test_collection_has_required_fields(self) -> None:
+        data = self._get_collections()
+        for coll in data["collections"]:
+            assert "id" in coll
+            assert "title" in coll
+            assert "links" in coll
+
+    def test_collection_has_self_link(self) -> None:
+        data = self._get_collections()
+        coll = data["collections"][0]
+        rels = {link["rel"] for link in coll["links"]}
+        assert "self" in rels
+
+    def test_collection_has_items_link(self) -> None:
+        data = self._get_collections()
+        coll = data["collections"][0]
+        items_links = [link for link in coll["links"] if link["rel"] == "items"]
+        assert len(items_links) == 1
+        assert items_links[0]["type"] == "application/geo+json"
+
+    def test_collection_items_link_ends_with_items(self) -> None:
+        data = self._get_collections()
+        coll = data["collections"][0]
+        items_href = next(
+            link["href"] for link in coll["links"] if link["rel"] == "items"
+        )
+        assert items_href.endswith("/items")
+
+    def test_collection_id_is_commit_sha(self) -> None:
+        data = self._get_collections()
+        coll = data["collections"][0]
+        assert coll["id"] == self.commit_sha
+
+    def test_collection_has_item_type(self) -> None:
+        data = self._get_collections()
+        coll = data["collections"][0]
+        assert coll.get("itemType") == "feature"
+
+
+@pytest.mark.django_db
+class TestOGCUserSingleCollection(BaseOGCUserTestCase):
+    """OGC API - Features: user single collection endpoint."""
+
+    def _get_collection(self) -> dict[str, Any]:
+        resp = self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-collection",
+                kwargs={
+                    "key": self.token.key,
+                    "commit_sha": self.commit_sha,
+                },
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        return resp.json()  # type: ignore[no-any-return]
+
+    def test_single_collection_returns_200(self) -> None:
+        self._get_collection()
+
+    def test_single_collection_has_id(self) -> None:
+        data = self._get_collection()
+        assert data["id"] == self.commit_sha
+
+    def test_single_collection_has_title(self) -> None:
+        data = self._get_collection()
+        assert "title" in data
+        assert data["title"] == self.project.name
+
+    def test_single_collection_has_self_link(self) -> None:
+        data = self._get_collection()
+        rels = {link["rel"] for link in data["links"]}
+        assert "self" in rels
+
+    def test_single_collection_has_items_link(self) -> None:
+        data = self._get_collection()
+        items_links = [link for link in data["links"] if link["rel"] == "items"]
+        assert len(items_links) == 1
+        assert items_links[0]["type"] == "application/geo+json"
+        assert items_links[0]["href"].endswith("/items")
+
+    def test_single_collection_invalid_sha_returns_404(self) -> None:
+        resp = self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-collection",
+                kwargs={
+                    "key": self.token.key,
+                    "commit_sha": "f" * 40,
+                },
+            )
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_single_collection_no_permission_returns_error(self) -> None:
+        """User without access to the project gets an error (401 or 404)."""
+        other_project = ProjectFactory.create()
+        other_sha = "c" * 40
+        create_project_geojson(
+            project=other_project,
+            commit_sha=other_sha,
+            commit_date=timezone.now(),
+            author_name="Other",
+            author_email="other@example.com",
+            message="Other commit",
+            file=temp_geojson_file(),
+        )
+        resp = self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-collection",
+                kwargs={
+                    "key": self.token.key,
+                    "commit_sha": other_sha,
+                },
+            )
+        )
+        assert resp.status_code in (
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_404_NOT_FOUND,
+        )
+
+
+@pytest.mark.django_db
+class TestOGCUserCollectionItems(BaseOGCUserTestCase):
+    """OGC API - Features: user /items endpoint."""
+
+    def _get_items_response(self, **extra_kwargs: Any) -> Any:
+        return self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-collection-items",
+                kwargs={
+                    "key": self.token.key,
+                    "commit_sha": self.commit_sha,
+                },
+            ),
+            **extra_kwargs,
+        )
+
+    def test_items_returns_200(self) -> None:
+        resp = self._get_items_response()
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_items_content_type_is_geojson(self) -> None:
+        resp = self._get_items_response()
+        assert "application/geo+json" in resp["Content-Type"]
+
+    def test_items_is_valid_feature_collection(self) -> None:
+        resp = self._get_items_response()
+        data = orjson.loads(b"".join(resp.streaming_content))
+        assert data["type"] == "FeatureCollection"
+        assert "features" in data
+        assert isinstance(data["features"], list)
+
+    def test_items_filters_to_linestring_only(self) -> None:
+        resp = self._get_items_response()
+        data = orjson.loads(b"".join(resp.streaming_content))
+        for feature in data["features"]:
+            assert feature["geometry"]["type"] == "LineString"
+        assert len(data["features"]) == 2  # noqa: PLR2004
+
+    def test_items_has_etag_header(self) -> None:
+        resp = self._get_items_response()
+        assert "ETag" in resp
+        assert resp["ETag"] == f'"{self.commit_sha}"'
+
+    def test_items_has_cache_control_header(self) -> None:
+        resp = self._get_items_response()
+        assert "Cache-Control" in resp
+        assert "public" in resp["Cache-Control"]
+        assert "max-age=86400" in resp["Cache-Control"]
+
+    def test_items_has_content_disposition_inline(self) -> None:
+        resp = self._get_items_response()
+        assert resp.get("Content-Disposition") == "inline"
+
+    def test_items_conditional_request_returns_304(self) -> None:
+        etag = f'"{self.commit_sha}"'
+        resp = self._get_items_response(
+            headers={"if-none-match": etag},
+        )
+        assert resp.status_code == status.HTTP_304_NOT_MODIFIED
+        assert resp["ETag"] == etag
+
+    def test_items_conditional_request_mismatched_etag_returns_200(self) -> None:
+        resp = self._get_items_response(
+            headers={"if-none-match": '"wrong"'},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_items_ignores_query_params(self) -> None:
+        resp = self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-collection-items",
+                kwargs={
+                    "key": self.token.key,
+                    "commit_sha": self.commit_sha,
+                },
+            )
+            + "?limit=10&bbox=-90,19,-86,21",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
+        assert len(data["features"]) == 2  # noqa: PLR2004
+
+    def test_items_invalid_commit_returns_404(self) -> None:
+        resp = self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-collection-items",
+                kwargs={
+                    "key": self.token.key,
+                    "commit_sha": "f" * 40,
+                },
+            )
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_items_no_permission_returns_error(self) -> None:
+        """User without access to the project gets an error (401 or 404)."""
+        other_project = ProjectFactory.create()
+        other_sha = "c" * 40
+        create_project_geojson(
+            project=other_project,
+            commit_sha=other_sha,
+            commit_date=timezone.now(),
+            author_name="Other",
+            author_email="other@example.com",
+            message="Other commit",
+            file=_temp_linestring_geojson_file(),
+        )
+        resp = self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-collection-items",
+                kwargs={
+                    "key": self.token.key,
+                    "commit_sha": other_sha,
+                },
+            )
+        )
+        assert resp.status_code in (
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    def test_items_caching_returns_same_content(self) -> None:
+        resp1 = self._get_items_response()
+        resp2 = self._get_items_response()
+        body1 = b"".join(resp1.streaming_content)
+        body2 = b"".join(resp2.streaming_content)
+        assert body1 == body2
+
+
+# ======================================================================
+# OGC API - Features: USER discovery endpoints
+# ======================================================================
+
+
+@pytest.mark.django_db
+class TestOGCUserLandingPage(BaseOGCUserTestCase):
+    """OGC API - Features: user landing page requirements."""
+
+    def _get_landing(self) -> dict[str, Any]:
+        resp = self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-landing",
+                kwargs={"key": self.token.key},
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        return resp.json()  # type: ignore[no-any-return]
+
+    def test_landing_page_returns_200(self) -> None:
+        self._get_landing()
+
+    def test_landing_page_has_title(self) -> None:
+        data = self._get_landing()
+        assert "title" in data
+        assert isinstance(data["title"], str)
+
+    def test_landing_page_has_links(self) -> None:
+        data = self._get_landing()
+        assert "links" in data
+        assert isinstance(data["links"], list)
+        assert len(data["links"]) >= 3  # noqa: PLR2004
+
+    def test_landing_page_has_self_link(self) -> None:
+        data = self._get_landing()
+        rels = {link["rel"] for link in data["links"]}
+        assert "self" in rels
+
+    def test_landing_page_has_conformance_link(self) -> None:
+        data = self._get_landing()
+        rels = {link["rel"] for link in data["links"]}
+        assert "conformance" in rels
+
+    def test_landing_page_has_data_link(self) -> None:
+        data = self._get_landing()
+        data_links = [link for link in data["links"] if link["rel"] == "data"]
+        assert len(data_links) == 1
+        assert data_links[0]["type"] == "application/json"
+
+    def test_landing_page_has_service_desc_link(self) -> None:
+        data = self._get_landing()
+        rels = {link["rel"] for link in data["links"]}
+        assert "service-desc" in rels
+
+    def test_landing_page_all_links_have_required_fields(self) -> None:
+        data = self._get_landing()
+        for link in data["links"]:
+            assert "href" in link, f"Link missing href: {link}"
+            assert "rel" in link, f"Link missing rel: {link}"
+            assert "type" in link, f"Link missing type: {link}"
+
+
+@pytest.mark.django_db
+class TestOGCUserConformance(BaseOGCUserTestCase):
+    """OGC API - Features: user conformance declaration requirements."""
+
+    def _get_conformance(self) -> dict[str, Any]:
+        resp = self.client.get(
+            reverse(
+                "api:v1:gis-ogc:user-conformance",
+                kwargs={"key": self.token.key},
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        return resp.json()  # type: ignore[no-any-return]
+
+    def test_conformance_returns_200(self) -> None:
+        self._get_conformance()
+
+    def test_conformance_has_conforms_to(self) -> None:
+        data = self._get_conformance()
+        assert "conformsTo" in data
+        assert isinstance(data["conformsTo"], list)
+
+    def test_conformance_declares_core(self) -> None:
+        data = self._get_conformance()
+        assert (
+            "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core"
+            in data["conformsTo"]
+        )
+
+    def test_conformance_declares_geojson(self) -> None:
+        data = self._get_conformance()
+        assert (
+            "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson"
+            in data["conformsTo"]
+        )
+
+    def test_conformance_does_not_declare_filtering(self) -> None:
+        data = self._get_conformance()
+        for cls in data["conformsTo"]:
+            assert "filter" not in cls.lower()
+            assert "cql" not in cls.lower()
+
+
+@pytest.mark.django_db
+class TestOGCUserDiscoveryFlow(BaseOGCUserTestCase):
+    """End-to-end: follow the full QGIS-style discovery chain for user endpoints."""
+
+    def test_full_discovery_chain(self) -> None:
+        """Landing -> conformance -> collections -> collection -> items."""
+        client = self.client
+        key = self.token.key
+
+        # 1. Landing page
+        landing = client.get(
+            reverse("api:v1:gis-ogc:user-landing", kwargs={"key": key})
+        ).json()
+        assert "links" in landing
+
+        # 2. Follow rel:conformance
+        conf_href = next(
+            link["href"] for link in landing["links"] if link["rel"] == "conformance"
+        )
+        conf = client.get(conf_href).json()
+        assert "conformsTo" in conf
+
+        # 3. Follow rel:data -> collections
+        data_href = next(
+            link["href"] for link in landing["links"] if link["rel"] == "data"
+        )
+        collections = client.get(data_href).json()
+        assert len(collections["collections"]) >= 1
+
+        # 4. Follow collection self link -> single collection
+        coll = collections["collections"][0]
+        self_href = next(
+            link["href"] for link in coll["links"] if link["rel"] == "self"
+        )
+        single = client.get(self_href).json()
+        assert single["id"] == coll["id"]
+
+        # 5. Follow items link -> GeoJSON
+        items_href = next(
+            link["href"] for link in single["links"] if link["rel"] == "items"
+        )
+        items_resp = client.get(items_href)
+        assert items_resp.status_code == status.HTTP_200_OK
+        assert "application/geo+json" in items_resp["Content-Type"]
+
+        geojson = orjson.loads(b"".join(items_resp.streaming_content))  # type: ignore[attr-defined]
+        assert geojson["type"] == "FeatureCollection"
+        assert len(geojson["features"]) >= 1

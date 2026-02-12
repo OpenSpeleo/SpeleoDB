@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 
+"""OGC API - Features views scoped to a **User** (``user_token`` / ``key``).
+
+The OGC base classes live in :mod:`speleodb.api.v1.views.ogc_base`.
+Each concrete class below sets ``queryset`` / ``lookup_field`` and
+implements the one abstract getter that specialises it for the
+user-token workflow.
+"""
+
 from __future__ import annotations
 
-import logging
-from io import BytesIO
 from typing import TYPE_CHECKING
 from typing import Any
 
-import orjson
-from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Prefetch
 from django.http import Http404
-from django.http import StreamingHttpResponse
-from geojson import FeatureCollection  # type: ignore[attr-defined]
-from rest_framework import permissions
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import GenericAPIView
 
@@ -22,17 +23,17 @@ from speleodb.api.v1.permissions import SDB_ReadAccess
 from speleodb.api.v1.permissions import SDB_WebViewerAccess
 from speleodb.api.v1.serializers import ProjectGeoJSONCommitSerializer
 from speleodb.api.v1.serializers import ProjectWithGeoJsonSerializer
+from speleodb.api.v1.views.ogc_base import BaseOGCCollectionApiView
+from speleodb.api.v1.views.ogc_base import BaseOGCCollectionItemApiView
+from speleodb.api.v1.views.ogc_base import BaseOGCCollectionsApiView
+from speleodb.api.v1.views.ogc_base import BaseOGCConformanceApiView
+from speleodb.api.v1.views.ogc_base import BaseOGCLandingPageApiView
 from speleodb.gis.models import ProjectGeoJSON
-from speleodb.gis.ogc_models import OGCLayerList
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
-from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-    from typing import Any
-
     from rest_framework.compat import QuerySet
     from rest_framework.request import Request
     from rest_framework.response import Response
@@ -40,7 +41,10 @@ if TYPE_CHECKING:
 
     from speleodb.users.models import User
 
-logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Non-OGC helpers / views
+# ---------------------------------------------------------------------------
 
 
 class BaseUserProjectGeoJsonApiView(SDBAPIViewMixin):
@@ -69,35 +73,52 @@ class ProjectAllProjectGeoJsonApiView(
     serializer_class = ProjectWithGeoJsonSerializer
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Return all accessible projects and their GeoJSON data."""
         user = self.get_user()
         projects = self.get_user_projects(user)
-
         serializer = self.get_serializer(projects, many=True)
         return SuccessResponse(serializer.data)
 
 
-class OGCGISUserProjectsApiView(GenericAPIView[Token], BaseUserProjectGeoJsonApiView):
-    """API view that returns raw GeoJSON data for every user's project in a proxied
-    fashion for GIS."""
+# ---------------------------------------------------------------------------
+# OGC API - Features: User subclasses (public, token-based)
+# ---------------------------------------------------------------------------
+
+
+class OGCGISUserLandingPageApiView(BaseOGCLandingPageApiView):
+    """OGC landing page for user-scoped projects."""
 
     queryset = Token.objects.all()
-    permission_classes = [permissions.AllowAny]
+    lookup_field = "key"
+
+
+class OGCGISUserConformanceApiView(BaseOGCConformanceApiView):
+    """OGC conformance declaration for user-scoped projects."""
+
+    queryset = Token.objects.all()
+    lookup_field = "key"
+
+
+class OGCGISUserProjectsApiView(
+    BaseOGCCollectionsApiView,
+    BaseUserProjectGeoJsonApiView,
+):
+    """OGC ``/collections`` — lists all projects accessible to the token owner."""
+
+    queryset = Token.objects.all()
     lookup_field = "key"
 
     def get_serializer(self, *args: Any, **kwargs: Any) -> BaseSerializer[Token]:
         return super().get_serializer(*args, **kwargs)
 
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        """Return all accessible projects and their GeoJSON data."""
-        token = self.get_object()
+    def get_ogc_layer_data(self) -> list[dict[str, Any]]:
+        token: Token = self.get_object()
         projects = self.get_user_projects(token.user)
 
         geojson_objs: list[ProjectGeoJSON] = [
             objs[0] for project in projects if (objs := project.geojsons.all())
         ]
 
-        data = [
+        return [
             {
                 "sha": geojson_obj.commit_sha,
                 "title": geojson_obj.project.name,
@@ -107,18 +128,13 @@ class OGCGISUserProjectsApiView(GenericAPIView[Token], BaseUserProjectGeoJsonApi
             for geojson_obj in geojson_objs
         ]
 
-        ogc_layers: OGCLayerList = OGCLayerList.model_validate({"layers": data})
 
-        return NoWrapResponse(ogc_layers.to_ogc_collections(request=request))
-
-
-class BaseOGCGISViewCollectionApiView(GenericAPIView[Token], SDBAPIViewMixin):
-    queryset = Token.objects.all()
-    permission_classes = [permissions.AllowAny]
-    lookup_field = "key"
+class _UserCollectionMixin:
+    """Shared ``get_geojson_object`` for the User collection endpoints."""
 
     def get_geojson_object(self, commit_sha: str) -> ProjectGeoJSON:
-        user: User = self.get_object().user
+        token: Token = self.get_object()  # type: ignore[attr-defined]
+        user: User = token.user
 
         try:
             project_geojson = ProjectGeoJSON.objects.select_related(
@@ -141,104 +157,33 @@ class BaseOGCGISViewCollectionApiView(GenericAPIView[Token], SDBAPIViewMixin):
         return project_geojson
 
 
-class OGCGISUserCollectionApiView(BaseOGCGISViewCollectionApiView):
-    def get(
-        self,
-        request: Request,
-        key: str,
-        commit_sha: str,
-        *args: Any,
-        **kwargs: Any,
-    ) -> NoWrapResponse:
-        """Return GeoJSON signed URLs for the view."""
-        project_geojson = self.get_geojson_object(commit_sha=commit_sha)
+class OGCGISUserCollectionApiView(_UserCollectionMixin, BaseOGCCollectionApiView):
+    """OGC single-collection metadata for a user project."""
 
-        return NoWrapResponse(
-            {
-                "id": project_geojson.commit_sha,
-                "title": project_geojson.project.name,
-                "description": f"Commit: {project_geojson.commit_sha}",
-                "itemType": "feature",
-                "links": [
-                    {
-                        "href": project_geojson.get_signed_download_url(
-                            expires_in=3600
-                        ),
-                        "rel": "items",
-                        "type": "application/geo+json",
-                        "title": f"{project_geojson.project.name}",
-                    }
-                ],
-            }
-        )
+    queryset = Token.objects.all()
+    lookup_field = "key"
 
 
-class OGCGISUserCollectionItemApiView(BaseOGCGISViewCollectionApiView):
-    def get(
-        self,
-        request: Request,
-        key: str,
-        commit_sha: str,
-        *args: Any,
-        **kwargs: Any,
-    ) -> StreamingHttpResponse:
-        project_geojson = self.get_geojson_object(commit_sha=commit_sha)
+class OGCGISUserCollectionItemApiView(
+    _UserCollectionMixin,
+    BaseOGCCollectionItemApiView,
+):
+    """OGC ``/items`` — proxy-served filtered GeoJSON for a user project."""
 
-        buffer = BytesIO()
+    queryset = Token.objects.all()
+    lookup_field = "key"
 
-        cache_key = f"ogc_collections_project_geojson_{project_geojson.commit_sha}"
-        cached_content: bytes | None = cache.get(cache_key)
 
-        if cached_content:
-            buffer.write(cached_content)
-            buffer.seek(0)  # rewind to start
-
-        else:
-
-            def geojson_filter() -> bytes:
-                with project_geojson.file.open("rb") as f:
-                    features = orjson.loads(f.read()).get("features", [])
-
-                    data = FeatureCollection(  # type: ignore[no-untyped-call]
-                        [
-                            feature
-                            for feature in features
-                            if feature.get("geometry", {}).get("type") == "LineString"
-                        ]
-                    )
-
-                return orjson.dumps(data)
-
-            data: bytes = geojson_filter()
-            buffer.write(data)
-            buffer.seek(0)  # rewind to start
-
-            # set cache 1 hour
-            cache.set(
-                cache_key,
-                data,
-                timeout=60 * 60,
-            )
-
-        def buffer_stream() -> Generator[bytes, Any]:
-            chunk_size = 4096
-            while chunk := buffer.read(chunk_size):
-                yield chunk
-
-        return StreamingHttpResponse(
-            buffer_stream(),
-            content_type="application/geo+json",
-        )
+# ---------------------------------------------------------------------------
+# Non-OGC: commit listing
+# ---------------------------------------------------------------------------
 
 
 class ProjectGeoJsonCommitsApiView(GenericAPIView[Project], SDBAPIViewMixin):
-    """
-    API view to list all ProjectGeoJSON commits for a project.
+    """List all ProjectGeoJSON commits for a project.
 
     Returns lightweight commit metadata without signed URLs.
     Used for populating commit selection dropdowns in UIs.
-
-    Requires READ_ONLY access or higher (excludes WEB_VIEWER).
     """
 
     queryset = Project.objects.all()
@@ -246,14 +191,9 @@ class ProjectGeoJsonCommitsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Return list of commits with GeoJSON data."""
-
         project = self.get_object()
-
-        # Get all GeoJSON for this project, ordered by commit_date descending
         serializer = ProjectGeoJSONCommitSerializer(
             project.geojsons.order_by("-commit__authored_date"),
             many=True,
         )
-
         return SuccessResponse(serializer.data)
