@@ -21,34 +21,35 @@ def get_grid_class(total_count: int) -> str:
     - Calculate completeness score for 2-column and 3-column layouts
     - Choose layout that minimizes incomplete rows and total rows
     """
-    if total_count <= 2:
-        # 1 or 2 people always use 2 columns
-        return "grid-cols-1 md:grid-cols-2"
+    return "grid-cols-1 md:grid-cols-2"
+    # if total_count <= 2:
+    #     # 1 or 2 people always use 2 columns
+    #     return "grid-cols-1 md:grid-cols-2"
 
-    # Calculate layout metrics for 2 and 3 columns
-    rows_2col = (total_count + 1) // 2  # Ceiling division
-    remainder_2col = total_count % 2
+    # # Calculate layout metrics for 2 and 3 columns
+    # rows_2col = (total_count + 1) // 2  # Ceiling division
+    # remainder_2col = total_count % 2
 
-    rows_3col = (total_count + 2) // 3  # Ceiling division
-    remainder_3col = total_count % 3
+    # rows_3col = (total_count + 2) // 3  # Ceiling division
+    # remainder_3col = total_count % 3
 
-    # Score based on: fewer rows is better, complete rows are better
-    # Penalty for incomplete rows (0 remainder is best)
-    score_2col = rows_2col + (0.5 if remainder_2col == 1 else 0)
-    score_3col = rows_3col + (
-        0.3 if remainder_3col == 1 else 0.6 if remainder_3col == 2 else 0
-    )
+    # # Score based on: fewer rows is better, complete rows are better
+    # # Penalty for incomplete rows (0 remainder is best)
+    # score_2col = rows_2col + (0.5 if remainder_2col == 1 else 0)
+    # score_3col = rows_3col + (
+    #     0.3 if remainder_3col == 1 else 0.6 if remainder_3col == 2 else 0
+    # )
 
-    # For small numbers (3-6), prefer 2 columns unless 3 divides evenly
-    if total_count <= 6:
-        if total_count % 3 == 0:  # 3 or 6 people
-            return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-        return "grid-cols-1 md:grid-cols-2"
+    # # For small numbers (3-6), prefer 2 columns unless 3 divides evenly
+    # if total_count <= 6:
+    #     if total_count % 3 == 0:  # 3 or 6 people
+    #         return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+    #     return "grid-cols-1 md:grid-cols-2"
 
-    # For larger numbers, use scoring algorithm
-    if score_2col <= score_3col:
-        return "grid-cols-1 md:grid-cols-2"
-    return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+    # # For larger numbers, use scoring algorithm
+    # if score_2col <= score_3col:
+    #     return "grid-cols-1 md:grid-cols-2"
+    # return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
 
 
 @register.filter

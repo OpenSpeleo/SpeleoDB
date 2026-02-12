@@ -184,10 +184,49 @@ class TestPeoplePageView:
         # Should show first initial
         assert ">N<" in content  # The initial is displayed in a span
 
-    def test_grid_layout_classes(self, client: Client, db: None) -> None:
+    # def test_grid_layout_classes(self, client: Client, db: None) -> None:
+    #     """Test that grid layout classes are applied correctly."""
+    #     # Create exactly 3 technical members (should use 3 columns)
+    #     for i in range(3):
+    #         TechnicalMember.objects.create(
+    #             full_name=f"Tech Member {i + 1}",
+    #             title="Developer",
+    #             description="Description",
+    #             photo=create_test_image(),
+    #         )
+
+    #     url = reverse("people")
+    #     response = client.get(url)
+    #     content = response.content.decode()
+
+    #     assert response.status_code == status.HTTP_200_OK
+    #     # Should have 3-column grid class
+    #     assert "lg:grid-cols-3" in content
+
+    # def test_grid_layout_classes(self, client: Client, db: None) -> None:
+    #     """Test that grid layout classes are applied correctly."""
+    #     # Create exactly 3 technical members (should use 2 columns)
+    #     for i in range(3):
+    #         TechnicalMember.objects.create(
+    #             full_name=f"Tech Member {i + 1}",
+    #             title="Developer",
+    #             description="Description",
+    #             photo=create_test_image(),
+    #         )
+
+    #     url = reverse("people")
+    #     response = client.get(url)
+    #     content = response.content.decode()
+
+    #     assert response.status_code == status.HTTP_200_OK
+    #     # Should have 3-column grid class
+    #     assert "lg:grid-cols-3" in content
+
+    @pytest.mark.parametrize("n_people", [2, 3])
+    def test_grid_layout_classes(self, n_people: int, client: Client, db: None) -> None:
         """Test that grid layout classes are applied correctly."""
         # Create exactly 3 technical members (should use 3 columns)
-        for i in range(3):
+        for i in range(n_people):
             TechnicalMember.objects.create(
                 full_name=f"Tech Member {i + 1}",
                 title="Developer",
@@ -200,8 +239,8 @@ class TestPeoplePageView:
         content = response.content.decode()
 
         assert response.status_code == status.HTTP_200_OK
-        # Should have 3-column grid class
-        assert "lg:grid-cols-3" in content
+        # Should have 2-column grid class
+        assert "lg:grid-cols-3" not in content
 
     def test_all_sections_together(self, client: Client, db: None) -> None:
         """Test page with all three types of members."""
