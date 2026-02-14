@@ -18,7 +18,6 @@ from sentry_sdk.integrations.redis import RedisIntegration
 
 from .base import *  # noqa: F403
 from .base import DATABASES
-from .base import ENABLE_DJANGO_HIJACK
 from .base import INSTALLED_APPS
 from .base import SPECTACULAR_SETTINGS
 from .base import env
@@ -27,10 +26,6 @@ from .base import env
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env("DJANGO_SECRET_KEY")
-
-# https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-allowed_hosts: str | None = env("DJANGO_ALLOWED_HOSTS")  # pyright: ignore[reportAssignmentType]
-ALLOWED_HOSTS = allowed_hosts.split(",") if allowed_hosts is not None else []
 
 # DATABASES
 # ------------------------------------------------------------------------------
@@ -111,12 +106,6 @@ EMAIL_SUBJECT_PREFIX = env(
     "DJANGO_EMAIL_SUBJECT_PREFIX",
     default="[SpeleoDB] ",  # pyright: ignore[reportArgumentType]
 )
-
-# HIJACK
-# ------------------------------------------------------------------------------
-# Django Admin URL regex.
-if ENABLE_DJANGO_HIJACK:
-    HIJACK_URL = env("DJANGO_HIJACK_URL")
 
 # ADMIN
 # ------------------------------------------------------------------------------

@@ -104,7 +104,7 @@ class UserAdminBase(ExportMixin, auth_admin.UserAdmin):  # type: ignore[type-arg
     resource_class = UserImportExportResource
 
 
-if settings.ENABLE_DJANGO_HIJACK:
+if "hijack" in settings.INSTALLED_APPS:
     from hijack.contrib.admin import HijackUserAdminMixin
 
     @admin.register(User)

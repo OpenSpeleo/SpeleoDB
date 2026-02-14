@@ -26,7 +26,10 @@ if READ_DOT_ENV_FILE:
 DEBUG = env.bool("DJANGO_DEBUG", False)
 DEBUG_GITLAB = env.bool("DJANGO_DEBUG_GITLAB", False)
 ALLOW_USER_DEBUG = env.bool("ALLOW_USER_DEBUG", default=False)  # pyright: ignore[reportArgumentType]
-ENABLE_DJANGO_HIJACK = DEBUG or ALLOW_USER_DEBUG
+
+# https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
+allowed_hosts: str | None = env("DJANGO_ALLOWED_HOSTS", default=None)  # pyright: ignore[reportAssignmentType]
+ALLOWED_HOSTS = allowed_hosts.split(",") if allowed_hosts is not None else []
 
 # Local time zone. Choices are
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -93,6 +96,25 @@ ROOT_URLCONF = "config.urls"
 # https://docs.djangoproject.com/en/dev/ref/settings/#wsgi-application
 WSGI_APPLICATION = "config.wsgi.application"
 
+# MIDDLEWARE
+# ------------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/dev/ref/settings/#middleware
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+    # Before django-hijack to log the correct user
+    "speleodb.middleware.LastLoginUpdateMiddleware",
+    "speleodb.middleware.ViewNameMiddleware",
+    "speleodb.middleware.DRFWrapResponseMiddleware",
+]
+
 # APPS
 # ------------------------------------------------------------------------------
 DJANGO_APPS = [
@@ -140,17 +162,6 @@ if DEBUG:
         "schema_viewer",
     ]
 
-if ENABLE_DJANGO_HIJACK:
-    # https://github.com/django-hijack/django-hijack
-    # With Django Hijack, admins can log in and work on behalf of other users
-    # without having to know their credentials.
-    # Author's NOTE: This mechanism should only be used in local development.
-    #                And should not be turned on in production.
-    THIRD_PARTY_APPS += [
-        "hijack",
-        "hijack.contrib.admin",
-    ]
-
 LOCAL_APPS = [
     # API Apps
     "speleodb.api.v1",
@@ -168,6 +179,38 @@ LOCAL_APPS = [
     "frontend_private",
     "frontend_public",
 ]
+
+
+# USER DEBUGGING: https://github.com/django-hijack/django-hijack
+# ------------------------------------------------------------------------------
+# Note: This must be turned off/deactivated in production
+
+# Hide notification if `None`.
+HIJACK_INSERT_BEFORE: str | None = None
+
+if DEBUG or ALLOW_USER_DEBUG:
+    # With Django Hijack, admins can log in and work on behalf of other users
+    # without having to know their credentials.
+    # Author's NOTE: This mechanism should only be used in local development.
+    #                And should not be turned on in production.
+    THIRD_PARTY_APPS += [
+        "hijack",
+        "hijack.contrib.admin",
+    ]
+
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index("speleodb.middleware.LastLoginUpdateMiddleware") + 1,
+        "hijack.middleware.HijackUserMiddleware",
+    )
+    HIJACK_URL = env("DJANGO_HIJACK_URL") if not DEBUG else "debug_mode/"
+
+else:
+    HIJACK_URL = None
+
+
+# ALL DJANGO APPs
+# ------------------------------------------------------------------------------
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -276,31 +319,6 @@ GITLAB_TOKEN = env("GITLAB_TOKEN")
 
 GITLAB_HTTP_PROTOCOL = "https"
 
-# MIDDLEWARE
-# ------------------------------------------------------------------------------
-# https://docs.djangoproject.com/en/dev/ref/settings/#middleware
-MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "allauth.account.middleware.AccountMiddleware",
-    # Before django-hijack to log the correct user
-    "speleodb.middleware.LastLoginUpdateMiddleware",
-    "speleodb.middleware.ViewNameMiddleware",
-    "speleodb.middleware.DRFWrapResponseMiddleware",
-]
-
-if ENABLE_DJANGO_HIJACK:
-    MIDDLEWARE.insert(
-        MIDDLEWARE.index("speleodb.middleware.LastLoginUpdateMiddleware") + 1,
-        "hijack.middleware.HijackUserMiddleware",
-    )
-
 # MAPBOX CONFIGURATION
 # ------------------------------------------------------------------------------
 MAPBOX_API_TOKEN = env("MAPBOX_API_TOKEN")
@@ -313,6 +331,22 @@ AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")  # pyright: ignore[reportArgumentType]
 AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN")
+
+
+# DJANGO CORS: https://github.com/adamchainz/django-cors-headers#setup
+# ------------------------------------------------------------------------------
+
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+
+else:
+    CORS_ALLOWED_ORIGINS = [
+        f"https://{host}" for host in [*ALLOWED_HOSTS.copy(), AWS_S3_CUSTOM_DOMAIN]
+    ]
+    CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+CORS_URLS_REGEX = r"^/api/.*$"
+
 
 # STATIC
 # ------------------------------------------------------------------------------
@@ -419,13 +453,6 @@ EMAIL_BACKEND = env(
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 5
-
-# DJANGO-HIJACK
-# ------------------------------------------------------------------------------
-# Django Hijack URL.
-HIJACK_URL: str | None = "debug_mode/" if ENABLE_DJANGO_HIJACK else None
-# Hide notification if `None`.
-HIJACK_INSERT_BEFORE: str | None = None
 
 # ADMIN
 # ------------------------------------------------------------------------------
@@ -549,9 +576,6 @@ if env.bool("DJANGO_DEBUG_DRF_AUTH", default=False):
         "speleodb.api.v1.authentication.DebugHeaderAuthentication",
         *REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"],
     ]
-
-# django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
-CORS_URLS_REGEX = r"^/api/.*$"
 
 # By Default swagger ui is available only to admin user(s). You can change permission classes to change that
 # See more configuration options at https://drf-spectacular.readthedocs.io/en/latest/settings.html#settings
