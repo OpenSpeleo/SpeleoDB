@@ -29,6 +29,7 @@ urlpatterns = [
         urls_js if settings.DEBUG else cache_page(5 * 60)(urls_js),
         name="url_reverse.js",
     ),
+    path(".well-known/", include("well_known.urls", namespace="well_known")),
     # Media files
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
 ]

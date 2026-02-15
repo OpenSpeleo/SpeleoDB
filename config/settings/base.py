@@ -128,7 +128,6 @@ DJANGO_APPS = [
     # "django.contrib.humanize", # Handy template tags
     "django.contrib.admin",
     "django.forms",
-    "tailwind_css",  # Tailwind CSS app (contains package.json, configs)
 ]
 
 THIRD_PARTY_APPS = [
@@ -178,6 +177,10 @@ LOCAL_APPS = [
     "frontend_errors",
     "frontend_private",
     "frontend_public",
+    # Mobile App
+    "well_known",
+    # NPM App
+    "tailwind_css",  # Tailwind CSS app (contains package.json, configs)
 ]
 
 

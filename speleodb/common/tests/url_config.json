@@ -6,6 +6,18 @@
         "decorators": ""
     },
     {
+        "url": "/.well-known/apple-app-site-association",
+        "module": "well_known.views.apple_app_site_association",
+        "name": "well_known:apple-app-site-association",
+        "decorators": ""
+    },
+    {
+        "url": "/.well-known/assetlinks.json",
+        "module": "well_known.views.assetlinks",
+        "name": "well_known:assetlinks.json",
+        "decorators": ""
+    },
+    {
         "url": "/400/",
         "module": "django.views.defaults.bad_request",
         "name": "errors:400_page",
