@@ -5,22 +5,26 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from django.http import JsonResponse
+from django.shortcuts import redirect
+from django.urls import reverse
 from rest_framework.decorators import api_view
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
+    from django.http import HttpResponsePermanentRedirect
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])  # Example of applying a permission policy
+@permission_classes([AllowAny])
 def assetlinks(request: HttpRequest) -> JsonResponse:
+    """This view allow SpeleoDB Android app to use password managers with
+    `www.speleodb.org` domain"""
     return JsonResponse(
         [
             {
                 "relation": [
-                    "delegate_permission/common.handle_all_urls",
                     "delegate_permission/common.get_login_creds",
                 ],
                 "target": {
@@ -38,14 +42,19 @@ def assetlinks(request: HttpRequest) -> JsonResponse:
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])  # Example of applying a permission policy
+@permission_classes([AllowAny])
 def apple_app_site_association(request: HttpRequest) -> JsonResponse:
+    """This view allow SpeleoDB iOS app to use password managers with
+    `www.speleodb.org` domain"""
+
     return JsonResponse(
-        {
-            "applinks": {
-                "apps": [],
-                "details": [{"appID": "UDUF7J66TN.org.speleodb.app", "paths": ["*"]}],
-            }
-        },
+        {"webcredentials": {"apps": ["UDUF7J66TN.org.speleodb.app"]}},
         content_type="application/json",
     )
+
+
+@permission_classes([AllowAny])
+def change_password(request: HttpRequest) -> HttpResponsePermanentRedirect:
+    """Helps browser/password managers send users directly to change-password when
+    needed (compromised/reused password flows)."""
+    return redirect(reverse("private:user_password"), permanent=True)

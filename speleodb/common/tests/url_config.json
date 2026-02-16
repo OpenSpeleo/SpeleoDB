@@ -18,6 +18,12 @@
         "decorators": ""
     },
     {
+        "url": "/.well-known/change-password",
+        "module": "well_known.views.change_password",
+        "name": "",
+        "decorators": ""
+    },
+    {
         "url": "/400/",
         "module": "django.views.defaults.bad_request",
         "name": "errors:400_page",
