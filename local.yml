@@ -25,10 +25,7 @@ services:
       - ./.envs/.postgres
     ports: []
     command: sleep infinity
-    networks:
-      default:
-        aliases:
-          - django.localhost
+    network_mode: "host"
     environment:
       # Pre-commit skip jobs - Only dev env not on CI
       SKIP: pysentry
@@ -48,22 +45,12 @@ services:
       - ./.envs/.postgres
     ports:
       - "5432:5432"
-    hostname: postgres.localhost
-    networks:
-      default:
-        aliases:
-          - postgres.localhost
 
   redis:
     image: docker.io/redis:6
     container_name: speleodb_local_redis
     ports:
       - "6379:6379"
-    hostname: redis.localhost
-    networks:
-      default:
-        aliases:
-          - redis.localhost
 
   django-webserver:
     <<: *django
@@ -75,11 +62,6 @@ services:
     ports:
       - "8000:8000"
     command: /start
-    hostname: speleodb.localhost
-    networks:
-      default:
-        aliases:
-          - speleodb.localhost
 
   # celeryworker:
   #   <<: *django
@@ -117,8 +99,8 @@ services:
       # Root User Credentials: root:WE66dZFgKevGzj31My!5
       GITLAB_ROOT_PASSWORD: WE66dZFgKevGzj31My!5
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://gitlab.localhost:9080'
-        pages_external_url "http://gitlab.localhost:9080/"
+        external_url 'http://localhost:9080'
+        pages_external_url "http://localhost:9080/"
         gitlab_rails['gitlab_shell_ssh_port'] = 2222
         prometheus_monitoring['enable'] = false
         alertmanager['enable'] = false
@@ -133,11 +115,6 @@ services:
       - speleodb_local_gitlab_config:/etc/gitlab
       - speleodb_local_gitlab_logs:/var/log/gitlab
       - speleodb_local_gitlab_data:/var/opt/gitlab
-    hostname: gitlab.localhost
-    networks:
-      default:
-        aliases:
-          - gitlab.localhost
 
   minio:
     image: minio/minio
@@ -152,8 +129,3 @@ services:
       - "9000:9000"
       - "9001:9001"
     command: server --console-address ":9001" /data
-    hostname: minio.localhost
-    networks:
-      default:
-        aliases:
-          - minio.localhost
