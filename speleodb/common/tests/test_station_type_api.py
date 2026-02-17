@@ -441,7 +441,7 @@ class TestStationTypeGeoJSON(BaseAPIProjectTestCase):
         )
 
         response = self.client.get(
-            reverse("api:v1:stations-geojson"),
+            reverse("api:v1:subsurface-stations-geojson"),
             headers={"authorization": self.auth},
         )
 

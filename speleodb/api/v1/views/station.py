@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from rest_framework.serializers import ModelSerializer
 
 
-class BaseStationsApiView(GenericAPIView[SubSurfaceStation], SDBAPIViewMixin):
+class BaseSubSurfaceStationsApiView(GenericAPIView[SubSurfaceStation], SDBAPIViewMixin):
     """
     Simple view to get all stations that belongs to a user or create a station.
     """
@@ -62,7 +62,7 @@ class BaseStationsApiView(GenericAPIView[SubSurfaceStation], SDBAPIViewMixin):
         return SubSurfaceStation.objects.filter(project__in=user_projects)
 
 
-class StationsApiView(BaseStationsApiView):
+class SubSurfaceStationsApiView(BaseSubSurfaceStationsApiView):
     """
     Simple view to get all stations that belongs to a user.
     """
@@ -75,7 +75,7 @@ class StationsApiView(BaseStationsApiView):
         return SuccessResponse(serializer.data)
 
 
-class StationsGeoJSONApiView(BaseStationsApiView):
+class SubSurfaceStationsGeoJSONApiView(BaseSubSurfaceStationsApiView):
     """
     Simple view to get all stations for a user as GeoJSON-compatible data.
     Used by the map viewer to display station markers.

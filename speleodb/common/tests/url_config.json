@@ -930,12 +930,6 @@
         "decorators": ""
     },
     {
-        "url": "/api/v1/stations/",
-        "module": "speleodb.api.v1.views.station.StationsApiView",
-        "name": "api:v1:stations",
-        "decorators": ""
-    },
-    {
         "url": "/api/v1/stations/<uuid:id>/",
         "module": "speleodb.api.v1.views.station.StationSpecificApiView",
         "name": "api:v1:station-detail",
@@ -984,9 +978,15 @@
         "decorators": ""
     },
     {
-        "url": "/api/v1/stations/geojson/",
-        "module": "speleodb.api.v1.views.station.StationsGeoJSONApiView",
-        "name": "api:v1:stations-geojson",
+        "url": "/api/v1/stations/subsurface/",
+        "module": "speleodb.api.v1.views.station.SubSurfaceStationsApiView",
+        "name": "api:v1:subsurface-stations",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/stations/subsurface/geojson/",
+        "module": "speleodb.api.v1.views.station.SubSurfaceStationsGeoJSONApiView",
+        "name": "api:v1:subsurface-stations-geojson",
         "decorators": ""
     },
     {

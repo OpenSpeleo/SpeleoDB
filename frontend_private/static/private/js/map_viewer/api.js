@@ -57,7 +57,7 @@ export const API = {
 
     // All Stations GeoJSON (single API call for all stations)
     getAllStationsGeoJSON: () =>
-        apiRequest(Urls['api:v1:stations-geojson']()),
+        apiRequest(Urls['api:v1:subsurface-stations-geojson']()),
 
     // Surface Networks
     getAllSurfaceNetworks: () =>

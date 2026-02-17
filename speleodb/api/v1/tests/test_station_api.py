@@ -277,7 +277,7 @@ class TestStationCRUDOperations(BaseAPIProjectTestCase):
         stations = SubSurfaceStationFactory.create_batch(3, project=self.project)
 
         response = self.client.get(
-            reverse("api:v1:stations"),
+            reverse("api:v1:subsurface-stations"),
             headers={"authorization": self.auth},
         )
 
