@@ -25,7 +25,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "django-redis==6.0.0", # https://github.com/jazzband/django-redis
     "hiredis==3.3.0",      # https://github.com/redis/hiredis-py
-    "redis==7.1.0",        # https://github.com/redis/redis-py
+    "redis==7.1.1",        # https://github.com/redis/redis-py
 
     # Data Processing & Writing
     # ------------------------------------------------------------------------------
@@ -37,14 +37,14 @@ dependencies = [
     "ffmpeg-python==0.2.0", # https://github.com/kkroening/ffmpeg-python
     "Pillow==12.1.1",       # https://github.com/python-pillow/Pillow
     "pillow-heif==1.2.0",   # https://github.com/bigcat88/pillow_heif
-    "PyMuPDF==1.26.7",      # https://github.com/pymupdf/PyMuPDF
+    "PyMuPDF==1.27.1",      # https://github.com/pymupdf/PyMuPDF
 
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
     "fastkml[lxml]==1.4.0",  # https://github.com/cleder/fastkml
     "geojson==3.2.0",        # https://github.com/jazzband/geojson
     "gpxpy==1.6.2",          # https://github.com/tkrajina/gpxpy
-    "jsonschema-rs==0.41.0", # https://github.com/Stranger6667/jsonschema
+    "jsonschema-rs==0.42.0", # https://github.com/Stranger6667/jsonschema
     "orjson==3.11.7",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
@@ -61,10 +61,10 @@ dependencies = [
     # Django
     # ------------------------------------------------------------------------------
     "django==6.0.2",                   # https://www.djangoproject.com/
-    "django-allauth==65.14.1",         # https://github.com/pennersr/django-allauth
+    "django-allauth==65.14.3",         # https://github.com/pennersr/django-allauth
     "django-countries==8.2.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
-    "django-environ==0.12.0",          # https://github.com/joke2k/django-environ
+    "django-environ==0.12.1",          # https://github.com/joke2k/django-environ
     "django-hijack==3.7.6",            # https://github.com/django-hijack/django-hijack/
     "django-import-export==4.4.0",     # https://github.com/django-import-export/django-import-export
     "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
@@ -81,8 +81,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.42.45", # https://github.com/boto/botocore
-    "boto3==1.42.45",    # https://github.com/boto/boto3
+    "botocore==1.42.49", # https://github.com/boto/botocore
+    "boto3==1.42.49",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -122,11 +122,11 @@ local = [
     # Django Testing
     # ------------------------------------------------------------------------------
     "django-coverage-plugin==3.2.0", # https://github.com/nedbat/django_coverage_plugin
-    "pytest-django==4.11.1",         # https://github.com/pytest-dev/pytest-django
+    "pytest-django==4.12.0",         # https://github.com/pytest-dev/pytest-django
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.15.0",      # https://github.com/astral-sh/ruff
+    "ruff==0.15.1",      # https://github.com/astral-sh/ruff
     "coverage==7.13.4",  # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",    # https://github.com/Riverside-Healthcare/djLint
     "pre-commit==4.5.1", # https://github.com/pre-commit/pre-commit
@@ -140,7 +140,7 @@ local = [
 ]
 
 production = [
-    "gunicorn==25.0.3", # https://github.com/benoitc/gunicorn
+    "gunicorn==25.1.0", # https://github.com/benoitc/gunicorn
     # "granian==2.5.2",  # https://github.com/emmett-framework/granian
     "psycopg[c]==3.3.2", # https://github.com/psycopg/psycopg
 
