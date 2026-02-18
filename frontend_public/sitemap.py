@@ -23,6 +23,7 @@ class AboutSitemap(sitemaps.Sitemap):  # type: ignore[type-arg]
             "people",
             "roadmap",
             "changelog",
+            "download",
         ]
 
     def location(self, item: str) -> str:

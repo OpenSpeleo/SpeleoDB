@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Mobile App{% endblock title %}
+
+{% block content %}
+  <section>
+    <div class="relative max-w-6xl mx-auto px-4 sm:px-6 min-h-screen">
+
+      <!-- Background glow -->
+      <div class="absolute inset-0 -z-10 -mx-28 rounded-b-[3rem] pointer-events-none overflow-hidden" aria-hidden="true">
+        <div class="absolute left-1/2 -translate-x-1/2 bottom-0 -z-10">
+          <img src="{% static 'media/glow-top.svg' %}" class="max-w-none" width="1404" height="658" alt="">
+        </div>
+      </div>
+
+      <!-- Ambient particles -->
+      <div class="absolute inset-0 -z-10" aria-hidden="true">
+        <canvas data-particle-animation data-particle-quantity="8" data-particle-staticity="35"></canvas>
+      </div>
+
+      <div class="pt-24 pb-14 sm:pt-28 md:pt-32 md:pb-20 lg:min-h-screen lg:flex lg:flex-col lg:justify-center lg:py-0">
+        <div class="max-w-3xl mx-auto text-center">
+
+          <h1 class="h1 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4" data-aos="fade-down">
+            SpeleoDB goes Mobile !
+          </h1>
+          <p class="text-base sm:text-lg text-slate-300 leading-relaxed my-6 sm:my-8 px-2 sm:px-0" data-aos="fade-down" data-aos-delay="150">
+            SpeleoDB now available on Android and iOS. Open your cave projects from the field.<br>
+            Whether you are in the parking lot, in the jungle, in the cave or even underwater, 
+            you can access your cave projects and keep your team focused on what matters most: the cave.
+          </p>
+        </div>
+
+        <div class="max-w-sm sm:max-w-md md:max-w-2xl mx-auto pt-4 sm:pt-6">
+          <div class="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-5">
+            <a
+              class="inline-flex w-full md:w-[18rem] lg:w-[19rem] items-center justify-center active:scale-[0.99] sm:hover:scale-[1.02] transition duration-150 ease-in-out"
+              href="{{ play_store_url }}"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Download SpeleoDB for Android on Google Play"
+              data-aos="fade-down"
+            >
+              <img src="{% static 'media/download_android.svg' %}" class="h-16 sm:h-[4.5rem] w-auto" alt="Get it on Google Play">
+            </a>
+            <a
+              class="inline-flex w-full md:w-[18rem] lg:w-[19rem] items-center justify-center active:scale-[0.99] sm:hover:scale-[1.02] transition duration-150 ease-in-out"
+              href="{{ app_store_url }}"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Download CavesGo for iPhone on the App Store"
+              data-aos="fade-down"
+              data-aos-delay="100"
+            >
+              <img src="{% static 'media/download_ios.svg' %}" class="h-16 sm:h-[4.5rem] w-auto" alt="Download on the App Store">
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section class="relative -mt-10 sm:-mt-14 pb-16 md:pb-24">
+    <!-- Smooth transition glow -->
+    <div class="absolute inset-x-0 -top-16 sm:-top-20 -z-10 flex justify-center pointer-events-none" aria-hidden="true">
+      <div class="h-40 w-72 rounded-full bg-purple-500/25 blur-3xl"></div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="relative max-w-4xl mx-auto rounded-3xl border border-slate-700/80 bg-slate-900/80 p-6 sm:p-8 md:p-10 backdrop-blur-sm overflow-hidden">
+        <div class="absolute inset-0 -z-10 bg-gradient-to-b from-purple-500/10 via-transparent to-transparent"></div>
+
+        <div class="max-w-2xl mx-auto text-center" data-aos="fade-down">
+          <div class="inline-flex font-medium bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-purple-200 pb-2">
+            Compass Companion App
+          </div>
+          <h2 class="h3 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-3">
+            Compass Sidecar for Windows
+          </h2>
+          <p class="text-sm text-slate-400 pb-3">
+            Latest version:
+            <span class="text-slate-200 font-medium">v{{ compass_sidecar_version }}</span>
+            {% if compass_sidecar_pub_date %}
+              <span class="text-slate-500">&middot; {{ compass_sidecar_pub_date|slice:":10" }}</span>
+            {% endif %}
+          </p>
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+            Download the <b>Compass Sidecar</b> companion app for Windows<br>
+            Experience the full power of SpeleoDB directly from Compass.
+          </p>
+        </div>
+
+        <div class="mt-6 sm:my-8 md:my-12 flex justify-center" data-aos="fade-down" data-aos-delay="100">
+          <a
+            class="inline-flex items-center justify-center active:scale-[0.99] sm:hover:scale-[1.02] transition duration-150 ease-in-out"
+            href="{{ compass_sidecar_windows_url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Download Compass Sidecar for Windows"
+          >
+            <img src="{% static 'media/download_windows.svg' %}" class="h-16 sm:h-[4.75rem] w-auto" alt="Download Compass Sidecar for Windows">
+          </a>
+        </div>
+
+        <p class="mt-4 text-center text-sm text-slate-500" data-aos="fade-down" data-aos-delay="150">
+          <a class="text-purple-300 hover:text-purple-200 transition duration-150 ease-in-out" href="{{ compass_sidecar_releases_url }}" target="_blank" rel="noopener noreferrer">
+            View all releases
+          </a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+{% endblock content %}
