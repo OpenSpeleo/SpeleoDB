@@ -22,15 +22,7 @@
 
                 <!-- Hero content -->
                 <div class="max-w-3xl mx-auto text-center">
-                    <div class="mb-6 pb-8" data-aos="fade-down">
-                        <div class="inline-flex relative before:absolute before:inset-0 before:bg-purple-500 before:blur-md">
-                            <a class="btn-sm py-0.5 text-slate-300 hover:text-white transition duration-150 ease-in-out group [background:linear-gradient(theme(colors.purple.500),_theme(colors.purple.500))_padding-box,_linear-gradient(theme(colors.purple.500),_theme(colors.purple.200)_75%,_theme(colors.transparent)_100%)_border-box] relative before:absolute before:inset-0 before:bg-slate-800/50 before:rounded-full before:pointer-events-none shadow" {% if request.user.is_authenticated %} href="{% url 'private:user_dashboard' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
-                                <span class="relative inline-flex items-center">
-                                    SpeleoDB is now in Beta <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
-                                </span>
-                            </a>
-                        </div>
-                    </div>
+                    
                     <h1 class="h1 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4" data-aos="fade-down">
                         SpeleoDB - Cave Survey
                     </h1>
@@ -44,11 +36,33 @@
                         We believe in team dynamics and synergies applied to cave survey.<br>
                         SpeleoDB to foster and simplify team survey and collaboration.
                     </p>
-                    <div class="max-w-xs mx-auto sm:max-w-none sm:inline-flex sm:justify-center space-y-4 sm:space-y-0 sm:space-x-4" data-aos="fade-down" data-aos-delay="400">
-                        <div>
-                            <a class="btn text-slate-900 bg-gradient-to-r from-white/80 via-white to-white/80 hover:bg-white w-full transition duration-150 ease-in-out group" {% if request.user.is_authenticated %} href="{% url 'private:user_dashboard' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
+                    <div class="max-w-2xl mx-auto" data-aos="fade-down" data-aos-delay="400">
+                        <div class="my-20">
+                            <a class="btn h-12 w-48 text-slate-900 bg-gradient-to-r from-white/80 via-white to-white/80 hover:bg-white transition duration-150 ease-in-out group" {% if request.user.is_authenticated %} href="{% url 'private:user_dashboard' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
                                 Get Started <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
                             </a>
+                        </div>
+                        <div class="pt-6">
+                            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                <a
+                                    class="inline-flex hover:scale-[1.02] transition duration-150 ease-in-out"
+                                    href="{{ play_store_url }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label="Download SpeleoDB for Android on Google Play"
+                                >
+                                    <img src="{% static 'media/download_android.svg' %}" class="h-16 w-auto" alt="Get it on Google Play">
+                                </a>
+                                <a
+                                    class="inline-flex hover:scale-[1.02] transition duration-150 ease-in-out"
+                                    href="{{ app_store_url }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label="Download CavesGo for iPhone on the App Store"
+                                >
+                                    <img src="{% static 'media/download_ios.svg' %}" class="h-16 w-auto" alt="Download on the App Store">
+                                </a>
+                            </div>
                         </div>
                     </div>
 

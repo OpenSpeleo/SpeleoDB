@@ -1,7 +1,7 @@
 [
     {
         "url": "/",
-        "module": "django.views.generic.base.TemplateView",
+        "module": "frontend_public.views.HomePageView",
         "name": "home",
         "decorators": ""
     },
@@ -1125,6 +1125,12 @@
         "url": "/changelog/",
         "module": "django.views.generic.base.TemplateView",
         "name": "changelog",
+        "decorators": ""
+    },
+    {
+        "url": "/download/",
+        "module": "frontend_public.views.MobileDownloadPageView",
+        "name": "download",
         "decorators": ""
     },
     {

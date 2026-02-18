@@ -12,7 +12,9 @@ from django.views.generic import TemplateView
 from frontend_public.sitemap import AboutSitemap
 from frontend_public.sitemap import HomeSitemap
 from frontend_public.sitemap import LegalSitemap
+from frontend_public.views import HomePageView
 from frontend_public.views import LoginView
+from frontend_public.views import MobileDownloadPageView
 from frontend_public.views import PasswordResetFromKeyView
 from frontend_public.views import PasswordResetView
 from frontend_public.views import PeoplePageView
@@ -43,7 +45,8 @@ urlpatterns = [
         name="sitemap.xml",
     ),
     # ------------------ MAIN PAGES ------------------ #
-    path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
+    path("", HomePageView.as_view(), name="home"),
+    path("download/", MobileDownloadPageView.as_view(), name="download"),
     path(
         "about/", TemplateView.as_view(template_name="pages/about.html"), name="about"
     ),
