@@ -57,11 +57,17 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - run: cd tailwind_css/static_src && npm ci
 
-      # Consider using pre-commit.ci for open source project
-      - name: Run pre-commit
-        uses: pre-commit/action@v3.0.1
+      - run: |
+          pushd tailwind_css/static_src && \
+          npm ci && \
+          popd
+
+      - run: |
+          prek run \
+            --all-files \
+            --show-diff-on-failure \
+            --color always
         env:
           DJANGO_DEBUG: True # necessary to collect all URLs
 
@@ -74,6 +80,7 @@ jobs:
         image: redis:6
         ports:
           - 6379:6379
+
       postgres:
         image: postgres:16
         ports:

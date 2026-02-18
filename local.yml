@@ -4,7 +4,8 @@ volumes:
   speleodb_local_gitlab_config: {}
   speleodb_local_gitlab_logs: {}
   speleodb_local_gitlab_data: {}
-  speleodb_local_minio_data: {}
+  # speleodb_local_minio_data: {}
+  speleodb_local_rustfs_data: {}
 
 services:
   django: &django
@@ -26,9 +27,6 @@ services:
     ports: []
     command: sleep infinity
     network_mode: "host"
-    environment:
-      # Pre-commit skip jobs - Only dev env not on CI
-      SKIP: pysentry
 
   postgres:
     build:
@@ -116,16 +114,29 @@ services:
       - speleodb_local_gitlab_logs:/var/log/gitlab
       - speleodb_local_gitlab_data:/var/opt/gitlab
 
-  minio:
-    image: minio/minio
-    container_name: speleodb_minio
+  # minio:
+  #   image: minio/minio
+  #   container_name: speleodb_minio
+  #   environment:
+  #     - MINIO_ROOT_USER=access_key
+  #     - MINIO_ROOT_PASSWORD=secret_key
+  #     - MINIO_BROWSER=on
+  #   volumes:
+  #     - speleodb_local_minio_data:/data
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   command: server --console-address ":9001" /data
+
+  rustfs:
+    image: rustfs/rustfs
+    container_name: speleodb_rustfs
     environment:
-      - MINIO_ROOT_USER=access_key
-      - MINIO_ROOT_PASSWORD=secret_key
-      - MINIO_BROWSER=on
+      - RUSTFS_ACCESS_KEY=access_key
+      - RUSTFS_SECRET_KEY=secret_key
+      - RUSTFS_CONSOLE_ENABLE=true
     volumes:
-      - speleodb_local_minio_data:/data
+      - speleodb_local_rustfs_data:/data
     ports:
       - "9000:9000"
       - "9001:9001"
-    command: server --console-address ":9001" /data

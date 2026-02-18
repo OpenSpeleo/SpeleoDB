@@ -14,7 +14,7 @@ from storages.backends.s3 import S3Storage
 # ---------------------------------------------------------------------------
 # In production the CloudFront signing keys are present, so private storage
 # classes keep the custom domain and let django-storages generate CloudFront
-# signed URLs.  In local dev (MinIO) there are no CloudFront keys, so private
+# signed URLs.  In local dev (S3 bucket) there are no CloudFront keys, so private
 # storage classes disable the custom domain to fall back to S3 presigned URLs.
 _CLOUDFRONT_SIGNING_ENABLED: bool = bool(
     getattr(settings, "AWS_CLOUDFRONT_KEY", None)
@@ -65,7 +65,7 @@ class BaseS3Storage(S3Storage):
                 name, parameters=parameters, expire=expire, http_method=http_method
             )
 
-            # Force HTTP if using a non-SSL endpoint (useful for MinIO local dev)
+            # Force HTTP if using a non-SSL endpoint (useful for S3 local dev)
             if (
                 isinstance(self.custom_domain, str)
                 and "localhost" in self.custom_domain

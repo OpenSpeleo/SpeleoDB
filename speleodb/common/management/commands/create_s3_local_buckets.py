@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class Command(BaseCommand):
-    help = "Create a MinIO bucket and apply a bucket policy."
+    help = "Create a S3 buckets and apply a bucket policy."
 
     def handle(self, *args: Any, **kwargs: Any) -> None:
         for bucket_name in [
@@ -36,7 +36,7 @@ class Command(BaseCommand):
                 ],
             }
 
-            # Create S3/MinIO client
+            # Create S3 client
             s3 = boto3.client(  # type: ignore[no-untyped-call]
                 "s3",
                 endpoint_url=getattr(settings, "AWS_S3_ENDPOINT_URL", None),
