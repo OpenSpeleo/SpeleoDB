@@ -1,0 +1,8 @@
+[speleodb]
+id = "09819c3e-67dd-4c38-81a8-faa5e47728b5"
+version = "1.0.0"
+
+[project]
+mak_file = "sample.mak"
+dat_files = ["sample-1.dat", "sample-2.dat"]
+plt_files = ["sample.plt"]

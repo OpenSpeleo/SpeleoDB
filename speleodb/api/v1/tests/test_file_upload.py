@@ -332,6 +332,7 @@ class FileViewTests(BaseAPIProjectTestCase):
         assert download_response.status_code == status.HTTP_200_OK
 
         payload = self._response_bytes(download_response)
+
         with zipfile.ZipFile(io.BytesIO(payload), mode="r") as zipf:
             members = set(zipf.namelist())
             assert {

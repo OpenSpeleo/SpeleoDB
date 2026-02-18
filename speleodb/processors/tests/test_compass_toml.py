@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from speleodb.processors._impl.compass_toml import KNOWN_VERSIONS
+from speleodb.processors._impl.compass_toml import COMPASS_TOML_KNOWN_VERSIONS
 from speleodb.processors._impl.compass_toml import CompassTOML
 from speleodb.processors._impl.compass_toml import (
     build_compass_config_from_upload_filenames,
@@ -16,13 +16,15 @@ from speleodb.processors._impl.compass_toml import (
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from packaging.version import Version
+
 # ----------------------------------------------------------------------
 # Test data
 # ----------------------------------------------------------------------
 
 VALID_TOML = """[speleodb]
 id = "53b76eb6-0694-4b6f-a260-f875f5182222"
-version = "0.0.1"
+version = "{version}"
 
 [project]
 mak_file = "project.mak"
@@ -35,7 +37,7 @@ plt_files = []
 """
 
 
-INVALID_VERSION_TOML = VALID_TOML.replace('version = "0.0.1"', 'version = "99.99.99"')
+INVALID_VERSION_TOML = VALID_TOML.format(version="99.99.99")
 INVALID_MAK_FILE_TOML = VALID_TOML.replace("project.mak", "project.txt")
 INVALID_DAT_FILE_TOML = VALID_TOML.replace('"data/file2.dat"', '"data/file2.txt"')
 INVALID_PLT_FILE_TOML = VALID_TOML.replace(
@@ -67,12 +69,13 @@ def write_tmp_toml(tmp_path: Path, content: str) -> Path:
 # ----------------------------------------------------------------------
 
 
-def test_load_valid_file(tmp_path: Path) -> None:
-    path = write_tmp_toml(tmp_path, VALID_TOML)
+@pytest.mark.parametrize("version", COMPASS_TOML_KNOWN_VERSIONS)
+def test_load_valid_file(version: Version, tmp_path: Path) -> None:
+    path = write_tmp_toml(tmp_path, VALID_TOML.format(version=version))
     cfg = CompassTOML.from_toml(path)
 
     assert str(cfg.speleodb.id) == "53b76eb6-0694-4b6f-a260-f875f5182222"
-    assert cfg.speleodb.version == str(KNOWN_VERSIONS[0])
+    assert cfg.speleodb.version == str(version)
     assert cfg.project.mak_file.endswith(".mak")
     assert all(d.endswith(".dat") for d in cfg.project.dat_files)
     assert cfg.project.plt_files == []
@@ -83,8 +86,9 @@ def test_load_valid_file(tmp_path: Path) -> None:
 # ----------------------------------------------------------------------
 
 
-def test_load_valid_bytesio() -> None:
-    bio = BytesIO(VALID_TOML.encode("utf-8"))
+@pytest.mark.parametrize("version", COMPASS_TOML_KNOWN_VERSIONS)
+def test_load_valid_bytesio(version: Version) -> None:
+    bio = BytesIO(VALID_TOML.format(version=version).encode("utf-8"))
     cfg = CompassTOML.from_toml(bio)
 
     assert cfg.project.mak_file == "project.mak"
@@ -165,9 +169,10 @@ def test_invalid_plt_file_bytesio() -> None:
 # ----------------------------------------------------------------------
 
 
-def test_to_toml_file(tmp_path: Path) -> None:
+@pytest.mark.parametrize("version", COMPASS_TOML_KNOWN_VERSIONS)
+def test_to_toml_file(version: Version, tmp_path: Path) -> None:
     # Load valid config
-    path = write_tmp_toml(tmp_path, VALID_TOML)
+    path = write_tmp_toml(tmp_path, VALID_TOML.format(version=version))
     cfg = CompassTOML.from_toml(path)
 
     # Write to new file
@@ -186,8 +191,9 @@ def test_to_toml_file(tmp_path: Path) -> None:
 # ----------------------------------------------------------------------
 
 
-def test_to_toml_bytesio() -> None:
-    bio = BytesIO(VALID_TOML.encode("utf-8"))
+@pytest.mark.parametrize("version", COMPASS_TOML_KNOWN_VERSIONS)
+def test_to_toml_bytesio(version: Version) -> None:
+    bio = BytesIO(VALID_TOML.format(version=version).encode("utf-8"))
     cfg = CompassTOML.from_toml(bio)
 
     out = BytesIO()
@@ -201,12 +207,13 @@ def test_to_toml_bytesio() -> None:
     assert "project.mak" in out.getvalue().decode("utf-8")
 
 
-def test_roundtrip_sha256_consistency(tmp_path: Path) -> None:
+@pytest.mark.parametrize("version", COMPASS_TOML_KNOWN_VERSIONS)
+def test_roundtrip_sha256_consistency(version: Version, tmp_path: Path) -> None:
     # -----------------------------------------------------
     # 1. Write TOML to disk
     # -----------------------------------------------------
     input_f = tmp_path / "input.toml"
-    input_f.write_text(VALID_TOML, encoding="utf-8")
+    input_f.write_text(VALID_TOML.format(version=version), encoding="utf-8")
 
     # -----------------------------------------------------
     # 2. Compute first hash

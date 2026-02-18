@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     TomlInput = TomlPrimitive | dict[str, Any] | list[Any]
     TomlOutput = TomlPrimitive | Table | Array
 
-KNOWN_VERSIONS = [Version("0.0.1")]
+COMPASS_TOML_KNOWN_VERSIONS = [Version("1.0.0"), Version("0.0.1")]
 
 
 def _normalize_upload_filename(name: str) -> str:
@@ -79,7 +79,7 @@ def build_compass_config_from_upload_filenames(
     return CompassTOML(
         speleodb=SpeleodbNFO(
             id=project_id,
-            version=str(KNOWN_VERSIONS[0]),
+            version=str(COMPASS_TOML_KNOWN_VERSIONS[0]),
         ),
         project=ProjectNFO(
             mak_file=mak_files[0],
@@ -170,8 +170,10 @@ class SpeleodbNFO(BaseModel):
     @classmethod
     def validate_version(cls, v: str) -> str:
         parsed_version = Version(v)
-        if parsed_version not in KNOWN_VERSIONS:
-            raise ValueError(f"Unknown version '{v}'")
+        if parsed_version not in COMPASS_TOML_KNOWN_VERSIONS:
+            raise ValueError(
+                f"Unknown version '{v}' - Known: {COMPASS_TOML_KNOWN_VERSIONS}"
+            )
         return v
 
 
