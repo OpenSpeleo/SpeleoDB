@@ -10,9 +10,9 @@ from django.db import models
 from django.db.models import indexes
 from django.utils import timezone
 
+from speleodb.common.enums import BaseIntegerChoices
 from speleodb.surveys.models import Project
 from speleodb.utils.decorators import classproperty
-from speleodb.utils.django_base_models import BaseIntegerChoices
 
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from django import template
 
-from speleodb.surveys.models import ProjectType
+from speleodb.common.enums import ProjectType
 
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise

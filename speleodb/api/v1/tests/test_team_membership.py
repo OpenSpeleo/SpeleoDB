@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 import uuid
+from typing import TYPE_CHECKING
 
 import pytest
 from django.core.exceptions import ObjectDoesNotExist
@@ -17,10 +18,12 @@ from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.utils import is_subset
-from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembershipRole
-from speleodb.users.models import User
+from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from speleodb.users.models import SurveyTeam
+    from speleodb.users.models import User
 
 
 class TestTeamMembershipCreation(BaseAPITestCase):

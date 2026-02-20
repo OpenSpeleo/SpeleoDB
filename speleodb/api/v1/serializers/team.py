@@ -9,9 +9,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django_countries import countries
 from rest_framework import serializers
 
+from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
-from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.utils.serializer_fields import CustomChoiceField
 from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 

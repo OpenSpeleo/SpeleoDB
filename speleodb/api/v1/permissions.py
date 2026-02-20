@@ -10,6 +10,7 @@ from rest_framework import permissions
 from rest_framework.exceptions import NotAuthenticated
 
 from speleodb.common.enums import PermissionLevel
+from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.gis.models import Cylinder
 from speleodb.gis.models import CylinderFleet
 from speleodb.gis.models import CylinderFleetUserPermission
@@ -33,7 +34,6 @@ from speleodb.gis.models import SurfaceMonitoringNetwork
 from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
 from speleodb.gis.models import SurfaceStation
 from speleodb.surveys.models import Project
-from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.utils.exceptions import NotAuthorizedError
 
 if TYPE_CHECKING:

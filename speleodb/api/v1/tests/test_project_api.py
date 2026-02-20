@@ -25,8 +25,8 @@ from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.api.v1.tests.utils import is_subset
 from speleodb.common.enums import PermissionLevel
+from speleodb.common.enums import ProjectType
 from speleodb.surveys.models import ProjectCommit
-from speleodb.surveys.models import ProjectType
 from speleodb.utils.test_utils import named_product
 
 if TYPE_CHECKING:

@@ -14,7 +14,7 @@ from speleodb.api.v1.tests.factories import StationResourceFactory
 from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models import StationResourceType
+from speleodb.common.enums import StationResourceType
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:

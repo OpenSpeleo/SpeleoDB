@@ -8,8 +8,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from speleodb.common.enums import PermissionLevel
+from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.models import User
 
 if TYPE_CHECKING:

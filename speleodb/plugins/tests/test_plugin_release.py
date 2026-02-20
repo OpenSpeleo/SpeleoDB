@@ -1,9 +1,9 @@
 import pytest
 from django.core.exceptions import ValidationError
 
+from speleodb.common.enums import OperatingSystemEnum
+from speleodb.common.enums import SurveyPlatformEnum
 from speleodb.plugins.models import PluginRelease
-from speleodb.plugins.models.platform_base import OperatingSystemEnum
-from speleodb.plugins.models.platform_base import SurveyPlatformEnum
 
 
 @pytest.mark.django_db

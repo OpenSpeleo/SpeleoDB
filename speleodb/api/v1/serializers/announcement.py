@@ -7,8 +7,8 @@ from typing import ClassVar
 
 from rest_framework import serializers
 
+from speleodb.common.enums import SurveyPlatformEnum
 from speleodb.plugins.models import PublicAnnoucement
-from speleodb.plugins.models.platform_base import SurveyPlatformEnum
 from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 if TYPE_CHECKING:

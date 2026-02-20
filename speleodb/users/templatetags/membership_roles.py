@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from django import template
 
-from speleodb.users.models import SurveyTeamMembershipRole
+from speleodb.common.enums import SurveyTeamMembershipRole
 
 register = template.Library()
 

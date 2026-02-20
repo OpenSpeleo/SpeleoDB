@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from django.db import models
 
-from speleodb.plugins.models.platform_base import OperatingSystemEnum
-from speleodb.plugins.models.platform_base import SurveyPlatformEnum
+from speleodb.common.enums import OperatingSystemEnum
+from speleodb.common.enums import SurveyPlatformEnum
 from speleodb.surveys.fields import Sha256Field
 from speleodb.surveys.fields import VersionField
 

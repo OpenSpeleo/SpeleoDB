@@ -18,8 +18,13 @@ from factory.django import DjangoModelFactory
 from rest_framework.authtoken.models import Token
 
 from speleodb.common.enums import InstallStatus
+from speleodb.common.enums import OperatingSystemEnum
 from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
+from speleodb.common.enums import ProjectType
+from speleodb.common.enums import StationResourceType
+from speleodb.common.enums import SurveyPlatformEnum
+from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.common.enums import UnitSystem
 from speleodb.gis.models import Cylinder
 from speleodb.gis.models import CylinderFleet
@@ -36,7 +41,6 @@ from speleodb.gis.models import SensorInstall
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationLogEntry
 from speleodb.gis.models import StationResource
-from speleodb.gis.models import StationResourceType
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceMonitoringNetwork
 from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
@@ -45,16 +49,12 @@ from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.plugins.models import PluginRelease
 from speleodb.plugins.models import PublicAnnoucement
-from speleodb.plugins.models.platform_base import OperatingSystemEnum
-from speleodb.plugins.models.platform_base import SurveyPlatformEnum
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
-from speleodb.surveys.models import ProjectType
 from speleodb.surveys.models import TeamProjectPermission
 from speleodb.surveys.models import UserProjectPermission
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
-from speleodb.users.models import SurveyTeamMembershipRole
 from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory
 

@@ -10,13 +10,13 @@ from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Self
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import models
 
+from speleodb.common.enums import StationResourceType
 from speleodb.gis.models import Station
 from speleodb.gis.models import SurfaceStation
 from speleodb.gis.models.station import SubSurfaceStation
@@ -27,17 +27,6 @@ from speleodb.utils.validators import AttachmentValidator
 from speleodb.utils.video_processing import VideoProcessor
 
 logger = logging.getLogger(__name__)
-
-
-class StationResourceType(models.TextChoices):
-    PHOTO = "photo", "Photo"
-    VIDEO = "video", "Video"
-    NOTE = "note", "Note"
-    DOCUMENT = "document", "Document"
-
-    @classmethod
-    def from_str(cls, value: str) -> Self:
-        return cls._member_map_[value.upper()]  # type: ignore[return-value]
 
 
 def get_station_resource_path(instance: StationResource, filename: str) -> str:

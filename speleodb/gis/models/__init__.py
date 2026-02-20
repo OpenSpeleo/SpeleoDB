@@ -24,7 +24,6 @@ from speleodb.gis.models.station import SurfaceStation
 from speleodb.gis.models.station import SubSurfaceStation
 
 # Resource Related Models
-from speleodb.gis.models.station_resource import StationResourceType
 from speleodb.gis.models.station_resource import StationResource
 
 # Science Related Models
@@ -73,7 +72,6 @@ __all__ = [
     "Station",
     "StationLogEntry",
     "StationResource",
-    "StationResourceType",
     "StationTag",
     "SubSurfaceStation",
     "SurfaceMonitoringNetwork",

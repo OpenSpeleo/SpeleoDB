@@ -4,8 +4,8 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+from speleodb.common.enums import SurveyPlatformEnum
 from speleodb.plugins.models import PublicAnnoucement
-from speleodb.plugins.models.platform_base import SurveyPlatformEnum
 
 
 @pytest.mark.django_db

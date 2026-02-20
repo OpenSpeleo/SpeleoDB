@@ -15,10 +15,10 @@ from rest_framework.exceptions import ValidationError
 
 from speleodb.api.v1.serializers.project_commit import ProjectCommitSerializer
 from speleodb.common.enums import PermissionLevel
+from speleodb.common.enums import ProjectType
+from speleodb.common.enums import ProjectVisibility
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
-from speleodb.surveys.models import ProjectType
-from speleodb.surveys.models import ProjectVisibility
 from speleodb.surveys.models import UserProjectPermission
 from speleodb.users.models import User
 from speleodb.utils.exceptions import NotAuthorizedError

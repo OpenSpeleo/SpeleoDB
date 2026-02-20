@@ -357,8 +357,8 @@ wheels = [
 
 [[package]]
 name = "compass-lib"
-version = "0.0.5"
-source = { git = "https://github.com/OpenSpeleo/pytool_compass_lib.git?rev=8e7af42d9d4f88d12d3592a8295757941b9e82f4#8e7af42d9d4f88d12d3592a8295757941b9e82f4" }
+version = "0.0.6"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "geojson" },
     { name = "numpy" },
@@ -370,6 +370,10 @@ dependencies = [
     { name = "scipy" },
     { name = "shapely" },
     { name = "utm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/8a/b60239a878a6dfdf673b56a38f19115c1d576dc10b39d6b1f32a4638643b/compass_lib-0.0.6.tar.gz", hash = "sha256:8e5f1fd6e8f1fed7f3d6ff4262780d4a6e65c7745b3cde94770ca1137ad1731a", size = 76404, upload-time = "2026-02-20T17:03:09.282Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/42/8d/b0ae47a27bdefecd19aee3ddf29e80ef48c6b21a31cc2ba441209781a272/compass_lib-0.0.6-py3-none-any.whl", hash = "sha256:86133e6a6076f282d14a8f08a3a4e07f6bb31cee69432d8aa3fab3047e41e9c8", size = 94086, upload-time = "2026-02-20T17:03:08.036Z" },
 ]
 
 [[package]]
@@ -2449,7 +2453,7 @@ requires-dist = [
     { name = "botocore", specifier = "==1.42.49" },
     { name = "celery", specifier = "==5.6.2" },
     { name = "celery-types", marker = "extra == 'local'", specifier = "==0.24.0" },
-    { name = "compass-lib", git = "https://github.com/OpenSpeleo/pytool_compass_lib.git?rev=8e7af42d9d4f88d12d3592a8295757941b9e82f4" },
+    { name = "compass-lib", specifier = "==0.0.6" },
     { name = "coverage", marker = "extra == 'local'", specifier = "==7.13.4" },
     { name = "cryptography", marker = "extra == 'production'", specifier = "==46.0.5" },
     { name = "deepdiff", marker = "extra == 'local'", specifier = ">=7.0,<9.0" },

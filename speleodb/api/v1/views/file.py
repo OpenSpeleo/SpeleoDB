@@ -38,6 +38,7 @@ from speleodb.api.v1.permissions import SDB_WriteAccess
 from speleodb.api.v1.permissions import UserOwnsProjectMutex
 from speleodb.api.v1.serializers import ProjectSerializer
 from speleodb.api.v1.serializers import UploadSerializer
+from speleodb.common.enums import ProjectType
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
@@ -53,7 +54,6 @@ from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
-from speleodb.surveys.models import ProjectType
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import FileRejectedError
 from speleodb.utils.exceptions import GeoJSONGenerationError

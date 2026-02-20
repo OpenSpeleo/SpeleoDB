@@ -6,7 +6,7 @@ import uuid
 
 from django.db import models
 
-from speleodb.plugins.models.platform_base import SurveyPlatformEnum
+from speleodb.common.enums import SurveyPlatformEnum
 from speleodb.surveys.fields import VersionField
 
 

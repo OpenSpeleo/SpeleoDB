@@ -18,15 +18,15 @@ from speleodb.api.v1.tests.factories import TeamProjectPermissionFactory
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembershipRole
-from speleodb.users.models import User
+from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
     from rest_framework.authtoken.models import Token
 
     from speleodb.surveys.models import Project
+    from speleodb.users.models import SurveyTeam
+    from speleodb.users.models import User
 
 
 class PermissionType(Enum):

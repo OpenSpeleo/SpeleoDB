@@ -14,9 +14,9 @@ from geojson import Feature  # type: ignore[attr-defined]
 from geojson import Point  # type: ignore[attr-defined]
 from rest_framework import serializers
 
+from speleodb.common.enums import StationResourceType
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models import StationResourceType
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
 from speleodb.utils.gps_utils import format_coordinate

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 import uuid
+from typing import TYPE_CHECKING
 
 from django.urls import reverse
 from parameterized.parameterized import parameterized
@@ -14,8 +15,10 @@ from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.utils import is_subset
-from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembershipRole
+from speleodb.common.enums import SurveyTeamMembershipRole
+
+if TYPE_CHECKING:
+    from speleodb.users.models import SurveyTeam
 
 
 class TestTeamCreation(BaseAPITestCase):

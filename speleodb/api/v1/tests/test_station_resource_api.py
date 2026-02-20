@@ -20,9 +20,9 @@ from speleodb.api.v1.tests.factories import NoteStationResourceFactory
 from speleodb.api.v1.tests.factories import PhotoStationResourceFactory
 from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
+from speleodb.common.enums import StationResourceType
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
-from speleodb.gis.models import StationResourceType
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.utils.test_utils import named_product
 

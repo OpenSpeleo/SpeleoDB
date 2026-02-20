@@ -14,9 +14,9 @@ from rest_framework import status
 from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v1.tests.base_testcase import PermissionType
 from speleodb.common.enums import PermissionLevel
+from speleodb.common.enums import ProjectType
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import FileFormat
-from speleodb.surveys.models import ProjectType
 
 BASE_DIR = pathlib.Path(__file__).parent / "artifacts"
 ARIANE_TEST_FILE = BASE_DIR / "test_simple.tml"

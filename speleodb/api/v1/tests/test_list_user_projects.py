@@ -16,7 +16,7 @@ from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.factories import TeamProjectPermissionFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.users.models import SurveyTeamMembershipRole
+from speleodb.common.enums import SurveyTeamMembershipRole
 
 if TYPE_CHECKING:
     from speleodb.surveys.models import TeamProjectPermission

@@ -14,6 +14,7 @@ import orjson
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management.base import BaseCommand
 
+from speleodb.common.enums import ProjectType
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.git_engine.core import GitFile
 from speleodb.processors import ArianeTMLFileProcessor
@@ -21,7 +22,6 @@ from speleodb.processors._impl.compass_toml import CompassTOML
 from speleodb.processors._impl.compass_toml import get_compass_mak_filepath
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
-from speleodb.surveys.models import ProjectType
 from speleodb.utils.exceptions import GeoJSONGenerationError
 
 if TYPE_CHECKING:
@@ -40,6 +40,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
+            "--project_type",
+            default=None,
+            choices=[*ProjectType.values, None],
+            help=(
+                "Ignore that the GeoJSON file already exists, recompute and overwrite."
+            ),
+        )
+
+        parser.add_argument(
             "--force_recompute",
             action="store_true",
             help=(
@@ -51,7 +60,7 @@ class Command(BaseCommand):
         self, commit: GitCommit, tmp_dirpath: Path
     ) -> Path | None:
         try:
-            file = commit.tree / ArianeTMLFileProcessor.TARGET_SAVE_FILENAME  # pyright: ignore[reportOperatorIssue]
+            file = commit.tree / ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
         except KeyError:
             return None
 
@@ -101,10 +110,19 @@ class Command(BaseCommand):
             case _:
                 return None
 
-    def handle(self, *, force_recompute: bool = False, **kwargs: Any) -> None:
-        for project in Project.objects.filter(exclude_geojson=False).order_by(
-            "-modified_date"
-        ):
+    def handle(
+        self,
+        *,
+        project_type: ProjectType | None,
+        force_recompute: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        qs = Project.objects.filter(exclude_geojson=False)
+
+        if project_type is not None:
+            qs = qs.filter(type=project_type)
+
+        for project in qs.order_by("-modified_date"):
             logger.info("")
             logger.info("-" * 60)
             logger.info(f"Processing Project: {project.id} ~ {project.name}")

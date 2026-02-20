@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.http import HttpResponse
@@ -23,9 +24,11 @@ from speleodb.api.v1.tests.factories import SurveyTeamFactory
 from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembershipRole
+from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from speleodb.users.models import SurveyTeam
 
 
 class BaseTestCase(BaseUserTestCaseMixin, TestCase):

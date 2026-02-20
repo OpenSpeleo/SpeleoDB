@@ -34,11 +34,11 @@ from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import ArianeInterface
 
+from speleodb.common.enums import ProjectType
+from speleodb.common.enums import ProjectVisibility
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.gitlab_manager import GitlabManager
-from speleodb.surveys.models import ProjectType
-from speleodb.surveys.models import ProjectVisibility
 from speleodb.utils.exceptions import GeoJSONGenerationError
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.timing_ctx import timed_section
