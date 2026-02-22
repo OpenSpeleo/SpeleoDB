@@ -14,8 +14,11 @@ from django.urls import reverse
 from parameterized.parameterized import parameterized
 from rest_framework import status
 
+from frontend_public.views import APP_STORE_URL
 from frontend_public.views import COMPASS_SIDECAR_RELEASE_INFO_CACHE_KEY
 from frontend_public.views import COMPASS_SIDECAR_RELEASES_URL
+from frontend_public.views import PLAY_STORE_URL
+from frontend_public.views import classify_mobile_platform
 from frontend_public.views import get_compass_sidecar_release_info
 from speleodb.users.tests.factories import UserFactory
 
@@ -78,6 +81,108 @@ class ViewFunctionalityTest(TestCase):
         assert response["Content-Type"].startswith("text/html"), response[
             "Content-Type"
         ]
+
+
+class AdaptiveDownloadRedirectViewTests(TestCase):
+    @parameterized.expand(
+        [
+            (
+                "android",
+                "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+                PLAY_STORE_URL,
+            ),
+            (
+                "iphone",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) "
+                "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 "
+                "Mobile/15E148 Safari/604.1",
+                APP_STORE_URL,
+            ),
+            (
+                "ipad",
+                "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) "
+                "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 "
+                "Mobile/15E148 Safari/604.1",
+                APP_STORE_URL,
+            ),
+            (
+                "ipados_desktop_mode",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 "
+                "Mobile/15E148 Safari/604.1",
+                APP_STORE_URL,
+            ),
+            (
+                "desktop",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                None,
+            ),
+            ("missing", None, None),
+            ("empty", "", None),
+        ]
+    )
+    def test_redirects_to_expected_destination(
+        self,
+        name: str,
+        user_agent: str | None,
+        expected_mobile_destination: str | None,
+    ) -> None:
+
+        response = self.client.get(
+            reverse("download_redirect"), headers={"user-agent": user_agent}
+        )
+
+        expected_location = (
+            reverse("download")
+            if expected_mobile_destination is None
+            else expected_mobile_destination
+        )
+
+        assert isinstance(response, HttpResponseRedirect), type(response)
+        assert response.status_code == status.HTTP_302_FOUND
+        assert response["Location"] == expected_location
+
+
+class MobilePlatformClassificationTests(SimpleTestCase):
+    @parameterized.expand(
+        [
+            (
+                "android",
+                "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36",
+                "android",
+            ),
+            (
+                "iphone",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)",
+                "ios",
+            ),
+            (
+                "ipad",
+                "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X)",
+                "ios",
+            ),
+            (
+                "ipados_desktop_mode",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Mobile/15E148",
+                "ios",
+            ),
+            (
+                "desktop",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "unknown",
+            ),
+            ("empty", "", "unknown"),
+        ]
+    )
+    def test_classify_mobile_platform(
+        self,
+        name: str,
+        user_agent: str,
+        expected_platform: str,
+    ) -> None:
+        assert classify_mobile_platform(user_agent) == expected_platform
 
 
 class CompassSidecarReleaseFetchTests(SimpleTestCase):

@@ -68,6 +68,24 @@ def get_mobile_store_links() -> dict[str, str]:
     }
 
 
+def classify_mobile_platform(user_agent: str) -> str:
+    normalized_user_agent = user_agent.lower()
+
+    if "android" in normalized_user_agent:
+        return "android"
+
+    ios_tokens = ("iphone", "ipad", "ipod")
+    is_ios = any(token in normalized_user_agent for token in ios_tokens)
+    is_ipados_desktop_mode = (
+        "macintosh" in normalized_user_agent and "mobile" in normalized_user_agent
+    )
+
+    if is_ios or is_ipados_desktop_mode:
+        return "ios"
+
+    return "unknown"
+
+
 def get_compass_sidecar_release_info(
     *,
     latest_json_url: str = COMPASS_SIDECAR_LATEST_JSON_URL,
@@ -257,6 +275,23 @@ class MobileDownloadPageView(TemplateView):
         context["compass_sidecar_pub_date"] = release_info["pub_date"]
         context["compass_sidecar_releases_url"] = COMPASS_SIDECAR_RELEASES_URL
         return context
+
+
+class AdaptiveDownloadRedirectView(View):
+    def get(self, request: HttpRequest) -> HttpResponse:
+        user_agent = request.headers.get("user-agent", "")
+        if not isinstance(user_agent, str):
+            user_agent = ""
+
+        platform = classify_mobile_platform(user_agent)
+
+        if platform == "android":
+            return redirect(PLAY_STORE_URL)
+
+        if platform == "ios":
+            return redirect(APP_STORE_URL)
+
+        return redirect("download")
 
 
 class PeoplePageView(TemplateView):

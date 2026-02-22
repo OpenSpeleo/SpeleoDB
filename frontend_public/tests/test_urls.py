@@ -15,6 +15,7 @@ from django.urls import reverse
         # General routes
         ("home", "", None),
         ("download", "download/", None),
+        ("download_redirect", "download/mobile/", None),
         ("about", "about/", None),
         ("people", "people/", None),
         ("roadmap", "roadmap/", None),

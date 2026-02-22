@@ -1134,6 +1134,12 @@
         "decorators": ""
     },
     {
+        "url": "/download/mobile/",
+        "module": "frontend_public.views.AdaptiveDownloadRedirectView",
+        "name": "download_redirect",
+        "decorators": ""
+    },
+    {
         "url": "/git/<uuid:id>.git/git-receive-pack",
         "module": "speleodb.git_proxy.views.WriteServiceView",
         "name": "git_service_write",
