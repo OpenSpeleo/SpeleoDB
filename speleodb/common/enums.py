@@ -29,6 +29,24 @@ class BaseIntegerChoices(models.IntegerChoices):
         return list(cls._member_map_.values())  # type: ignore[attr-defined]
 
 
+class UserAction(models.TextChoices):
+    LOGIN = "login", "Login"
+    LOGOUT = "logout", "Logout"
+    SIGNUP = "signup", "Signup"
+    PASSWORD_CHANGED = "password change", "Password Changed"
+    PASSWORD_RESET = "password reset", "Password Reset"
+    TOKEN_REFRESH = "token refresh", "Token Refresh"
+
+
+class UserApplication(models.TextChoices):
+    WEBSITE = "website", "Website"
+    IOS_APP = "iOS", "IOS"
+    ANDROID_APP = "android", "Android"
+    ARIANE_APP = "ariane", "Ariane"
+    COMPASS_APP = "compass", "Compass"
+    UNKNOWN = "unknown", "Unknown"
+
+
 class InstallStatus(models.TextChoices):
     INSTALLED = "installed", "Installed"
     RETRIEVED = "retrieved", "Retrieved"

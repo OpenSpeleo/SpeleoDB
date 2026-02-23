@@ -16,6 +16,7 @@ from import_export.admin import ExportMixin
 
 from speleodb.users.forms import UserAdminChangeForm
 from speleodb.users.forms import UserAdminCreationForm
+from speleodb.users.models import AccountEvent
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
@@ -165,3 +166,39 @@ class SurveyTeamMembershipAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
         # Refresh the `modified_date` field
         obj.team.save()
+
+
+@admin.register(AccountEvent)
+class AccountEventAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "id",
+        "user",
+        "action",
+        "application",
+        "ip_addr",
+        "creation_date",
+    )
+    list_filter = ("action", "application", "creation_date")
+    search_fields = ("user__email", "user__name", "ip_addr", "user_agent")
+    ordering = ("-creation_date",)
+    readonly_fields = (
+        "id",
+        "user",
+        "action",
+        "application",
+        "ip_addr",
+        "user_agent",
+        "creation_date",
+        "modified_date",
+    )
+    fields = readonly_fields
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: AccountEvent | None = None
+    ) -> bool:
+        if obj is not None:
+            return False
+        return super().has_change_permission(request, obj)

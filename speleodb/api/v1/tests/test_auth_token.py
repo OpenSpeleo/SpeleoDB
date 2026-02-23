@@ -8,6 +8,9 @@ from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
+from speleodb.common.enums import UserAction
+from speleodb.common.enums import UserApplication
+from speleodb.users.models import AccountEvent
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.test_utils import named_product
 
@@ -62,6 +65,91 @@ class TestTokenAuth(BaseAPITestCase):
         auth = f"{token_header} {self.token.key}"
         response = self.client.get(endpoint, headers={"authorization": auth})
         assert response.status_code == status.HTTP_200_OK, response.data
+
+    def test_get_creates_login_event(self) -> None:
+        endpoint = reverse("api:v1:user-auth-token")
+        auth = self.header_prefix + self.token.key
+
+        response = self.client.get(
+            endpoint,
+            headers={
+                "authorization": auth,
+                "user-agent": "Compass/2.3.1 (Android)",
+                "x-forwarded-for": "203.0.113.45, 10.0.0.7",
+            },
+            REMOTE_ADDR="10.0.0.7",
+        )
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+
+        event = AccountEvent.objects.get()
+        assert event.user == self.user
+        assert event.action == UserAction.LOGIN
+        assert event.application == UserApplication.COMPASS_APP
+        assert event.ip_addr == "203.0.113.45"
+
+    def test_post_creates_login_event(self) -> None:
+        endpoint = reverse("api:v1:user-auth-token")
+
+        # Reset the user password since the factory sets a random one.
+        self.user.set_password(USER_TEST_PASSWORD)
+        self.user.save()
+
+        response = self.client.post(
+            endpoint,
+            {"email": self.user.email, "password": USER_TEST_PASSWORD},
+            headers={"user-agent": "Ariane/7.0.0 (iPhone)"},
+            REMOTE_ADDR="198.51.100.11",
+        )
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+
+        event = AccountEvent.objects.get()
+        assert event.user == self.user
+        assert event.action == UserAction.LOGIN
+        assert event.application == UserApplication.ARIANE_APP
+        assert event.ip_addr == "198.51.100.11"
+
+    @parameterized.expand(["PUT", "PATCH"])
+    def test_put_patch_do_not_create_login_event(self, method: str) -> None:
+        endpoint = reverse("api:v1:user-auth-token")
+
+        # Reset the user password since the factory sets a random one.
+        self.user.set_password(USER_TEST_PASSWORD)
+        self.user.save()
+
+        method_fn = getattr(self.client, method.lower())
+        response = method_fn(
+            endpoint,
+            {"email": self.user.email, "password": USER_TEST_PASSWORD},
+            HTTP_USER_AGENT="Compass/2.3.1 (Android)",
+            REMOTE_ADDR="198.51.100.12",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        assert AccountEvent.objects.filter(action=UserAction.LOGIN).count() == 0
+        assert AccountEvent.objects.filter(action=UserAction.TOKEN_REFRESH).count() == 1
+
+    def test_failed_post_does_not_create_login_event(self) -> None:
+        endpoint = reverse("api:v1:user-auth-token")
+
+        response = self.client.post(
+            endpoint,
+            {"email": self.user.email, "password": "incorrect-password"},
+            headers={"user-agent": "Ariane/7.0.0 (iPhone)"},
+            REMOTE_ADDR="198.51.100.12",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
+        assert AccountEvent.objects.count() == 0
+
+    def test_failed_get_does_not_create_login_event(self) -> None:
+        endpoint = reverse("api:v1:user-auth-token")
+
+        response = self.client.get(endpoint)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED, response.data
+        assert AccountEvent.objects.count() == 0
 
     @parameterized.expand(
         named_product(method=["POST", "PUT", "PATCH"], is_authenticated=[True, False])

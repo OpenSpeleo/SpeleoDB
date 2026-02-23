@@ -22,6 +22,8 @@ from speleodb.api.v1.serializers import PasswordChangeSerializer
 from speleodb.api.v1.serializers import UserSerializer
 from speleodb.api.v1.serializers.user import UserAutocompleteSerializer
 from speleodb.users.models import User
+from speleodb.users.signals import api_auth_success
+from speleodb.users.signals import auth_token_refresh
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import NoWrapResponse
@@ -77,6 +79,7 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
 
         user = self.get_user()
         token, _ = Token.objects.get_or_create(user=user)
+        api_auth_success.send(sender=self.__class__, user=user, request=request)
 
         return NoWrapResponse(
             {
@@ -85,7 +88,9 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
             }
         )
 
-    def _fetch_token(self, request: Request, refresh_token: bool) -> Response:
+    def _fetch_token(
+        self, request: Request, refresh_token: bool, *, emit_login_event: bool = False
+    ) -> Response:
         if not request.user.is_authenticated:
             serializer = self.get_serializer(data=request.data)
 
@@ -98,11 +103,18 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
         else:
             user = self.get_user()
 
+        created: bool
+        token: Token
         if refresh_token:
             # delete to recreate a fresh token
             Token.objects.filter(user=user).delete()
+            token = Token.objects.create(user=user)
+            created = True
+            auth_token_refresh.send(sender=self.__class__, user=user, request=request)
 
-        token, created = Token.objects.get_or_create(user=user)
+        else:
+            token, created = Token.objects.get_or_create(user=user)
+            api_auth_success.send(sender=self.__class__, user=user, request=request)
 
         return NoWrapResponse(
             {
@@ -113,7 +125,7 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
         )
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return self._fetch_token(request, refresh_token=False)
+        return self._fetch_token(request, refresh_token=False, emit_login_event=True)
 
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._fetch_token(request, refresh_token=True)
