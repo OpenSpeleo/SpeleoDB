@@ -69,7 +69,7 @@ dependencies = [
     "django-import-export==4.4.0",     # https://github.com/django-import-export/django-import-export
     "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
-    "django-polymorphic==4.11.0",      # https://github.com/jazzband/django-polymorphic
+    "django-polymorphic==4.11.1",      # https://github.com/jazzband/django-polymorphic
     "django-rest-polymorphic==0.1.10", # https://github.com/denisorehovsky/django-rest-polymorphic
     "django-storages[s3]==1.14.6",     # https://github.com/jschneier/django-storages
 
