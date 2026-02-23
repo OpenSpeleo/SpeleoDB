@@ -27,18 +27,18 @@ class PersonAdminBase(admin.ModelAdmin):  # type: ignore[type-arg]
         "title",
         "order",
         "has_link",
-        "created_at",
+        "creation_date",
     ]
 
     list_display_links = ["full_name"]
 
     list_editable = ["order"]
 
-    list_filter = ["created_at", "updated_at"]
+    list_filter = ["creation_date", "modified_date"]
 
     search_fields = ["full_name", "title", "description"]
 
-    readonly_fields = ["id", "created_at", "updated_at", "photo_preview_large"]
+    readonly_fields = ["id", "creation_date", "modified_date", "photo_preview_large"]
 
     fieldsets = (
         (
@@ -69,7 +69,7 @@ class PersonAdminBase(admin.ModelAdmin):  # type: ignore[type-arg]
         (
             "Metadata",
             {
-                "fields": ("id", "created_at", "updated_at"),
+                "fields": ("id", "creation_date", "modified_date"),
                 "classes": ("collapse",),
             },
         ),

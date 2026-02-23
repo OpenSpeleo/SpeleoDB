@@ -51,8 +51,8 @@ class PersonModelTestMixin:
         assert person.description == "Test description"
         assert person.photo
         assert person.id is not None
-        assert person.created_at is not None
-        assert person.updated_at is not None
+        assert person.creation_date is not None
+        assert person.modified_date is not None
 
     def test_optional_fields(self) -> None:
         """Test that optional fields work correctly."""

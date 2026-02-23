@@ -118,7 +118,7 @@ class PersonAdminTestMixin:
             "title",
             "order",
             "has_link",
-            "created_at",
+            "creation_date",
         ]
 
         assert admin.list_display == expected_fields
@@ -224,7 +224,7 @@ class PersonAdminTestMixin:
         site = AdminSite()
         admin = self.admin_class(self.model_class, site)
 
-        expected_filters = ["created_at", "updated_at"]
+        expected_filters = ["creation_date", "modified_date"]
         assert admin.list_filter == expected_filters
 
     def test_admin_readonly_fields(self, db: None) -> None:
@@ -232,7 +232,12 @@ class PersonAdminTestMixin:
         site = AdminSite()
         admin = self.admin_class(self.model_class, site)
 
-        expected_readonly = ["id", "created_at", "updated_at", "photo_preview_large"]
+        expected_readonly = [
+            "id",
+            "creation_date",
+            "modified_date",
+            "photo_preview_large",
+        ]
         assert admin.readonly_fields == expected_readonly
 
 
