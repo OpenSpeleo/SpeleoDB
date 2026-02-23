@@ -36,7 +36,7 @@ dependencies = [
     "av==16.1.0",           # https://github.com/PyAV-Org/PyAV
     "ffmpeg-python==0.2.0", # https://github.com/kkroening/ffmpeg-python
     "Pillow==12.1.1",       # https://github.com/python-pillow/Pillow
-    "pillow-heif==1.2.0",   # https://github.com/bigcat88/pillow_heif
+    "pillow-heif==1.2.1",   # https://github.com/bigcat88/pillow_heif
     "PyMuPDF==1.27.1",      # https://github.com/pymupdf/PyMuPDF
 
     # GeoJSON & GIS
