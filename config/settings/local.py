@@ -33,7 +33,7 @@ GITLAB_HTTP_PROTOCOL = "http"
 
 # AWS S3 CONFIGURATION
 # ------------------------------------------------------------------------------
-if (s3_endpoint_url := env.str("AWS_S3_ENDPOINT_URL", default=None)) is not None:  # pyright: ignore[reportArgumentType]
+if (s3_endpoint_url := env.str("AWS_S3_ENDPOINT_URL", default=None)) is not None:  # type: ignore[arg-type]
     AWS_S3_ENDPOINT_URL: str = s3_endpoint_url  # pyright: ignore[reportAssignmentType]
     AWS_S3_USE_SSL = False
     AWS_S3_VERIFY = False

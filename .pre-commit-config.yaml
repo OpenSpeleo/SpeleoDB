@@ -27,7 +27,7 @@ repos:
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.1
+    rev: v0.15.2
     hooks:
       # Linter
       - id: ruff
@@ -44,7 +44,7 @@ repos:
       - id: djlint-django
 
   - repo: https://github.com/PyCQA/autoflake
-    rev: v2.3.2 # check for the latest version
+    rev: v2.3.3 # check for the latest version
     hooks:
       - id: autoflake
         args:
@@ -84,7 +84,7 @@ repos:
         args: ["-iii", "-ll"]
 
   - repo: https://github.com/pysentry/pysentry-pre-commit
-    rev: v0.4.1
+    rev: v0.4.2
     hooks:
       - id: pysentry
         args:
