@@ -85,6 +85,8 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
 
     // Store the project ID for later use
     pendingInstallProjectId = projectId;
+    // Always refresh fleet cylinders per modal session to avoid stale availability.
+    fleetCylindersCache = {};
 
     container.innerHTML = `
         <div class="space-y-4">

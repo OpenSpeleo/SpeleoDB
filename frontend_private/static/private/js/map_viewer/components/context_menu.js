@@ -11,6 +11,29 @@ export const ContextMenu = {
         });
     },
 
+    getClampedPosition(clickX, clickY, menuRect, viewportPadding = 8) {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        let left = clickX;
+        let top = clickY;
+
+        // Prefer flipping near edges, then clamp to viewport bounds.
+        if (left + menuRect.width > viewportWidth - viewportPadding) {
+            left = clickX - menuRect.width;
+        }
+        if (top + menuRect.height > viewportHeight - viewportPadding) {
+            top = clickY - menuRect.height;
+        }
+
+        const maxLeft = Math.max(viewportPadding, viewportWidth - menuRect.width - viewportPadding);
+        const maxTop = Math.max(viewportPadding, viewportHeight - menuRect.height - viewportPadding);
+
+        left = Math.min(Math.max(left, viewportPadding), maxLeft);
+        top = Math.min(Math.max(top, viewportPadding), maxTop);
+
+        return { left, top };
+    },
+
     /**
      * Show context menu at map-relative coordinates
      * @param {number} mapX - X position relative to map container
@@ -57,20 +80,14 @@ export const ContextMenu = {
         this.menuEl.style.top = `${posY}px`;
         this.menuEl.style.display = 'block';
         
-        // Adjust position if menu would go off screen (use requestAnimationFrame for accurate measurement)
+        // Adjust position once dimensions are measurable.
         requestAnimationFrame(() => {
-            const menuRect = this.menuEl.getBoundingClientRect();
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
+            if (!this.menuEl || this.menuEl.style.display === 'none') return;
 
-            // If menu would go off right edge, flip to left of click point
-            if (menuRect.right > windowWidth) {
-                this.menuEl.style.left = `${posX - menuRect.width}px`;
-            }
-            // If menu would go off bottom edge, flip to above click point
-            if (menuRect.bottom > windowHeight) {
-                this.menuEl.style.top = `${posY - menuRect.height}px`;
-            }
+            const menuRect = this.menuEl.getBoundingClientRect();
+            const { left, top } = this.getClampedPosition(posX, posY, menuRect);
+            this.menuEl.style.left = `${left}px`;
+            this.menuEl.style.top = `${top}px`;
         });
 
         // Attach click handlers to items

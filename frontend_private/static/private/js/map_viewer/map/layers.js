@@ -37,6 +37,59 @@ const ZOOM_LEVELS = {
     GPS_TRACK_LINE: 8,
 };
 
+/**
+ * Remove map layers first, then their source to avoid dependent-layer issues.
+ */
+function removeLayersAndSource(map, layerIds, sourceId) {
+    layerIds.forEach((layerId) => {
+        if (map.getLayer(layerId)) {
+            map.removeLayer(layerId);
+        }
+    });
+
+    if (map.getSource(sourceId)) {
+        map.removeSource(sourceId);
+    }
+}
+
+/**
+ * Build gas mix label text from cylinder percentages.
+ */
+function getCylinderGasMixTextExpression() {
+    return [
+        'case',
+        ['==', ['get', 'o2_percentage'], 100], 'Oxygen',
+        ['>', ['get', 'he_percentage'], 0],
+        [
+            'concat',
+            ['to-string', ['get', 'o2_percentage']],
+            '/',
+            ['to-string', ['get', 'he_percentage']]
+        ],
+        ['==', ['get', 'o2_percentage'], 21], 'Air',
+        ['concat', 'NX', ['to-string', ['get', 'o2_percentage']]]
+    ];
+}
+
+/**
+ * Build label for cylinder installs: install-date\ngas-mix@pressure.
+ */
+function getCylinderInstallLabelExpression() {
+    return [
+        'concat',
+        ['coalesce', ['get', 'install_date'], 'Unknown date'],
+        '\n',
+        getCylinderGasMixTextExpression(),
+        '@',
+        ['to-string', ['get', 'pressure']],
+        ' ',
+        ['case',
+            ['==', ['get', 'pressure_unit_system'], 'imperial'], 'PSI',
+            'BAR'
+        ]
+    ];
+}
+
 // Helper to ensure altitude zero (defined locally or imported if moved to Utils)
 function processGeoJSON(geojsonData) {
     if (!geojsonData || !geojsonData.features) return geojsonData;
@@ -314,9 +367,7 @@ export const Layers = {
         const pointsLayerId = `gps-track-points-${tid}`;
 
         // Remove existing layers and source if they exist
-        if (map.getLayer(pointsLayerId)) map.removeLayer(pointsLayerId);
-        if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId);
-        if (map.getSource(sourceId)) map.removeSource(sourceId);
+        removeLayersAndSource(map, [pointsLayerId, lineLayerId], sourceId);
 
         // Get color for this track
         const color = Colors.getGPSTrackColor(tid);
@@ -663,14 +714,11 @@ export const Layers = {
         console.log(`📍 Adding ${data.features?.length || 0} stations to map for project ${projectId}`);
 
         // Remove existing layers and source if they exist (for refresh)
-        [labelLayerId, geologyLayerId, artifactLayerId, boneLayerId, biologyLayerId, circleLayerId].forEach(layerId => {
-            if (map.getLayer(layerId)) {
-                map.removeLayer(layerId);
-            }
-        });
-        if (map.getSource(sourceId)) {
-            map.removeSource(sourceId);
-        }
+        removeLayersAndSource(
+            map,
+            [labelLayerId, geologyLayerId, artifactLayerId, boneLayerId, biologyLayerId, circleLayerId],
+            sourceId
+        );
 
         if (!data.features || data.features.length === 0) {
             console.log(`📍 No stations to display for project ${projectId}`);
@@ -850,15 +898,7 @@ export const Layers = {
         console.log(`📍 Adding ${data.features?.length || 0} Landmarks to map`);
 
         // Remove existing layer and source if they exist (to refresh)
-        if (map.getLayer('landmarks-layer')) {
-            map.removeLayer('landmarks-layer');
-        }
-        if (map.getLayer('landmarks-labels')) {
-            map.removeLayer('landmarks-labels');
-        }
-        if (map.getSource(sourceId)) {
-            map.removeSource(sourceId);
-        }
+        removeLayersAndSource(map, ['landmarks-labels', 'landmarks-layer'], sourceId);
 
         if (!data.features || data.features.length === 0) {
             console.log('📍 No Landmarks to display');
@@ -958,15 +998,7 @@ export const Layers = {
         console.log(`📍 Adding ${data.features?.length || 0} surface stations to map for network ${networkId}`);
 
         // Remove existing layer and source if they exist (for refresh)
-        if (map.getLayer(labelLayerId)) {
-            map.removeLayer(labelLayerId);
-        }
-        if (map.getLayer(symbolLayerId)) {
-            map.removeLayer(symbolLayerId);
-        }
-        if (map.getSource(sourceId)) {
-            map.removeSource(sourceId);
-        }
+        removeLayersAndSource(map, [labelLayerId, symbolLayerId], sourceId);
 
         if (!data.features || data.features.length === 0) {
             console.log(`📍 No surface stations to display for network ${networkId}`);
@@ -1669,16 +1701,12 @@ export const Layers = {
 
         const sourceId = 'cylinder-installs-source';
         const layerId = 'cylinder-installs-layer';
+        const labelLayerId = 'cylinder-installs-labels';
 
         console.log(`Adding ${geojsonData.features?.length || 0} cylinder installs to map`);
 
-        // Remove existing layer and source if they exist (for refresh)
-        if (map.getLayer(layerId)) {
-            map.removeLayer(layerId);
-        }
-        if (map.getSource(sourceId)) {
-            map.removeSource(sourceId);
-        }
+        // Remove existing layers before removing source (safe refresh order).
+        removeLayersAndSource(map, [labelLayerId, layerId], sourceId);
 
         if (!geojsonData.features || geojsonData.features.length === 0) {
             console.log('No cylinder installs to display');
@@ -1750,28 +1778,13 @@ export const Layers = {
         }
 
         // Add label layer for cylinder installs
-        const labelLayerId = 'cylinder-installs-labels';
-        if (map.getLayer(labelLayerId)) {
-            map.removeLayer(labelLayerId);
-        }
-
         map.addLayer({
             id: labelLayerId,
             type: 'symbol',
             source: sourceId,
             minzoom: ZOOM_LEVELS.CYLINDER_INSTALL_LABEL,
             layout: {
-                'text-field': [
-                    'concat',
-                    ['get', 'install_date'],
-                    ' @ ',
-                    ['to-string', ['get', 'pressure']],
-                    ' ',
-                    ['case',
-                        ['==', ['get', 'pressure_unit_system'], 'imperial'], 'PSI',
-                        'BAR'
-                    ]
-                ],
+                'text-field': getCylinderInstallLabelExpression(),
                 'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
                 'text-size': 11,
                 'text-offset': [0, 1.5],
