@@ -136,6 +136,19 @@ repos:
         pass_filenames: false
 
   # ========================================================================= #
+  #                               JAVASCRIPT LINT                             #
+  # ========================================================================= #
+
+  - repo: local
+    hooks:
+      - id: lint-map-viewer-js
+        name: Lint map viewer JavaScript
+        entry: npm run lint:js
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # ========================================================================= #
   #                               TAILWIND CSS                                #
   # ========================================================================= #
 
@@ -155,7 +168,7 @@ repos:
             }
 
             HASH_BEFORE=$(hash_files)
-            pushd tailwind_css/static_src && npm run pre-commit && popd > /dev/null
+            npm run pre-commit > /dev/null
             HASH_AFTER=$(hash_files)
 
             if [ "$HASH_BEFORE" != "$HASH_AFTER" ]; then

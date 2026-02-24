@@ -3,15 +3,15 @@ const plugin = require('tailwindcss/plugin');
 module.exports = {
     content: [
         // HTML Templates files
-        '../../frontend_private/templates/**/*.html',
-        '../../frontend_public/templates/footer.html',
+        './frontend_private/templates/**/*.html',
+        './frontend_public/templates/footer.html',
 
         // JS files that contain Tailwind CSS classes
-        '../../frontend_private/static/private/js/*.js',
-        '../../frontend_private/static/private/js/map_viewer/**/*.js',
+        './frontend_private/static/private/js/*.js',
+        './frontend_private/static/private/js/map_viewer/**/*.js',
 
         // Python files that contain Tailwind CSS classes
-        '../../speleodb/surveys/templatetags/project_types.py'
+        './speleodb/surveys/templatetags/project_types.py'
     ],
     darkMode: 'class',
     theme: {

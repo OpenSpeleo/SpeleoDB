@@ -19,6 +19,7 @@ import { Utils } from './utils.js';
 import { ContextMenu } from './components/context_menu.js';
 import { ProjectPanel } from './components/project_panel.js';
 import { GPSTracksPanel } from './components/gps_tracks_panel.js';
+import { DepthLegend } from './components/depth_legend.js';
 import { API } from './api.js';
 
 // Parse URL parameters for initial map position
@@ -356,71 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const legend = document.getElementById('map-legend');
-
-    // Track current color mode
-    window.colorMode = 'project';
-
-    // Update depth legend visibility based on active mode and data availability
-    function updateDepthLegendVisibility() {
-        try {
-            const depthLegend = document.getElementById('depth-scale-fixed');
-            if (!depthLegend) return;
-            const shouldShow = (window.colorMode === 'depth' && window.depthAvailable === true);
-            depthLegend.style.display = shouldShow ? 'block' : 'none';
-            // Also hide depth cursor indicator when legend hidden
-            if (!shouldShow) {
-                const cursor = document.getElementById('depth-cursor-indicator');
-                const label = document.getElementById('depth-cursor-label');
-                if (cursor) cursor.style.display = 'none';
-                if (label) label.style.display = 'none';
-            }
-        } catch (e) {
-            // ignore
-        }
-    }
-
-    // Create depth scale dynamically (matching old implementation)
-    function createDepthScale() {
-        try {
-            const mapContainer = document.getElementById('map');
-            const existing = document.getElementById('depth-scale-fixed');
-            let container = existing;
-
-            if (!container) {
-                container = document.createElement('div');
-                container.id = 'depth-scale-fixed';
-                container.style.position = 'absolute';
-                container.style.left = '5px';
-                container.style.bottom = '5px';
-                container.style.zIndex = '5';
-                container.style.backgroundColor = '#0f172a';
-                container.style.border = '2px solid #475569';
-                container.style.borderRadius = '8px';
-                container.style.padding = '8px 10px';
-                mapContainer.appendChild(container);
-            }
-
-            const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : 9999;
-            container.innerHTML = `
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <span style="color:#94a3b8; font-size:12px;">Depth</span>
-                    <div id="depth-scale-gradient" style="position:relative; width:160px; height:10px; background: linear-gradient(90deg, #4575b4 0%, #e6f598 50%, #d73027 100%); border-radius: 4px;">
-                        <div id="depth-cursor-indicator" style="position:absolute; top:-3px; left:0; width:2px; height:16px; background:#ffffff; box-shadow:0 0 4px rgba(0,0,0,0.6); display:none; transition:left 0.15s ease-out;"></div>
-                        <div id="depth-cursor-label" style="position:absolute; top:-27px; left:0; transform:translateX(-50%); color:#e5e7eb; font-size:13px; background: rgba(2, 6, 23, 0.9); border: 1px solid #334155; padding: 2px 6px; border-radius: 3px; display:none; pointer-events:none; white-space:nowrap; transition:left 0.15s ease-out;"></div>
-                    </div>
-                </div>
-                <div style="display:flex; justify-content:space-between; color:#94a3b8; font-size:11px; margin-top:4px;">
-                    <span>0 ft</span>
-                    <span>${Math.ceil(maxVal)} ft</span>
-                </div>
-            `;
-
-            // Respect initial color mode for legend visibility
-            updateDepthLegendVisibility();
-        } catch (e) {
-            console.warn('Unable to render/update depth scale:', e);
-        }
-    }
+    DepthLegend.init(map);
 
     // 4. Load Data
     map.on('load', async () => {
@@ -558,9 +495,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Error loading Cylinder Installs', e);
         }
 
-        // Create depth scale dynamically
-        createDepthScale();
-
         // Check for URL parameters to fly to a specific location
         const urlParams = getUrlParams();
 
@@ -621,96 +555,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         landmarkManagerButton.addEventListener('click', () => LandmarkUI.openManagerModal());
     }
 
-    // Ensure depth scale is hidden initially
-    updateDepthLegendVisibility();
-
     const legendToggleBtn = document.getElementById('legend-toggle-button');
     if (legendToggleBtn && legend) {
         legendToggleBtn.addEventListener('click', () => {
             legend.classList.toggle('hidden');
         });
     }
-
-    // Listen for Color Mode Changes to update and auto-show legend
-    window.addEventListener('speleo:color-mode-changed', (e) => {
-        window.colorMode = e.detail.mode;
-        updateDepthLegendVisibility();
-    });
-
-    // Listen for depth data updates to refresh legend range
-    window.addEventListener('speleo:depth-data-updated', (e) => {
-        // Recreate the depth scale with updated max value
-        createDepthScale();
-        // Update visibility now that we have depth data
-        updateDepthLegendVisibility();
-    });
-
-    // Setup mouse hover for depth indicator (matching old implementation)
-    map.on('mousemove', (e) => {
-        if (window.colorMode !== 'depth' || window.depthAvailable !== true) return;
-
-        const indicator = document.getElementById('depth-cursor-indicator');
-        const labelEl = document.getElementById('depth-cursor-label');
-        const gradientEl = document.getElementById('depth-scale-gradient');
-
-        if (!gradientEl || !indicator || !labelEl) return;
-
-        // Query line layers for depth data
-        const queryPaddingPx = 12;
-        const queryBox = [
-            [e.point.x - queryPaddingPx, e.point.y - queryPaddingPx],
-            [e.point.x + queryPaddingPx, e.point.y + queryPaddingPx]
-        ];
-
-        let features = [];
-        try {
-            features = map.queryRenderedFeatures(queryBox);
-        } catch (err) {
-            // ignore query errors
-        }
-
-        // Find line features with depth data
-        const lineFeature = features.find(f =>
-            f.layer && f.layer.type === 'line' &&
-            f.properties &&
-            (f.properties.depth_val !== undefined || f.properties.depth_norm !== undefined)
-        );
-
-        if (!lineFeature) {
-            indicator.style.display = 'none';
-            labelEl.style.display = 'none';
-            return;
-        }
-
-        const props = lineFeature.properties || {};
-        const depthVal = props.depth_val;
-        const norm = props.depth_norm;
-
-        // Use depth_val if available (already in feet), otherwise compute from normalized
-        if (typeof depthVal === 'number' && isFinite(depthVal)) {
-            const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : 9999;
-            const pct = Math.min(Math.max(depthVal / maxVal, 0), 1) * 100;
-            indicator.style.left = `calc(${pct}% - 1px)`;
-            indicator.style.display = 'block';
-            labelEl.textContent = `${depthVal.toFixed(1)} ft`;
-            labelEl.style.left = `calc(${pct}% - 0px)`;
-            labelEl.style.display = 'block';
-        } else if (typeof norm === 'number' && isFinite(norm)) {
-            // Fallback to normalized if depth_val not present
-            const maxVal = Number.isFinite(window.depthMax) ? window.depthMax : 9999;
-            const clamped = Math.min(Math.max(norm, 0), 1);
-            const depth = clamped * maxVal;
-            const pct = clamped * 100;
-            indicator.style.left = `calc(${pct}% - 1px)`;
-            indicator.style.display = 'block';
-            labelEl.textContent = `${depth.toFixed(1)} ft`;
-            labelEl.style.left = `calc(${pct}% - 0px)`;
-            labelEl.style.display = 'block';
-        } else {
-            indicator.style.display = 'none';
-            labelEl.style.display = 'none';
-        }
-    });
 
     // Listen for Refresh Events
     window.addEventListener('speleo:refresh-stations', async (e) => {

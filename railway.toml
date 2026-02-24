@@ -15,7 +15,7 @@ builder = "RAILPACK"
 runtime = "V2"
 numReplicas = 1
 startCommand = "gunicorn config.wsgi:application --workers ${GUNICORN_WORKERS} --threads ${GUNICORN_THREADS} --max-requests 128 --preload"
-preDeployCommand = "npm install --prefix /app/tailwind_css/static_src && npm run --prefix /app/tailwind_css/static_src build && python /app/manage.py migrate && python /app/manage.py collectstatic --noinput --verbosity=3"
+preDeployCommand = "npm ci && npm run build && python /app/manage.py migrate && python /app/manage.py collectstatic --noinput --verbosity=3"
 sleepApplication = false
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10

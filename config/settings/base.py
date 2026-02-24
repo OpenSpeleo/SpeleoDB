@@ -179,8 +179,6 @@ LOCAL_APPS = [
     "frontend_public",
     # Mobile App
     "well_known",
-    # NPM App
-    "tailwind_css",  # Tailwind CSS app (contains package.json, configs)
 ]
 
 

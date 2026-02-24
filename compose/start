@@ -7,11 +7,11 @@ set -o nounset
 python manage.py migrate
 
 # Install npm dependencies and ensure correct esbuild binary for container architecture
-rm -rf /app/tailwind_css/static_src/node_modules/@esbuild /app/tailwind_css/static_src/node_modules/esbuild
-npm install --prefix /app/tailwind_css/static_src
+rm -rf /app/node_modules/@esbuild /app/node_modules/esbuild
+npm ci
 
 # Start Tailwind + esbuild watchers in background
-npm run --prefix /app/tailwind_css/static_src dev &
+npm run dev &
 
 # Forward SIGTERM/SIGINT to children
 trap "kill 0" SIGINT SIGTERM

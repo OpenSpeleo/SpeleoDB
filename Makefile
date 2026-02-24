@@ -16,8 +16,13 @@ load_data:
 	python manage.py loaddata fixtures/surveys.json
 	python manage.py loaddata fixtures/emailaddresses.json
 
-test:
+test: test-python test-js
+
+test-python:
 	pytest
+
+test-js:
+	npm run test:js
 
 deploy:
 	python manage.py merge_prod_dotenvs.py

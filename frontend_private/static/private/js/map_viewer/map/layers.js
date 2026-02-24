@@ -1,7 +1,12 @@
 import { Config } from '../config.js';
 import { State } from '../state.js';
 import { Colors } from './colors.js';
-import { DepthUtils } from './depth.js';
+import {
+    buildSectionDepthAverageMap,
+    computeProjectDepthDomain,
+    mergeDepthDomains,
+    resolveLineDepthValue
+} from './depth.js';
 import { Geometry } from './geometry.js';
 import { API } from '../api.js';
 
@@ -107,107 +112,45 @@ function withProjectScopedMarkerProperties(properties, projectId) {
     };
 }
 
-// Helper to ensure altitude zero (defined locally or imported if moved to Utils)
-function processGeoJSON(geojsonData) {
-    if (!geojsonData || !geojsonData.features) return geojsonData;
+// Process project GeoJSON once on load/refresh and cache project-level depth domain.
+function processGeoJSON(projectId, geojsonData) {
+    const pid = String(projectId);
+    if (!geojsonData || !Array.isArray(geojsonData.features)) {
+        State.projectDepthDomains.set(pid, null);
+        return geojsonData;
+    }
+
     const processed = JSON.parse(JSON.stringify(geojsonData));
-
-    // First pass: Calculate Depth Range and Normalize
-    // Depth mapping: compute average depth per section_name from Point features
-    const sectionDepthAccumulator = new Map();
-
-    processed.features.forEach(feature => {
-        const props = feature?.properties;
-        const sectionName = DepthUtils.getFeatureSectionName(props);
-        const pointDepth = DepthUtils.getFeatureDepthValue(props);
-
-        if (
-            feature &&
-            feature.geometry &&
-            feature.geometry.type === 'Point' &&
-            sectionName != null &&
-            typeof pointDepth === 'number' && isFinite(pointDepth)
-        ) {
-            const key = sectionName;
-            const arr = sectionDepthAccumulator.get(key) || [];
-            arr.push(pointDepth);
-            sectionDepthAccumulator.set(key, arr);
-        }
-    });
-
-    const sectionDepthAvgMap = new Map();
-    sectionDepthAccumulator.forEach((arr, key) => {
-        if (arr.length > 0) {
-            const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
-            sectionDepthAvgMap.set(key, avg);
-            if (typeof window.depthMin === 'undefined') {
-                window.depthMin = Infinity;
-                window.depthMax = -Infinity;
-            }
-            window.depthMax = Math.max(window.depthMax, avg);
-            window.depthAvailable = true;
-        }
-    });
-
-    // Also include depths specified directly on LineString features
-    processed.features.forEach(feature => {
-        const d = DepthUtils.getFeatureDepthValue(feature?.properties);
-        if (
-            feature &&
-            feature.geometry &&
-            feature.geometry.type === 'LineString' &&
-            typeof d === 'number' &&
-            isFinite(d)
-        ) {
-            if (typeof window.depthMax === 'undefined') {
-                window.depthMax = d;
-            } else {
-                window.depthMax = Math.max(window.depthMax, d);
-            }
-            window.depthAvailable = true;
-        }
-    });
-
-    // Second pass: Normalize and Force Zero Altitude
-    const maxVal = (window.depthAvailable && Number.isFinite(window.depthMax)) ? window.depthMax : 9999;
-    const range = Math.max(1e-9, maxVal);
+    const sectionDepthAvgMap = buildSectionDepthAverageMap(processed.features);
+    const projectDepthDomain = computeProjectDepthDomain(processed, sectionDepthAvgMap);
+    State.projectDepthDomains.set(pid, projectDepthDomain);
+    const maxVal = projectDepthDomain ? Math.max(1e-9, projectDepthDomain.max) : 1;
 
     function forceZero(c) {
+        if (!Array.isArray(c) || c.length === 0) return c;
         if (typeof c[0] === 'number') return c.length >= 3 ? [c[0], c[1], 0] : c;
         return c.map(forceZero);
     }
 
-    processed.features.forEach(f => {
-        // Normalize Depth
-        if (window.depthAvailable && f.geometry.type === 'LineString' && f.properties) {
-            const lineDepth = DepthUtils.getFeatureDepthValue(f.properties);
-            const sectionKey = DepthUtils.getFeatureSectionName(f.properties);
-            const sectionDepth = sectionKey ? sectionDepthAvgMap.get(sectionKey) : undefined;
-
-            const depthValue = (typeof lineDepth === 'number' && isFinite(lineDepth))
-                ? lineDepth
-                : (typeof sectionDepth === 'number' && isFinite(sectionDepth) ? sectionDepth : undefined);
-
-            if (typeof depthValue === 'number') {
-                const norm = depthValue / range;
-                f.properties.depth_norm = Math.min(Math.max(norm, 0), 1);
-                // Store raw depth for hover tooltip (in feet as per source data)
-                f.properties.depth_val = depthValue;
+    processed.features.forEach((feature) => {
+        // Stamp canonical depth values on lines once; style expressions use depth_val.
+        if (feature?.geometry?.type === 'LineString' && feature.properties) {
+            const depthValue = resolveLineDepthValue(feature.properties, sectionDepthAvgMap);
+            if (typeof depthValue === 'number' && Number.isFinite(depthValue)) {
+                const norm = depthValue / maxVal;
+                feature.properties.depth_norm = Math.min(Math.max(norm, 0), 1);
+                feature.properties.depth_val = depthValue;
+            } else {
+                delete feature.properties.depth_norm;
+                delete feature.properties.depth_val;
             }
         }
 
         // Force Z=0
-        if (f.geometry && f.geometry.coordinates) {
-            f.geometry.coordinates = forceZero(f.geometry.coordinates);
+        if (feature?.geometry?.coordinates) {
+            feature.geometry.coordinates = forceZero(feature.geometry.coordinates);
         }
     });
-
-    // Trigger legend update event
-    if (window.depthAvailable) {
-        window.dispatchEvent(new CustomEvent('speleo:depth-data-updated', {
-            detail: { max: window.depthMax }
-        }));
-    }
 
     return processed;
 }
@@ -263,6 +206,36 @@ export const Layers = {
         return Config.projects
             .map(project => String(project.id))
             .filter(projectId => this.isProjectVisible(projectId));
+    },
+
+    getActiveDepthDomain: function () {
+        return State.activeDepthDomain;
+    },
+
+    emitDepthDomainUpdated: function () {
+        const depthDomain = State.activeDepthDomain;
+        const detail = {
+            domain: depthDomain,
+            available: Boolean(depthDomain),
+            max: depthDomain ? depthDomain.max : null
+        };
+
+        if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') {
+            return;
+        }
+
+        window.dispatchEvent(new CustomEvent('speleo:depth-domain-updated', { detail }));
+        // Keep legacy event for existing listeners.
+        window.dispatchEvent(new CustomEvent('speleo:depth-data-updated', { detail }));
+    },
+
+    recomputeActiveDepthDomain: function () {
+        const activeDomains = this.getVisibleProjectIds().map((projectId) => {
+            return State.projectDepthDomains.get(String(projectId)) || null;
+        });
+        State.activeDepthDomain = mergeDepthDomains(activeDomains);
+        this.emitDepthDomainUpdated();
+        return State.activeDepthDomain;
     },
 
     /**
@@ -556,36 +529,57 @@ export const Layers = {
 
         // Update map visibility in one place for project layers and scoped markers.
         this.applyProjectVisibility(pid);
+
+        this.recomputeActiveDepthDomain();
+        if (this.colorMode === 'depth') {
+            this.applyDepthLineColors();
+        }
+    },
+
+    forEachProjectLineLayer: function (callback) {
+        const map = State.map;
+        if (!map) return;
+
+        State.allProjectLayers.forEach((layers, projectId) => {
+            layers.forEach((layerId) => {
+                const layer = map.getLayer(layerId);
+                if (layer && layer.type === 'line') {
+                    callback(layerId, String(projectId));
+                }
+            });
+        });
+    },
+
+    applyProjectLineColors: function () {
+        const map = State.map;
+        if (!map) return;
+
+        this.forEachProjectLineLayer((layerId, projectId) => {
+            map.setPaintProperty(layerId, 'line-color', Colors.getProjectColor(projectId));
+        });
+    },
+
+    applyDepthLineColors: function () {
+        const map = State.map;
+        if (!map) return;
+
+        const depthPaint = Colors.getDepthPaint(State.activeDepthDomain);
+        this.forEachProjectLineLayer((layerId) => {
+            map.setPaintProperty(layerId, 'line-color', depthPaint);
+        });
     },
 
     setColorMode: function (mode) {
         if (mode !== 'project' && mode !== 'depth') return;
         this.colorMode = mode;
 
-        const map = State.map;
-        if (!map) return;
+        if (mode === 'depth') {
+            this.recomputeActiveDepthDomain();
+            this.applyDepthLineColors();
+            return;
+        }
 
-        // Iterate all project layers
-        State.allProjectLayers.forEach((layers, projectId) => {
-            layers.forEach(layerId => {
-                if (map.getLayer(layerId) && map.getLayer(layerId).type === 'line') {
-                    // Only apply to line layers (survey lines)
-                    if (mode === 'project') {
-                        const color = Colors.getProjectColor(projectId);
-                        map.setPaintProperty(layerId, 'line-color', color);
-                    } else {
-                        // Depth mode
-                        // We need depth range. For now, use fixed range or try to guess.
-                        // Ideally we stored range per project.
-                        // Let's assume 0 to 500m for now.
-                        map.setPaintProperty(layerId, 'line-color', Colors.getDepthPaint(0, 500));
-                    }
-                }
-            });
-        });
-
-        // Update Legend visibility (if legend logic existed in Layers, or dispatch event)
-        // window.dispatchEvent(new CustomEvent('speleo:color-mode-changed', { detail: { mode } }));
+        this.applyProjectLineColors();
     },
 
     addProjectGeoJSON: async function (projectId, url) {
@@ -601,7 +595,7 @@ export const Layers = {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const rawData = await response.json();
-                data = processGeoJSON(rawData);
+                data = processGeoJSON(projectId, rawData);
 
                 // Cache line features for magnetic snapping
                 Geometry.cacheLineFeatures(projectId, data);
@@ -612,7 +606,7 @@ export const Layers = {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const rawData = await response.json();
-                data = processGeoJSON(rawData);
+                data = processGeoJSON(projectId, rawData);
 
                 // Cache line features for magnetic snapping
                 Geometry.cacheLineFeatures(projectId, data);
@@ -676,7 +670,9 @@ export const Layers = {
                         'line-cap': 'round'
                     },
                     paint: {
-                        'line-color': this.colorMode === 'project' ? color : Colors.getDepthPaint(0, 500),
+                        'line-color': this.colorMode === 'project'
+                            ? color
+                            : Colors.getDepthPaint(State.activeDepthDomain),
                         // Thicker lines at low zoom for visibility from high altitude
                         'line-width': ['interpolate', ['linear'], ['zoom'], 0, 2, 6, 2.5, 10, 3, 14, 4, 18, 6],
                         'line-opacity': 1
@@ -756,6 +752,11 @@ export const Layers = {
 
             if (!bounds.isEmpty()) {
                 State.projectBounds.set(String(projectId), bounds);
+            }
+
+            this.recomputeActiveDepthDomain();
+            if (this.colorMode === 'depth') {
+                this.applyDepthLineColors();
             }
 
         } catch (e) {

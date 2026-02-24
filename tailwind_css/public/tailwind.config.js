@@ -1,13 +1,13 @@
 module.exports = {
     content: [
         // Templates files
-        '../../frontend_public/templates/**/*.html',
+        './frontend_public/templates/**/*.html',
 
         // JS files that might contain Tailwind CSS classes
-        '../../frontend_public/static/js/*.js',
+        './frontend_public/static/js/*.js',
 
         // Python files that contain Tailwind CSS classes
-        '../../frontend_public/templatetags/people_tags.py'
+        './frontend_public/templatetags/people_tags.py'
     ],
     theme: {
         extend: {

@@ -70,16 +70,24 @@ export const Colors = {
         gpsTrackColorMap.clear();
     },
 
-    // Interpolation expression for depth
-    // Uses normalized depth (0 to 1) calculated in Layers.js processGeoJSON
-    getDepthPaint: function(minDepth = 0, maxDepth = 500) {
+    // Interpolation expression for depth using active merged domain.
+    // Falls back to gray when no active depth domain is available.
+    getDepthPaint: function(depthDomain = null) {
+        const maxDepth = depthDomain && Number.isFinite(depthDomain.max)
+            ? Math.max(1e-9, depthDomain.max)
+            : null;
+        if (!maxDepth) {
+            return '#999999';
+        }
+
+        const midDepth = maxDepth / 2;
         return [
             'case',
-            ['has', 'depth_norm'],
-            ['interpolate', ['linear'], ['get', 'depth_norm'],
+            ['has', 'depth_val'],
+            ['interpolate', ['linear'], ['max', 0, ['coalesce', ['to-number', ['get', 'depth_val']], 0]],
                 0, '#4575b4',
-                0.5, '#e6f598',
-                1, '#d73027'
+                midDepth, '#e6f598',
+                maxDepth, '#d73027'
             ],
             '#999999' // Fallback color if no depth
         ];
