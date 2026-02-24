@@ -52,10 +52,9 @@ export const StationManager = {
 
     async loadStationsForProject(projectId) {
         try {
-            // Skip loading stations if user only has WEB_VIEWER access on this project
-            const proj = Config.projects.find(p => p.id === String(projectId));
-            if (proj && proj.permissions === 'WEB_VIEWER') {
-                console.log('⏭️ Skipping station load for WEB_VIEWER project', projectId);
+            // Skip loading stations when project read access is not granted.
+            if (!Config.hasProjectAccess(projectId, 'read')) {
+                console.log('⏭️ Skipping station load without project read access', projectId);
                 return [];
             }
 

@@ -193,7 +193,7 @@ export const Interactions = {
 
             if (stationFeature) {
                 const projectId = Geometry.findProjectForFeature(stationFeature, map, State.allProjectLayers);
-                if (Config.hasProjectWriteAccess(projectId)) {
+                if (Config.hasScopedAccess('project', projectId, 'write')) {
                     isPotentialDrag = true;
                     hasMoved = false;
                     isDragging = false;
@@ -217,18 +217,21 @@ export const Interactions = {
             );
 
             if (cylinderInstallFeature) {
-                isPotentialDrag = true;
-                hasMoved = false;
-                isDragging = false;
-                draggedFeatureId = cylinderInstallFeature.id;
-                draggedType = 'cylinder-install';
-                originalCoords = cylinderInstallFeature.geometry.coordinates.slice();
-                mouseDownPoint = e.point;
-                draggedProjectId = null;
-                currentSnapResult = null;
+                const installProjectId = cylinderInstallFeature.properties?.project_id;
+                if (Config.hasScopedAccess('project', installProjectId, 'write')) {
+                    isPotentialDrag = true;
+                    hasMoved = false;
+                    isDragging = false;
+                    draggedFeatureId = cylinderInstallFeature.id;
+                    draggedType = 'cylinder-install';
+                    originalCoords = cylinderInstallFeature.geometry.coordinates.slice();
+                    mouseDownPoint = e.point;
+                    draggedProjectId = null;
+                    currentSnapResult = null;
 
-                map.dragPan.disable();
-                return;
+                    map.dragPan.disable();
+                    return;
+                }
             }
 
             // Check Exploration Lead
@@ -237,18 +240,21 @@ export const Interactions = {
             );
 
             if (explorationLeadFeature) {
-                isPotentialDrag = true;
-                hasMoved = false;
-                isDragging = false;
-                draggedFeatureId = explorationLeadFeature.id;
-                draggedType = 'exploration-lead';
-                originalCoords = explorationLeadFeature.geometry.coordinates.slice();
-                mouseDownPoint = e.point;
-                draggedProjectId = null;
-                currentSnapResult = null;
+                const leadProjectId = explorationLeadFeature.properties?.project_id;
+                if (Config.hasScopedAccess('project', leadProjectId, 'write')) {
+                    isPotentialDrag = true;
+                    hasMoved = false;
+                    isDragging = false;
+                    draggedFeatureId = explorationLeadFeature.id;
+                    draggedType = 'exploration-lead';
+                    originalCoords = explorationLeadFeature.geometry.coordinates.slice();
+                    mouseDownPoint = e.point;
+                    draggedProjectId = null;
+                    currentSnapResult = null;
 
-                map.dragPan.disable();
-                return;
+                    map.dragPan.disable();
+                    return;
+                }
             }
 
             // Check Landmark

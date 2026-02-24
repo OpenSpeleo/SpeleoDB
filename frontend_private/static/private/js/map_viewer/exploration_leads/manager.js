@@ -55,10 +55,9 @@ export const ExplorationLeadManager = {
      */
     async loadLeadsForProject(projectId) {
         try {
-            // Skip loading leads if user only has WEB_VIEWER access on this project
-            const proj = Config.projects.find(p => p.id === String(projectId));
-            if (proj && proj.permissions === 'WEB_VIEWER') {
-                console.log('⏭️ Skipping exploration leads load for WEB_VIEWER project', projectId);
+            // Skip loading leads when project read access is not granted.
+            if (!Config.hasProjectAccess(projectId, 'read')) {
+                console.log('⏭️ Skipping exploration leads load without project read access', projectId);
                 return [];
             }
 
@@ -106,7 +105,7 @@ export const ExplorationLeadManager = {
         // Load leads for each project user has read access to (excludes WEB_VIEWER)
         for (const project of Config.projects) {
             // Skip projects with only web viewer permission
-            if (!Config.hasProjectReadAccess(project.id)) {
+            if (!Config.hasProjectAccess(project.id, 'read')) {
                 continue;
             }
 

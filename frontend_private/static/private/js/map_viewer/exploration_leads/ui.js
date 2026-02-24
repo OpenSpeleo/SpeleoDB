@@ -109,8 +109,9 @@ export const ExplorationLeadUI = {
         const coords = lead.coordinates;
         const lat = coords[1].toFixed(7);
         const lng = coords[0].toFixed(7);
-        const hasWriteAccess = lead.projectId && Config.hasProjectWriteAccess(lead.projectId);
-        const hasAdminAccess = lead.projectId && Config.hasProjectAdminAccess && Config.hasProjectAdminAccess(lead.projectId);
+        const access = Config.getScopedAccess('project', lead.projectId);
+        const hasWriteAccess = access.write;
+        const hasAdminAccess = access.delete;
 
         const content = `
             <div class="space-y-4">

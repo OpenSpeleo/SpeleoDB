@@ -23,18 +23,11 @@ export const StationResources = {
         currentStationId = stationId;
         // Check both subsurface and surface stations
         const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
-        const isSurfaceStation = station?.network || station?.station_type === 'surface';
         currentProjectId = station?.project || station?.network;
 
-        // Use appropriate permission check based on station type
-        let hasWriteAccess, hasAdminAccess;
-        if (isSurfaceStation) {
-            hasWriteAccess = Config.hasNetworkWriteAccess(station?.network);
-            hasAdminAccess = Config.hasNetworkAdminAccess(station?.network);
-        } else {
-            hasWriteAccess = Config.hasProjectWriteAccess(currentProjectId);
-            hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(currentProjectId) : hasWriteAccess;
-        }
+        const stationAccess = Config.getStationAccess(station);
+        const hasWriteAccess = stationAccess.write;
+        const hasAdminAccess = stationAccess.delete;
 
         // Show loading overlay
         const loadingOverlay = Utils.showLoadingOverlay('Loading station resources...');

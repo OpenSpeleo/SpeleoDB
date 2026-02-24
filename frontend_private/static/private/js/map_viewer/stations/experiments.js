@@ -22,6 +22,10 @@ let experimentDataRows = [];
 let currentStationId = null;
 let currentProjectId = null;
 
+function getExperimentScopeAccess(parentId, isSurfaceStation) {
+    return Config.getScopedAccess(isSurfaceStation ? 'network' : 'project', parentId);
+}
+
 /**
  * Sort experiment fields by their order property
  */
@@ -94,13 +98,9 @@ function validateExperimentField(value, fieldType, required, fieldId = '') {
  */
 function renderExperimentTable(experiment, dataRows, stationId, projectId, isSurfaceStation = false) {
     const sortedFields = sortExperimentFields(experiment.experiment_fields || {});
-    // Use appropriate permission check based on station type
-    const hasWriteAccess = isSurfaceStation 
-        ? Config.hasNetworkWriteAccess(projectId) 
-        : Config.hasProjectWriteAccess(projectId);
-    const isAdmin = isSurfaceStation 
-        ? Config.hasNetworkAdminAccess(projectId) 
-        : Config.hasProjectAdminAccess(projectId);
+    const access = getExperimentScopeAccess(projectId, isSurfaceStation);
+    const hasWriteAccess = access.write;
+    const isAdmin = access.delete;
 
     if (!dataRows || dataRows.length === 0) {
         return `
@@ -199,10 +199,8 @@ export const StationExperiments = {
         const isSurfaceStation = station?.network || station?.station_type === 'surface';
         currentProjectId = station?.project || station?.network || null;
 
-        // Use appropriate permission check based on station type
-        const hasWriteAccess = isSurfaceStation 
-            ? Config.hasNetworkWriteAccess(station?.network)
-            : Config.hasProjectWriteAccess(currentProjectId);
+        const stationAccess = Config.getStationAccess(station);
+        const hasWriteAccess = stationAccess.write;
 
         // Show loading overlay
         const loadingOverlay = Utils.showLoadingOverlay('Loading experiments...');
@@ -378,9 +376,7 @@ export const StationExperiments = {
             const { State } = await import('../state.js');
             const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
             const isSurfaceStation = station?.network || station?.station_type === 'surface';
-            const hasWriteAccess = isSurfaceStation 
-                ? Config.hasNetworkWriteAccess(projectId) 
-                : Config.hasProjectWriteAccess(projectId);
+            const hasWriteAccess = getExperimentScopeAccess(projectId, isSurfaceStation).write;
 
             if (!hasWriteAccess) {
                 Utils.showNotification('warning', 'You have read access and cannot add records.');

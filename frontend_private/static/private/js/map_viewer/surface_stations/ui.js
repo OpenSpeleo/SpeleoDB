@@ -207,7 +207,7 @@ export const SurfaceStationUI = {
     },
 
     getCreateStationButtons() {
-        const networks = Config.networks.filter(n => Config.hasNetworkWriteAccess(n.id));
+        const networks = Config.networks.filter(n => Config.hasNetworkAccess(n.id, 'write'));
 
         if (networks.length === 0) {
             return '<p class="text-sm text-slate-500">You need write access to a network to create surface stations.</p>';
@@ -226,7 +226,7 @@ export const SurfaceStationUI = {
 
     showCreateStationModal(preselectedNetworkId = null) {
         // Get networks with write access
-        const networks = Config.networks.filter(n => Config.hasNetworkWriteAccess(n.id));
+        const networks = Config.networks.filter(n => Config.hasNetworkAccess(n.id, 'write'));
 
         if (networks.length === 0) {
             Utils.showNotification('error', 'You need write access to a network to create surface stations.');

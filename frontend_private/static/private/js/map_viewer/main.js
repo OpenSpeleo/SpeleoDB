@@ -164,9 +164,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (!station) break;
 
                     const typeInfo = typeLabels[station.type];
+                    const canDeleteStation = Config.hasScopedAccess('project', station.project, 'delete');
 
-                    // Delete Station (if admin access)
-                    if (Config.hasProjectAdminAccess(station.project)) {
+                    // Delete Station
+                    if (canDeleteStation) {
                         items.push({
                             label: `Delete ${typeInfo.label}`,
                             subtitle: station.name,
@@ -186,14 +187,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case "surface-station":
                     // Get surface station data for coordinates
                     const surface_station = State.allSurfaceStations.get(data.id);
+                    const canDeleteSurfaceStation = surface_station
+                        ? Config.hasScopedAccess('network', surface_station.network, 'delete')
+                        : false;
 
-                    // Delete Surface Station (if network admin access)
-                    if (surface_station && Config.hasNetworkAdminAccess(surface_station.network)) {
+                    // Delete Surface Station
+                    if (surface_station && canDeleteSurfaceStation) {
                         items.push({
                             label: 'Delete Surface Station',
                             subtitle: surface_station.name,
                             icon: '🗑️',
                             onClick: () => StationDetails.confirmDelete(surface_station, 'surface')
+                        });
+                    } else if (surface_station) {
+                        items.push({
+                            label: 'Can not delete Surface Station - Need DELETE access',
+                            subtitle: surface_station.name,
+                            icon: '🔒',
+                            disabled: true
                         });
                     }
 
@@ -221,14 +232,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Get Exploration Lead data
                     const explo_lead = State.explorationLeads.get(data.id);
                     var lineName = explo_lead?.lineName || 'Survey Line';
+                    const canDeleteLead = explo_lead?.projectId
+                        ? Config.hasScopedAccess('project', explo_lead.projectId, 'delete')
+                        : false;
 
                     // Delete Exploration Lead
-                    items.push({
-                        label: 'Delete Exploration Lead',
-                        subtitle: `On ${lineName}`,
-                        icon: '🗑️',
-                        onClick: () => ExplorationLeadUI.showDeleteConfirmModal(data.id, lineName)
-                    });
+                    if (canDeleteLead) {
+                        items.push({
+                            label: 'Delete Exploration Lead',
+                            subtitle: `On ${lineName}`,
+                            icon: '🗑️',
+                            onClick: () => ExplorationLeadUI.showDeleteConfirmModal(data.id, lineName)
+                        });
+                    } else {
+                        items.push({
+                            label: 'Can not delete Exploration Lead - Need DELETE access',
+                            subtitle: `On ${lineName}`,
+                            icon: '🔒',
+                            disabled: true
+                        });
+                    }
                     break;
 
                 default:
@@ -244,9 +267,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // Near a survey line - show all line-related options
                         const nearestProjectId = snapCheck.projectId;
                         const lineName = snapCheck.lineName || 'Survey Line';
-                        const canCreate = nearestProjectId && Config.hasProjectWriteAccess(nearestProjectId);
+                        const canWriteProject = nearestProjectId && Config.hasScopedAccess('project', nearestProjectId, 'write');
 
-                        if (canCreate) {
+                        if (canWriteProject) {
                             Object.entries(typeLabels).forEach(([key, val]) => {
                                 items.push({
                                     label: `Create ${val.label}`,
@@ -284,14 +307,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
 
                         // Install Safety Cylinder - uses new persistent cylinder system
-                        items.push({
-                            label: 'Install Safety Cylinder',
-                            subtitle: `At ${latitude}, ${longitude}`,
-                            icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-5 h-5">`,
-                            onClick: () => {
-                                CylinderInstalls.showInstallModal(snapCheck.coordinates, lineName, nearestProjectId);
-                            }
-                        });
+                        if (canWriteProject) {
+                            items.push({
+                                label: 'Install Safety Cylinder',
+                                subtitle: `At ${latitude}, ${longitude}`,
+                                icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-5 h-5">`,
+                                onClick: () => {
+                                    CylinderInstalls.showInstallModal(snapCheck.coordinates, lineName, nearestProjectId);
+                                }
+                            });
+                        } else {
+                            items.push({
+                                label: 'Install Safety Cylinder',
+                                subtitle: "No write access for this project",
+                                icon: '🔒',
+                                disabled: true
+                            });
+                        }
                     }
                     else {
                         // Landmark creation is always available for authenticated users

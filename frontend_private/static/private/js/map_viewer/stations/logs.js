@@ -27,15 +27,9 @@ export const StationLogs = {
         currentProjectId = station?.project;
         currentNetworkId = station?.network;
         
-        // Use appropriate permission check based on station type
-        let hasWriteAccess, hasAdminAccess;
-        if (isSurfaceStation) {
-            hasWriteAccess = Config.hasNetworkWriteAccess(currentNetworkId);
-            hasAdminAccess = Config.hasNetworkAdminAccess(currentNetworkId);
-        } else {
-            hasWriteAccess = Config.hasProjectWriteAccess(currentProjectId);
-            hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(currentProjectId) : hasWriteAccess;
-        }
+        const stationAccess = Config.getStationAccess(station);
+        const hasWriteAccess = stationAccess.write;
+        const hasAdminAccess = stationAccess.delete;
         
         console.log('📝 StationLogs permissions:', { hasWriteAccess, hasAdminAccess, currentNetworkId, currentProjectId });
 

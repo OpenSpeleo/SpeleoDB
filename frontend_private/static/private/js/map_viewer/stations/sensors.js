@@ -151,9 +151,10 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
     const { State } = await import('../state.js');
     const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
     const isSurfaceStation = station?.network || station?.station_type === 'surface';
-    const hasWriteAccess = isSurfaceStation 
-        ? Config.hasNetworkWriteAccess(projectId) 
-        : Config.hasProjectWriteAccess(projectId);
+    const hasWriteAccess = Config.getScopedAccess(
+        isSurfaceStation ? 'network' : 'project',
+        projectId
+    ).write;
 
     container.innerHTML = `
         <div class="tab-content active">
@@ -322,10 +323,10 @@ export const StationSensors = {
 
     async loadCurrentInstalls(stationId, projectId, subtab = 'current', isSurfaceStation = false) {
         const container = document.getElementById('station-modal-content');
-        // Use appropriate permission check based on station type
-        const hasWriteAccess = isSurfaceStation 
-            ? Config.hasNetworkWriteAccess(projectId) 
-            : Config.hasProjectWriteAccess(projectId);
+        const hasWriteAccess = Config.getScopedAccess(
+            isSurfaceStation ? 'network' : 'project',
+            projectId
+        ).write;
         const loadingOverlay = Utils.showLoadingOverlay('Loading sensor installations...');
 
         currentStationId = stationId;

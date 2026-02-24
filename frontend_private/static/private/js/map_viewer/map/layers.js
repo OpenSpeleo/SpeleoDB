@@ -37,6 +37,13 @@ const ZOOM_LEVELS = {
     GPS_TRACK_LINE: 8,
 };
 
+const PROJECT_SCOPED_MARKER_PROPERTY = 'project_id';
+const PROJECT_SCOPED_MARKER_LAYER_IDS = Object.freeze([
+    'cylinder-installs-layer',
+    'cylinder-installs-labels',
+    'exploration-leads-layer'
+]);
+
 /**
  * Remove map layers first, then their source to avoid dependent-layer issues.
  */
@@ -88,6 +95,16 @@ function getCylinderInstallLabelExpression() {
             'BAR'
         ]
     ];
+}
+
+/**
+ * Add normalized project visibility property to map marker feature properties.
+ */
+function withProjectScopedMarkerProperties(properties, projectId) {
+    return {
+        ...properties,
+        [PROJECT_SCOPED_MARKER_PROPERTY]: projectId ? String(projectId) : null
+    };
 }
 
 // Helper to ensure altitude zero (defined locally or imported if moved to Utils)
@@ -237,6 +254,70 @@ export const Layers = {
         } catch (e) {
             return true;
         }
+    },
+
+    /**
+     * Build list of currently visible project IDs.
+     */
+    getVisibleProjectIds: function () {
+        return Config.projects
+            .map(project => String(project.id))
+            .filter(projectId => this.isProjectVisible(projectId));
+    },
+
+    /**
+     * Filter expression for markers tied to project visibility.
+     * Markers without project scoping remain visible.
+     */
+    getProjectScopedMarkerFilter: function () {
+        const visibleProjectIds = this.getVisibleProjectIds();
+        return [
+            'any',
+            ['!', ['has', PROJECT_SCOPED_MARKER_PROPERTY]],
+            ['==', ['get', PROJECT_SCOPED_MARKER_PROPERTY], null],
+            ['in', ['to-string', ['get', PROJECT_SCOPED_MARKER_PROPERTY]], ['literal', visibleProjectIds]]
+        ];
+    },
+
+    /**
+     * Apply project visibility rules to cross-project marker layers.
+     */
+    applyProjectScopedMarkerVisibility: function () {
+        const map = State.map;
+        if (!map || !map.getStyle()) return;
+
+        const filter = this.getProjectScopedMarkerFilter();
+        PROJECT_SCOPED_MARKER_LAYER_IDS.forEach((layerId) => {
+            if (map.getLayer(layerId)) {
+                map.setFilter(layerId, filter);
+            }
+        });
+    },
+
+    /**
+     * Apply visibility to all tracked layers of one project.
+     */
+    applyProjectLayerVisibility: function (projectId) {
+        const map = State.map;
+        if (!map || !map.getStyle()) return;
+
+        const pid = String(projectId);
+        const isVisible = this.isProjectVisible(pid);
+        const projectLayerIds = State.allProjectLayers.get(pid) || [];
+
+        projectLayerIds.forEach((layerId) => {
+            if (map.getLayer(layerId)) {
+                map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
+            }
+        });
+    },
+
+    /**
+     * Apply complete project visibility rules (project layers + scoped markers).
+     */
+    applyProjectVisibility: function (projectId) {
+        this.applyProjectLayerVisibility(projectId);
+        this.applyProjectScopedMarkerVisibility();
     },
 
     // Network visibility preferences
@@ -473,21 +554,8 @@ export const Layers = {
             }
         }
 
-        // Update Map Layers
-        // All station layers (circles, bone-icons, artifact-icons, labels) are tracked in allProjectLayers
-        if (State.map && State.map.getStyle()) {
-            const layers = State.allProjectLayers.get(pid) || [];
-
-            layers.forEach(layerId => {
-                if (State.map.getLayer(layerId)) {
-                    State.map.setLayoutProperty(
-                        layerId,
-                        'visibility',
-                        isVisible ? 'visible' : 'none'
-                    );
-                }
-            });
-        }
+        // Update map visibility in one place for project layers and scoped markers.
+        this.applyProjectVisibility(pid);
     },
 
     setColorMode: function (mode) {
@@ -663,12 +731,8 @@ export const Layers = {
                 });
                 projectLayers.push(pointLayerId);
 
-                // Initial visibility
-                if (!this.isProjectVisible(projectId)) {
-                    projectLayers.forEach(lid => {
-                        if (map.getLayer(lid)) map.setLayoutProperty(lid, 'visibility', 'none');
-                    });
-                }
+                // Initial visibility is handled by centralized project-visibility logic.
+                this.applyProjectLayerVisibility(projectId);
 
             }
 
@@ -879,14 +943,8 @@ export const Layers = {
             }
         });
 
-        // Respect initial visibility
-        if (!this.isProjectVisible(projectId)) {
-            newLayers.forEach(layerId => {
-                if (map.getLayer(layerId)) {
-                    map.setLayoutProperty(layerId, 'visibility', 'none');
-                }
-            });
-        }
+        // Respect initial visibility through centralized project-layer logic.
+        this.applyProjectLayerVisibility(projectId);
     },
 
     addLandmarkLayer: function (data) {
@@ -1488,10 +1546,10 @@ export const Layers = {
                 type: 'Point',
                 coordinates: marker.coordinates
             },
-            properties: {
+            properties: withProjectScopedMarkerProperties({
                 id: marker.id,
                 lineName: marker.lineName
-            }
+            }, marker.projectId)
         }));
 
         const geojson = {
@@ -1543,6 +1601,8 @@ export const Layers = {
                 });
             }
         }
+
+        this.applyProjectScopedMarkerVisibility();
     },
 
     /**
@@ -1798,6 +1858,8 @@ export const Layers = {
                 'text-halo-width': 1.5
             }
         });
+
+        this.applyProjectScopedMarkerVisibility();
 
         // Reorder to ensure proper z-ordering
         this.reorderLayers();

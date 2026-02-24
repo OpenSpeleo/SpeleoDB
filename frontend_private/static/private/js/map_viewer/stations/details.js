@@ -434,14 +434,16 @@ export const StationDetails = {
         let hasWriteAccess, hasAdminAccess, parentName, parentType;
 
         if (isSurfaceStation) {
-            hasWriteAccess = Config.hasNetworkWriteAccess(parentId);
-            hasAdminAccess = Config.hasNetworkAdminAccess(parentId);
+            const access = Config.getScopedAccess('network', parentId);
+            hasWriteAccess = access.write;
+            hasAdminAccess = access.delete;
             const network = Config.networks.find(n => n.id === String(parentId));
             parentName = network ? network.name : 'Unknown Network';
             parentType = 'Network';
         } else {
-            hasWriteAccess = Config.hasProjectWriteAccess(parentId);
-            hasAdminAccess = Config.hasProjectAdminAccess ? Config.hasProjectAdminAccess(parentId) : hasWriteAccess;
+            const access = Config.getScopedAccess('project', parentId);
+            hasWriteAccess = access.write;
+            hasAdminAccess = access.delete;
             const project = Config.projects.find(p => p.id === String(parentId));
             parentName = project ? project.name : 'Unknown Project';
             parentType = 'Project';
