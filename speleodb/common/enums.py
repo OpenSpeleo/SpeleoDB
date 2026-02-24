@@ -42,7 +42,7 @@ class UserApplication(models.TextChoices):
     ANDROID_APP = "android", "Android"
     ARIANE_APP = "ariane", "Ariane"
     COMPASS_APP = "compass", "Compass"
-    IOS_APP = "iOS", "IOS"
+    IOS_APP = "iOS", "iOS"
     UNITTEST = "unittest", "Unittest"
     WEBSITE = "website", "Website"
     # Fallback
