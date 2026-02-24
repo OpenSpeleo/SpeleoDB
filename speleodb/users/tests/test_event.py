@@ -61,16 +61,17 @@ def test_allauth_signal_creates_website_account_event(
 @pytest.mark.parametrize(
     ("user_agent", "expected_application"),
     [
-        ("Ariane/3.2.0 (iPhone)", UserApplication.ARIANE_APP),
-        ("Compass/1.0.0 (Android)", UserApplication.COMPASS_APP),
+        ("Java-http-client/25", UserApplication.ARIANE_APP),
+        ("Tauri/SpeleoDB-Compass-Sidecar/v1.1.0", UserApplication.COMPASS_APP),
         (
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+            "SpeleoDB-iOS/v1.1.0/device-unknown - iOS",
             UserApplication.IOS_APP,
         ),
         (
-            "Mozilla/5.0 (Linux; Android 14; Pixel 8)",
+            "SpeleoDB-Android/v1.2.0/SM-S931B - Android 16",
             UserApplication.ANDROID_APP,
         ),
+        ("SpeleoDB-Unittest", UserApplication.UNITTEST),
         ("Mozilla/5.0 (X11; Linux x86_64)", UserApplication.UNKNOWN),
     ],
 )

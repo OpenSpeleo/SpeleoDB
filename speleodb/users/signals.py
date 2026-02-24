@@ -79,6 +79,9 @@ def _infer_api_application(user_agent: str) -> UserApplication:
     if "android" in normalized_user_agent:
         return UserApplication.ANDROID_APP
 
+    if "unittest" in normalized_user_agent:
+        return UserApplication.UNITTEST
+
     return UserApplication.UNKNOWN
 
 

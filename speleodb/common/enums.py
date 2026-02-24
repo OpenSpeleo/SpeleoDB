@@ -39,11 +39,13 @@ class UserAction(models.TextChoices):
 
 
 class UserApplication(models.TextChoices):
-    WEBSITE = "website", "Website"
-    IOS_APP = "iOS", "IOS"
     ANDROID_APP = "android", "Android"
     ARIANE_APP = "ariane", "Ariane"
     COMPASS_APP = "compass", "Compass"
+    IOS_APP = "iOS", "IOS"
+    UNITTEST = "unittest", "Unittest"
+    WEBSITE = "website", "Website"
+    # Fallback
     UNKNOWN = "unknown", "Unknown"
 
 
