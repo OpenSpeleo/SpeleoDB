@@ -13,6 +13,8 @@ Unlike product docs, these files prioritize:
 
 - `map-viewer/depth-domain-reactivity.md`
   - depth color mode architecture, cache model, and performance rationale
+- `map-viewer/design-requirements.md`
+  - canonical map viewer feature contracts and guardrails
 - `map-viewer/map_viewer_depth_coloring.md`
   - markdown conversion of `docs/map_viewer_depth_coloring.rst` for agent usage
 - `map-viewer/permissions-and-access.md`

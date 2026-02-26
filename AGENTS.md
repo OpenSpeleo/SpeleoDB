@@ -5,12 +5,70 @@ Guidance for AI/code agents working in the SpeleoDB repository.
 This file is intentionally opinionated and feature-focused so agents can make
 correct changes without re-discovering architecture every session.
 
-## Primary Goals
+## Core Principles
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Principal Engineer standards
+- **Minimat Impact**: Changes should only touch what's necessary. Avoid introducing bugs
+or changing unrelated parts of the code.
+- **Readability & Maintainability**: Preserve product behavior while improving
+maintainability.
+- **Performance Conscious**: Be aware of the performance impact of your changes and try
+to minimize the impact on performance, whether it's N+1 SQL queries or heavy compute.
+- **Refactor as necessary**: Prefer centralized logic over duplicated conditionals or
+per-call custom checks.
+- **Tests are cheap**: Every behavior should be tested. Untested code is broken code.
 
-- Preserve product behavior while improving maintainability.
-- Keep private/public map viewers behaviorally aligned where intended.
-- Prevent regressions in performance-sensitive map features.
-- Prefer centralized logic over duplicated conditionals or per-call custom checks.
+## Task Management
+
+1. **Plan First**: Write plan to `tasks/todos/` with checkable items
+2. **Verify Plan**: Check in before starting implementation
+3. **Track Progress**: Mark items complete as you go
+4. **Explain Changes**: High-level summary at each step
+5. **Document Results**: Add review section to tasks/todo.md"
+6. **Capture Lessons**: Update `tasks/lessons/` after corrections
+7. **Documentation is Key**: Document each feature and design inside `docs/`.
+What is the feature being implemented, the design space and intents and a
+rapid summary of the approach taken with key APIs & concepts.
+
+## Workflow Orchestration
+
+### 1. Plan Node Default
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately - don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
+
+### 2. Subagent Strategy
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One tack per subagent for focused execution
+
+### 3. Self-Improvement Loop
+- After ANY correction from the user: update `tasks/lessons/` with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
+
+### 4. Verification Before Done
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+### 5. Demand Elegance (Balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes - don't over-engineer
+- Challenge your own work before presenting it
+
+### 6. Autonomous Bug Fizing
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests - then resolve them
+- Zero context switching required from the user
+- Go fix failing CI tests without being told how
+
+
 
 ## Repository Map
 
@@ -19,8 +77,11 @@ correct changes without re-discovering architecture every session.
 - `frontend_public/`: public UI assets and templates.
 - `frontend_private/static/private/js/map_viewer/`: core map viewer modules.
 - `frontend_public/static/js/gis_view_main.js`: public viewer entrypoint.
-- `tailwind_css/static_src/`: Tailwind source styles and Tailwind configs.
+- `tailwind_css/`: Tailwind source styles and Tailwind configs.
 - `docs/`: agent-focused design and implementation docs.
+- `tasks/lessons/`: agent-focused lesson docs - errors not to reproduce.
+- `tasks/todos/`: agent-focused todo docs - working documents for the tasks
+being performed
 
 ## JavaScript Workspace Contract
 
@@ -51,84 +112,36 @@ The repository now uses a single Node workspace at the repo root.
 
 ## Map Viewer Design Guardrails
 
-## Shared code, two entrypoints
+- Keep private/public map viewers behaviorally aligned where intended.
+- The code between private & public map viewer should be as much as
+possible re-used, no re-implementation.
 
 Most map viewer behavior is implemented in shared private modules and consumed by:
-
 - private entrypoint: `frontend_private/static/private/js/map_viewer/main.js`
 - public entrypoint: `frontend_public/static/js/gis_view_main.js`
 
 When touching shared behavior, explicitly verify both entrypoints are still valid.
 
-## Permission logic is centralized
-
-Use `frontend_private/static/private/js/map_viewer/config.js` as the source of truth.
-
-Preferred APIs:
-
-- `Config.hasProjectAccess(projectId, action)`
-- `Config.hasNetworkAccess(networkId, action)`
-- `Config.hasScopedAccess(scopeType, scopeId, action)`
-- `Config.getStationAccess(station)`
-
-Actions are normalized as `read | write | delete`.
-Do not add one-off permission branches in UI modules when central APIs can be used.
-
-## Depth coloring must remain reactive and cached
-
-Depth mode behavior uses per-project domain cache + merged active domain:
-
-- Per-project domains stored in `State.projectDepthDomains`
-- Active domain stored in `State.activeDepthDomain`
-- Merge utility: `mergeDepthDomains(...)` in `map/depth.js`
-- Layer repaint in depth mode uses active merged domain
-- Legend behavior is centralized in `components/depth_legend.js`
-
-Critical performance invariant:
-
-- Project visibility toggles in depth mode should be `O(active projects)`,
-  not `O(active features)`.
-
-## Layer/source lifecycle discipline
-
-When refreshing map data:
-
-- Remove dependent layers first, then remove source.
-- Reuse teardown helpers (for consistency and regression prevention).
-- Avoid ad hoc `removeSource(...)` usage that skips dependent layers.
-
-## Visibility behavior
-
-Project visibility should affect:
-
-- project survey layers
-- project-scoped markers (for example leads and cylinder installs)
-- depth-domain recomputation in depth mode
-
-Avoid feature-specific visibility logic drift; prefer shared visibility utilities.
-
-## Context menu icon behavior
-
-Context menu icon rendering is cache-backed to avoid repeated network fetches.
-Do not regress into rebuilding image URLs in ways that re-trigger network loads
-on every menu open.
-
 ## Testing Requirements
 
-For map viewer/frontend changes, validate both lint and tests:
+For frontend (public or private) changes, validate tests:
 
-- `npm run lint:js`
 - `npm run test:js`
 
-Key current test files:
+Backend/API changes should also run relevant `pytest` targets:
 
-- `frontend_private/static/private/js/map_viewer/config.permissions.test.js`
-- `frontend_private/static/private/js/map_viewer/map/depth.test.js`
-- `frontend_private/static/private/js/map_viewer/map/layers.depth_domain.test.js`
-- `frontend_private/static/private/js/map_viewer/components/depth_legend.test.js`
-- `frontend_public/static/js/gis_view_main.test.js`
+- `pytest`
 
-Backend/API changes should also run relevant `pytest` targets.
+New tests should respects coding existing structures
+
+## Linter
+
+Both frontend and backend include linting:
+
+- Javascript: `npm run lint:js`
+- Python: `ruff` & `mypy`
+
+All python code must include type checking for every variable or function.
 
 ## Documentation Expectations for Agents
 
@@ -154,14 +167,16 @@ Before finishing map viewer work, check:
 
 ## Practical Do/Do-Not
 
-Do:
+### Do:
 
-- Prefer shared utilities/modules over copy-paste.
+- Prefer shared utilities/modules over code duplication.
 - Keep behavior parity for public/private map flows when intended.
-- Add focused tests when changing invariants.
+- Add focused tests when changing anything of significance.
+- Be performance conscious.
+- Systematically document all features & architectural decisions.
 
-Do not:
+### Do not:
 
-- Reintroduce nested Node toolchains.
-- Bypass centralized permission APIs.
-- Add expensive computations into frequent map interaction paths.
+- Duplicate code or logic
+- Introduce "quick patches" that hinder long term maintainability.
+- Add expensive computations.
