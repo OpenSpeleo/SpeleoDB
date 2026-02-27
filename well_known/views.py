@@ -19,13 +19,16 @@ if TYPE_CHECKING:
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def assetlinks(request: HttpRequest) -> JsonResponse:
-    """This view allow SpeleoDB Android app to use password managers with
-    `www.speleodb.org` domain"""
+    """This view allow SpeleoDB Android app to:
+    - use password managers with `www.speleodb.org` domain
+    - use speleodb://open links
+    """
     return JsonResponse(
         [
             {
                 "relation": [
                     "delegate_permission/common.get_login_creds",
+                    "delegate_permission/common.handle_all_urls",
                 ],
                 "target": {
                     "namespace": "android_app",
@@ -44,11 +47,26 @@ def assetlinks(request: HttpRequest) -> JsonResponse:
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def apple_app_site_association(request: HttpRequest) -> JsonResponse:
-    """This view allow SpeleoDB iOS app to use password managers with
-    `www.speleodb.org` domain"""
+    """This view allow SpeleoDB iOS app to:
+    - use password managers with `www.speleodb.org` domain
+    - use speleodb://open links
+    """
 
     return JsonResponse(
-        {"webcredentials": {"apps": ["UDUF7J66TN.org.speleodb.app"]}},
+        {
+            "applinks": {
+                "details": [
+                    {
+                        "appIDs": ["UDUF7J66TN.org.speleodb.app"],
+                        "components": [
+                            {"/": "/app", "comment": "Open app landing"},
+                            {"/": "/app/*", "comment": "Future deep link paths"},
+                        ],
+                    }
+                ]
+            },
+            "webcredentials": {"apps": ["UDUF7J66TN.org.speleodb.app"]},
+        },
         content_type="application/json",
     )
 
