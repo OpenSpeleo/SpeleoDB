@@ -230,7 +230,9 @@ class ProjectStationsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixin):
         """Get all stations for a project in a map-friendly format."""
         project = self.get_object()
 
-        stations = SubSurfaceStation.objects.filter(project=project)
+        stations = SubSurfaceStation.objects.filter(project=project).select_related(
+            "tag", "project"
+        )
 
         serializer = self.get_serializer(stations, many=True)
 
@@ -367,7 +369,9 @@ class NetworkStationsGeoJSONView(
         """Get all stations for a network in a map-friendly format."""
         network = self.get_object()
 
-        stations = SurfaceStation.objects.filter(network=network)
+        stations = SurfaceStation.objects.filter(network=network).select_related(
+            "tag", "network"
+        )
 
         serializer = self.get_serializer(stations, many=True)
 

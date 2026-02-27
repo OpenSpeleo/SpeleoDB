@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from typing import TYPE_CHECKING
 from typing import Any
-from venv import logger
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from django.db.models.base import ModelBase
+
+logger = logging.getLogger(__name__)
 
 sha1_regex = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 
@@ -135,11 +137,12 @@ class GISView(models.Model):
             List of dicts containing project info and signed URLs
         """
 
-        # Optimize: prefetch GeoJSON to avoid N+1 queries
         project_views = self.project_views.select_related("project").prefetch_related(
             Prefetch(
                 "project__geojsons",
-                queryset=ProjectGeoJSON.objects.order_by("-commit__authored_date"),
+                queryset=ProjectGeoJSON.objects.select_related("commit").order_by(
+                    "-commit__authored_date"
+                ),
             )
         )
 
@@ -150,21 +153,21 @@ class GISView(models.Model):
 
             proj_geojson: ProjectGeoJSON
 
-            # Get the appropriate GeoJSON
             if view_project.use_latest:
-                try:
-                    proj_geojson = project.geojsons.all()[0]
-                except IndexError:
+                if (geojson := project.geojsons.first()) is None:
                     continue
 
+                proj_geojson = geojson
+
             elif view_project.commit_sha:
-                # Find in prefetched data
-                try:
-                    proj_geojson = project.geojsons.filter(
-                        commit__id=view_project.commit_sha
-                    )[0]
-                except IndexError:
+                matched = project.geojsons.filter(
+                    commit_id=view_project.commit_sha
+                ).first()
+
+                if matched is None:
                     continue
+
+                proj_geojson = matched
 
             else:
                 logger.error(
@@ -209,7 +212,7 @@ class GISView(models.Model):
                     "project_geojson"
                 ).get_signed_download_url(expires_in=expires_in)
 
-            except ValidationError, Exception:  # noqa: BLE001
+            except ValidationError, Exception:
                 logger.exception(
                     "Error generating signed URL for project %s in view %s",
                     geojson_data["project_id"],

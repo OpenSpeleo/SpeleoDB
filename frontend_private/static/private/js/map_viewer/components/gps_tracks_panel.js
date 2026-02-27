@@ -1,4 +1,4 @@
-import { Config } from '../config.js';
+import { Config, DEFAULTS } from '../config.js';
 import { Layers } from '../map/layers.js';
 import { State } from '../state.js';
 import { Colors } from '../map/colors.js';
@@ -171,8 +171,9 @@ export const GPSTracksPanel = {
             item.dataset.color = color;
             
             // Truncate long track names
-            const displayName = track.name.length > 30 
-                ? track.name.substring(0, 27) + '...' 
+            const maxLen = DEFAULTS.UI.TRACK_NAME_MAX_LENGTH;
+            const displayName = track.name.length > maxLen 
+                ? track.name.substring(0, maxLen - 3) + '...' 
                 : track.name;
             
             item.innerHTML = `
@@ -245,7 +246,7 @@ export const GPSTracksPanel = {
         const bounds = State.gpsTrackBounds.get(tid);
         
         if (bounds && State.map) {
-            State.map.fitBounds(bounds, { padding: 50, maxZoom: 16 });
+            State.map.fitBounds(bounds, { padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING, maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM });
         } else {
             console.log(`📍 GPS track ${trackId} bounds not available yet`);
         }

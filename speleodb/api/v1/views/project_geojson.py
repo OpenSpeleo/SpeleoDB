@@ -107,9 +107,6 @@ class OGCGISUserProjectsApiView(
     queryset = Token.objects.all()
     lookup_field = "key"
 
-    def get_serializer(self, *args: Any, **kwargs: Any) -> BaseSerializer[Token]:
-        return super().get_serializer(*args, **kwargs)
-
     def get_ogc_layer_data(self) -> list[dict[str, Any]]:
         token: Token = self.get_object()
         projects = self.get_user_projects(token.user)

@@ -16,13 +16,37 @@ considering a change complete.
 
 ## Frontend Test Scope
 
-Current map viewer tests include:
+Current map viewer tests (20 files, 484+ tests):
 
-- `frontend_private/static/private/js/map_viewer/config.permissions.test.js`
-- `frontend_private/static/private/js/map_viewer/map/depth.test.js`
-- `frontend_private/static/private/js/map_viewer/map/layers.depth_domain.test.js`
-- `frontend_private/static/private/js/map_viewer/components/depth_legend.test.js`
-- `frontend_public/static/js/gis_view_main.test.js`
+### Core modules
+- `frontend_private/.../map_viewer/api.test.js` — API client methods, request config, error handling
+- `frontend_private/.../map_viewer/config.permissions.test.js` — permission matrix, rank model, scope routing
+- `frontend_private/.../map_viewer/config.loading.test.js` — project/network/GPS loading, caching, setPublicProjects
+- `frontend_private/.../map_viewer/state.test.js` — state fields, init() reset behavior
+
+### Map modules
+- `frontend_private/.../map_viewer/map/depth.test.js` — depth domain merging
+- `frontend_private/.../map_viewer/map/layers.depth_domain.test.js` — depth domain reactivity
+- `frontend_private/.../map_viewer/map/geometry.test.js` — Haversine, snap points, snap indicator, snap radius
+
+### Components
+- `frontend_private/.../map_viewer/components/depth_legend.test.js` — legend rendering
+- `frontend_private/.../map_viewer/components/context_menu.test.js` — menu rendering, icon caching, positioning
+- `frontend_private/.../map_viewer/components/modal.test.js` — base HTML, open/close lifecycle
+- `frontend_private/.../map_viewer/components/notification.test.js` — toast creation, auto-removal
+- `frontend_private/.../map_viewer/components/project_panel.test.js` — panel init, toggle, sorting
+- `frontend_private/.../map_viewer/components/upload.test.js` — progress bar, XHR upload lifecycle
+
+### Entity managers
+- `frontend_private/.../map_viewer/stations/manager.test.js` — CRUD, caching, cache invalidation
+- `frontend_private/.../map_viewer/stations/tags.test.js` — tag loading, selection, color updates
+- `frontend_private/.../map_viewer/stations/logs.test.js` — log rendering, access control, XSS safety
+- `frontend_private/.../map_viewer/surface_stations/manager.test.js` — CRUD, network scoping
+- `frontend_private/.../map_viewer/landmarks/manager.test.js` — CRUD, drag revert
+- `frontend_private/.../map_viewer/exploration_leads/manager.test.js` — CRUD, project filtering
+
+### Public viewer
+- `frontend_public/static/js/gis_view_main.test.js` — initialization, zoom limits, error handling
 
 ## Feature-Level Validation Expectations
 

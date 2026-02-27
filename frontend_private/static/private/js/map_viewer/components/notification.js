@@ -1,5 +1,7 @@
+import { DEFAULTS } from '../config.js';
+
 export const Notification = {
-    show(type, message, duration = 3000) {
+    show(type, message, duration = DEFAULTS.UI.NOTIFICATION_DURATION_MS) {
         // Reuse existing toast or create one
         // The legacy code used Alpine or just global HTML.
         // We'll create a simple container if it doesn't exist
@@ -30,7 +32,7 @@ export const Notification = {
         
         setTimeout(() => {
             el.classList.add('opacity-0', 'translate-y-2');
-            setTimeout(() => el.remove(), 300);
+            setTimeout(() => el.remove(), DEFAULTS.UI.NOTIFICATION_FADEOUT_MS);
         }, duration);
     }
 };

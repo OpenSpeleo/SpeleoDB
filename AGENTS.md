@@ -180,3 +180,11 @@ Before finishing map viewer work, check:
 - Duplicate code or logic
 - Introduce "quick patches" that hinder long term maintainability.
 - Add expensive computations.
+- Reintroduce nested Node toolchains.
+- Bypass centralized permission APIs.
+
+### Coding rules
+
+See `docs/coding-rules.md` for JavaScript constant centralization, Python
+import ordering, and Django ORM rules.
+These are **hard rules** — violations must be fixed before merging.

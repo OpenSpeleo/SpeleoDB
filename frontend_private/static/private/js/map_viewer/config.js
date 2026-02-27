@@ -1,5 +1,74 @@
 import { API } from './api.js';
 
+// ============================================================
+// DEFAULTS — single source of truth for every tuneable constant
+// in the map viewer. No magic numbers anywhere else.
+// ============================================================
+export const DEFAULTS = Object.freeze({
+    MAP: {
+        STYLE: 'mapbox://styles/mapbox/satellite-streets-v12',
+        CENTER: [0, 0],
+        INITIAL_ZOOM: 0,
+        LIMITED_MAX_ZOOM: 13,
+        PRECISE_MAX_ZOOM: 22,
+        FLY_TO_ZOOM: 18,
+        FIT_BOUNDS_PADDING: 50,
+        FIT_BOUNDS_MAX_ZOOM: 16,
+        SCALE_CONTROL_MAX_WIDTH: 200,
+        RESIZE_DELAY_MS: 100,
+    },
+
+    ZOOM_LEVELS: {
+        PROJECT_LINE: 8,
+        PROJECT_LINE_LABEL: 14,
+        PROJECT_ENTRY_SYMBOL: 10,
+        LANDMARK_SYMBOL: 12,
+        LANDMARK_LABEL: 16,
+        SURFACE_STATION_SYMBOL: 12,
+        SURFACE_STATION_LABEL: 16,
+        SUBSURFACE_STATION_SYMBOL: 12,
+        SUBSURFACE_STATION_LABEL: 16,
+        CYLINDER_INSTALL_SYMBOL: 12,
+        CYLINDER_INSTALL_LABEL: 16,
+        EXPLORATION_LEAD_SYMBOL: 12,
+        GPS_TRACK_LINE: 8,
+    },
+
+    SNAP: {
+        RADIUS_METERS: 10,
+        MIN_RADIUS: 1,
+    },
+
+    DRAG: {
+        THRESHOLD_PX: 10,
+        QUERY_PADDING_PX: 8,
+    },
+
+    UI: {
+        MOBILE_BREAKPOINT: 640,
+        MIN_MAP_HEIGHT: 600,
+        MAP_PADDING_OFFSET: 20,
+        NOTIFICATION_DURATION_MS: 3000,
+        NOTIFICATION_FADEOUT_MS: 300,
+        OVERLAY_FADE_DELAY_MS: 500,
+        TRACK_NAME_MAX_LENGTH: 30,
+        NOTE_PREVIEW_LENGTH: 200,
+    },
+
+    UPLOAD: {
+        MAX_FILE_SIZE: 500 * 1024 * 1024,
+    },
+
+    COLORS: {
+        DEFAULT_STATION: '#fb923c',
+    },
+
+    STORAGE_KEYS: {
+        PROJECT_VISIBILITY: 'speleo_project_visibility',
+        NETWORK_VISIBILITY: 'speleo_network_visibility',
+    },
+});
+
 const PermissionAction = Object.freeze({
     READ: 'read',
     WRITE: 'write',
@@ -60,7 +129,15 @@ export const Config = {
         return this.gpsTracks.map(t => t.id);
     },
 
-    // Load projects from API (call this early in initialization)
+    setPublicProjects(projects) {
+        this._projects = projects.map(p => ({
+            id: p.id,
+            name: p.name,
+            permissions: 'READ_ONLY',
+            geojson_url: p.geojson_url || p.geojson_file,
+        }));
+    },
+
     async loadProjects() {
         if (this._projects) {
             return this._projects;
@@ -320,8 +397,8 @@ export const Config = {
         }
         console.log(`✅ ${this._projects.length} projects with GeoJSON available for map viewer`);
     },
-    VISIBILITY_PREFS_STORAGE_KEY: 'speleo_project_visibility',
-    NETWORK_VISIBILITY_PREFS_STORAGE_KEY: 'speleo_network_visibility',
+    VISIBILITY_PREFS_STORAGE_KEY: DEFAULTS.STORAGE_KEYS.PROJECT_VISIBILITY,
+    NETWORK_VISIBILITY_PREFS_STORAGE_KEY: DEFAULTS.STORAGE_KEYS.NETWORK_VISIBILITY,
 
     // Load GPS tracks from API (call this early in initialization)
     async loadGPSTracks() {

@@ -1,11 +1,8 @@
 import { State } from '../state.js';
 import { Layers } from './layers.js';
+import { DEFAULTS } from '../config.js';
 
-// Magnetic snap radius in meters
-const MAGNETIC_SNAP_RADIUS = 10;
-
-// Cache for line features by project
-const lineFeatureCache = new Map();
+let MAGNETIC_SNAP_RADIUS = DEFAULTS.SNAP.RADIUS_METERS;
 
 // Cache for snap points (start/end vertices only) by project
 const snapPointsCache = new Map();
@@ -31,24 +28,17 @@ export const Geometry = {
     cacheLineFeatures: function(projectId, geojsonData) {
         if (!geojsonData || !geojsonData.features) return;
         
-        const lines = new Map();
         const snapPoints = [];
+        let lineCount = 0;
         
         geojsonData.features.forEach((feature, index) => {
             if (feature.geometry && feature.geometry.type === 'LineString') {
                 const coords = feature.geometry.coordinates;
                 const lineName = feature.properties?.section_name || feature.properties?.name || `Line ${index}`;
+                lineCount++;
                 
-                // Store full line data
-                lines.set(`${projectId}-line-${index}`, {
-                    coordinates: coords,
-                    properties: feature.properties
-                });
-                
-                // Extract ONLY start and end points for snapping
                 if (coords.length >= 2) {
-                    // Start point
-                    const startCoord = [coords[0][0], coords[0][1]]; // [lng, lat] only
+                    const startCoord = [coords[0][0], coords[0][1]];
                     snapPoints.push({
                         coordinates: startCoord,
                         lineName: lineName,
@@ -56,7 +46,6 @@ export const Geometry = {
                         lineIndex: 0
                     });
                     
-                    // End point
                     const endCoord = [coords[coords.length - 1][0], coords[coords.length - 1][1]];
                     snapPoints.push({
                         coordinates: endCoord,
@@ -68,10 +57,9 @@ export const Geometry = {
             }
         });
         
-        if (lines.size > 0) {
-            lineFeatureCache.set(String(projectId), lines);
+        if (lineCount > 0) {
             snapPointsCache.set(String(projectId), snapPoints);
-            console.log(`📐 Project ${projectId}: ${lines.size} lines, ${snapPoints.length} snap points (start/end only)`);
+            console.log(`📐 Project ${projectId}: ${lineCount} lines, ${snapPoints.length} snap points (start/end only)`);
         }
     },
 
@@ -161,23 +149,17 @@ export const Geometry = {
         if (!this.snapIndicatorEl) {
             this.snapIndicatorEl = document.createElement('div');
             this.snapIndicatorEl.id = 'snap-indicator';
-            this.snapIndicatorEl.style.cssText = `
-                position: absolute;
-                pointer-events: none;
-                z-index: 1000;
-                transition: all 0.1s ease-out;
-            `;
-            document.body.appendChild(this.snapIndicatorEl);
+            map.getContainer().appendChild(this.snapIndicatorEl);
         }
 
         const point = map.project(coordinates);
-        this.snapIndicatorEl.style.display = 'block';
-        this.snapIndicatorEl.style.left = `${point.x}px`;
-        this.snapIndicatorEl.style.top = `${point.y}px`;
 
         if (isSnapped) {
             this.snapIndicatorEl.style.cssText = `
                 position: absolute;
+                display: block;
+                left: ${point.x}px;
+                top: ${point.y}px;
                 width: 20px;
                 height: 20px;
                 border-radius: 50%;
@@ -192,6 +174,9 @@ export const Geometry = {
         } else {
             this.snapIndicatorEl.style.cssText = `
                 position: absolute;
+                display: block;
+                left: ${point.x}px;
+                top: ${point.y}px;
                 width: 16px;
                 height: 16px;
                 border-radius: 50%;
@@ -277,10 +262,10 @@ export const Geometry = {
         return info;
     },
 
-    // Set snap radius (for testing)
     setSnapRadius: function(radiusInMeters) {
-        // Note: This requires changing the constant to a variable if we want runtime adjustment
-        console.log(`🧲 Magnetic snap radius is ${MAGNETIC_SNAP_RADIUS}m (not adjustable at runtime)`);
+        const prev = MAGNETIC_SNAP_RADIUS;
+        MAGNETIC_SNAP_RADIUS = Math.max(DEFAULTS.SNAP.MIN_RADIUS, Number(radiusInMeters) || DEFAULTS.SNAP.RADIUS_METERS);
+        console.log(`🧲 Magnetic snap radius changed: ${prev}m → ${MAGNETIC_SNAP_RADIUS}m`);
         return MAGNETIC_SNAP_RADIUS;
     }
 };

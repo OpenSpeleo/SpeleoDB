@@ -1,4 +1,4 @@
-import { Config } from '../config.js';
+import { Config, DEFAULTS } from '../config.js';
 import { State } from '../state.js';
 import { Colors } from './colors.js';
 import {
@@ -13,34 +13,26 @@ import { API } from '../api.js';
 // Track whether custom marker images have been loaded
 let markerImagesLoaded = false;
 
-const ZOOM_LEVELS = {
-    // Survey GeoJSONs
-    PROJECT_LINE: 8,
-    PROJECT_LINE_LABEL: 14,
-    PROJECT_ENTRY_SYMBOL: 10,
+function computeGeoJSONBounds(geojsonData) {
+    const bounds = new mapboxgl.LngLatBounds();
+    if (geojsonData && geojsonData.features) {
+        const extend = (coords) => {
+            if (typeof coords[0] === 'number') {
+                bounds.extend(coords);
+            } else {
+                coords.forEach(extend);
+            }
+        };
+        geojsonData.features.forEach(feature => {
+            if (feature.geometry && feature.geometry.coordinates) {
+                extend(feature.geometry.coordinates);
+            }
+        });
+    }
+    return bounds;
+}
 
-    // Landmarks
-    LANDMARK_SYMBOL: 12,
-    LANDMARK_LABEL: 16,
-
-    // Surface Stations
-    SURFACE_STATION_SYMBOL: 12,
-    SURFACE_STATION_LABEL: 16,
-
-    // Subsurface Stations
-    SUBSURFACE_STATION_SYMBOL: 12,
-    SUBSURFACE_STATION_LABEL: 16,
-
-    // Cylinder Installs
-    CYLINDER_INSTALL_SYMBOL: 12,
-    CYLINDER_INSTALL_LABEL: 16,
-
-    // Exploration Leads
-    EXPLORATION_LEAD_SYMBOL: 12,
-
-    // GPS Tracks
-    GPS_TRACK_LINE: 8,
-};
+const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 
 const PROJECT_SCOPED_MARKER_PROPERTY = 'project_id';
 const PROJECT_SCOPED_MARKER_LAYER_IDS = Object.freeze([
@@ -460,24 +452,7 @@ export const Layers = {
         });
         trackLayers.push(lineLayerId);
 
-        // Calculate and store bounds for fly-to functionality
-        const bounds = new mapboxgl.LngLatBounds();
-        if (geojsonData && geojsonData.features) {
-            geojsonData.features.forEach(feature => {
-                if (feature.geometry && feature.geometry.coordinates) {
-                    // Helper to extend bounds recursively
-                    const extend = (coords) => {
-                        if (typeof coords[0] === 'number') {
-                            bounds.extend(coords);
-                        } else {
-                            coords.forEach(extend);
-                        }
-                    };
-                    extend(feature.geometry.coordinates);
-                }
-            });
-        }
-
+        const bounds = computeGeoJSONBounds(geojsonData);
         if (!bounds.isEmpty()) {
             State.gpsTrackBounds.set(tid, bounds);
             console.log(`📍 Calculated bounds for GPS track ${trackId}`);
@@ -589,28 +564,16 @@ export const Layers = {
         const sourceId = `project-geojson-${projectId}`;
 
         try {
-            let data;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const rawData = await response.json();
+            const data = processGeoJSON(projectId, rawData);
+
+            Geometry.cacheLineFeatures(projectId, data);
+
             if (map.getSource(sourceId)) {
-                // Refresh data
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const rawData = await response.json();
-                data = processGeoJSON(projectId, rawData);
-
-                // Cache line features for magnetic snapping
-                Geometry.cacheLineFeatures(projectId, data);
-
                 map.getSource(sourceId).setData(data);
             } else {
-                // Fetch and add
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const rawData = await response.json();
-                data = processGeoJSON(projectId, rawData);
-
-                // Cache line features for magnetic snapping
-                Geometry.cacheLineFeatures(projectId, data);
-
                 map.addSource(sourceId, {
                     type: 'geojson',
                     data: data,
@@ -627,37 +590,7 @@ export const Layers = {
                 }
                 const projectLayers = State.allProjectLayers.get(String(projectId));
 
-                // // 1. Polygons (Fill & Stroke) - visible from zoom 0
-                // const fillLayerId = `project-fill-${projectId}`;
-                // const strokeLayerId = `project-stroke-${projectId}`;
-
-                // map.addLayer({
-                //     id: fillLayerId,
-                //     type: 'fill',
-                //     source: sourceId,
-                //     filter: ['in', '$type', 'Polygon'],
-                //     minzoom: 0,
-                //     paint: {
-                //         'fill-color': color,
-                //         'fill-opacity': 0.6
-                //     }
-                // });
-                // projectLayers.push(fillLayerId);
-
-                // map.addLayer({
-                //     id: strokeLayerId,
-                //     type: 'line',
-                //     source: sourceId,
-                //     filter: ['in', '$type', 'Polygon'],
-                //     minzoom: 0,
-                //     paint: {
-                //         'line-color': '#000',
-                //         'line-width': 2
-                //     }
-                // });
-                // projectLayers.push(strokeLayerId);
-
-                // 2. Lines (survey lines visible from zoom 0)
+                // Lines (survey lines visible from zoom 0)
                 const lineLayerId = `project-layer-${projectId}`;
                 map.addLayer({
                     id: lineLayerId,
@@ -732,24 +665,7 @@ export const Layers = {
 
             }
 
-            // Calculate and store bounds
-            const bounds = new mapboxgl.LngLatBounds();
-            if (data && data.features) {
-                data.features.forEach(feature => {
-                    if (feature.geometry && feature.geometry.coordinates) {
-                        // Helper to extend bounds recursively
-                        const extend = (coords) => {
-                            if (typeof coords[0] === 'number') {
-                                bounds.extend(coords);
-                            } else {
-                                coords.forEach(extend);
-                            }
-                        };
-                        extend(feature.geometry.coordinates);
-                    }
-                });
-            }
-
+            const bounds = computeGeoJSONBounds(data);
             if (!bounds.isEmpty()) {
                 State.projectBounds.set(String(projectId), bounds);
             }
@@ -799,7 +715,7 @@ export const Layers = {
             if (!feature.properties.color) {
                 // Use tag color if available, otherwise use default orange
                 const tag = feature.properties.tag;
-                feature.properties.color = (tag && tag.color) ? tag.color : '#fb923c';
+                feature.properties.color = (tag && tag.color) ? tag.color : DEFAULTS.COLORS.DEFAULT_STATION;
             }
         });
 
@@ -823,7 +739,7 @@ export const Layers = {
             minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
             paint: {
                 'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 5, 18, 8],
-                'circle-color': ['coalesce', ['get', 'color'], '#fb923c'],
+                'circle-color': ['coalesce', ['get', 'color'], DEFAULTS.COLORS.DEFAULT_STATION],
                 'circle-stroke-width': 2,
                 'circle-stroke-color': '#ffffff',
                 'circle-opacity': 1
@@ -1073,7 +989,7 @@ export const Layers = {
             if (!feature.properties.color) {
                 // Use tag color if available, otherwise use default orange
                 const tag = feature.properties.tag;
-                feature.properties.color = (tag && tag.color) ? tag.color : '#fb923c';
+                feature.properties.color = (tag && tag.color) ? tag.color : DEFAULTS.COLORS.DEFAULT_STATION;
             }
         });
 
@@ -1098,7 +1014,7 @@ export const Layers = {
                 'text-ignore-placement': true
             },
             paint: {
-                'text-color': ['coalesce', ['get', 'color'], '#fb923c'],
+                'text-color': ['coalesce', ['get', 'color'], DEFAULTS.COLORS.DEFAULT_STATION],
                 'text-halo-color': '#ffffff',
                 'text-halo-width': 2,
                 'text-halo-blur': 0.5
@@ -1132,9 +1048,8 @@ export const Layers = {
             State.allNetworkLayers.set(String(networkId), []);
         }
         const networkLayers = State.allNetworkLayers.get(String(networkId));
-        if (!networkLayers.includes(symbolLayerId)) {
-            networkLayers.push(symbolLayerId, labelLayerId);
-        }
+        if (!networkLayers.includes(symbolLayerId)) networkLayers.push(symbolLayerId);
+        if (!networkLayers.includes(labelLayerId)) networkLayers.push(labelLayerId);
 
         // Respect initial visibility
         if (!this.isNetworkVisible(networkId)) {

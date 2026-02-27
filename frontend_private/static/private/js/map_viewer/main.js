@@ -1,4 +1,4 @@
-import { Config } from './config.js';
+import { Config, DEFAULTS } from './config.js';
 import { State } from './state.js';
 import { MapCore } from './map/core.js';
 import { Layers } from './map/layers.js';
@@ -85,8 +85,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const rect = mapElement.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
         const mapTop = rect.top;
-        const isMobile = window.innerWidth <= 640;
-        const newHeight = isMobile ? (viewportHeight - mapTop) : Math.max(viewportHeight - mapTop - 20, 600);
+        const isMobile = window.innerWidth <= DEFAULTS.UI.MOBILE_BREAKPOINT;
+        const newHeight = isMobile ? (viewportHeight - mapTop) : Math.max(viewportHeight - mapTop - DEFAULTS.UI.MAP_PADDING_OFFSET, DEFAULTS.UI.MIN_MAP_HEIGHT);
         mapElement.style.height = newHeight + 'px';
     }
 
@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case "exploration-lead":
                     // Get Exploration Lead data
                     const explo_lead = State.explorationLeads.get(data.id);
-                    var lineName = explo_lead?.lineName || 'Survey Line';
+                    const lineName = explo_lead?.lineName || 'Survey Line';
                     const canDeleteLead = explo_lead?.projectId
                         ? Config.hasScopedAccess('project', explo_lead.projectId, 'delete')
                         : false;
@@ -503,18 +503,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log(`🎯 Flying to URL coordinates: ${urlParams.lat}, ${urlParams.long}`);
             map.flyTo({
                 center: [urlParams.long, urlParams.lat],
-                zoom: 18,
+                zoom: DEFAULTS.MAP.FLY_TO_ZOOM,
                 essential: true
             });
         } else if (State.projectBounds.size > 0) {
-            // Auto-zoom to fit all project bounds
             const allBounds = new mapboxgl.LngLatBounds();
             State.projectBounds.forEach(bounds => {
                 allBounds.extend(bounds);
             });
 
             if (!allBounds.isEmpty()) {
-                map.fitBounds(allBounds, { padding: 50, maxZoom: 16 });
+                map.fitBounds(allBounds, { padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING, maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM });
             }
         }
 
@@ -522,7 +521,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
             overlay.classList.add('opacity-0', 'pointer-events-none');
-            setTimeout(() => overlay.remove(), 500);
+            setTimeout(() => overlay.remove(), DEFAULTS.UI.OVERLAY_FADE_DELAY_MS);
         }
 
         console.log('✅ Map Data Loaded (Projects, GeoJSON, Stations, Landmarks)');
@@ -663,7 +662,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.setSnapRadius = (radius) => Geometry.setSnapRadius(radius);
 
     window.goToStation = (id, lat, lon) => {
-        map.flyTo({ center: [lon, lat], zoom: 18 });
+        map.flyTo({ center: [lon, lat], zoom: DEFAULTS.MAP.FLY_TO_ZOOM });
         // Check if it's a subsurface or surface station
         const station = State.allStations.get(id);
         const surfaceStation = State.allSurfaceStations.get(id);
@@ -731,14 +730,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
         // Setup handlers
+        const removeLandmarkModal = () => {
+            document.getElementById('landmark-drag-confirm-modal')?.remove();
+        };
+
         document.getElementById('landmark-drag-cancel-btn').onclick = () => {
             Layers.revertLandmarkPosition(landmarkId, originalCoords);
-            document.getElementById('landmark-drag-confirm-modal').remove();
+            removeLandmarkModal();
         };
 
         document.getElementById('landmark-drag-confirm-btn').onclick = async () => {
-            const modal = document.getElementById('landmark-drag-confirm-modal');
-
             try {
                 await LandmarkManager.moveLandmark(landmarkId, newCoords);
                 Utils.showNotification('success', 'Landmark moved successfully!');
@@ -748,10 +749,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Layers.revertLandmarkPosition(landmarkId, originalCoords);
             }
 
-            modal.remove();
+            removeLandmarkModal();
         };
 
-        // Close on backdrop click
         document.getElementById('landmark-drag-confirm-modal').onclick = (e) => {
             if (e.target.id === 'landmark-drag-confirm-modal') {
                 Layers.revertLandmarkPosition(landmarkId, originalCoords);
@@ -837,17 +837,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
         // Setup handlers
+        const removeDragModal = () => {
+            document.getElementById('drag-confirm-modal')?.remove();
+        };
+
         document.getElementById('drag-cancel-btn').onclick = () => {
-            // Revert to original position
             Layers.updateStationPosition(projectId, stationId, originalCoords);
-            document.getElementById('drag-confirm-modal').remove();
+            removeDragModal();
         };
 
         document.getElementById('drag-confirm-btn').onclick = async () => {
-            const modal = document.getElementById('drag-confirm-modal');
-
             try {
-                // Update station via API
                 await StationManager.moveStation(stationId, finalCoords);
 
                 const snapMessage = snapResult.snapped
@@ -855,82 +855,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     : '';
                 Utils.showNotification('success', `Station moved successfully${snapMessage}!`);
 
-                // Refresh stations
                 Layers.refreshStationsAfterChange(projectId);
 
             } catch (error) {
                 console.error('Error moving station:', error);
                 Utils.showNotification('error', 'Failed to move station');
-
-                // Revert on error
                 Layers.updateStationPosition(projectId, stationId, originalCoords);
             }
 
-            modal.remove();
+            removeDragModal();
         };
 
-        // Close on backdrop click
         document.getElementById('drag-confirm-modal').onclick = (e) => {
             if (e.target.id === 'drag-confirm-modal') {
                 Layers.updateStationPosition(projectId, stationId, originalCoords);
-                e.target.remove();
-            }
-        };
-    }
-
-    // Delete marker confirmation modal (for exploration leads)
-    function showDeleteMarkerModal(markerType, markerId, lineName) {
-        const typeLabel = 'Exploration Lead';
-
-        const modalHtml = `
-            <div id="delete-marker-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
-                    <div class="p-6">
-                        <div class="flex items-center justify-center mb-4">
-                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl" 
-                                 style="background: linear-gradient(135deg, #ef4444, #dc2626);">
-                                🗑️
-                            </div>
-                        </div>
-                        <h3 class="text-lg font-semibold text-white text-center mb-2">Delete ${typeLabel}</h3>
-                        <p class="text-slate-300 text-center mb-6">
-                            Are you sure you want to delete this ${typeLabel.toLowerCase()} on "${lineName}"?
-                        </p>
-                        
-                        <div class="flex gap-3">
-                            <button id="delete-marker-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
-                                Cancel
-                            </button>
-                            <button id="delete-marker-confirm-btn" class="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg transition-colors">
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Remove any existing modal
-        const existingModal = document.getElementById('delete-marker-modal');
-        if (existingModal) existingModal.remove();
-
-        // Add modal to DOM
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        // Setup handlers
-        document.getElementById('delete-marker-cancel-btn').onclick = () => {
-            document.getElementById('delete-marker-modal').remove();
-        };
-
-        document.getElementById('delete-marker-confirm-btn').onclick = () => {
-            Layers.removeExplorationLeadMarker(markerId);
-            Utils.showNotification('success', `${typeLabel} deleted`);
-            document.getElementById('delete-marker-modal').remove();
-        };
-
-        // Close on backdrop click
-        document.getElementById('delete-marker-modal').onclick = (e) => {
-            if (e.target.id === 'delete-marker-modal') {
                 e.target.remove();
             }
         };
@@ -1015,17 +953,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
+        const removeModal = () => {
+            document.getElementById('marker-drag-confirm-modal')?.remove();
+        };
+
         document.getElementById('marker-drag-cancel-btn').onclick = () => {
             revertPosition();
-            document.getElementById('marker-drag-confirm-modal').remove();
+            removeModal();
         };
 
         document.getElementById('marker-drag-confirm-btn').onclick = async () => {
             if (snapResult.snapped) {
                 try {
-                    // Update to final snapped position
                     if (markerType === 'cylinder-install') {
-                        // Persistent install - update via API
                         await API.updateCylinderInstall(markerId, {
                             latitude: finalCoords[1],
                             longitude: finalCoords[0]
@@ -1033,7 +973,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         Layers.updateCylinderInstallPosition(markerId, finalCoords);
                         Utils.showNotification('success', `${typeLabel} moved to ${snapResult.lineName}`);
                     } else {
-                        // Update exploration lead via API
                         await ExplorationLeadManager.moveLead(markerId, finalCoords);
                         Layers.updateExplorationLeadPosition(markerId, finalCoords);
                         Utils.showNotification('success', `${typeLabel} moved to ${snapResult.lineName}`);
@@ -1046,10 +985,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 revertPosition();
             }
-            document.getElementById('marker-drag-confirm-modal').remove();
+            removeModal();
         };
 
-        // Close on backdrop click (revert)
         document.getElementById('marker-drag-confirm-modal').onclick = (e) => {
             if (e.target.id === 'marker-drag-confirm-modal') {
                 revertPosition();
@@ -1059,6 +997,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     window.goToLandmark = (id, lat, lon) => {
-        map.flyTo({ center: [lon, lat], zoom: 18 });
+        map.flyTo({ center: [lon, lat], zoom: DEFAULTS.MAP.FLY_TO_ZOOM });
     };
 });

@@ -1,4 +1,4 @@
-import { Config } from '../config.js';
+import { Config, DEFAULTS } from '../config.js';
 import { Layers } from '../map/layers.js';
 import { State } from '../state.js';
 import { Colors } from '../map/colors.js';
@@ -93,7 +93,7 @@ export const ProjectPanel = {
                     // Fly to bounds
                     const bounds = State.projectBounds.get(String(project.id));
                     if (bounds) {
-                        State.map.fitBounds(bounds, { padding: 50, maxZoom: 16 });
+                        State.map.fitBounds(bounds, { padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING, maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM });
                     }
                 }
             });

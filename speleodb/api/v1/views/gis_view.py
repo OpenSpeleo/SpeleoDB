@@ -62,8 +62,11 @@ class GISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gis_view = self.get_object()
 
-        expires_in = int(request.query_params.get("expires_in", 3600))
-        expires_in = min(max(expires_in, 60), 86400)
+        try:
+            expires_in = int(request.query_params.get("expires_in", 3600))
+            expires_in = min(max(expires_in, 60), 86400)
+        except ValueError, TypeError:
+            expires_in = 3600
 
         try:
             serializer = GISViewDataSerializer(
@@ -178,8 +181,17 @@ class PublicGISViewGeoJSONApiView(GenericAPIView[GISView], SDBAPIViewMixin):
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gis_view = self.get_object()
-        serializer = PublicGISViewSerializer(
-            gis_view,
-            context={"expires_in": 3600},
-        )
-        return SuccessResponse(serializer.data)
+        try:
+            serializer = PublicGISViewSerializer(
+                gis_view,
+                context={"expires_in": 3600},
+            )
+            return SuccessResponse(serializer.data)
+        except Exception:
+            logger.exception(
+                "Error generating public GeoJSON data for view %s", gis_view.id
+            )
+            return ErrorResponse(
+                {"error": "Failed to load map data"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

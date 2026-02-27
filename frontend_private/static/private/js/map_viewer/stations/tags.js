@@ -2,6 +2,7 @@ import { API } from '../api.js';
 import { State } from '../state.js';
 import { Utils } from '../utils.js';
 import { Layers } from '../map/layers.js';
+import { DEFAULTS } from '../config.js';
 
 // Default colors if API fails
 const FALLBACK_COLORS = [
@@ -301,7 +302,7 @@ export const StationTags = {
         if (!station) return;
 
         // Use the tag's color if available, otherwise default
-        const color = station.tag ? station.tag.color : '#fb923c';
+        const color = station.tag ? station.tag.color : DEFAULTS.COLORS.DEFAULT_STATION;
 
         // Determine if this is a surface or subsurface station
         if (station.network || station.station_type === 'surface') {

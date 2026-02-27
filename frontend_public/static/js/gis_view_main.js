@@ -18,9 +18,7 @@ import { Layers } from '../../../frontend_private/static/private/js/map_viewer/m
 import { Utils } from '../../../frontend_private/static/private/js/map_viewer/utils.js';
 import { ProjectPanel } from '../../../frontend_private/static/private/js/map_viewer/components/project_panel.js';
 import { DepthLegend } from '../../../frontend_private/static/private/js/map_viewer/components/depth_legend.js';
-import { Config } from '../../../frontend_private/static/private/js/map_viewer/config.js';
-
-const LIMITED_MAX_ZOOM = 13;
+import { Config, DEFAULTS } from '../../../frontend_private/static/private/js/map_viewer/config.js';
 
 // Global entry point for Public GIS View Map Viewer
 document.addEventListener('DOMContentLoaded', async () => {
@@ -48,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Limit max zoom to 12 if precise zoom is not allowed
     const allowPreciseZoom = context.allowPreciseZoom !== false;
-    const maxZoom = allowPreciseZoom ? 22 : LIMITED_MAX_ZOOM;
+    const maxZoom = allowPreciseZoom ? DEFAULTS.MAP.PRECISE_MAX_ZOOM : DEFAULTS.MAP.LIMITED_MAX_ZOOM;
 
     const map = MapCore.init(token, 'map');
     map.setMaxZoom(maxZoom);
@@ -60,8 +58,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const rect = mapElement.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
         const mapTop = rect.top;
-        const isMobile = window.innerWidth <= 640;
-        const newHeight = isMobile ? (viewportHeight - mapTop) : Math.max(viewportHeight - mapTop - 20, 600);
+        const isMobile = window.innerWidth <= DEFAULTS.UI.MOBILE_BREAKPOINT;
+        const newHeight = isMobile ? (viewportHeight - mapTop) : Math.max(viewportHeight - mapTop - DEFAULTS.UI.MAP_PADDING_OFFSET, DEFAULTS.UI.MIN_MAP_HEIGHT);
         mapElement.style.height = newHeight + 'px';
     }
 
@@ -94,13 +92,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             console.log(`✅ Received ${projects.length} projects from GIS View "${viewData.view_name}"`);
 
-            // Set up minimal project config for layers (read-only)
-            Config._projects = projects.map(p => ({
+            Config.setPublicProjects(projects.map(p => ({
                 id: p.id,
                 name: p.name,
-                permissions: 'READ_ONLY',  // Public view is always read-only
-                geojson_url: p.geojson_file
-            }));
+                geojson_file: p.geojson_file,
+            })));
 
             // Initialize Project Panel (shows projects from the view)
             ProjectPanel.init();
@@ -132,8 +128,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
 
                 if (!allBounds.isEmpty()) {
-                    const fitMaxZoom = allowPreciseZoom ? 16 : LIMITED_MAX_ZOOM;
-                    map.fitBounds(allBounds, { padding: 50, maxZoom: fitMaxZoom });
+                    const fitMaxZoom = allowPreciseZoom ? DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM : DEFAULTS.MAP.LIMITED_MAX_ZOOM;
+                    map.fitBounds(allBounds, { padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING, maxZoom: fitMaxZoom });
                 }
             }
 
@@ -148,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
             overlay.classList.add('opacity-0', 'pointer-events-none');
-            setTimeout(() => overlay.remove(), 500);
+            setTimeout(() => overlay.remove(), DEFAULTS.UI.OVERLAY_FADE_DELAY_MS);
         }
     });
 

@@ -1,6 +1,6 @@
 import { API } from '../api.js';
 import { Utils } from '../utils.js';
-import { Config } from '../config.js';
+import { Config, DEFAULTS } from '../config.js';
 import { State } from '../state.js';
 import { createProgressBarHTML, UploadProgressController } from '../components/upload.js';
 
@@ -123,10 +123,10 @@ export const StationResources = {
             <div class="resource-card p-5 bg-slate-800/20 border border-slate-600/50 rounded-lg hover:bg-slate-700/30 transition-colors">
                 <div class="flex justify-between items-start mb-3">
                     <div>
-                        <h4 class="text-white font-medium">${resource.title || 'Untitled'}
+                        <h4 class="text-white font-medium">${Utils.escapeHtml(resource.title || 'Untitled')}
                             ${isDemoStation ? '<span class="demo-badge">DEMO</span>' : ''}
                         </h4>
-                        <span class="px-2 py-1 bg-sky-500 text-white text-xs rounded mt-1 inline-block">${resource.resource_type}</span>
+                        <span class="px-2 py-1 bg-sky-500 text-white text-xs rounded mt-1 inline-block">${Utils.escapeHtml(resource.resource_type)}</span>
                     </div>
                     ${hasWriteAccess ? `
                         <div class="flex space-x-1">
@@ -147,7 +147,7 @@ export const StationResources = {
                     ` : ''}
                 </div>
                 
-                ${resource.description ? `<p class="text-slate-300 text-sm mb-3">${resource.description}</p>` : ''}
+                ${resource.description ? `<p class="text-slate-300 text-sm mb-3">${Utils.escapeHtml(resource.description)}</p>` : ''}
                 
                 ${this.getResourcePreview(resource)}
                 
@@ -164,10 +164,10 @@ export const StationResources = {
             case 'photo':
                 return resource.file ?
                     `<div class="resource-preview">
-                        <img src="${resource.miniature || resource.file}" alt="${resource.title}" 
+                        <img src="${resource.miniature || resource.file}" alt="${Utils.escapeHtml(resource.title)}" 
                              class="photo-preview cursor-zoom-in"
                              data-photo-url="${resource.file}"
-                             data-photo-title="${resource.title}"
+                             data-photo-title="${Utils.escapeHtml(resource.title)}"
                              title="Click to view full size"
                              loading="lazy">
                     </div>` :
@@ -211,7 +211,7 @@ export const StationResources = {
                             <svg class="w-5 h-5 text-sky-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
-                            <div class="line-clamp-3 overflow-hidden">${Utils.escapeHtml(resource.text_content.substring(0, 200))}${resource.text_content.length > 200 ? '...' : ''}</div>
+                            <div class="line-clamp-3 overflow-hidden">${Utils.escapeHtml(resource.text_content.substring(0, DEFAULTS.UI.NOTE_PREVIEW_LENGTH))}${resource.text_content.length > DEFAULTS.UI.NOTE_PREVIEW_LENGTH ? '...' : ''}</div>
                         </div>
                         <div class="text-xs text-sky-400 mt-2">Click to read full note</div>
                     </div>` :
@@ -457,7 +457,7 @@ export const StationResources = {
     },
 
     updateFileDisplay(fileContainer, file) {
-        const maxSize = 500 * 1024 * 1024; // 500MB
+        const maxSize = DEFAULTS.UPLOAD.MAX_FILE_SIZE;
         if (file.size > maxSize) {
             Utils.showNotification('error', 'File size cannot exceed 500MB');
             const fileInput = fileContainer.querySelector('input[type="file"]');
@@ -586,13 +586,13 @@ export const StationResources = {
                                 </div>
                                 <div>
                                     <label class="block text-slate-300 text-sm font-medium mb-2">Title</label>
-                                    <input type="text" name="title" class="form-input" value="${resource.title || ''}" required>
+                                    <input type="text" name="title" class="form-input" value="${Utils.escapeHtml(resource.title || '')}" required>
                                 </div>
                             </div>
                             
                             <div>
                                 <label class="block text-slate-300 text-sm font-medium mb-2">Description (optional)</label>
-                                <textarea name="description" class="form-input form-textarea" placeholder="Additional details...">${resource.description || ''}</textarea>
+                                <textarea name="description" class="form-input form-textarea" placeholder="Additional details...">${Utils.escapeHtml(resource.description || '')}</textarea>
                             </div>
                             
                             ${['photo', 'video', 'document'].includes(resource.resource_type) ? `
@@ -740,7 +740,7 @@ export const StationResources = {
                         </div>
                         <div class="flex justify-between">
                             <span class="text-slate-400">Title:</span>
-                            <span class="text-white">${resource.title || 'Untitled'}</span>
+                            <span class="text-white">${Utils.escapeHtml(resource.title || 'Untitled')}</span>
                         </div>
                     </div>
                 ` : ''}

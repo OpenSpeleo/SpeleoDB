@@ -1,4 +1,4 @@
-import { Config } from '../config.js';
+import { Config, DEFAULTS } from '../config.js';
 import { State } from '../state.js';
 import { Layers } from './layers.js';
 
@@ -8,20 +8,19 @@ export const MapCore = {
 
         const map = new mapboxgl.Map({
             container: containerId,
-            style: 'mapbox://styles/mapbox/satellite-streets-v12',
-            center: [0, 0],
-            zoom: 0,
-            projection: 'globe', // Enable globe projection for better wide-angle view
-            pitchWithRotate: false, // Disable pitch with rotate
-            dragRotate: false, // Disable rotation
-            touchPitch: false // Disable pitch gestures
+            style: DEFAULTS.MAP.STYLE,
+            center: DEFAULTS.MAP.CENTER,
+            zoom: DEFAULTS.MAP.INITIAL_ZOOM,
+            projection: 'globe',
+            pitchWithRotate: false,
+            dragRotate: false,
+            touchPitch: false
         });
 
-        // Add controls
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
         map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
-        map.addControl(new mapboxgl.ScaleControl({ maxWidth: 200, unit: 'metric' }), 'bottom-right');
-        map.addControl(new mapboxgl.ScaleControl({ maxWidth: 200, unit: 'imperial' }), 'bottom-right');
+        map.addControl(new mapboxgl.ScaleControl({ maxWidth: DEFAULTS.MAP.SCALE_CONTROL_MAX_WIDTH, unit: 'metric' }), 'bottom-right');
+        map.addControl(new mapboxgl.ScaleControl({ maxWidth: DEFAULTS.MAP.SCALE_CONTROL_MAX_WIDTH, unit: 'imperial' }), 'bottom-right');
 
         // Set state
         State.map = map;
@@ -62,7 +61,7 @@ export const MapCore = {
         });
 
         // Initial resize to fit container
-        setTimeout(() => map.resize(), 100);
+        setTimeout(() => map.resize(), DEFAULTS.MAP.RESIZE_DELAY_MS);
     },
 
     setupColorModeToggle: function (map) {

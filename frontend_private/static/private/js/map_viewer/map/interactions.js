@@ -1,21 +1,10 @@
 import { State } from '../state.js';
 import { Geometry } from './geometry.js';
-import { Config } from '../config.js';
+import { Config, DEFAULTS } from '../config.js';
 import { Layers } from './layers.js';
-
-// Drag threshold in pixels - must move this far before drag starts
-const DRAG_THRESHOLD = 10;
 
 export const Interactions = {
     handlers: {},
-
-    // Handlers should contain:
-    // onStationClick(stationId)
-    // onLandmarkClick(landmarkId)
-    // onStationDragEnd(stationId, snapResult, originalCoords)
-    // onLandmarkDragEnd(landmarkId, newCoords, originalCoords)
-    // onContextMenu(event, type, data)
-    // onMapClick(coords)
 
     init: function (map, handlers) {
         this.handlers = handlers || {};
@@ -25,8 +14,7 @@ export const Interactions = {
         this.setupContextMenu(map);
     },
 
-    // Query padding in pixels for interactive feature detection
-    QUERY_PADDING: 8,
+    QUERY_PADDING: DEFAULTS.DRAG.QUERY_PADDING_PX,
 
     setupHoverEffects: function (map) {
         map.on('mousemove', (e) => {
@@ -287,7 +275,7 @@ export const Interactions = {
                 const dy = e.point.y - mouseDownPoint.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
-                if (distance < DRAG_THRESHOLD) {
+                if (distance < DEFAULTS.DRAG.THRESHOLD_PX) {
                     return; // Not dragging yet
                 }
 

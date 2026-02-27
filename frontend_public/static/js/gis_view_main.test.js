@@ -29,6 +29,14 @@ const configMock = {
     _projects: null,
     get projects() {
         return this._projects || [];
+    },
+    setPublicProjects(projects) {
+        this._projects = projects.map(p => ({
+            id: p.id,
+            name: p.name,
+            permissions: 'READ_ONLY',
+            geojson_url: p.geojson_url || p.geojson_file,
+        }));
     }
 };
 
@@ -56,9 +64,10 @@ vi.mock('../../../frontend_private/static/private/js/map_viewer/components/depth
     DepthLegend: depthLegendMock
 }));
 
-vi.mock('../../../frontend_private/static/private/js/map_viewer/config.js', () => ({
-    Config: configMock
-}));
+vi.mock('../../../frontend_private/static/private/js/map_viewer/config.js', async () => {
+    const actual = await vi.importActual('../../../frontend_private/static/private/js/map_viewer/config.js');
+    return { Config: configMock, DEFAULTS: actual.DEFAULTS };
+});
 
 function createMapMock() {
     const handlers = {};

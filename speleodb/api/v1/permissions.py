@@ -380,8 +380,7 @@ class GPSTrackOwnershipPermission(permissions.BasePermission):
         view: APIView,
         obj: GPSTrack,
     ) -> bool:
-        """Users can only access Landmarks they created."""
-        # Check if the object has a created_by field and if it matches the user
+        """Users can only access GPSTracks they created."""
         if not isinstance(obj, GPSTrack):
             raise TypeError(f"Expected a `GPSTrack` object, got {type(obj)}")
 
@@ -393,9 +392,9 @@ class GPSTrackOwnershipPermission(permissions.BasePermission):
 
 class GISViewOwnershipPermission(permissions.BasePermission):
     """
-    Permission class specifically for Landmark ownership.
-    - Users can only see/modify their own Landmarks
-    - No sharing or public access to Landmarks
+    Permission class specifically for GISView ownership.
+    - Users can only see/modify their own GISViews
+    - No sharing or public access to GISViews
     """
 
     def has_permission(self, request: Request, view: APIView) -> bool:
@@ -410,8 +409,7 @@ class GISViewOwnershipPermission(permissions.BasePermission):
         view: APIView,
         obj: GISView,
     ) -> bool:
-        """Users can only access Landmarks they created."""
-        # Check if the object has a created_by field and if it matches the user
+        """Users can only access GISViews they own."""
         if not isinstance(obj, GISView):
             raise TypeError(f"Expected a `GISView` object, got {type(obj)}")
 
