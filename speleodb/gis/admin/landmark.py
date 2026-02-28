@@ -11,6 +11,8 @@ from django.contrib import admin
 from speleodb.gis.models import Landmark
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from django import forms
     from django.http import HttpRequest
 
@@ -20,8 +22,6 @@ class LandmarkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "name",
         "description_preview",
-        "latitude",
-        "longitude",
         "user",
         "creation_date",
         "modified_date",
@@ -30,6 +30,9 @@ class LandmarkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_filter = ["creation_date", "modified_date"]
     search_fields = ["name", "description"]
     readonly_fields = ("id", "coordinates", "creation_date", "modified_date", "user")
+
+    # For confidentiality reason - these fields should only be visible to `superusers`
+    _SUPERUSER_ONLY_FIELDS: frozenset[str] = frozenset({"latitude", "longitude"})
 
     fieldsets = (
         ("Basic Information", {"fields": ("name", "description")}),
@@ -53,6 +56,21 @@ class LandmarkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             },
         ),
     )
+
+    def get_list_display(self, request: HttpRequest) -> list[Any]:
+        base: list[Any] = list(super().get_list_display(request))
+        if not request.user.is_superuser:
+            return base
+        return [*base, *self._SUPERUSER_ONLY_FIELDS]
+
+    def get_fieldsets(  # type: ignore[override]
+        self, request: HttpRequest, obj: Landmark | None = None
+    ) -> list[tuple[str | None, dict[str, Any]]]:
+        fieldsets = list(super().get_fieldsets(request, obj))
+        user: Any = request.user
+        if user.is_superuser:
+            return fieldsets  # type: ignore[return-value]
+        return [(title, opts) for title, opts in fieldsets if title != "Location"]  # type: ignore[misc]
 
     @admin.display(description="Description")
     def description_preview(self, obj: Landmark) -> str:

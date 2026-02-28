@@ -9,10 +9,13 @@ from allauth.account.admin import EmailAddressAdmin as _EmailAddressAdmin
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.admin.models import LogEntry
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
 from import_export import resources
 from import_export.admin import ExportMixin
+from rest_framework.authtoken.admin import TokenAdmin as _TokenAdmin
+from rest_framework.authtoken.models import TokenProxy
 
 from speleodb.users.forms import UserAdminChangeForm
 from speleodb.users.forms import UserAdminCreationForm
@@ -104,6 +107,19 @@ class UserAdminBase(ExportMixin, auth_admin.UserAdmin):  # type: ignore[type-arg
 
     resource_class = UserImportExportResource
 
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return request.user.is_superuser
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: User | None = None
+    ) -> bool:
+        return request.user.is_superuser
+
+    def has_delete_permission(
+        self, request: HttpRequest, obj: User | None = None
+    ) -> bool:
+        return request.user.is_superuser
+
 
 if "hijack" in settings.INSTALLED_APPS:
     from hijack.contrib.admin import HijackUserAdminMixin
@@ -112,6 +128,13 @@ if "hijack" in settings.INSTALLED_APPS:
     class UserAdmin(HijackUserAdminMixin, UserAdminBase):  # type: ignore[misc]
         def get_hijack_user(self, obj: User) -> User:
             return obj
+
+        def get_changelist_instance(self, request: HttpRequest) -> Any:
+            if not request.user.is_superuser:
+                return super(HijackUserAdminMixin, self).get_changelist_instance(
+                    request
+                )
+            return super().get_changelist_instance(request)  # type: ignore[no-untyped-call]
 
 else:
 
@@ -133,6 +156,19 @@ class EmailAddressAdmin(_EmailAddressAdmin):
         form = super().get_form(request, obj, **kwargs)
         form.base_fields["user"].widget.attrs["style"] = "width: 20em;"  # pyright: ignore[reportAttributeAccessIssue]
         return form
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return request.user.is_superuser
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: EmailAddress | None = None
+    ) -> bool:
+        return request.user.is_superuser
+
+    def has_delete_permission(
+        self, request: HttpRequest, obj: EmailAddress | None = None
+    ) -> bool:
+        return request.user.is_superuser
 
 
 @admin.register(SurveyTeam)
@@ -197,8 +233,81 @@ class AccountEventAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return False
 
     def has_change_permission(
-        self, request: HttpRequest, obj: AccountEvent | None = None
+        self, request: HttpRequest, obj: object | None = None
     ) -> bool:
+
         if obj is not None:
             return False
-        return super().has_change_permission(request, obj)
+        return request.user.is_superuser
+
+    def has_delete_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
+        return request.user.is_superuser
+
+
+# ---------------------------------------------------------------------------
+# Token admin -- superuser-only, completely hidden from staff
+# ---------------------------------------------------------------------------
+
+admin.site.unregister(TokenProxy)
+
+
+@admin.register(TokenProxy)
+class TokenAdmin(_TokenAdmin):
+    def has_module_permission(self, request: HttpRequest) -> bool:
+        return request.user.is_superuser
+
+    def has_view_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
+        return request.user.is_superuser
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return request.user.is_superuser
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
+
+        if obj is not None:
+            return False
+        return request.user.is_superuser
+
+    def has_delete_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
+        return request.user.is_superuser
+
+
+@admin.register(LogEntry)
+class LogEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    # to have a date-based drilldown navigation in the admin page
+    date_hierarchy = "action_time"
+
+    # to filter the resultes by users, content types and action flags
+    list_filter = ["user", "content_type", "action_flag"]
+
+    # when searching the user will be able to search in both object_repr and
+    # change_message
+    search_fields = ["object_repr", "change_message"]
+
+    list_display = [
+        "action_time",
+        "user",
+        "content_type",
+        "action_flag",
+    ]
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: EmailAddress | None = None
+    ) -> bool:
+        return request.user.is_superuser
+
+    def has_delete_permission(
+        self, request: HttpRequest, obj: EmailAddress | None = None
+    ) -> bool:
+        return request.user.is_superuser

@@ -1,0 +1,18 @@
+---
+description: Keep feature documentation in docs/ up to date when changing behavior or architecture
+alwaysApply: true
+---
+
+# Documentation Maintenance
+
+When changing feature behavior or architecture, check `docs/` for
+existing documentation on the affected topic.
+
+1. Run `ls docs/` to see what documentation exists.
+2. If a relevant doc exists, read it and update it to reflect your
+   changes.
+3. If you are adding a new feature with no existing doc, create one
+   in `docs/` covering: feature intent, engineering scope, testing
+   strategy, and performance implications.
+
+Do not skip this step. Undocumented changes are incomplete changes.

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from django import forms
@@ -7,6 +9,8 @@ from speleodb.gis.models import ExplorationLead
 
 if TYPE_CHECKING:
     from typing import Any
+
+    from django.http import HttpRequest
 
 
 class ExplorationLeadAdminForm(forms.ModelForm):  # type: ignore[type-arg]
@@ -53,9 +57,12 @@ class ExplorationLeadAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     # Read-only metadata
     readonly_fields = (
         "id",
+        "coordinates",
         "creation_date",
         "modified_date",
     )
+
+    _SUPERUSER_ONLY_FIELDS: frozenset[str] = frozenset({"latitude", "longitude"})
 
     # Detail view layout
     fieldsets = (
@@ -74,6 +81,7 @@ class ExplorationLeadAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "fields": (
                     "latitude",
                     "longitude",
+                    "coordinates",
                 ),
                 "description": "Geographic coordinates of the exploration lead.",
             },
@@ -89,3 +97,24 @@ class ExplorationLeadAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             },
         ),
     )
+
+    def get_list_display(self, request: HttpRequest) -> list[Any]:
+        base: list[Any] = list(super().get_list_display(request))
+        if not request.user.is_superuser:
+            return [f for f in base if f not in self._SUPERUSER_ONLY_FIELDS]
+        return base
+
+    def get_fieldsets(  # type: ignore[override]
+        self, request: HttpRequest, obj: ExplorationLead | None = None
+    ) -> list[tuple[str | None, dict[str, Any]]]:
+        fieldsets = list(super().get_fieldsets(request, obj))
+        if request.user.is_superuser:
+            return fieldsets  # type: ignore[return-value]
+        return [(title, opts) for title, opts in fieldsets if title != "Coordinates"]  # type: ignore[misc]
+
+    @admin.display(description="Coordinates (Lat, Lon)")
+    def coordinates(self, obj: ExplorationLead) -> str:
+        """Display coordinates in a readable format."""
+        if obj.coordinates:
+            return f"{obj.latitude:.7f}, {obj.longitude:.7f}"
+        return "-"

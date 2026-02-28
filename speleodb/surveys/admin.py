@@ -84,14 +84,28 @@ class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "creation_date",
         "modified_date",
         "fork_from",
-        "latitude",
-        "longitude",
         "short_description",
     )
     ordering = ("name",)
     readonly_fields = ("created_by", "creation_date", "modified_date")
 
     list_filter = [ProjectCountryFilter, "type", "created_by", "is_active"]
+
+    # For confidentiality reason - these fields should only be visible to `superusers`
+    _SUPERUSER_ONLY_FIELDS: frozenset[str] = frozenset({"latitude", "longitude"})
+
+    def get_list_display(self, request: HttpRequest) -> list[Any]:
+        base: list[Any] = list(super().get_list_display(request))
+        if not request.user.is_superuser:
+            return base
+        return [*base, *self._SUPERUSER_ONLY_FIELDS]
+
+    def get_fields(self, request: HttpRequest, obj: Project | None = None) -> list[Any]:
+        fields: list[Any] = list(super().get_fields(request, obj))
+        user: Any = request.user
+        if not user.is_superuser:
+            return fields
+        return [*fields, *self._SUPERUSER_ONLY_FIELDS]
 
     @admin.display(description="Description")
     def short_description(self, obj: Project) -> str:
