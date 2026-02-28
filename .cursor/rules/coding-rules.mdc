@@ -1,0 +1,14 @@
+---
+description: Coding rules - read docs/coding-rules.md before writing any Python or JavaScript
+globs: "**/*.{py,js}"
+alwaysApply: false
+---
+
+# Coding Rules
+
+Before writing or editing any Python or JavaScript file, READ
+`docs/coding-rules.md` using the Read tool. Follow every rule in
+that file. No exceptions.
+
+Do NOT paraphrase or memorize the rules -- read the file every session
+so you always have the latest version.

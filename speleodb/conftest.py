@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from _pytest.compat import LEGACY_PATH
+    from django.test.client import Client
     from pytest_django.fixtures import SettingsWrapper
 
     from speleodb.surveys.models import Project
@@ -53,6 +54,27 @@ def admin_user(db: None) -> User:
     )
     assert user.is_superuser
     return user
+
+
+@pytest.fixture
+def staff_user(db: None) -> User:
+    user = UserFactory.create(
+        email="staff@example.com",
+        is_staff=True,
+        is_superuser=False,
+    )
+    assert user.is_staff
+    assert not user.is_superuser
+    return user
+
+
+@pytest.fixture
+def staff_client(staff_user: User) -> Client:
+    from django.test.client import Client as DjangoClient  # noqa: PLC0415
+
+    client = DjangoClient()
+    client.force_login(staff_user)
+    return client
 
 
 @pytest.fixture

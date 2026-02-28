@@ -35,7 +35,7 @@ ALLOWED_HOSTS = allowed_hosts.split(",") if allowed_hosts is not None else []
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # though not all of them may be available with every OS.
 # In Windows, this must be set to your system time zone.
-TIME_ZONE = "US/Eastern"
+TIME_ZONE = "America/New_York"
 # https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 SITE_ID = 1
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-i18n
@@ -226,6 +226,7 @@ MIGRATION_MODULES = {"sites": "speleodb.contrib.sites.migrations"}
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
+    "speleodb.users.backends.StaffFullAdminAccessBackend",
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model

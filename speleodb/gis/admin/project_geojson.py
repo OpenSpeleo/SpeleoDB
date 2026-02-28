@@ -50,6 +50,28 @@ class ProjectGeoJSONAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     list_filter = [GeoJSONProjectFilter, "commit__authored_date"]
 
+    @admin.display(description="File (S3 path)")
+    def file_path(self, obj: ProjectGeoJSON) -> str:
+        return obj.file.name if obj.file else "-"
+
+    def get_fields(
+        self, request: HttpRequest, obj: ProjectGeoJSON | None = None
+    ) -> tuple[str, ...]:
+        fields = self.fields
+        assert fields is not None
+        if not request.user.is_superuser:  # type: ignore[union-attr]
+            return tuple("file_path" if f == "file" else f for f in fields)
+        return fields
+
+    def get_readonly_fields(
+        self, request: HttpRequest, obj: ProjectGeoJSON | None = None
+    ) -> tuple[str, ...]:
+        base = self.readonly_fields
+        assert base is not None
+        if not request.user.is_superuser:  # type: ignore[union-attr]
+            return (*base, "file_path")
+        return base
+
     def has_change_permission(
         self, request: HttpRequest, obj: ProjectGeoJSON | None = None
     ) -> bool:

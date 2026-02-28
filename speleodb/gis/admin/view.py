@@ -86,14 +86,29 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     autocomplete_fields = ["owner"]
 
+    _SUPERUSER_ONLY_FIELDS: frozenset[str] = frozenset(
+        {
+            "api_url_display",
+            "gis_token",
+            "token_preview",
+        }
+    )
+
+    def get_list_display(self, request: HttpRequest) -> list[Any]:
+        base: list[Any] = list(super().get_list_display(request))
+        if not request.user.is_superuser:  # type: ignore[union-attr]
+            return [f for f in base if f not in self._SUPERUSER_ONLY_FIELDS]
+        return base
+
     def get_fields(self, request: HttpRequest, obj: GISView | None = None) -> list[str]:  # type: ignore[override]
         """Hide readonly metadata fields when creating a new view."""
-        if obj is None:  # Creating new object
-            # Only show editable fields
+        if obj is None:
             return ["name", "description", "allow_precise_zoom", "owner"]
 
-        # Editing existing object - show all fields
-        return super().get_fields(request, obj)  # type: ignore[return-value]
+        fields: list[str] = list(super().get_fields(request, obj))  # type: ignore[arg-type]
+        if not request.user.is_superuser:  # type: ignore[union-attr]
+            return [f for f in fields if f not in self._SUPERUSER_ONLY_FIELDS]
+        return fields
 
     def changeform_view(
         self,

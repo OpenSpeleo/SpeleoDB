@@ -1,0 +1,18 @@
+---
+description: Read AGENTS.md at the start of every session for project conventions and workflow
+alwaysApply: true
+---
+
+# AGENTS.md
+
+At the start of every session, READ `AGENTS.md` at the repository root
+using the Read tool. It contains:
+
+- Core principles and workflow orchestration rules
+- Repository map and ownership boundaries
+- Testing requirements and linter commands
+- Practical do/do-not lists
+- References to `docs/coding-rules.md` for hard coding rules
+
+Follow all instructions in that file. Do not rely on memory from
+previous sessions -- the file may have been updated.
