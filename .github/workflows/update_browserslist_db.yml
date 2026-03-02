@@ -30,7 +30,7 @@ jobs:
         run: npx update-browserslist-db@latest
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: chore/update-browserslist-db
           base: ${{ github.event.repository.default_branch }}
