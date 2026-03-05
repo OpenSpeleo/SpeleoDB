@@ -1871,6 +1871,30 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
         body2 = b"".join(resp2.streaming_content)
         assert body1 == body2
 
+    def test_items_accept_geojson_returns_200(self) -> None:
+        """OGC clients (ArcGIS Pro) send Accept: application/geo+json."""
+        resp = self._get_items_response(headers={"accept": "application/geo+json"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert "application/geo+json" in resp["Content-Type"]
+        data = orjson.loads(b"".join(resp.streaming_content))
+        assert data["type"] == "FeatureCollection"
+
+    def test_items_accept_json_returns_200(self) -> None:
+        """Clients may also request Accept: application/json as a fallback."""
+        resp = self._get_items_response(headers={"accept": "application/json"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert "application/geo+json" in resp["Content-Type"]
+        data = orjson.loads(b"".join(resp.streaming_content))
+        assert data["type"] == "FeatureCollection"
+
+    def test_items_accept_legacy_geojson_returns_200(self) -> None:
+        """Some clients use the non-standard application/geojson media type."""
+        resp = self._get_items_response(headers={"accept": "application/geojson"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert "application/geo+json" in resp["Content-Type"]
+        data = orjson.loads(b"".join(resp.streaming_content))
+        assert data["type"] == "FeatureCollection"
+
 
 @pytest.mark.django_db
 class TestOGCDiscoveryFlow(BaseOGCViewTestCase):
@@ -2196,6 +2220,30 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
         assert resp.status_code == status.HTTP_200_OK
         data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
         assert len(data["features"]) == 2  # noqa: PLR2004
+
+    def test_items_accept_geojson_returns_200(self) -> None:
+        """OGC clients (ArcGIS Pro) send Accept: application/geo+json."""
+        resp = self._get_items_response(headers={"accept": "application/geo+json"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert "application/geo+json" in resp["Content-Type"]
+        data = orjson.loads(b"".join(resp.streaming_content))
+        assert data["type"] == "FeatureCollection"
+
+    def test_items_accept_json_returns_200(self) -> None:
+        """Clients may also request Accept: application/json as a fallback."""
+        resp = self._get_items_response(headers={"accept": "application/json"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert "application/geo+json" in resp["Content-Type"]
+        data = orjson.loads(b"".join(resp.streaming_content))
+        assert data["type"] == "FeatureCollection"
+
+    def test_items_accept_legacy_geojson_returns_200(self) -> None:
+        """Some clients use the non-standard application/geojson media type."""
+        resp = self._get_items_response(headers={"accept": "application/geojson"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert "application/geo+json" in resp["Content-Type"]
+        data = orjson.loads(b"".join(resp.streaming_content))
+        assert data["type"] == "FeatureCollection"
 
     def test_items_invalid_commit_returns_404(self) -> None:
         resp = self.client.get(

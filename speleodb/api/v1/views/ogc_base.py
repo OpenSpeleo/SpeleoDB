@@ -28,6 +28,8 @@ from django.http import StreamingHttpResponse
 from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
 from rest_framework.generics import GenericAPIView
+from rest_framework.renderers import BaseRenderer
+from rest_framework.renderers import JSONRenderer
 
 from speleodb.gis.ogc_models import OGCLayerList
 from speleodb.gis.ogc_models import build_ogc_conformance
@@ -36,6 +38,8 @@ from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import NoWrapResponse
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from rest_framework.request import Request
 
     from speleodb.gis.models import ProjectGeoJSON
@@ -108,6 +112,46 @@ def serve_geojson_proxy(
     response["Cache-Control"] = "public, max-age=86400"
     response["Content-Disposition"] = "inline"
     return response
+
+
+# ---------------------------------------------------------------------------
+# Renderers
+# ---------------------------------------------------------------------------
+
+
+class GeoJSONRenderer(BaseRenderer):
+    """Declares ``application/geo+json`` so DRF content negotiation accepts it.
+
+    OGC API Features Part 1 (RFC 7946) mandates this media type for the
+    ``/items`` endpoint.  Clients like ArcGIS Pro send
+    ``Accept: application/geo+json``; without a matching renderer DRF rejects
+    the request with 406 before the view method runs.
+
+    The renderer is never used for actual serialisation — the view returns a
+    ``StreamingHttpResponse`` which bypasses DRF rendering entirely.
+    """
+
+    media_type: str = "application/geo+json"
+    format: str = "geojson"
+
+    def render(
+        self,
+        data: Any,
+        accepted_media_type: str | None = None,
+        renderer_context: Mapping[str, Any] | None = None,
+    ) -> bytes:
+        return orjson.dumps(data)
+
+
+class LegacyGeoJSONRenderer(GeoJSONRenderer):
+    """Accepts the non-standard ``application/geojson`` media type.
+
+    Some clients use this variant instead of the RFC 7946 standard
+    ``application/geo+json``.
+    """
+
+    media_type: str = "application/geojson"
+    format: str = "geojson-legacy"
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +263,7 @@ class BaseOGCCollectionItemApiView(GenericAPIView, SDBAPIViewMixin, abc.ABC):  #
     """
 
     permission_classes = [permissions.AllowAny]
+    renderer_classes = [GeoJSONRenderer, LegacyGeoJSONRenderer, JSONRenderer]
 
     @abc.abstractmethod
     def get_geojson_object(self, commit_sha: str) -> ProjectGeoJSON:
