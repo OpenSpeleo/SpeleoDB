@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from django.db.utils import IntegrityError
 from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
 from rest_framework import status
@@ -102,12 +103,26 @@ class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
         user = self.get_user()
 
         serializer = self.get_serializer(data=request.data)
+
         if serializer.is_valid():
-            serializer.save(user=user)
-            return SuccessResponse(
-                {"landmark": serializer.data},
-                status=status.HTTP_201_CREATED,
-            )
+            try:
+                serializer.save(user=user)
+                return SuccessResponse(
+                    {"landmark": serializer.data},
+                    status=status.HTTP_201_CREATED,
+                )
+            except IntegrityError:
+                lat = serializer.data.get("latitude")
+                long = serializer.data.get("longitude")
+                return ErrorResponse(
+                    {
+                        "error": (
+                            "A landmark for GPS coordinate "
+                            f"({lat}, {long}) already exists or is invalid."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         return ErrorResponse(
             {"errors": serializer.errors},

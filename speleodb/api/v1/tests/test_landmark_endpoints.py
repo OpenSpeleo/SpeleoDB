@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
+from django.db import transaction
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -193,6 +194,61 @@ class TestLandmarkEndpoints:
         assert response.status_code == status.HTTP_201_CREATED
         landmark = Landmark.objects.get(name="Minimal Landmark")
         assert landmark.description == ""
+
+    def test_create_landmark_missing_latitude(
+        self, api_client: APIClient, user: User
+    ) -> None:
+        """Test creating a Landmark without latitude returns 400."""
+        api_client.force_authenticate(user=user)
+        url = reverse("api:v1:landmarks")
+        data = {
+            "name": "No Lat Landmark",
+            "longitude": "-122.0",
+        }
+
+        response = api_client.post(url, data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        response_data = response.json()
+        assert "latitude" in response_data["errors"]
+
+    def test_create_landmark_missing_longitude(
+        self, api_client: APIClient, user: User
+    ) -> None:
+        """Test creating a Landmark without longitude returns 400."""
+        api_client.force_authenticate(user=user)
+        url = reverse("api:v1:landmarks")
+        data = {
+            "name": "No Long Landmark",
+            "latitude": "45.0",
+        }
+
+        response = api_client.post(url, data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        response_data = response.json()
+        assert "longitude" in response_data["errors"]
+
+    def test_create_landmark_duplicate_location_same_user(
+        self, api_client: APIClient, user: User, landmark: Landmark
+    ) -> None:
+        """Test creating a second Landmark at the same coordinates for the same user
+        returns 400."""
+        api_client.force_authenticate(user=user)
+        url = reverse("api:v1:landmarks")
+        data = {
+            "name": "Duplicate Location",
+            "latitude": str(landmark.latitude),
+            "longitude": str(landmark.longitude),
+        }
+
+        with transaction.atomic():
+            response = api_client.post(url, data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        response_data = response.json()
+        assert "error" in response_data
+        assert "already exists" in response_data["error"]
 
     def test_create_landmark_invalid_latitude(
         self, api_client: APIClient, user: User
