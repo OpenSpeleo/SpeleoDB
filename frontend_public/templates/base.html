@@ -61,25 +61,25 @@
                     <nav class="hidden md:flex md:grow">
 
                         <!-- Desktop menu links -->
-                        <ul class="flex grow justify-center flex-wrap items-center">
+                        <ul class="flex grow justify-center items-center">
                             <li>
-                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'about' %}">About</a>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-2 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'about' %}">About</a>
                             </li>
                             <li>
-                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'people' %}">People</a>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-2 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'people' %}">People</a>
                             </li>
                             <li>
-                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'changelog' %}">Changelog</a>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-2 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'changelog' %}">Changelog</a>
                             </li>
                             <li>
-                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'roadmap' %}">Roadmap</a>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-2 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'roadmap' %}">Roadmap</a>
                             </li>
                             <li>
-                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'download' %}">Download</a>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-2 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'download' %}">Download</a>
                             </li>
                             {% if request.user.is_authenticated %}
                             <li>
-                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-4 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'private:user_dashboard' %}">Dashboard</a>
+                                <a class="font-medium text-sm text-slate-300 hover:text-white mx-2 lg:mx-5 transition duration-150 ease-in-out" href="{% url 'private:user_dashboard' %}">Dashboard</a>
                             </li>
                             {% endif %}
                             {% if user.is_staff or user.is_superuser %}
