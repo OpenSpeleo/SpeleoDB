@@ -29,26 +29,23 @@
                 </div>
             </div>
 
-            <div class="pt-32 pb-16 md:pt-52 md:pb-32">
+            <div class="min-h-screen flex items-center pt-32 pb-16 md:pb-32">
 
                 <!-- Hero content -->
-                <div class="max-w-3xl mx-auto text-center">
+                <div class="max-w-3xl mx-auto text-center ">
                     
                     <h1 class="h1 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4" data-aos="fade-down">
-                        SpeleoDB - Cave Survey
+                       <div>SpeleoDB</div>
                     </h1>
                     <hr>
                     <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4 pt-4" data-aos="fade-down">
-                        Explore as One, Survey as Many
-                    </h2>
-                    <p class="text-lg text-slate-300 my-8" data-aos="fade-down" data-aos-delay="200">
-                        We are a US-registered 501c3 non-profit organization aiming to provide<br>
-                        an intuitive and easy way to manage your cave survey data.<br><br>
-                        We believe in team dynamics and synergies applied to cave survey.<br>
-                        SpeleoDB to foster and simplify team survey and collaboration.
+                        Explore as One<span class="hidden sm:inline">-</span><br class="sm:hidden">Survey as Many
+                    </h2 >
+                    <p class="text-lg/8">
+                        We are a US-registered 501c3 non-profit organization aiming to provide an intuitive and easy way to manage survey data. We believe in team dynamics and synergies applied to cave survey. We created SpeleoDB to foster and simplify team survey and collaboration.
                     </p>
                     <div class="max-w-2xl mx-auto" data-aos="fade-down" data-aos-delay="400">
-                        <div class="my-20">
+                        <div class="my-8">
                             <a class="btn h-12 w-48 text-slate-900 bg-gradient-to-r from-white/80 via-white to-white/80 hover:bg-white transition duration-150 ease-in-out group" {% if request.user.is_authenticated %} href="{% url 'private:user_dashboard' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
                                 Get Started <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
                             </a>
