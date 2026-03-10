@@ -2,14 +2,17 @@
 {% load static %}
 
 {% block content %}
+
+<div class="relative">
+
+    <!-- Particles animation -->
+    <div class="absolute inset-0 -z-10" aria-hidden="true">
+        <canvas data-particle-animation data-particle-quantity="50"></canvas>
+    </div>
+
     <!-- Hero -->
     <section>
         <div class="relative max-w-12xl mx-auto px-4 sm:px-6 min-h-screen">
-
-            <!-- Particles animation -->
-            <div class="absolute inset-0 -z-10" aria-hidden="true">
-                <canvas data-particle-animation data-particle-quantity="20" data-particle-staticity="40"></canvas>
-            </div>
 
             <!-- Illustration -->
             <div class="absolute inset-0 -z-10 -mx-28 rounded-b-[3rem] pointer-events-none overflow-hidden" aria-hidden="true">
@@ -85,10 +88,8 @@
 
     <!-- Features -->
     <section>
-        <div class="relative max-w-6xl mx-auto px-4 sm:px-6  min-h-screen  grid content-stretch justify-center">
-            <div class="absolute inset-0 -z-10" aria-hidden="true">
-                <canvas data-particle-animation data-particle-quantity="15" data-particle-staticity="45"></canvas>
-            </div>
+        <div class="relative max-w-6xl mx-auto px-4 sm:px-6  min-h-screen">
+
             <!-- Illustration -->
             <div class="absolute inset-0 -z-10 -mx-28 rounded-t-[3rem] pointer-events-none overflow-hidden" aria-hidden="true">
                 <div class="absolute left-1/2 -translate-x-1/2 top-0 -z-10">
@@ -164,7 +165,7 @@
 
                                 <!-- Particles animation -->
                                 <div class="absolute inset-0 -z-10">
-                                    <canvas data-particle-animation data-particle-quantity="20" data-particle-staticity="50"></canvas>
+                                    <canvas data-particle-animation data-particle-quantity="8" data-particle-staticity="30"></canvas>
                                 </div>
 
                                 <div class="flex items-center justify-center">
@@ -214,14 +215,6 @@
 
     <!-- Features #2 -->
     <section class="relative">
-
-        <!-- Particles animation -->
-        <div class="">
-            <div class="absolute inset-0 -z-10" aria-hidden="true">
-                <canvas data-particle-animation data-particle-quantity="25" data-particle-staticity="55"></canvas>
-            </div>
-        </div>
-
         <div class="max-w-6xl mx-auto px-4 sm:px-6 min-h-screen">
             <div class="pt-16 md:pt-32 pb-16 md:pb-32">
 
@@ -399,8 +392,11 @@
                         </p>
                     </div>
                 </div>
+
             </div>
         </div>
 
     </section>
+
+</div>
 {% endblock %}
