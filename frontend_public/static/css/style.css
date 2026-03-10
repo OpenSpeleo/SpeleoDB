@@ -2243,10 +2243,6 @@ input[type="search"]::-webkit-search-results-decoration {
   max-width: 72rem;
 }
 
-.max-w-\[548px\]{
-  max-width: 548px;
-}
-
 .max-w-md{
   max-width: 28rem;
 }
