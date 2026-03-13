@@ -27,7 +27,7 @@ repos:
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.2
+    rev: v0.15.6
     hooks:
       # Linter
       - id: ruff
@@ -61,14 +61,14 @@ repos:
   # ========================================================================= #
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: "1.29.1"
+    rev: "1.30.0"
     hooks:
       - id: django-upgrade
         args: ["--target-version", "5.2"]
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
-    rev: 0.10.4
+    rev: 0.10.9
     hooks:
       - id: uv-lock
         args: ["--check"]
@@ -78,13 +78,13 @@ repos:
   # ========================================================================= #
 
   - repo: https://github.com/pycqa/bandit
-    rev: 1.9.3
+    rev: 1.9.4
     hooks:
       - id: bandit
         args: ["-iii", "-ll"]
 
   - repo: https://github.com/pysentry/pysentry-pre-commit
-    rev: v0.4.2
+    rev: v0.4.3
     hooks:
       - id: pysentry
         args:
