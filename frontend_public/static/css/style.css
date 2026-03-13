@@ -1841,6 +1841,11 @@ input[type="search"]::-webkit-search-results-decoration {
   margin-bottom: -0.5rem;
 }
 
+.mx-2{
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+}
+
 .mx-4{
   margin-left: 1rem;
   margin-right: 1rem;
@@ -2366,10 +2371,6 @@ input[type="search"]::-webkit-search-results-decoration {
 
 .flex-col{
   flex-direction: column;
-}
-
-.flex-wrap{
-  flex-wrap: wrap;
 }
 
 .flex-nowrap{
