@@ -8,21 +8,23 @@
         <div class="grid sm:grid-cols-12 gap-8 py-8 md:py-12">
 
             <!-- 1st block -->
-            <div class="col-span-12 ">
-                <div class="h-full">
-                    <div class="mb-6 sm:mb-0">
-                        <div class="mb-6 flex justify-center ">
-                            <!-- Logo -->
-                            <a class="inline-flex" href="{% url 'home' %}" aria-label="SpeleoDB">
-                                <img src="{% static 'media/logo.svg' %}" style="height:65px" alt="SpeleoDB">
-                            </a>
-                        </div>
+            <div class="col-span-12 md:col-span-4 text-right md:text-left">
+                <div class="h-full flex flex-col justify-between">
+                    <div class="flex justify-center ">
+                        <!-- Logo -->
+                        <a class="inline-flex" href="{% url 'home' %}" aria-label="SpeleoDB">
+                            <img src="{% static 'media/logo.svg' %}" style="height:65px" alt="SpeleoDB">
+                        </a>
+                    </div>
+                    <div class=" text-center hidden md:block">
+                        <div class="text-sm text-slate-300">&copy; {{ request.get_host }}<span class="text-slate-500 hidden lg:inline">-</span><br class="lg:hidden">All rights reserved.</div>
                     </div>
                 </div>
+                
             </div>
 
             <!-- 2nd block -->
-            <div class="grid grid-cols-12 gap-8 col-span-12 text-center">
+            <div class="grid grid-cols-12 gap-8 col-span-12 md:col-span-8 text-center">
 
                 <!-- 1st sub block -->
                 <div class="sm:col-span-4 col-span-12 order-1 sm:order-0 mb-6 sm:mb-0">
@@ -74,12 +76,9 @@
             </div> 
 
             <!--3rd block -->
-            <div class="col-span-12">
+            <div class="col-span-12 block md:hidden">
                 <div class="h-full text-center ">
-                    <div class="mb-6 sm:mb-0">
-                        
-                        <div class="text-sm text-slate-300">&copy; {{ request.get_host }} <span class="text-slate-500">-</span> All rights reserved.</div>
-                    </div>
+                    <div class="text-sm text-slate-300">&copy; {{ request.get_host }} <span class="text-slate-500">-</span> All rights reserved.</div>
                 </div>
             </div>
 
