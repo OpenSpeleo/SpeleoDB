@@ -32,26 +32,23 @@
                 </div>
             </div>
 
-            <div class="pt-32 pb-16 md:pt-52 md:pb-32">
+            <div class="min-h-screen flex items-center justify-center pt-32 pb-16 md:pb-32">
 
                 <!-- Hero content -->
-                <div class="max-w-3xl mx-auto text-center">
+                <div class="max-w-3xl mx-auto text-center ">
                     
                     <h1 class="h1 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4" data-aos="fade-down">
-                        SpeleoDB - Cave Survey
+                       <div>SpeleoDB</div>
                     </h1>
                     <hr>
                     <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4 pt-4" data-aos="fade-down">
-                        Explore as One, Survey as Many
-                    </h2>
-                    <p class="text-lg text-slate-300 my-8" data-aos="fade-down" data-aos-delay="200">
-                        We are a US-registered 501c3 non-profit organization aiming to provide<br>
-                        an intuitive and easy way to manage your cave survey data.<br><br>
-                        We believe in team dynamics and synergies applied to cave survey.<br>
-                        SpeleoDB to foster and simplify team survey and collaboration.
+                        Explore as One<span class="hidden sm:inline">-</span><br class="sm:hidden">Survey as Many
+                    </h2 >
+                    <p class="text-lg/8">
+                        We are a US-registered 501c3 non-profit organization aiming to provide an intuitive and easy way to manage survey data. <br>We believe in team dynamics and synergies applied to cave survey. We created SpeleoDB to foster and simplify team survey and collaboration.
                     </p>
                     <div class="max-w-2xl mx-auto" data-aos="fade-down" data-aos-delay="400">
-                        <div class="my-20">
+                        <div class="my-8">
                             <a class="btn h-12 w-48 text-slate-900 bg-gradient-to-r from-white/80 via-white to-white/80 hover:bg-white transition duration-150 ease-in-out group" {% if request.user.is_authenticated %} href="{% url 'private:user_dashboard' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
                                 Get Started <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
                             </a>
@@ -108,7 +105,7 @@
                 </div>
             </div>
 
-            <div class="pt-16 pb-12 md:pt-52 md:pb-20">
+            <div class="min-h-screen flex items-center justify-center">
 
                 <div x-data="{ tab: '1' }">
 
@@ -119,17 +116,17 @@
                         <div class="md:w-7/12 lg:w-1/2 order-1 md:order-none max-md:text-center" data-aos="fade-down">
                             <!-- Content #1 -->
                             <div>
-                                <div class="inline-flex font-medium bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-purple-200 pb-3">The platform thought and designed for collaborative survey.</div>
+                                <div class="inline-flex font-medium bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-purple-200 pb-3">The platform designed for collaborative survey</div>
                             </div>
                             <h3 class="h3 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-3">
                                 By and For Cave Divers
                             </h3>
                             <p class="text-lg text-slate-400 mb-4">
-                                Rely on the shoulder of giants to deliver you the most simple and intuitive experience.
+                                Standing on the shoulders of giants to deliver you the most simple and intuitive experience
                             </p>
                             <hr>
                             <p class="text-lg text-slate-400 mt-4 mb-8">
-                                Built on top of the state-of-the-art software <a class="ulink" href="https://git-scm.com/" target="_blank">git</a> to save, manage, version, collaborate on survey data.
+                                Built on top of the state-of-the-art software <a class="ulink" href="https://git-scm.com/" target="_blank">git</a> to save, manage, version, and collaborate on survey data
                             </p>
                             <div class="mt-8 max-w-xs max-md:mx-auto space-y-2">
                                 <span
@@ -220,8 +217,10 @@
 
                 <!-- Section header -->
                 <div class="max-w-3xl mx-auto text-center pb-12 md:pb-20">
-                    <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4 text-3xl">
-                        Data Privacy ~ Transparency ~ Distributed Future
+                    <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4 text-3xl grid md:grid-cols-3 items-center text-center">
+						<div>Transparency</div>
+						<div>Distributed Future</div>
+                        <div>Data Privacy</div>
                     </h2>
                     <p class="text-lg text-slate-400 text-justify">
                         <b>SpeleoDB</b>, developed by the Underwater Speleological and Archaeological Heritage Institute (<a href="https://www.usahinstitute.org/" class="underline">USAH Institute</a>), is a platform designed to address the unique needs of the cave survey and data collection community. We understand the critical importance of data privacy, ownership, and attribution. Our open-source platform is built on a foundation of transparency, allowing anyone to review the code. SpeleoDB leverages proven solutions like GIT for survey data versioning and champions an open file format standard to promote cross-software compatibility. With a technical steering committee guiding its evolution, the platform emphasizes a decentralized future through a newly developed protocol: SpeleoPUB, fostering seamless collaboration while respecting individual control over data.
@@ -308,7 +307,7 @@
                             <h4 class="font-medium text-slate-50">Powered by GIT</h4>
                         </div>
                         <p class="text-sm text-slate-400 text-justify">
-                            SpeleoDB leverages GIT to version every survey, file or information, ensuring that all changes are tracked and recoverable, making collaboration seamless and reliable.
+                            SpeleoDB leverages GIT to version every survey, file, or information, ensuring that all changes are tracked and recoverable, making collaboration seamless and reliable.
                         </p>
                     </div>
                     <!-- Feature -->
@@ -335,7 +334,7 @@
                             <h4 class="font-medium text-slate-50">Secure Backups</h4>
                         </div>
                         <p class="text-sm text-slate-400 text-justify">
-                            All data is backed up across multiple datacenters, providing robust protection against data loss and ensuring accessibility whenever needed.
+                            All data is backed up across multiple datacenters, providing robust protection against loss and ensuring accessibility whenever needed.
                         </p>
                     </div>
                     <!-- Feature -->
