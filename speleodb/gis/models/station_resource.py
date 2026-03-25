@@ -242,7 +242,7 @@ class StationResource(models.Model):
 
             # Validate file extension matches resource type
             if self.file:
-                file_extension = Path(self.file.name).suffix.lower()
+                file_extension = Path(self.file.name).suffix.lower()  # type: ignore[arg-type]
 
                 # Define allowed extensions for each resource type
                 allowed_extensions = {
@@ -312,15 +312,14 @@ class StationResource(models.Model):
             return
 
         # Check if the uploaded file is HEIC/HEIF
-        original_extension = Path(self.file.name).suffix.lower()
+        original_extension = Path(self.file.name).suffix.lower()  # type: ignore[arg-type]
         is_heic = original_extension in {".heic", ".heif"}
 
         self.file.open("rb")
 
         # If it's HEIC, we need to convert the main file to JPEG too
         if is_heic:
-            # Convert HEIC to JPEG for the main file
-            img = ImageProcessor.process_image_for_web(self.file)
+            img = ImageProcessor.process_image_for_web(self.file)  # type: ignore[arg-type]
 
             # Save as JPEG
             main_buffer = BytesIO()
@@ -328,7 +327,7 @@ class StationResource(models.Model):
             main_buffer.seek(0)
 
             # Update the filename to .jpg
-            original_name = Path(self.file.name).stem
+            original_name = Path(self.file.name).stem  # type: ignore[arg-type]
             new_filename = f"{original_name}.jpg"
 
             # Replace the file with the converted version
@@ -338,11 +337,10 @@ class StationResource(models.Model):
             # Re-open for miniature generation
             self.file.open("rb")
 
-        # Generate miniature
-        miniature_content = ImageProcessor.create_miniature(self.file)
+        miniature_content = ImageProcessor.create_miniature(self.file)  # type: ignore[arg-type]
 
         # Generate filename for miniature
-        original_name = Path(self.file.name).stem
+        original_name = Path(self.file.name).stem  # type: ignore[arg-type]
         miniature_name = f"{original_name}_thumb.jpg"
 
         # Save miniature
@@ -356,11 +354,10 @@ class StationResource(models.Model):
 
         self.file.open("rb")
 
-        # Extract thumbnail from video
-        miniature_content = VideoProcessor.extract_thumbnail(self.file)
+        miniature_content = VideoProcessor.extract_thumbnail(self.file)  # type: ignore[arg-type]
 
         # Generate filename for miniature
-        original_name = Path(self.file.name).stem
+        original_name = Path(self.file.name).stem  # type: ignore[arg-type]
         miniature_name = f"{original_name}_thumb.jpg"
 
         # Save miniature
@@ -369,17 +366,20 @@ class StationResource(models.Model):
 
     def _generate_document_miniature(self) -> None:
         """Generate miniature for document resources."""
-        if not self.file or Path(self.file.name).suffix.lower() != ".pdf":
+        if not self.file:
+            return
+
+        if Path(self.file.name).suffix.lower() != ".pdf":  # type: ignore[arg-type]
             return
 
         self.file.open("rb")
-        # Generate preview based on document type
         miniature_content = DocumentProcessor.generate_preview(
-            self.file, filename=self.file.name
+            self.file,  # type: ignore[arg-type]
+            filename=self.file.name or "",
         )
 
         # Generate filename for miniature
-        original_name = Path(self.file.name).stem
+        original_name = Path(self.file.name).stem  # type: ignore[arg-type]
         miniature_name = f"{original_name}_thumb.jpg"
 
         # Save miniature

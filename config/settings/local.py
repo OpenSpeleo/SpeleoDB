@@ -85,7 +85,7 @@ class EmailEMLBackend(EmailBackend):
         super().__init__(*args, **kwargs)
         timestamp = timezone.now().strftime("%Y%m%d-%H%M%S")
         fname = f"{timestamp}-{abs(id(self))}.eml"
-        self._fname = os.path.join(self.file_path, fname)  # type: ignore[attr-defined]  # noqa: PTH118
+        self._fname = os.path.join(self.file_path, fname)  # noqa: PTH118
 
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
