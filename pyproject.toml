@@ -75,7 +75,7 @@ dependencies = [
 
     # Django REST Framework
     # ------------------------------------------------------------------------------
-    "djangorestframework==3.17.0", # https://github.com/encode/django-rest-framework
+    "djangorestframework==3.17.1", # https://github.com/encode/django-rest-framework
     "django-cors-headers==4.9.0",  # https://github.com/adamchainz/django-cors-headers
     "drf-spectacular==0.29.0",     # https://github.com/tfranzel/drf-spectacular
 
