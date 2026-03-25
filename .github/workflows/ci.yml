@@ -102,6 +102,16 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
 
+      rustfs:
+        image: rustfs/rustfs:latest
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       CELERY_BROKER_URL: "redis://localhost:6379/0"
       # postgres://user:password@host:port/database
@@ -130,6 +140,13 @@ jobs:
       - name: Install Dependencies
         run: uv sync --extra local --frozen
 
+      - name: Create S3 Bucket
+        run: aws --endpoint-url http://localhost:9000 s3 mb s3://speleodb-user-artifacts-test
+        env:
+          AWS_ACCESS_KEY_ID: rustfsadmin
+          AWS_SECRET_ACCESS_KEY: rustfsadmin
+          AWS_DEFAULT_REGION: us-east-1
+
       - name: Run Tests
         run: |
           python manage.py validate_templates --settings config.settings.test --ignore-app allauth
@@ -139,9 +156,10 @@ jobs:
           GITLAB_GROUP_NAME: ${{ secrets.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ secrets.GITLAB_HOST_URL }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_S3_REGION_NAME: ${{ secrets.AWS_S3_REGION_NAME }}
-          AWS_STORAGE_BUCKET_NAME: ${{ secrets.AWS_STORAGE_BUCKET_NAME }}
           MAPBOX_API_TOKEN: ${{ secrets.MAPBOX_API_TOKEN }}
-          AWS_S3_CUSTOM_DOMAIN: "${{ secrets.AWS_STORAGE_BUCKET_NAME }}.s3.${{ secrets.AWS_S3_REGION_NAME }}.amazonaws.com"
+          AWS_ACCESS_KEY_ID: rustfsadmin
+          AWS_SECRET_ACCESS_KEY: rustfsadmin
+          AWS_S3_REGION_NAME: us-east-1
+          AWS_STORAGE_BUCKET_NAME: speleodb-user-artifacts-test
+          AWS_S3_ENDPOINT_URL: "http://localhost:9000"
+          AWS_S3_CUSTOM_DOMAIN: "localhost:9000"
