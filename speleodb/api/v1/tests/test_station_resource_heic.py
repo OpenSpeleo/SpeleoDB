@@ -59,8 +59,10 @@ class TestHEICSupport(BaseAPIProjectTestCase):
 
         # Check resource was created and file was converted to JPEG
         assert resource.id is not None
-        assert resource.file.name.endswith(".jpg")  # Should be converted to JPEG
-        assert not resource.file.name.endswith(".heic")  # Should NOT be HEIC
+        file_name = resource.file.name
+        assert file_name is not None
+        assert file_name.endswith(".jpg")  # Should be converted to JPEG
+        assert not file_name.endswith(".heic")  # Should NOT be HEIC
 
         # Verify the stored file is actually JPEG
         resource.file.open("rb")
@@ -90,9 +92,9 @@ class TestHEICSupport(BaseAPIProjectTestCase):
             created_by=self.user.email,
         )
         # If pillow-heif is available, it should convert
-        assert resource.file.name.endswith(".jpg") or resource.file.name.endswith(
-            ".heif"
-        )
+        file_name = resource.file.name
+        assert file_name is not None
+        assert file_name.endswith((".jpg", ".heif"))
 
     def test_image_processor_recognizes_heic(self) -> None:
         """Test that ImageProcessor recognizes HEIC files as images."""
@@ -143,11 +145,15 @@ class TestHEICSupport(BaseAPIProjectTestCase):
 
         # Check miniature was created
         assert resource.miniature is not None
-        assert ".jpg" in resource.miniature.name  # Storage may modify filename
+        miniature_name = resource.miniature.name
+        assert miniature_name is not None
+        assert ".jpg" in miniature_name  # Storage may modify filename
 
         # Check main file was converted to JPEG
-        assert ".jpg" in resource.file.name
-        assert ".heic" not in resource.file.name
+        file_name = resource.file.name
+        assert file_name is not None
+        assert ".jpg" in file_name
+        assert ".heic" not in file_name
 
         # Verify miniature dimensions
         resource.miniature.open("rb")

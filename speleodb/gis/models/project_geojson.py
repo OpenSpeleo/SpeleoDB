@@ -110,4 +110,4 @@ class ProjectGeoJSON(models.Model):
     def get_signed_download_url(self, expires_in: int = 3600) -> str:
         if not self.file:
             raise ValidationError("No file to download.")
-        return self.file.storage.url(self.file.name, expire=expires_in)  # type: ignore[no-any-return]
+        return self.file.storage.url(self.file.name, expire=expires_in)  # type: ignore[call-arg]

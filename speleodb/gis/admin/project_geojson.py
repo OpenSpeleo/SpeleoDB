@@ -52,7 +52,7 @@ class ProjectGeoJSONAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     @admin.display(description="File (S3 path)")
     def file_path(self, obj: ProjectGeoJSON) -> str:
-        return obj.file.name if obj.file else "-"
+        return (obj.file.name or "-") if obj.file else "-"
 
     def get_fields(
         self, request: HttpRequest, obj: ProjectGeoJSON | None = None

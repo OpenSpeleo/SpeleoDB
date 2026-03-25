@@ -128,7 +128,7 @@ class PersonBase(models.Model):
             return None
 
         try:
-            return self.photo.url  # type: ignore[no-any-return]
+            return self.photo.url
         except AttributeError:
             return None
 
