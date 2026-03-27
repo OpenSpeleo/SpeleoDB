@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import re
 from typing import Any
 from typing import ClassVar
 
@@ -50,8 +51,13 @@ class StationTagSerializer(
         return value.strip().title()
 
     def validate_color(self, value: str) -> str:
-        """Ensure color is uppercase for consistency."""
-        return value.upper()
+        """Validate color is a 6-digit hex code and uppercase it."""
+        value = value.strip().upper()
+        if not re.match(r"^#[0-9A-F]{6}$", value):
+            raise serializers.ValidationError(
+                "Color must be a 6-digit hex code (e.g. #FF0000)."
+            )
+        return value
 
     def create(self, validated_data: dict[str, Any]) -> StationTag:
         """Create a new station tag with the current user."""

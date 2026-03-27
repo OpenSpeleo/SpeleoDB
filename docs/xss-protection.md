@@ -162,3 +162,40 @@ update **both** files and run `npm run test:js`.
 This shared snippet is included in 28+ Django templates. It calls
 `escapeHtml()` (from `xss-helpers.js`) on all API error fields before
 inserting into the error modal.
+
+---
+
+## Server-side sanitization (defense-in-depth)
+
+The backend strips HTML tags from all user text fields before saving to
+the database. This is defense-in-depth -- even if a frontend escaping
+path is missed, the stored data cannot contain executable HTML.
+
+### Pipeline
+
+`speleodb/utils/sanitize.py` defines `sanitize_text()` which runs:
+
+1. **`nh3.clean(value, tags=set())`** -- strips ALL HTML tags, keeps
+   text content only. `<script>alert(1)</script>` becomes `alert(1)`.
+2. Unicode NFD decomposition + combining mark removal (anti-zalgo).
+3. NFC recomposition.
+4. Control/format character removal.
+5. Whitespace normalization.
+
+### Integration
+
+`SanitizedFieldsMixin` (in `speleodb/utils/serializer_mixins.py`) runs
+`sanitize_text()` on every field listed in a serializer's
+`sanitized_fields` during `to_internal_value()`. 21 serializer classes
+across the codebase use this mixin, covering ~50 text fields.
+
+### What this means for users
+
+Angle brackets in text fields are stripped: `<WIP> Station` becomes
+`WIP Station`. This is an explicit trade-off for security.
+
+### Tag color validation
+
+`StationTagSerializer.validate_color` rejects any value that is not a
+6-digit hex code (`#RRGGBB`). This prevents CSS injection via
+`style="background-color: ${tag.color}"` on the frontend.

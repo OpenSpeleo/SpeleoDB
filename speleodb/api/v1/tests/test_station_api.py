@@ -766,10 +766,13 @@ class TestStationAPIFuzzing(BaseAPIProjectTestCase):
                 assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
                 continue
 
-            # Should accept the input but store it safely
+            # Should accept the input but store it sanitized
             assert response.status_code == status.HTTP_201_CREATED
-            # Data should be stored as-is, not executed
-            assert response.data["data"]["description"] == payload
+            stored = response.data["data"]["description"]
+            assert "<script>" not in stored
+            assert "<img" not in stored
+            assert "<svg" not in stored
+            assert stored == sanitize_text(payload)
 
     def test_random_coordinate_values(self) -> None:
         """Test various random coordinate values."""

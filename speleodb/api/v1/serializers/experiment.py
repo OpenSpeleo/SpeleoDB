@@ -19,6 +19,7 @@ from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models.experiment import ExperimentFieldDefinition
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.users.models import User
+from speleodb.utils.sanitize import sanitize_text
 from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 logger = logging.getLogger(__name__)
@@ -548,6 +549,15 @@ class ExperimentRecordSerializer(serializers.ModelSerializer[ExperimentRecord]):
             "creation_date",
             "modified_date",
         ]
+
+    def validate_data(self, value: dict[str, Any]) -> dict[str, Any]:
+        """Sanitize string values inside the experiment data JSON."""
+        if isinstance(value, dict):
+            return {
+                k: sanitize_text(v) if isinstance(v, str) else v
+                for k, v in value.items()
+            }
+        return value
 
 
 class ExperimentRecordGISSerializer(serializers.Serializer[ExperimentRecord]):

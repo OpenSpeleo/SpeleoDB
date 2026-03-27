@@ -46,7 +46,9 @@ class Station(PolymorphicModel):
     )
 
     description = models.TextField(
-        blank=True, default="", help_text="Optional description of the station"
+        blank=True,
+        default="",
+        help_text="Optional description of the station",
     )
 
     # Station coordinates

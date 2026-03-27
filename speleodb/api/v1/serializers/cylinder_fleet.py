@@ -30,7 +30,14 @@ logger = logging.getLogger(__name__)
 class CylinderSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Cylinder]):
     """Serializer for Cylinder model."""
 
-    sanitized_fields: ClassVar[list[str]] = ["name", "brand", "owner", "notes", "type"]
+    sanitized_fields: ClassVar[list[str]] = [
+        "name",
+        "brand",
+        "owner",
+        "notes",
+        "type",
+        "serial",
+    ]
 
     # Make fleet write-only since we pass it via URL
     fleet = serializers.PrimaryKeyRelatedField(
@@ -579,9 +586,11 @@ class CylinderInstallGeoJSONSerializer(serializers.ModelSerializer[CylinderInsta
 
 
 class CylinderPressureCheckSerializer(
-    serializers.ModelSerializer[CylinderPressureCheck]
+    SanitizedFieldsMixin, serializers.ModelSerializer[CylinderPressureCheck]
 ):
     """Serializer for CylinderPressureCheck model."""
+
+    sanitized_fields: ClassVar[list[str]] = ["notes"]
 
     # Read-only nested information
     install_id = serializers.UUIDField(source="install.id", read_only=True)
