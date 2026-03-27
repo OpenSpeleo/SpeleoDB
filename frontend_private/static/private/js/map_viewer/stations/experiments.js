@@ -129,7 +129,7 @@ function renderExperimentTable(experiment, dataRows, stationId, projectId, isSur
                     <tr>
                         ${sortedFields.map(field => `
                             <th class="px-4 py-3 whitespace-nowrap text-center">
-                                ${field.name}
+                                ${Utils.escapeHtml(field.name)}
                                 ${field.required ? '<span class="text-red-400 ml-1">*</span>' : ''}
                             </th>
                         `).join('')}
@@ -160,7 +160,7 @@ function renderExperimentTable(experiment, dataRows, stationId, projectId, isSur
             } else if (field.type === 'boolean') {
                 displayValue = value ? 'Yes' : 'No';
             } else {
-                displayValue = String(value);
+                displayValue = Utils.escapeHtml(String(value));
             }
             return `<td class="px-4 py-3 text-slate-300 text-center">${displayValue}</td>`;
         }).join('')}
@@ -238,40 +238,40 @@ export const StationExperiments = {
             const renderContent = () => {
                 const selectedExperiment = activeExperiments.find(exp => exp.id === selectedExperimentId);
 
-                container.innerHTML = `
+                container.innerHTML = Utils.safeHtml`
                     <div class="tab-content active">
                         <div class="space-y-6">
                             <div class="flex items-center justify-between flex-wrap gap-4">
                                 <h3 class="text-xl font-semibold text-white">Scientific Experiments</h3>
-                                ${selectedExperiment && hasWriteAccess ? `
+                                ${Utils.raw(selectedExperiment && hasWriteAccess ? `
                                     <button onclick="window.StationExperiments.openAddRowModal('${stationId}', '${currentProjectId}', '${selectedExperiment.id}')" class="btn-primary">
                                         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                         </svg>
                                         Add Record
                                     </button>
-                                ` : ''}
+                                ` : '')}
                             </div>
 
                             <div class="bg-slate-800/30 rounded-lg border border-slate-600/50 p-4">
                                 <label class="block text-sm font-medium text-slate-300 mb-2">Select Experiment</label>
                                 <select id="experiment-selector" class="bg-slate-700 text-white rounded-lg p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-transparent">
                                     <option value="">-- Choose an experiment --</option>
-                                    ${activeExperiments.map(exp => `
+                                    ${Utils.raw(activeExperiments.map(exp => `
                                         <option value="${exp.id}" ${exp.id === selectedExperimentId ? 'selected' : ''}>
-                                            ${exp.name}${exp.code ? ` (${exp.code})` : ''}
+                                            ${Utils.escapeHtml(exp.name)}${exp.code ? ` (${Utils.escapeHtml(exp.code)})` : ''}
                                         </option>
-                                    `).join('')}
+                                    `).join(''))}
                                 </select>
-                                ${selectedExperiment ? `
+                                ${Utils.raw(selectedExperiment ? `
                                     <div class="mt-3 text-sm text-slate-400">
-                                        ${selectedExperiment.description ? `<p class="mb-2">${selectedExperiment.description}</p>` : ''}
+                                        ${selectedExperiment.description ? `<p class="mb-2">${Utils.escapeHtml(selectedExperiment.description)}</p>` : ''}
                                         ${selectedExperiment.start_date ? `<p>Period: ${new Date(selectedExperiment.start_date).toLocaleDateString()}${selectedExperiment.end_date ? ` - ${new Date(selectedExperiment.end_date).toLocaleDateString()}` : ''}</p>` : ''}
                                     </div>
-                                ` : ''}
+                                ` : '')}
                             </div>
 
-                            ${selectedExperiment ? `
+                            ${Utils.raw(selectedExperiment ? `
                                 <div class="bg-slate-800/30 rounded-lg border border-slate-600/50 p-6">
                                     <h4 class="text-lg font-semibold text-white mb-4">Data Records</h4>
                                     ${renderExperimentTable(selectedExperiment, experimentDataRows, stationId, currentProjectId, isSurfaceStation)}
@@ -284,7 +284,7 @@ export const StationExperiments = {
                                     <h3 class="text-white text-lg font-medium mb-2">Select an Experiment</h3>
                                     <p class="text-slate-400">Choose an experiment from the dropdown above to view and record data.</p>
                                 </div>
-                            `}
+                            `)}
                         </div>
                     </div>
                 `;
@@ -340,7 +340,7 @@ export const StationExperiments = {
         } catch (error) {
             console.error('Error loading experiments:', error);
             Utils.hideLoadingOverlay(loadingOverlay);
-            container.innerHTML = `
+            container.innerHTML = Utils.safeHtml`
                 <div class="tab-content active">
                     <div class="space-y-6">
                         <div class="flex items-center justify-between">
@@ -403,7 +403,7 @@ export const StationExperiments = {
                                    step="any"
                                    ${isRequired ? 'required' : ''}
                                    class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                                   placeholder="Enter ${field.name.toLowerCase()}">
+                                   placeholder="Enter ${Utils.escapeHtml(field.name.toLowerCase())}">
                         `;
                         break;
                     case 'date':
@@ -439,7 +439,7 @@ export const StationExperiments = {
                                     class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-transparent">
                                 <option value="">-- Select --</option>
                                 ${options.map(opt => `
-                                    <option value="${opt}">${opt}</option>
+                                    <option value="${Utils.escapeHtml(opt)}">${Utils.escapeHtml(opt)}</option>
                                 `).join('')}
                             </select>
                         `;
@@ -452,14 +452,14 @@ export const StationExperiments = {
                                    name="${field.id}" 
                                    ${isRequired ? 'required' : ''}
                                    class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                                   placeholder="Enter ${field.name.toLowerCase()}">
+                                   placeholder="Enter ${Utils.escapeHtml(field.name.toLowerCase())}">
                         `;
                 }
 
                 return `
                     <div class="field-group">
                         <label for="${fieldId}" class="block text-sm font-medium text-slate-300 mb-2">
-                            ${field.name}
+                            ${Utils.escapeHtml(field.name)}
                             ${isRequired ? '<span class="text-red-400">*</span>' : ''}
                         </label>
                         ${inputHtml}
@@ -480,7 +480,7 @@ export const StationExperiments = {
                                     </svg>
                                 </button>
                             </div>
-                            <p class="text-slate-400 text-sm mt-2">${experiment.name}</p>
+                            <p class="text-slate-400 text-sm mt-2">${Utils.escapeHtml(experiment.name)}</p>
                         </div>
                         <form id="experiment-row-form" class="p-6 space-y-6">
                             ${fieldInputs}

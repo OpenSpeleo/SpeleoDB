@@ -2,6 +2,7 @@ import { Config, DEFAULTS } from '../config.js';
 import { Layers } from '../map/layers.js';
 import { State } from '../state.js';
 import { Colors } from '../map/colors.js';
+import { Utils } from '../utils.js';
 
 export const ProjectPanel = {
     init: function() {
@@ -73,13 +74,13 @@ export const ProjectPanel = {
             item.dataset.projectId = project.id;
             item.dataset.color = color;
             
-            item.innerHTML = `
+            item.innerHTML = Utils.safeHtml`
                 <div class="flex items-center gap-2 overflow-hidden flex-1">
                     <div class="project-color-dot w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${isVisible ? color : '#94a3b8'}"></div>
                     <span class="text-slate-200 text-sm font-medium truncate select-none">${project.name}</span>
                 </div>
                 <label class="toggle-switch m-0 scale-75 origin-right">
-                    <input type="checkbox" ${isVisible ? 'checked' : ''}>
+                    <input type="checkbox" ${Utils.raw(isVisible ? 'checked' : '')}>
                     <span class="toggle-slider"></span>
                 </label>
             `;

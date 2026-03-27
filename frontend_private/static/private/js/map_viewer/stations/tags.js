@@ -72,9 +72,9 @@ export const StationTags = {
                         ${State.userTags.length > 0 ? `
                             <div class="space-y-2">
                                 ${State.userTags.map(tag => `
-                                    <button onclick="window.setStationTag('${stationId}', '${tag.id}')" 
+                                    <button onclick="window.setStationTag('${stationId}', '${tag.id}')"
                                             class="w-full text-left px-4 py-2 rounded-lg ${currentTagId === tag.id ? 'bg-sky-600' : 'bg-slate-700'} hover:bg-slate-600 transition-colors flex items-center justify-between">
-                                        <span class="station-tag" style="background-color: ${tag.color}">${tag.name}</span>
+                                        <span class="station-tag" style="background-color: ${tag.color}">${Utils.escapeHtml(tag.name)}</span>
                                         ${currentTagId === tag.id ? '<span class="text-white text-sm">✓ Current</span>' : ''}
                                     </button>
                                 `).join('')}
@@ -329,7 +329,7 @@ export const StationTags = {
         }
 
         if (station.tag && station.tag.name && station.tag.color) {
-            tagContainer.innerHTML = `
+            tagContainer.innerHTML = Utils.safeHtml`
                 <span class="station-tag" style="background-color: ${station.tag.color}">
                     ${station.tag.name}
                     <span class="remove-tag" onclick="window.removeStationTag('${stationId}')">×</span>

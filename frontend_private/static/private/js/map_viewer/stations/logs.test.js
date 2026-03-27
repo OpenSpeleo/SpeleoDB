@@ -13,15 +13,34 @@ vi.mock('../api.js', () => ({
     },
 }));
 
-vi.mock('../utils.js', () => ({
-    Utils: {
-        showNotification: vi.fn(),
-        showLoadingOverlay: vi.fn(() => document.createElement('div')),
-        hideLoadingOverlay: vi.fn(),
-        formatJournalDate: vi.fn((d) => d || ''),
-        filenameFromUrl: vi.fn((url) => url?.split('/').pop() || ''),
-    },
-}));
+vi.mock('../utils.js', () => {
+    const escapeHtml = (text) => {
+        if (text === null || text === undefined) return '';
+        const str = String(text);
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
+    const RAW = Symbol('RAW_HTML');
+    return {
+        Utils: {
+            showNotification: vi.fn(),
+            showLoadingOverlay: vi.fn(() => document.createElement('div')),
+            hideLoadingOverlay: vi.fn(),
+            formatJournalDate: vi.fn((d) => d || ''),
+            filenameFromUrl: vi.fn((url) => url?.split('/').pop() || ''),
+            escapeHtml: vi.fn(escapeHtml),
+            raw: (html) => ({ [RAW]: true, value: String(html) }),
+            safeHtml: (strings, ...values) => strings.reduce((r, s, i) => {
+                if (i < values.length) {
+                    const v = values[i];
+                    if (v && typeof v === 'object' && v[RAW]) return r + s + v.value;
+                    return r + s + escapeHtml(v);
+                }
+                return r + s;
+            }, ''),
+        },
+    };
+});
 
 vi.mock('../config.js', () => ({
     Config: {

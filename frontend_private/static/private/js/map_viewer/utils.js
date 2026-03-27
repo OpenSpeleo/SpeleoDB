@@ -1,6 +1,25 @@
 import { Notification } from './components/notification.js';
 
+const RAW_HTML = Symbol('RAW_HTML');
+
 export const Utils = {
+    raw: function(htmlString) {
+        return { [RAW_HTML]: true, value: String(htmlString) };
+    },
+
+    safeHtml: function(strings, ...values) {
+        return strings.reduce((result, str, i) => {
+            if (i < values.length) {
+                const val = values[i];
+                if (val && typeof val === 'object' && val[RAW_HTML]) {
+                    return result + str + val.value;
+                }
+                return result + str + Utils.escapeHtml(val);
+            }
+            return result + str;
+        }, '');
+    },
+
     getCSRFToken: function() {
         const cookieValue = document.cookie
             .split('; ')
@@ -108,9 +127,11 @@ export const Utils = {
     },
 
     escapeHtml: function(text) {
-        if (!text) return '';
+        if (text === null || text === undefined) return '';
+        const str = String(text);
+        if (!str) return '';
         const div = document.createElement('div');
-        div.textContent = text;
+        div.textContent = str;
         return div.innerHTML;
     },
 

@@ -275,17 +275,17 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                             <tbody class="divide-y divide-slate-700" id="sensor-history-tbody">
                                 ${installs.map((install, index) => `
                                     <tr class="hover:bg-slate-800/30 ${index % 2 === 0 ? 'bg-slate-900/20' : ''}">
-                                        <td class="px-4 py-3 text-white font-medium">${install.sensor_name || 'Unknown'}</td>
-                                        <td class="px-4 py-3 text-slate-300">${install.sensor_fleet_name || 'Unknown'}</td>
+                                        <td class="px-4 py-3 text-white font-medium">${Utils.escapeHtml(install.sensor_name || 'Unknown')}</td>
+                                        <td class="px-4 py-3 text-slate-300">${Utils.escapeHtml(install.sensor_fleet_name || 'Unknown')}</td>
                                         <td class="px-4 py-3">
                                             <span class="px-2 py-1 ${getSensorInstallStatusColor(install.status)} text-white text-xs rounded-full font-medium block w-20 text-center">
                                                 ${getSensorInstallStatusLabel(install.status)}
                                             </span>
                                         </td>
                                         <td class="px-4 py-3 text-slate-300">${formatDateString(install.install_date)}</td>
-                                        <td class="px-4 py-3 text-slate-400 text-xs">${install.install_user || '-'}</td>
+                                        <td class="px-4 py-3 text-slate-400 text-xs">${Utils.escapeHtml(install.install_user || '-')}</td>
                                         <td class="px-4 py-3 text-slate-300">${install.uninstall_date ? formatDateString(install.uninstall_date) : '-'}</td>
-                                        <td class="px-4 py-3 text-slate-400 text-xs">${install.uninstall_user || '-'}</td>
+                                        <td class="px-4 py-3 text-slate-400 text-xs">${Utils.escapeHtml(install.uninstall_user || '-')}</td>
                                         <td class="px-4 py-3 text-slate-400 text-xs">${install.modified_date ? new Date(install.modified_date).toLocaleDateString() : '-'}</td>
                                     </tr>
                                 `).join('')}
@@ -382,8 +382,8 @@ export const StationSensors = {
                                         <div class="bg-slate-800/20 border border-slate-600/50 rounded-lg p-5 hover:bg-slate-700/30 transition-colors">
                                             <div class="flex justify-between items-start mb-3">
                                                 <div class="flex-1">
-                                                    <h4 class="text-white font-medium text-lg">${install.sensor_name || 'Unknown Sensor'}</h4>
-                                                    <p class="text-slate-400 text-sm mt-1">Fleet: ${install.sensor_fleet_name || 'Unknown Fleet'}</p>
+                                                    <h4 class="text-white font-medium text-lg">${Utils.escapeHtml(install.sensor_name || 'Unknown Sensor')}</h4>
+                                                    <p class="text-slate-400 text-sm mt-1">Fleet: ${Utils.escapeHtml(install.sensor_fleet_name || 'Unknown Fleet')}</p>
                                                 </div>
                                                 <span class="px-3 py-1 ${getSensorInstallStatusColor(install.status)} text-white text-xs rounded-full font-medium block w-20 text-center">
                                                     ${getSensorInstallStatusLabel(install.status)}
@@ -397,7 +397,7 @@ export const StationSensors = {
                                                 </div>
                                                 <div>
                                                     <span class="text-slate-400">Installer:</span>
-                                                    <span class="text-white ml-2">${install.install_user || 'Unknown'}</span>
+                                                    <span class="text-white ml-2">${Utils.escapeHtml(install.install_user || 'Unknown')}</span>
                                                 </div>
                                                 ${install.expiracy_memory_date ? `
                                                     <div>
@@ -766,7 +766,7 @@ export const StationSensors = {
                                     class="form-input" required>
                                     <option value="">Select a fleet...</option>
                                     ${fleetsWithAvailableCount.map(fleet => `
-                                        <option value="${fleet.id}">${fleet.name} (${fleet.availableCount} available)</option>
+                                        <option value="${fleet.id}">${Utils.escapeHtml(fleet.name)} (${fleet.availableCount} available)</option>
                                     `).join('')}
                                 </select>
                             </div>
@@ -876,7 +876,7 @@ export const StationSensors = {
                 sensorSelect.innerHTML = '<option value="">Select a sensor...</option>' +
                     availableSensors.map(sensor => `
                         <option value="${sensor.id}" ${sensor.id === currentSensorId ? 'selected' : ''}>
-                            ${sensor.name}
+                            ${Utils.escapeHtml(sensor.name)}
                         </option>
                     `).join('');
             }
@@ -1039,7 +1039,7 @@ export const StationSensors = {
                                     <option value="">Select a fleet...</option>
                                     ${fleetsWithAvailableCount.map(fleet => `
                                         <option value="${fleet.id}" ${fleet.id === currentFleetId ? 'selected' : ''}>
-                                            ${fleet.name} (${fleet.availableCount} available)
+                                            ${Utils.escapeHtml(fleet.name)} (${fleet.availableCount} available)
                                         </option>
                                     `).join('')}
                                 </select>
@@ -1051,7 +1051,7 @@ export const StationSensors = {
                                     <option value="">Select a sensor...</option>
                                     ${availableSensors.map(sensor => `
                                         <option value="${sensor.id}" ${sensor.id === install.sensor_id ? 'selected' : ''}>
-                                            ${sensor.name}
+                                            ${Utils.escapeHtml(sensor.name)}
                                         </option>
                                     `).join('')}
                                 </select>

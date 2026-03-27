@@ -302,7 +302,7 @@ export const StationDetails = {
                                 <div class="h-10 bg-slate-600/50 rounded animate-pulse"></div>
                             </div>
                         </div>
-                        
+
                         <div class="p-8 space-y-6">
                             <!-- Loading spinner -->
                             <div class="flex items-center justify-center py-8">
@@ -428,7 +428,7 @@ export const StationDetails = {
             typeBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-medium border ${typeInfo.color}">${typeInfo.icon} ${typeInfo.label}</span>`;
         }
 
-        modalTitle.innerHTML = `${stationTypeLabel}: ${station.name}${typeBadge}${isDemoStation ? ' <span class="demo-badge">DEMO</span>' : ''}`;
+        modalTitle.innerHTML = Utils.safeHtml`${Utils.raw(stationTypeLabel)}: ${station.name}${Utils.raw(typeBadge)}${Utils.raw(isDemoStation ? ' <span class="demo-badge">DEMO</span>' : '')}`;
 
         // Determine access based on station type
         let hasWriteAccess, hasAdminAccess, parentName, parentType;
@@ -487,24 +487,24 @@ export const StationDetails = {
             </div>
         `;
 
-        modalContent.innerHTML = `
+        modalContent.innerHTML = Utils.safeHtml`
             <div class="tab-content active">
                 <div class="space-y-8">
                     <div class="bg-slate-700/70 rounded-xl border border-slate-600/50 overflow-hidden">
                         <div class="bg-slate-800/30 p-6">
                             <h3 class="text-2xl font-bold text-white">${station.name}</h3>
                             <div class="grid grid-cols-2 gap-3 mt-4">
-                                <button ${hasWriteAccess ? `id="edit-station-btn"` : ''} class="btn-secondary text-sm w-full ${hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasWriteAccess ? '' : 'disabled'}>✏️ Edit</button>
-                                <button ${hasAdminAccess ? `id="delete-station-btn"` : ''} class="btn-danger text-sm w-full ${hasAdminAccess ? '' : 'opacity-50 cursor-not-allowed'}" ${hasAdminAccess ? '' : 'disabled'}>🗑️ Delete</button>
+                                <button ${Utils.raw(hasWriteAccess ? 'id="edit-station-btn"' : '')} class="btn-secondary text-sm w-full ${Utils.raw(hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed')}" ${Utils.raw(hasWriteAccess ? '' : 'disabled')}>✏️ Edit</button>
+                                <button ${Utils.raw(hasAdminAccess ? 'id="delete-station-btn"' : '')} class="btn-danger text-sm w-full ${Utils.raw(hasAdminAccess ? '' : 'opacity-50 cursor-not-allowed')}" ${Utils.raw(hasAdminAccess ? '' : 'disabled')}>🗑️ Delete</button>
                             </div>
                         </div>
-                        
+
                         <div class="p-8 space-y-6">
-                            ${stationTypeSection}
-                            ${station.description ? `<p class="text-slate-300 text-lg leading-relaxed bg-slate-800/30 p-4 rounded-lg border">${station.description}</p>` : ''}
-                            
+                            ${Utils.raw(stationTypeSection)}
+                            ${Utils.raw(station.description ? Utils.safeHtml`<p class="text-slate-300 text-lg leading-relaxed bg-slate-800/30 p-4 rounded-lg border">${station.description}</p>` : '')}
+
                             <!-- Tag Section -->
-                            ${hasWriteAccess ? `
+                            ${Utils.raw(hasWriteAccess ? Utils.safeHtml`
                             <div class="bg-slate-800/30 p-4 rounded-lg border border-slate-600/50">
                                 <div class="flex items-center justify-between mb-3">
                                     <h4 class="text-white font-semibold flex items-center">
@@ -514,19 +514,19 @@ export const StationDetails = {
                                         Tag
                                     </h4>
                                     <button id="open-tag-selector-btn" class="text-xs px-3 py-1 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors">
-                                        ${(station.tag && station.tag.name) ? 'Change Tag' : '+ Add Tag'}
+                                        ${Utils.raw((station.tag && station.tag.name) ? 'Change Tag' : '+ Add Tag')}
                                     </button>
                                 </div>
                                 <div id="station-tag-display" class="flex gap-2 min-h-[32px]">
-                                    ${(station.tag && station.tag.name && station.tag.color) ? `
+                                    ${Utils.raw((station.tag && station.tag.name && station.tag.color) ? Utils.safeHtml`
                                         <span class="station-tag" style="background-color: ${station.tag.color}">
                                             ${station.tag.name}
                                             <span class="remove-tag" onclick="window.removeStationTag('${station.id}')">×</span>
                                         </span>
-                                    ` : '<span class="text-slate-400 text-sm">No tag assigned</span>'}
+                                    ` : '<span class="text-slate-400 text-sm">No tag assigned</span>')}
                                 </div>
                             </div>
-                            ` : (station.tag && station.tag.name && station.tag.color) ? `
+                            ` : (station.tag && station.tag.name && station.tag.color) ? Utils.safeHtml`
                             <div class="bg-slate-800/30 p-4 rounded-lg border border-slate-600/50">
                                 <h4 class="text-white font-semibold mb-3 flex items-center">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -540,9 +540,9 @@ export const StationDetails = {
                                     </span>
                                 </div>
                             </div>
-                            ` : ''}
-                            
-                            ${snapInfo}
+                            ` : '')}
+
+                            ${Utils.raw(snapInfo)}
                         </div>
                     </div>
                 </div>
@@ -575,7 +575,7 @@ export const StationDetails = {
         const modalContent = document.getElementById('station-modal-content');
         const isSurfaceStation = stationType === 'surface';
 
-        modalContent.innerHTML = `
+        modalContent.innerHTML = Utils.safeHtml`
             <div class="tab-content active p-6">
                 <form id="edit-station-form" class="space-y-6">
                     <div>
@@ -587,6 +587,7 @@ export const StationDetails = {
                         <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
                         <textarea id="edit-station-description" rows="4"
                                   class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:border-sky-500 focus:outline-none resize-none">${station.description || ''}</textarea>
+
                     </div>
                     <div class="flex gap-3 justify-end pt-4 border-t border-slate-600">
                         <button type="button" id="cancel-edit-btn" class="btn-secondary">Cancel</button>
@@ -651,13 +652,13 @@ export const StationDetails = {
             const modalContent = document.getElementById('station-modal-content');
             const stationTypeLabel = isSurfaceStation ? 'Surface Station' : 'Station';
 
-            modalContent.innerHTML = `
+            modalContent.innerHTML = Utils.safeHtml`
                 <div class="tab-content active p-6">
                     <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-6 text-center">
                         <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                         </svg>
-                        <h3 class="text-xl font-bold text-white mb-2">Delete ${stationTypeLabel}?</h3>
+                        <h3 class="text-xl font-bold text-white mb-2">Delete ${Utils.raw(stationTypeLabel)}?</h3>
                         <p class="text-slate-300 mb-2">Are you sure you want to delete <strong>${station.name}</strong>?</p>
                         <p class="text-red-300 text-sm mb-6">This action cannot be undone. All associated resources, logs, and data will be permanently deleted.</p>
                         <div class="flex gap-3 justify-center">
@@ -701,7 +702,7 @@ export const StationDetails = {
         const isSurfaceStation = stationType === 'surface';
         const stationTypeLabel = isSurfaceStation ? 'Surface Station' : 'Station';
 
-        const modalHtml = `
+        const modalHtml = Utils.safeHtml`
             <div id="station-delete-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6">
@@ -712,7 +713,7 @@ export const StationDetails = {
                                 </svg>
                             </div>
                         </div>
-                        <h3 class="text-xl font-bold text-white text-center mb-2">Delete ${stationTypeLabel}?</h3>
+                        <h3 class="text-xl font-bold text-white text-center mb-2">Delete ${Utils.raw(stationTypeLabel)}?</h3>
                         <p class="text-slate-300 text-center mb-2">Are you sure you want to delete <strong>${station.name}</strong>?</p>
                         <p class="text-red-300 text-sm text-center mb-6">This action cannot be undone. All associated resources, logs, and data will be permanently deleted.</p>
                         <div class="flex gap-3 justify-center">

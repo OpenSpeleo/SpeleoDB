@@ -50,22 +50,22 @@ export const StationResources = {
             cachedResources = resources;
 
             // Build HTML
-            container.innerHTML = `
+            container.innerHTML = Utils.safeHtml`
                 <div class="tab-content active">
                     <div class="space-y-6 p-6">
                         <div class="flex justify-between items-center">
                             <h3 class="text-xl font-semibold text-white">Resources for ${station?.name || 'Station'}</h3>
-                            ${hasWriteAccess ? `
+                            ${Utils.raw(hasWriteAccess ? `
                                 <button id="add-resource-btn" class="btn-primary text-sm">
                                     <svg class="w-4 h-4 fill-current opacity-80 shrink-0" viewBox="0 0 16 16">
                                         <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z"></path>
                                     </svg>
                                     <span class="ml-2">Add Resource</span>
                                 </button>
-                            ` : ''}
+                            ` : '')}
                         </div>
-                        
-                        ${resources.length > 0 ? `
+
+                        ${Utils.raw(resources.length > 0 ? `
                             <div class="resource-grid">
                                 ${resources.map(resource => this.renderResourceCard(resource, hasWriteAccess, hasAdminAccess)).join('')}
                             </div>
@@ -85,7 +85,7 @@ export const StationResources = {
                                 <p class="text-slate-400 mb-4">Start documenting this station by adding photos, notes, or videos.</p>
                                 ${hasWriteAccess ? `<p class="text-sky-400 text-sm">Click the "Add Resource" button above to add your first resource.</p>` : ''}
                             </div>
-                        `}
+                        `)}
                     </div>
                 </div>
             `;
@@ -153,7 +153,7 @@ export const StationResources = {
                 
                 <div class="flex justify-between items-center mt-3 text-xs text-slate-400">
                     <span>${new Date(resource.creation_date).toLocaleDateString()}</span>
-                    <span>${resource.created_by || 'Unknown'}</span>
+                    <span>${Utils.escapeHtml(resource.created_by || 'Unknown')}</span>
                 </div>
             </div>
         `;
@@ -202,10 +202,10 @@ export const StationResources = {
             case 'note':
                 return resource.text_content ?
                     `<div class="text-slate-300 text-sm bg-slate-900 p-3 rounded cursor-pointer hover:bg-slate-800 transition-colors note-preview" 
-                         data-note-title="${resource.title}"
+                         data-note-title="${Utils.escapeHtml(resource.title)}"
                          data-note-content="${Utils.escapeHtml(resource.text_content)}"
-                         data-note-description="${resource.description || ''}"
-                         data-note-author="${resource.created_by || 'Unknown'}"
+                         data-note-description="${Utils.escapeHtml(resource.description || '')}"
+                         data-note-author="${Utils.escapeHtml(resource.created_by || 'Unknown')}"
                          data-note-date="${resource.creation_date}">
                         <div class="flex items-start gap-2">
                             <svg class="w-5 h-5 text-sky-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,13 +312,13 @@ export const StationResources = {
         const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
         const container = document.getElementById('station-modal-content');
 
-        container.innerHTML = `
+        container.innerHTML = Utils.safeHtml`
             <div class="tab-content active">
                 <div class="space-y-6 p-6">
                     <div class="flex justify-between items-center">
                         <h3 class="text-xl font-semibold text-white">Add Resource to ${station?.name || 'Station'}</h3>
                     </div>
-                    
+
                     <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                         <h4 class="text-blue-300 font-semibold mb-2">💡 Tips</h4>
                         <ul class="text-blue-200 text-sm space-y-1">
@@ -327,7 +327,7 @@ export const StationResources = {
                             <li>• All resources are automatically associated with this station</li>
                         </ul>
                     </div>
-                    
+
                     <div class="bg-slate-700/70 p-6 rounded-xl border border-slate-600/50">
                         <form id="resource-form" enctype="multipart/form-data" class="space-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -335,10 +335,10 @@ export const StationResources = {
                                     <label class="block text-slate-300 text-sm font-medium mb-2">Resource Type <span class="text-red-400">*</span></label>
                                     <select name="resource_type" id="resource-type-select" class="form-input" required>
                                         <option value="">Select type...</option>
-                                        <option value="photo" ${preselectedType === 'photo' ? 'selected' : ''}>📷 Photo</option>
-                                        <option value="video" ${preselectedType === 'video' ? 'selected' : ''}>🎥 Video</option>
-                                        <option value="note" ${preselectedType === 'note' ? 'selected' : ''}>📝 Note</option>
-                                        <option value="document" ${preselectedType === 'document' ? 'selected' : ''}>📄 Document</option>
+                                        <option value="photo" ${Utils.raw(preselectedType === 'photo' ? 'selected' : '')}>📷 Photo</option>
+                                        <option value="video" ${Utils.raw(preselectedType === 'video' ? 'selected' : '')}>🎥 Video</option>
+                                        <option value="note" ${Utils.raw(preselectedType === 'note' ? 'selected' : '')}>📝 Note</option>
+                                        <option value="document" ${Utils.raw(preselectedType === 'document' ? 'selected' : '')}>📄 Document</option>
                                     </select>
                                 </div>
                                 <div>
@@ -346,12 +346,12 @@ export const StationResources = {
                                     <input type="text" name="title" id="resource-title" class="form-input" placeholder="Descriptive title..." required>
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label class="block text-slate-300 text-sm font-medium mb-2">Description (optional)</label>
                                 <textarea name="description" id="resource-description" class="form-input form-textarea" rows="3" placeholder="Additional details about this resource..."></textarea>
                             </div>
-                            
+
                             <div id="file-input-container" class="file-upload-area">
                                 <div class="text-center">
                                     <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -362,14 +362,14 @@ export const StationResources = {
                                     <p class="text-slate-400 text-xs">Max file size: 500MB • Images, videos, documents accepted</p>
                                 </div>
                             </div>
-                            
+
                             <div id="text-input-container" class="hidden">
                                 <label class="block text-slate-300 text-sm font-medium mb-2">Content <span class="text-red-400">*</span></label>
                                 <textarea id="text-content" name="text_content" class="form-input form-textarea" rows="6" placeholder="Enter your notes..."></textarea>
                             </div>
-                            
-                            ${createProgressBarHTML('resource-upload')}
-                            
+
+                            ${Utils.raw(createProgressBarHTML('resource-upload'))}
+
                             <div id="resource-form-buttons" class="flex gap-3">
                                 <button type="submit" id="resource-submit-btn" class="btn-primary">
                                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -483,7 +483,7 @@ export const StationResources = {
                 textDiv.removeChild(existingFileInput);
             }
 
-            textDiv.innerHTML = `
+            textDiv.innerHTML = Utils.safeHtml`
                 <svg class="w-12 h-12 text-green-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
@@ -567,35 +567,35 @@ export const StationResources = {
             return;
         }
 
-        container.innerHTML = `
+        container.innerHTML = Utils.safeHtml`
             <div class="tab-content active">
                 <div class="space-y-6 p-6">
                     <div class="flex items-center justify-between">
                         <h3 class="text-xl font-semibold text-white">Edit Resource</h3>
                     </div>
-                    
+
                     <div class="bg-slate-700/70 p-6 rounded-xl border border-slate-600/50">
                         <form id="resource-edit-form" enctype="multipart/form-data" class="space-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-slate-300 text-sm font-medium mb-2">Resource Type</label>
                                     <select name="resource_type" class="form-input" disabled>
-                                        <option value="${resource.resource_type}" selected>${this.getResourceTypeLabel(resource.resource_type)}</option>
+                                        <option value="${resource.resource_type}" selected>${Utils.raw(this.getResourceTypeLabel(resource.resource_type))}</option>
                                     </select>
                                     <p class="text-xs text-slate-400 mt-1">Type cannot be changed</p>
                                 </div>
                                 <div>
                                     <label class="block text-slate-300 text-sm font-medium mb-2">Title</label>
-                                    <input type="text" name="title" class="form-input" value="${Utils.escapeHtml(resource.title || '')}" required>
+                                    <input type="text" name="title" class="form-input" value="${resource.title || ''}" required>
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label class="block text-slate-300 text-sm font-medium mb-2">Description (optional)</label>
-                                <textarea name="description" class="form-input form-textarea" placeholder="Additional details...">${Utils.escapeHtml(resource.description || '')}</textarea>
+                                <textarea name="description" class="form-input form-textarea" placeholder="Additional details...">${resource.description || ''}</textarea>
                             </div>
-                            
-                            ${['photo', 'video', 'document'].includes(resource.resource_type) ? `
+
+                            ${Utils.raw(['photo', 'video', 'document'].includes(resource.resource_type) ? `
                                 <div id="edit-file-container" class="file-upload-area">
                                     <div class="text-center">
                                         <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -604,20 +604,20 @@ export const StationResources = {
                                         <p class="text-slate-300 text-sm mb-2">Click to upload new file (optional)</p>
                                         <input type="file" name="file" class="hidden" accept="${this.getFileAccept(resource.resource_type)}">
                                         <p class="text-slate-400 text-xs">Leave empty to keep current file</p>
-                                        ${resource.file ? `<p class="text-sky-400 text-xs mt-2">Current file: ${this.getFileName(resource.file)}</p>` : ''}
+                                        ${resource.file ? `<p class="text-sky-400 text-xs mt-2">Current file: ${Utils.escapeHtml(this.getFileName(resource.file))}</p>` : ''}
                                     </div>
                                 </div>
-                            ` : ''}
-                            
-                            ${resource.resource_type === 'note' ? `
+                            ` : '')}
+
+                            ${Utils.raw(resource.resource_type === 'note' ? `
                                 <div>
                                     <label class="block text-slate-300 text-sm font-medium mb-2">Content</label>
-                                    <textarea name="text_content" class="form-input form-textarea" rows="6" required>${resource.text_content || ''}</textarea>
+                                    <textarea name="text_content" class="form-input form-textarea" rows="6" required>${Utils.escapeHtml(resource.text_content || '')}</textarea>
                                 </div>
-                            ` : ''}
-                            
-                            ${createProgressBarHTML('resource-edit-upload')}
-                            
+                            ` : '')}
+
+                            ${Utils.raw(createProgressBarHTML('resource-edit-upload'))}
+
                             <div id="edit-form-buttons" class="flex gap-3">
                                 <button type="submit" id="edit-resource-submit-btn" class="btn-primary">💾 Save Changes</button>
                                 <button type="button" id="cancel-edit-btn" class="btn-secondary">Cancel</button>
@@ -720,7 +720,7 @@ export const StationResources = {
         modal.id = 'resource-delete-modal';
         modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-black/80';
         modal.style.cssText = 'z-index: 9999; pointer-events: auto;';
-        modal.innerHTML = `
+        modal.innerHTML = Utils.safeHtml`
             <div class="bg-slate-800 rounded-xl border border-red-500/30 p-6 max-w-md w-full" data-modal-content>
                 <div class="text-center mb-6">
                     <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -731,8 +731,8 @@ export const StationResources = {
                     <h3 class="text-xl font-bold text-white mb-2">Delete Resource?</h3>
                     <p class="text-slate-300">Are you sure you want to delete this resource?</p>
                 </div>
-                
-                ${resource ? `
+
+                ${Utils.raw(resource ? `
                     <div class="bg-slate-700/50 rounded-lg p-4 mb-6 space-y-2 text-sm">
                         <div class="flex justify-between">
                             <span class="text-slate-400">Type:</span>
@@ -743,10 +743,10 @@ export const StationResources = {
                             <span class="text-white">${Utils.escapeHtml(resource.title || 'Untitled')}</span>
                         </div>
                     </div>
-                ` : ''}
-                
+                ` : '')}
+
                 <p class="text-red-300 text-sm text-center mb-6">⚠️ This action cannot be undone!</p>
-                
+
                 <div class="flex gap-3">
                     <button data-action="cancel" class="btn-secondary flex-1">Cancel</button>
                     <button data-action="confirm" class="btn-danger flex-1">Delete</button>
@@ -826,7 +826,7 @@ export const StationResources = {
         lightbox.id = 'photo-lightbox';
         lightbox.className = 'fixed inset-0 flex items-center justify-center p-4 bg-black/95';
         lightbox.style.cssText = 'z-index: 200;';
-        lightbox.innerHTML = `
+        lightbox.innerHTML = Utils.safeHtml`
             <div class="relative max-w-5xl max-h-full" data-lightbox-container>
                 <img src="${url}" alt="${title}" class="max-w-full max-h-[85vh] object-contain rounded-lg">
                 <div class="absolute top-4 right-4 flex gap-2">
@@ -927,7 +927,7 @@ export const StationResources = {
         modal.id = 'video-modal';
         modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-black/95';
         modal.style.cssText = 'z-index: 200;';
-        modal.innerHTML = `
+        modal.innerHTML = Utils.safeHtml`
             <div class="relative" data-video-container style="max-width: 90vw; max-height: 90vh;">
                 <video controls autoplay class="rounded-lg bg-black" style="max-width: 90vw; max-height: 85vh; min-width: 320px;">
                     <source src="${url}" type="video/mp4">
@@ -996,16 +996,16 @@ export const StationResources = {
         modal.id = 'note-viewer-modal';
         modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-black/80';
         modal.style.cssText = 'z-index: 200;';
-        modal.innerHTML = `
+        modal.innerHTML = Utils.safeHtml`
             <div class="bg-slate-800 rounded-xl border border-slate-600 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
                 <div class="p-6 border-b border-slate-700 flex justify-between items-start">
                     <div>
                         <h3 class="text-xl font-bold text-white">${noteData.title || 'Note'}</h3>
                         <div class="flex gap-4 text-sm text-slate-400 mt-2">
                             <span>By ${noteData.author}</span>
-                            <span>${new Date(noteData.date).toLocaleDateString()}</span>
+                            <span>${Utils.raw(new Date(noteData.date).toLocaleDateString())}</span>
                         </div>
-                        ${noteData.description ? `<p class="text-slate-300 mt-2 text-sm">${noteData.description}</p>` : ''}
+                        ${Utils.raw(noteData.description ? `<p class="text-slate-300 mt-2 text-sm">${Utils.escapeHtml(noteData.description)}</p>` : '')}
                     </div>
                     <button data-close-note class="text-slate-400 hover:text-white p-2">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1015,7 +1015,7 @@ export const StationResources = {
                 </div>
                 <div class="p-6 overflow-y-auto flex-1 bg-slate-900/50">
                     <div class="prose prose-invert max-w-none">
-                        ${this.formatNoteContent(noteData.content)}
+                        ${Utils.raw(this.formatNoteContent(noteData.content))}
                     </div>
                 </div>
                 <div class="p-4 border-t border-slate-700 flex justify-between items-center">
