@@ -695,13 +695,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         <h3 class="text-lg font-semibold text-white text-center mb-2">Move Landmark</h3>
                         <p class="text-slate-300 text-center mb-6">
-                            Move "${landmarkName}" to this location?
+                            Move "${Utils.escapeHtml(landmarkName)}" to this location?
                         </p>
                         
                         <div class="bg-slate-700/50 rounded-lg p-4 space-y-2 mb-6">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Landmark Name:</span>
-                                <span class="text-white">${landmarkName}</span>
+                                <span class="text-white">${Utils.escapeHtml(landmarkName)}</span>
                             </div>
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">New Location:</span>
@@ -767,8 +767,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const finalCoords = snapResult.coordinates;
 
         // Create modal HTML
+        const escapedLineName = Utils.escapeHtml(snapResult.lineName);
         const actionText = snapResult.snapped
-            ? `snap to survey line "${snapResult.lineName}"`
+            ? `snap to survey line &quot;${escapedLineName}&quot;`
             : 'place at the exact GPS coordinates';
 
         const modalHtml = `
@@ -783,13 +784,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         <h3 class="text-lg font-semibold text-white text-center mb-2">Move Station</h3>
                         <p class="text-slate-300 text-center mb-6">
-                            Move "${stationName}" to this location and ${actionText}?
+                            Move "${Utils.escapeHtml(stationName)}" to this location and ${actionText}?
                         </p>
                         
                         <div class="bg-slate-700/50 rounded-lg p-4 space-y-2 mb-6">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Station Name:</span>
-                                <span class="text-white">${stationName}</span>
+                                <span class="text-white">${Utils.escapeHtml(stationName)}</span>
                             </div>
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">New Location:</span>
@@ -798,11 +799,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             ${snapResult.snapped ? `
                                 <div class="flex justify-between text-sm">
                                     <span class="text-slate-400">Magnetic Snap:</span>
-                                    <span class="text-emerald-400">🧲 ${snapResult.lineName}</span>
+                                    <span class="text-emerald-400">🧲 ${escapedLineName}</span>
                                 </div>
                                 <div class="flex justify-between text-sm">
                                     <span class="text-slate-400">Snap Point:</span>
-                                    <span class="text-white capitalize">${snapResult.pointType || 'vertex'} point</span>
+                                    <span class="text-white capitalize">${Utils.escapeHtml(snapResult.pointType || 'vertex')} point</span>
                                 </div>
                                 <div class="flex justify-between text-sm">
                                     <span class="text-slate-400">Distance:</span>
@@ -851,7 +852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await StationManager.moveStation(stationId, finalCoords);
 
                 const snapMessage = snapResult.snapped
-                    ? ` and snapped to ${snapResult.lineName}`
+                    ? ` and snapped to ${snapResult.lineName || 'survey line'}`
                     : '';
                 Utils.showNotification('success', `Station moved successfully${snapMessage}!`);
 
@@ -914,7 +915,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             ${snapResult.snapped ? `
                                 <div class="flex justify-between text-sm">
                                     <span class="text-slate-400">Snapped to:</span>
-                                    <span class="text-emerald-400">🧲 ${snapResult.lineName} (${snapResult.pointType})</span>
+                                    <span class="text-emerald-400">🧲 ${Utils.escapeHtml(snapResult.lineName)} (${Utils.escapeHtml(snapResult.pointType)})</span>
                                 </div>
                             ` : `
                                 <div class="flex justify-between text-sm">

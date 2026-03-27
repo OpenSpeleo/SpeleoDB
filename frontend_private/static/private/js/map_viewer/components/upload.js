@@ -216,12 +216,23 @@ export class UploadProgressController {
     error(message) {
         const { status, cancelBtn, bar } = this.getElements();
         if (status) {
-            status.innerHTML = `
-                <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-                <span class="text-red-400">${message || 'Upload failed'}</span>
-            `;
+            status.textContent = '';
+            const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            icon.setAttribute('class', 'w-4 h-4 text-red-400');
+            icon.setAttribute('fill', 'none');
+            icon.setAttribute('stroke', 'currentColor');
+            icon.setAttribute('viewBox', '0 0 24 24');
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('stroke-linecap', 'round');
+            path.setAttribute('stroke-linejoin', 'round');
+            path.setAttribute('stroke-width', '2');
+            path.setAttribute('d', 'M6 18L18 6M6 6l12 12');
+            icon.appendChild(path);
+            const msgSpan = document.createElement('span');
+            msgSpan.className = 'text-red-400';
+            msgSpan.textContent = message || 'Upload failed';
+            status.appendChild(icon);
+            status.appendChild(msgSpan);
         }
         if (bar) {
             bar.classList.remove('from-blue-500', 'to-cyan-400');

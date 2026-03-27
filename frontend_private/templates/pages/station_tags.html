@@ -353,12 +353,7 @@ $(document).ready(function() {
     }
 
     // Utility: Escape HTML to prevent XSS
-    function escapeHtml(text) {
-        if (text === null || text === undefined) return '';
-        const div = document.createElement('div');
-        div.textContent = String(text);
-        return div.innerHTML;
-    }
+    // escapeHtml() and safeCssColor() are provided by xss-helpers.js
 
     // Load all tags
     function loadTags() {
@@ -424,8 +419,8 @@ $(document).ready(function() {
                     </td>
                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                         <div class="flex items-center justify-center gap-2">
-                            <span class="color-swatch" style="background-color: ${tag.color}"></span>
-                            <code class="text-xs text-slate-400">${tag.color}</code>
+                            <span class="color-swatch" style="background-color: ${safeCssColor(tag.color)}"></span>
+                            <code class="text-xs text-slate-400">${escapeHtml(tag.color)}</code>
                         </div>
                     </td>
                     <td class="px-2 first:pl-5 last:pr-5 py-3">
@@ -472,7 +467,7 @@ $(document).ready(function() {
                 <div class="tag-card">
                     <div class="tag-card-header">
                         <div class="tag-card-title flex items-center gap-3">
-                            <span class="color-swatch" style="background-color: ${tag.color}"></span>
+                            <span class="color-swatch" style="background-color: ${safeCssColor(tag.color)}"></span>
                             <div>
                                 <div class="text-lg font-semibold text-slate-100">${escapeHtml(tag.name)}</div>
                                 <div class="text-xs text-slate-400">${tag.station_count || 0} station${(tag.station_count || 0) !== 1 ? 's' : ''}</div>
@@ -496,7 +491,7 @@ $(document).ready(function() {
                     <div class="tag-card-body">
                         <div class="tag-card-row">
                             <span class="tag-card-label">Color</span>
-                            <span class="tag-card-value"><code>${tag.color}</code></span>
+                            <span class="tag-card-value"><code>${escapeHtml(tag.color)}</code></span>
                         </div>
                         <div class="tag-card-row">
                             <span class="tag-card-label">Created</span>
@@ -694,7 +689,7 @@ $(document).ready(function() {
         $('#delete-tag-id').val(tag.id);
         $('#delete-tag-info').html(`
             <div class="flex items-center gap-2 bg-slate-700/50 rounded-lg p-3">
-                <span class="color-swatch" style="background-color: ${tag.color}"></span>
+                <span class="color-swatch" style="background-color: ${safeCssColor(tag.color)}"></span>
                 <span class="text-slate-100 font-medium">${escapeHtml(tag.name)}</span>
             </div>
         `);

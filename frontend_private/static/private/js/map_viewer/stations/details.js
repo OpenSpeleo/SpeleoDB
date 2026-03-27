@@ -481,7 +481,7 @@ export const StationDetails = {
                 <strong class="text-slate-300">📍 Station Location:</strong>
                 <div class="text-sm text-slate-200 mt-1">
                     <div>GPS Location: <span class="font-mono text-slate-300">${Number(station.latitude).toFixed(7)}, ${Number(station.longitude).toFixed(7)}</span></div>
-                    <div class="mt-1">${parentType}: <span class="text-slate-300">${parentName}</span></div>
+                    <div class="mt-1">${Utils.escapeHtml(parentType)}: <span class="text-slate-300">${Utils.escapeHtml(parentName)}</span></div>
                 </div>
                 ${dragInfo}
             </div>
@@ -519,7 +519,7 @@ export const StationDetails = {
                                 </div>
                                 <div id="station-tag-display" class="flex gap-2 min-h-[32px]">
                                     ${Utils.raw((station.tag && station.tag.name && station.tag.color) ? Utils.safeHtml`
-                                        <span class="station-tag" style="background-color: ${station.tag.color}">
+                                        <span class="station-tag" style="background-color: ${Utils.raw(Utils.safeCssColor(station.tag.color))}">
                                             ${station.tag.name}
                                             <span class="remove-tag" onclick="window.removeStationTag('${station.id}')">×</span>
                                         </span>
@@ -535,7 +535,7 @@ export const StationDetails = {
                                     Tag
                                 </h4>
                                 <div>
-                                    <span class="station-tag" style="background-color: ${station.tag.color}">
+                                    <span class="station-tag" style="background-color: ${Utils.raw(Utils.safeCssColor(station.tag.color))}">
                                         ${station.tag.name}
                                     </span>
                                 </div>

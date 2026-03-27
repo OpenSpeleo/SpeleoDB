@@ -113,7 +113,7 @@ export const StationUI = {
 
                 projectStations.forEach(station => {
                     // Get tag color for marker or use default
-                    const markerColor = (station.tag && station.tag.color) ? station.tag.color : '#fb923c';
+                    const markerColor = Utils.safeCssColor((station.tag && station.tag.color) ? station.tag.color : '#fb923c');
 
                     // Station type badge
                     const typeLabels = {
@@ -137,14 +137,14 @@ export const StationUI = {
                                             ${typeBadge}
                                             <h5 class="text-white font-medium">${Utils.escapeHtml(station.name)}</h5>
                                             ${station.tag && station.tag.name && station.tag.color ? `
-                                                <span class="station-tag text-xs" style="background-color: ${station.tag.color}; padding: 2px 8px;">
+                                                <span class="station-tag text-xs" style="background-color: ${Utils.safeCssColor(station.tag.color)}; padding: 2px 8px;">
                                                     ${Utils.escapeHtml(station.tag.name)}
                                                 </span>
                                             ` : ''}
                                         </div>
                                         <p class="text-xs text-slate-400">
                                             ${Number(station.latitude).toFixed(5)}, ${Number(station.longitude).toFixed(5)}
-                                            ${station.snapped_to_line ? `• <span class="text-sky-400">📍 ${station.snapped_to_line}</span>` : ''}
+                                            ${station.snapped_to_line ? `• <span class="text-sky-400">📍 ${Utils.escapeHtml(station.snapped_to_line)}</span>` : ''}
                                         </p>
                                     </div>
                                 </div>
@@ -257,7 +257,7 @@ export const StationUI = {
                 <div class="bg-slate-700/50 rounded-lg p-3 text-sm text-slate-300">
                     <div class="flex items-center gap-2 mb-1">
                         <span class="text-green-400">🧲</span>
-                        <span>Snapped to: ${snap.lineName || 'Survey Line'} (${snap.pointType} point)</span>
+                        <span>Snapped to: ${Utils.escapeHtml(snap.lineName || 'Survey Line')} (${Utils.escapeHtml(snap.pointType)} point)</span>
                     </div>
                     <div class="text-xs text-slate-400 mt-1">
                         Distance: ${snap.distance.toFixed(1)}m | Lat: ${snappedCoords[1].toFixed(7)}, Lon: ${snappedCoords[0].toFixed(7)}

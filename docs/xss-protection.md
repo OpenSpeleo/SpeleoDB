@@ -3,15 +3,17 @@
 ## Why
 
 Users can enter names like `<WIP> Sensor Type` or `A & B`. These must
-display correctly — not get stripped, not execute as HTML. The fix is
+display correctly -- not get stripped, not execute as HTML. The fix is
 **render-side escaping**: the backend stores raw text, the frontend escapes
 before inserting into the DOM.
 
-## How
+## Core API (ES module files)
 
-### ES module files (map viewer)
+### `Utils.escapeHtml(text)`
 
-Use `Utils.escapeHtml()` on any user data going into `innerHTML` or `.html()`:
+Escapes `<`, `>`, `&`, `"`, `'` so the value is safe in both HTML text
+content **and** HTML attribute positions. Returns empty string for
+`null`/`undefined`.
 
 ```js
 import { Utils } from '../utils.js';
@@ -19,7 +21,9 @@ import { Utils } from '../utils.js';
 container.innerHTML = `<h3>${Utils.escapeHtml(station.name)}</h3>`;
 ```
 
-Or use the `Utils.safeHtml` tagged template — it auto-escapes all interpolations:
+### `Utils.safeHtml` tagged template
+
+Auto-escapes all interpolations. Use for multi-line innerHTML assignments:
 
 ```js
 container.innerHTML = Utils.safeHtml`
@@ -29,28 +33,132 @@ container.innerHTML = Utils.safeHtml`
 `;
 ```
 
-`Utils.raw()` marks a value as pre-trusted (static HTML, SVG icons, conditional blocks).
+### `Utils.raw(htmlString)`
 
-### Django template inline scripts
+Marks a value as pre-trusted (static HTML, SVG icons, conditional blocks).
+**Never** wrap strings that contain unescaped user data.
 
-Inline `<script>` blocks can't import ES modules. Define `escapeHtml()` locally:
+### `Utils.isValidCssColor(color)` / `Utils.safeCssColor(color, fallback)`
+
+Validates that a color string is a valid hex color (`#RGB` or `#RRGGBB`).
+Use before interpolating user-supplied colors into `style` attributes to
+prevent CSS injection. Returns the fallback (default `#94a3b8`) for invalid
+values.
 
 ```js
-function escapeHtml(text) {
-    if (text === null || text === undefined) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
-}
+const safeColor = Utils.safeCssColor(tag.color);
+el.innerHTML = `<span style="background-color: ${safeColor}">...</span>`;
 
+// Inside Utils.safeHtml, wrap in Utils.raw() since safeCssColor already validates
+el.innerHTML = Utils.safeHtml`<span style="background-color: ${Utils.raw(Utils.safeCssColor(tag.color))}">...</span>`;
+```
+
+### `Utils.sanitizeUrl(url)`
+
+Validates that a URL is safe for use in `href` and `src` attributes.
+Allows `http:`, `https:`, and relative URLs. Rejects `javascript:`,
+`data:`, `vbscript:`, and other dangerous schemes. Returns empty string
+for invalid URLs.
+
+```js
+// Always sanitize API-supplied URLs before inserting into href/src
+`<a href="${Utils.sanitizeUrl(resource.file)}">View</a>`;
+`<img src="${Utils.sanitizeUrl(resource.miniature)}">`;
+```
+
+## Shared global helpers (`xss-helpers.js`)
+
+`frontend_private/static/private/js/xss-helpers.js` defines `escapeHtml`,
+`safeCssColor`, `isValidCssColor`, and `sanitizeUrl` as global functions.
+It is loaded in `base_private.html` before any page-specific scripts, so
+every inline `<script>` block can call these directly without redefining
+them.
+
+```js
+// In any inline <script> block or non-module .js file:
 tableBody.html(`<td>${escapeHtml(tag.name)}</td>`);
+const safe = safeCssColor(tag.color);
+```
+
+**Do not** define local copies of `escapeHtml` in templates or standalone
+scripts. Use the global.
+
+For ES module files (map viewer), import from `utils.js` instead:
+
+```js
+import { Utils } from '../utils.js';
+html += `<td>${Utils.escapeHtml(value)}</td>`;
+```
+
+jQuery `.text()` is also safe for plain text (error messages, labels):
+
+```js
+$('#error').text(errorMsg);   // GOOD
+$('#error').html(errorMsg);   // BAD
 ```
 
 ## What to escape
 
-Any field a user can edit: names, descriptions, notes, titles, tag names,
-sensor names, experiment field names, cell values, GPS track names.
+Any field a user or API can control: names, descriptions, notes, titles,
+tag names, sensor names, experiment field names, cell values, GPS track
+names, line names, error messages, file names, author names, status labels,
+resource URLs (`resource.file`, `resource.miniature`, `log.attachment`),
+and resource text content (`resource.text_content`).
 
 ## What NOT to escape
 
-Static HTML, SVG icons, CSS classes, numeric coordinates, boolean attributes.
+Static HTML, SVG icons, CSS classes, numeric coordinates, boolean
+attributes, values already inside `Utils.raw()`.
+
+## Attribute contexts
+
+`escapeHtml` escapes both `"` and `'`, making it safe for attribute values:
+
+```js
+// Safe -- quotes in station.name won't break out of value=""
+el.innerHTML = Utils.safeHtml`<input value="${station.name}">`;
+```
+
+## URL attributes
+
+API-supplied URLs in `href` and `src` attributes must be validated with
+`Utils.sanitizeUrl()` to block `javascript:` and other dangerous schemes:
+
+```js
+// BAD -- javascript: protocol executes on click
+`<a href="${resource.file}">View</a>`;
+
+// GOOD -- sanitizeUrl rejects non-http(s) URLs
+`<a href="${Utils.sanitizeUrl(resource.file)}">View</a>`;
+```
+
+## HTML sinks to watch
+
+All of these parse HTML and are XSS vectors if given unescaped user data:
+
+- `element.innerHTML = ...`
+- `element.insertAdjacentHTML('beforeend', ...)`
+- `$(selector).html(...)`
+- `Modal.base(title, content, footer)` -- callers must pre-escape
+- `href="${url}"` / `src="${url}"` -- use `Utils.sanitizeUrl()`
+
+Safe alternatives that never parse HTML:
+
+- `element.textContent = ...`
+- `$(selector).text(...)`
+
+## Architecture: two canonical locations
+
+1. **`xss-helpers.js`** -- global functions for inline `<script>` blocks
+   and non-module JS files. Loaded once in `base_private.html`.
+2. **`Utils` in `utils.js`** -- same functions wrapped in the ES module
+   API for map viewer modules. Tested via `utils.test.js`.
+
+Both implement the same escaping logic. When changing the algorithm,
+update **both** files and run `npm run test:js`.
+
+## `ajax_error_modal_management.js`
+
+This shared snippet is included in 28+ Django templates. It calls
+`escapeHtml()` (from `xss-helpers.js`) on all API error fields before
+inserting into the error modal.

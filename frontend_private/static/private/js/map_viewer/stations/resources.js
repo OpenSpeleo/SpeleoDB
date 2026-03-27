@@ -164,9 +164,9 @@ export const StationResources = {
             case 'photo':
                 return resource.file ?
                     `<div class="resource-preview">
-                        <img src="${resource.miniature || resource.file}" alt="${Utils.escapeHtml(resource.title)}" 
+                        <img src="${Utils.sanitizeUrl(resource.miniature || resource.file)}" alt="${Utils.escapeHtml(resource.title)}" 
                              class="photo-preview cursor-zoom-in"
-                             data-photo-url="${resource.file}"
+                             data-photo-url="${Utils.sanitizeUrl(resource.file)}"
                              data-photo-title="${Utils.escapeHtml(resource.title)}"
                              title="Click to view full size"
                              loading="lazy">
@@ -177,9 +177,9 @@ export const StationResources = {
                 return resource.file ?
                     resource.miniature ?
                         `<div class="resource-preview video-preview cursor-pointer" 
-                              data-video-url="${resource.file}" 
-                              data-video-title="${resource.title}">
-                            <img src="${resource.miniature}" alt="${resource.title}" 
+                              data-video-url="${Utils.sanitizeUrl(resource.file)}" 
+                              data-video-title="${Utils.escapeHtml(resource.title)}">
+                            <img src="${Utils.sanitizeUrl(resource.miniature)}" alt="${Utils.escapeHtml(resource.title)}" 
                                  title="Click to play video"
                                  loading="lazy">
                             <div class="play-overlay">
@@ -193,7 +193,7 @@ export const StationResources = {
                         </div>` :
                         `<div class="resource-preview">
                             <video controls class="w-full">
-                                <source src="${resource.file}" type="video/mp4">
+                                <source src="${Utils.sanitizeUrl(resource.file)}" type="video/mp4">
                                 Your browser does not support the video tag.
                             </video>
                         </div>` :
@@ -225,8 +225,8 @@ export const StationResources = {
                 if (resource.miniature) {
                     return `
                         <div class="resource-preview">
-                            <a href="${resource.file}" target="_blank" class="block relative group">
-                                <img src="${resource.miniature}" alt="${resource.title}" 
+                            <a href="${Utils.sanitizeUrl(resource.file)}" target="_blank" class="block relative group">
+                                <img src="${Utils.sanitizeUrl(resource.miniature)}" alt="${Utils.escapeHtml(resource.title)}" 
                                      class="w-full h-40 object-contain bg-slate-900 rounded"
                                      loading="lazy">
                                 <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -237,7 +237,7 @@ export const StationResources = {
                 }
                 return `
                     <div class="text-sm">
-                        <a href="${resource.file}" target="_blank" class="text-sky-400 hover:text-sky-300 underline flex items-center gap-2">
+                        <a href="${Utils.sanitizeUrl(resource.file)}" target="_blank" class="text-sky-400 hover:text-sky-300 underline flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
@@ -810,6 +810,9 @@ export const StationResources = {
 
     // ===== LIGHTBOX & VIEWERS =====
     openPhotoLightbox(url, title) {
+        const safeUrl = Utils.sanitizeUrl(url);
+        if (!safeUrl) return;
+
         // Store reference to this for event handlers
         const self = this;
 
@@ -819,7 +822,7 @@ export const StationResources = {
             existingLightbox.remove();
         }
 
-        currentPhotoUrl = url;
+        currentPhotoUrl = safeUrl;
         currentPhotoTitle = title || 'Photo';
 
         const lightbox = document.createElement('div');
@@ -828,7 +831,7 @@ export const StationResources = {
         lightbox.style.cssText = 'z-index: 200;';
         lightbox.innerHTML = Utils.safeHtml`
             <div class="relative max-w-5xl max-h-full" data-lightbox-container>
-                <img src="${url}" alt="${title}" class="max-w-full max-h-[85vh] object-contain rounded-lg">
+                <img src="${Utils.raw(safeUrl)}" alt="${title}" class="max-w-full max-h-[85vh] object-contain rounded-lg">
                 <div class="absolute top-4 right-4 flex gap-2">
                     <button data-download-photo class="bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg" title="Download">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -920,6 +923,9 @@ export const StationResources = {
     },
 
     openVideoModal(url, title) {
+        const safeUrl = Utils.sanitizeUrl(url);
+        if (!safeUrl) return;
+
         // Store reference to this for event handlers
         const self = this;
 
@@ -930,7 +936,7 @@ export const StationResources = {
         modal.innerHTML = Utils.safeHtml`
             <div class="relative" data-video-container style="max-width: 90vw; max-height: 90vh;">
                 <video controls autoplay class="rounded-lg bg-black" style="max-width: 90vw; max-height: 85vh; min-width: 320px;">
-                    <source src="${url}" type="video/mp4">
+                    <source src="${Utils.raw(safeUrl)}" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="absolute top-4 right-4 flex gap-2">

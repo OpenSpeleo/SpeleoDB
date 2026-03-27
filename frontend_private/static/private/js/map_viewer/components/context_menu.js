@@ -1,3 +1,5 @@
+import { Utils } from '../utils.js';
+
 export const ContextMenu = {
     menuEl: null,
     iconDataUrlCache: new Map(),
@@ -133,8 +135,8 @@ export const ContextMenu = {
                     <div class="context-menu-item ${item.disabled ? 'disabled' : ''}">
                         <div class="context-menu-icon">${this.getCachedIconMarkup(item.icon || '')}</div>
                         <div class="context-menu-text">
-                            <div>${item.label}</div>
-                            ${item.subtitle ? `<div class="context-menu-subtitle">${item.subtitle}</div>` : ''}
+                            <div>${Utils.escapeHtml(item.label)}</div>
+                            ${item.subtitle ? `<div class="context-menu-subtitle">${Utils.escapeHtml(item.subtitle)}</div>` : ''}
                         </div>
                     </div>
                 `;

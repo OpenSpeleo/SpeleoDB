@@ -460,13 +460,6 @@ $(document).ready(function() {
         attachEventHandlers();
     }
 
-    // Escape HTML to prevent XSS
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
     // Attach event handlers to dynamically created elements
     function attachEventHandlers() {
         $('.btn-edit-track').off('click').on('click', function() {

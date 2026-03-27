@@ -153,10 +153,10 @@ function renderExperimentTable(experiment, dataRows, stationId, projectId, isSur
                     const date = new Date(value);
                     displayValue = date.toLocaleDateString();
                 } catch (e) {
-                    displayValue = value;
+                    displayValue = Utils.escapeHtml(String(value));
                 }
             } else if (field.type === 'number') {
-                displayValue = typeof value === 'number' ? value.toLocaleString() : value;
+                displayValue = typeof value === 'number' ? value.toLocaleString() : Utils.escapeHtml(String(value));
             } else if (field.type === 'boolean') {
                 displayValue = value ? 'Yes' : 'No';
             } else {
@@ -244,7 +244,11 @@ export const StationExperiments = {
                             <div class="flex items-center justify-between flex-wrap gap-4">
                                 <h3 class="text-xl font-semibold text-white">Scientific Experiments</h3>
                                 ${Utils.raw(selectedExperiment && hasWriteAccess ? `
-                                    <button onclick="window.StationExperiments.openAddRowModal('${stationId}', '${currentProjectId}', '${selectedExperiment.id}')" class="btn-primary">
+                                    <button id="add-experiment-row-btn"
+                                            data-station-id="${Utils.escapeHtml(stationId)}"
+                                            data-project-id="${Utils.escapeHtml(currentProjectId)}"
+                                            data-experiment-id="${Utils.escapeHtml(selectedExperiment.id)}"
+                                            class="btn-primary">
                                         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                         </svg>
@@ -288,6 +292,17 @@ export const StationExperiments = {
                         </div>
                     </div>
                 `;
+
+                // Wire up "Add Record" button
+                const addRowBtn = document.getElementById('add-experiment-row-btn');
+                if (addRowBtn) {
+                    addRowBtn.addEventListener('click', () => {
+                        const sid = addRowBtn.dataset.stationId;
+                        const pid = addRowBtn.dataset.projectId;
+                        const eid = addRowBtn.dataset.experimentId;
+                        window.StationExperiments.openAddRowModal(sid, pid, eid);
+                    });
+                }
 
                 // Setup experiment selector change handler
                 const selector = document.getElementById('experiment-selector');

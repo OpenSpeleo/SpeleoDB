@@ -112,10 +112,16 @@ export const StationLogs = {
                 <div class="tab-content active p-6">
                     <div class="text-center py-12">
                         <p class="text-red-400">Failed to load journal entries.</p>
-                        <button onclick="window.StationLogs.render('${stationId}', document.getElementById('station-modal-content'))" class="btn-secondary mt-4">Retry</button>
+                        <button id="logs-retry-btn" class="btn-secondary mt-4">Retry</button>
                     </div>
                 </div>
             `;
+            const retryBtn = document.getElementById('logs-retry-btn');
+            if (retryBtn) {
+                retryBtn.addEventListener('click', () => {
+                    window.StationLogs.render(stationId, document.getElementById('station-modal-content'));
+                });
+            }
         }
     },
 
@@ -179,7 +185,7 @@ export const StationLogs = {
                         </svg>
                         <span class="uppercase tracking-wide text-xs font-semibold">ATTACHMENT</span>
                         <span class="text-sky-200">•</span>
-                        <a href="${log.attachment}" target="_blank" class="underline decoration-sky-400 hover:text-white">${Utils.escapeHtml(Utils.filenameFromUrl(log.attachment))}</a>
+                        <a href="${Utils.sanitizeUrl(log.attachment)}" target="_blank" class="underline decoration-sky-400 hover:text-white">${Utils.escapeHtml(Utils.filenameFromUrl(log.attachment))}</a>
                     </div>
                 ` : ''}
             </article>

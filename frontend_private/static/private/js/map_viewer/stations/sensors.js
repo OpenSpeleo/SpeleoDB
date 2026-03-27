@@ -37,7 +37,7 @@ function getSensorInstallStatusLabel(status) {
         'lost': 'Lost',
         'abandoned': 'Abandoned'
     };
-    return labels[status?.toLowerCase()] || status;
+    return labels[status?.toLowerCase()] || Utils.escapeHtml(status);
 }
 
 /**
@@ -1233,7 +1233,7 @@ export const StationSensors = {
                         <div class="bg-slate-700/50 rounded-lg p-3 mb-4">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Sensor:</span>
-                                <span class="text-white">${sensorName}</span>
+                                <span class="text-white">${Utils.escapeHtml(sensorName)}</span>
                             </div>
                             <div class="flex justify-between text-sm mt-2">
                                 <span class="text-slate-400">New Status:</span>

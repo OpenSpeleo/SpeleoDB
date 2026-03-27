@@ -117,7 +117,7 @@ export const SurfaceStationUI = {
 
                 networkStations.forEach(station => {
                     // Get tag color for marker or use default
-                    const markerColor = (station.tag && station.tag.color) ? station.tag.color : '#fb923c';
+                    const markerColor = Utils.safeCssColor((station.tag && station.tag.color) ? station.tag.color : '#fb923c');
 
                     html += `
                         <div class="bg-slate-700/50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
@@ -128,7 +128,7 @@ export const SurfaceStationUI = {
                                         <div class="flex items-center gap-2 flex-wrap">
                                             <h5 class="text-white font-medium">${Utils.escapeHtml(station.name)}</h5>
                                             ${station.tag && station.tag.name && station.tag.color ? `
-                                                <span class="station-tag text-xs" style="background-color: ${station.tag.color}; padding: 2px 8px;">
+                                                <span class="station-tag text-xs" style="background-color: ${Utils.safeCssColor(station.tag.color)}; padding: 2px 8px;">
                                                     ${Utils.escapeHtml(station.tag.name)}
                                                 </span>
                                             ` : ''}
@@ -236,7 +236,7 @@ export const SurfaceStationUI = {
         // Build network dropdown options
         const networkOptionsHtml = networks.map(n => {
             const selected = (preselectedNetworkId && n.id === preselectedNetworkId) || (networks.length === 1);
-            return `<option value="${n.id}" ${selected ? 'selected' : ''}>${n.name}</option>`;
+            return `<option value="${Utils.escapeHtml(n.id)}" ${selected ? 'selected' : ''}>${Utils.escapeHtml(n.name)}</option>`;
         }).join('');
 
         const formHtml = `

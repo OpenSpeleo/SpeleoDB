@@ -144,4 +144,20 @@ describe('Modal', () => {
             expect(document.getElementById('m2')).not.toBeNull();
         });
     });
+
+    describe('XSS safety', () => {
+        it('does not strip hostile content from title (caller must escape)', () => {
+            const xssTitle = '<img onerror=alert(1)>';
+            const html = Modal.base('xss-modal', xssTitle, '<p>body</p>');
+            // Modal.base passes title through raw - callers are responsible for escaping.
+            // This test documents that Modal.base does NOT escape - callers must.
+            expect(html).toContain(xssTitle);
+        });
+
+        it('does not strip hostile content from content param', () => {
+            const xssContent = '<script>alert("xss")</script>';
+            const html = Modal.base('xss-modal', 'Safe Title', xssContent);
+            expect(html).toContain(xssContent);
+        });
+    });
 });

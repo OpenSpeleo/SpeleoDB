@@ -164,6 +164,7 @@ Before finishing map viewer work, check:
 3. Public and private map viewers still initialize shared modules correctly.
 4. Lint and tests pass from root.
 5. Tailwind outputs still generate from root scripts.
+6. No unescaped user/API data in `innerHTML`, `.html()`, or `insertAdjacentHTML`.
 
 ## Practical Do/Do-Not
 
@@ -174,6 +175,8 @@ Before finishing map viewer work, check:
 - Add focused tests when changing anything of significance.
 - Be performance conscious.
 - Systematically document all features & architectural decisions.
+- Escape all user/API data before inserting into HTML sinks (`Utils.safeHtml`,
+  `Utils.escapeHtml`, or `textContent`).
 
 ### Do not:
 
@@ -182,9 +185,11 @@ Before finishing map viewer work, check:
 - Add expensive computations.
 - Reintroduce nested Node toolchains.
 - Bypass centralized permission APIs.
+- Use `Utils.raw()` on strings that contain unescaped user data.
+- Put user-supplied strings into `innerHTML` / `.html()` without escaping.
 
 ### Coding rules
 
-See `docs/coding-rules.md` for JavaScript constant centralization, Python
-import ordering, and Django ORM rules.
+See `docs/coding-rules.md` for JavaScript constant centralization, XSS
+escaping requirements, Python import ordering, and Django ORM rules.
 These are **hard rules** — violations must be fixed before merging.

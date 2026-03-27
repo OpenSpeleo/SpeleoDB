@@ -515,7 +515,7 @@
                             errorMsg = response.error;
                         }
 
-                        $("#modal_error_txt").html(errorMsg);
+                        $("#modal_error_txt").text(errorMsg);
                         $("#modal_error").css('display', 'flex');
                     }
                 });
@@ -546,7 +546,7 @@
                             errorMsg = response.error;
                         }
 
-                        $("#modal_error_txt").html(errorMsg);
+                        $("#modal_error_txt").text(errorMsg);
                         $("#modal_error").css('display', 'flex');
                     }
                 });
@@ -583,7 +583,7 @@
                 },
                 error: function (xhr) {
                     const errorMsg = xhr.responseJSON?.error || 'Failed to delete cylinder.';
-                    $("#modal_error_txt").html(errorMsg);
+                    $("#modal_error_txt").text(errorMsg);
                     $("#modal_error").css('display', 'flex');
                     $('#delete_cylinder_modal').css('display', 'none').addClass('hidden');
                 }
@@ -638,7 +638,7 @@
                         errorMsg = response.error;
                     }
 
-                    $("#modal_error_txt").html(errorMsg);
+                    $("#modal_error_txt").text(errorMsg);
                     $("#modal_error").css('display', 'flex');
                 }
             });

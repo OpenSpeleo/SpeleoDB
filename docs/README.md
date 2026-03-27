@@ -31,6 +31,13 @@ Unlike product docs, these files prioritize:
 - `map-viewer/design-requirements.md`
   - canonical map viewer feature contracts and guardrails
 
+### Security
+
+- `xss-protection.md`
+  - render-side HTML escaping strategy, `Utils.escapeHtml` / `Utils.safeHtml` /
+    `Utils.raw` API, attribute-context escaping, jQuery `.html()` patterns,
+    inline `escapeHtml` alignment, CSS color validation
+
 ### Specialized Topics
 
 - `map-viewer/depth-domain-reactivity.md`

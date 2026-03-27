@@ -18,7 +18,7 @@ vi.mock('../utils.js', () => {
         if (text === null || text === undefined) return '';
         const str = String(text);
         if (!str) return '';
-        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     };
     const RAW = Symbol('RAW_HTML');
     return {
@@ -29,6 +29,17 @@ vi.mock('../utils.js', () => {
             formatJournalDate: vi.fn((d) => d || ''),
             filenameFromUrl: vi.fn((url) => url?.split('/').pop() || ''),
             escapeHtml: vi.fn(escapeHtml),
+            sanitizeUrl: vi.fn((url) => {
+                if (!url || typeof url !== 'string') return '';
+                const trimmed = url.trim();
+                if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(trimmed)) {
+                    try {
+                        const parsed = new URL(trimmed);
+                        return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? trimmed : '';
+                    } catch (_) { return ''; }
+                }
+                return trimmed;
+            }),
             raw: (html) => ({ [RAW]: true, value: String(html) }),
             safeHtml: (strings, ...values) => strings.reduce((r, s, i) => {
                 if (i < values.length) {
@@ -262,6 +273,33 @@ describe('StationLogs', () => {
             const html = StationLogs.renderEntry(log, false, false);
 
             expect(html).toContain('Only admins can delete');
+        });
+
+        it('escapes quotes in title for attribute-context safety', () => {
+            const log = { id: 'log-1', title: 'test" onclick="alert(1)', notes: '' };
+
+            const html = StationLogs.renderEntry(log, true, false);
+
+            expect(html).not.toContain('onclick="alert');
+            expect(html).toContain('&quot;');
+        });
+
+        it('escapes HTML in title to prevent XSS', () => {
+            const log = { id: 'log-1', title: '<img onerror=alert(1)>', notes: 'safe' };
+
+            const html = StationLogs.renderEntry(log, false, false);
+
+            expect(html).not.toContain('<img onerror');
+            expect(html).toContain('&lt;img');
+        });
+
+        it('escapes created_by field', () => {
+            const log = { id: 'log-1', title: 'T', notes: '', created_by: '<b>hacker</b>' };
+
+            const html = StationLogs.renderEntry(log, false, false);
+
+            expect(html).not.toContain('<b>hacker</b>');
+            expect(html).toContain('&lt;b&gt;');
         });
     });
 
