@@ -13,6 +13,7 @@ from django.utils import timezone
 from speleodb.api.v1.tests.factories import ProjectCommitFactory
 from speleodb.api.v1.tests.factories import ProjectFactory
 from speleodb.surveys.models import ProjectCommit
+from speleodb.surveys.models.mutex import ProjectMutex
 from speleodb.users.tests.factories import UserFactory
 
 
@@ -341,7 +342,10 @@ class TestGetOrCreateFromCommitSanitization(TestCase):
         assert "<img" not in commit.author_name
 
     def test_zalgo_stripped_from_message(self) -> None:
-        zalgo = "Z\u0300\u0301\u0302\u0303\u0304\u0305\u0306\u0307a\u0300\u0301\u0302\u0303l\u0300\u0301g\u0300o"
+        zalgo = (
+            "Z\u0300\u0301\u0302\u0303\u0304\u0305\u0306\u0307"
+            "a\u0300\u0301\u0302\u0303l\u0300\u0301g\u0300o"
+        )
         fake = self._make_fake_commit(
             hexsha="c" * 40,
             message=f"{zalgo} commit",
@@ -368,8 +372,6 @@ class TestMutexClosingCommentSanitization(TestCase):
     """Test that ProjectMutex.release_mutex sanitizes the closing comment."""
 
     def setUp(self) -> None:
-        from speleodb.surveys.models.mutex import ProjectMutex
-
         self.user = UserFactory.create()
         self.project = ProjectFactory.create(created_by=self.user.email)
         self.mutex = ProjectMutex.objects.create(
@@ -377,16 +379,12 @@ class TestMutexClosingCommentSanitization(TestCase):
         )
 
     def test_html_stripped_from_closing_comment(self) -> None:
-        from speleodb.surveys.models.mutex import ProjectMutex
-
         self.mutex.release_mutex(self.user, '<script>alert("xss")</script> done')
         self.mutex.refresh_from_db()
         assert "<script>" not in self.mutex.closing_comment
         assert "done" in self.mutex.closing_comment
 
     def test_zalgo_stripped_from_closing_comment(self) -> None:
-        from speleodb.surveys.models.mutex import ProjectMutex
-
         zalgo = "Z\u0300\u0301\u0302\u0303a\u0300\u0301l\u0300g\u0300o"
         self.mutex.release_mutex(self.user, f"{zalgo} release")
         self.mutex.refresh_from_db()
