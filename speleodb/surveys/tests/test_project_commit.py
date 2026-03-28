@@ -275,3 +275,119 @@ class TestProjectCommitModel(TestCase):
         )
 
         assert commit.tree == {}
+
+
+class TestGetOrCreateFromCommitSanitization(TestCase):
+    """Test that get_or_create_from_commit sanitizes text fields."""
+
+    def setUp(self) -> None:
+        self.user = UserFactory.create()
+        self.project = ProjectFactory.create(created_by=self.user.email)
+
+    @staticmethod
+    def _make_fake_commit(
+        hexsha: str,
+        message: str,
+        author_name: str = "Test Author",
+        author_email: str = "test@example.com",
+    ) -> object:
+        """Build a minimal mock matching the GitCommit interface."""
+
+        class _Author:
+            def __init__(self, name: str, email: str) -> None:
+                self.name = name
+                self.email = email
+
+        class _FakeCommit:
+            def __init__(
+                self,
+                hexsha: str,
+                message: str,
+                author: _Author,
+                authored_date: float,
+            ) -> None:
+                self.hexsha = hexsha
+                self.message = message
+                self.author = author
+                self.authored_date = authored_date
+                self.parents: list[object] = []
+
+            def tree_to_json(self) -> list[dict[str, str]]:
+                return []
+
+        return _FakeCommit(
+            hexsha=hexsha,
+            message=message,
+            author=_Author(author_name, author_email),
+            authored_date=timezone.now().timestamp(),
+        )
+
+    def test_html_stripped_from_message(self) -> None:
+        fake = self._make_fake_commit(
+            hexsha="a" * 40,
+            message='<script>alert("xss")</script> normal text',
+        )
+        commit = ProjectCommit.get_or_create_from_commit(self.project, fake)  # type: ignore[arg-type]
+        assert "<script>" not in commit.message
+        assert "normal text" in commit.message
+
+    def test_html_stripped_from_author_name(self) -> None:
+        fake = self._make_fake_commit(
+            hexsha="b" * 40,
+            message="clean message",
+            author_name='<img src=x onerror="alert(1)">',
+        )
+        commit = ProjectCommit.get_or_create_from_commit(self.project, fake)  # type: ignore[arg-type]
+        assert "<img" not in commit.author_name
+
+    def test_zalgo_stripped_from_message(self) -> None:
+        zalgo = "Z\u0300\u0301\u0302\u0303\u0304\u0305\u0306\u0307a\u0300\u0301\u0302\u0303l\u0300\u0301g\u0300o"
+        fake = self._make_fake_commit(
+            hexsha="c" * 40,
+            message=f"{zalgo} commit",
+        )
+        commit = ProjectCommit.get_or_create_from_commit(self.project, fake)  # type: ignore[arg-type]
+        assert "Zalgo commit" in commit.message
+
+    def test_existing_commit_returned_unchanged(self) -> None:
+        """get_or_create should return existing commit without re-sanitizing."""
+        ProjectCommitFactory.create(
+            id="d" * 40,
+            project=self.project,
+            message="original message",
+        )
+        fake = self._make_fake_commit(
+            hexsha="d" * 40,
+            message="different message",
+        )
+        commit = ProjectCommit.get_or_create_from_commit(self.project, fake)  # type: ignore[arg-type]
+        assert commit.message == "original message"
+
+
+class TestMutexClosingCommentSanitization(TestCase):
+    """Test that ProjectMutex.release_mutex sanitizes the closing comment."""
+
+    def setUp(self) -> None:
+        from speleodb.surveys.models.mutex import ProjectMutex
+
+        self.user = UserFactory.create()
+        self.project = ProjectFactory.create(created_by=self.user.email)
+        self.mutex = ProjectMutex.objects.create(
+            project=self.project, user=self.user, is_active=True
+        )
+
+    def test_html_stripped_from_closing_comment(self) -> None:
+        from speleodb.surveys.models.mutex import ProjectMutex
+
+        self.mutex.release_mutex(self.user, '<script>alert("xss")</script> done')
+        self.mutex.refresh_from_db()
+        assert "<script>" not in self.mutex.closing_comment
+        assert "done" in self.mutex.closing_comment
+
+    def test_zalgo_stripped_from_closing_comment(self) -> None:
+        from speleodb.surveys.models.mutex import ProjectMutex
+
+        zalgo = "Z\u0300\u0301\u0302\u0303a\u0300\u0301l\u0300g\u0300o"
+        self.mutex.release_mutex(self.user, f"{zalgo} release")
+        self.mutex.refresh_from_db()
+        assert "Zalgo release" in self.mutex.closing_comment
