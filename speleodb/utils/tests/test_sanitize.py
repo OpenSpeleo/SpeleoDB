@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import unicodedata
+
 from speleodb.utils.sanitize import sanitize_text
 
 
@@ -12,8 +14,8 @@ class TestSanitizeText:
     # Zalgo / combining-mark abuse
     # ------------------------------------------------------------------
 
-    def test_zalgo_text_stripped_to_base_characters(self) -> None:
-        """Heavily decorated zalgo text should collapse to plain letters."""
+    def test_zalgo_text_reduced_to_near_base_characters(self) -> None:
+        """Heavily decorated zalgo text should have excess marks stripped."""
         zalgo = (
             "D\u0338\u0328\u031b\u0356\u032f\u0318\u0326\u0354\u0331\u0331\u0356"
             "\u0354\u033b\u0356\u035c\u0345a\u0335\u0327\u0321\u0322\u0333\u0353"
@@ -33,16 +35,24 @@ class TestSanitizeText:
             "\u033f\u0308\u0302\u0301\u0315\u030a\u030d\u0308\u0302\u030a\u0301"
             "\u033d\u0303\u0300\u0345"
         )
-        assert sanitize_text(zalgo) == "DaniS"
+        result = sanitize_text(zalgo)
+        # Base characters survive; excess marks are stripped
+        base_only = "".join(
+            c for c in result if unicodedata.category(c)[0] != "M"
+        )
+        assert base_only == "DaniS"
+        # Each base char keeps at most 3 combining marks
+        mark_count = len(result) - len(base_only)
+        assert mark_count <= len(base_only) * 3
 
-    def test_simple_combining_accent_removed(self) -> None:
-        """A single combining acute accent on 'e' should be stripped."""
-        # 'e' + combining acute accent (U+0301)
-        assert sanitize_text("e\u0301") == "e"
+    def test_simple_combining_accent_preserved(self) -> None:
+        """A single combining acute accent on 'e' should be kept."""
+        # 'e' + combining acute accent (U+0301) → recomposed to 'é'
+        assert sanitize_text("e\u0301") == "é"
 
-    def test_precomposed_accent_decomposed_and_stripped(self) -> None:
-        """Pre-composed é is decomposed by NFD and the accent removed."""
-        assert sanitize_text("\u00e9") == "e"
+    def test_precomposed_accent_preserved(self) -> None:
+        """Pre-composed é should survive sanitization."""
+        assert sanitize_text("\u00e9") == "é"
 
     # ------------------------------------------------------------------
     # Compatibility characters preserved (NFD, not NFKD)
@@ -68,23 +78,22 @@ class TestSanitizeText:
         assert sanitize_text("Станция №1") == "Станция №1"
 
     # ------------------------------------------------------------------
-    # Accented characters are stripped to base letters
+    # Accented characters are preserved (up to 3 marks per base char)
     # ------------------------------------------------------------------
 
-    def test_accented_latin_stripped(self) -> None:
-        """Common accented Latin letters lose their diacritics."""
-        assert sanitize_text("café") == "cafe"
-        assert sanitize_text("naïve") == "naive"
-        assert sanitize_text("résumé") == "resume"
+    def test_accented_latin_preserved(self) -> None:
+        """Common accented Latin letters keep their diacritics."""
+        assert sanitize_text("café") == "café"
+        assert sanitize_text("naïve") == "naïve"
+        assert sanitize_text("résumé") == "résumé"
 
-    def test_n_tilde_stripped(self) -> None:
-        """ñ is decomposed and the tilde removed."""
-        assert sanitize_text("niño") == "nino"
+    def test_n_tilde_preserved(self) -> None:
+        """ñ should survive sanitization."""
+        assert sanitize_text("niño") == "niño"
 
-    def test_devanagari_marks_stripped(self) -> None:
-        """Devanagari combining marks (virama, vowel signs) are stripped."""
-        # स्टेशन → सटशन (virama and vowel sign removed)
-        assert sanitize_text("स्टेशन") == "सटशन"
+    def test_devanagari_marks_preserved(self) -> None:
+        """Devanagari combining marks within the limit are preserved."""
+        assert sanitize_text("स्टेशन") == "स्टेशन"
 
     # ------------------------------------------------------------------
     # Control / format characters
