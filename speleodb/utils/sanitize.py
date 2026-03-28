@@ -8,10 +8,10 @@ import unicodedata
 
 import nh3
 
+# Legitimate scripts (Thai, Vietnamese, IPA) use up to 3 combining marks
+# per base character.  Zalgo text stacks 10-50+.  Marks beyond this limit
+# are silently dropped.
 MAX_COMBINING_MARKS_PER_CHAR = 3
-"""Legitimate scripts (Thai, Vietnamese, IPA) use up to 3 combining marks
-per base character.  Zalgo text stacks 10-50+.  Marks beyond this limit
-are silently dropped."""
 
 
 def sanitize_text(value: str) -> str:
