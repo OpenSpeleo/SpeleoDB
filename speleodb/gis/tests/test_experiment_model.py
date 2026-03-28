@@ -786,7 +786,7 @@ class TestExperimentFieldSanitization:
 
     def test_html_mixed_with_text_stripped(self) -> None:
         field_def = ExperimentFieldDefinition(
-            name='<b>Temperature</b> <script>alert(1)</script>',
+            name="<b>Temperature</b> <script>alert(1)</script>",
             type=FieldType.TEXT,
             required=False,
             order=0,
@@ -811,7 +811,7 @@ class TestExperimentFieldSanitization:
             required=False,
             order=0,
             options=[
-                '<b>Bold</b> Option',
+                "<b>Bold</b> Option",
                 "Normal Option",
             ],
         )
