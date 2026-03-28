@@ -157,3 +157,56 @@ class TestSanitizeText:
     def test_real_world_cave_name(self) -> None:
         """A typical cave name stays clean."""
         assert sanitize_text("Grotte de la Luire") == "Grotte de la Luire"
+
+    # ------------------------------------------------------------------
+    # HTML tag stripping (nh3)
+    # ------------------------------------------------------------------
+
+    def test_script_tag_and_content_stripped(self) -> None:
+        """<script> tags AND their content are removed entirely by nh3."""
+        assert sanitize_text('<script>alert("xss")</script>') == ""
+
+    def test_script_tag_surrounding_text_preserved(self) -> None:
+        """Text around <script> tags survives; only the script block is removed."""
+        result = sanitize_text('Before <script>alert("xss")</script> After')
+        assert "<script>" not in result
+        assert "alert" not in result
+        assert "Before" in result
+        assert "After" in result
+
+    def test_img_onerror_stripped(self) -> None:
+        """<img> with event handler is stripped entirely (void element, no text)."""
+        assert sanitize_text("<img onerror=alert(1)>") == ""
+
+    def test_bold_tag_stripped(self) -> None:
+        """<b> tags are stripped but text content is kept."""
+        assert sanitize_text("<b>bold</b>") == "bold"
+
+    def test_nested_tags_stripped(self) -> None:
+        """Nested tags are all removed, only text survives."""
+        assert sanitize_text("<div><p>text</p></div>") == "text"
+
+    def test_anchor_tag_stripped(self) -> None:
+        """<a> tags with href are stripped, link text is kept."""
+        assert sanitize_text('<a href="https://evil.com">click</a>') == "click"
+
+    def test_angle_brackets_in_plain_text_stripped(self) -> None:
+        """Angle brackets that look like tags are removed."""
+        result = sanitize_text("<WIP> Station Name")
+        assert "<" not in result
+        assert ">" not in result
+
+    def test_html_with_attributes_stripped(self) -> None:
+        """Tags with class/style/data attributes are fully removed."""
+        assert (
+            sanitize_text('<div class="evil" style="background:url(x)">safe</div>')
+            == "safe"
+        )
+
+    def test_mixed_html_and_text(self) -> None:
+        """HTML mixed with clean text keeps only the text parts."""
+        assert sanitize_text("Hello <b>world</b>!") == "Hello world!"
+
+    def test_plain_ampersand_preserved(self) -> None:
+        """Bare ampersands in text survive the pipeline."""
+        assert sanitize_text("A & B") == "A & B"

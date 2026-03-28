@@ -2,7 +2,7 @@ import { ContextMenu } from './context_menu.js';
 
 describe('ContextMenu', () => {
     beforeEach(() => {
-        document.body.innerHTML = '<div id="context-menu" style="display:none;"></div><div id="map"></div>';
+        document.body.innerHTML = '<div id="context-menu" class="context-menu" style="display:none;"></div><div id="map"></div>';
         ContextMenu.menuEl = null;
         ContextMenu.iconDataUrlCache = new Map();
         ContextMenu.iconFetchPromises = new Map();
@@ -124,6 +124,24 @@ describe('ContextMenu', () => {
             ContextMenu.show(0, 0, makeItems());
 
             expect(ContextMenu.menuEl).not.toBeNull();
+        });
+
+        it('escapes hostile label and subtitle in menu items', () => {
+            const items = [{
+                label: '<img onerror=alert(1)>',
+                subtitle: 'test" onclick="alert(2)',
+                action: vi.fn(),
+            }];
+            ContextMenu.show(100, 100, items);
+            const menu = document.querySelector('.context-menu');
+            expect(menu).toBeTruthy();
+            const html = menu.innerHTML;
+            expect(html).toContain('&lt;img');
+            expect(html).not.toContain('<img onerror');
+            // innerHTML serialization decodes &quot; in text nodes; assert subtitle stayed plain text.
+            const subtitleEl = menu.querySelector('.context-menu-subtitle');
+            expect(subtitleEl.textContent).toBe('test" onclick="alert(2)');
+            expect(subtitleEl.children.length).toBe(0);
         });
     });
 

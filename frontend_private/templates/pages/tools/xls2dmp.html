@@ -482,10 +482,6 @@ $(document).ready(function() {
         });
     }
 
-    function escapeHtml(s) {
-        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
     function refreshIndexes() {
         $tbody.children('tr').each(function(i) {
             $(this).children('td').first().text(i + 1);

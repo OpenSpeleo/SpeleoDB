@@ -1,3 +1,4 @@
+/* global escapeHtml */
 // Shared user autocomplete helper
 // Usage: attachUserAutocomplete($("#user"), $("#user_suggestions"), autocompleteUrl)
 
@@ -7,15 +8,6 @@ function attachUserAutocomplete($input, $suggestions, autocompleteUrl) {
     let activeIndex = -1;
     let currentItems = [];
     let debounceTimer = null;
-
-    function escapeHtml(text) {
-        return String(text)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
 
     function render(items) {
         currentItems = items || [];

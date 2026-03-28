@@ -316,7 +316,7 @@
             // Validate that all fields are complete (have name and type)
             const completenessValidation = ExperimentFields.validateFieldsComplete();
             if (!completenessValidation.isValid) {
-                $("#modal_error_txt").html(completenessValidation.errorMessage);
+                $("#modal_error_txt").text(completenessValidation.errorMessage);
                 $("#modal_error").css('display', 'flex');
                 return false;
             }

@@ -15,8 +15,9 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "argon2-cffi==25.1.0",  # https://github.com/hynek/argon2-cffi
     "dict-hash==1.3.7",     # https://github.com/LucaCappelletti94/dict_hash
+    "nh3==0.3.4",           # https://github.com/messense/nh3
     "python-dotenv==1.2.2", # https://github.com/theskumar/python-dotenv
-    "pytz==2026.1.post1",         # https://github.com/stub42/pytz
+    "pytz==2026.1.post1",   # https://github.com/stub42/pytz
     "timeago==1.0.16",      # https://github.com/hustcc/timeago
     "tomlkit==0.14.0",      # https://github.com/python-poetry/tomlkit
     "wrapt==2.1.2",         # https://github.com/GrahamDumpleton/wrapt
@@ -37,7 +38,7 @@ dependencies = [
     "ffmpeg-python==0.2.0", # https://github.com/kkroening/ffmpeg-python
     "Pillow==12.1.1",       # https://github.com/python-pillow/Pillow
     "pillow-heif==1.3.0",   # https://github.com/bigcat88/pillow_heif
-    "PyMuPDF==1.27.2.2",      # https://github.com/pymupdf/PyMuPDF
+    "PyMuPDF==1.27.2.2",    # https://github.com/pymupdf/PyMuPDF
 
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------

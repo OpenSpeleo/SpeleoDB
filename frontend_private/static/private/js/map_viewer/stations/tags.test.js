@@ -24,11 +24,31 @@ vi.mock('../state.js', () => ({
     },
 }));
 
-vi.mock('../utils.js', () => ({
-    Utils: {
-        showNotification: vi.fn(),
-    },
-}));
+vi.mock('../utils.js', () => {
+    const escapeHtml = (text) => {
+        if (text === null || text === undefined) return '';
+        const str = String(text);
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    };
+    const RAW = Symbol('RAW_HTML');
+    return {
+        Utils: {
+            showNotification: vi.fn(),
+            safeCssColor: vi.fn((c, fb) => (/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(String(c || '')) ? c : (fb || '#94a3b8'))),
+            escapeHtml: vi.fn(escapeHtml),
+            raw: (html) => ({ [RAW]: true, value: String(html) }),
+            safeHtml: (strings, ...values) => strings.reduce((r, s, i) => {
+                if (i < values.length) {
+                    const v = values[i];
+                    if (v && typeof v === 'object' && v[RAW]) return r + s + v.value;
+                    return r + s + escapeHtml(v);
+                }
+                return r + s;
+            }, ''),
+        },
+    };
+});
 
 vi.mock('../map/layers.js', () => ({
     Layers: {
@@ -278,6 +298,28 @@ describe('StationTags', () => {
 
             expect(document.getElementById('tag-selector-overlay').innerHTML).toContain('No tags available');
         });
+
+        it('escapes malicious tag names to prevent XSS', () => {
+            State.allStations.set('st-1', { id: 'st-1', tag: null });
+            State.userTags = [{ id: 'tag-1', name: '<img onerror=alert(1)>', color: '#ff0000' }];
+
+            StationTags.openTagSelector('st-1');
+
+            const overlay = document.getElementById('tag-selector-overlay');
+            expect(overlay.innerHTML).not.toContain('<img onerror');
+            expect(overlay.innerHTML).toContain('&lt;img onerror');
+        });
+
+        it('escapes tag color in style attribute via safeCssColor', () => {
+            // A malicious tag color should be rejected by safeCssColor
+            State.userTags = [{ id: 't1', name: 'XSS', color: 'red; background-image: url(https://evil.com)' }];
+            State.allStations.set('s1', { id: 's1', tag: { id: 't1' } });
+            StationTags.openTagSelector('s1');
+            const overlay = document.getElementById('tag-selector-overlay');
+            expect(overlay).toBeTruthy();
+            const html = overlay.innerHTML;
+            expect(html).not.toContain('background-image');
+        });
     });
 
     describe('closeTagSelector', () => {
@@ -350,6 +392,18 @@ describe('StationTags', () => {
 
         it('does nothing if tag container is not in DOM', () => {
             expect(() => StationTags.refreshStationTagDisplay('st-1')).not.toThrow();
+        });
+
+        it('escapes malicious tag name in badge HTML', () => {
+            document.body.innerHTML = '<div id="station-tag-display"></div>';
+            const station = { tag: { name: '<script>alert("xss")</script>', color: '#00ff00' } };
+            State.allStations.set('st-1', station);
+
+            StationTags.refreshStationTagDisplay('st-1', station);
+
+            const container = document.getElementById('station-tag-display');
+            expect(container.innerHTML).not.toContain('<script>');
+            expect(container.innerHTML).toContain('&lt;script&gt;');
         });
     });
 

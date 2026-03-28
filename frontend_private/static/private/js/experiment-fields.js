@@ -1,3 +1,4 @@
+/* global escapeHtml */
 /**
  * Experiment Fields Manager
  * Handles dynamic field creation, tag management, and Title Case conversion
@@ -35,15 +36,11 @@
         }
     }
 
-    /**
-     * Create a tag element with Title Case text
-     * Tags are used for Multiple Choice field options
-     */
     function createTag(text, container) {
         const titleCaseText = toTitleCase(text);
         const tag = $(`
             <span class="inline-flex items-center gap-1 px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
-                <span class="tag-text">${titleCaseText}</span>
+                <span class="tag-text">${escapeHtml(titleCaseText)}</span>
                 <button type="button" class="remove-tag hover:text-rose-400 transition-colors">
                     <svg class="w-3 h-3 fill-current" viewBox="0 0 16 16">
                         <path d="M12.72 3.293a1 1 0 00-1.415 0L8 6.586 4.695 3.293a1 1 0 00-1.414 1.414L6.586 8l-3.305 3.305a1 1 0 101.414 1.414L8 9.414l3.305 3.305a1 1 0 001.414-1.414L9.414 8l3.305-3.293a1 1 0 000-1.414z"/>

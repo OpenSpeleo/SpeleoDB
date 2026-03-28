@@ -1,6 +1,25 @@
 import { Notification } from './components/notification.js';
 
+const RAW_HTML = Symbol('RAW_HTML');
+
 export const Utils = {
+    raw: function(htmlString) {
+        return { [RAW_HTML]: true, value: String(htmlString) };
+    },
+
+    safeHtml: function(strings, ...values) {
+        return strings.reduce((result, str, i) => {
+            if (i < values.length) {
+                const val = values[i];
+                if (val && typeof val === 'object' && val[RAW_HTML]) {
+                    return result + str + val.value;
+                }
+                return result + str + Utils.escapeHtml(val);
+            }
+            return result + str;
+        }, '');
+    },
+
     getCSRFToken: function() {
         const cookieValue = document.cookie
             .split('; ')
@@ -107,11 +126,39 @@ export const Utils = {
         Notification.show(type, message, duration);
     },
 
+    isValidCssColor: function(color) {
+        if (!color || typeof color !== 'string') return false;
+        return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color);
+    },
+
+    safeCssColor: function(color, fallback = '#94a3b8') {
+        return this.isValidCssColor(color) ? color : fallback;
+    },
+
+    sanitizeUrl: function(url) {
+        if (!url || typeof url !== 'string') return '';
+        const trimmed = url.trim();
+        if (trimmed === '') return '';
+        try {
+            const parsed = new URL(trimmed, window.location.origin);
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                return trimmed;
+            }
+        } catch (_) {
+            if (!/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(trimmed)) {
+                return trimmed;
+            }
+        }
+        return '';
+    },
+
     escapeHtml: function(text) {
-        if (!text) return '';
+        if (text === null || text === undefined) return '';
+        const str = String(text);
+        if (!str) return '';
         const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        div.textContent = str;
+        return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     },
 
     /**
@@ -123,12 +170,20 @@ export const Utils = {
         const overlay = document.createElement('div');
         overlay.id = 'station-loading-overlay';
         overlay.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center';
-        overlay.innerHTML = `
-            <div class="bg-slate-800 rounded-xl p-6 text-center">
-                <div class="loading-spinner mx-auto mb-4"></div>
-                <p class="text-slate-300">${message}</p>
-            </div>
-        `;
+
+        const inner = document.createElement('div');
+        inner.className = 'bg-slate-800 rounded-xl p-6 text-center';
+
+        const spinner = document.createElement('div');
+        spinner.className = 'loading-spinner mx-auto mb-4';
+
+        const msgEl = document.createElement('p');
+        msgEl.className = 'text-slate-300';
+        msgEl.textContent = message;
+
+        inner.appendChild(spinner);
+        inner.appendChild(msgEl);
+        overlay.appendChild(inner);
         document.body.appendChild(overlay);
         return overlay;
     },

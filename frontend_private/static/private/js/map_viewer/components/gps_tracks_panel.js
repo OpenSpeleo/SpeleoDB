@@ -2,6 +2,7 @@ import { Config, DEFAULTS } from '../config.js';
 import { Layers } from '../map/layers.js';
 import { State } from '../state.js';
 import { Colors } from '../map/colors.js';
+import { Utils } from '../utils.js';
 
 export const GPSTracksPanel = {
     init: function() {
@@ -176,15 +177,15 @@ export const GPSTracksPanel = {
                 ? track.name.substring(0, maxLen - 3) + '...' 
                 : track.name;
             
-            item.innerHTML = `
+            item.innerHTML = Utils.safeHtml`
                 <div class="flex items-center gap-2 overflow-hidden flex-1">
-                    <div class="gps-track-color-dot w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${isVisible ? color : '#94a3b8'}; ${isVisible ? 'border: 2px dashed rgba(255,255,255,0.5);' : ''}"></div>
+                    <div class="gps-track-color-dot w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${isVisible ? color : '#94a3b8'}; ${Utils.raw(isVisible ? 'border: 2px dashed rgba(255,255,255,0.5);' : '')}"></div>
                     <span class="text-slate-200 text-sm font-medium truncate select-none" title="${track.name}">${displayName}</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <div class="gps-track-loading-spinner ${isLoading ? '' : 'hidden'}" style="width: 16px; height: 16px; border: 2px solid rgba(56, 189, 248, 0.3); border-left-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                    <div class="gps-track-loading-spinner ${Utils.raw(isLoading ? '' : 'hidden')}" style="width: 16px; height: 16px; border: 2px solid rgba(56, 189, 248, 0.3); border-left-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
                     <label class="toggle-switch m-0 scale-75 origin-right">
-                        <input type="checkbox" ${isVisible ? 'checked' : ''} ${isLoading ? 'disabled' : ''}>
+                        <input type="checkbox" ${Utils.raw(isVisible ? 'checked' : '')} ${Utils.raw(isLoading ? 'disabled' : '')}>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>

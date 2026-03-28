@@ -29,7 +29,7 @@ from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 
 class ProjectSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Project]):
-    sanitized_fields: ClassVar[list[str]] = ["name", "description"]
+    sanitized_fields: ClassVar[list[str]] = ["name", "description", "created_by"]
     country = CustomChoiceField(choices=list(countries))
     visibility = CustomChoiceField(
         choices=ProjectVisibility,  # type: ignore[arg-type]

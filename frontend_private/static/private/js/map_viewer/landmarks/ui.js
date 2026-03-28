@@ -93,7 +93,7 @@ export const LandmarkUI = {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h5 class="text-white font-medium">${landmark.name}</h5>
+                                    <h5 class="text-white font-medium">${Utils.escapeHtml(landmark.name)}</h5>
                                     <p class="text-xs text-slate-400">
                                         ${Number(landmark.latitude).toFixed(5)}, ${Number(landmark.longitude).toFixed(5)}
                                     </p>
@@ -168,14 +168,14 @@ export const LandmarkUI = {
             return;
         }
 
-        const title = landmark ? `Landmark: ${landmark.name}` : 'Landmark Details';
+        const title = landmark ? `Landmark: ${Utils.escapeHtml(landmark.name)}` : 'Landmark Details';
         const extraTitle = isNewlyCreated ? '<span class="ml-2 text-sm text-emerald-400">✨ Newly Created</span>' : '';
 
-        const content = landmark ? `
+        const content = landmark ? Utils.safeHtml`
             <div class="space-y-4">
                 <div>
                     <h3 class="text-lg font-semibold text-white mb-2">${landmark.name}</h3>
-                    ${landmark.description ? `<p class="text-slate-300">${landmark.description}</p>` : '<p class="text-slate-400 italic">No description</p>'}
+                    ${Utils.raw(landmark.description ? Utils.safeHtml`<p class="text-slate-300">${landmark.description}</p>` : '<p class="text-slate-400 italic">No description</p>')}
                 </div>
                 <div class="bg-slate-700/50 rounded-lg p-4 space-y-2">
                     <p class="text-slate-300"><strong>Coordinates:</strong> ${Number(landmark.latitude).toFixed(7)}, ${Number(landmark.longitude).toFixed(7)}</p>
@@ -341,21 +341,15 @@ export const LandmarkUI = {
         const landmark = State.allLandmarks.get(landmarkId);
         if (!landmark) return;
 
-        // Escape HTML for textarea content
-        const escapeHtml = (str) => {
-            if (!str) return '';
-            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        };
-
-        const formHtml = `
+        const formHtml = Utils.safeHtml`
             <form id="edit-landmark-form" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
-                    <input type="text" id="edit-landmark-name" required value="${escapeHtml(landmark.name)}" class="form-input">
+                    <input type="text" id="edit-landmark-name" required value="${landmark.name}" class="form-input">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
-                    <textarea id="edit-landmark-description" rows="3" class="form-input form-textarea">${escapeHtml(landmark.description)}</textarea>
+                    <textarea id="edit-landmark-description" rows="3" class="form-input form-textarea">${landmark.description || ''}</textarea>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -438,7 +432,7 @@ export const LandmarkUI = {
     },
 
     showDeleteConfirmModal(landmark) {
-        const content = `
+        const content = Utils.safeHtml`
             <div class="mb-6">
                 <p class="text-slate-300 mb-2">Are you sure you want to delete this Landmark?</p>
                 <p class="text-white font-semibold text-lg">${landmark.name}</p>

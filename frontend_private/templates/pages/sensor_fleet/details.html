@@ -360,7 +360,7 @@
                         errorMsg = response.error;
                     }
 
-                    $("#modal_error_txt").html(errorMsg);
+                    $("#modal_error_txt").text(errorMsg);
                     $("#modal_error").css('display', 'flex');
                 }
             });
@@ -397,7 +397,7 @@
                         errorMsg = response.error;
                     }
 
-                    $("#modal_error_txt").html(errorMsg);
+                    $("#modal_error_txt").text(errorMsg);
                     $("#modal_error").css('display', 'flex');
                 }
             });
@@ -432,7 +432,7 @@
                 console.error('❌ Error toggling sensor:', xhr);
 
                 const errorMsg = xhr.responseJSON?.error || 'Failed to toggle sensor status.';
-                $("#modal_error_txt").html(errorMsg);
+                $("#modal_error_txt").text(errorMsg);
                 $("#modal_error").css('display', 'flex');
             }
         });
@@ -478,7 +478,7 @@
                 console.error('❌ Error deleting sensor:', xhr);
 
                 const errorMsg = xhr.responseJSON?.error || 'Failed to delete sensor.';
-                $("#modal_error_txt").html(errorMsg);
+                $("#modal_error_txt").text(errorMsg);
                 $("#modal_error").css('display', 'flex');
                 $('#delete_sensor_modal').css('display', 'none').addClass('hidden');
             }
@@ -547,7 +547,7 @@
                     errorMsg = response.error;
                 }
 
-                $("#modal_error_txt").html(errorMsg);
+                $("#modal_error_txt").text(errorMsg);
                 $("#modal_error").css('display', 'flex');
             }
         });

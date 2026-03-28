@@ -112,57 +112,69 @@ export const StationLogs = {
                 <div class="tab-content active p-6">
                     <div class="text-center py-12">
                         <p class="text-red-400">Failed to load journal entries.</p>
-                        <button onclick="window.StationLogs.render('${stationId}', document.getElementById('station-modal-content'))" class="btn-secondary mt-4">Retry</button>
+                        <button id="logs-retry-btn" class="btn-secondary mt-4">Retry</button>
                     </div>
                 </div>
             `;
+            const retryBtn = document.getElementById('logs-retry-btn');
+            if (retryBtn) {
+                retryBtn.addEventListener('click', () => {
+                    window.StationLogs.render(stationId, document.getElementById('station-modal-content'));
+                });
+            }
         }
     },
 
     renderEntry(log, hasWriteAccess, hasAdminAccess) {
-        const escapedNotes = (log.notes || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        
+        const escapedTitle = Utils.escapeHtml(log.title || 'Untitled Entry');
+        const escapedNotes = Utils.escapeHtml(log.notes || '');
+        const escapedCreatedBy = Utils.escapeHtml(log.created_by || 'Unknown');
+
+        const editButton = hasWriteAccess ? Utils.safeHtml`
+            <button class="text-slate-300 hover:text-white edit-log-btn" title="Edit entry"
+                    data-log-id="${log.id}"
+                    data-title="${log.title || ''}"
+                    data-notes="${log.notes || ''}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+            </button>
+        ` : `
+            <button class="text-slate-500 opacity-50 cursor-not-allowed" title="You need write access" disabled>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+            </button>
+        `;
+
+        const deleteButton = hasAdminAccess ? Utils.safeHtml`
+            <button class="text-red-400 hover:text-red-300 delete-log-btn" title="Delete entry"
+                    data-log-id="${log.id}"
+                    data-title="${log.title || ''}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+            </button>
+        ` : `
+            <button class="text-red-400 opacity-50 cursor-not-allowed" title="Only admins can delete" disabled>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+            </button>
+        `;
+
         return `
             <article class="journal-entry" data-log-id="${log.id}">
                 <header class="journal-entry-header">
-                    <h4 class="journal-entry-title">${log.title || 'Untitled Entry'}</h4>
+                    <h4 class="journal-entry-title">${escapedTitle}</h4>
                     <div class="journal-entry-meta">
                         <span>${Utils.formatJournalDate(log.creation_date)}</span>
                         <span class="journal-dot"></span>
-                        <span>${log.created_by || 'Unknown'}</span>
+                        <span>${escapedCreatedBy}</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        ${hasWriteAccess ? `
-                            <button class="text-slate-300 hover:text-white edit-log-btn" title="Edit entry" 
-                                    data-log-id="${log.id}"
-                                    data-title="${(log.title || '').replace(/"/g, '&quot;')}"
-                                    data-notes="${(log.notes || '').replace(/"/g, '&quot;')}">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                </svg>
-                            </button>
-                        ` : `
-                            <button class="text-slate-500 opacity-50 cursor-not-allowed" title="You need write access" disabled>
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                </svg>
-                            </button>
-                        `}
-                        ${hasAdminAccess ? `
-                            <button class="text-red-400 hover:text-red-300 delete-log-btn" title="Delete entry"
-                                    data-log-id="${log.id}"
-                                    data-title="${(log.title || '').replace(/"/g, '&quot;')}">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                            </button>
-                        ` : `
-                            <button class="text-red-400 opacity-50 cursor-not-allowed" title="Only admins can delete" disabled>
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                            </button>
-                        `}
+                        ${editButton}
+                        ${deleteButton}
                     </div>
                 </header>
                 <div class="journal-entry-body">${escapedNotes}</div>
@@ -173,7 +185,7 @@ export const StationLogs = {
                         </svg>
                         <span class="uppercase tracking-wide text-xs font-semibold">ATTACHMENT</span>
                         <span class="text-sky-200">•</span>
-                        <a href="${log.attachment}" target="_blank" class="underline decoration-sky-400 hover:text-white">${Utils.filenameFromUrl(log.attachment)}</a>
+                        <a href="${Utils.sanitizeUrl(log.attachment)}" target="_blank" class="underline decoration-sky-400 hover:text-white">${Utils.escapeHtml(Utils.filenameFromUrl(log.attachment))}</a>
                     </div>
                 ` : ''}
             </article>
@@ -351,11 +363,11 @@ export const StationLogs = {
                         <form id="log-edit-form" class="space-y-4">
                             <div>
                                 <label class="block text-slate-300 text-sm font-medium mb-2">Title <span class="text-red-400">*</span></label>
-                                <input id="edit-log-title" type="text" class="form-input" value="${logData.title.replace(/"/g, '&quot;')}" required>
+                                <input id="edit-log-title" type="text" class="form-input" value="${Utils.escapeHtml(logData.title)}" required>
                             </div>
                             <div>
                                 <label class="block text-slate-300 text-sm font-medium mb-2">Notes <span class="text-red-400">*</span></label>
-                                <textarea id="edit-log-notes" class="form-input form-textarea" rows="6" required>${logData.notes}</textarea>
+                                <textarea id="edit-log-notes" class="form-input form-textarea" rows="6" required>${Utils.escapeHtml(logData.notes)}</textarea>
                             </div>
                             <div class="flex items-center justify-end gap-3 pt-2">
                                 <button type="button" id="cancel-edit-btn" class="btn-secondary">Cancel</button>
@@ -424,7 +436,7 @@ export const StationLogs = {
                         </div>
                         <h3 class="text-lg font-semibold text-white text-center mb-2">Delete Journal Entry?</h3>
                         <p class="text-slate-300 text-center mb-2">Are you sure you want to delete this entry?</p>
-                        <p class="text-white font-medium text-center mb-4">"${title}"</p>
+                        <p class="text-white font-medium text-center mb-4">"${Utils.escapeHtml(title)}"</p>
                         <p class="text-red-300 text-sm text-center mb-6">This action cannot be undone.</p>
                         <div class="flex gap-3">
                             <button id="cancel-delete-btn" class="flex-1 btn-secondary">Cancel</button>
@@ -460,7 +472,7 @@ export const StationLogs = {
     updateFileDisplay(container, file) {
         const placeholder = container.querySelector('#log-file-placeholder');
         if (placeholder) {
-            placeholder.innerHTML = `
+            placeholder.innerHTML = Utils.safeHtml`
                 <svg class="w-8 h-8 text-emerald-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>

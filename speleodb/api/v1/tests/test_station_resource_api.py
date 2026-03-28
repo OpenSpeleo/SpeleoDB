@@ -1142,11 +1142,11 @@ class TestStationResourceFuzzing(BaseAPIProjectTestCase):
                 "title": "A" * 200,  # Max length
                 "text_content": "Test",
             },
-            # Special characters in text
+            # XSS payloads (nh3 strips script tags AND their content)
             {
                 "resource_type": StationResourceType.NOTE,
                 "title": "Special Characters: !@#$%^&*()",
-                "text_content": "<script>alert('xss')</script>",
+                "text_content": "Safe text <b onmouseover=alert(1)>with XSS</b>",
             },
             # Unicode content
             {

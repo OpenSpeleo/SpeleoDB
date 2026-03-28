@@ -173,7 +173,7 @@
             } else {
                 let fileNames = filesArray.map((file, index) => 
                     `<div>
-                        - ${file.name} <span class="remove-file" data-index="${index}" style="color: red; font-size: 20px; cursor: pointer;">&times;</span>
+                        - ${escapeHtml(file.name)} <span class="remove-file" data-index="${index}" style="color: red; font-size: 20px; cursor: pointer;">&times;</span>
                     </div>`
                 ).join("");
                 $('#dropzone label').html("<b>** Files to upload **</b><hr class='my-4'>" + fileNames);

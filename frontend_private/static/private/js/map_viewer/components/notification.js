@@ -18,10 +18,16 @@ export const Notification = {
         const bgColor = type === 'error' ? 'bg-red-500' : (type === 'success' ? 'bg-emerald-500' : 'bg-slate-700');
         
         el.className = `${bgColor} text-white px-4 py-3 rounded shadow-lg transform transition-all duration-300 translate-y-full opacity-0 flex items-center`;
-        el.innerHTML = `
-            <span class="mr-2">${type === 'error' ? '⚠️' : (type === 'success' ? '✅' : 'ℹ️')}</span>
-            <span>${message}</span>
-        `;
+
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'mr-2';
+        iconSpan.textContent = type === 'error' ? '⚠️' : (type === 'success' ? '✅' : 'ℹ️');
+
+        const msgSpan = document.createElement('span');
+        msgSpan.textContent = message;
+
+        el.appendChild(iconSpan);
+        el.appendChild(msgSpan);
         
         container.appendChild(el);
         

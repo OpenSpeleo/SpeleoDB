@@ -41,6 +41,55 @@ The `DEFAULTS` object is organized by category:
 When adding a new feature that needs a tuneable value, add it to `DEFAULTS`
 first, then import it where needed.
 
+### No unescaped user data in HTML sinks
+
+**Every** `innerHTML` assignment, jQuery `.html()` call, or
+`insertAdjacentHTML` that interpolates user- or API-supplied data **must**
+escape that data first. This applies to ES module files **and** inline
+`<script>` blocks in Django templates.
+
+```javascript
+// BAD — user data injected raw into HTML
+el.innerHTML = `<h3>${station.name}</h3>`;
+$('#error').html(errorMsg);
+
+// GOOD — ES module: use Utils.safeHtml / Utils.escapeHtml
+el.innerHTML = Utils.safeHtml`<h3>${station.name}</h3>`;
+html += `<td>${Utils.escapeHtml(value)}</td>`;
+
+// GOOD — inline template script: use local escapeHtml or .text()
+$('#error').text(errorMsg);
+tableBody.html(`<td>${escapeHtml(tag.name)}</td>`);
+
+// GOOD — safe alternative: textContent (never parses HTML)
+el.textContent = station.name;
+```
+
+**Attribute contexts** (e.g. `value="..."`, `data-*="..."`) require quote
+escaping. `Utils.escapeHtml` escapes `"` and `'` in addition to `<`, `>`,
+`&`.
+
+**`Utils.raw()`** marks content as pre-trusted and bypasses escaping.
+Never wrap strings that contain unescaped user data in `Utils.raw()`.
+
+**CSS color values** in `style` attributes must be validated with
+`Utils.isValidCssColor()` or `Utils.safeCssColor()` before interpolation.
+
+**URL attributes** (`href`, `src`) with API-supplied values must be
+validated with `Utils.sanitizeUrl()` to block `javascript:` and other
+dangerous schemes.
+
+**Inline event handlers** (`onclick="..."`) should be avoided. Use
+`data-*` attributes with `addEventListener` instead. If inline handlers
+are unavoidable, any interpolated values must be escaped.
+
+**Do not** define local `escapeHtml` / `safeCssColor` functions in
+templates or standalone scripts. Use the global functions from
+`xss-helpers.js` (loaded in `base_private.html`). ES module files
+should use `Utils.escapeHtml` from `utils.js`.
+
+See `docs/xss-protection.md` for the full rationale and patterns.
+
 ---
 
 ## Python / Backend

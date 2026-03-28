@@ -72,9 +72,9 @@ export const StationTags = {
                         ${State.userTags.length > 0 ? `
                             <div class="space-y-2">
                                 ${State.userTags.map(tag => `
-                                    <button onclick="window.setStationTag('${stationId}', '${tag.id}')" 
+                                    <button onclick="window.setStationTag('${stationId}', '${tag.id}')"
                                             class="w-full text-left px-4 py-2 rounded-lg ${currentTagId === tag.id ? 'bg-sky-600' : 'bg-slate-700'} hover:bg-slate-600 transition-colors flex items-center justify-between">
-                                        <span class="station-tag" style="background-color: ${tag.color}">${tag.name}</span>
+                                        <span class="station-tag" style="background-color: ${Utils.safeCssColor(tag.color)}">${Utils.escapeHtml(tag.name)}</span>
                                         ${currentTagId === tag.id ? '<span class="text-white text-sm">✓ Current</span>' : ''}
                                     </button>
                                 `).join('')}
@@ -140,21 +140,24 @@ export const StationTags = {
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-2">Color</label>
                             <div class="tag-color-picker" id="tag-color-picker">
-                                ${State.tagColors.map(color => `
+                                ${State.tagColors.map(color => {
+                                    const safe = Utils.safeCssColor(color);
+                                    return `
                                     <div class="tag-color-option" 
-                                         style="background-color: ${color}" 
-                                         data-color="${color}"
-                                         onclick="window.selectTagColor('${color}')" 
-                                         title="${color}"></div>
-                                `).join('')}
+                                         style="background-color: ${safe}" 
+                                         data-color="${Utils.escapeHtml(safe)}"
+                                         onclick="window.selectTagColor('${Utils.escapeHtml(safe)}')" 
+                                         title="${Utils.escapeHtml(safe)}"></div>
+                                    `;
+                                }).join('')}
                             </div>
-                            <input type="hidden" id="new-tag-color" value="${State.tagColors[0] || '#ef4444'}">
+                            <input type="hidden" id="new-tag-color" value="${Utils.safeCssColor(State.tagColors[0] || '#ef4444')}">
                             
                             <!-- Custom Color Picker -->
                             <div class="mt-4 flex items-center gap-3 flex-wrap">
                                 <label class="text-sm text-slate-400">Or pick a custom color:</label>
                                 <input type="color" id="new-tag-custom-color" 
-                                       value="${State.tagColors[0] || '#ef4444'}"
+                                       value="${Utils.safeCssColor(State.tagColors[0] || '#ef4444')}"
                                        onchange="window.useCustomColorForNewTag()"
                                        class="h-10 w-20 rounded cursor-pointer border border-slate-600"
                                        title="Pick custom color">
@@ -329,8 +332,8 @@ export const StationTags = {
         }
 
         if (station.tag && station.tag.name && station.tag.color) {
-            tagContainer.innerHTML = `
-                <span class="station-tag" style="background-color: ${station.tag.color}">
+            tagContainer.innerHTML = Utils.safeHtml`
+                <span class="station-tag" style="background-color: ${Utils.raw(Utils.safeCssColor(station.tag.color))}">
                     ${station.tag.name}
                     <span class="remove-tag" onclick="window.removeStationTag('${stationId}')">×</span>
                 </span>

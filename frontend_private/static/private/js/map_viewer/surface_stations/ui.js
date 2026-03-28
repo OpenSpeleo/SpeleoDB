@@ -109,7 +109,7 @@ export const SurfaceStationUI = {
                             <svg class="w-5 h-5 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                             </svg>
-                            ${networkName}
+                            ${Utils.escapeHtml(networkName)}
                             <span class="ml-2 text-sm text-slate-400 font-normal">(${networkStations.length} station${networkStations.length !== 1 ? 's' : ''})</span>
                         </h4>
                         <div class="space-y-2">
@@ -117,7 +117,7 @@ export const SurfaceStationUI = {
 
                 networkStations.forEach(station => {
                     // Get tag color for marker or use default
-                    const markerColor = (station.tag && station.tag.color) ? station.tag.color : '#fb923c';
+                    const markerColor = Utils.safeCssColor((station.tag && station.tag.color) ? station.tag.color : '#fb923c');
 
                     html += `
                         <div class="bg-slate-700/50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
@@ -126,10 +126,10 @@ export const SurfaceStationUI = {
                                     <div class="w-3 h-3 flex-shrink-0 border-2 border-white shadow-md" style="background: ${markerColor}; transform: rotate(45deg);"></div>
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2 flex-wrap">
-                                            <h5 class="text-white font-medium">${station.name}</h5>
+                                            <h5 class="text-white font-medium">${Utils.escapeHtml(station.name)}</h5>
                                             ${station.tag && station.tag.name && station.tag.color ? `
-                                                <span class="station-tag text-xs" style="background-color: ${station.tag.color}; padding: 2px 8px;">
-                                                    ${station.tag.name}
+                                                <span class="station-tag text-xs" style="background-color: ${Utils.safeCssColor(station.tag.color)}; padding: 2px 8px;">
+                                                    ${Utils.escapeHtml(station.tag.name)}
                                                 </span>
                                             ` : ''}
                                         </div>
@@ -236,7 +236,7 @@ export const SurfaceStationUI = {
         // Build network dropdown options
         const networkOptionsHtml = networks.map(n => {
             const selected = (preselectedNetworkId && n.id === preselectedNetworkId) || (networks.length === 1);
-            return `<option value="${n.id}" ${selected ? 'selected' : ''}>${n.name}</option>`;
+            return `<option value="${Utils.escapeHtml(n.id)}" ${selected ? 'selected' : ''}>${Utils.escapeHtml(n.name)}</option>`;
         }).join('');
 
         const formHtml = `

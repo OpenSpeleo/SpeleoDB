@@ -22,16 +22,6 @@ let fleetSelectHandler = null;
 let cylinderSelectHandler = null;
 
 /**
- * Escape HTML to prevent XSS attacks
- */
-function escapeHtml(text) {
-    if (text == null) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
-}
-
-/**
  * Format gas mix display based on O2 and He percentages
  * Matches the logic from cylinder_table.html
  */
@@ -58,7 +48,7 @@ function openCylinderModal(title = 'Safety Cylinder') {
     if (titleEl) {
         titleEl.innerHTML = `
             <img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-6 h-6">
-            ${escapeHtml(title)}
+            ${Utils.escapeHtml(title)}
         `;
     }
 }
@@ -131,7 +121,7 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
                         Location Name <span class="text-rose-500">*</span>
                     </label>
                     <input type="text" id="install-location-name" 
-                        value="${escapeHtml(locationName)}"
+                        value="${Utils.escapeHtml(locationName)}"
                         class="form-input w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
                         placeholder="e.g., Wakulla Spring Cave - Station A1">
                 </div>
@@ -248,7 +238,7 @@ async function loadFleets() {
             fleetSelect.innerHTML = '<option value="">Select a fleet...</option>' +
                 fleets.map(fleet => `
                     <option value="${fleet.id}">
-                        ${escapeHtml(fleet.name)} (${fleet.cylinder_count || 0} cylinders)
+                        ${Utils.escapeHtml(fleet.name)} (${fleet.cylinder_count || 0} cylinders)
                     </option>
                 `).join('');
 
@@ -323,7 +313,7 @@ async function loadFleetCylinders(fleetId) {
                             data-he="${cyl.he_percentage}"
                             data-pressure="${cyl.pressure}"
                             data-unit="${cyl.unit_system}">
-                            ${escapeHtml(cyl.name || cyl.serial || 'Unnamed')} (${gasInfo}) - ${cyl.pressure} ${pressureUnit}
+                            ${Utils.escapeHtml(cyl.name || cyl.serial || 'Unnamed')} (${gasInfo}) - ${cyl.pressure} ${pressureUnit}
                         </option>`;
                     }).join('');
                 cylinderSelect.disabled = false;
@@ -494,10 +484,10 @@ function renderCylinderDetails(install) {
             <!-- Header -->
             <div class="flex items-center">
                 <div>
-                    <h3 class="text-lg font-semibold text-white">${escapeHtml(install.cylinder_name) || 'Unnamed Cylinder'}</h3>
-                    <p class="text-slate-400 text-sm">${escapeHtml(install.location_name) || 'Unknown location'}</p>
+                    <h3 class="text-lg font-semibold text-white">${Utils.escapeHtml(install.cylinder_name) || 'Unnamed Cylinder'}</h3>
+                    <p class="text-slate-400 text-sm">${Utils.escapeHtml(install.location_name) || 'Unknown location'}</p>
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mt-1 ${statusColors[install.status] || 'bg-slate-500/20 text-slate-400'}">
-                        ${escapeHtml(install.status?.toUpperCase() || 'UNKNOWN')}
+                        ${Utils.escapeHtml(install.status?.toUpperCase() || 'UNKNOWN')}
                     </span>
                 </div>
             </div>
@@ -505,11 +495,11 @@ function renderCylinderDetails(install) {
             <!-- Sub-tabs for cylinder details -->
             <div class="flex space-x-2 border-b border-slate-600">
                 <button class="cylinder-subtab px-4 py-2 text-sm font-medium text-sky-400 border-b-2 border-sky-400"
-                    data-subtab="info" onclick="window.CylinderInstalls.switchTab('info', '${escapeHtml(install.id)}')">
+                    data-subtab="info" onclick="window.CylinderInstalls.switchTab('info', '${Utils.escapeHtml(install.id)}')">
                     Cylinder Info
                 </button>
                 <button class="cylinder-subtab px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300"
-                    data-subtab="pressure" onclick="window.CylinderInstalls.switchTab('pressure', '${escapeHtml(install.id)}')">
+                    data-subtab="pressure" onclick="window.CylinderInstalls.switchTab('pressure', '${Utils.escapeHtml(install.id)}')">
                     Pressure Checks (${install.pressure_check_count || 0})
                 </button>
             </div>
@@ -566,15 +556,15 @@ function renderCylinderInfoTab(install) {
                 <div class="space-y-2">
                     <div class="flex justify-between">
                         <span class="text-slate-400">Name:</span>
-                        <span class="text-white">${escapeHtml(install.cylinder_name) || 'N/A'}</span>
+                        <span class="text-white">${Utils.escapeHtml(install.cylinder_name) || 'N/A'}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Serial:</span>
-                        <span class="text-white">${escapeHtml(install.cylinder_serial) || 'N/A'}</span>
+                        <span class="text-white">${Utils.escapeHtml(install.cylinder_serial) || 'N/A'}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Fleet:</span>
-                        <span class="text-white">${escapeHtml(install.cylinder_fleet_name) || 'N/A'}</span>
+                        <span class="text-white">${Utils.escapeHtml(install.cylinder_fleet_name) || 'N/A'}</span>
                     </div>
                 </div>
             </div>
@@ -585,20 +575,20 @@ function renderCylinderInfoTab(install) {
                 <div class="space-y-2">
                     <div class="flex justify-between">
                         <span class="text-slate-400">Project:</span>
-                        <span class="text-white">${escapeHtml(install.project_name) || 'N/A'}</span>
+                        <span class="text-white">${Utils.escapeHtml(install.project_name) || 'N/A'}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Install Date:</span>
-                        <span class="text-white">${escapeHtml(install.install_date) || 'N/A'}</span>
+                        <span class="text-white">${Utils.escapeHtml(install.install_date) || 'N/A'}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Installed By:</span>
-                        <span class="text-white">${escapeHtml(install.install_user) || 'N/A'}</span>
+                        <span class="text-white">${Utils.escapeHtml(install.install_user) || 'N/A'}</span>
                     </div>
                     ${install.distance_from_entry ? `
                     <div class="flex justify-between">
                         <span class="text-slate-400">Distance:</span>
-                        <span class="text-white">${escapeHtml(install.distance_from_entry)} ${distanceUnit}</span>
+                        <span class="text-white">${Utils.escapeHtml(install.distance_from_entry)} ${distanceUnit}</span>
                     </div>
                     ` : ''}
                 </div>
@@ -610,11 +600,11 @@ function renderCylinderInfoTab(install) {
                 <div class="space-y-2">
                     <div class="flex justify-between">
                         <span class="text-slate-400">Latitude:</span>
-                        <span class="text-white font-mono">${escapeHtml(install.latitude)}</span>
+                        <span class="text-white font-mono">${Utils.escapeHtml(install.latitude)}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Longitude:</span>
-                        <span class="text-white font-mono">${escapeHtml(install.longitude)}</span>
+                        <span class="text-white font-mono">${Utils.escapeHtml(install.longitude)}</span>
                     </div>
                 </div>
             </div>
@@ -623,7 +613,7 @@ function renderCylinderInfoTab(install) {
             ${install.notes ? `
             <div class="bg-slate-700/50 rounded-lg p-4">
                 <h4 class="text-sm font-medium text-slate-400 mb-3">Notes</h4>
-                <p class="text-white text-sm">${escapeHtml(install.notes)}</p>
+                <p class="text-white text-sm">${Utils.escapeHtml(install.notes)}</p>
             </div>
             ` : ''}
         </div>
@@ -631,15 +621,15 @@ function renderCylinderInfoTab(install) {
         ${isInstalled ? `
         <!-- Actions -->
         <div class="flex flex-wrap justify-end gap-2 pt-6 border-t border-slate-700">
-            <button type="button" onclick="window.CylinderInstalls.markAsRetrieved('${escapeHtml(install.id)}')"
+            <button type="button" onclick="window.CylinderInstalls.markAsRetrieved('${Utils.escapeHtml(install.id)}')"
                 class="px-3 py-2 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors">
                 Mark as Retrieved
             </button>
-            <button type="button" onclick="window.CylinderInstalls.markAsAbandoned('${escapeHtml(install.id)}')"
+            <button type="button" onclick="window.CylinderInstalls.markAsAbandoned('${Utils.escapeHtml(install.id)}')"
                 class="px-3 py-2 bg-slate-500 text-white text-sm rounded-lg hover:bg-slate-600 transition-colors">
                 Mark as Abandoned
             </button>
-            <button type="button" onclick="window.CylinderInstalls.markAsLost('${escapeHtml(install.id)}')"
+            <button type="button" onclick="window.CylinderInstalls.markAsLost('${Utils.escapeHtml(install.id)}')"
                 class="px-3 py-2 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition-colors">
                 Mark as Lost
             </button>
@@ -667,7 +657,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                 <!-- Add new check button -->
                 <div class="flex justify-between items-center">
                     <h4 class="text-lg font-medium text-white">Pressure Check History</h4>
-                    <button type="button" onclick="window.CylinderInstalls.showAddPressureCheck('${escapeHtml(installId)}')"
+                    <button type="button" onclick="window.CylinderInstalls.showAddPressureCheck('${Utils.escapeHtml(installId)}')"
                         class="px-3 py-1.5 bg-sky-500 text-white text-sm rounded-lg hover:bg-sky-600 transition-colors flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -705,9 +695,9 @@ async function renderPressureChecksTab(installId, contentEl) {
                                         ? new Date(check.check_date).toLocaleDateString()
                                         : new Date(check.creation_date).toLocaleDateString();
                                     // Escape user-controlled fields to prevent XSS
-                                    const safeUser = escapeHtml(check.user) || 'Unknown';
-                                    const safeNotes = escapeHtml(check.notes) || '-';
-                                    const safeCheckId = escapeHtml(check.id);
+                                    const safeUser = Utils.escapeHtml(check.user) || 'Unknown';
+                                    const safeNotes = Utils.escapeHtml(check.notes) || '-';
+                                    const safeCheckId = Utils.escapeHtml(check.id);
                                     return `
                                         <tr class="hover:bg-slate-700/30">
                                             <td class="px-4 py-3 text-white">${checkDate}</td>
@@ -715,7 +705,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                                             <td class="px-4 py-3 text-slate-400">${safeUser}</td>
                                             <td class="px-4 py-3 text-slate-400 max-w-xs truncate">${safeNotes}</td>
                                             <td class="px-4 py-3 text-right">
-                                                <button onclick="window.CylinderInstalls.editPressureCheck('${escapeHtml(installId)}', '${safeCheckId}')"
+                                                <button onclick="window.CylinderInstalls.editPressureCheck('${Utils.escapeHtml(installId)}', '${safeCheckId}')"
                                                     class="text-sky-400 hover:text-sky-300 mr-2" title="Edit">
                                                     <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -723,7 +713,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                                                         </path>
                                                     </svg>
                                                 </button>
-                                                <button onclick="window.CylinderInstalls.deletePressureCheck('${escapeHtml(installId)}', '${safeCheckId}')"
+                                                <button onclick="window.CylinderInstalls.deletePressureCheck('${Utils.escapeHtml(installId)}', '${safeCheckId}')"
                                                     class="text-rose-400 hover:text-rose-300" title="Delete">
                                                     <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -801,11 +791,11 @@ function showAddPressureCheck(installId) {
             </div>
             
             <div class="flex justify-end gap-3">
-                <button type="button" onclick="window.CylinderInstalls.switchTab('pressure', '${escapeHtml(installId)}')"
+                <button type="button" onclick="window.CylinderInstalls.switchTab('pressure', '${Utils.escapeHtml(installId)}')"
                     class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors">
                     Cancel
                 </button>
-                <button type="button" onclick="window.CylinderInstalls.savePressureCheck('${escapeHtml(installId)}')"
+                <button type="button" onclick="window.CylinderInstalls.savePressureCheck('${Utils.escapeHtml(installId)}')"
                     class="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors">
                     Save Check
                 </button>
@@ -874,8 +864,8 @@ async function editPressureCheck(installId, checkId) {
         const response = await API.getCylinderPressureCheckDetails(installId, checkId);
         const check = response.data;
 
-        const safeInstallId = escapeHtml(installId);
-        const safeCheckId = escapeHtml(checkId);
+        const safeInstallId = Utils.escapeHtml(installId);
+        const safeCheckId = Utils.escapeHtml(checkId);
 
         // Get the check_date or fallback to today
         const checkDateValue = check.check_date || new Date().toISOString().split('T')[0];
@@ -917,7 +907,7 @@ async function editPressureCheck(installId, checkId) {
                     <label class="block text-sm font-medium text-slate-300 mb-2">Notes</label>
                     <textarea id="edit-check-notes" rows="1"
                         class="form-textarea w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
-                        placeholder="Optional notes...">${escapeHtml(check.notes || '')}</textarea>
+                        placeholder="Optional notes...">${Utils.escapeHtml(check.notes || '')}</textarea>
                 </div>
                 
                 <div class="flex justify-end gap-3">
@@ -938,7 +928,7 @@ async function editPressureCheck(installId, checkId) {
         contentEl.innerHTML = `
             <div class="text-center py-8 text-rose-400">
                 <p>Failed to load pressure check</p>
-                <button type="button" onclick="window.CylinderInstalls.switchTab('pressure', '${escapeHtml(installId)}')"
+                <button type="button" onclick="window.CylinderInstalls.switchTab('pressure', '${Utils.escapeHtml(installId)}')"
                     class="mt-4 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors">
                     Back to List
                 </button>

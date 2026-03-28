@@ -28,7 +28,7 @@ export const ExplorationLeadUI = {
                 <div class="bg-slate-700/50 rounded-lg p-3 text-sm text-slate-300">
                     <div class="flex items-center gap-2 mb-1">
                         <img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-4 h-4">
-                        <span>Location: ${lineName}</span>
+                        <span>Location: ${Utils.escapeHtml(lineName)}</span>
                     </div>
                     <div class="text-xs text-slate-400 mt-1">
                         Lat: ${coordinates[1].toFixed(7)}, Lon: ${coordinates[0].toFixed(7)}
@@ -124,7 +124,7 @@ export const ExplorationLeadUI = {
                     <div class="text-sm text-slate-300">
                         <div class="flex justify-between">
                             <span class="text-slate-400">Survey Line:</span>
-                            <span>${lead.lineName || 'Unknown'}</span>
+                            <span>${Utils.escapeHtml(lead.lineName || 'Unknown')}</span>
                         </div>
                         <div class="flex justify-between mt-1">
                             <span class="text-slate-400">Coordinates:</span>
@@ -137,7 +137,7 @@ export const ExplorationLeadUI = {
                         ${lead.createdBy ? `
                         <div class="flex justify-between mt-1">
                             <span class="text-slate-400">Created by:</span>
-                            <span class="text-xs">${lead.createdBy}</span>
+                            <span class="text-xs">${Utils.escapeHtml(lead.createdBy)}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -149,7 +149,7 @@ export const ExplorationLeadUI = {
                     <textarea id="lead-description-edit" rows="4"
                         class="form-input form-textarea"
                         placeholder="Describe the exploration lead..."
-                        ${!hasWriteAccess ? 'disabled' : ''}>${lead.description || ''}</textarea>
+                        ${!hasWriteAccess ? 'disabled' : ''}>${Utils.escapeHtml(lead.description || '')}</textarea>
                     <p class="text-xs text-slate-400 mt-2">
                         💡 Direction, size, access type (sidemount/backmount), water flow, etc.
                     </p>
@@ -235,7 +235,7 @@ export const ExplorationLeadUI = {
                     </svg>
                 </div>
                 <h3 class="text-xl font-bold text-white mb-2">Delete Exploration Lead?</h3>
-                <p class="text-slate-300 mb-2">Are you sure you want to delete this exploration lead on <strong>${lineName}</strong>?</p>
+                <p class="text-slate-300 mb-2">Are you sure you want to delete this exploration lead on <strong>${Utils.escapeHtml(lineName)}</strong>?</p>
                 <p class="text-red-300 text-sm">This action cannot be undone.</p>
             </div>
         `;
