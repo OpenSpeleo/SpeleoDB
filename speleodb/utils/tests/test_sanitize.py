@@ -37,9 +37,7 @@ class TestSanitizeText:
         )
         result = sanitize_text(zalgo)
         # Base characters survive; excess marks are stripped
-        base_only = "".join(
-            c for c in result if unicodedata.category(c)[0] != "M"
-        )
+        base_only = "".join(c for c in result if unicodedata.category(c)[0] != "M")
         assert base_only == "DaniS"
         # Each base char keeps at most 3 combining marks
         mark_count = len(result) - len(base_only)
