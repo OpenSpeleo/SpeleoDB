@@ -146,7 +146,7 @@ production = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "cryptography==46.0.5", # https://github.com/pyca/cryptography
+    "cryptography==46.0.6", # https://github.com/pyca/cryptography
 
     # Django
     # ------------------------------------------------------------------------------
