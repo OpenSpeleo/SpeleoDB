@@ -127,7 +127,7 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.15.7",     # https://github.com/astral-sh/ruff
+    "ruff==0.15.8",     # https://github.com/astral-sh/ruff
     "coverage==7.13.5", # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",   # https://github.com/Riverside-Healthcare/djLint
     "prek==0.3.8",      # https://github.com/j178/prek
