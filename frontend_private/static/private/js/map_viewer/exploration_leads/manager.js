@@ -130,8 +130,8 @@ export const ExplorationLeadManager = {
      */
     async createLead(projectId, coordinates, description) {
         const leadData = {
-            latitude: coordinates[1].toFixed(7),
-            longitude: coordinates[0].toFixed(7),
+            latitude: Number(coordinates[1]).toFixed(7),
+            longitude: Number(coordinates[0]).toFixed(7),
             description: description
         };
 
@@ -215,8 +215,8 @@ export const ExplorationLeadManager = {
      */
     async moveLead(leadId, newCoords) {
         return this.updateLead(leadId, {
-            latitude: newCoords[1].toFixed(7),
-            longitude: newCoords[0].toFixed(7)
+            latitude: Number(newCoords[1]).toFixed(7),
+            longitude: Number(newCoords[0]).toFixed(7)
         });
     }
 };

@@ -87,8 +87,8 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
             
             <div id="cylinder-install-form" class="hidden space-y-4">
                 <!-- Hidden coordinates and project -->
-                <input type="hidden" id="install-latitude" value="${coordinates[1].toFixed(7)}">
-                <input type="hidden" id="install-longitude" value="${coordinates[0].toFixed(7)}">
+                <input type="hidden" id="install-latitude" value="${Number(coordinates[1]).toFixed(7)}">
+                <input type="hidden" id="install-longitude" value="${Number(coordinates[0]).toFixed(7)}">
                 <input type="hidden" id="install-project-id" value="${projectId || ''}">
                 
                 <!-- Fleet Selection -->

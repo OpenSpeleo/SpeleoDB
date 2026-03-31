@@ -260,7 +260,7 @@ export const StationUI = {
                         <span>Snapped to: ${Utils.escapeHtml(snap.lineName || 'Survey Line')} (${Utils.escapeHtml(snap.pointType)} point)</span>
                     </div>
                     <div class="text-xs text-slate-400 mt-1">
-                        Distance: ${snap.distance.toFixed(1)}m | Lat: ${snappedCoords[1].toFixed(7)}, Lon: ${snappedCoords[0].toFixed(7)}
+                        Distance: ${Number(snap.distance).toFixed(1)}m | Lat: ${Number(snappedCoords[1]).toFixed(7)}, Lon: ${Number(snappedCoords[0]).toFixed(7)}
                     </div>
                 </div>
             </form>

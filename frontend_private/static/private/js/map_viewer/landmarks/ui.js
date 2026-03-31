@@ -212,12 +212,12 @@ export const LandmarkUI = {
                     <textarea id="landmark-description" rows="3" class="form-input form-textarea" placeholder="Optional description"></textarea>
                 </div>
                 <div class="bg-slate-700/50 rounded-lg p-3 text-sm text-slate-300">
-                    Location: ${coordinates[1].toFixed(7)}, ${coordinates[0].toFixed(7)}
+                    Location: ${Number(coordinates[1]).toFixed(7)}, ${Number(coordinates[0]).toFixed(7)}
                 </div>
             </form>`;
 
         const footer = `
-            <button onclick="document.getElementById('landmark-details-modal')?.remove()" class="btn-secondary">Cancel</button>
+            <button data-close-modal="create-landmark-modal" class="btn-secondary">Cancel</button>
             <button form="create-landmark-form" type="submit" class="btn-primary">Create</button>
         `;
 

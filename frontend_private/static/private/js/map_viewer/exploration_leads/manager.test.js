@@ -233,6 +233,19 @@ describe('ExplorationLeadManager', () => {
             expect(leadData.longitude).toBe('6.1234568');
         });
 
+        it('handles string coordinates without throwing', async () => {
+            API.createExplorationLead.mockResolvedValue({
+                success: true,
+                data: { id: 'l2', latitude: '46.5', longitude: '6.5' },
+            });
+
+            await ExplorationLeadManager.createLead('p1', ['6.123456789', '46.987654321'], 'desc');
+
+            const [, leadData] = API.createExplorationLead.mock.calls[0];
+            expect(leadData.latitude).toBe('46.9876543');
+            expect(leadData.longitude).toBe('6.1234568');
+        });
+
         it('throws when API response is unsuccessful', async () => {
             API.createExplorationLead.mockResolvedValue({ success: false });
 
@@ -319,6 +332,21 @@ describe('ExplorationLeadManager', () => {
             const result = await ExplorationLeadManager.moveLead('l1', [7.5, 47.5]);
 
             expect(result.id).toBe('l1');
+            expect(API.updateExplorationLead).toHaveBeenCalledWith('l1', {
+                latitude: '47.5000000',
+                longitude: '7.5000000',
+            });
+        });
+
+        it('handles string coordinates without throwing', async () => {
+            State.explorationLeads.set('l1', { id: 'l1', coordinates: [6.0, 46.0] });
+            API.updateExplorationLead.mockResolvedValue({
+                success: true,
+                data: { id: 'l1', latitude: '47.5', longitude: '7.5', description: '' },
+            });
+
+            await ExplorationLeadManager.moveLead('l1', ['7.5', '47.5']);
+
             expect(API.updateExplorationLead).toHaveBeenCalledWith('l1', {
                 latitude: '47.5000000',
                 longitude: '7.5000000',

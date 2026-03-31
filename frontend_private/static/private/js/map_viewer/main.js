@@ -135,19 +135,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             const items = [];
 
             // Use feature coordinates when right-clicking on a feature, otherwise use mouse position
-            let latitude, longitude, coords;
+            let latitude, longitude;
             if (data.feature && data.feature.geometry && data.feature.geometry.coordinates) {
                 // Feature coordinates are [longitude, latitude]
                 const featureCoords = data.feature.geometry.coordinates;
-                longitude = parseFloat(featureCoords[0]).toFixed(7);
-                latitude = parseFloat(featureCoords[1]).toFixed(7);
-                coords = [longitude, latitude];
+                longitude = parseFloat(featureCoords[0]);
+                latitude = parseFloat(featureCoords[1]);
             } else {
                 // Fallback to mouse position for map background clicks
-                latitude = event.lngLat.lat.toFixed(7);
-                longitude = event.lngLat.lng.toFixed(7);
-                coords = [longitude, latitude];
+                latitude = event.lngLat.lat;
+                longitude = event.lngLat.lng;
             }
+            const coords = [longitude, latitude];
+            const latDisplay = Number(latitude).toFixed(7);
+            const lngDisplay = Number(longitude).toFixed(7);
 
             // Get appropriate label and icon based on station type
             const typeLabels = {
@@ -274,7 +275,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             Object.entries(typeLabels).forEach(([key, val]) => {
                                 items.push({
                                     label: `Create ${val.label}`,
-                                    subtitle: `At ${latitude}, ${longitude}`,
+                                    subtitle: `At ${latDisplay}, ${lngDisplay}`,
                                     icon: `<img src="${val.icon}" class="w-5 h-5">`,
                                     onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, key)
                                 });
@@ -311,7 +312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (canWriteProject) {
                             items.push({
                                 label: 'Install Safety Cylinder',
-                                subtitle: `At ${latitude}, ${longitude}`,
+                                subtitle: `At ${latDisplay}, ${lngDisplay}`,
                                 icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-5 h-5">`,
                                 onClick: () => {
                                     CylinderInstalls.showInstallModal(snapCheck.coordinates, lineName, nearestProjectId);
@@ -346,9 +347,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Copy Coordinates
             items.push({
                 label: 'Copy Coordinates',
-                subtitle: `${latitude}, ${longitude}`,
+                subtitle: `${latDisplay}, ${lngDisplay}`,
                 icon: '📋',
-                onClick: () => Utils.copyToClipboard(`${latitude}, ${longitude}`)
+                onClick: () => Utils.copyToClipboard(`${latDisplay}, ${lngDisplay}`)
             });
 
             ContextMenu.show(event.point.x, event.point.y, items);
@@ -705,7 +706,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">New Location:</span>
-                                <span class="text-white font-mono">${newCoords[1].toFixed(7)}, ${newCoords[0].toFixed(7)}</span>
+                                <span class="text-white font-mono">${Number(newCoords[1]).toFixed(7)}, ${Number(newCoords[0]).toFixed(7)}</span>
                             </div>
                         </div>
                         
@@ -794,7 +795,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">New Location:</span>
-                                <span class="text-white font-mono">${finalCoords[1].toFixed(7)}, ${finalCoords[0].toFixed(7)}</span>
+                                <span class="text-white font-mono">${Number(finalCoords[1]).toFixed(7)}, ${Number(finalCoords[0]).toFixed(7)}</span>
                             </div>
                             ${snapResult.snapped ? `
                                 <div class="flex justify-between text-sm">
@@ -807,7 +808,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </div>
                                 <div class="flex justify-between text-sm">
                                     <span class="text-slate-400">Distance:</span>
-                                    <span class="text-white">${snapResult.distance.toFixed(1)}m</span>
+                                    <span class="text-white">${Number(snapResult.distance).toFixed(1)}m</span>
                                 </div>
                             ` : `
                                 <div class="flex justify-between text-sm">
@@ -910,7 +911,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">New Location:</span>
-                                <span class="text-white font-mono">${finalCoords[1].toFixed(7)}, ${finalCoords[0].toFixed(7)}</span>
+                                <span class="text-white font-mono">${Number(finalCoords[1]).toFixed(7)}, ${Number(finalCoords[0]).toFixed(7)}</span>
                             </div>
                             ${snapResult.snapped ? `
                                 <div class="flex justify-between text-sm">

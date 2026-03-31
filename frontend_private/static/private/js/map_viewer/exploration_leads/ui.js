@@ -31,7 +31,7 @@ export const ExplorationLeadUI = {
                         <span>Location: ${Utils.escapeHtml(lineName)}</span>
                     </div>
                     <div class="text-xs text-slate-400 mt-1">
-                        Lat: ${coordinates[1].toFixed(7)}, Lon: ${coordinates[0].toFixed(7)}
+                        Lat: ${Number(coordinates[1]).toFixed(7)}, Lon: ${Number(coordinates[0]).toFixed(7)}
                     </div>
                 </div>
             </form>
@@ -107,8 +107,8 @@ export const ExplorationLeadUI = {
         }
 
         const coords = lead.coordinates;
-        const lat = coords[1].toFixed(7);
-        const lng = coords[0].toFixed(7);
+        const lat = Number(coords[1]).toFixed(7);
+        const lng = Number(coords[0]).toFixed(7);
         const access = Config.getScopedAccess('project', lead.projectId);
         const hasWriteAccess = access.write;
         const hasAdminAccess = access.delete;

@@ -117,6 +117,20 @@ describe('StationCylinders XSS', () => {
         expect(rawHtml).toMatch(/id="install-location-name"/);
     });
 
+    it('handles string coordinates in showInstallModal without throwing', async () => {
+        API.getCylinderFleets.mockResolvedValue({
+            data: [{ id: 'f1', name: 'Fleet', cylinder_count: 0 }],
+        });
+        API.getCylinderFleetCylinders.mockResolvedValue({ data: [] });
+
+        await CylinderInstalls.showInstallModal(['-82.5', '27.5'], 'Test', 'p1');
+
+        const latInput = document.getElementById('install-latitude');
+        const lonInput = document.getElementById('install-longitude');
+        expect(latInput.value).toBe('27.5000000');
+        expect(lonInput.value).toBe('-82.5000000');
+    });
+
     it('escapes fleet name with double quotes in option label text', async () => {
         API.getCylinderFleets.mockResolvedValue({
             data: [{ id: 'f-q', name: '"><img src=x onerror=1>', cylinder_count: 1 }],
