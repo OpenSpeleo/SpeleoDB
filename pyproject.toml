@@ -26,7 +26,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "django-redis==6.0.0", # https://github.com/jazzband/django-redis
     "hiredis==3.3.1",      # https://github.com/redis/hiredis-py
-    "redis==7.3.0",        # https://github.com/redis/redis-py
+    "redis==7.4.0",        # https://github.com/redis/redis-py
 
     # Data Processing & Writing
     # ------------------------------------------------------------------------------
@@ -57,7 +57,7 @@ dependencies = [
     # Git Management
     # ------------------------------------------------------------------------------
     "GitPython==3.1.46",    # https://github.com/gitpython-developers/GitPython
-    "python-gitlab==8.1.0", # https://python-gitlab.readthedocs.io/en/stable/
+    "python-gitlab==8.2.0", # https://python-gitlab.readthedocs.io/en/stable/
 
     # Django
     # ------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ dependencies = [
     "django-countries==8.2.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.13.0",          # https://github.com/joke2k/django-environ
-    "django-hijack==3.7.6",            # https://github.com/django-hijack/django-hijack/
+    "django-hijack==3.7.7",            # https://github.com/django-hijack/django-hijack/
     "django-import-export==4.4.0",     # https://github.com/django-import-export/django-import-export
     "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
@@ -82,24 +82,24 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.42.75", # https://github.com/boto/botocore
-    "boto3==1.42.75",    # https://github.com/boto/boto3
+    "botocore==1.42.78", # https://github.com/boto/botocore
+    "boto3==1.42.78",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
-    "celery==5.6.2",             # https://github.com/celery/celery
+    "celery==5.6.3",             # https://github.com/celery/celery
     "django-celery-beat==2.9.0", # https://github.com/celery/django-celery-beat
     "flower==2.0.1",             # https://github.com/mher/flower
     "watchfiles==1.1.1",         # https://github.com/samuelcolvin/watchfiles
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.55.0", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.56.0", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
 local = [
-    "werkzeug[watchdog]==3.1.6", # https://github.com/pallets/werkzeug
+    "werkzeug[watchdog]==3.1.7", # https://github.com/pallets/werkzeug
     "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
     "psycopg[binary]==3.3.3",    # https://github.com/psycopg/psycopg
 
@@ -127,7 +127,7 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.15.7",     # https://github.com/astral-sh/ruff
+    "ruff==0.15.8",     # https://github.com/astral-sh/ruff
     "coverage==7.13.5", # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",   # https://github.com/Riverside-Healthcare/djLint
     "prek==0.3.8",      # https://github.com/j178/prek
@@ -141,13 +141,13 @@ local = [
 ]
 
 production = [
-    "gunicorn==25.1.0", # https://github.com/benoitc/gunicorn
+    "gunicorn==25.3.0", # https://github.com/benoitc/gunicorn
     # "granian==2.5.2",  # https://github.com/emmett-framework/granian
     "psycopg[c]==3.3.3", # https://github.com/psycopg/psycopg
 
     # AWS
     # ------------------------------------------------------------------------------
-    "cryptography==46.0.5", # https://github.com/pyca/cryptography
+    "cryptography==46.0.6", # https://github.com/pyca/cryptography
 
     # Django
     # ------------------------------------------------------------------------------
