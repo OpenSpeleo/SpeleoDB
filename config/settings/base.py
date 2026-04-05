@@ -63,9 +63,16 @@ DJANGO_GIT_BRANCH_NAME = "master"
 
 # File Upload Limits
 # ------------------------------------------------------------------------------
-DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT = 150  # File size limit per individual file
-DJANGO_UPLOAD_TOTAL_FILESIZE_MB_LIMIT = 150  # File size limit for an entire commit
-DJANGO_UPLOAD_TOTAL_FILES_LIMIT = 20  # Maxmimum number of files simultaneously uploaded
+# File size limit per individual file
+DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT = env(
+    "DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT", default=150
+)
+# File size limit for an entire commit
+DJANGO_UPLOAD_TOTAL_FILESIZE_MB_LIMIT = env(
+    "DJANGO_UPLOAD_TOTAL_FILESIZE_MB_LIMIT", default=150
+)
+# Maxmimum number of files simultaneously uploaded
+DJANGO_UPLOAD_TOTAL_FILES_LIMIT = 20
 
 # DATABASES
 # ------------------------------------------------------------------------------
