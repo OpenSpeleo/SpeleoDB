@@ -222,3 +222,29 @@ describe('Utils.raw edge cases', () => {
         expect(result.value).toBe('undefined');
     });
 });
+
+describe('Utils.countryFlag', () => {
+    it('converts FR to French flag emoji', () => {
+        expect(Utils.countryFlag('FR')).toBe(String.fromCodePoint(0x1F1EB, 0x1F1F7));
+    });
+
+    it('converts US to US flag emoji', () => {
+        expect(Utils.countryFlag('US')).toBe(String.fromCodePoint(0x1F1FA, 0x1F1F8));
+    });
+
+    it('returns empty string for empty input', () => {
+        expect(Utils.countryFlag('')).toBe('');
+    });
+
+    it('returns empty string for null', () => {
+        expect(Utils.countryFlag(null)).toBe('');
+    });
+
+    it('returns empty string for single character (too short)', () => {
+        expect(Utils.countryFlag('X')).toBe('');
+    });
+
+    it('returns empty string for three characters (too long)', () => {
+        expect(Utils.countryFlag('ABC')).toBe('');
+    });
+});

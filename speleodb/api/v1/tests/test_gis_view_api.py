@@ -596,6 +596,7 @@ class TestPublicGISProjectViewSerializer(BaseAPITestCase):
         data = {
             "project_id": "12345678-1234-1234-1234-123456789012",
             "project_name": "Test Cave Project",
+            "project_color": "#e41a1c",
             "url": "https://example.com/geojson.json",
             "commit_sha": "a" * 40,
             "commit_date": "2024-01-15T10:30:00+00:00",
@@ -608,6 +609,7 @@ class TestPublicGISProjectViewSerializer(BaseAPITestCase):
         # Verify field name mappings
         assert result["id"] == data["project_id"]
         assert result["name"] == data["project_name"]
+        assert result["color"] == data["project_color"]
         assert result["geojson_file"] == data["url"]
         assert result["commit_sha"] == data["commit_sha"]
         assert result["commit_date"] == data["commit_date"]
@@ -618,6 +620,7 @@ class TestPublicGISProjectViewSerializer(BaseAPITestCase):
         data = {
             "project_id": "12345678-1234-1234-1234-123456789012",
             "project_name": "Test Project",
+            "project_color": "#377eb8",
             "url": "https://example.com/direct.json",  # URL as string
             "commit_sha": "b" * 40,
             "commit_date": "2024-01-20T15:45:00+00:00",
@@ -627,6 +630,7 @@ class TestPublicGISProjectViewSerializer(BaseAPITestCase):
         serializer = PublicGISProjectViewSerializer(data)
         result = serializer.data
 
+        assert result["color"] == "#377eb8"
         assert result["geojson_file"] == "https://example.com/direct.json"
 
     def test_serializer_many_mode(self) -> None:
@@ -635,6 +639,7 @@ class TestPublicGISProjectViewSerializer(BaseAPITestCase):
             {
                 "project_id": "11111111-1111-1111-1111-111111111111",
                 "project_name": "Project A",
+                "project_color": "#e41a1c",
                 "url": "https://example.com/a.json",
                 "commit_sha": "a" * 40,
                 "commit_date": "2024-01-01T00:00:00+00:00",
@@ -643,7 +648,8 @@ class TestPublicGISProjectViewSerializer(BaseAPITestCase):
             {
                 "project_id": "22222222-2222-2222-2222-222222222222",
                 "project_name": "Project B",
-                "url": ("https://example.com/b.json",),
+                "project_color": "#4daf4a",
+                "url": "https://example.com/b.json",
                 "commit_sha": "b" * 40,
                 "commit_date": "2024-02-01T00:00:00+00:00",
                 "use_latest": False,
@@ -656,6 +662,8 @@ class TestPublicGISProjectViewSerializer(BaseAPITestCase):
         assert len(result) == 2  # noqa: PLR2004
         assert result[0]["name"] == "Project A"
         assert result[1]["name"] == "Project B"
+        assert result[0]["color"] == "#e41a1c"
+        assert result[1]["color"] == "#4daf4a"
         assert result[0]["use_latest"] is True
         assert result[1]["use_latest"] is False
 
@@ -719,6 +727,7 @@ class TestPublicGISViewSerializer(BaseAPITestCase):
         project_data = data["projects"][0]
         assert project_data["id"] == str(project.id)
         assert project_data["name"] == project.name
+        assert project_data["color"] == project.color
         assert "geojson_file" in project_data
         assert project_data["commit_sha"] == commit_sha
         assert project_data["use_latest"] is False
@@ -978,6 +987,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         project_data = data["projects"][0]
         assert "id" in project_data
         assert "name" in project_data
+        assert "color" in project_data
         assert "geojson_file" in project_data
         assert "commit_sha" in project_data
         assert "commit_date" in project_data
@@ -986,6 +996,7 @@ class TestPublicGISViewGeoJSONApi(BaseAPITestCase):
         # Verify types
         assert isinstance(project_data["id"], str)
         assert isinstance(project_data["name"], str)
+        assert isinstance(project_data["color"], str)
         assert isinstance(project_data["geojson_file"], str)
         assert isinstance(project_data["commit_sha"], str)
         assert isinstance(project_data["commit_date"], str)

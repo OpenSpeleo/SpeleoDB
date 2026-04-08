@@ -232,12 +232,14 @@ New tracks are imported via `API.importGPX(formData)` which hits
 ### Panel behavior
 
 - The panel positions itself below the project panel (expanded or
-  minimized), observing DOM mutations to reposition dynamically.
+  minimized), using a `ResizeObserver` on the project panel to
+  reposition dynamically (catches country group collapse/expand).
 - Each track item shows: color dot, name (truncated at 30 chars),
   loading spinner (when fetching), and a toggle switch.
 - Clicking the track card body activates the track and flies to its
   bounds (`fitBounds` with padding 50, maxZoom 16).
-- Colors are assigned via `Colors.getGPSTrackColor(trackId)`.
+- Colors are model-stored; resolved via `Colors.getGPSTrackColor(trackId)`
+  which reads `Config.getGPSTrackById(trackId).color`.
 
 ### Visibility control
 
@@ -429,13 +431,181 @@ the `isFormData` flag in `apiRequest`.
 
 **Module:** `components/project_panel.js`
 
-Left-side panel listing all projects the user has access to. Supports
-expand/collapse with state memory. The GPS Tracks panel positions itself
-relative to this panel.
+Left-side panel listing all projects the user has access to. Projects are
+grouped by country when the `country` field is present on at least one
+project; otherwise a flat alphabetical list is rendered. Each country
+group has a collapsible header with a flag emoji, project count, and a
+bulk-toggle switch that acts as a **visibility gate** for all projects in
+the group.
+
+#### Two-level visibility model
+
+Map visibility uses two independent controls:
+
+1. **Country gate** — the country toggle switch. When OFF, all projects
+   in that country are hidden on the map regardless of individual state.
+2. **Individual project toggle** — per-project visibility.
+
+A project is visible on the map only when **both** its country gate AND
+its individual toggle are ON. Toggling a country OFF/ON does not reset
+individual project preferences.
+
+`State.effectiveProjectVisibility` (`Map<string, boolean>`) tracks the
+actual map-level visibility computed from both gates. It is set **before**
+the map guard in `applyProjectLayerVisibility` so that downstream
+consumers (`getVisibleProjectIds`) read the real on-map state. This
+affects stations, leads, cylinders, and depth domains.
+
+`_applyInitialCountryVisibility()` is called during `ProjectPanel.init()`
+to enforce country gates on page load.
+
+Collapse state is persisted to `localStorage` under
+`DEFAULTS.STORAGE_KEYS.COUNTRY_COLLAPSED`. Country visibility state is
+persisted under `DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY`.
 
 ### 8.5 GPS Tracks Panel
 
 **Module:** `components/gps_tracks_panel.js`
 
 See Section 4. Positioned below the project panel, auto-repositions on
-project panel expand/collapse via MutationObserver.
+project panel resize (including country group collapse/expand) via a
+`ResizeObserver` on the project panel container.
+
+---
+
+## 9. Project & GPS Track Colors
+
+**Model fields:** `Project.color`, `GPSTrack.color` (both `CharField(max_length=7)`)
+**Palette:** `ColorPalette` in `speleodb/common/enums.py`
+**JS module:** `map/colors.js`
+
+### Model-stored colors
+
+Both `Project` and `GPSTrack` store a hex color on the Django model,
+assigned randomly from `ColorPalette.COLORS` (20 perceptually distinct
+entries) at creation time via `ColorPalette.random_color()`. Users can
+change the color via a color picker on the project details, new-project,
+and GPS track edit pages.
+
+### Color resolution in the map viewer
+
+`Colors.getProjectColor(projectId)` reads the stored color from
+`Config.getProjectById(projectId).color`. If the project is not yet
+loaded in Config, it returns `FALLBACK_COLOR` (`#94a3b8`) **without
+caching**, so the next call retries (resolves timing issues during init).
+
+`Colors.getGPSTrackColor(trackId)` follows the same pattern via
+`Config.getGPSTrackById(trackId).color`, falling back to `FALLBACK_COLOR`.
+
+There is **no palette array in JS**. All color assignment is model-driven.
+
+### Palette source of truth
+
+The 20-color palette lives in a single canonical location:
+
+| Location | Class |
+|---|---|
+| `speleodb/common/enums.py` | `ColorPalette` — `COLORS` tuple, `random_color()` classmethod, `is_valid_hex()` static method |
+
+The palette is exposed to Django templates via the
+`{% get_project_color_palette %}` template tag (returns
+`ColorPalette.COLORS`).
+
+### Serializer validation
+
+Both `ProjectSerializer.validate_color()` and
+`GPSTrackSerializer.validate_color()` enforce hex format via
+`ColorPalette.is_valid_hex()` and normalize to lowercase.
+
+`GPSTrackSerializer` has a custom `update()` method that passes
+`update_fields` to `save()`, allowing metadata-only changes (like color)
+to skip S3 file re-hashing. `GPSTrack.save()` skips file hashing when
+`update_fields` is provided and doesn't include `file`.
+
+### Color picker UI
+
+**Pages:** `details.html`, `new.html` (projects), GPS track edit modal
+
+The color picker renders:
+
+1. Preset swatches from `{% get_project_color_palette %}`.
+2. A native color picker triggered via an SVG icon.
+3. An editable hex input with `#` prefix.
+
+For read-only projects, the picker is visually disabled (opacity 0.5,
+pointer-events none), presets are hidden, and the save button is grayed
+with cursor-not-allowed.
+
+### Template tag
+
+`{% get_project_color_palette %}` (registered in
+`speleodb/surveys/templatetags/project_colors.py`) exposes the palette
+to Django templates for rendering color-picker preset swatches.
+
+---
+
+## 10. Country Grouping
+
+**JS module:** `components/project_panel.js`
+**Django view:** `ProjectListingView` in `frontend_private/views/project.py`
+
+Projects are grouped by country in two places: the project panel inside
+the map viewer, and the project listing page (`projects.html`).
+
+### Map viewer project panel
+
+When at least one project has a `country` value, `ProjectPanel` renders
+country groups instead of a flat list. Each group has:
+
+- A collapsible header with flag emoji (`Utils.countryFlag()`), country
+  code (ISO alpha-2), project count badge, and a bulk visibility toggle.
+- An indeterminate checkbox state when only some projects in the group
+  are visible.
+- Collapse/expand state persisted to `localStorage` under
+  `DEFAULTS.STORAGE_KEYS.COUNTRY_COLLAPSED`.
+- Country visibility state persisted under
+  `DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY`.
+- CSS transition at `DEFAULTS.UI.COUNTRY_GROUP_TRANSITION_MS` (250 ms).
+
+#### Two-level visibility
+
+The country toggle acts as a **visibility gate** separate from individual
+project toggles:
+
+- A project is visible on the map only when **both** its country gate
+  AND its individual toggle are ON.
+- Toggling a country OFF does not reset individual project preferences;
+  toggling it back ON restores exactly the projects that were individually
+  enabled.
+- `State.effectiveProjectVisibility` (`Map<string, boolean>`) tracks the
+  actual on-map visibility (set before the map guard in
+  `applyProjectLayerVisibility`).
+- `toggleProjectVisibility` clears stale `effectiveProjectVisibility`
+  entries before re-applying.
+- `getVisibleProjectIds()` reads from `effectiveProjectVisibility`,
+  ensuring stations, leads, cylinders, and depth domains all respect the
+  two-level gate.
+- `_applyInitialCountryVisibility()` is called during
+  `ProjectPanel.init()` to enforce country gates on page load.
+
+If no project has a `country` value, the panel falls back to a flat
+alphabetical list (`_renderFlat`). The public viewer always uses the flat
+fallback because `setPublicProjects()` does not include `country`.
+
+### Project listing page
+
+`ProjectListingView` groups projects into `projects_by_country` (a
+`dict[str, list[ProjectInfoData]]` sorted alphabetically by country
+name). The template renders collapsible sections with flag emojis via the
+`country_flag` template filter. Collapse state is persisted to
+`localStorage` under `DEFAULTS.STORAGE_KEYS.PROJECTS_COUNTRY_COLLAPSED`.
+
+### Country flag utilities
+
+| Context | Function | Input |
+|---|---|---|
+| Django templates | `country_flag` filter (`project_colors.py`) | ISO alpha-2 code |
+| JS (ES modules) | `Utils.countryFlag(code)` (`utils.js`) | ISO alpha-2 code |
+
+Both convert a two-letter code to the corresponding regional indicator
+emoji pair (e.g. `"FR"` -> the French flag emoji).

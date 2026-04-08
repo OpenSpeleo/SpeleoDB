@@ -1,5 +1,6 @@
 {% extends "base_private.html" %}
 {% load static %}
+{% load project_colors %}
 
 {% block extra_css %}
 <style>
@@ -219,6 +220,29 @@
                         Give your GPS track a descriptive name to easily identify it later.
                     </p>
                 </div>
+
+                <!-- Track Color -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Track Color</label>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div id="edit-track-color-preview" class="w-8 h-8 rounded border-2 border-slate-500 shrink-0"></div>
+                        <button type="button" id="edit-track-color-picker-btn" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer" title="Custom color">
+                            <img src="{% static 'private/media/color-picker.svg' %}" class="w-6 h-6 invert opacity-60 hover:opacity-100 transition-opacity" alt="Pick color">
+                        </button>
+                        <input type="color" id="edit-track-color-picker" class="sr-only">
+                        <input type="hidden" name="color" id="edit-track-color-value" value="">
+                        <div class="flex items-stretch">
+                            <span class="inline-flex items-center px-2 text-sm font-mono text-slate-400 bg-slate-600 border border-r-0 border-slate-600 rounded-l select-none">#</span>
+                            <input type="text" id="edit-track-color-hex" value="" maxlength="6" class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-none" spellcheck="false">
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        {% get_project_color_palette as palette %}
+                        {% for c in palette %}
+                        <button type="button" class="edit-track-color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer" style="background-color: {{ c }}" data-color="{{ c }}"></button>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
 
             <!-- Modal footer -->
@@ -289,6 +313,7 @@
 
 {% block extra_js %}
 <script src="{% url 'url_reverse.js' %}"></script>
+<script src="{% static 'private/js/color-picker.js' %}"></script>
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
@@ -378,11 +403,7 @@ $(document).ready(function() {
                     </td>
                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                         <div class="flex items-center gap-3">
-                            <div class="track-icon">
-                                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                                </svg>
-                            </div>
+                            <div class="w-3 h-3 rounded-full shrink-0" style="background-color: ${safeCssColor(track.color, '#94a3b8')}"></div>
                             <div class="font-medium text-slate-100">${escapeHtml(track.name)}</div>
                         </div>
                     </td>
@@ -423,11 +444,7 @@ $(document).ready(function() {
                 <div class="track-card">
                     <div class="track-card-header">
                         <div class="track-card-title flex items-center gap-3">
-                            <div class="track-icon">
-                                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                                </svg>
-                            </div>
+                            <div class="w-4 h-4 rounded-full shrink-0" style="background-color: ${safeCssColor(track.color, '#94a3b8')}"></div>
                             <div class="text-lg font-semibold text-slate-100">${escapeHtml(track.name)}</div>
                         </div>
                         <div class="track-card-actions">
@@ -473,6 +490,16 @@ $(document).ready(function() {
         });
     }
 
+    // Track color picker helpers
+    var setTrackColor = initColorPicker({
+        preview:      '#edit-track-color-preview',
+        hiddenInput:  '#edit-track-color-value',
+        nativePicker: '#edit-track-color-picker',
+        pickerBtn:    '#edit-track-color-picker-btn',
+        hexInput:     '#edit-track-color-hex',
+        presets:      '.edit-track-color-preset',
+    });
+
     // Open edit track modal
     function openEditModal(trackId) {
         const track = allTracks.find(t => t.id === trackId);
@@ -480,6 +507,7 @@ $(document).ready(function() {
 
         $('#edit-track-id').val(track.id);
         $('#edit-track-name').val(track.name);
+        setTrackColor(track.color || '#94a3b8');
         
         $('#edit-track-modal').css('display', 'flex').removeClass('hidden');
     }
@@ -495,6 +523,7 @@ $(document).ready(function() {
 
         const trackId = $('#edit-track-id').val();
         const name = $('#edit-track-name').val().trim();
+        const color = $('#edit-track-color-value').val();
 
         if (!name) {
             $("#modal_error_txt").text("Please enter a track name");
@@ -505,7 +534,7 @@ $(document).ready(function() {
         $.ajax({
             url: Urls['api:v1:gps-track-detail'](trackId),
             method: 'PATCH',
-            data: JSON.stringify({ name: name }),
+            data: JSON.stringify({ name: name, color: color }),
             contentType: "application/json; charset=utf-8",
             beforeSend: function(xhr) {
                 xhr.setRequestHeader("X-CSRFToken", getCSRFToken());

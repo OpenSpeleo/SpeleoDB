@@ -11,15 +11,17 @@ per-project GeoJSON loading.
 Django Backend
   │
   ├─ GET /api/v1/projects/                    → Config.loadProjects()
-  │   Response: { success, data: [{ id, name, permission, ... }] }
+  │   Response: { success, data: [{ id, name, permission, country, color, ... }] }
   │   Stored in: Config._projects
+  │   Note: `country` (ISO alpha-2 code) drives country grouping in ProjectPanel.
+  │         `color` (hex string) is the model-assigned project color.
   │
   ├─ GET /api/v1/surface-networks/            → Config.loadNetworks()
   │   Response: { success, data: [{ id, name, user_permission_level, ... }] }
   │   Stored in: Config._networks
   │
   ├─ GET /api/v1/gps-tracks/                  → Config.loadGPSTracks()
-  │   Response: { success, data: [{ id, name, file, ... }] }
+  │   Response: { success, data: [{ id, name, color, file, ... }] }
   │   Stored in: Config._gpsTracks
   │
   └─ GET /api/v1/all-projects-geojson/        → API.getAllProjectsGeoJSON()
@@ -68,6 +70,42 @@ For each project in Config.projects (parallel via Promise.all):
         └─ Dispatch speleo:depth-domain-updated
 ```
 
+### `country` and `color` Field Flows
+
+```
+Config._projects (loaded from API)
+  │
+  ├─ country ──→ ProjectPanel._hasCountryData()
+  │               └─ If any project has country: _renderGrouped()
+  │                   ├─ Groups projects by country
+  │                   ├─ Flag emoji via Utils.countryFlag(country)
+  │                   ├─ Collapse state ↔ localStorage (COUNTRY_COLLAPSED key)
+  │                   ├─ Country visibility ↔ localStorage (COUNTRY_VISIBILITY key)
+  │                   └─ Two-level visibility:
+  │                       ├─ Country toggle = visibility gate
+  │                       ├─ Project visible only when BOTH country AND individual ON
+  │                       └─ State.effectiveProjectVisibility tracks actual map state
+  │
+  └─ color ───→ Colors.getProjectColor(projectId)
+                 ├─ Reads project.color from Config.getProjectById()
+                 ├─ Caches in projectColorMap
+                 ├─ Falls back to FALLBACK_COLOR (#94a3b8) WITHOUT caching
+                 │   (retries on next call so timing issues resolve)
+                 └─ Used by:
+                     ├─ ProjectPanel: color dot per project row
+                     └─ Layers.addProjectGeoJSON(): line-color paint property
+
+Config._gpsTracks (loaded from API)
+  │
+  └─ color ───→ Colors.getGPSTrackColor(trackId)
+                 ├─ Reads track.color from Config.getGPSTrackById()
+                 ├─ Caches in gpsTrackColorMap
+                 ├─ Falls back to FALLBACK_COLOR (#94a3b8) WITHOUT caching
+                 └─ Used by: GPSTracksPanel (color dot), Layers (track line color)
+```
+
+Colors are fully model-driven. There is no JS-side palette array.
+
 ### Public Viewer Data Flow
 
 The public viewer has a simpler single-phase pipeline:
@@ -75,10 +113,11 @@ The public viewer has a simpler single-phase pipeline:
 ```
 fetch /api/v1/gis-ogc/view/{gisToken}/geojson
   │
-  └─ Response: { success, data: { view_name, projects: [{ id, name, geojson_file }] } }
+  └─ Response: { success, data: { view_name, projects: [{ id, name, color, geojson_file }] } }
       │
       ├─ Config.setPublicProjects(projects)    Set read-only project list
       │   All projects get permissions = 'READ_ONLY'
+      │   Maps `color` field (project_color from API)
       │
       └─ For each project (parallel):
           └─ Layers.addProjectGeoJSON(projectId, geojsonUrl)
@@ -321,6 +360,22 @@ Layers.recomputeActiveDepthDomain()
 - **Recomputed when**: Project visibility toggled, new GeoJSON loaded, color
   mode switched to depth
 
+### Effective Visibility
+
+`State.effectiveProjectVisibility` is a `Map<string, boolean>` that
+records whether each project is actually visible on the map. It is set
+inside `applyProjectLayerVisibility` **before** the map layer guard,
+so consumers always get the real state even if the map hasn't rendered
+that project's layers yet.
+
+`getVisibleProjectIds()` reads from `effectiveProjectVisibility` (not
+`projectLayerStates`), so stations, leads, cylinders, and depth domains
+all respect the two-level country gate.
+
+`toggleProjectVisibility` clears the stale
+`effectiveProjectVisibility` entry for the project before re-applying
+visibility, ensuring the map stays consistent.
+
 ### Project-Scoped Marker Visibility
 
 Cylinder installs and exploration leads are stored in global layers but
@@ -330,7 +385,7 @@ visibility changes:
 ```
 Layers.applyProjectScopedMarkerVisibility()
   │
-  ├─ Build list of visible project IDs
+  ├─ Build list of visible project IDs (from effectiveProjectVisibility)
   ├─ Construct Mapbox filter expression:
   │   ['any',
   │     ['!', ['has', 'project_id']],     ← markers without project scope stay visible

@@ -116,6 +116,7 @@ describe('Config loading and data methods', () => {
                         permission: 'ADMIN',
                         description: 'Desc',
                         country: 'US',
+                        color: '#e41a1c',
                         latitude: 45.0,
                         longitude: -73.0,
                         visibility: 'public',
@@ -134,12 +135,24 @@ describe('Config loading and data methods', () => {
                     permissions: 'ADMIN',
                     description: 'Desc',
                     country: 'US',
+                    color: '#e41a1c',
                     latitude: 45.0,
                     longitude: -73.0,
                     visibility: 'public',
                     geojson_url: '/geojson/p1',
                 },
             ]);
+        });
+
+        it('maps the color field from the API response', async () => {
+            API.getAllProjects.mockResolvedValue({
+                success: true,
+                data: [{ id: 'p-1', name: 'Test', permission: 'ADMIN', color: '#377eb8' }],
+            });
+
+            await Config.loadProjects();
+
+            expect(Config.projects[0].color).toBe('#377eb8');
         });
 
         it('renames API "permission" field to "permissions"', async () => {
@@ -305,13 +318,14 @@ describe('Config loading and data methods', () => {
     // ------------------------------------------------------------------ //
 
     describe('loadGPSTracks()', () => {
-        it('calls API.getGPSTracks and maps response data', async () => {
+        it('calls API.getGPSTracks and maps response data including color', async () => {
             API.getGPSTracks.mockResolvedValue({
                 success: true,
                 data: [
                     {
                         id: 't-1',
                         name: 'Track 1',
+                        color: '#e41a1c',
                         file: '/tracks/t1.geojson',
                         sha256_hash: 'abc123',
                         creation_date: '2024-01-01',
@@ -327,6 +341,7 @@ describe('Config loading and data methods', () => {
                 {
                     id: 't-1',
                     name: 'Track 1',
+                    color: '#e41a1c',
                     file: '/tracks/t1.geojson',
                     sha256_hash: 'abc123',
                     creation_date: '2024-01-01',
@@ -376,6 +391,7 @@ describe('Config loading and data methods', () => {
                     {
                         id: 't-1',
                         name: 'Track',
+                        color: '#ff0000',
                         file: '/file.geojson',
                         sha256_hash: 'hash',
                         creation_date: '2024-01-01',
@@ -389,8 +405,49 @@ describe('Config loading and data methods', () => {
 
             const track = Config.gpsTracks[0];
             expect(Object.keys(track).sort()).toEqual(
-                ['creation_date', 'file', 'id', 'modified_date', 'name', 'sha256_hash']
+                ['color', 'creation_date', 'file', 'id', 'modified_date', 'name', 'sha256_hash']
             );
+        });
+    });
+
+    // ------------------------------------------------------------------ //
+    // getGPSTrackById()
+    // ------------------------------------------------------------------ //
+
+    describe('getGPSTrackById()', () => {
+        it('finds a track by string ID', () => {
+            Config._gpsTracks = [
+                { id: 't-1', name: 'Track 1', color: '#e41a1c' },
+                { id: 't-2', name: 'Track 2', color: '#377eb8' },
+            ];
+
+            const result = Config.getGPSTrackById('t-1');
+            expect(result).toEqual({ id: 't-1', name: 'Track 1', color: '#e41a1c' });
+        });
+
+        it('finds a track by numeric ID via string coercion', () => {
+            Config._gpsTracks = [
+                { id: '42', name: 'Numeric Track', color: '#4daf4a' },
+            ];
+
+            expect(Config.getGPSTrackById(42)).toEqual({ id: '42', name: 'Numeric Track', color: '#4daf4a' });
+        });
+
+        it('returns null for unknown ID', () => {
+            Config._gpsTracks = [{ id: 't-1', name: 'Track' }];
+            expect(Config.getGPSTrackById('nonexistent')).toBeNull();
+        });
+
+        it('returns null for null', () => {
+            expect(Config.getGPSTrackById(null)).toBeNull();
+        });
+
+        it('returns null for undefined', () => {
+            expect(Config.getGPSTrackById(undefined)).toBeNull();
+        });
+
+        it('returns null when no tracks are loaded', () => {
+            expect(Config.getGPSTrackById('t-1')).toBeNull();
         });
     });
 
@@ -450,6 +507,16 @@ describe('Config loading and data methods', () => {
             Config.setPublicProjects([{ id: 'new', name: 'New' }]);
 
             expect(Config.projectIds).toEqual(['new']);
+        });
+
+        it('stores color but not country', () => {
+            Config.setPublicProjects([
+                { id: '1', name: 'Cave A', country: 'US', color: '#ff0000' },
+            ]);
+
+            const project = Config.projects[0];
+            expect(project).not.toHaveProperty('country');
+            expect(project.color).toBe('#ff0000');
         });
     });
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
 from typing import ClassVar
@@ -13,6 +14,8 @@ from speleodb.gis.models import GISView
 from speleodb.surveys.models import Project
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
+
+logger = logging.getLogger(__name__)
 
 sha1_regex = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 
@@ -238,6 +241,7 @@ class PublicGISProjectViewSerializer(serializers.Serializer[dict[str, Any]]):
 
     id = serializers.UUIDField(source="project_id")
     name = serializers.CharField(source="project_name")
+    color = serializers.CharField(source="project_color")
     geojson_file = serializers.SerializerMethodField()
     commit_sha = serializers.CharField()
     commit_date = serializers.CharField()
@@ -272,10 +276,19 @@ class PublicGISViewSerializer(serializers.Serializer[GISView]):
         expires_in = self.context.get("expires_in", 3600)
         try:
             geojson_data = obj.get_geojson_urls(expires_in=expires_in)
-            serializer = PublicGISProjectViewSerializer(geojson_data, many=True)  # type: ignore[arg-type]
-            return serializer.data  # type: ignore[return-value]
-        except Exception:  # noqa: BLE001
+        except Exception:
+            logger.exception("Failed to load geojson URLs for GISView %s", obj.pk)
             return []
+
+        results: list[dict[str, Any]] = []
+        for item in geojson_data:
+            try:
+                results.append(PublicGISProjectViewSerializer(item).data)
+            except Exception:
+                logger.exception(
+                    "Failed to serialize project %s", item.get("project_id")
+                )
+        return results
 
 
 class GISViewDataSerializer(serializers.Serializer[GISView]):

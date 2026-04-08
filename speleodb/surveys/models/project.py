@@ -19,6 +19,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import IntegerField
 from django.db.models import Prefetch
@@ -34,6 +35,7 @@ from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import ArianeInterface
 
+from speleodb.common.enums import ColorPalette
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import ProjectVisibility
 from speleodb.git_engine.core import GitRepo
@@ -199,6 +201,15 @@ class Project(models.Model):
     description = models.TextField(blank=False, null=False)
 
     country = CountryField(null=False, blank=False)
+
+    color = models.CharField(
+        max_length=7,
+        default=ColorPalette.random_color,
+        validators=[
+            RegexValidator(r"^#[0-9a-fA-F]{6}$", "Must be a #RRGGBB hex color")
+        ],
+        help_text="Hex color code for map rendering (e.g. #e41a1c)",
+    )
 
     exclude_geojson = models.BooleanField(
         default=False,

@@ -7,9 +7,11 @@ import uuid
 from typing import Any
 
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import UniqueConstraint
 
+from speleodb.common.enums import ColorPalette
 from speleodb.surveys.fields import Sha256Field
 from speleodb.users.models import User
 from speleodb.utils.storages import GPSTrackStorage
@@ -54,6 +56,15 @@ class GPSTrack(models.Model):
         verbose_name="SHA256 hash of the `geojson file`",
     )
 
+    color = models.CharField(
+        max_length=7,
+        default=ColorPalette.random_color,
+        validators=[
+            RegexValidator(r"^#[0-9a-fA-F]{6}$", "Must be a #RRGGBB hex color")
+        ],
+        help_text="Hex color code for map rendering (e.g. #377eb8)",
+    )
+
     user = models.ForeignKey(
         User,
         related_name="gps_tracks",
@@ -84,16 +95,15 @@ class GPSTrack(models.Model):
         return f"[GPS Track] {self.user.name} @ {self.creation_date}"
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        # Ensure the `hash` is properly set.
-        self._set_file_hash()
+        update_fields: list[str] | None = kwargs.get("update_fields")
+        if update_fields is None or "file" in update_fields:
+            self._set_file_hash()
 
-        # Finish by cleaning after the hash is set
         self.full_clean()
-
-        return super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def _set_file_hash(self) -> None:
-        if self.file is None:
+        if not self.file:
             raise ValueError("File is `None`")
 
         sha256 = hashlib.sha256()

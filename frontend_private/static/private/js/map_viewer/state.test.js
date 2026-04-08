@@ -2,7 +2,7 @@ import { State } from './state.js';
 
 describe('State', () => {
     afterEach(() => {
-        State.init();
+        State.resetLayerState();
         State.map = null;
         State.userTags = [];
         State.tagColors = [];
@@ -17,6 +17,7 @@ describe('State', () => {
 
         it('has Map instances for layer tracking', () => {
             expect(State.projectLayerStates).toBeInstanceOf(Map);
+            expect(State.effectiveProjectVisibility).toBeInstanceOf(Map);
             expect(State.networkLayerStates).toBeInstanceOf(Map);
             expect(State.allProjectLayers).toBeInstanceOf(Map);
             expect(State.allNetworkLayers).toBeInstanceOf(Map);
@@ -63,16 +64,18 @@ describe('State', () => {
         });
     });
 
-    describe('init()', () => {
+    describe('resetLayerState()', () => {
         it('resets all Map fields to empty Maps', () => {
             State.projectLayerStates.set('test', true);
+            State.effectiveProjectVisibility.set('test', false);
             State.allStations.set('s1', { id: 's1' });
             State.explorationLeads.set('e1', {});
             State.gpsTrackCache.set('t1', {});
 
-            State.init();
+            State.resetLayerState();
 
             expect(State.projectLayerStates.size).toBe(0);
+            expect(State.effectiveProjectVisibility.size).toBe(0);
             expect(State.allStations.size).toBe(0);
             expect(State.explorationLeads.size).toBe(0);
             expect(State.gpsTrackCache.size).toBe(0);
@@ -80,13 +83,13 @@ describe('State', () => {
 
         it('resets activeDepthDomain to null', () => {
             State.activeDepthDomain = { min: 0, max: 100 };
-            State.init();
+            State.resetLayerState();
             expect(State.activeDepthDomain).toBeNull();
         });
 
         it('resets landmarksVisible to true', () => {
             State.landmarksVisible = false;
-            State.init();
+            State.resetLayerState();
             expect(State.landmarksVisible).toBe(true);
         });
 
@@ -94,7 +97,7 @@ describe('State', () => {
             const oldStations = State.allStations;
             const oldBounds = State.projectBounds;
 
-            State.init();
+            State.resetLayerState();
 
             expect(State.allStations).not.toBe(oldStations);
             expect(State.projectBounds).not.toBe(oldBounds);
@@ -109,7 +112,7 @@ describe('State', () => {
             State.allGPSTrackLayers.set('t1', ['layer-1']);
             State.gpsTrackBounds.set('t1', [0, 0, 1, 1]);
 
-            State.init();
+            State.resetLayerState();
 
             expect(State.gpsTrackLayerStates.size).toBe(0);
             expect(State.gpsTrackCache.size).toBe(0);
@@ -124,7 +127,7 @@ describe('State', () => {
             State.currentStationForTagging = 'station-1';
             State.currentProjectId = 'proj-1';
 
-            State.init();
+            State.resetLayerState();
 
             expect(State.map).toBe('mock-map');
             expect(State.userTags).toEqual(['tag1']);

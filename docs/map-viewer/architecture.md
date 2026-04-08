@@ -39,7 +39,7 @@ flowchart TD
         INTERACTIONS["interactions.js"]
         GEOMETRY["geometry.js"]
         DEPTH["depth.js"]
-        COLORS["colors.js"]
+        COLORS["colors.js<br/>(model-driven)"]
     end
 
     subgraph components/
@@ -47,7 +47,7 @@ flowchart TD
         NOTIFICATION["notification.js"]
         CONTEXT_MENU["context_menu.js"]
         DEPTH_LEGEND["depth_legend.js"]
-        PROJECT_PANEL["project_panel.js"]
+        PROJECT_PANEL["project_panel.js<br/>(country grouping)"]
         GPS_PANEL["gps_tracks_panel.js"]
         UPLOAD["upload.js"]
     end
@@ -111,6 +111,8 @@ flowchart TD
 |---|:---:|:---:|
 | Survey GeoJSON (lines, points) | Yes | Yes |
 | Color modes (By Project / By Depth) | Yes | Yes |
+| Project colors (model-stored) | Yes | Yes (color from API) |
+| Country grouping in project panel | Yes | No (flat list) |
 | Project visibility toggle panel | Yes | Yes |
 | Depth legend | Yes | Yes |
 | Auto-zoom to bounds | Yes | Yes |
@@ -140,7 +142,7 @@ flowchart TD
 ```
 DOMContentLoaded
 │
-├─ 1. State.init()                          Reset all mutable runtime state
+├─ 1. State.resetLayerState()                          Reset all mutable runtime state
 │
 ├─ 2. Config.loadProjects()                 Fetch project list + permissions from API
 ├─ 2. Config.loadNetworks()                 Fetch surface network list from API
@@ -164,6 +166,7 @@ DOMContentLoaded
     ├─ Config.filterProjectsByGeoJSON()      Remove projects without GeoJSON data
     │
     ├─ ProjectPanel.init()                  Render project list in sidebar
+    │     └─ _applyInitialCountryVisibility()  Enforce country gates on load
     ├─ GPSTracksPanel.init()                Render GPS tracks panel (all OFF by default)
     ├─ StationTags.init()                   Load user tags + colors
     │
@@ -197,7 +200,7 @@ DOMContentLoaded
 DOMContentLoaded
 │
 ├─ 1. Validate context (viewMode === 'public', gisToken present)
-├─ 2. State.init()
+├─ 2. State.resetLayerState()
 ├─ 3. MapCore.init(token, 'map') + set maxZoom
 ├─ 4. DepthLegend.init(map)
 │
@@ -230,12 +233,13 @@ initialization and not mutated during the session (except
 
 | Property | Type | Purpose |
 |---|---|---|
-| `_projects` | `Array` | Project list with `id`, `name`, `permissions`, `geojson_url` |
+| `_projects` | `Array` | Project list with `id`, `name`, `permissions`, `country`, `color`, `geojson_url` |
 | `_networks` | `Array` | Surface network list with `id`, `name`, `permission_level` |
-| `_gpsTracks` | `Array` | GPS track metadata with `id`, `name`, `file` URL |
+| `_gpsTracks` | `Array` | GPS track metadata with `id`, `name`, `color`, `file` URL |
 
 Key methods: `hasProjectAccess(id, action)`, `hasNetworkAccess(id, action)`,
-`hasScopedAccess(scopeType, scopeId, action)`, `getStationAccess(station)`.
+`hasScopedAccess(scopeType, scopeId, action)`, `getStationAccess(station)`,
+`getProjectById(id)`, `getGPSTrackById(id)`.
 
 Permission model uses ranked levels:
 - Projects: `UNKNOWN(0)` < `WEB_VIEWER(1)` < `READ_ONLY(2)` < `READ_AND_WRITE(3)` < `ADMIN(4)`
@@ -243,7 +247,7 @@ Permission model uses ranked levels:
 
 ### `State` — Mutable Runtime State
 
-All fields are reset by `State.init()`. Every map is keyed by string IDs.
+All fields are reset by `State.resetLayerState()`. Every map is keyed by string IDs.
 
 | Field | Type | Purpose |
 |---|---|---|
@@ -271,6 +275,7 @@ All fields are reset by `State.init()`. Every map is keyed by string IDs.
 | `gpsTrackLoadingStates` | `Map<string, boolean>` | Which tracks are currently downloading |
 | `allGPSTrackLayers` | `Map<string, string[]>` | Mapbox layer IDs belonging to each GPS track |
 | `gpsTrackBounds` | `Map<string, LngLatBounds>` | Geographic bounds per GPS track |
+| `effectiveProjectVisibility` | `Map<string, boolean>` | Actual on-map visibility (respects both country gate and individual toggle) |
 
 ---
 

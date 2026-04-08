@@ -33,10 +33,10 @@ The `DEFAULTS` object is organized by category:
 | `DEFAULTS.ZOOM_LEVELS` | min zoom per layer type |
 | `DEFAULTS.SNAP` | magnetic snap radius |
 | `DEFAULTS.DRAG` | drag threshold, query padding |
-| `DEFAULTS.UI` | mobile breakpoint, notification duration, truncation lengths |
+| `DEFAULTS.UI` | mobile breakpoint, notification duration, truncation lengths, `COUNTRY_GROUP_TRANSITION_MS` |
 | `DEFAULTS.UPLOAD` | max file size |
-| `DEFAULTS.COLORS` | default station color |
-| `DEFAULTS.STORAGE_KEYS` | localStorage key names |
+| `DEFAULTS.COLORS` | `DEFAULT_STATION`, `FALLBACK` (`#94a3b8` — used when model color is not yet loaded), `DEPTH_NONE`/`DEPTH_SHALLOW`/`DEPTH_MID`/`DEPTH_DEEP` (depth gradient) |
+| `DEFAULTS.STORAGE_KEYS` | localStorage key names: `COUNTRY_COLLAPSED`, `COUNTRY_VISIBILITY`, `PROJECTS_COUNTRY_COLLAPSED`, plus project/network visibility keys |
 
 When adding a new feature that needs a tuneable value, add it to `DEFAULTS`
 first, then import it where needed.

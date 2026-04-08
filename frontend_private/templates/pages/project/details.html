@@ -4,6 +4,17 @@
 {% load countries %}
 {% load visibility_scopes %}
 {% load project_types %}
+{% load project_colors %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .color-picker-disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+</style>
+{% endblock extra_css %}
 
 {% block right_panel %}
 <div class="grow">
@@ -63,6 +74,37 @@
                 </div>
             </section>
 
+            <!-- Project Color -->
+            <section>
+                <div class="mt-5">
+                    <label class="block text-sm font-medium mb-1">Project Color:</label>
+                    <div class="color-picker-group{% if not has_write_access %} color-picker-disabled{% endif %}">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div id="color-preview" class="w-8 h-8 rounded border-2 border-slate-500 shrink-0" style="background-color: {{ project.color }}"></div>
+                            {% if has_write_access %}
+                            <button type="button" id="color-picker-btn" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer" title="Custom color">
+                                <img src="{% static 'private/media/color-picker.svg' %}" class="w-6 h-6 invert opacity-60 hover:opacity-100 transition-opacity" alt="Pick color">
+                            </button>
+                            {% endif %}
+                            <input type="color" id="color-picker" value="{{ project.color }}" class="sr-only">
+                            <input type="hidden" name="color" id="color-value" value="{{ project.color }}">
+                            <div class="flex items-stretch">
+                                <span class="inline-flex items-center px-2 text-sm font-mono text-slate-400 bg-slate-600 border border-r-0 border-slate-600 rounded-l select-none">#</span>
+                                <input type="text" id="color-hex-input" value="{{ project.color|cut:'#' }}" maxlength="6" class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-none" spellcheck="false" {% if not has_write_access %}disabled{% endif %}>
+                            </div>
+                        </div>
+                        {% if has_write_access %}
+                        <div class="flex flex-wrap gap-2">
+                            {% get_project_color_palette as palette %}
+                            {% for c in palette %}
+                            <button type="button" class="color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer{% if c == project.color %} ring-2 ring-white ring-offset-2 ring-offset-slate-800{% endif %}" style="background-color: {{ c }}" data-color="{{ c }}"></button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+
             <!-- Latitude / Longitude -->
             <section>
                 <div class="flex flex-wrap mt-5 gap-4">
@@ -84,7 +126,7 @@
             <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
                 <div class="flex self-end">
                     <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:projects' %}">Cancel</a>
-                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+                    <button id="btn_submit" class="btn ml-3 {% if has_write_access %}bg-indigo-500 hover:bg-indigo-600 text-white{% else %}bg-slate-600 text-slate-400 cursor-not-allowed{% endif %}" {% if not has_write_access %}disabled{% endif %}>Save Changes</button>
                 </div>
             </div>
         </footer>
@@ -99,6 +141,10 @@
 </div>
 {% endblock right_panel %}
 
+{% block extra_js %}
+<script src="{% static 'private/js/color-picker.js' %}"></script>
+{% endblock extra_js %}
+
 {% block inline_extra_js %}
 <script>
 
@@ -111,6 +157,15 @@
             if ($("#modal_error").is(":visible")) {
                 $("#modal_error").hide();
             }
+        });
+
+        initColorPicker({
+            preview:      '#color-preview',
+            hiddenInput:  '#color-value',
+            nativePicker: '#color-picker',
+            pickerBtn:    '#color-picker-btn',
+            hexInput:     '#color-hex-input',
+            presets:      '.color-preset',
         });
 
         $('#btn_submit').click(function (e) {
@@ -134,7 +189,7 @@
                     return true;
                 },
                 success: function (data) {
-                    $("#modal_success_txt").html("The project your has been updated.");
+                    $("#modal_success_txt").html("The project has been updated.");
                     $("#modal_success").css('display', 'flex');
 
                     window.setTimeout(function(){

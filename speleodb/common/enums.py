@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import random
+import re
 from typing import TYPE_CHECKING
 from typing import Self
 
@@ -176,3 +178,49 @@ class OperatingSystemEnum(BaseIntegerChoices):
     LINUX = (30, "LINUX")
     LINUX_32 = (31, "LINUX_32")
     LINUX_64 = (32, "LINUX_64")
+
+
+# =============================================================================
+# Color Palette
+# =============================================================================
+
+_HEX_COLOR_RE = re.compile(r"#[0-9a-fA-F]{6}")
+
+
+class ColorPalette:
+    """20 perceptually distinct colors used as defaults for projects and GPS tracks."""
+
+    COLORS: tuple[str, ...] = (
+        "#e41a1c",
+        "#377eb8",
+        "#4daf4a",
+        "#984ea3",
+        "#ff7f00",
+        "#ffff33",
+        "#a65628",
+        "#f781bf",
+        "#999999",
+        "#66c2a5",
+        "#fc8d62",
+        "#8da0cb",
+        "#e78ac3",
+        "#a6d854",
+        "#ffd92f",
+        "#e5c494",
+        "#b3b3b3",
+        "#1b9e77",
+        "#d95f02",
+        "#7570b3",
+    )
+
+    @classmethod
+    def random_color(cls) -> str:
+        """Return a random color from the palette (for model defaults)."""
+        return random.choice(cls.COLORS)
+
+    @staticmethod
+    def is_valid_hex(value: object) -> bool:
+        """Check whether *value* is a valid ``#RRGGBB`` hex colour."""
+        if not isinstance(value, str):
+            return False
+        return bool(_HEX_COLOR_RE.fullmatch(value))

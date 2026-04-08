@@ -1,6 +1,7 @@
 export const State = {
     map: null,
-    projectLayerStates: new Map(), // Track visibility state for each project
+    projectLayerStates: new Map(), // Individual user preference per project
+    effectiveProjectVisibility: new Map(), // Actual map visibility (preference AND country gate)
     networkLayerStates: new Map(), // Track visibility state for each network
     userTags: [], // Store all user's tags
     tagColors: [], // Store predefined colors
@@ -32,9 +33,11 @@ export const State = {
     allGPSTrackLayers: new Map(), // Track all layer IDs for each GPS track
     gpsTrackBounds: new Map(), // Track bounds for each GPS track for fly-to
 
-    // Initializer to reset state if needed
-    init: function () {
+    // Resets layer and map data state. Does NOT reset map instance,
+    // userTags, tagColors, currentStationForTagging, or currentProjectId.
+    resetLayerState: function () {
         this.projectLayerStates = new Map();
+        this.effectiveProjectVisibility = new Map();
         this.networkLayerStates = new Map();
         this.allProjectLayers = new Map();
         this.allNetworkLayers = new Map();

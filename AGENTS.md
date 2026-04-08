@@ -114,7 +114,22 @@ The repository now uses a single Node workspace at the repo root.
 
 - Keep private/public map viewers behaviorally aligned where intended.
 - The code between private & public map viewer should be as much as
-possible re-used, no re-implementation.
+  possible re-used, no re-implementation.
+- **Colors are fully model-driven.** `Colors.getProjectColor()` and
+  `Colors.getGPSTrackColor()` read the stored color from Config
+  (`getProjectById` / `getGPSTrackById`). There is **no palette array
+  in JS**. If Config hasn't loaded the entity yet, functions return
+  `FALLBACK_COLOR` (`#94a3b8`) **without caching** so the next call
+  retries.
+- The 20-color palette lives in a single canonical location:
+  `ColorPalette` in `speleodb/common/enums.py`. It is exposed to
+  templates via the `{% get_project_color_palette %}` tag.
+- **Two-level project visibility:** The map viewer project panel uses
+  country grouping with a two-level visibility model. A project is
+  visible on the map only when both its country gate AND individual
+  toggle are ON. `State.effectiveProjectVisibility` tracks the actual
+  on-map state; `getVisibleProjectIds()` reads from it, affecting
+  stations, leads, cylinders, and depth domains.
 
 Most map viewer behavior is implemented in shared private modules and consumed by:
 - private entrypoint: `frontend_private/static/private/js/map_viewer/main.js`

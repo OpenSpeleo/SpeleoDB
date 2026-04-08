@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import Any
@@ -13,6 +14,7 @@ from django.urls import reverse
 from rest_framework.authtoken.models import Token
 
 from frontend_private.views.base import AuthenticatedTemplateView
+from speleodb.common.enums import ColorPalette
 from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectMutex
@@ -101,25 +103,51 @@ class ProjectListingView(AuthenticatedTemplateView):
             )
         }
 
-        context["projects_data"] = [
+        projects_data: list[ProjectInfoData] = [
             ProjectInfoData(
                 level_label=perm.level_label,
-                project=projects[perm.project_id],  # pyright: ignore[reportAttributeAccessIssue]
+                project=proj,  # pyright: ignore[reportAttributeAccessIssue]
                 active_mutex=(
                     mtx[0]
-                    if (mtx := projects[perm.project_id]._prefetched_active_mutex[:1])  # noqa: SLF001 # pyright: ignore[reportAttributeAccessIssue]
+                    if (mtx := proj._prefetched_active_mutex[:1])  # noqa: SLF001 # pyright: ignore[reportAttributeAccessIssue]
                     else None
                 )
                 or None,
             )
             for perm in perms
+            if (proj := projects.get(perm.project_id)) is not None  # pyright: ignore[reportAttributeAccessIssue]
         ]
+        context["projects_data"] = projects_data
+
+        # Group by country for collapsible sections
+        grouped: dict[str, list[ProjectInfoData]] = defaultdict(list)
+        for pd in projects_data:
+            country_name = (
+                str(pd.project.country.name)
+                if pd.project.country and pd.project.country.name
+                else "Unknown"
+            )
+            grouped[country_name].append(pd)
+
+        # Sort groups alphabetically; "Unknown" always last
+        context["projects_by_country"] = {
+            country: sorted(items, key=lambda pd: pd.project.name.lower())
+            for country, items in sorted(
+                grouped.items(),
+                key=lambda kv: (kv[0] == "Unknown", kv[0].lower()),
+            )
+        }
 
         return self.render_to_response(context)
 
 
 class NewProjectView(AuthenticatedTemplateView):
     template_name = "pages/project/new.html"
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["default_color"] = ColorPalette.random_color()
+        return context
 
 
 class _BaseProjectView(AuthenticatedTemplateView):

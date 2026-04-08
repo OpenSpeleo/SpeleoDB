@@ -14,6 +14,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from speleodb.api.v1.serializers.project_commit import ProjectCommitSerializer
+from speleodb.common.enums import ColorPalette
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import ProjectVisibility
@@ -121,6 +122,15 @@ class ProjectSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Projec
                 data["longitude"] = format_coordinate(longitude)
 
         return super().to_internal_value(data)
+
+    def validate_color(self, value: str) -> str:
+        """Ensure color is a valid 7-character hex code."""
+        value = value.strip()
+        if not ColorPalette.is_valid_hex(value):
+            raise serializers.ValidationError(
+                "Color must be a valid hex color (e.g. #e41a1c)"
+            )
+        return value.lower()
 
     def validate(self, attrs: dict[str, str]) -> dict[str, str]:
         created_by = attrs.get("created_by")

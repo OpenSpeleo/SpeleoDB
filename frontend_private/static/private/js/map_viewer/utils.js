@@ -1,4 +1,5 @@
 import { Notification } from './components/notification.js';
+import { DEFAULTS } from './config.js';
 
 const RAW_HTML = Symbol('RAW_HTML');
 
@@ -131,7 +132,7 @@ export const Utils = {
         return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color);
     },
 
-    safeCssColor: function(color, fallback = '#94a3b8') {
+    safeCssColor: function(color, fallback = DEFAULTS.COLORS.FALLBACK) {
         return this.isValidCssColor(color) ? color : fallback;
     },
 
@@ -150,6 +151,16 @@ export const Utils = {
             }
         }
         return '';
+    },
+
+    countryFlag: function(code) {
+        if (!code || typeof code !== 'string' || code.length !== 2) return '';
+        const upper = code.toUpperCase();
+        if (!/^[A-Z]{2}$/.test(upper)) return '';
+        return String.fromCodePoint(
+            upper.charCodeAt(0) - 0x41 + 0x1F1E6,
+            upper.charCodeAt(1) - 0x41 + 0x1F1E6
+        );
     },
 
     escapeHtml: function(text) {

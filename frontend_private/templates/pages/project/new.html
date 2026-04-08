@@ -6,6 +6,7 @@
 {% load survey_formats %}
 {% load visibility_scopes %}
 {% load project_types %}
+{% load project_colors %}
 
 
 {% block content %}
@@ -83,6 +84,31 @@
                                 </div>
                             </section>
 
+                            <!-- Project Color -->
+                            <section>
+                                <div class="mt-5">
+                                    <label class="block text-sm font-medium mb-1">Project Color:</label>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div id="color-preview" class="w-8 h-8 rounded border-2 border-slate-500 shrink-0" style="background-color: {{ default_color }}"></div>
+                                        <button type="button" id="color-picker-btn" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer" title="Custom color">
+                                            <img src="{% static 'private/media/color-picker.svg' %}" class="w-6 h-6 invert opacity-60 hover:opacity-100 transition-opacity" alt="Pick color">
+                                        </button>
+                                        <input type="color" id="color-picker" value="{{ default_color }}" class="sr-only">
+                                        <input type="hidden" name="color" id="color-value" value="{{ default_color }}">
+                                        <div class="flex items-stretch">
+                                            <span class="inline-flex items-center px-2 text-sm font-mono text-slate-400 bg-slate-600 border border-r-0 border-slate-600 rounded-l select-none">#</span>
+                                            <input type="text" id="color-hex-input" value="{{ default_color|slice:'1:' }}" maxlength="6" class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-none" spellcheck="false">
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% get_project_color_palette as palette %}
+                                        {% for c in palette %}
+                                        <button type="button" class="color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer" style="background-color: {{ c }}" data-color="{{ c }}"></button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </section>
+
                             <!-- Latitude / Longitude -->
                             <section>
                                 <div class="flex flex-wrap mt-5 gap-4">
@@ -94,6 +120,7 @@
                                 <div class="w-full lg:flex-1">
                                     <label class="block text-sm font-medium mb-1" for="longitude">Longitude:</label>
                                     <input id="longitude" name="longitude" class="form-input max-w-full w-full" type="text" placeholder="[Optional]" />
+                                </div>
                                 </div>
                             </section>
 
@@ -123,6 +150,7 @@
 
 {% block extra_js %}
 <script src="{% url 'url_reverse.js' %}"></script>
+<script src="{% static 'private/js/color-picker.js' %}"></script>
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
@@ -137,6 +165,15 @@
             if ($("#modal_error").is(":visible")) {
                 $("#modal_error").hide();
             }
+        });
+
+        initColorPicker({
+            preview:      '#color-preview',
+            hiddenInput:  '#color-value',
+            nativePicker: '#color-picker',
+            pickerBtn:    '#color-picker-btn',
+            hexInput:     '#color-hex-input',
+            presets:      '.color-preset',
         });
 
         $('#btn_submit').click(function (e) {

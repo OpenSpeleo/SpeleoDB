@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 SpeleoDB Map Viewer Initializing...');
 
     // 1. Initialize State
-    State.init();
+    State.resetLayerState();
 
     // 2. Load Projects, Networks, and GPS Tracks from API (needed for permissions and lists)
     await Config.loadProjects();

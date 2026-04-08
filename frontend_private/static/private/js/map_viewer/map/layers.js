@@ -192,12 +192,26 @@ export const Layers = {
     },
 
     /**
-     * Build list of currently visible project IDs.
+     * Whether a project is effectively visible on the map.
+     * Checks effectiveProjectVisibility (set by applyProjectLayerVisibility)
+     * first; falls back to individual preference for projects that haven't
+     * been applied yet.
+     */
+    isProjectEffectivelyVisible: function (projectId) {
+        const pid = String(projectId);
+        if (State.effectiveProjectVisibility.has(pid)) {
+            return State.effectiveProjectVisibility.get(pid);
+        }
+        return this.isProjectVisible(pid);
+    },
+
+    /**
+     * Build list of currently visible project IDs (uses effective state).
      */
     getVisibleProjectIds: function () {
         return Config.projects
             .map(project => String(project.id))
-            .filter(projectId => this.isProjectVisible(projectId));
+            .filter(projectId => this.isProjectEffectivelyVisible(projectId));
     },
 
     getActiveDepthDomain: function () {
@@ -261,15 +275,32 @@ export const Layers = {
 
     /**
      * Apply visibility to all tracked layers of one project.
+     * @param {string} projectId
+     * @param {boolean} [visibilityOverride] - if provided, uses this value
+     *   instead of reading from State.projectLayerStates.  Allows callers
+     *   (e.g. country-level gate) to hide a project on the map without
+     *   changing its stored individual preference.
      */
-    applyProjectLayerVisibility: function (projectId) {
+    applyProjectLayerVisibility: function (projectId, visibilityOverride) {
+        const pid = String(projectId);
+        let isVisible;
+        if (visibilityOverride !== undefined) {
+            isVisible = visibilityOverride;
+        } else if (State.effectiveProjectVisibility.has(pid)) {
+            isVisible = State.effectiveProjectVisibility.get(pid);
+        } else {
+            isVisible = this.isProjectVisible(pid);
+        }
+
+        // Record effective state before the map guard so that layers
+        // added later (e.g. by addProjectGeoJSON) pick up the correct
+        // visibility even when the map isn't ready yet.
+        State.effectiveProjectVisibility.set(pid, isVisible);
+
         const map = State.map;
         if (!map || !map.getStyle()) return;
 
-        const pid = String(projectId);
-        const isVisible = this.isProjectVisible(pid);
         const projectLayerIds = State.allProjectLayers.get(pid) || [];
-
         projectLayerIds.forEach((layerId) => {
             if (map.getLayer(layerId)) {
                 map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
@@ -279,9 +310,11 @@ export const Layers = {
 
     /**
      * Apply complete project visibility rules (project layers + scoped markers).
+     * @param {string} projectId
+     * @param {boolean} [visibilityOverride] - forwarded to applyProjectLayerVisibility
      */
-    applyProjectVisibility: function (projectId) {
-        this.applyProjectLayerVisibility(projectId);
+    applyProjectVisibility: function (projectId, visibilityOverride) {
+        this.applyProjectLayerVisibility(projectId, visibilityOverride);
         this.applyProjectScopedMarkerVisibility();
     },
 
@@ -490,19 +523,12 @@ export const Layers = {
         // Update state and storage
         this.saveProjectVisibilityPref(pid, isVisible);
 
-        // Update button UI
-        const button = document.querySelector(`.project-button[data-project-id="${pid}"]`);
-        if (button) {
-            if (isVisible) {
-                button.classList.remove('opacity-50');
-                button.querySelector('.project-color-dot').style.backgroundColor = button.dataset.color;
-            } else {
-                button.classList.add('opacity-50');
-                button.querySelector('.project-color-dot').style.backgroundColor = '#94a3b8'; // Slate-400
-            }
-        }
+        // Clear stale effective state so applyProjectLayerVisibility reads
+        // the fresh individual preference instead of a cached value.
+        State.effectiveProjectVisibility.delete(pid);
 
         // Update map visibility in one place for project layers and scoped markers.
+        // Panel UI is updated by ProjectPanel.refreshList() which callers invoke.
         this.applyProjectVisibility(pid);
 
         this.recomputeActiveDepthDomain();

@@ -1,5 +1,5 @@
 const stateMock = {
-    init: vi.fn(),
+    resetLayerState: vi.fn(),
     projectBounds: new Map()
 };
 
@@ -34,6 +34,7 @@ const configMock = {
         this._projects = projects.map(p => ({
             id: p.id,
             name: p.name,
+            color: p.color,
             permissions: 'READ_ONLY',
             geojson_url: p.geojson_url || p.geojson_file,
         }));
@@ -207,7 +208,7 @@ describe('frontend_public gis_view_main', () => {
         const onDomReady = await importModuleAndGetDomReadyHandler();
         await onDomReady();
 
-        expect(stateMock.init).toHaveBeenCalledTimes(1);
+        expect(stateMock.resetLayerState).toHaveBeenCalledTimes(1);
         expect(mapCoreMock.init).toHaveBeenCalledWith('mapbox-token', 'map');
         expect(mapMock.setMaxZoom).toHaveBeenCalledWith(13);
         expect(depthLegendMock.init).toHaveBeenCalledWith(mapMock);
@@ -218,8 +219,8 @@ describe('frontend_public gis_view_main', () => {
 
         expect(globalThis.fetch).toHaveBeenCalledWith('/api/v1/gis-ogc/view/public-token/geojson');
         expect(configMock._projects).toEqual([
-            { id: 'p1', name: 'Project One', permissions: 'READ_ONLY', geojson_url: '/g1.geojson' },
-            { id: 'p2', name: 'Project Two', permissions: 'READ_ONLY', geojson_url: '/g2.geojson' }
+            { id: 'p1', name: 'Project One', color: undefined, permissions: 'READ_ONLY', geojson_url: '/g1.geojson' },
+            { id: 'p2', name: 'Project Two', color: undefined, permissions: 'READ_ONLY', geojson_url: '/g2.geojson' }
         ]);
         expect(projectPanelMock.init).toHaveBeenCalledTimes(1);
         expect(layersMock.addProjectGeoJSON).toHaveBeenCalledTimes(2);
@@ -267,6 +268,60 @@ describe('frontend_public gis_view_main', () => {
             expect.any(MockLngLatBounds),
             expect.objectContaining({ maxZoom: 16, padding: 50 })
         );
+    });
+
+    it('passes color through to Config.setPublicProjects', async () => {
+        window.MAPVIEWER_CONTEXT = {
+            viewMode: 'public',
+            gisToken: 'public-token',
+            mapboxToken: 'mapbox-token',
+        };
+
+        globalThis.fetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                success: true,
+                data: {
+                    view_name: 'Color View',
+                    projects: [
+                        { id: 'p1', name: 'Red Cave', color: '#e41a1c', geojson_file: '/g1.geojson' },
+                    ]
+                }
+            })
+        });
+
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+        await mapHandlers.load();
+
+        expect(configMock._projects[0].color).toBe('#e41a1c');
+    });
+
+    it('stores no country field — no grouping or country gate in public viewer', async () => {
+        window.MAPVIEWER_CONTEXT = {
+            viewMode: 'public',
+            gisToken: 'public-token',
+            mapboxToken: 'mapbox-token',
+        };
+
+        globalThis.fetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                success: true,
+                data: {
+                    view_name: 'No Country View',
+                    projects: [
+                        { id: 'p1', name: 'Cave A', geojson_file: '/g1.geojson' },
+                    ]
+                }
+            })
+        });
+
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+        await mapHandlers.load();
+
+        expect(configMock._projects[0]).not.toHaveProperty('country');
     });
 
     it('shows load failure notification when public GIS API call fails', async () => {

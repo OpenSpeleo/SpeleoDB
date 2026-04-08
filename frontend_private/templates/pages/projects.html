@@ -5,6 +5,7 @@
 {% load set_var %}
 {% load str_format %}
 {% load project_types %}
+{% load project_colors %}
 
 {% block extra_css %}
 <style>
@@ -13,11 +14,11 @@
         .projects-table {
             display: none;
         }
-        
+
         .projects-cards {
             display: block;
         }
-        
+
         .project-card {
             background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
             border: 1px solid rgba(100, 116, 139, 0.3);
@@ -26,12 +27,12 @@
             margin-bottom: 16px;
             transition: all 0.3s ease;
         }
-        
+
         .project-card:hover {
             border-color: rgba(99, 102, 241, 0.5);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
-        
+
         .project-card-header {
             display: flex;
             justify-content: space-between;
@@ -40,7 +41,7 @@
             padding-bottom: 12px;
             border-bottom: 1px solid rgba(100, 116, 139, 0.3);
         }
-        
+
         .project-card-title {
             font-size: 18px;
             font-weight: 600;
@@ -48,52 +49,114 @@
             flex: 1;
             margin-right: 12px;
         }
-        
+
         .project-card-actions {
             display: flex;
             gap: 8px;
             flex-shrink: 0;
         }
-        
+
         .project-card-body {
             display: grid;
             gap: 10px;
         }
-        
+
         .project-card-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 12px;
         }
-        
+
         .project-card-label {
             font-size: 13px;
             color: #94a3b8;
             font-weight: 500;
             flex-shrink: 0;
         }
-        
+
         .project-card-value {
             font-size: 15px;
             color: #cbd5e1;
             font-weight: 500;
             text-align: right;
         }
-        
+
         .project-card-badge {
             text-align: right;
         }
     }
-    
+
     @media (min-width: 769px) {
         .projects-table {
             display: block;
         }
-        
+
         .projects-cards {
             display: none;
         }
+    }
+
+    /* Country group collapsible headers */
+    .country-group-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        cursor: pointer;
+        user-select: none;
+        background: rgba(30, 41, 59, 0.6);
+        border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+        font-size: 15px;
+        font-weight: 600;
+        color: #e2e8f0;
+        transition: background 0.15s ease;
+    }
+
+    .country-group-header:hover {
+        background: rgba(51, 65, 85, 0.7);
+    }
+
+    .country-group-chevron {
+        transition: transform 0.2s ease;
+    }
+
+    .country-group.collapsed .country-group-chevron {
+        transform: rotate(-90deg);
+    }
+
+    .country-group.collapsed .country-group-content {
+        display: none;
+    }
+
+    .country-group.collapsed .country-group-row {
+        display: none;
+    }
+
+    .country-group-count {
+        color: #94a3b8;
+        font-weight: 400;
+        font-size: 13px;
+    }
+
+    /* Desktop table country header row */
+    table .country-group-header {
+        background: rgba(30, 41, 59, 0.6);
+    }
+
+    table .country-group-header td {
+        padding: 10px 16px;
+    }
+
+    table .country-group-header .country-group-header-inner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 15px;
+        font-weight: 600;
+        color: #e2e8f0;
     }
 </style>
 {% endblock extra_css %}
@@ -150,93 +213,107 @@
         <!-- Mobile Cards View -->
         <div class="projects-cards">
             <div class="p-4">
-                {% for proj_data in projects_data %}
-                <div class="project-card">
-                    <div class="project-card-header">
-                        <div class="project-card-title">{{ proj_data.project.name }}</div>
-                        <div class="project-card-actions">
-                            {% if proj_data.active_mutex %}
-                            {% if proj_data.active_mutex.user == user or proj_data.level_label == "ADMIN" %}
-                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded-full cursor-pointer">
-                                <img class="btn-unlock" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ proj_data.project.id }}" width="28" height="28" alt="Unlock">
-                            </div>
-                            {% endif %}
-                            {% endif %}
-                            <a href="{% url 'private:project_details' project_id=proj_data.project.id %}" class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition">
-                                <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="View">
-                            </a>
-                        </div>
+                {% for country_name, country_projects in projects_by_country.items %}
+                <div class="country-group" data-country-code="{{ country_projects.0.project.country.code }}">
+                    <div class="country-group-header" role="button" tabindex="0">
+                        <svg class="country-group-chevron w-4 h-4 shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                        <span>{{ country_projects.0.project.country.code|country_flag }}</span>
+                        <span>{{ country_name }}</span>
+                        <span class="country-group-count">({{ country_projects|length }})</span>
                     </div>
-                    <div class="project-card-body">
-                        <div class="project-card-row">
-                            <span class="project-card-label">Software</span>
-                            <div class="project-card-badge">
-                                {% get_project_type_color proj_data.project.type as type_bg_color %}
-                                {% get_project_type_display proj_data.project.type as type_display %}
-                                <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 text-white {{ type_bg_color }}">
-                                    {{ type_display }}
+                    <div class="country-group-content">
+                        {% for proj_data in country_projects %}
+                        <div class="project-card">
+                            <div class="project-card-header">
+                                <div class="project-card-title">{{ proj_data.project.name }}</div>
+                                <div class="project-card-actions">
+                                    {% if proj_data.active_mutex %}
+                                    {% if proj_data.active_mutex.user == user or proj_data.level_label == "ADMIN" %}
+                                    <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded-full cursor-pointer">
+                                        <img class="btn-unlock" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ proj_data.project.id }}" width="28" height="28" alt="Unlock">
+                                    </div>
+                                    {% endif %}
+                                    {% endif %}
+                                    <a href="{% url 'private:project_details' project_id=proj_data.project.id %}" class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition">
+                                        <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="View">
+                                    </a>
                                 </div>
                             </div>
-                        </div>
-                        <div class="project-card-row">
-                            <span class="project-card-label">Collaborators</span>
-                            <span class="project-card-value">{{ proj_data.project.collaborator_count }}</span>
-                        </div>
-                        <div class="project-card-row">
-                            <span class="project-card-label">Revisions</span>
-                            <span class="project-card-value" id="async_revision_mobile_{{ proj_data.project.id }}">
-                                <img data-id="async_revision_mobile_{{ proj_data.project.id }}" data-project_id="{{proj_data.project.id}}"
-                                class="async_revision inline-flex filter invert-[0.5] sepia saturate-[5] hue-rotate-[203deg] w-6" src="{% static 'private/media/spinner.svg' %}">
-                            </span>
-                        </div>
-                        <div class="project-card-row">
-                            <span class="project-card-label">Permission</span>
-                            <div class="project-card-badge">
-                                {% if proj_data.level_label == "WEB_VIEWER" %}
-                                    {% set bg_color = 'bg-pastel-grey' %}
-                                {% elif proj_data.level_label == "READ_ONLY" %}
-                                    {% set bg_color = 'bg-pastel-beige' %}
-                                {% elif proj_data.level_label == "READ_AND_WRITE" %}
-                                    {% set bg_color = 'bg-pastel-navy' %}
-                                {% elif proj_data.level_label == "ADMIN" %}
-                                    {% set bg_color = 'bg-pastel-orange' %}
-                                {% else %}
-                                    {% set bg_color = '' %}
-                                {% endif %}
-                                <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 {{ bg_color }}">
-                                    {{ proj_data.level_label|normalize }}
+                            <div class="project-card-body">
+                                <div class="project-card-row">
+                                    <span class="project-card-label">Software</span>
+                                    <div class="project-card-badge">
+                                        {% get_project_type_color proj_data.project.type as type_bg_color %}
+                                        {% get_project_type_display proj_data.project.type as type_display %}
+                                        <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 text-white {{ type_bg_color }}">
+                                            {{ type_display }}
+                                        </div>
+                                    </div>
                                 </div>
+                                <div class="project-card-row">
+                                    <span class="project-card-label">Collaborators</span>
+                                    <span class="project-card-value">{{ proj_data.project.collaborator_count }}</span>
+                                </div>
+                                <div class="project-card-row">
+                                    <span class="project-card-label">Revisions</span>
+                                    <span class="project-card-value" id="async_revision_mobile_{{ proj_data.project.id }}">
+                                        <img data-id="async_revision_mobile_{{ proj_data.project.id }}" data-project_id="{{proj_data.project.id}}"
+                                        class="async_revision inline-flex filter invert-[0.5] sepia saturate-[5] hue-rotate-[203deg] w-6" src="{% static 'private/media/spinner.svg' %}">
+                                    </span>
+                                </div>
+                                <div class="project-card-row">
+                                    <span class="project-card-label">Permission</span>
+                                    <div class="project-card-badge">
+                                        {% if proj_data.level_label == "WEB_VIEWER" %}
+                                            {% set bg_color = 'bg-pastel-grey' %}
+                                        {% elif proj_data.level_label == "READ_ONLY" %}
+                                            {% set bg_color = 'bg-pastel-beige' %}
+                                        {% elif proj_data.level_label == "READ_AND_WRITE" %}
+                                            {% set bg_color = 'bg-pastel-navy' %}
+                                        {% elif proj_data.level_label == "ADMIN" %}
+                                            {% set bg_color = 'bg-pastel-orange' %}
+                                        {% else %}
+                                            {% set bg_color = '' %}
+                                        {% endif %}
+                                        <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 {{ bg_color }}">
+                                            {{ proj_data.level_label|normalize }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="project-card-row">
+                                    <span class="project-card-label">Last Edit</span>
+                                    <span class="project-card-value">{{ proj_data.project.modified_date|date:"Y/m/d" }}</span>
+                                </div>
+                                {% if proj_data.active_mutex.user %}
+                                <div class="project-card-row">
+                                    <span class="project-card-label">Current Editor</span>
+                                    <span class="project-card-value" style="font-size: 13px;">{{ proj_data.active_mutex.user.email }}</span>
+                                </div>
+                                <div class="project-card-row">
+                                    <span class="project-card-label">Editing Since</span>
+                                    <span class="project-card-value">
+                                        {% if proj_data.active_mutex %}
+                                            {{ proj_data.active_mutex.created_date|date:"Y/m/d" }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                {% endif %}
+                                {% if proj_data.project.latitude and proj_data.project.longitude %}
+                                <div class="project-card-row">
+                                    <span class="project-card-label">GPS Coordinates</span>
+                                    <a href="https://www.google.com/maps/place/{{proj_data.project.latitude}},{{proj_data.project.longitude}}"
+                                    target="_blank" class="text-sky-400 hover:text-sky-300 text-sm">
+                                        View on Map
+                                    </a>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
-                        <div class="project-card-row">
-                            <span class="project-card-label">Last Edit</span>
-                            <span class="project-card-value">{{ proj_data.project.modified_date|date:"Y/m/d" }}</span>
-                        </div>
-                        {% if proj_data.active_mutex.user %}
-                        <div class="project-card-row">
-                            <span class="project-card-label">Current Editor</span>
-                            <span class="project-card-value" style="font-size: 13px;">{{ proj_data.active_mutex.user.email }}</span>
-                        </div>
-                        <div class="project-card-row">
-                            <span class="project-card-label">Editing Since</span>
-                            <span class="project-card-value">
-                                {% if proj_data.active_mutex %}
-                                    {{ proj_data.active_mutex.created_date|date:"Y/m/d" }}
-                                {% else %}
-                                -
-                                {% endif %}
-                            </span>
-                        </div>
-                        {% endif %}
-                        {% if proj_data.project.latitude and proj_data.project.longitude %}
-                        <div class="project-card-row">
-                            <span class="project-card-label">GPS Coordinates</span>
-                            <a href="https://www.google.com/maps/place/{{proj_data.project.latitude}},{{proj_data.project.longitude}}"
-                            target="_blank" class="text-sky-400 hover:text-sky-300 text-sm">
-                                View on Map
-                            </a>
-                        </div>
-                        {% endif %}
+                        {% endfor %}
                     </div>
                 </div>
                 {% endfor %}
@@ -249,10 +326,10 @@
             <div>
 
                 <!-- Table -->
-                <div class="overflow-x-auto">
+                <div class="overflow-auto max-h-[calc(100vh-14rem)]">
                     <table class="table-auto w-full text-slate-300">
                         <!-- Table header -->
-                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900 border-t border-b border-slate-700 sticky top-0 z-10">
                             <tr>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
                                     <div class="font-semibold text-center">Project Name</div>
@@ -285,14 +362,26 @@
                                 </th>
                             </tr>
                         </thead>
-                        <!-- Table body -->
-                        <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
-                            {% for proj_data in projects_data %}
-                                <!-- Row -->
-                                <tr>
+                        <!-- Table body: grouped by country -->
+                        {% for country_name, country_projects in projects_by_country.items %}
+                        <tbody class="country-group text-sm divide-y divide-slate-200 divide-slate-700" data-country-code="{{ country_projects.0.project.country.code }}">
+                            <tr class="country-group-header">
+                                <td colspan="10">
+                                    <div class="country-group-header-inner" role="button" tabindex="0">
+                                        <svg class="country-group-chevron w-4 h-4 shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                        <span>{{ country_projects.0.project.country.code|country_flag }}</span>
+                                        <span>{{ country_name }}</span>
+                                        <span class="country-group-count">({{ country_projects|length }})</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% for proj_data in country_projects %}
+                                <tr class="country-group-row">
                                     <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
                                         <div class="text-center">
-                                            <div class="font-medium text-slate-100">{{ proj_data.project.name }}</div>
+                                            <span class="font-medium text-slate-100">{{ proj_data.project.name }}</span>
                                         </div>
                                     </td>
                                     <td class="px-2 first:pl-5 last:pr-5 py-3">
@@ -389,6 +478,7 @@
                                 </tr>
                             {% endfor %}
                         </tbody>
+                        {% endfor %}
                     </table>
 
                 </div>
@@ -545,6 +635,59 @@ $( document ).ready(function() {
             $('.async_revision').each(function() {
                 $("#" + $(this).data('id')).html("-");
             });
+        }
+    });
+
+    // Country group collapse/expand with localStorage persistence
+    var STORAGE_KEY = 'speleo_projects_collapsed_countries';
+
+    function getCollapsedCountries() {
+        try {
+            var stored = localStorage.getItem(STORAGE_KEY);
+            return stored ? JSON.parse(stored) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveCollapsedCountries(collapsed) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsed));
+        } catch (e) {
+            // localStorage unavailable
+        }
+    }
+
+    function toggleCountryGroup(header) {
+        var $group = $(header).closest('.country-group');
+        $group.toggleClass('collapsed');
+
+        var code = $group.data('country-code');
+        var current = getCollapsedCountries();
+        var idx = current.indexOf(code);
+        if ($group.hasClass('collapsed')) {
+            if (idx === -1) current.push(code);
+        } else {
+            if (idx !== -1) current.splice(idx, 1);
+        }
+        saveCollapsedCountries(current);
+    }
+
+    // Restore previously-collapsed groups from localStorage
+    getCollapsedCountries().forEach(function(code) {
+        $('.country-group[data-country-code="' + code + '"]').addClass('collapsed');
+    });
+
+    // Click handler for all country group headers
+    $('.country-group-header').click(function() {
+        toggleCountryGroup(this);
+    });
+
+    // Keyboard handler (Enter / Space) for accessibility
+    $('.country-group-header, .country-group-header-inner').on('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleCountryGroup($(this).closest('.country-group-header')[0] || this);
         }
     });
 });

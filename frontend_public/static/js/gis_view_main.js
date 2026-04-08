@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 1. Initialize State
-    State.init();
+    State.resetLayerState();
 
     // 2. Initialize Map
     const token = context.mapboxToken || '';
@@ -95,6 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             Config.setPublicProjects(projects.map(p => ({
                 id: p.id,
                 name: p.name,
+                color: p.color,
                 geojson_file: p.geojson_file,
             })));
 

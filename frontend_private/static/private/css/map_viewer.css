@@ -1471,6 +1471,71 @@ select.form-input:focus {
     font-size: 10px !important;
 }
 
+/* Country Group Styles (Project Panel) */
+.country-group {
+    margin-bottom: 4px;
+}
+
+.country-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    color: #cbd5e1;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s ease;
+}
+
+.country-group-header:hover {
+    background: rgba(71, 85, 105, 0.5);
+}
+
+.country-group-chevron {
+    transition: transform 0.2s ease;
+}
+
+.country-group.collapsed .country-group-chevron {
+    transform: rotate(-90deg);
+}
+
+.country-group-flag {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.country-group-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.country-group-count {
+    color: #64748b;
+    font-weight: 400;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.country-group-content {
+    overflow: hidden;
+    max-height: 9999px;
+    opacity: 1;
+    transition: max-height 0.3s cubic-bezier(0, 1, 0, 1), opacity 0.2s ease;
+    padding-left: 8px;
+}
+
+.country-group.collapsed .country-group-content {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
 /* GPS Track Panel Styles */
 .gps-track-button {
     display: flex;

@@ -108,40 +108,66 @@ export const GPSTracksPanel = {
         gpsPanelMinimized.style.top = `${gpsTop}px`;
     },
 
+    _resizeObserver: null,
+    _mutationObserver: null,
+
     setupProjectPanelListener: function() {
-        // Watch for project panel expand/collapse to reposition GPS panel
         const projectPanel = document.getElementById('project-panel');
         const projectPanelMinimized = document.getElementById('project-panel-minimized');
         const projectToggleBtn = document.getElementById('panel-toggle');
         const projectExpandBtn = document.getElementById('panel-expand');
 
-        // Reposition when project panel toggles
         if (projectToggleBtn) {
             projectToggleBtn.addEventListener('click', () => {
-                // Small delay to let the project panel animation complete
                 setTimeout(() => this.positionPanel(), 50);
             });
         }
 
         if (projectExpandBtn) {
             projectExpandBtn.addEventListener('click', () => {
-                // Small delay to let the project panel animation complete
                 setTimeout(() => this.positionPanel(), 50);
             });
         }
 
-        // Also observe DOM changes for dynamic positioning
+        // ResizeObserver catches all size changes: content changes from
+        // country group collapse/expand, visibility toggles, etc.
+        const debouncedPosition = Utils.debounce(() => this.positionPanel(), 50);
+
+        this._resizeObserver = new ResizeObserver(debouncedPosition);
+
+        if (projectPanel) {
+            this._resizeObserver.observe(projectPanel);
+        }
+        if (projectPanelMinimized) {
+            this._resizeObserver.observe(projectPanelMinimized);
+        }
+
+        // MutationObserver still needed for display:none/block toggling
+        // (ResizeObserver doesn't fire when an element is hidden)
         if (projectPanel || projectPanelMinimized) {
-            const observer = new MutationObserver(() => {
-                this.positionPanel();
-            });
+            this._mutationObserver = new MutationObserver(debouncedPosition);
 
             if (projectPanel) {
-                observer.observe(projectPanel, { attributes: true, attributeFilter: ['style'] });
+                this._mutationObserver.observe(projectPanel, { attributes: true, attributeFilter: ['style'] });
             }
             if (projectPanelMinimized) {
-                observer.observe(projectPanelMinimized, { attributes: true, attributeFilter: ['style'] });
+                this._mutationObserver.observe(projectPanelMinimized, { attributes: true, attributeFilter: ['style'] });
             }
+        }
+    },
+
+    destroy: function() {
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+            this._resizeObserver = null;
+        }
+        if (this._mutationObserver) {
+            this._mutationObserver.disconnect();
+            this._mutationObserver = null;
+        }
+        if (this._loadingListener) {
+            window.removeEventListener('speleo:gps-track-loading-changed', this._loadingListener);
+            this._loadingListener = null;
         }
     },
 
@@ -179,7 +205,7 @@ export const GPSTracksPanel = {
             
             item.innerHTML = Utils.safeHtml`
                 <div class="flex items-center gap-2 overflow-hidden flex-1">
-                    <div class="gps-track-color-dot w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${isVisible ? color : '#94a3b8'}; ${Utils.raw(isVisible ? 'border: 2px dashed rgba(255,255,255,0.5);' : '')}"></div>
+                    <div class="gps-track-color-dot w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${Utils.raw(Utils.safeCssColor(isVisible ? color : DEFAULTS.COLORS.FALLBACK))}; ${Utils.raw(isVisible ? 'border: 2px dashed rgba(255,255,255,0.5);' : '')}"></div>
                     <span class="text-slate-200 text-sm font-medium truncate select-none" title="${track.name}">${displayName}</span>
                 </div>
                 <div class="flex items-center gap-2">
@@ -281,8 +307,9 @@ export const GPSTracksPanel = {
 
     setupLoadingListener: function() {
         // Listen for loading state changes to update UI
-        window.addEventListener('speleo:gps-track-loading-changed', (e) => {
-            const { trackId, isLoading } = e.detail;
+        this._loadingListener = (e) => {
+            const { trackId, isLoading } = e.detail || {};
+            if (!trackId) return;
             const item = document.querySelector(`.gps-track-button[data-track-id="${trackId}"]`);
             if (item) {
                 const spinner = item.querySelector('.gps-track-loading-spinner');
@@ -300,7 +327,8 @@ export const GPSTracksPanel = {
                     checkbox.disabled = isLoading;
                 }
             }
-        });
+        };
+        window.addEventListener('speleo:gps-track-loading-changed', this._loadingListener);
     },
     
     getTrackColor: function(trackId) {

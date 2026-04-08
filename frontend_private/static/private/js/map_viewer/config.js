@@ -53,6 +53,7 @@ export const DEFAULTS = Object.freeze({
         OVERLAY_FADE_DELAY_MS: 500,
         TRACK_NAME_MAX_LENGTH: 30,
         NOTE_PREVIEW_LENGTH: 200,
+        COUNTRY_GROUP_TRANSITION_MS: 250,
     },
 
     UPLOAD: {
@@ -61,11 +62,19 @@ export const DEFAULTS = Object.freeze({
 
     COLORS: {
         DEFAULT_STATION: '#fb923c',
+        FALLBACK: '#94a3b8',
+        DEPTH_NONE: '#999999',
+        DEPTH_SHALLOW: '#4575b4',
+        DEPTH_MID: '#e6f598',
+        DEPTH_DEEP: '#d73027',
     },
 
     STORAGE_KEYS: {
         PROJECT_VISIBILITY: 'speleo_project_visibility',
         NETWORK_VISIBILITY: 'speleo_network_visibility',
+        COUNTRY_COLLAPSED: 'speleo_country_collapsed',
+        COUNTRY_VISIBILITY: 'speleo_country_visibility',
+        PROJECTS_COUNTRY_COLLAPSED: 'speleo_projects_collapsed_countries', // used by projects.html inline JS
     },
 });
 
@@ -131,8 +140,9 @@ export const Config = {
 
     setPublicProjects(projects) {
         this._projects = projects.map(p => ({
-            id: p.id,
+            id: String(p.id),
             name: p.name,
+            color: p.color,
             permissions: 'READ_ONLY',
             geojson_url: p.geojson_url || p.geojson_file,
         }));
@@ -150,11 +160,12 @@ export const Config = {
             if (response && response.success && Array.isArray(response.data)) {
                 // Map API response to expected format (permission -> permissions)
                 this._projects = response.data.map(p => ({
-                    id: p.id,
+                    id: String(p.id),
                     name: p.name,
                     permissions: p.permission,  // API returns 'permission', code expects 'permissions'
                     description: p.description,
                     country: p.country,
+                    color: p.color,
                     latitude: p.latitude,
                     longitude: p.longitude,
                     visibility: p.visibility,
@@ -186,7 +197,7 @@ export const Config = {
             if (response && response.success && Array.isArray(response.data)) {
                 // Map API response to expected format
                 this._networks = response.data.map(n => ({
-                    id: n.id,
+                    id: String(n.id),
                     name: n.name,
                     description: n.description,
                     is_active: n.is_active,
@@ -235,6 +246,11 @@ export const Config = {
     getNetworkById: function (networkId) {
         if (!networkId) return null;
         return this.networks.find(network => network.id === String(networkId)) || null;
+    },
+
+    getGPSTrackById: function (trackId) {
+        if (!trackId) return null;
+        return this.gpsTracks.find(track => track.id === String(trackId)) || null;
     },
 
     getProjectPermissionRank: function (projectId) {
@@ -413,8 +429,9 @@ export const Config = {
             if (response && response.success && Array.isArray(response.data)) {
                 // Map API response to expected format
                 this._gpsTracks = response.data.map(t => ({
-                    id: t.id,
+                    id: String(t.id),
                     name: t.name,
+                    color: t.color,
                     file: t.file, // URL to download the GeoJSON
                     sha256_hash: t.sha256_hash,
                     creation_date: t.creation_date,

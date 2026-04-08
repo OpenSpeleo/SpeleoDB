@@ -153,16 +153,19 @@ class GISView(models.Model):
 
             proj_geojson: ProjectGeoJSON
 
+            prefetched = list(project.geojsons.all())
+
             if view_project.use_latest:
-                if (geojson := project.geojsons.first()) is None:
+                if not prefetched:
                     continue
 
-                proj_geojson = geojson
+                proj_geojson = prefetched[0]
 
             elif view_project.commit_sha:
-                matched = project.geojsons.filter(
-                    commit_id=view_project.commit_sha
-                ).first()
+                matched = next(
+                    (g for g in prefetched if g.commit_id == view_project.commit_sha),
+                    None,
+                )
 
                 if matched is None:
                     continue
@@ -180,6 +183,7 @@ class GISView(models.Model):
                 {
                     "project_id": str(project.id),
                     "project_name": project.name,
+                    "project_color": project.color,
                     "project_geojson": proj_geojson,
                     "commit_sha": proj_geojson.commit.id,
                     "commit_date": proj_geojson.commit.authored_date.isoformat(),
