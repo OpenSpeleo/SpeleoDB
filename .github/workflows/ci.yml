@@ -103,7 +103,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
 
       rustfs:
-        image: rustfs/rustfs:latest
+        image: rustfs/rustfs:1.0.0-alpha.90
         ports:
           - 9000:9000
         options: >-
