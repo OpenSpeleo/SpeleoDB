@@ -92,6 +92,55 @@ Both are registered in `speleodb/surveys/templatetags/project_colors.py`.
 
 ---
 
+## Layout Decisions
+
+### Fixed column widths (`table-fixed`)
+
+The desktop table uses `table-fixed` with explicit percentage widths on
+every `<th>`. This prevents column widths from shifting when country
+groups are expanded or collapsed. With `table-auto`, hidden rows caused
+the browser to recalculate column widths based only on visible content,
+creating a jarring layout shift.
+
+Column width allocation (must sum to 100%):
+
+| Column | Width | Rationale |
+|---|---|---|
+| Project Name | 17% | Longest text content |
+| Software | 9% | Short badge |
+| Collaborators | 8% | Single number |
+| Revisions | 7% | Single number |
+| Permission | 10% | Badge text varies |
+| GPS Coordinates | 10% | "Google Maps" link |
+| Last Edit | 9% | Date (YYYY/MM/DD) |
+| Current Editor | 13% | Email address |
+| Editing Since | 9% | Date (YYYY/MM/DD) |
+| Actions | 8% | 1-2 icon buttons |
+
+### Page-level scroll (no container scrollbar)
+
+The table wrapper has **no** `overflow-auto` or `max-h-*` constraint.
+The table grows naturally and the page scrolls via the content column
+(`base_private.html` line ~640: `overflow-y-auto`). This avoids a
+secondary scrollbar that appears/disappears based on the number of
+projects.
+
+### Sticky table header
+
+The `<thead>` uses `sticky top-16 z-10`. `top-16` (4rem) matches the
+site header height (`h-16`), so the table header sticks directly below
+the site header (which is `sticky top-0 z-30`). The lower `z-10` keeps
+the table header below the site header in stacking order.
+
+### Collapse restoration (FOUC prevention)
+
+Collapsed country groups are restored from `localStorage` via a
+synchronous `<script>` placed immediately after the table/cards markup,
+**before** `$(document).ready()`. This prevents a flash of uncollapsed
+content (FOUC) that would occur if restoration waited for DOMContentLoaded.
+
+---
+
 ## Key Files
 
 | File | Role |

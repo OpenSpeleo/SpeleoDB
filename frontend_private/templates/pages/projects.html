@@ -158,6 +158,72 @@
         font-weight: 600;
         color: #e2e8f0;
     }
+
+    /*
+     * Responsive column hiding with width redistribution.
+     * Column indices (nth-child): 1=Name 2=Software 3=Collaborators
+     * 4=Revisions 5=Permission 6=GPS 7=LastEdit 8=Editor
+     * 9=EditingSince 10=Actions
+     *
+     * When a column is hidden its percentage is redistributed so
+     * visible columns still sum to 100% (required by table-fixed).
+     */
+
+    /* < 1700px: hide Collaborators (col 3) + Editing Since (col 9) — 8 columns */
+    @media (max-width: 1699px) {
+        .projects-table th:nth-child(3),
+        .projects-table td:nth-child(3),
+        .projects-table th:nth-child(9),
+        .projects-table td:nth-child(9) { display: none; }
+
+        .projects-table th:nth-child(1)  { width: 21%; }
+        .projects-table th:nth-child(2)  { width: 11%; }
+        .projects-table th:nth-child(4)  { width:  8%; }
+        .projects-table th:nth-child(5)  { width: 12%; }
+        .projects-table th:nth-child(6)  { width: 12%; }
+        .projects-table th:nth-child(7)  { width: 11%; }
+        .projects-table th:nth-child(8)  { width: 16%; }
+        .projects-table th:nth-child(10) { width:  9%; }
+    }
+
+    /* < 1500px: also hide Revisions (col 4) — 7 columns */
+    @media (max-width: 1499px) {
+        .projects-table th:nth-child(4),
+        .projects-table td:nth-child(4) { display: none; }
+
+        .projects-table th:nth-child(1)  { width: 23%; }
+        .projects-table th:nth-child(2)  { width: 13%; }
+        .projects-table th:nth-child(5)  { width: 14%; }
+        .projects-table th:nth-child(6)  { width: 13%; }
+        .projects-table th:nth-child(7)  { width: 12%; }
+        .projects-table th:nth-child(8)  { width: 16%; }
+        .projects-table th:nth-child(10) { width:  9%; }
+    }
+
+    /* < 1450px: also hide Current Editor (col 8) — 6 columns */
+    @media (max-width: 1449px) {
+        .projects-table th:nth-child(8),
+        .projects-table td:nth-child(8) { display: none; }
+
+        .projects-table th:nth-child(1)  { width: 28%; }
+        .projects-table th:nth-child(2)  { width: 15%; }
+        .projects-table th:nth-child(5)  { width: 16%; }
+        .projects-table th:nth-child(6)  { width: 15%; }
+        .projects-table th:nth-child(7)  { width: 15%; }
+        .projects-table th:nth-child(10) { width: 11%; }
+    }
+
+    /* < 1300px: also hide Last Edit (col 7) — 5 columns */
+    @media (max-width: 1299px) {
+        .projects-table th:nth-child(7),
+        .projects-table td:nth-child(7) { display: none; }
+
+        .projects-table th:nth-child(1)  { width: 33%; }
+        .projects-table th:nth-child(2)  { width: 18%; }
+        .projects-table th:nth-child(5)  { width: 19%; }
+        .projects-table th:nth-child(6)  { width: 17%; }
+        .projects-table th:nth-child(10) { width: 13%; }
+    }
 </style>
 {% endblock extra_css %}
 
@@ -326,39 +392,39 @@
             <div>
 
                 <!-- Table -->
-                <div class="overflow-auto max-h-[calc(100vh-14rem)]">
-                    <table class="table-auto w-full text-slate-300">
+                <div>
+                    <table class="table-fixed w-full text-slate-300">
                         <!-- Table header -->
-                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900 border-t border-b border-slate-700 sticky top-0 z-10">
+                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900 border-t border-b border-slate-700 sticky top-16 z-10">
                             <tr>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-[17%]">
                                     <div class="font-semibold text-center">Project Name</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-[9%]">
                                     <div class="font-semibold text-center">Software</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-[8%]">
                                     <div class="font-semibold text-center">Collaborators</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-[7%]">
                                     <div class="font-semibold text-center">Revisions</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-[10%]">
                                     <div class="font-semibold text-center">Permission</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
-                                    <div class="font-semibold text-center">GPS Coordinates</div>
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-[10%]">
+                                    <div class="font-semibold text-center">GPS Coords</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-[9%]">
                                     <div class="font-semibold text-center">Last Edit</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-[13%]">
                                     <div class="font-semibold text-center">Current Editor</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-[9%]">
                                     <div class="font-semibold text-center">Editing Since</div>
                                 </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                                <th class="px-2 first:pl-5 last:pr-5 py-3 w-[8%]">
                                 </th>
                             </tr>
                         </thead>
@@ -457,20 +523,18 @@
                                             {% endif %}
                                         </div>
                                     </td>
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
-                                        <div class="flex items-center text-slate-800">
-                                            {% set margin_left = '52' %} <!-- 40 + 12 -->
+                                    <td class="px-1 py-3 overflow-hidden">
+                                        <div class="flex items-center justify-center gap-1 min-w-0">
                                             {% if proj_data.active_mutex %}
                                             {% if proj_data.active_mutex.user == user or proj_data.level_label == "ADMIN" %}
-                                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3 cursor-pointer">
-                                                <img class="btn-unlock" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ proj_data.project.id }}" width="35" height="35" alt="Icon Unlock">
+                                            <div class="w-10 aspect-square min-w-0 shrink flex items-center justify-center bg-slate-700 rounded-full cursor-pointer">
+                                                <img class="btn-unlock max-w-[75%] max-h-[75%]" src="{% static 'private/media/unlock.png' %}" data-project_id="{{ proj_data.project.id }}" alt="Icon Unlock">
                                             </div>
-                                            {% set margin_left = '0' %}
                                             {% endif %}
                                             {% endif %}
-                                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 rounded-full mr-2 sm:mr-3" style="margin-left: {{ margin_left }}px;">
-                                                <a href="{% url 'private:project_details' project_id=proj_data.project.id %}">
-                                                    <img class="ml-1" src="{% static 'private/media/right_arrow.svg' %}" width="20" height="20" alt="Icon Open">
+                                            <div class="w-10 aspect-square min-w-0 shrink bg-slate-700 rounded-full">
+                                                <a class="flex items-center justify-center w-full h-full" href="{% url 'private:project_details' project_id=proj_data.project.id %}">
+                                                    <img class="w-5 h-5" src="{% static 'private/media/right_arrow.svg' %}" alt="Icon Open">
                                                 </a>
                                             </div>
                                         </div>
@@ -488,6 +552,29 @@
     </div>
 </main>
 
+<script>
+// Restore collapsed country groups synchronously before paint to avoid FOUC.
+// Must run after the .country-group elements exist but before $(document).ready().
+(function() {
+    var STORAGE_KEY = 'speleo_projects_collapsed_countries';
+    try {
+        var stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            var codes = JSON.parse(stored);
+            for (var i = 0; i < codes.length; i++) {
+                var groups = document.querySelectorAll(
+                    '.country-group[data-country-code="' + codes[i] + '"]'
+                );
+                for (var j = 0; j < groups.length; j++) {
+                    groups[j].classList.add('collapsed');
+                }
+            }
+        }
+    } catch (e) {
+        // localStorage unavailable or corrupt — groups stay expanded
+    }
+})();
+</script>
 
 {% include 'snippets/modal_success.html' %}
 {% include 'snippets/modal_error.html' %}
@@ -672,11 +759,6 @@ $( document ).ready(function() {
         }
         saveCollapsedCountries(current);
     }
-
-    // Restore previously-collapsed groups from localStorage
-    getCollapsedCountries().forEach(function(code) {
-        $('.country-group[data-country-code="' + code + '"]').addClass('collapsed');
-    });
 
     // Click handler for all country group headers
     $('.country-group-header').click(function() {
