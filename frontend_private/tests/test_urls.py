@@ -15,6 +15,7 @@ from django.urls import reverse
     [
         # General routes
         ("private:user_dashboard", "", None),
+        ("private:user_profile", "profile/", None),
         ("private:user_password", "password/", None),
         ("private:user_authtoken", "auth-token/", None),
         ("private:user_feedback", "feedback/", None),

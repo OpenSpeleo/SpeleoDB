@@ -47,6 +47,7 @@ export default [
                 describe: 'readonly',
                 it: 'readonly',
                 expect: 'readonly',
+                beforeAll: 'readonly',
                 beforeEach: 'readonly',
                 afterEach: 'readonly',
                 vi: 'readonly'

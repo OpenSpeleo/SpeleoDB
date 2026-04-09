@@ -96,6 +96,23 @@ See `docs/xss-protection.md` for the full rationale and patterns.
 
 ### Import & Module-Level Code
 
+- **All imports must be at the top of the file.** Never use inline/local
+  imports inside functions, methods, or `setUp`. This violates ruff PLC0415.
+  If you need a symbol, import it at the top with all other imports.
+
+```python
+# BAD — inline import inside a method
+def test_something(self) -> None:
+    from speleodb.common.enums import ProjectType  # PLC0415!
+    ...
+
+# GOOD — import at the top of the file
+from speleodb.common.enums import ProjectType
+
+def test_something(self) -> None:
+    ...
+```
+
 - **Never place executable statements (assignments, function calls) between
   import groups.** `logger = logging.getLogger(__name__)` and similar
   module-level assignments go **after all imports** (including

@@ -243,7 +243,7 @@
                             <!-- Account Settings Section -->
                             <div class="settings-dropdown-section">
                                 <div class="settings-dropdown-section-title">Account Settings</div>
-                                <a href="{% url 'private:user_dashboard' %}" class="settings-dropdown-item {% if request.url_name == 'user_dashboard' %}active{% endif %}" @click="open = false">
+                                <a href="{% url 'private:user_profile' %}" class="settings-dropdown-item {% if request.url_name == 'user_profile' %}active{% endif %}" @click="open = false">
                                     <svg class="w-4 h-4 stroke-current fill-none stroke-width-2" viewBox="2.25 2.25 19.5 19.51">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                         <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
@@ -316,8 +316,8 @@
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
                             <!-- Accont Info -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'user_dashboard' %}bg-indigo-500/30{% endif %}" href="{% url 'private:user_dashboard' %}">
-                                    {% if request.url_name == 'user_dashboard' %}
+                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'user_profile' %}bg-indigo-500/30{% endif %}" href="{% url 'private:user_profile' %}">
+                                    {% if request.url_name == 'user_profile' %}
                                         <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400" viewBox="2.25 2.25 19.5 19.51">
                                     {% else %}
                                         <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-slate-500" viewBox="2.25 2.25 19.5 19.51">
@@ -327,7 +327,7 @@
                                         <path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
                                         <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855" />
                                       </svg>
-                                    {% if request.url_name == 'user_dashboard' %}
+                                    {% if request.url_name == 'user_profile' %}
                                         <span class="text-sm font-medium text-indigo-400">
                                     {% else %}
                                         <span class="text-sm font-medium text-slate-300 hover:text-slate-200">

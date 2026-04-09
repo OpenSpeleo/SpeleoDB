@@ -1,0 +1,823 @@
+{% extends "base_private.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        border-color: rgba(99, 102, 241, 0.4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #e2e8f0;
+        line-height: 1;
+    }
+    .stat-label {
+        font-size: 0.8125rem;
+        color: #94a3b8;
+        font-weight: 500;
+        margin-top: 6px;
+    }
+    .skeleton-pulse {
+        background: linear-gradient(90deg, rgba(51,65,85,0.4) 25%, rgba(71,85,105,0.5) 50%, rgba(51,65,85,0.4) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 4px;
+    }
+    @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* Heatmap — GitHub-style contribution graph */
+    .heatmap-table {
+        border-spacing: 3px;
+        border-collapse: separate;
+        width: 100%;
+        table-layout: fixed;
+    }
+    .heatmap-table col.hm-label-col {
+        width: 36px;
+    }
+    .heatmap-table td {
+        padding: 0;
+    }
+    .heatmap-table td.hm-day-label {
+        font-size: 11px;
+        color: #64748b;
+        padding-right: 4px;
+        text-align: right;
+        white-space: nowrap;
+        overflow: hidden;
+        vertical-align: middle;
+    }
+    .heatmap-table thead td {
+        font-size: 11px;
+        color: #64748b;
+        padding-bottom: 2px;
+    }
+    .hm-cell {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        border-radius: 2px;
+        position: relative;
+    }
+    .hm-cell[data-tip]:hover::after {
+        content: attr(data-tip);
+        position: absolute;
+        bottom: calc(100% + 6px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: #e2e8f0;
+        font-size: 12px;
+        white-space: nowrap;
+        padding: 5px 10px;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        z-index: 50;
+        pointer-events: none;
+        animation: hm-tip-in 0.15s ease-out;
+        animation-delay: 0.25s;
+        animation-fill-mode: both;
+    }
+    .hm-cell[data-tip]:hover::before {
+        content: '';
+        position: absolute;
+        bottom: calc(100% + 2px);
+        left: 50%;
+        transform: translateX(-50%);
+        border: 4px solid transparent;
+        border-top-color: #334155;
+        z-index: 50;
+        pointer-events: none;
+        animation: hm-tip-in 0.15s ease-out;
+        animation-delay: 0.25s;
+        animation-fill-mode: both;
+    }
+    @keyframes hm-tip-in {
+        from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+        to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .hm-level-0 { background-color: #161b22; }
+    .hm-level-1 { background-color: #0e4429; }
+    .hm-level-2 { background-color: #006d32; }
+    .hm-level-3 { background-color: #26a641; }
+    .hm-level-4 { background-color: #39d353; }
+
+    .hm-legend-cell {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+
+    .hm-stat-card {
+        background: rgba(22, 27, 34, 0.6);
+        border: 1px solid rgba(100, 116, 139, 0.2);
+        border-radius: 8px;
+        padding: 12px 14px;
+    }
+
+    .activity-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        transition: background 0.15s ease;
+        border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+    }
+    .activity-row:last-child { border-bottom: none; }
+    .activity-row:hover {
+        background: rgba(51, 65, 85, 0.3);
+    }
+    .activity-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+        text-transform: uppercase;
+    }
+    .activity-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 500;
+        text-decoration: none;
+        white-space: nowrap;
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: background 0.15s ease;
+    }
+    .activity-badge-project {
+        background: rgba(99, 102, 241, 0.15);
+        color: #a5b4fc;
+    }
+    .activity-badge-project:hover {
+        background: rgba(99, 102, 241, 0.3);
+    }
+    .activity-badge-sha {
+        background: rgba(51, 65, 85, 0.5);
+        color: #94a3b8;
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        letter-spacing: 0.3px;
+    }
+    .activity-badge-sha:hover {
+        background: rgba(51, 65, 85, 0.8);
+        color: #cbd5e1;
+    }
+    .activity-msg {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+        color: #94a3b8;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .activity-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+        font-size: 11px;
+        color: #64748b;
+        white-space: nowrap;
+    }
+    .activity-meta a {
+        color: #64748b;
+        text-decoration: none;
+        transition: color 0.15s ease;
+    }
+    .activity-meta a:hover { color: #a5b4fc; }
+    .activity-time-short { display: none; }
+
+    .quick-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        background: rgba(30, 41, 59, 0.6);
+        color: #e2e8f0;
+        font-weight: 500;
+        font-size: 0.8125rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .quick-action-btn:hover {
+        border-color: rgba(99, 102, 241, 0.5);
+        background: rgba(99, 102, 241, 0.1);
+        color: #a5b4fc;
+    }
+
+    @media (max-width: 640px) {
+        .stat-value { font-size: 1.5rem; }
+        .stat-card { padding: 14px; }
+    }
+
+    /* ---- Mobile overhaul (tablets and below) ---- */
+    @media (max-width: 768px) {
+        /* Quick actions: full-width stacked buttons */
+        .quick-action-btn {
+            display: flex;
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 0.875rem;
+        }
+
+        /* Hide contribution heatmap entirely */
+        .heatmap-section-desktop {
+            display: none !important;
+        }
+
+        /* Activity feed: 3-column compact layout — Who / Project / When */
+        .activity-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 6px 10px;
+            align-items: center;
+            padding: 8px 6px;
+        }
+        .activity-avatar,
+        .activity-msg,
+        .activity-badge-sha {
+            display: none;
+        }
+        .activity-row .text-sm.font-medium.text-slate-200 {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        .activity-badge-project {
+            max-width: none;
+            font-size: 11px;
+        }
+        .activity-meta {
+            font-size: 11px;
+        }
+        .activity-time-full { display: none; }
+        .activity-time-short { display: inline; }
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+
+        <!-- Page Header + Quick Actions -->
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+            <div class="mb-4 sm:mb-0">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Dashboard</h1>
+            </div>
+            <div class="flex flex-col sm:flex-row flex-wrap gap-2">
+                <a href="{% url 'private:project_new' %}" class="quick-action-btn">
+                    <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Create New Project
+                </a>
+                <a href="{% url 'private:projects' %}" class="quick-action-btn">
+                    <svg class="w-5 h-5 text-sky-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                    </svg>
+                    View All Projects
+                </a>
+                <a href="{% url 'private:map_viewer' %}" class="quick-action-btn">
+                    <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                    </svg>
+                    Open Survey Map
+                </a>
+            </div>
+        </div>
+
+        <!-- Stat Cards -->
+        <div id="stat-cards" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+            <div class="stat-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                </div>
+                <div class="stat-value" id="stat-projects"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
+                <div class="stat-label">Projects</div>
+            </div>
+            <div class="stat-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-5 h-5 text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </div>
+                <div class="stat-value" id="stat-teams"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
+                <div class="stat-label">Teams</div>
+            </div>
+            <div class="stat-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="stat-value" id="stat-commits"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
+                <div class="stat-label">Your Contributions</div>
+            </div>
+            <div class="stat-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-5 h-5 text-sky-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </div>
+                <div class="stat-value" id="stat-stations"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
+                <div class="stat-label">Stations Created</div>
+            </div>
+            <div class="stat-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                    </svg>
+                </div>
+                <div class="stat-value" id="stat-landmarks"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
+                <div class="stat-label">Landmarks</div>
+            </div>
+            <div class="stat-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-5 h-5 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                    </svg>
+                </div>
+                <div class="stat-value" id="stat-gps-tracks"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
+                <div class="stat-label">GPS Tracks</div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="flex flex-col md:flex-row gap-6 mb-8">
+            <!-- Contributions Over Time -->
+            <div class="bg-slate-800 rounded-sm shadow-lg border border-slate-700 p-5 flex-1 md:w-2/3">
+                <h2 class="text-lg font-semibold text-slate-100 mb-4">Contributions Over Time</h2>
+                <div style="position:relative; height:280px;">
+                    <canvas id="commits-chart" role="img" aria-label="Line chart showing contributions over the last 12 months"></canvas>
+                </div>
+            </div>
+            <!-- Projects by Software -->
+            <div class="bg-slate-800 rounded-sm shadow-lg border border-slate-700 p-5 md:w-1/3">
+                <h2 class="text-lg font-semibold text-slate-100 mb-4">Projects by Software</h2>
+                <div style="position:relative; height:280px;" class="flex items-center justify-center">
+                    <canvas id="projects-chart" role="img" aria-label="Doughnut chart showing projects by software type"></canvas>
+                    <div id="projects-chart-empty" class="hidden text-slate-500 text-sm text-center absolute">No projects yet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contribution Heatmap -->
+        <div class="bg-slate-800 rounded-sm shadow-lg border border-slate-700 p-5 mb-8 heatmap-section-desktop">
+            <div class="flex items-baseline justify-between mb-3">
+                <h2 class="text-sm text-slate-100">
+                    <span id="heatmap-total-count" class="font-semibold">0</span>
+                    contributions in the last year
+                </h2>
+            </div>
+
+            <!-- Heatmap graph rendered as a <table> for perfect alignment -->
+            <div class="mb-3">
+                <table id="contribution-heatmap" class="heatmap-table" aria-label="Contribution activity">
+                    <!-- JS renders thead (months) + 7 tbody rows (Sun..Sat) -->
+                </table>
+            </div>
+
+            <div class="flex items-center justify-end gap-1.5 text-xs text-slate-500 mb-5">
+                <span>Less</span>
+                <span class="hm-legend-cell hm-level-0"></span>
+                <span class="hm-legend-cell hm-level-1"></span>
+                <span class="hm-legend-cell hm-level-2"></span>
+                <span class="hm-legend-cell hm-level-3"></span>
+                <span class="hm-legend-cell hm-level-4"></span>
+                <span>More</span>
+            </div>
+
+            <!-- Summary stats row -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="hm-stat-card">
+                    <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">This week</div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-xl font-bold text-slate-100" id="heatmap-week-count">0</span>
+                        <span class="text-xs text-slate-500">contributions</span>
+                    </div>
+                </div>
+                <div class="hm-stat-card">
+                    <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">This month</div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-xl font-bold text-slate-100" id="heatmap-month-count">0</span>
+                        <span class="text-xs text-slate-500">contributions</span>
+                    </div>
+                </div>
+                <div class="hm-stat-card">
+                    <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">Busiest day</div>
+                    <div class="text-sm font-semibold text-slate-200" id="heatmap-busiest-day">--</div>
+                    <div class="text-xs text-slate-500" id="heatmap-busiest-count">&nbsp;</div>
+                </div>
+                <div class="hm-stat-card">
+                    <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">Current streak</div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-xl font-bold text-slate-100" id="heatmap-streak-count">0</span>
+                        <span class="text-xs text-slate-500">days</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-slate-800 rounded-sm shadow-lg border border-slate-700 p-5">
+            <h2 class="text-lg font-semibold text-slate-100 mb-4">Recent Activity</h2>
+            <div id="recent-activity">
+                <div class="flex items-center gap-3 py-2.5 px-3" style="height:52px">
+                    <div class="skeleton-pulse" style="width:32px;height:32px;border-radius:50%;flex-shrink:0"></div>
+                    <div class="flex-1">
+                        <div class="skeleton-pulse" style="width:60%;height:14px;margin-bottom:6px"></div>
+                        <div class="skeleton-pulse" style="width:40%;height:12px"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 py-2.5 px-3" style="height:52px">
+                    <div class="skeleton-pulse" style="width:32px;height:32px;border-radius:50%;flex-shrink:0"></div>
+                    <div class="flex-1">
+                        <div class="skeleton-pulse" style="width:50%;height:14px;margin-bottom:6px"></div>
+                        <div class="skeleton-pulse" style="width:35%;height:12px"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 py-2.5 px-3" style="height:52px">
+                    <div class="skeleton-pulse" style="width:32px;height:32px;border-radius:50%;flex-shrink:0"></div>
+                    <div class="flex-1">
+                        <div class="skeleton-pulse" style="width:55%;height:14px;margin-bottom:6px"></div>
+                        <div class="skeleton-pulse" style="width:45%;height:12px"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+{% endblock content %}
+
+{% block extra_js %}
+<script src="{% url 'url_reverse.js' %}"></script>
+<script src="{% static 'private/js/dashboard-helpers.js' %}"></script>
+{% if debug %}
+<script src="{% static 'private/js/vendors/chart.js' %}"></script>
+{% else %}
+<script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.0/chart.umd.min.js"
+    integrity="sha512-TJ7U6JRJx5IpyvvO9atNnBzwJIoZDaQnQhb0Wmw32Rj5BQHAmJG16WzaJbDns2Wk5VG6gMt4MytZApZG47rCdg==" 
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+</script>
+{% endif %}
+{% endblock extra_js %}
+
+{% block inline_extra_js %}
+<script>
+$(document).ready(function() {
+    var commitsChart = null;
+    var projectsChart = null;
+
+    function populateStatCards(summary) {
+        $('#stat-projects').text(formatNumber(summary.total_projects));
+        $('#stat-teams').text(formatNumber(summary.total_teams));
+        $('#stat-commits').text(formatNumber(summary.user_commits));
+        $('#stat-stations').text(formatNumber(summary.total_stations_created));
+        $('#stat-landmarks').text(formatNumber(summary.total_landmarks));
+        $('#stat-gps-tracks').text(formatNumber(summary.total_gps_tracks));
+    }
+
+    function showStatCardErrors() {
+        $('#stat-cards .stat-value').text('-');
+    }
+
+    function initCommitsChart(commitsOverTime) {
+        var ctx = document.getElementById('commits-chart');
+        if (!ctx) return;
+
+        var config = buildCommitsChartConfig(commitsOverTime);
+        config.data.datasets[0].backgroundColor = 'rgba(129,140,248,0.1)';
+        config.data.datasets[0].fill = true;
+        config.data.datasets[0].tension = 0.3;
+        config.data.datasets[0].pointRadius = 3;
+        config.data.datasets[0].pointHoverRadius = 5;
+        config.data.datasets[1].backgroundColor = 'rgba(52,211,153,0.1)';
+        config.data.datasets[1].fill = true;
+        config.data.datasets[1].tension = 0.3;
+        config.data.datasets[1].pointRadius = 3;
+        config.data.datasets[1].pointHoverRadius = 5;
+
+        config.options = {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle' }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#64748b' },
+                    grid: { color: 'rgba(51,65,85,0.4)' }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#64748b', precision: 0 },
+                    grid: { color: 'rgba(51,65,85,0.4)' }
+                }
+            }
+        };
+
+        commitsChart = new Chart(ctx, config);
+    }
+
+    function initProjectsChart(projectsByType) {
+        var ctx = document.getElementById('projects-chart');
+        if (!ctx) return;
+
+        var config = buildProjectsChartConfig(projectsByType);
+
+        if (config.isEmpty) {
+            $(ctx).hide();
+            $('#projects-chart-empty').removeClass('hidden');
+            return;
+        }
+
+        config.data.datasets[0].borderColor = '#1e293b';
+        config.data.datasets[0].borderWidth = 2;
+        config.options = {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', padding: 16 }
+                }
+            }
+        };
+
+        projectsChart = new Chart(ctx, config);
+    }
+
+    function renderHeatmap(calendarTimestamps) {
+        var table = document.getElementById('contribution-heatmap');
+        if (!table) return;
+
+        var calendar = groupTimestampsByLocalDate(
+            Array.isArray(calendarTimestamps) ? calendarTimestamps : []
+        );
+        if (!Array.isArray(calendarTimestamps) && calendarTimestamps && typeof calendarTimestamps === 'object') {
+            calendar = calendarTimestamps;
+        }
+
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        function toMonday(d) { return (d.getDay() + 6) % 7; }
+
+        var totalWeeks = 53;
+        var endDate = new Date(today);
+        endDate.setDate(endDate.getDate() + (6 - toMonday(endDate)));
+        var startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - (totalWeeks * 7) + 1);
+
+        var weeks = [];
+        var cursor = new Date(startDate);
+
+        for (var w = 0; w < totalWeeks; w++) {
+            var week = [];
+            for (var d = 0; d < 7; d++) {
+                var key = cursor.getFullYear() + '-' +
+                    String(cursor.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(cursor.getDate()).padStart(2, '0');
+                var isFuture = cursor > today;
+                var count = isFuture ? 0 : (calendar[key] || 0);
+                week.push({ date: new Date(cursor), key: key, count: count, future: isFuture });
+                cursor.setDate(cursor.getDate() + 1);
+            }
+            weeks.push(week);
+        }
+
+        var stats = computeHeatmapStats(calendar);
+
+        var monthHeaders = [];
+        var prevMKey = '';
+        for (var w = 0; w < totalWeeks; w++) {
+            var firstDay = weeks[w][0];
+            var mKey = firstDay.date.getFullYear() + '-' + firstDay.date.getMonth();
+            if (mKey !== prevMKey) {
+                var yr = String(firstDay.date.getFullYear()).slice(-2);
+                monthHeaders.push({
+                    label: firstDay.date.toLocaleString('en', { month: 'short' }) + ' ' + yr,
+                    startCol: w
+                });
+                prevMKey = mKey;
+            }
+        }
+        for (var i = 0; i < monthHeaders.length; i++) {
+            var nextStart = (i + 1 < monthHeaders.length) ? monthHeaders[i + 1].startCol : totalWeeks;
+            monthHeaders[i].colspan = nextStart - monthHeaders[i].startCol;
+        }
+
+        var dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+        function ordinal(n) {
+            var s = ['th','st','nd','rd'];
+            var v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        }
+        var tipMonths = ['January','February','March','April','May','June',
+                         'July','August','September','October','November','December'];
+
+        var html = '<colgroup><col class="hm-label-col">';
+        for (var c = 0; c < totalWeeks; c++) html += '<col>';
+        html += '</colgroup>';
+
+        html += '<thead><tr><td></td>';
+        for (var i = 0; i < monthHeaders.length; i++) {
+            html += '<td colspan="' + monthHeaders[i].colspan + '">' + monthHeaders[i].label + '</td>';
+        }
+        html += '</tr></thead><tbody>';
+
+        for (var row = 0; row < 7; row++) {
+            html += '<tr>';
+            html += '<td class="hm-day-label">' + dayLabels[row] + '</td>';
+            for (var col = 0; col < totalWeeks; col++) {
+                var cell = weeks[col][row];
+                if (cell.future) {
+                    html += '<td></td>';
+                } else {
+                    var lvl = getHeatmapLevel(cell.count);
+                    var cd = cell.date;
+                    var tip = cell.count + ' contribution' + (cell.count !== 1 ? 's' : '') +
+                        ' on ' + tipMonths[cd.getMonth()] + ' ' + ordinal(cd.getDate()) + '.';
+                    html += '<td><div class="hm-cell hm-level-' + lvl + '" data-tip="' + tip + '" title="' + tip + '" aria-label="' + tip + '"></div></td>';
+                }
+            }
+            html += '</tr>';
+        }
+        html += '</tbody>';
+        table.innerHTML = html;
+
+        var el;
+        el = document.getElementById('heatmap-total-count');
+        if (el) el.textContent = stats.total.toLocaleString();
+
+        el = document.getElementById('heatmap-week-count');
+        if (el) el.textContent = stats.weekCount.toLocaleString();
+
+        el = document.getElementById('heatmap-month-count');
+        if (el) el.textContent = stats.monthCount.toLocaleString();
+
+        var busiestEl = document.getElementById('heatmap-busiest-day');
+        var busiestCountEl = document.getElementById('heatmap-busiest-count');
+        if (busiestEl) {
+            if (stats.busiestDayCount > 0) {
+                var bd = new Date(stats.busiestDay + 'T00:00:00');
+                busiestEl.textContent = bd.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
+                if (busiestCountEl) busiestCountEl.textContent = stats.busiestDayCount + ' contribution' + (stats.busiestDayCount !== 1 ? 's' : '');
+            } else {
+                busiestEl.textContent = '--';
+                if (busiestCountEl) busiestCountEl.textContent = '';
+            }
+        }
+
+        el = document.getElementById('heatmap-streak-count');
+        if (el) el.textContent = stats.streak;
+    }
+
+    function renderActivityFeed(activity) {
+        var container = document.getElementById('recent-activity');
+        if (!container) return;
+
+        // Filter out automated system commits
+        var filtered = [];
+        if (activity) {
+            for (var i = 0; i < activity.length; i++) {
+                if (activity[i].author_name === 'SpeleoDB' && activity[i].message.indexOf('[Automated]') === 0) continue;
+                filtered.push(activity[i]);
+            }
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML =
+                '<div class="flex flex-col items-center justify-center py-10 text-center">' +
+                    '<svg class="w-12 h-12 text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>' +
+                    '</svg>' +
+                    '<div class="text-sm text-slate-400">No recent activity</div>' +
+                    '<div class="text-xs text-slate-600 mt-1">Contributions will appear here as you work</div>' +
+                '</div>';
+            return;
+        }
+
+        var html = '';
+        var lastDateLabel = '';
+
+        for (var i = 0; i < filtered.length; i++) {
+            var item = filtered[i];
+            var projectName = escapeHtml(item.project_name);
+            var authorName = escapeHtml(item.author_name);
+            var message = escapeHtml(item.message);
+            var projectUrl = Urls['private:project_details'](item.project_id);
+            var initials = getInitials(item.author_name);
+            var color = getAvatarColor(item.author_name);
+
+            var itemDate = new Date(item.authored_date);
+            var localDateTime = itemDate.toLocaleDateString('en', {
+                month: 'short', day: 'numeric', year: 'numeric'
+            }) + ' at ' + itemDate.toLocaleTimeString('en', {
+                hour: 'numeric', minute: '2-digit', hour12: true
+            });
+            var localDateOnly = itemDate.toLocaleDateString('en', {
+                month: 'short', day: 'numeric'
+            });
+
+            // Date group headers
+            var todayDate = new Date();
+            var dateLabel;
+            if (itemDate.toDateString() === todayDate.toDateString()) {
+                dateLabel = 'Today';
+            } else {
+                var yesterday = new Date(todayDate);
+                yesterday.setDate(yesterday.getDate() - 1);
+                if (itemDate.toDateString() === yesterday.toDateString()) {
+                    dateLabel = 'Yesterday';
+                } else {
+                    dateLabel = itemDate.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+                }
+            }
+
+            if (dateLabel !== lastDateLabel) {
+                html += '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide px-2 ' +
+                    (i > 0 ? 'mt-3 ' : '') + 'mb-1">' + dateLabel + '</div>';
+                lastDateLabel = dateLabel;
+            }
+
+            var gitUrl = Urls['private:project_revision_explorer'](item.project_id, item.commit_id);
+            var shortSha = item.commit_id ? item.commit_id.slice(0, 7) : '';
+
+            html += '<div class="activity-row">' +
+                '<div class="activity-avatar" style="background-color:' + color + '">' + initials + '</div>' +
+                '<span class="text-sm font-medium text-slate-200 shrink-0">' + authorName + '</span>' +
+                '<a href="' + projectUrl + '" class="activity-badge activity-badge-project">' + projectName + '</a>' +
+                '<a href="' + gitUrl + '" class="activity-badge activity-badge-sha" title="Browse commit">' + shortSha + '</a>' +
+                '<span class="activity-msg">' + message + '</span>' +
+                '<span class="activity-meta"><span class="activity-time-full">' + localDateTime + '</span><span class="activity-time-short">' + localDateOnly + '</span></span>' +
+            '</div>';
+        }
+        container.innerHTML = html;
+    }
+
+    $.ajax({
+        url: Urls['api:v1:user-dashboard-stats'](),
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                var data = response.data;
+                populateStatCards(data.summary);
+                initCommitsChart(data.commits_over_time);
+                initProjectsChart(data.projects_by_type);
+                renderHeatmap(data.contribution_calendar);
+                renderActivityFeed(data.recent_activity);
+            } else {
+                showStatCardErrors();
+            }
+        },
+        error: function() {
+            showStatCardErrors();
+            $('#recent-activity').html('<div class="text-sm text-slate-500 py-4 text-center">Failed to load activity</div>');
+        }
+    });
+});
+</script>
+{% endblock inline_extra_js %}

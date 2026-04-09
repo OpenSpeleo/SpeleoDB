@@ -59,6 +59,7 @@ from frontend_private.views.user import DashboardView
 from frontend_private.views.user import FeedbackView
 from frontend_private.views.user import PassWordView
 from frontend_private.views.user import PreferencesView
+from frontend_private.views.user import ProfileView
 from frontend_private.views.user import StationTagsView
 
 __all__ = [
@@ -94,6 +95,7 @@ __all__ = [
     "NewTeamView",
     "PassWordView",
     "PreferencesView",
+    "ProfileView",
     "ProjectDangerZoneView",
     "ProjectDetailsView",
     "ProjectGitExplorerView",

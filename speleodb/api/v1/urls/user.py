@@ -12,6 +12,7 @@ from speleodb.api.v1.views.user import UserAuthTokenView
 from speleodb.api.v1.views.user import UserAutocompleteView
 from speleodb.api.v1.views.user import UserInfo
 from speleodb.api.v1.views.user import UserPasswordChangeView
+from speleodb.api.v1.views.user_dashboard import UserDashboardStatsView
 
 urlpatterns: list[URLPattern] = [
     path("", UserInfo.as_view(), name="user-detail"),
@@ -23,6 +24,11 @@ urlpatterns: list[URLPattern] = [
         name="release-all-locks",
     ),
     path("autocomplete/", UserAutocompleteView.as_view(), name="user-autocomplete"),
+    path(
+        "dashboard-stats/",
+        UserDashboardStatsView.as_view(),
+        name="user-dashboard-stats",
+    ),
     # GIS View Management
     path("gis_views/", GISViewManagementListApiView.as_view(), name="gis-views"),
     path(

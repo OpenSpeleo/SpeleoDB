@@ -57,9 +57,36 @@ work to the database where it belongs. This means:
 - Even when a prefetch cache exists, writing `filter()` makes the intent
   clear and keeps the code honest when the prefetch is later removed.
 
+## Mistake 3: Case/When conditional aggregation killing index usage
+
+```python
+# BAD — Case/When forces full table scan, bypasses indexes
+commit_qs.aggregate(
+    total=Count("id"),
+    user_total=Count(Case(When(author_email=user.email, then=1))),
+)
+```
+
+```python
+# GOOD — two indexed COUNT queries, each can use its own index
+commit_qs.count()
+commit_qs.filter(author_email=user.email).count()
+```
+
+`Count(Case(When(...)))` looks clever (one query instead of two), but the
+CASE expression prevents the database from using an index on the filtered
+column. On large tables this causes a full sequential scan instead of two
+fast index lookups, turning a ~200ms endpoint into ~12s.
+
+**Rule:** Do not "optimize" separate indexed `.count()` calls into a single
+`Case/When` aggregate unless you have verified with `EXPLAIN ANALYZE` that
+it actually helps.
+
 ## Self-check before committing
 
 1. Am I converting a queryset to a list? Do I need all items?
 2. Am I looping/generating over a queryset to find a match? Use `.filter()`.
 3. Am I doing `next(... for x in qs if x.field == val)` ? That is always
    wrong — use `.filter(field=val).first()`.
+4. Am I replacing multiple simple `.count()` with `Case/When` aggregation?
+   Verify with `EXPLAIN` first — it often makes things worse.

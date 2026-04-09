@@ -40,6 +40,7 @@ from frontend_private.views import NewSurfaceNetworkView
 from frontend_private.views import NewTeamView
 from frontend_private.views import PassWordView
 from frontend_private.views import PreferencesView
+from frontend_private.views import ProfileView
 from frontend_private.views import ProjectDangerZoneView
 from frontend_private.views import ProjectDetailsView
 from frontend_private.views import ProjectGitExplorerView
@@ -245,6 +246,7 @@ team_urls: list[URLPattern] = [
 urlpatterns: list[URLPattern | URLResolver] = [
     # User URLs
     path("", DashboardView.as_view(), name="user_dashboard"),
+    path("profile/", ProfileView.as_view(), name="user_profile"),
     path("auth-token/", AuthTokenView.as_view(), name="user_authtoken"),
     path("feedback/", FeedbackView.as_view(), name="user_feedback"),
     path("password/", PassWordView.as_view(), name="user_password"),

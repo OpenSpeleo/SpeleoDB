@@ -62,6 +62,7 @@ class UserViewsTest(BaseTestCase):
     @parameterized.expand(
         [
             "user_dashboard",
+            "user_profile",
             "user_authtoken",
             "user_feedback",
             "user_password",

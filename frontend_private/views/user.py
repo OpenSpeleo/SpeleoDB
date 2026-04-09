@@ -17,8 +17,13 @@ if TYPE_CHECKING:
     from speleodb.utils.requests import AuthenticatedHttpRequest
 
 
-# ============ Setting Pages ============ #
+# ============ Dashboard ============ #
 class DashboardView(AuthenticatedTemplateView):
+    template_name = "pages/dashboard.html"
+
+
+# ============ Setting Pages ============ #
+class ProfileView(AuthenticatedTemplateView):
     template_name = "pages/user/dashboard.html"
 
 

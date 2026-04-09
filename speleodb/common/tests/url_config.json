@@ -1098,6 +1098,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/user/dashboard-stats/",
+        "module": "speleodb.api.v1.views.user_dashboard.UserDashboardStatsView",
+        "name": "api:v1:user-dashboard-stats",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/user/gis_views/",
         "module": "speleodb.api.v1.views.gis_view_management.GISViewManagementListApiView",
         "name": "api:v1:gis-views",
@@ -1353,6 +1359,12 @@
         "url": "/private/preferences/",
         "module": "frontend_private.views.user.PreferencesView",
         "name": "private:user_preferences",
+        "decorators": ""
+    },
+    {
+        "url": "/private/profile/",
+        "module": "frontend_private.views.user.ProfileView",
+        "name": "private:user_profile",
         "decorators": ""
     },
     {

@@ -1,0 +1,42 @@
+---
+description: Python imports must be at the top of the file — never inline
+globs: "**/*.py"
+alwaysApply: true
+---
+
+# Python Import Rules
+
+**ALL imports MUST be at the top of the file.** Never place `import` or
+`from ... import` statements inside functions, methods, `setUp`, or any
+other non-top-level scope.
+
+This is a hard rule enforced by ruff (PLC0415). Violations break CI.
+
+```python
+# BAD — inline import inside a method (PLC0415)
+def test_something(self) -> None:
+    from speleodb.common.enums import ProjectType
+    ...
+
+# BAD — inline import inside setUp
+def setUp(self) -> None:
+    from speleodb.api.v1.tests.factories import TokenFactory
+    ...
+
+# GOOD — all imports at the top of the file
+from speleodb.api.v1.tests.factories import TokenFactory
+from speleodb.common.enums import ProjectType
+
+def test_something(self) -> None:
+    ...
+```
+
+The only exception is `TYPE_CHECKING` blocks:
+
+```python
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User  # OK — guarded, not runtime
+```
