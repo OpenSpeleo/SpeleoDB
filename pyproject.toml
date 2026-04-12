@@ -118,7 +118,7 @@ local = [
     "django-stubs[compatible-mypy]==6.0.1",               # https://github.com/typeddjango/django-stubs
     "celery-types==0.26.0",                               # https://github.com/sbdchd/celery-types
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
-    "types-pytz==2026.1.1.20260304",                      # https://github.com/python/typeshed
+    "types-pytz==2026.1.1.20260402",                      # https://github.com/python/typeshed
 
     # Django Testing
     # ------------------------------------------------------------------------------
