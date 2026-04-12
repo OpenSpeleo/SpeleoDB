@@ -105,7 +105,7 @@ local = [
 
     # Testing
     # ------------------------------------------------------------------------------
-    "deepdiff>=7.0,<9.0",   # https://github.com/seperman/deepdiff
+    "deepdiff>=9.0.0,<10.0",   # https://github.com/seperman/deepdiff
     "factory-boy==3.3.3",   # https://github.com/FactoryBoy/factory_boy
     "mypy==1.19.1",         # https://github.com/python/mypy
     "parameterized==0.9.0", # https://github.com/wolever/parameterized
