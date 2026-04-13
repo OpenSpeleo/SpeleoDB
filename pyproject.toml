@@ -46,7 +46,7 @@ dependencies = [
     "geojson==3.2.0",        # https://github.com/jazzband/geojson
     "gpxpy==1.6.2",          # https://github.com/tkrajina/gpxpy
     "jsonschema-rs==0.45.0", # https://github.com/Stranger6667/jsonschema
-    "orjson==3.11.7",        # https://github.com/ijl/orjson
+    "orjson==3.11.8",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
     # ------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ dependencies = [
     # Django
     # ------------------------------------------------------------------------------
     "django==6.0.4",                   # https://www.djangoproject.com/
-    "django-allauth==65.15.0",         # https://github.com/pennersr/django-allauth
+    "django-allauth==65.15.1",         # https://github.com/pennersr/django-allauth
     "django-countries==8.2.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.13.0",          # https://github.com/joke2k/django-environ
@@ -82,7 +82,7 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.42.78", # https://github.com/boto/botocore
+    "botocore==1.42.83", # https://github.com/boto/botocore
     "boto3==1.42.78",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
@@ -94,18 +94,18 @@ dependencies = [
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.56.0", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.57.0", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
 local = [
-    "werkzeug[watchdog]==3.1.7", # https://github.com/pallets/werkzeug
+    "werkzeug[watchdog]==3.1.8", # https://github.com/pallets/werkzeug
     "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
     "psycopg[binary]==3.3.3",    # https://github.com/psycopg/psycopg
 
     # Testing
     # ------------------------------------------------------------------------------
-    "deepdiff>=7.0,<9.0",   # https://github.com/seperman/deepdiff
+    "deepdiff>=9.0.0,<10.0",   # https://github.com/seperman/deepdiff
     "factory-boy==3.3.3",   # https://github.com/FactoryBoy/factory_boy
     "mypy==1.19.1",         # https://github.com/python/mypy
     "parameterized==0.9.0", # https://github.com/wolever/parameterized
@@ -114,27 +114,27 @@ local = [
 
     # Typing
     # ------------------------------------------------------------------------------
-    "djangorestframework-stubs[compatible-mypy]==3.16.8", # https://github.com/typeddjango/djangorestframework-stubs
-    "django-stubs[compatible-mypy]==6.0.1",               # https://github.com/typeddjango/django-stubs
+    "djangorestframework-stubs[compatible-mypy]==3.16.9", # https://github.com/typeddjango/djangorestframework-stubs
+    "django-stubs[compatible-mypy]==6.0.2",               # https://github.com/typeddjango/django-stubs
     "celery-types==0.26.0",                               # https://github.com/sbdchd/celery-types
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
-    "types-pytz==2026.1.1.20260304",                      # https://github.com/python/typeshed
+    "types-pytz==2026.1.1.20260402",                      # https://github.com/python/typeshed
 
     # Django Testing
     # ------------------------------------------------------------------------------
-    "django-coverage-plugin==3.2.0", # https://github.com/nedbat/django_coverage_plugin
+    "django-coverage-plugin==3.2.2", # https://github.com/nedbat/django_coverage_plugin
     "pytest-django==4.12.0",         # https://github.com/pytest-dev/pytest-django
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.15.8",     # https://github.com/astral-sh/ruff
+    "ruff==0.15.9",     # https://github.com/astral-sh/ruff
     "coverage==7.13.5", # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",   # https://github.com/Riverside-Healthcare/djLint
     "prek==0.3.8",      # https://github.com/j178/prek
 
     # Django
     # ------------------------------------------------------------------------------
-    "django-debug-toolbar==6.2.0",    # https://github.com/jazzband/django-debug-toolbar
+    "django-debug-toolbar==6.3.0",    # https://github.com/jazzband/django-debug-toolbar
     "django-extensions==4.1",         # https://github.com/django-extensions/django-extensions
     "django-schema-viewer==0.5.3",    # https://github.com/pikhovkin/django-schema-viewer
     "django-silk[formatting]==5.5.0", # https://github.com/jazzband/django-silk
