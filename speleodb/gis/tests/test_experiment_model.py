@@ -720,8 +720,8 @@ class TestExperimentModel:
         assert "experiment_fields" in exc_info.value.message_dict
         assert "not unique" in str(exc_info.value.message_dict).lower()
 
-    def test_field_name_titlecase_enforcement(self) -> None:
-        """Test that field names are automatically converted to titlecase."""
+    def test_field_name_case_preserved(self) -> None:
+        """Test that field names preserve their original case."""
         uuid1 = Experiment.generate_field_uuid()
 
         experiment = Experiment.objects.create(
@@ -730,7 +730,7 @@ class TestExperimentModel:
             experiment_fields={
                 **MandatoryFieldUuid.get_mandatory_fields(),
                 uuid1: {
-                    "name": "ph level",  # lowercase
+                    "name": "pH level",
                     "type": FieldType.NUMBER.value,
                     "required": False,
                     "order": 2,
@@ -738,9 +738,8 @@ class TestExperimentModel:
             },
         )
 
-        # Verify name was converted to titlecase
         experiment.refresh_from_db()
-        assert experiment.experiment_fields[uuid1]["name"] == "Ph Level"
+        assert experiment.experiment_fields[uuid1]["name"] == "pH level"
 
     def test_order_field_present(self) -> None:
         """Test that order field is required and present."""
@@ -943,8 +942,8 @@ class TestExperimentModel:
         assert "experiment_fields" in exc_info.value.message_dict
         assert "not unique" in str(exc_info.value.message_dict).lower()
 
-    def test_titlecase_with_special_characters(self) -> None:
-        """Test titlecase conversion with special characters."""
+    def test_field_name_special_characters_preserved(self) -> None:
+        """Test that mixed case and special characters in field names are preserved."""
         uuid1 = Experiment.generate_field_uuid()
 
         experiment = Experiment.objects.create(
@@ -953,7 +952,7 @@ class TestExperimentModel:
             experiment_fields={
                 **MandatoryFieldUuid.get_mandatory_fields(),
                 uuid1: {
-                    "name": "pH level (water)",  # Mixed case with parentheses
+                    "name": "Nitrate No3-N (mg/L-N)",
                     "type": FieldType.NUMBER.value,
                     "required": False,
                     "order": 2,
@@ -961,9 +960,8 @@ class TestExperimentModel:
             },
         )
 
-        # Verify titlecase was applied
         experiment.refresh_from_db()
-        assert experiment.experiment_fields[uuid1]["name"] == "Ph Level (Water)"
+        assert experiment.experiment_fields[uuid1]["name"] == "Nitrate No3-N (mg/L-N)"
 
     def test_edit_name_and_order_together(self) -> None:
         """Test that both name and order can be edited simultaneously."""

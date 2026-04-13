@@ -449,14 +449,14 @@ class TestExperimentSerializer:
         assert "experiment_fields" in serializer.errors
         assert "not unique" in str(serializer.errors).lower()
 
-    def test_titlecase_enforcement_via_serializer(self, user: User) -> None:
-        """Test that titlecase is enforced via serializer."""
+    def test_field_name_case_preserved_via_serializer(self, user: User) -> None:
+        """Test that field names preserve their original case via serializer."""
         data = {
             "name": "Test Experiment",
             "created_by": user.email,
             "experiment_fields": [
-                {"name": "measurement date", "type": "date", "required": True},
-                {"name": "SUBMITTER EMAIL", "type": "text", "required": True},
+                {"name": "Measurement Date", "type": "date", "required": True},
+                {"name": "Submitter Email", "type": "text", "required": True},
                 {"name": "pH level", "type": "number", "required": False},
             ],
         }
@@ -465,7 +465,6 @@ class TestExperimentSerializer:
         assert serializer.is_valid(), f"Serializer errors: {serializer.errors}"
         saved = serializer.save()
 
-        # Find fields and check titlecase
         fields = saved.experiment_fields
         measurement_field = fields["00000000-0000-0000-0000-000000000001"]
         assert measurement_field["name"] == "Measurement Date"
@@ -473,10 +472,9 @@ class TestExperimentSerializer:
         submitter_field = fields["00000000-0000-0000-0000-000000000002"]
         assert submitter_field["name"] == "Submitter Email"
 
-        # Find ph level field
-        ph_field = next((f for f in fields.values() if "Ph Level" in f["name"]), None)
+        ph_field = next((f for f in fields.values() if "pH level" in f["name"]), None)
         assert ph_field is not None
-        assert ph_field["name"] == "Ph Level"
+        assert ph_field["name"] == "pH level"
 
     def test_order_field_in_serializer_output(self, user: User) -> None:
         """Test that order field is included in serializer output."""

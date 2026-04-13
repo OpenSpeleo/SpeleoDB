@@ -1,7 +1,7 @@
 /* global escapeHtml */
 /**
  * Experiment Fields Manager
- * Handles dynamic field creation, tag management, and Title Case conversion
+ * Handles dynamic field creation, tag management, and validation
  * for experiment custom fields with Multiple Choice options
  */
 
@@ -10,17 +10,6 @@
 
     // Field counter for unique IDs
     let fieldCounter = 0;
-
-    /**
-     * Convert text to Title Case
-     * Standardizes values to make them case-agnostic
-     */
-    function toTitleCase(str) {
-        return str.replace(
-            /\w\S*/g,
-            text => text.charAt(0).toUpperCase() + text.substring(1).toLowerCase()
-        );
-    }
 
     /**
      * Toggle visibility of "no fields" message
@@ -37,10 +26,9 @@
     }
 
     function createTag(text, container) {
-        const titleCaseText = toTitleCase(text);
         const tag = $(`
             <span class="inline-flex items-center gap-1 px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
-                <span class="tag-text">${escapeHtml(titleCaseText)}</span>
+                <span class="tag-text">${escapeHtml(text)}</span>
                 <button type="button" class="remove-tag hover:text-rose-400 transition-colors">
                     <svg class="w-3 h-3 fill-current" viewBox="0 0 16 16">
                         <path d="M12.72 3.293a1 1 0 00-1.415 0L8 6.586 4.695 3.293a1 1 0 00-1.414 1.414L6.586 8l-3.305 3.305a1 1 0 101.414 1.414L8 9.414l3.305 3.305a1 1 0 001.414-1.414L9.414 8l3.305-3.293a1 1 0 000-1.414z"/>
@@ -136,8 +124,7 @@
             const editedName = $(this).find('.existing-field-name').val().trim();
             
             if (editedName) {
-                const normalizedName = toTitleCase(editedName);
-                const lowerName = normalizedName.toLowerCase();
+                const lowerName = editedName.toLowerCase();
 
                 if (!fieldNames.has(lowerName)) {
                     fieldNames.set(lowerName, []);
@@ -152,8 +139,7 @@
             const fieldName = $(this).find('.field-name').val().trim();
 
             if (fieldName) {
-                const normalizedName = toTitleCase(fieldName);
-                const lowerName = normalizedName.toLowerCase();
+                const lowerName = fieldName.toLowerCase();
 
                 if (!fieldNames.has(lowerName)) {
                     fieldNames.set(lowerName, []);
@@ -279,32 +265,16 @@
             validateUniqueFieldNames();
         });
 
-        // Titleize field name on blur and validate uniqueness (for NEW fields)
+        // Validate uniqueness on blur (for NEW fields)
         $(document).on('blur', '.field-name', function () {
-            const input = $(this);
-            const value = input.val().trim();
-
-            if (value) {
-                // Apply Title Case
-                const titleCased = toTitleCase(value);
-                input.val(titleCased);
-
-                // Validate uniqueness
+            if ($(this).val().trim()) {
                 validateUniqueFieldNames();
             }
         });
 
-        // Titleize existing field name on blur and validate uniqueness (for EXISTING fields)
+        // Validate uniqueness on blur (for EXISTING fields)
         $(document).on('blur', '.existing-field-name', function () {
-            const input = $(this);
-            const value = input.val().trim();
-
-            if (value) {
-                // Apply Title Case
-                const titleCased = toTitleCase(value);
-                input.val(titleCased);
-
-                // Validate uniqueness
+            if ($(this).val().trim()) {
                 validateUniqueFieldNames();
             }
         });
@@ -400,7 +370,6 @@
     // Export to global scope for use in templates
     window.ExperimentFields = {
         initialize: initializeExperimentFields,
-        toTitleCase: toTitleCase,
         validateUniqueFieldNames: validateUniqueFieldNames,
         validateFieldsComplete: validateFieldsComplete
     };

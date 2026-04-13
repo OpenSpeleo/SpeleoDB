@@ -173,7 +173,9 @@ path is missed, the stored data cannot contain executable HTML.
 
 ### Pipeline
 
-`speleodb/utils/sanitize.py` defines `sanitize_text()` which runs:
+`speleodb/utils/sanitize.py` defines two sanitization functions:
+
+**`sanitize_text()`** -- aggressive, strips accents (anti-zalgo):
 
 1. **`nh3.clean(value, tags=set())`** -- strips ALL HTML tags, keeps
    text content only. `<script>alert(1)</script>` becomes `alert(1)`.
@@ -182,12 +184,22 @@ path is missed, the stored data cannot contain executable HTML.
 4. Control/format character removal.
 5. Whitespace normalization.
 
+**`sanitize_field_name()`** -- accent-preserving variant:
+
+Same pipeline but skips steps 2-3 (NFD + mark removal), only performing
+NFC normalization. Used for experiment field names and other
+user-visible labels where accented characters (e.g. `température`,
+`señal`) must be preserved.
+
 ### Integration
 
 `SanitizedFieldsMixin` (in `speleodb/utils/serializer_mixins.py`) runs
 `sanitize_text()` on every field listed in a serializer's
 `sanitized_fields` during `to_internal_value()`. 21 serializer classes
 across the codebase use this mixin, covering ~50 text fields.
+
+Experiment field names use `sanitize_field_name()` via the Pydantic
+validator on `ExperimentFieldDefinition.name`.
 
 ### What this means for users
 

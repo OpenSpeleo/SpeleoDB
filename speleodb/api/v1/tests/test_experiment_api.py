@@ -1656,8 +1656,8 @@ class TestExperimentFieldNameEditing(BaseAPITestCase):
         experiment.refresh_from_db()
         assert experiment.experiment_fields[ph_uuid]["name"] == "Edited Name"
 
-    def test_patch_edit_field_name_enforces_titlecase(self) -> None:
-        """Test that edited field names are converted to titlecase."""
+    def test_patch_edit_field_name_preserves_case(self) -> None:
+        """Test that edited field names preserve their original case."""
         ph_uuid = Experiment.generate_field_uuid()
 
         experiment_fields = {
@@ -1693,12 +1693,11 @@ class TestExperimentFieldNameEditing(BaseAPITestCase):
             level=PermissionLevel.READ_AND_WRITE,
         )
 
-        # Edit field name with lowercase
         data = {
             "experiment_fields": [
                 {
                     "id": ph_uuid,
-                    "name": "new lowercase name",
+                    "name": "Nitrate No3-N (mg/L-N)",
                     "type": "number",
                     "required": False,
                 },
@@ -1715,12 +1714,11 @@ class TestExperimentFieldNameEditing(BaseAPITestCase):
         assert response.status_code == status.HTTP_200_OK
         response_data = response.json()["data"]
 
-        # Find the field and verify name was titlecased
         edited_field = next(
             (f for f in response_data["experiment_fields"] if f["id"] == ph_uuid), None
         )
         assert edited_field is not None
-        assert edited_field["name"] == "New Lowercase Name"
+        assert edited_field["name"] == "Nitrate No3-N (mg/L-N)"
 
     def test_patch_edit_name_to_duplicate_rejected(self) -> None:
         """Test that editing a name to duplicate another is rejected."""
@@ -2174,7 +2172,7 @@ class TestExperimentFieldEdgeCases(BaseAPITestCase):
         assert response.status_code == status.HTTP_201_CREATED
         response_data = response.json()["data"]
 
-        # Find field with long name (titlecased)
+        # Find field with long name
         long_field = next(
             (f for f in response_data["experiment_fields"] if len(f["name"]) > 400),  # noqa: PLR2004
             None,
@@ -2182,7 +2180,7 @@ class TestExperimentFieldEdgeCases(BaseAPITestCase):
         assert long_field is not None
 
     def test_unicode_field_names_preserved(self) -> None:
-        """Test that unicode characters in names are preserved and titlecased."""
+        """Test that unicode characters in names are preserved."""
         data = {
             "name": "Test Experiment",
             "experiment_fields": [
@@ -2208,9 +2206,8 @@ class TestExperimentFieldEdgeCases(BaseAPITestCase):
         response_data = response.json()["data"]
 
         field_names = [f["name"] for f in response_data["experiment_fields"]]
-        # Titlecase should be applied (though Chinese doesn't have case)
         assert "温度 测量" in field_names
-        assert "Température Eau" in field_names
+        assert "température eau" in field_names
 
     def test_special_characters_in_field_names(self) -> None:
         """Test that special characters in names are handled."""
@@ -2235,8 +2232,72 @@ class TestExperimentFieldEdgeCases(BaseAPITestCase):
         response_data = response.json()["data"]
 
         field_names = [f["name"] for f in response_data["experiment_fields"]]
-        assert "Ph (Water)" in field_names
+        assert "pH (water)" in field_names
         assert "Temperature [°C]" in field_names
+
+    def test_scientific_notation_field_name_round_trip(self) -> None:
+        """Test that a scientific field name with mixed case, digits, hyphens,
+        and parenthesised units survives a full POST round-trip unchanged."""
+        data = {
+            "name": "Water Chemistry",
+            "experiment_fields": [
+                {"name": "Measurement Date", "type": "date", "required": True},
+                {"name": "Submitter Email", "type": "text", "required": True},
+                {
+                    "name": "Nitrate No3-N (mg/L-N)",
+                    "type": "number",
+                    "required": False,
+                },
+            ],
+        }
+
+        response = self.client.post(
+            reverse("api:v1:experiments"),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        response_data = response.json()["data"]
+
+        field_names = [f["name"] for f in response_data["experiment_fields"]]
+        assert "Nitrate No3-N (mg/L-N)" in field_names
+
+    def test_html_stripped_from_field_names(self) -> None:
+        """Test that HTML tags are stripped from field names on creation."""
+        data = {
+            "name": "XSS Experiment",
+            "experiment_fields": [
+                {"name": "Measurement Date", "type": "date", "required": True},
+                {"name": "Submitter Email", "type": "text", "required": True},
+                {
+                    "name": "<b>pH</b> Level",
+                    "type": "number",
+                    "required": False,
+                },
+                {
+                    "name": '<script>alert("xss")</script>Depth',
+                    "type": "number",
+                    "required": False,
+                },
+            ],
+        }
+
+        response = self.client.post(
+            reverse("api:v1:experiments"),
+            data=data,
+            content_type="application/json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        response_data = response.json()["data"]
+
+        field_names = [f["name"] for f in response_data["experiment_fields"]]
+        assert "pH Level" in field_names
+        assert "Depth" in field_names
+        assert not any("<" in name for name in field_names)
 
     def test_edit_name_with_name_only_field(self) -> None:
         """Test editing only name while keeping UUID, type, required, order."""
@@ -2297,12 +2358,11 @@ class TestExperimentFieldEdgeCases(BaseAPITestCase):
         assert response.status_code == status.HTTP_200_OK
         response_data = response.json()["data"]
 
-        # Verify name changed and titlecased
         field = next(
             (f for f in response_data["experiment_fields"] if f["id"] == ph_uuid), None
         )
         assert field is not None
-        assert field["name"] == "Brand New Name"
+        assert field["name"] == "brand new name"
         assert field["type"] == "number"
         assert field["required"] is False
         # Order is implicit - no order field in response

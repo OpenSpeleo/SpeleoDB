@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from speleodb.utils.sanitize import sanitize_field_name
 from speleodb.utils.sanitize import sanitize_text
 
 
@@ -210,3 +211,53 @@ class TestSanitizeText:
     def test_plain_ampersand_preserved(self) -> None:
         """Bare ampersands in text survive the pipeline."""
         assert sanitize_text("A & B") == "A & B"
+
+
+class TestSanitizeFieldName:
+    """Test cases for the accent-preserving sanitize_field_name function."""
+
+    def test_accented_characters_preserved(self) -> None:
+        """Accented Latin letters survive unlike sanitize_text."""
+        assert sanitize_field_name("café") == "café"
+        assert sanitize_field_name("résumé") == "résumé"
+        assert sanitize_field_name("naïve") == "naïve"
+
+    def test_n_tilde_preserved(self) -> None:
+        assert sanitize_field_name("niño") == "niño"
+
+    def test_scientific_field_name_preserved(self) -> None:
+        assert sanitize_field_name("Nitrate No3-N (mg/L-N)") == "Nitrate No3-N (mg/L-N)"
+
+    def test_french_field_name_preserved(self) -> None:
+        assert sanitize_field_name("Température Eau") == "Température Eau"
+
+    def test_case_preserved(self) -> None:
+        assert sanitize_field_name("pH level") == "pH level"
+        assert sanitize_field_name("UPPERCASE") == "UPPERCASE"
+
+    def test_html_stripped(self) -> None:
+        assert sanitize_field_name("<b>pH</b> Level") == "pH Level"
+        assert sanitize_field_name('<script>alert("xss")</script>') == ""
+
+    def test_control_characters_removed(self) -> None:
+        text = "ab\u200b\u200c\u200dcd"
+        assert sanitize_field_name(text) == "abcd"
+
+    def test_whitespace_normalized(self) -> None:
+        assert sanitize_field_name("  hello   world  ") == "hello world"
+        assert sanitize_field_name("hello\tworld") == "hello world"
+
+    def test_empty_string(self) -> None:
+        assert sanitize_field_name("") == ""
+
+    def test_plain_ascii_unchanged(self) -> None:
+        assert sanitize_field_name("SpeleoDB") == "SpeleoDB"
+
+    def test_cjk_preserved(self) -> None:
+        assert sanitize_field_name("温度 测量") == "温度 测量"
+
+    def test_emoji_preserved(self) -> None:
+        assert sanitize_field_name("Cave 🦇") == "Cave 🦇"
+
+    def test_ampersand_preserved(self) -> None:
+        assert sanitize_field_name("A & B") == "A & B"

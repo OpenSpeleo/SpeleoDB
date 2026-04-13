@@ -67,3 +67,43 @@ def sanitize_text(value: str) -> str:
     # 5. Normalise whitespace: collapse runs and strip.
     value = re.sub(r"[ \t]+", " ", value)
     return value.strip()
+
+
+def sanitize_field_name(value: str) -> str:
+    """
+    Sanitize a user-supplied field name for safe storage, **preserving accents**.
+
+    Identical to :func:`sanitize_text` except it skips the NFD decomposition
+    and combining-mark removal steps, so accented characters (``é``, ``ñ``,
+    ``ü``, etc.) survive.  This is the correct sanitizer for experiment field
+    names and other user-visible labels where accent preservation matters.
+
+    Pipeline:
+        1. Strip all HTML tags via ``nh3``.
+        2. Unescape HTML entities.
+        3. NFC normalization (compose, never strip).
+        4. Remove control / format characters (Cc/Cf) except whitespace.
+        5. Collapse runs of whitespace and strip edges.
+
+    Example:
+        >>> sanitize_field_name("Température Eau")
+        'Température Eau'
+        >>> sanitize_field_name('<b>pH</b>')
+        'pH'
+    """
+    if not value:
+        return value
+
+    value = nh3.clean(value, tags=set())
+    value = html.unescape(value)
+
+    value = unicodedata.normalize("NFC", value)
+
+    value = "".join(
+        ch
+        for ch in value
+        if unicodedata.category(ch) not in {"Cc", "Cf"} or ch in "\n\r\t "
+    )
+
+    value = re.sub(r"[ \t]+", " ", value)
+    return value.strip()

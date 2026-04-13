@@ -152,28 +152,6 @@ class ExperimentSerializer(
                 {"experiment_fields": [f"Field '{field_name}': {str(e)!s}"]}
             ) from e
 
-    def _process_mandatory_field(
-        self,
-        field_def: ExperimentFieldDefinition,
-        processed_fields: dict[str, dict[str, Any]],
-    ) -> bool:
-        """
-        Process a mandatory field by name match. Returns True if processed.
-
-        Note: The order should already be set correctly in field_def before calling
-        this.
-        """
-        mandatory_fields = MandatoryFieldUuid.get_mandatory_fields()
-        for mandatory_uuid, mandatory_data in mandatory_fields.items():
-            if mandatory_data["name"] == field_def.name:
-                if mandatory_uuid in processed_fields:
-                    # Update the mandatory field with validated data
-                    processed_fields[mandatory_uuid] = field_def.model_dump(
-                        mode="json", exclude_none=True
-                    )
-                return True
-        return False
-
     def _process_custom_field(
         self,
         field_def: ExperimentFieldDefinition,
@@ -261,7 +239,7 @@ class ExperimentSerializer(
             if "order" not in field_data_with_order:
                 field_data_with_order["order"] = order
 
-            # Validate and parse field using Pydantic (applies titlecase)
+            # Validate and parse field using Pydantic (applies sanitization)
             field_def = self._validate_and_parse_field(
                 field_data_with_order, field_name
             )

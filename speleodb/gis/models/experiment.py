@@ -29,6 +29,7 @@ from speleodb.gis.models import Station
 from speleodb.gis.models.utils import generate_random_token
 from speleodb.users.models import User
 from speleodb.utils.pydantic_utils import pydantic_to_django_validation_error
+from speleodb.utils.sanitize import sanitize_field_name
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -123,10 +124,10 @@ class ExperimentFieldDefinition(PydanticBaseModel):
 
     @field_validator("name", mode="before")
     @classmethod
-    def titlecase_name(cls, v: str) -> str:
-        """Convert name to titlecase."""
+    def sanitize_name(cls, v: str) -> str:
+        """Sanitize name for safe storage (strip HTML, control chars, etc.)."""
         if isinstance(v, str):
-            return v.title()
+            return sanitize_field_name(v)
         return v
 
     @model_validator(mode="after")
@@ -152,7 +153,7 @@ def _validate_and_parse_fields_dict(
 ) -> dict[str, ExperimentFieldDefinition]:
     """
     Validate UUID format and parse field data, converting string types to FieldType
-    enum. Returns the VALIDATED data (with transformations like titlecase applied).
+    enum. Returns the VALIDATED data (with sanitization applied).
 
     Keeps UUID as strings to preserve exact representation.
     Handles temp_ prefixed keys separately (not valid UUIDs).
@@ -409,8 +410,9 @@ class Experiment(models.Model):
         """
         Validate that experiment_fields follows the correct structure using Pydantic.
 
-        Note: Titlecase transformation is applied by Pydantic during API requests.
-        For direct model usage (tests, factory), we trust the data is correct.
+        Note: Sanitization (HTML stripping, control-char removal, etc.) is applied
+        by Pydantic during API requests.  For direct model usage (tests, factory),
+        we trust the data is correct.
 
         Mandatory fields are identified by their UUID (from MandatoryFieldUuid enum),
         not by a 'mandatory' property in the field data.
@@ -599,29 +601,9 @@ class Experiment(models.Model):
 
         self.experiment_fields = processed_fields
 
-    def _apply_titlecase_to_field_names(self) -> None:
-        """
-        Apply titlecase transformation to all field names.
-        This ensures consistency whether fields are created via API (serializer)
-        or directly via model.
-        """
-        if not self.experiment_fields:
-            return
-
-        # Only process if experiment_fields is a dict
-        # If it's not, let the validation step catch the error
-        if not isinstance(self.experiment_fields, dict):
-            return
-
-        for field_data in self.experiment_fields.values():
-            if "name" in field_data and isinstance(field_data["name"], str):
-                field_data["name"] = field_data["name"].title()
-
     def clean(self) -> None:
         """Validate the model before saving."""
         super().clean()
-        # Apply titlecase to field names
-        self._apply_titlecase_to_field_names()
         # Validate structure
         self._validate_experiment_fields_structure()
         # Always validate name uniqueness (for both creates and updates)
