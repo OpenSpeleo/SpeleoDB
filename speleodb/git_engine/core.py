@@ -33,6 +33,7 @@ from git.exc import InvalidGitRepositoryError
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.exceptions import GitPathNotFoundError
+from speleodb.utils.helpers import retry_with_backoff
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -677,15 +678,18 @@ class GitRepo(Repo):
 
     def pull(self) -> None:
         origin = self.remotes.origin
-        for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
-            with contextlib.suppress(GitCommandError):
-                origin.pull("+refs/heads/*:refs/heads/*")
-                break
-        else:
+        try:
+            retry_with_backoff(
+                origin.pull,
+                "+refs/heads/*:refs/heads/*",
+                retries=settings.DJANGO_GIT_RETRY_ATTEMPTS,
+                exc_types=(GitCommandError,),
+            )
+        except GitCommandError:
             raise GitBaseError(
                 "Impossible to pull repository: "
                 f"{self.remotes.origin.url.split('@')[-1]}"  # Removes OAUTH2 token
-            )
+            ) from None
 
     def _checkout_branch_or_commit_and_maybe_pull(
         self, hexsha: str | None = None, branch_name: str | None = None
@@ -740,24 +744,39 @@ class GitRepo(Repo):
         author_email: str,
         force_empty_commit: bool = False,
     ) -> str | None:
+        _retry_kwargs: dict[str, Any] = {
+            "retries": settings.DJANGO_GIT_RETRY_ATTEMPTS,
+            "exc_types": (GitCommandError,),
+        }
+
         # Add every file pending
-        self.index.add("*")
+        retry_with_backoff(self.index.add, "*", **_retry_kwargs)
 
         # If there are modified files:
         if self.is_dirty() or force_empty_commit:
             author = git.Actor(author_name, author_email)
 
-            commit = self.index.commit(message, author=author, committer=GIT_COMMITTER)
+            commit = retry_with_backoff(
+                self.index.commit,
+                message,
+                author=author,
+                committer=GIT_COMMITTER,
+                **_retry_kwargs,
+            )
 
-            for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
-                with contextlib.suppress(GitCommandError):
-                    self.git.push("--set-upstream", "origin", self.active_branch)
-                    break
-            else:
+            try:
+                retry_with_backoff(
+                    self.git.push,
+                    "--set-upstream",
+                    "origin",
+                    self.active_branch,
+                    **_retry_kwargs,
+                )
+            except GitCommandError:
                 raise GitBaseError(
                     "Impossible to push to repository: "
                     f"{self.remotes.origin.url.split('@')[-1]}"  # Removes OAUTH2 token
-                )
+                ) from None
 
             return commit.hexsha
 

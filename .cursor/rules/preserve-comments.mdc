@@ -1,0 +1,14 @@
+# Preserve Existing Comments
+
+**NEVER remove or modify existing code comments** unless the comment is
+factually wrong due to your changes (e.g. it describes behavior that no
+longer exists after your edit).
+
+- If a comment is above code you are editing, keep it as-is.
+- If a comment is inside a block you are refactoring, carry it over.
+- Do not "clean up" comments you consider redundant or obvious.
+- Do not rephrase comments to match your style preferences.
+- The only valid reason to touch a comment is if your code change makes
+  the comment factually incorrect.
+
+This is a hard rule. Violations are unacceptable.

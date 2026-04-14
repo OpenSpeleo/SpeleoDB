@@ -10,11 +10,11 @@ import random
 import re
 import string
 import tempfile
-from collections import defaultdict
 from typing import TYPE_CHECKING
 from typing import Any
 
 import orjson
+import sentry_sdk
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -58,6 +58,7 @@ from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import FileRejectedError
 from speleodb.utils.exceptions import GeoJSONGenerationError
 from speleodb.utils.exceptions import ProjectNotFound
+from speleodb.utils.helpers import retry_with_backoff
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import DownloadResponseFromFile
 from speleodb.utils.response import ErrorResponse
@@ -78,35 +79,36 @@ def handle_exception(
     exception: Exception,
     message: str,
     status_code: int,
-    format_assoc: dict[Format, bool],
     project: Project,
 ) -> ErrorResponse:
-    additional_errors = []
-    # Cleanup created formats
-    for f_obj, created in format_assoc.items():
-        if created:
-            try:
-                f_obj.delete()
-            except Exception:  # noqa: BLE001
-                additional_errors.append(
-                    "Error during removal of created new format association"
-                )
+    logger.exception(
+        "Upload error for project %s (status=%s): %s",
+        project.id,
+        status_code,
+        exception,
+    )
+    sentry_sdk.capture_exception(exception)
 
-    # Reset project state
+    # Roll back the entire DB transaction so no partial writes (Format
+    # rows, ProjectCommit rows, etc.) survive a failed upload.  This is
+    # safe for every status code: if we reach this function the upload
+    # did not succeed, so nothing should be committed.
+    # ATOMIC_REQUESTS is always enabled (set in base.py, no view opts
+    # out via @non_atomic_requests), so we are guaranteed to be inside
+    # a transaction.atomic() block here.
+    transaction.set_rollback(True)
+
+    # Git working tree cleanup (not covered by DB rollback)
     try:
         project.git_repo.reset_and_remove_untracked()
     except Exception:  # noqa: BLE001
-        additional_errors.append(
-            "Error during resetting of the project to HEAD and removal of untracked "
-            "files."
+        logger.warning(
+            "Failed to reset git working tree for project %s",
+            project.id,
+            exc_info=True,
         )
 
     error_msg = message.format(exception)
-
-    if additional_errors:
-        error_msg += " - Additional Errors During Exception Handling: "
-        error_msg += ", ".join(additional_errors)
-
     return ErrorResponse({"error": error_msg}, status=status_code)
 
 
@@ -266,7 +268,6 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
             # ~~~~~~~~~~~~~~~~~~~~ END of Form Data Validation ~~~~~~~~~~~~~~~~~~~~ #
 
             # ~~~~~~~~~~~~~~~~~ START of writing files to project ~~~~~~~~~~~~~~~~~ #
-            format_assoc: dict[Format, bool] = defaultdict(lambda: False)
             project = self.get_object()
             auto_compass_toml_generated = False
 
@@ -331,22 +332,14 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                         with timed_section(f"File Adding: `{file.name}`"):
                             # maximum retry attempts in case of Git exception
                             with timed_section("Get Upload Processor"):
-                                git_error = None
-                                for _ in range(5):
-                                    try:
-                                        processor = AutoSelector.get_upload_processor(
-                                            fileformat=fileformat_f,
-                                            file=file,
-                                            project=project,
-                                        )
-                                        break
-                                    except GitCommandError as e:
-                                        git_error = str(e)
-                                else:
-                                    return ErrorResponse(
-                                        {"error": f"Git Error: {git_error}"},
-                                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                    )
+                                processor = retry_with_backoff(
+                                    AutoSelector.get_upload_processor,
+                                    retries=settings.DJANGO_GIT_RETRY_ATTEMPTS,
+                                    exc_types=(GitCommandError,),
+                                    fileformat=fileformat_f,
+                                    file=file,
+                                    project=project,
+                                )
 
                             with timed_section("File Management"):
                                 if fileformat_f == FileFormat.AUTO:
@@ -362,10 +355,9 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                 # Associates the project with the format, ignore if
                                 # already done. We have to start with this in order to
                                 # have: `commit_date` > creation_date.
-                                f_obj, created = Format.objects.get_or_create(
+                                Format.objects.get_or_create(
                                     project=project, _format=target_fileformat
                                 )
-                                format_assoc[f_obj] = format_assoc[f_obj] or created
 
                                 try:
                                     with timed_section("File copy to project"):
@@ -379,13 +371,6 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                         "- Skipping ..."
                                     )
                                     continue
-
-                                except (ValueError, TypeError, ValidationError) as e:
-                                    logger.exception("Error converting to GeoJSON")
-                                    return ErrorResponse(
-                                        {"error": str(e)},
-                                        status=status.HTTP_400_BAD_REQUEST,
-                                    )
 
                     with timed_section("GIT Commit and Push"):
                         # Finally commit the project - None if project not dirty
@@ -523,7 +508,6 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     e,
                     "An error occurred: {}",
                     status.HTTP_400_BAD_REQUEST,
-                    format_assoc,
                     project,
                 )
 
@@ -535,7 +519,6 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     e,
                     "There has been a problem accessing GitLab: `{}`",
                     status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    format_assoc,
                     project,
                 )
 
@@ -547,7 +530,6 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     e,
                     "One of the uploaded files has been rejected: `{}`",
                     status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                    format_assoc,
                     project,
                 )
 
@@ -559,7 +541,6 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     e,
                     "There has been a problem committing the files: {}",
                     status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    format_assoc,
                     project,
                 )
 

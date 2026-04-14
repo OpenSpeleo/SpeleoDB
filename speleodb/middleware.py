@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
+import sentry_sdk
 from django.conf import settings
 from django.contrib.auth.models import update_last_login
 from django.http import FileResponse
@@ -32,6 +34,8 @@ if TYPE_CHECKING:
 
     from rest_framework.request import Request
     from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 
 class LastLoginUpdateMiddleware:
@@ -134,6 +138,7 @@ class DRFWrapResponseMiddleware:
             if settings.DEBUG:
                 raise
 
+            logger.exception("API permission error at %s", request.path)
             payload["data"] = {}
             payload["error"] = f"An error occured in the process: {e}"
             http_status = status.HTTP_403_FORBIDDEN
@@ -143,6 +148,8 @@ class DRFWrapResponseMiddleware:
             if settings.DEBUG:
                 raise
 
+            logger.exception("Unhandled API exception at %s", request.path)
+            sentry_sdk.capture_exception(e)
             payload["data"] = {}
             payload["error"] = f"An error occured in the process: {e}"
             http_status = status.HTTP_500_INTERNAL_SERVER_ERROR

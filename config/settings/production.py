@@ -162,7 +162,7 @@ LOGGING = {
         },
         "django.request": {
             "level": "ERROR",
-            "handlers": ["mail_admins"],
+            "handlers": ["console", "mail_admins"],
             "propagate": False,
         },
         # Errors logged by the SDK itself

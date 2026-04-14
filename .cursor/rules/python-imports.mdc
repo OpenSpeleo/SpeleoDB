@@ -7,10 +7,14 @@ alwaysApply: true
 # Python Import Rules
 
 **ALL imports MUST be at the top of the file.** Never place `import` or
-`from ... import` statements inside functions, methods, `setUp`, or any
-other non-top-level scope.
+`from ... import` statements inside functions, methods, `setUp`, test
+methods, local scopes, or any other non-top-level scope.
 
 This is a hard rule enforced by ruff (PLC0415). Violations break CI.
+
+There are **NO EXCEPTIONS** for convenience, readability, or "it's only
+used once". If you need a symbol, import it at the top of the file with
+all other imports. Period.
 
 ```python
 # BAD — inline import inside a method (PLC0415)
@@ -23,15 +27,23 @@ def setUp(self) -> None:
     from speleodb.api.v1.tests.factories import TokenFactory
     ...
 
+# BAD — inline import "just for one test"
+def test_gitlab_error(self) -> None:
+    from speleodb.git_engine.gitlab_manager import GitlabError
+    ...
+
 # GOOD — all imports at the top of the file
 from speleodb.api.v1.tests.factories import TokenFactory
 from speleodb.common.enums import ProjectType
+from speleodb.git_engine.gitlab_manager import GitlabError
 
 def test_something(self) -> None:
     ...
 ```
 
-The only exception is `TYPE_CHECKING` blocks:
+The **only** permitted non-top-level imports are inside
+`if TYPE_CHECKING:` blocks, which exist solely to prevent circular
+imports at runtime:
 
 ```python
 from __future__ import annotations

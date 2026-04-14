@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 class UserFactory(DjangoModelFactory[User]):
     email: str = Faker("email")  # type: ignore[assignment]
     name: str = Faker("name")  # type: ignore[assignment]
-    country: str = random.choice(countries).code  # pyright: ignore[reportAttributeAccessIssue]
+    country: str = random.choice(list(countries)).code  # pyright: ignore[reportAttributeAccessIssue]
 
     class Meta:
         model = User

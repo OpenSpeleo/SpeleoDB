@@ -87,7 +87,7 @@ class TestUserAPI(BaseAPITestCase):
         self._patch_user_info(name=name)
 
     def test_patch_country(self) -> None:
-        country = random.choice(countries)[0]
+        country = random.choice(list(countries))[0]
         self._patch_user_info(country=country)
 
     def test_nonexisting_country(self) -> None:

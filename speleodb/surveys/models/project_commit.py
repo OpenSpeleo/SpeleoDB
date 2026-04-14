@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -107,23 +106,26 @@ class ProjectCommit(models.Model):
     def get_or_create_from_commit(
         cls, project: Project, commit: GitCommit
     ) -> ProjectCommit:
-        with contextlib.suppress(cls.DoesNotExist):
-            return ProjectCommit.objects.get(id=commit.hexsha)
-
-        return ProjectCommit.objects.create(
-            id=commit.hexsha,
-            project=project,
-            author_name=commit.author.name or "",
-            author_email=commit.author.email or "",
-            authored_date=datetime.fromtimestamp(
-                commit.authored_date,
-                tz=timezone.get_current_timezone(),
-            ),
-            message=(
-                message
-                if isinstance(message := commit.message, str)
-                else message.decode("utf-8", errors="ignore")
-            ),
-            parent_ids=[parent.hexsha for parent in commit.parents],
-            tree=commit.tree_to_json(),
+        raw_message = commit.message
+        message = (
+            raw_message
+            if isinstance(raw_message, str)
+            else raw_message.decode("utf-8", errors="ignore")
         )
+
+        obj, _ = ProjectCommit.objects.get_or_create(
+            id=commit.hexsha,
+            defaults={
+                "project": project,
+                "author_name": commit.author.name or "",
+                "author_email": commit.author.email or "",
+                "authored_date": datetime.fromtimestamp(
+                    commit.authored_date,
+                    tz=timezone.get_current_timezone(),
+                ),
+                "message": message,
+                "parent_ids": [parent.hexsha for parent in commit.parents],
+                "tree": commit.tree_to_json(),
+            },
+        )
+        return obj

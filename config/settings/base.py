@@ -474,7 +474,7 @@ ADMIN_URL = "admin/"
 # (done by default), Django emails these people the details of
 # exceptions raised in the request/response cycle.
 # NOTE: Please do not change this email - It helps us to get crash reports
-ADMINS = [("""Jonathan Dekhtiar""", "jonathan@dekhtiar.com")]
+ADMINS = ["jonathan@dekhtiar.com"]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
 # A list in the same format as ADMINS that specifies who should get broken
