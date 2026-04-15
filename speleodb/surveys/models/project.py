@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import pathlib
 import shutil
@@ -20,7 +21,6 @@ from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.core.validators import RegexValidator
 from django.db import models
-from django.db import transaction
 from django.db.models import IntegerField
 from django.db.models import Prefetch
 from django.db.models import Q
@@ -566,14 +566,11 @@ class Project(models.Model):
             # 3. Rebuild commits in order
             for git_commit in commits:
                 if git_commit.hexsha not in hashtable:
-                    try:
-                        with transaction.atomic():
-                            ProjectCommit.get_or_create_from_commit(
-                                project=self,
-                                commit=git_commit,
-                            )
-                    except IntegrityError:
-                        pass
+                    with contextlib.suppress(IntegrityError):
+                        _ = ProjectCommit.get_or_create_from_commit(
+                            project=self,
+                            commit=git_commit,
+                        )
 
     @property
     def formats(self) -> models.QuerySet[Format]:

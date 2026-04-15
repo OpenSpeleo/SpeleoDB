@@ -12,6 +12,7 @@ import string
 import tempfile
 from typing import TYPE_CHECKING
 from typing import Any
+from zipfile import BadZipFile
 
 import orjson
 import sentry_sdk
@@ -87,7 +88,8 @@ def handle_exception(
         status_code,
         exception,
     )
-    sentry_sdk.capture_exception(exception)
+    if status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR:
+        sentry_sdk.capture_exception(exception)
 
     # Roll back the entire DB transaction so no partial writes (Format
     # rows, ProjectCommit rows, etc.) survive a failed upload.  This is
@@ -372,6 +374,22 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                     )
                                     continue
 
+                                except (
+                                    BadZipFile,
+                                    ValueError,
+                                    TypeError,
+                                    ValidationError,
+                                ) as e:
+                                    if settings.DEBUG:
+                                        raise
+
+                                    return handle_exception(
+                                        e,
+                                        "An error occurred processing the file: {}",
+                                        status.HTTP_400_BAD_REQUEST,
+                                        project,
+                                    )
+
                     with timed_section("GIT Commit and Push"):
                         # Finally commit the project - None if project not dirty
                         hexsha: str | None = project.commit_and_push_project(
@@ -592,6 +610,21 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
         except ValidationError as e:
             return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        except RuntimeError as e:
+            logger.exception("Download error for project %s", project.id)
+            sentry_sdk.capture_exception(e)
+            return ErrorResponse(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        except GitlabError as e:
+            logger.exception("GitLab error during download for project %s", project.id)
+            sentry_sdk.capture_exception(e)
+            return ErrorResponse(
+                {"error": "There has been a problem accessing gitlab"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         with tempfile.TemporaryDirectory() as tempdir:
             try:
                 temp_filepath = (
@@ -635,11 +668,17 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
                 )
 
             except RuntimeError as e:
+                logger.exception("Download error for project %s", project.id)
+                sentry_sdk.capture_exception(e)
                 return ErrorResponse(
                     {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
-            except GitlabError:
+            except GitlabError as e:
+                logger.exception(
+                    "GitLab error during download for project %s", project.id
+                )
+                sentry_sdk.capture_exception(e)
                 return ErrorResponse(
                     {"error": "There has been a problem accessing gitlab"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,

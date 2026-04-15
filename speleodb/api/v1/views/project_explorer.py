@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
+import sentry_sdk
 from gitdb.exc import BadName as GitRevBadName
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -94,17 +95,19 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
                 }
             )
 
-        except GitBaseError, ValueError, GitCommitNotFoundError, GitRevBadName:
+        except (GitBaseError, ValueError, GitCommitNotFoundError, GitRevBadName) as e:
             logger.exception(
                 f"There has been a problem checking out the commit `{hexsha}`"
             )
+            sentry_sdk.capture_exception(e)
             return ErrorResponse(
                 {"error": f"Problem checking out the commit `{hexsha}`"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        except GitlabError:
+        except GitlabError as e:
             logger.exception("There has been a problem accessing gitlab")
+            sentry_sdk.capture_exception(e)
             return ErrorResponse(
                 {"error": "There has been a problem accessing gitlab"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

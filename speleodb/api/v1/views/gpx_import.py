@@ -9,12 +9,14 @@ from typing import Any
 
 import gpxpy
 import orjson
+import sentry_sdk
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.db import IntegrityError
+from django.db import transaction
 from django.utils import timezone
 from geojson import Feature  # type: ignore[attr-defined]
 from geojson import FeatureCollection  # type: ignore[attr-defined]
@@ -155,8 +157,8 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
                     content_type="application/geo+json",
                 )
 
+                # Skip if GPSTrack already exists
                 with contextlib.suppress(IntegrityError, ValidationError):
-                    # Skip if Landmark already exists.
                     _, created = GPSTrack.objects.get_or_create(
                         file=geojson_f,
                         user=user,
@@ -174,8 +176,11 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
             if settings.DEBUG:
                 raise
 
+            logger.exception("Error importing GPX file")
+            sentry_sdk.capture_exception(e)
+            transaction.set_rollback(True)
             return ErrorResponse(
-                f"There has been a problem importing the GPX file: {e}",
+                {"error": "There has been a problem importing the GPX file"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

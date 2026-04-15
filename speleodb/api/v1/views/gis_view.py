@@ -14,6 +14,7 @@ import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
+import sentry_sdk
 from django.db.models import Q
 from django.http import Http404
 from rest_framework import permissions
@@ -75,8 +76,9 @@ class GISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
             )
             return SuccessResponse(serializer.data)
 
-        except Exception:
+        except Exception as e:
             logger.exception("Error generating GeoJSON URLs for view %s", gis_view.id)
+            sentry_sdk.capture_exception(e)
             return ErrorResponse(
                 {"error": "Failed to generate GeoJSON URLs"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -187,10 +189,11 @@ class PublicGISViewGeoJSONApiView(GenericAPIView[GISView], SDBAPIViewMixin):
                 context={"expires_in": 3600},
             )
             return SuccessResponse(serializer.data)
-        except Exception:
+        except Exception as e:
             logger.exception(
                 "Error generating public GeoJSON data for view %s", gis_view.id
             )
+            sentry_sdk.capture_exception(e)
             return ErrorResponse(
                 {"error": "Failed to load map data"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

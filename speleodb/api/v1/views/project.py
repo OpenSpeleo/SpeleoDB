@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
+import sentry_sdk
 from django.db.utils import IntegrityError
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
@@ -51,8 +52,9 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
         try:
             return SuccessResponse(serializer.data)
 
-        except GitlabError:
+        except GitlabError as e:
             logger.exception("There has been a problem accessing gitlab")
+            sentry_sdk.capture_exception(e)
             return ErrorResponse(
                 {"error": "There has been a problem accessing gitlab"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

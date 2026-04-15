@@ -13,6 +13,7 @@ from typing import Annotated
 from typing import Any
 from typing import Literal
 
+import sentry_sdk
 from django.core.exceptions import ValidationError
 from mnemo_lib.commands.correct import correct as correct_dmp_cmd
 from mnemo_lib.constants import ShotType
@@ -232,6 +233,7 @@ class ToolDMP2JSON(APIView):
 
         except Exception as exc:
             logger.exception("Error converting DMP to JSON")
+            sentry_sdk.capture_exception(exc)
             return ErrorResponse(
                 {"error": f"Failed to parse DMP file: {exc!s}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

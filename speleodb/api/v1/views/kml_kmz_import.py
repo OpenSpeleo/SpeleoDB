@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import zipfile
 from typing import TYPE_CHECKING
 from typing import Any
 
+import sentry_sdk
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
+from django.db import IntegrityError
+from django.db import transaction
 from django.utils import timezone
 from fastkml import KML
 from fastkml.features import Placemark
@@ -128,24 +133,28 @@ class KML_KMZ_ImportView(GenericAPIView[Project], SDBAPIViewMixin):  # noqa: N80
 
             for point_data in iter_points(kml):
                 # Skip if Landmark already exists.
-                _, created = Landmark.objects.get_or_create(
-                    latitude=point_data["latitude"],
-                    longitude=point_data["longitude"],
-                    user=user,
-                    defaults={
-                        "name": point_data["name"],
-                        "description": point_data["description"],
-                    },
-                )
-                if created:
-                    landmarks_created += 1
+                with contextlib.suppress(IntegrityError, ValidationError):
+                    _, created = Landmark.objects.get_or_create(
+                        latitude=point_data["latitude"],
+                        longitude=point_data["longitude"],
+                        user=user,
+                        defaults={
+                            "name": point_data["name"],
+                            "description": point_data["description"],
+                        },
+                    )
+                    if created:
+                        landmarks_created += 1
 
         except Exception as e:
             if settings.DEBUG:
                 raise
 
+            logger.exception("Error importing KML/KMZ file")
+            sentry_sdk.capture_exception(e)
+            transaction.set_rollback(True)
             return ErrorResponse(
-                f"There has been a problem importing the KML/KMZ file: {e}",
+                {"error": "There has been a problem importing the KML/KMZ file"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

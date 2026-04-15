@@ -1,8 +1,8 @@
-# Upload Error Handling & Observability
+# API Error Handling & Observability
 
-How the file-upload pipeline handles failures, why `ATOMIC_REQUESTS`
-requires explicit rollback for caught exceptions, and how Sentry /
-admin-email reporting works.
+How all API views handle failures, why `ATOMIC_REQUESTS` requires
+explicit rollback for caught exceptions, and how Sentry / admin-email
+reporting works.
 
 ---
 
@@ -91,17 +91,18 @@ error-level log records either.
 
 ## `construct_git_history_from_project` and savepoints
 
-This method syncs `ProjectCommit` rows from git history. Under
-PostgreSQL + `ATOMIC_REQUESTS`, suppressing an `IntegrityError` without
-a savepoint leaves the PostgreSQL transaction in an aborted state — all
-subsequent queries fail with `InternalError`.
+This method syncs `ProjectCommit` rows from git history.
+`ProjectCommit.get_or_create_from_commit` uses Django's built-in
+`objects.get_or_create()` which handles savepoints internally — if the
+`create()` step hits an `IntegrityError`, `get_or_create` rolls back
+to its own savepoint and retries with `get()`. The outer transaction
+stays healthy.
 
-The fix wraps each `get_or_create` call in `transaction.atomic()` which
-creates a savepoint. If the `IntegrityError` fires, PostgreSQL rolls
-back to the savepoint, not the entire transaction.
-
-`ProjectCommit.get_or_create_from_commit` now uses Django's built-in
-`objects.get_or_create()` which handles savepoints internally.
+**Important:** `get_or_create()` already handles savepoints. Do NOT
+wrap it in an extra `transaction.atomic()` — that is redundant.
+A raw `Model.objects.create()` does NOT create a savepoint, so if
+you catch `IntegrityError` around a plain `create()`, you DO need
+`transaction.atomic()` (see `station_tag.py` for an example).
 
 ---
 
@@ -137,6 +138,82 @@ process finish and release the lock naturally.
 
 ---
 
+## Three-step protocol for all API views
+
+Every `except` block in any API view that returns an `ErrorResponse`
+with status >= 500 **must** follow this protocol:
+
+1. **`logger.exception(...)`** — preserves the full traceback in
+   console/Railway logs.
+2. **`sentry_sdk.capture_exception(exc)`** — creates a Sentry event
+   with traceback, tags, and request context.
+3. **`transaction.set_rollback(True)`** — required **only** when ORM
+   writes (`create`, `save`, `get_or_create`, etc.) happen inside the
+   `try` block before the error. Tells Django's `ATOMIC_REQUESTS` to
+   roll back the entire transaction.
+
+Views that return 4xx for user-input errors (e.g. `BadZipFile`,
+`ValidationError`, `FileNotFoundError`) do **not** need Sentry capture
+or rollback — those are expected outcomes, not internal failures.
+
+### Files covered by this protocol
+
+| File | View | Sentry | Rollback | Notes |
+|------|------|--------|----------|-------|
+| `file.py` | `FileUploadView` | Yes | Yes | via `handle_exception()` |
+| `file.py` | `FileDownloadView` | Yes | No | read-only, no DB writes |
+| `gpx_import.py` | `GPXImportView` | Yes | Yes | `Landmark` + `GPSTrack` writes |
+| `kml_kmz_import.py` | `KML_KMZ_ImportView` | Yes | Yes | `Landmark` writes |
+| `project_explorer.py` | `ProjectGitExplorerApiView` | Yes | No | read-only |
+| `project.py` | `ProjectSpecificApiView` | Yes | No | read-only |
+| `gis_view.py` | `GISViewDataApiView` | Yes | No | read-only |
+| `gis_view.py` | `PublicGISViewGeoJSONApiView` | Yes | No | read-only |
+| `tools.py` | `ToolDMP2JSON` | Yes | No | temp file only |
+| `middleware.py` | `DRFWrapResponseMiddleware` | Yes | No | last-resort backstop |
+
+### Savepoint rule for catching `IntegrityError`
+
+Under PostgreSQL + `ATOMIC_REQUESTS`, a caught `IntegrityError` leaves
+the transaction in an aborted state unless a savepoint was used.
+
+**`get_or_create()` handles this automatically** — it creates its own
+savepoint around the `create()` call. Do not add a redundant wrapper:
+
+```python
+# GOOD — get_or_create manages its own savepoint
+try:
+    obj, created = MyModel.objects.get_or_create(...)
+except IntegrityError:
+    pass
+
+# BAD — redundant savepoint, unnecessary nesting
+try:
+    with transaction.atomic():
+        obj, created = MyModel.objects.get_or_create(...)
+except IntegrityError:
+    pass
+```
+
+**A raw `create()` does NOT create a savepoint.** If you catch
+`IntegrityError` around a plain `create()`, you MUST wrap it:
+
+```python
+# GOOD — savepoint protects the outer transaction
+try:
+    with transaction.atomic():
+        MyModel.objects.create(...)
+except IntegrityError:
+    pass
+
+# BAD — corrupts PostgreSQL transaction under ATOMIC_REQUESTS
+try:
+    MyModel.objects.create(...)
+except IntegrityError:
+    pass
+```
+
+---
+
 ## Running the tests
 
 ```bash
@@ -145,4 +222,7 @@ pytest speleodb/git_engine/tests/test_git_retry.py -v
 
 # Upload error-handling tests (requires DB)
 pytest speleodb/api/v1/tests/test_file_upload_error_handling.py -v
+
+# All error-reporting tests (Sentry capture across all views)
+pytest speleodb/api/v1/tests/test_error_reporting.py -v
 ```

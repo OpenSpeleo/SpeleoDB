@@ -131,11 +131,12 @@ class UploadErrorHandlingTests(BaseAPIProjectTestCase):
         "speleodb.api.v1.views.file.sentry_sdk.capture_exception",
         autospec=True,
     )
-    def test_file_rejected_error_returns_415_and_captures_sentry(
+    def test_file_rejected_error_returns_415_without_sentry(
         self,
         mock_sentry: MagicMock,
     ) -> None:
-        """A FileRejectedError should produce a 415 and be captured."""
+        """A FileRejectedError should produce a 415 but NOT report to
+        Sentry -- it is a user-input error, not an internal failure."""
         with patch.object(
             type(self.project),
             "checkout_commit_or_default_pull_branch",
@@ -144,19 +145,18 @@ class UploadErrorHandlingTests(BaseAPIProjectTestCase):
             response = self._do_upload()
 
         assert response.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
-        mock_sentry.assert_called_once()
-        captured_exc = mock_sentry.call_args[0][0]
-        assert isinstance(captured_exc, FileRejectedError)
+        mock_sentry.assert_not_called()
 
     @patch(
         "speleodb.api.v1.views.file.sentry_sdk.capture_exception",
         autospec=True,
     )
-    def test_validation_error_returns_400_and_captures_sentry(
+    def test_validation_error_returns_400_without_sentry(
         self,
         mock_sentry: MagicMock,
     ) -> None:
-        """A ValidationError should produce a 400 and be captured."""
+        """A ValidationError should produce a 400 but NOT report to
+        Sentry -- it is a user-input error, not an internal failure."""
         with patch.object(
             type(self.project),
             "checkout_commit_or_default_pull_branch",
@@ -165,9 +165,7 @@ class UploadErrorHandlingTests(BaseAPIProjectTestCase):
             response = self._do_upload()
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        mock_sentry.assert_called_once()
-        captured_exc = mock_sentry.call_args[0][0]
-        assert isinstance(captured_exc, ValidationError)
+        mock_sentry.assert_not_called()
 
 
 @pytest.mark.skip_if_lighttest
