@@ -18,6 +18,7 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.db import IntegrityError
 from django.db import transaction
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from geojson import Feature  # type: ignore[attr-defined]
 from geojson import FeatureCollection  # type: ignore[attr-defined]
 from geojson import LineString  # type: ignore[attr-defined]
@@ -43,6 +44,24 @@ logger = logging.getLogger(__name__)
 class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {"file": {"type": "string", "format": "binary"}},
+                "required": ["file"],
+            }
+        },
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "landmarks_created": {"type": "integer"},
+                    "gps_tracks_created": {"type": "integer"},
+                },
+            }
+        },
+    )
     def put(
         self,
         request: Request,

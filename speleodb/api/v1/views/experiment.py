@@ -12,6 +12,7 @@ from typing import Any
 import xlsxwriter
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
 from rest_framework import status
@@ -153,6 +154,7 @@ class ExperimentApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    @extend_schema(operation_id="v1_experiments_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 

@@ -12,6 +12,7 @@ from django.db.models import IntegerField
 from django.db.models import OuterRef
 from django.db.models import Subquery
 from django.http import Http404
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -63,6 +64,7 @@ class SurfaceMonitoringNetworkApiView(
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = SurfaceMonitoringNetworkSerializer
 
+    @extend_schema(operation_id="v1_surface_networks_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List all networks with user permissions."""
         user = self.get_user()

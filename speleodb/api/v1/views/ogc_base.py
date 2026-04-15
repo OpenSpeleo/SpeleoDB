@@ -168,6 +168,7 @@ class BaseOGCLandingPageApiView(GenericAPIView, SDBAPIViewMixin):  # type: ignor
     Subclasses must set ``queryset`` and ``lookup_field``.
     """
 
+    schema = None
     permission_classes = [permissions.AllowAny]
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
@@ -181,6 +182,7 @@ class BaseOGCConformanceApiView(GenericAPIView, SDBAPIViewMixin):  # type: ignor
     Subclasses must set ``queryset`` and ``lookup_field``.
     """
 
+    schema = None
     permission_classes = [permissions.AllowAny]
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
@@ -195,6 +197,7 @@ class BaseOGCCollectionsApiView(GenericAPIView, SDBAPIViewMixin, abc.ABC):  # ty
     :meth:`get_ogc_layer_data`.
     """
 
+    schema = None
     permission_classes = [permissions.AllowAny]
 
     @abc.abstractmethod
@@ -217,6 +220,7 @@ class BaseOGCCollectionApiView(GenericAPIView, SDBAPIViewMixin, abc.ABC):  # typ
     :meth:`get_geojson_object`.
     """
 
+    schema = None
     permission_classes = [permissions.AllowAny]
 
     @abc.abstractmethod
@@ -262,6 +266,7 @@ class BaseOGCCollectionItemApiView(GenericAPIView, SDBAPIViewMixin, abc.ABC):  #
     :meth:`get_geojson_object`.
     """
 
+    schema = None
     permission_classes = [permissions.AllowAny]
     renderer_classes = [GeoJSONRenderer, LegacyGeoJSONRenderer, JSONRenderer]
 

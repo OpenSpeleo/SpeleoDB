@@ -1,34 +1,22 @@
 ---
-description: Always use parenthesized tuples in except clauses
+description: Use bare-comma except syntax (PEP 758, Python 3.14+)
 globs: "**/*.py"
 alwaysApply: true
 ---
 
-# Exception Syntax Rules
+# except syntax — bare commas, no unnecessary parentheses
 
-**Always use the parenthesized tuple form when catching multiple
-exception types:**
+This project requires Python >= 3.14 and uses PEP 758 bare-comma
+syntax for catching multiple exception types.
+
+**Only** add parentheses when you need `as e`:
 
 ```python
-# GOOD
-except (ObjectDoesNotExist, PermissionError):
-except (ValueError, TypeError) as e:
-except (GitBaseError, GitCommandError):
-
-# BAD — bare-comma form (PEP 758, Python 3.14+)
+except ValueError, TypeError:
 except ObjectDoesNotExist, PermissionError:
-except ValueError, TypeError as e:
-except GitBaseError, GitCommandError:
+
+except (ValueError, TypeError) as e:
+except (GitBaseError, GitCommandError) as e:
 ```
 
-Python 3.14 (PEP 758) made the bare-comma form syntactically valid for
-catching multiple types, but **this project does not use it**. The
-parenthesized form is:
-
-- More readable and universally understood.
-- Compatible with Python < 3.14.
-- Unambiguous (the comma form was a `SyntaxError` in Python 3.0–3.13
-  and meant variable binding in Python 2).
-
-This is a hard rule. Use `except (Type1, Type2):` every time, no
-exceptions.
+NEVER add parentheses unless binding the exception with `as`.

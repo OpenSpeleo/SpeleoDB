@@ -16,6 +16,7 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.db import IntegrityError
 from django.db import transaction
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from fastkml import KML
 from fastkml.features import Placemark
 from fastkml.features import _Feature as KML_Feature
@@ -73,6 +74,21 @@ def iter_points(feature: KML | KML_Feature) -> Generator[dict[str, str | float]]
 class KML_KMZ_ImportView(GenericAPIView[Project], SDBAPIViewMixin):  # noqa: N801
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {"file": {"type": "string", "format": "binary"}},
+                "required": ["file"],
+            }
+        },
+        responses={
+            200: {
+                "type": "object",
+                "properties": {"landmarks_created": {"type": "integer"}},
+            }
+        },
+    )
     def put(
         self,
         request: Request,

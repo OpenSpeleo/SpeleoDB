@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
     queryset = Station.objects.all()
     permission_classes = [SDB_WriteAccess | (IsReadOnly & SDB_ReadAccess)]
+    serializer_class = StationResourceSerializer  # type: ignore[assignment]
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -86,6 +87,7 @@ class StationResourceSpecificApiView(GenericAPIView[StationResource], SDBAPIView
         | (IsObjectEdition & SDB_WriteAccess)
         | (IsReadOnly & SDB_ReadAccess)
     ]
+    serializer_class = StationResourceSerializer
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:

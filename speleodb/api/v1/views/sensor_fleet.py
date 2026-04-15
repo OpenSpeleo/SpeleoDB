@@ -26,6 +26,7 @@ from django.db.models.functions import Least
 from django.http import Http404
 from django.http import StreamingHttpResponse
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -78,6 +79,7 @@ class SensorFleetApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = SensorFleetSerializer
 
+    @extend_schema(operation_id="v1_sensor_fleets_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List all sensor fleets with user permissions."""
         user = self.get_user()
@@ -983,6 +985,7 @@ class StationSensorInstallApiView(GenericAPIView[Station], SDBAPIViewMixin):
         """Return the serializer class for sensor installs."""
         return SensorInstallSerializer
 
+    @extend_schema(operation_id="v1_stations_sensor_installs_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         List sensor installs for a station.

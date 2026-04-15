@@ -15,6 +15,8 @@ from typing import Literal
 
 import sentry_sdk
 from django.core.exceptions import ValidationError
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from mnemo_lib.commands.correct import correct as correct_dmp_cmd
 from mnemo_lib.constants import ShotType
 from mnemo_lib.constants import SurveyDirection
@@ -56,6 +58,10 @@ def format_pydantic_error(err: PydanticValidationError) -> str:
 class ToolXLSToDMP(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        request={"application/json": {"type": "object"}},
+        responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+    )
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
@@ -155,6 +161,10 @@ class ToolXLSToDMP(APIView):
 class ToolXLSToCompass(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        request={"application/json": {"type": "object"}},
+        responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+    )
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
@@ -183,6 +193,16 @@ class ToolXLSToCompass(APIView):
 class ToolDMP2JSON(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {"file": {"type": "string", "format": "binary"}},
+                "required": ["file"],
+            }
+        },
+        responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+    )
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
@@ -267,6 +287,19 @@ class DMPDoctorQuery(BaseModel):
 class ToolDMPDoctor(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "file": {"type": "string", "format": "binary"},
+                    "data": {"type": "string"},
+                },
+                "required": ["file", "data"],
+            }
+        },
+        responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+    )
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:

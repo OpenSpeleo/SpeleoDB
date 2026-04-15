@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
 
+"""RFC 5785 ``.well-known`` views.
+
+These endpoints are consumed by operating systems (iOS universal links,
+Android app links, browser password managers), not by API clients.
+They are excluded from the OpenAPI schema with ``@extend_schema(exclude=True)``
+because they are infrastructure/protocol-discovery endpoints, not part of
+the REST API contract.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -7,6 +16,7 @@ from typing import TYPE_CHECKING
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
+from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
@@ -16,6 +26,7 @@ if TYPE_CHECKING:
     from django.http import HttpResponsePermanentRedirect
 
 
+@extend_schema(exclude=True)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def assetlinks(request: HttpRequest) -> JsonResponse:
@@ -44,6 +55,7 @@ def assetlinks(request: HttpRequest) -> JsonResponse:
     )
 
 
+@extend_schema(exclude=True)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def apple_app_site_association(request: HttpRequest) -> JsonResponse:

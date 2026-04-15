@@ -7,6 +7,7 @@ from typing import Any
 
 from django.db import IntegrityError
 from django.db import transaction
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -38,6 +39,7 @@ class StationTagsApiView(GenericAPIView[StationTag], SDBAPIViewMixin):
         user = self.get_user()
         return StationTag.objects.filter(user=user)
 
+    @extend_schema(operation_id="v1_station_tags_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List all tags for the authenticated user."""
         tags = self.get_queryset()
@@ -148,6 +150,16 @@ class StationTagColorsApiView(GenericAPIView[StationTag], SDBAPIViewMixin):
 
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "colors": {"type": "array", "items": {"type": "string"}}
+                },
+            }
+        },
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get list of predefined colors."""
         return SuccessResponse({"colors": StationTag.get_predefined_colors()})
@@ -161,6 +173,7 @@ class StationTagsManageApiView(GenericAPIView[Station], SDBAPIViewMixin):
 
     queryset = Station.objects.all()
     permission_classes = [SDB_WriteAccess]
+    serializer_class = StationTagSerializer  # type: ignore[assignment]
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:

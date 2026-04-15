@@ -106,6 +106,7 @@ class GitErrorRenderer(BaseRenderer):
 
 
 class BaseGitProxyAPIView(GenericAPIView[Project]):
+    schema = None
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
     lookup_field = "id"

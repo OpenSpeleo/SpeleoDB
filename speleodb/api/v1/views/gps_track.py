@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -31,6 +32,7 @@ class UserGPSTracks(GenericAPIView[GPSTrack], SDBAPIViewMixin):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = GPSTrackWithFileSerializer
 
+    @extend_schema(operation_id="v1_gps_tracks_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Return all accessible projects and their GeoJSON data."""
         user = self.get_user()

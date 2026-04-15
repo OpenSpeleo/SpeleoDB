@@ -6,6 +6,7 @@ import logging
 from typing import Any
 from typing import ClassVar
 
+from drf_spectacular.utils import extend_schema_field
 from geojson import Feature  # type: ignore[attr-defined]
 from geojson import Point  # type: ignore[attr-defined]
 from pydantic import ValidationError as PydanticValidationError
@@ -25,6 +26,27 @@ from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 logger = logging.getLogger(__name__)
 
 
+@extend_schema_field(
+    {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string", "format": "uuid"},
+                "name": {"type": "string"},
+                "type": {"type": "string"},
+                "required": {"type": "boolean"},
+                "order": {"type": "integer"},
+                "options": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "nullable": True,
+                },
+            },
+        },
+        "nullable": True,
+    }
+)
 class ExperimentFieldsField(DRFField):  # type: ignore[type-arg]
     """
     Custom field that accepts both list (API format) and dict (internal format).

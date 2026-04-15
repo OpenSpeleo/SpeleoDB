@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.db.utils import IntegrityError
+from drf_spectacular.utils import extend_schema
 from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
 from rest_framework import status
@@ -93,6 +94,7 @@ class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
         user = self.get_user()
         return Landmark.objects.filter(user=user).select_related("user")
 
+    @extend_schema(operation_id="v1_landmarks_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)

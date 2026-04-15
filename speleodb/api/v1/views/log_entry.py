@@ -87,6 +87,7 @@ class StationLogEntrySpecificApiView(GenericAPIView[StationLogEntry], SDBAPIView
         | (IsObjectEdition & SDB_WriteAccess)
         | (IsReadOnly & SDB_ReadAccess)
     ]
+    serializer_class = StationLogEntrySerializer
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:

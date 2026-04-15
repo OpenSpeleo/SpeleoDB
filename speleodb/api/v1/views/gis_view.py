@@ -58,6 +58,7 @@ class GISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
 
     queryset = GISView.objects.all()
     permission_classes = [GISViewOwnershipPermission]
+    serializer_class = GISViewDataSerializer
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -179,6 +180,7 @@ class PublicGISViewGeoJSONApiView(GenericAPIView[GISView], SDBAPIViewMixin):
 
     queryset = GISView.objects.all()
     permission_classes = [permissions.AllowAny]
+    serializer_class = PublicGISViewSerializer
     lookup_field = "gis_token"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:

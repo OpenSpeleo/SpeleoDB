@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -45,6 +46,7 @@ class GISViewManagementListApiView(GenericAPIView[GISView], SDBAPIViewMixin):
             .order_by("-modified_date")
         )
 
+    @extend_schema(operation_id="v1_user_gis_views_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List all GIS views for the authenticated user."""
         queryset = self.get_queryset()

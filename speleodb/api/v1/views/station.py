@@ -98,6 +98,7 @@ class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
         | (IsObjectEdition & SDB_WriteAccess)
         | (IsReadOnly & SDB_ReadAccess)
     ]
+    serializer_class = StationSerializer
     lookup_field = "id"
 
     def _get_serializer_for_station(

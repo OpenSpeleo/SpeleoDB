@@ -21,6 +21,7 @@ from django.db.models import Subquery
 from django.http import Http404
 from django.http import StreamingHttpResponse
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
 from rest_framework import status
@@ -75,6 +76,7 @@ class CylinderFleetApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixin):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CylinderFleetSerializer
 
+    @extend_schema(operation_id="v1_cylinder_fleets_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List all cylinder fleets with user permissions."""
         user = self.get_user()
@@ -871,6 +873,7 @@ class CylinderInstallApiView(GenericAPIView[CylinderInstall], SDBAPIViewMixin):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CylinderInstallSerializer
 
+    @extend_schema(operation_id="v1_cylinder_installs_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         List cylinder installs.
@@ -1121,6 +1124,7 @@ class CylinderPressureCheckApiView(
 
         return install, None
 
+    @extend_schema(operation_id="v1_cylinder_installs_pressure_checks_list")
     def get(
         self, request: Request, install_id: str, *args: Any, **kwargs: Any
     ) -> Response:

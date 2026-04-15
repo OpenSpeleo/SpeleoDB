@@ -16,6 +16,7 @@ from typing import Any
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Prefetch
 from django.http import Http404
+from drf_spectacular.utils import extend_schema
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import GenericAPIView
 
@@ -72,6 +73,7 @@ class ProjectAllProjectGeoJsonApiView(
     permission_classes = [SDB_WebViewerAccess]
     serializer_class = ProjectWithGeoJsonSerializer
 
+    @extend_schema(operation_id="v1_projects_geojson_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         projects = self.get_user_projects(user)
@@ -185,6 +187,7 @@ class ProjectGeoJsonCommitsApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
     queryset = Project.objects.all()
     permission_classes = [SDB_ReadAccess]
+    serializer_class = ProjectGeoJSONCommitSerializer  # type: ignore[assignment]
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:

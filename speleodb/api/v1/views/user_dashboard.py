@@ -10,6 +10,7 @@ from typing import Any
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework.generics import GenericAPIView
 
@@ -57,6 +58,24 @@ class UserDashboardStatsView(GenericAPIView[User], SDBAPIViewMixin):
 
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "summary": {"type": "object"},
+                    "projects_by_level": {"type": "object"},
+                    "projects_by_type": {"type": "object"},
+                    "commits_over_time": {"type": "array", "items": {"type": "object"}},
+                    "contribution_calendar": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                    "recent_activity": {"type": "array", "items": {"type": "object"}},
+                },
+            },
+        },
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 
