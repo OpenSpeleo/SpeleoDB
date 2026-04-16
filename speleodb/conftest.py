@@ -9,8 +9,8 @@ import pytest
 from django.apps import apps
 from dotenv import load_dotenv
 
-from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import SurveyTeamFactory
+from speleodb.api.v2.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.factories import SurveyTeamFactory
 from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation

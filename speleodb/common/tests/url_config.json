@@ -469,662 +469,1322 @@
     },
     {
         "url": "/api/v1/announcements/",
-        "module": "speleodb.api.v1.views.announcement.PublicAnnouncementApiView",
+        "module": "speleodb.api.v2.views.announcement.PublicAnnouncementApiView",
         "name": "api:v1:public-announcements",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-fleets/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetApiView",
         "name": "api:v1:cylinder-fleets",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetSpecificApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetSpecificApiView",
         "name": "api:v1:cylinder-fleet-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/cylinders/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderApiView",
         "name": "api:v1:cylinder-fleet-cylinders",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/cylinders/export/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetExportExcelApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetExportExcelApiView",
         "name": "api:v1:cylinder-fleet-cylinders-export",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/cylinders/watchlist/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetWatchlistApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetWatchlistApiView",
         "name": "api:v1:cylinder-fleet-watchlist",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/cylinders/watchlist/export/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetWatchlistExportExcelApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetWatchlistExportExcelApiView",
         "name": "api:v1:cylinder-fleet-watchlist-export",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-fleets/<uuid:fleet_id>/permissions/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderFleetPermissionApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetPermissionApiView",
         "name": "api:v1:cylinder-fleet-permissions",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-installs/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderInstallApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderInstallApiView",
         "name": "api:v1:cylinder-installs",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-installs/<uuid:install_id>/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderInstallSpecificApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderInstallSpecificApiView",
         "name": "api:v1:cylinder-install-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-installs/<uuid:install_id>/pressure-checks/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderPressureCheckApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderPressureCheckApiView",
         "name": "api:v1:cylinder-install-pressure-checks",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-installs/<uuid:install_id>/pressure-checks/<uuid:check_id>/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderPressureCheckSpecificApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderPressureCheckSpecificApiView",
         "name": "api:v1:cylinder-pressure-check-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinder-installs/geojson/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderInstallGeoJSONApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderInstallGeoJSONApiView",
         "name": "api:v1:cylinder-installs-geojson",
         "decorators": ""
     },
     {
         "url": "/api/v1/cylinders/<uuid:id>/",
-        "module": "speleodb.api.v1.views.cylinder_fleet.CylinderSpecificApiView",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderSpecificApiView",
         "name": "api:v1:cylinder-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/experiment_records/<uuid:id>/",
-        "module": "speleodb.api.v1.views.experiment.ExperimentRecordSpecificApiView",
+        "module": "speleodb.api.v2.views.experiment.ExperimentRecordSpecificApiView",
         "name": "api:v1:experiment-records-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/experiments/",
-        "module": "speleodb.api.v1.views.experiment.ExperimentApiView",
+        "module": "speleodb.api.v2.views.experiment.ExperimentApiView",
         "name": "api:v1:experiments",
         "decorators": ""
     },
     {
         "url": "/api/v1/experiments/<uuid:id>/",
-        "module": "speleodb.api.v1.views.experiment.ExperimentSpecificApiView",
+        "module": "speleodb.api.v2.views.experiment.ExperimentSpecificApiView",
         "name": "api:v1:experiment-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/experiments/<uuid:id>/export/excel/",
-        "module": "speleodb.api.v1.views.experiment.ExperimentExportExcelApiView",
+        "module": "speleodb.api.v2.views.experiment.ExperimentExportExcelApiView",
         "name": "api:v1:experiment-export-excel",
         "decorators": ""
     },
     {
         "url": "/api/v1/experiments/<uuid:id>/permission/detail/",
-        "module": "speleodb.api.v1.views.user_experiment_permission.ExperimentUserPermissionSpecificApiView",
+        "module": "speleodb.api.v2.views.user_experiment_permission.ExperimentUserPermissionSpecificApiView",
         "name": "api:v1:experiment-user-permissions-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/experiments/<uuid:id>/permissions/",
-        "module": "speleodb.api.v1.views.user_experiment_permission.ExperimentUserPermissionListApiView",
+        "module": "speleodb.api.v2.views.user_experiment_permission.ExperimentUserPermissionListApiView",
         "name": "api:v1:experiment-user-permissions",
         "decorators": ""
     },
     {
         "url": "/api/v1/exploration-leads/<uuid:id>/",
-        "module": "speleodb.api.v1.views.exploration_lead.ExplorationLeadSpecificApiView",
+        "module": "speleodb.api.v2.views.exploration_lead.ExplorationLeadSpecificApiView",
         "name": "api:v1:exploration-lead-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/exploration-leads/geojson/",
-        "module": "speleodb.api.v1.views.exploration_lead.AllExploLeadsGeoJSONApiView",
+        "module": "speleodb.api.v2.views.exploration_lead.AllExploLeadsGeoJSONApiView",
         "name": "api:v1:exploration-lead-all-geojson",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/experiment/<gis_token>/",
-        "module": "speleodb.api.v1.views.experiment.ExperimentGISApiView",
+        "module": "speleodb.api.v2.views.experiment.ExperimentGISApiView",
         "name": "api:v1:gis-ogc:experiment",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/user/<user_token:key>",
-        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserProjectsApiView",
+        "module": "speleodb.api.v2.views.project_geojson.OGCGISUserProjectsApiView",
         "name": "api:v1:gis-ogc:user-data",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/user/<user_token:key>/",
-        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserLandingPageApiView",
+        "module": "speleodb.api.v2.views.project_geojson.OGCGISUserLandingPageApiView",
         "name": "api:v1:gis-ogc:user-landing",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/user/<user_token:key>/<gitsha:commit_sha>",
-        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserCollectionApiView",
+        "module": "speleodb.api.v2.views.project_geojson.OGCGISUserCollectionApiView",
         "name": "api:v1:gis-ogc:user-collection",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/user/<user_token:key>/<gitsha:commit_sha>/items",
-        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserCollectionItemApiView",
+        "module": "speleodb.api.v2.views.project_geojson.OGCGISUserCollectionItemApiView",
         "name": "api:v1:gis-ogc:user-collection-items",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/user/<user_token:key>/conformance",
-        "module": "speleodb.api.v1.views.project_geojson.OGCGISUserConformanceApiView",
+        "module": "speleodb.api.v2.views.project_geojson.OGCGISUserConformanceApiView",
         "name": "api:v1:gis-ogc:user-conformance",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/view/<gis_token>",
-        "module": "speleodb.api.v1.views.gis_view.OGCGISViewCollectionsApiView",
+        "module": "speleodb.api.v2.views.gis_view.OGCGISViewCollectionsApiView",
         "name": "api:v1:gis-ogc:view-data",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/view/<gis_token>/",
-        "module": "speleodb.api.v1.views.gis_view.OGCGISViewLandingPageApiView",
+        "module": "speleodb.api.v2.views.gis_view.OGCGISViewLandingPageApiView",
         "name": "api:v1:gis-ogc:view-landing",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/view/<gis_token>/<gitsha:commit_sha>",
-        "module": "speleodb.api.v1.views.gis_view.OGCGISViewCollectionApiView",
+        "module": "speleodb.api.v2.views.gis_view.OGCGISViewCollectionApiView",
         "name": "api:v1:gis-ogc:view-collection",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/view/<gis_token>/<gitsha:commit_sha>/items",
-        "module": "speleodb.api.v1.views.gis_view.OGCGISViewCollectionItemApiView",
+        "module": "speleodb.api.v2.views.gis_view.OGCGISViewCollectionItemApiView",
         "name": "api:v1:gis-ogc:view-collection-items",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/view/<gis_token>/conformance",
-        "module": "speleodb.api.v1.views.gis_view.OGCGISViewConformanceApiView",
+        "module": "speleodb.api.v2.views.gis_view.OGCGISViewConformanceApiView",
         "name": "api:v1:gis-ogc:view-conformance",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis-ogc/view/<gis_token>/geojson",
-        "module": "speleodb.api.v1.views.gis_view.PublicGISViewGeoJSONApiView",
+        "module": "speleodb.api.v2.views.gis_view.PublicGISViewGeoJSONApiView",
         "name": "api:v1:gis-ogc:view-geojson",
         "decorators": ""
     },
     {
         "url": "/api/v1/gis_view/<uuid:id>/",
-        "module": "speleodb.api.v1.views.gis_view.GISViewDataApiView",
+        "module": "speleodb.api.v2.views.gis_view.GISViewDataApiView",
         "name": "api:v1:gis-view-data",
         "decorators": ""
     },
     {
         "url": "/api/v1/gps_tracks/",
-        "module": "speleodb.api.v1.views.gps_track.UserGPSTracks",
+        "module": "speleodb.api.v2.views.gps_track.UserGPSTracks",
         "name": "api:v1:gps-tracks",
         "decorators": ""
     },
     {
         "url": "/api/v1/gps_tracks/<uuid:id>/",
-        "module": "speleodb.api.v1.views.gps_track.GPSTrackSpecificAPIView",
+        "module": "speleodb.api.v2.views.gps_track.GPSTrackSpecificAPIView",
         "name": "api:v1:gps-track-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/import/gpx/",
-        "module": "speleodb.api.v1.views.gpx_import.GPXImportView",
+        "module": "speleodb.api.v2.views.gpx_import.GPXImportView",
         "name": "api:v1:gpx-import",
         "decorators": ""
     },
     {
         "url": "/api/v1/import/kml_kmz/",
-        "module": "speleodb.api.v1.views.kml_kmz_import.KML_KMZ_ImportView",
+        "module": "speleodb.api.v2.views.kml_kmz_import.KML_KMZ_ImportView",
         "name": "api:v1:kml-kmz-import",
         "decorators": ""
     },
     {
         "url": "/api/v1/landmarks/",
-        "module": "speleodb.api.v1.views.landmark.LandmarkAPIView",
+        "module": "speleodb.api.v2.views.landmark.LandmarkAPIView",
         "name": "api:v1:landmarks",
         "decorators": ""
     },
     {
         "url": "/api/v1/landmarks/<uuid:id>/",
-        "module": "speleodb.api.v1.views.landmark.LandmarkSpecificAPIView",
+        "module": "speleodb.api.v2.views.landmark.LandmarkSpecificAPIView",
         "name": "api:v1:landmark-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/landmarks/geojson/",
-        "module": "speleodb.api.v1.views.landmark.LandmarkGeoJSONView",
+        "module": "speleodb.api.v2.views.landmark.LandmarkGeoJSONView",
         "name": "api:v1:landmarks-geojson",
         "decorators": ""
     },
     {
         "url": "/api/v1/logs/<uuid:id>/",
-        "module": "speleodb.api.v1.views.log_entry.StationLogEntrySpecificApiView",
+        "module": "speleodb.api.v2.views.log_entry.StationLogEntrySpecificApiView",
         "name": "api:v1:log-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/plugin_releases/",
-        "module": "speleodb.api.v1.views.plugin_release.PluginReleasesApiView",
+        "module": "speleodb.api.v2.views.plugin_release.PluginReleasesApiView",
         "name": "api:v1:plugin-releases",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/",
-        "module": "speleodb.api.v1.views.project.ProjectApiView",
+        "module": "speleodb.api.v2.views.project.ProjectApiView",
         "name": "api:v1:projects",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/",
-        "module": "speleodb.api.v1.views.project.ProjectSpecificApiView",
+        "module": "speleodb.api.v2.views.project.ProjectSpecificApiView",
         "name": "api:v1:project-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/acquire/",
-        "module": "speleodb.api.v1.views.mutex.ProjectAcquireApiView",
+        "module": "speleodb.api.v2.views.mutex.ProjectAcquireApiView",
         "name": "api:v1:project-acquire",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/download/<download_format:fileformat>/",
-        "module": "speleodb.api.v1.views.file.FileDownloadView",
+        "module": "speleodb.api.v2.views.file.FileDownloadView",
         "name": "api:v1:project-download",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/download/<download_format:fileformat>/<gitsha:hexsha>/",
-        "module": "speleodb.api.v1.views.file.FileDownloadAtHashView",
+        "module": "speleodb.api.v2.views.file.FileDownloadAtHashView",
         "name": "api:v1:project-download-at-hash",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/download/blob/<blobsha:hexsha>/",
-        "module": "speleodb.api.v1.views.file.BlobDownloadView",
+        "module": "speleodb.api.v2.views.file.BlobDownloadView",
         "name": "api:v1:project-download-blob",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/exploration-leads/",
-        "module": "speleodb.api.v1.views.exploration_lead.ProjectExplorationLeadsApiView",
+        "module": "speleodb.api.v2.views.exploration_lead.ProjectExplorationLeadsApiView",
         "name": "api:v1:project-exploration-leads",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/exploration-leads/geojson/",
-        "module": "speleodb.api.v1.views.exploration_lead.ProjectExplorationLeadsGeoJSONView",
+        "module": "speleodb.api.v2.views.exploration_lead.ProjectExplorationLeadsGeoJSONView",
         "name": "api:v1:project-exploration-leads-geojson",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/geojson/",
-        "module": "speleodb.api.v1.views.project_geojson.ProjectGeoJsonCommitsApiView",
+        "module": "speleodb.api.v2.views.project_geojson.ProjectGeoJsonCommitsApiView",
         "name": "api:v1:project-geojson-commits",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/git_explorer/<gitsha:hexsha>/",
-        "module": "speleodb.api.v1.views.project_explorer.ProjectGitExplorerApiView",
+        "module": "speleodb.api.v2.views.project_explorer.ProjectGitExplorerApiView",
         "name": "api:v1:project-gitexplorer",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/permission/team/detail/",
-        "module": "speleodb.api.v1.views.team_project_permission.ProjectTeamPermissionSpecificApiView",
+        "module": "speleodb.api.v2.views.team_project_permission.ProjectTeamPermissionSpecificApiView",
         "name": "api:v1:project-team-permissions-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/permission/user/detail/",
-        "module": "speleodb.api.v1.views.user_project_permission.ProjectUserPermissionSpecificApiView",
+        "module": "speleodb.api.v2.views.user_project_permission.ProjectUserPermissionSpecificApiView",
         "name": "api:v1:project-user-permissions-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/permissions/team/",
-        "module": "speleodb.api.v1.views.team_project_permission.ProjectTeamPermissionListApiView",
+        "module": "speleodb.api.v2.views.team_project_permission.ProjectTeamPermissionListApiView",
         "name": "api:v1:project-team-permissions",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/permissions/user/",
-        "module": "speleodb.api.v1.views.user_project_permission.ProjectUserPermissionListApiView",
+        "module": "speleodb.api.v2.views.user_project_permission.ProjectUserPermissionListApiView",
         "name": "api:v1:project-user-permissions",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/release/",
-        "module": "speleodb.api.v1.views.mutex.ProjectReleaseApiView",
+        "module": "speleodb.api.v2.views.mutex.ProjectReleaseApiView",
         "name": "api:v1:project-release",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/revisions/",
-        "module": "speleodb.api.v1.views.project_explorer.ProjectRevisionsApiView",
+        "module": "speleodb.api.v2.views.project_explorer.ProjectRevisionsApiView",
         "name": "api:v1:project-revisions",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/stations/",
-        "module": "speleodb.api.v1.views.station.ProjectStationsApiView",
+        "module": "speleodb.api.v2.views.station.ProjectStationsApiView",
         "name": "api:v1:project-stations",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/stations/geojson/",
-        "module": "speleodb.api.v1.views.station.ProjectStationsGeoJSONView",
+        "module": "speleodb.api.v2.views.station.ProjectStationsGeoJSONView",
         "name": "api:v1:project-stations-geojson",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/<uuid:id>/upload/<upload_format:fileformat>/",
-        "module": "speleodb.api.v1.views.file.FileUploadView",
+        "module": "speleodb.api.v2.views.file.FileUploadView",
         "name": "api:v1:project-upload",
         "decorators": ""
     },
     {
         "url": "/api/v1/projects/geojson/",
-        "module": "speleodb.api.v1.views.project_geojson.ProjectAllProjectGeoJsonApiView",
+        "module": "speleodb.api.v2.views.project_geojson.ProjectAllProjectGeoJsonApiView",
         "name": "api:v1:all-projects-geojson",
         "decorators": ""
     },
     {
         "url": "/api/v1/resources/<uuid:id>/",
-        "module": "speleodb.api.v1.views.resource.StationResourceSpecificApiView",
+        "module": "speleodb.api.v2.views.resource.StationResourceSpecificApiView",
         "name": "api:v1:resource-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/sensor-fleets/",
-        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetApiView",
         "name": "api:v1:sensor-fleets",
         "decorators": ""
     },
     {
         "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/",
-        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetSpecificApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetSpecificApiView",
         "name": "api:v1:sensor-fleet-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/permissions/",
-        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetPermissionApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetPermissionApiView",
         "name": "api:v1:sensor-fleet-permissions",
         "decorators": ""
     },
     {
         "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/sensors/",
-        "module": "speleodb.api.v1.views.sensor_fleet.SensorApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorApiView",
         "name": "api:v1:sensor-fleet-sensors",
         "decorators": ""
     },
     {
         "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/sensors/export/",
-        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetExportExcelApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetExportExcelApiView",
         "name": "api:v1:sensor-fleet-sensors-export",
         "decorators": ""
     },
     {
         "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/sensors/watchlist/",
-        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetWatchlistApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetWatchlistApiView",
         "name": "api:v1:sensor-fleet-watchlist",
         "decorators": ""
     },
     {
         "url": "/api/v1/sensor-fleets/<uuid:fleet_id>/sensors/watchlist/export/",
-        "module": "speleodb.api.v1.views.sensor_fleet.SensorFleetWatchlistExportExcelApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetWatchlistExportExcelApiView",
         "name": "api:v1:sensor-fleet-watchlist-export",
         "decorators": ""
     },
     {
         "url": "/api/v1/sensors/<uuid:id>/",
-        "module": "speleodb.api.v1.views.sensor_fleet.SensorSpecificApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorSpecificApiView",
         "name": "api:v1:sensor-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/sensors/<uuid:id>/toggle-functional/",
-        "module": "speleodb.api.v1.views.sensor_fleet.SensorToggleFunctionalApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorToggleFunctionalApiView",
         "name": "api:v1:sensor-toggle-functional",
         "decorators": ""
     },
     {
         "url": "/api/v1/station_tags/",
-        "module": "speleodb.api.v1.views.station_tag.StationTagsApiView",
+        "module": "speleodb.api.v2.views.station_tag.StationTagsApiView",
         "name": "api:v1:station-tags",
         "decorators": ""
     },
     {
         "url": "/api/v1/station_tags/<uuid:id>/",
-        "module": "speleodb.api.v1.views.station_tag.StationTagSpecificApiView",
+        "module": "speleodb.api.v2.views.station_tag.StationTagSpecificApiView",
         "name": "api:v1:station-tag-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/station_tags/colors/",
-        "module": "speleodb.api.v1.views.station_tag.StationTagColorsApiView",
+        "module": "speleodb.api.v2.views.station_tag.StationTagColorsApiView",
         "name": "api:v1:station-tag-colors",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/<uuid:id>/",
-        "module": "speleodb.api.v1.views.station.StationSpecificApiView",
+        "module": "speleodb.api.v2.views.station.StationSpecificApiView",
         "name": "api:v1:station-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/<uuid:id>/experiment/<uuid:exp_id>/records/",
-        "module": "speleodb.api.v1.views.experiment.ExperimentRecordApiView",
+        "module": "speleodb.api.v2.views.experiment.ExperimentRecordApiView",
         "name": "api:v1:experiment-records",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/<uuid:id>/logs/",
-        "module": "speleodb.api.v1.views.log_entry.StationLogEntryApiView",
+        "module": "speleodb.api.v2.views.log_entry.StationLogEntryApiView",
         "name": "api:v1:station-logs",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/<uuid:id>/resources/",
-        "module": "speleodb.api.v1.views.resource.StationResourceApiView",
+        "module": "speleodb.api.v2.views.resource.StationResourceApiView",
         "name": "api:v1:station-resources",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/<uuid:id>/sensor-installs/",
-        "module": "speleodb.api.v1.views.sensor_fleet.StationSensorInstallApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.StationSensorInstallApiView",
         "name": "api:v1:station-sensor-installs",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/<uuid:id>/sensor-installs/<uuid:install_id>/",
-        "module": "speleodb.api.v1.views.sensor_fleet.StationSensorInstallSpecificApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.StationSensorInstallSpecificApiView",
         "name": "api:v1:station-sensor-install-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/<uuid:id>/sensor-installs/export/excel/",
-        "module": "speleodb.api.v1.views.sensor_fleet.StationSensorInstallExportExcelApiView",
+        "module": "speleodb.api.v2.views.sensor_fleet.StationSensorInstallExportExcelApiView",
         "name": "api:v1:station-sensor-installs-export",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/<uuid:id>/tags/",
-        "module": "speleodb.api.v1.views.station_tag.StationTagsManageApiView",
+        "module": "speleodb.api.v2.views.station_tag.StationTagsManageApiView",
         "name": "api:v1:station-tags-manage",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/subsurface/",
-        "module": "speleodb.api.v1.views.station.SubSurfaceStationsApiView",
+        "module": "speleodb.api.v2.views.station.SubSurfaceStationsApiView",
         "name": "api:v1:subsurface-stations",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/subsurface/geojson/",
-        "module": "speleodb.api.v1.views.station.SubSurfaceStationsGeoJSONApiView",
+        "module": "speleodb.api.v2.views.station.SubSurfaceStationsGeoJSONApiView",
         "name": "api:v1:subsurface-stations-geojson",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/surface/",
-        "module": "speleodb.api.v1.views.station.SurfaceStationsApiView",
+        "module": "speleodb.api.v2.views.station.SurfaceStationsApiView",
         "name": "api:v1:surface-stations",
         "decorators": ""
     },
     {
         "url": "/api/v1/stations/surface/geojson/",
-        "module": "speleodb.api.v1.views.station.SurfaceStationsGeoJSONApiView",
+        "module": "speleodb.api.v2.views.station.SurfaceStationsGeoJSONApiView",
         "name": "api:v1:surface-stations-geojson",
         "decorators": ""
     },
     {
         "url": "/api/v1/surface-networks/",
-        "module": "speleodb.api.v1.views.surface_network.SurfaceMonitoringNetworkApiView",
+        "module": "speleodb.api.v2.views.surface_network.SurfaceMonitoringNetworkApiView",
         "name": "api:v1:surface-networks",
         "decorators": ""
     },
     {
         "url": "/api/v1/surface-networks/<uuid:network_id>/",
-        "module": "speleodb.api.v1.views.surface_network.SurfaceMonitoringNetworkSpecificApiView",
+        "module": "speleodb.api.v2.views.surface_network.SurfaceMonitoringNetworkSpecificApiView",
         "name": "api:v1:surface-network",
         "decorators": ""
     },
     {
         "url": "/api/v1/surface-networks/<uuid:network_id>/permissions/",
-        "module": "speleodb.api.v1.views.surface_network.SurfaceMonitoringNetworkPermissionApiView",
+        "module": "speleodb.api.v2.views.surface_network.SurfaceMonitoringNetworkPermissionApiView",
         "name": "api:v1:surface-network-permissions",
         "decorators": ""
     },
     {
         "url": "/api/v1/surface-networks/<uuid:network_id>/stations/",
-        "module": "speleodb.api.v1.views.station.NetworkStationsApiView",
+        "module": "speleodb.api.v2.views.station.NetworkStationsApiView",
         "name": "api:v1:network-stations",
         "decorators": ""
     },
     {
         "url": "/api/v1/surface-networks/<uuid:network_id>/stations/geojson/",
-        "module": "speleodb.api.v1.views.station.NetworkStationsGeoJSONView",
+        "module": "speleodb.api.v2.views.station.NetworkStationsGeoJSONView",
         "name": "api:v1:network-stations-geojson",
         "decorators": ""
     },
     {
         "url": "/api/v1/teams/",
-        "module": "speleodb.api.v1.views.team.TeamApiView",
+        "module": "speleodb.api.v2.views.team.TeamApiView",
         "name": "api:v1:teams",
         "decorators": ""
     },
     {
         "url": "/api/v1/teams/<uuid:id>/",
-        "module": "speleodb.api.v1.views.team.TeamSpecificApiView",
+        "module": "speleodb.api.v2.views.team.TeamSpecificApiView",
         "name": "api:v1:team-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/teams/<uuid:id>/memberships/",
-        "module": "speleodb.api.v1.views.team_membership.TeamMembershipListApiView",
+        "module": "speleodb.api.v2.views.team_membership.TeamMembershipListApiView",
         "name": "api:v1:team-memberships",
         "decorators": ""
     },
     {
         "url": "/api/v1/teams/<uuid:id>/memberships/detail/",
-        "module": "speleodb.api.v1.views.team_membership.TeamMembershipApiView",
+        "module": "speleodb.api.v2.views.team_membership.TeamMembershipApiView",
         "name": "api:v1:team-memberships-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/tools/dmp-doctor/",
-        "module": "speleodb.api.v1.views.tools.ToolDMPDoctor",
+        "module": "speleodb.api.v2.views.tools.ToolDMPDoctor",
         "name": "api:v1:tool-dmp-doctor",
         "decorators": ""
     },
     {
         "url": "/api/v1/tools/dmp2json/",
-        "module": "speleodb.api.v1.views.tools.ToolDMP2JSON",
+        "module": "speleodb.api.v2.views.tools.ToolDMP2JSON",
         "name": "api:v1:tool-dmp2json",
         "decorators": ""
     },
     {
         "url": "/api/v1/tools/xls2compass/",
-        "module": "speleodb.api.v1.views.tools.ToolXLSToCompass",
+        "module": "speleodb.api.v2.views.tools.ToolXLSToCompass",
         "name": "api:v1:tool-xls2compass",
         "decorators": ""
     },
     {
         "url": "/api/v1/tools/xls2dmp/",
-        "module": "speleodb.api.v1.views.tools.ToolXLSToDMP",
+        "module": "speleodb.api.v2.views.tools.ToolXLSToDMP",
         "name": "api:v1:tool-xls2dmp",
         "decorators": ""
     },
     {
         "url": "/api/v1/user/",
-        "module": "speleodb.api.v1.views.user.UserInfo",
+        "module": "speleodb.api.v2.views.user.UserInfo",
         "name": "api:v1:user-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/user/auth-token/",
-        "module": "speleodb.api.v1.views.user.UserAuthTokenView",
+        "module": "speleodb.api.v2.views.user.UserAuthTokenView",
         "name": "api:v1:user-auth-token",
         "decorators": ""
     },
     {
         "url": "/api/v1/user/autocomplete/",
-        "module": "speleodb.api.v1.views.user.UserAutocompleteView",
+        "module": "speleodb.api.v2.views.user.UserAutocompleteView",
         "name": "api:v1:user-autocomplete",
         "decorators": ""
     },
     {
         "url": "/api/v1/user/dashboard-stats/",
-        "module": "speleodb.api.v1.views.user_dashboard.UserDashboardStatsView",
+        "module": "speleodb.api.v2.views.user_dashboard.UserDashboardStatsView",
         "name": "api:v1:user-dashboard-stats",
         "decorators": ""
     },
     {
         "url": "/api/v1/user/gis_views/",
-        "module": "speleodb.api.v1.views.gis_view_management.GISViewManagementListApiView",
+        "module": "speleodb.api.v2.views.gis_view_management.GISViewManagementListApiView",
         "name": "api:v1:gis-views",
         "decorators": ""
     },
     {
         "url": "/api/v1/user/gis_views/<uuid:id>/",
-        "module": "speleodb.api.v1.views.gis_view_management.GISViewManagementDetailApiView",
+        "module": "speleodb.api.v2.views.gis_view_management.GISViewManagementDetailApiView",
         "name": "api:v1:gis-view-detail",
         "decorators": ""
     },
     {
         "url": "/api/v1/user/password/",
-        "module": "speleodb.api.v1.views.user.UserPasswordChangeView",
+        "module": "speleodb.api.v2.views.user.UserPasswordChangeView",
         "name": "api:v1:user-password-update",
         "decorators": ""
     },
     {
         "url": "/api/v1/user/release_all_locks/",
-        "module": "speleodb.api.v1.views.user.ReleaseAllUserLocksView",
+        "module": "speleodb.api.v2.views.user.ReleaseAllUserLocksView",
         "name": "api:v1:release-all-locks",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/announcements/",
+        "module": "speleodb.api.v2.views.announcement.PublicAnnouncementApiView",
+        "name": "api:v2:public-announcements",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-fleets/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetApiView",
+        "name": "api:v2:cylinder-fleets",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-fleets/<uuid:fleet_id>/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetSpecificApiView",
+        "name": "api:v2:cylinder-fleet-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-fleets/<uuid:fleet_id>/cylinders/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderApiView",
+        "name": "api:v2:cylinder-fleet-cylinders",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-fleets/<uuid:fleet_id>/cylinders/export/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetExportExcelApiView",
+        "name": "api:v2:cylinder-fleet-cylinders-export",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-fleets/<uuid:fleet_id>/cylinders/watchlist/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetWatchlistApiView",
+        "name": "api:v2:cylinder-fleet-watchlist",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-fleets/<uuid:fleet_id>/cylinders/watchlist/export/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetWatchlistExportExcelApiView",
+        "name": "api:v2:cylinder-fleet-watchlist-export",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-fleets/<uuid:fleet_id>/permissions/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderFleetPermissionApiView",
+        "name": "api:v2:cylinder-fleet-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-installs/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderInstallApiView",
+        "name": "api:v2:cylinder-installs",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-installs/<uuid:install_id>/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderInstallSpecificApiView",
+        "name": "api:v2:cylinder-install-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-installs/<uuid:install_id>/pressure-checks/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderPressureCheckApiView",
+        "name": "api:v2:cylinder-install-pressure-checks",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-installs/<uuid:install_id>/pressure-checks/<uuid:check_id>/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderPressureCheckSpecificApiView",
+        "name": "api:v2:cylinder-pressure-check-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinder-installs/geojson/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderInstallGeoJSONApiView",
+        "name": "api:v2:cylinder-installs-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/cylinders/<uuid:id>/",
+        "module": "speleodb.api.v2.views.cylinder_fleet.CylinderSpecificApiView",
+        "name": "api:v2:cylinder-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/experiment_records/<uuid:id>/",
+        "module": "speleodb.api.v2.views.experiment.ExperimentRecordSpecificApiView",
+        "name": "api:v2:experiment-records-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/experiments/",
+        "module": "speleodb.api.v2.views.experiment.ExperimentApiView",
+        "name": "api:v2:experiments",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/experiments/<uuid:id>/",
+        "module": "speleodb.api.v2.views.experiment.ExperimentSpecificApiView",
+        "name": "api:v2:experiment-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/experiments/<uuid:id>/export/excel/",
+        "module": "speleodb.api.v2.views.experiment.ExperimentExportExcelApiView",
+        "name": "api:v2:experiment-export-excel",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/experiments/<uuid:id>/permission/detail/",
+        "module": "speleodb.api.v2.views.user_experiment_permission.ExperimentUserPermissionSpecificApiView",
+        "name": "api:v2:experiment-user-permissions-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/experiments/<uuid:id>/permissions/",
+        "module": "speleodb.api.v2.views.user_experiment_permission.ExperimentUserPermissionListApiView",
+        "name": "api:v2:experiment-user-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/exploration-leads/<uuid:id>/",
+        "module": "speleodb.api.v2.views.exploration_lead.ExplorationLeadSpecificApiView",
+        "name": "api:v2:exploration-lead-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/exploration-leads/geojson/",
+        "module": "speleodb.api.v2.views.exploration_lead.AllExploLeadsGeoJSONApiView",
+        "name": "api:v2:exploration-lead-all-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/experiment/<gis_token>/",
+        "module": "speleodb.api.v2.views.experiment.ExperimentGISApiView",
+        "name": "api:v2:gis-ogc:experiment",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/user/<user_token:key>",
+        "module": "speleodb.api.v2.views.project_geojson.OGCGISUserProjectsApiView",
+        "name": "api:v2:gis-ogc:user-data",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/user/<user_token:key>/",
+        "module": "speleodb.api.v2.views.project_geojson.OGCGISUserLandingPageApiView",
+        "name": "api:v2:gis-ogc:user-landing",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/user/<user_token:key>/<gitsha:commit_sha>",
+        "module": "speleodb.api.v2.views.project_geojson.OGCGISUserCollectionApiView",
+        "name": "api:v2:gis-ogc:user-collection",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/user/<user_token:key>/<gitsha:commit_sha>/items",
+        "module": "speleodb.api.v2.views.project_geojson.OGCGISUserCollectionItemApiView",
+        "name": "api:v2:gis-ogc:user-collection-items",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/user/<user_token:key>/conformance",
+        "module": "speleodb.api.v2.views.project_geojson.OGCGISUserConformanceApiView",
+        "name": "api:v2:gis-ogc:user-conformance",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/view/<gis_token>",
+        "module": "speleodb.api.v2.views.gis_view.OGCGISViewCollectionsApiView",
+        "name": "api:v2:gis-ogc:view-data",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/view/<gis_token>/",
+        "module": "speleodb.api.v2.views.gis_view.OGCGISViewLandingPageApiView",
+        "name": "api:v2:gis-ogc:view-landing",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/view/<gis_token>/<gitsha:commit_sha>",
+        "module": "speleodb.api.v2.views.gis_view.OGCGISViewCollectionApiView",
+        "name": "api:v2:gis-ogc:view-collection",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/view/<gis_token>/<gitsha:commit_sha>/items",
+        "module": "speleodb.api.v2.views.gis_view.OGCGISViewCollectionItemApiView",
+        "name": "api:v2:gis-ogc:view-collection-items",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/view/<gis_token>/conformance",
+        "module": "speleodb.api.v2.views.gis_view.OGCGISViewConformanceApiView",
+        "name": "api:v2:gis-ogc:view-conformance",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/view/<gis_token>/geojson",
+        "module": "speleodb.api.v2.views.gis_view.PublicGISViewGeoJSONApiView",
+        "name": "api:v2:gis-ogc:view-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis_view/<uuid:id>/",
+        "module": "speleodb.api.v2.views.gis_view.GISViewDataApiView",
+        "name": "api:v2:gis-view-data",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gps_tracks/",
+        "module": "speleodb.api.v2.views.gps_track.UserGPSTracks",
+        "name": "api:v2:gps-tracks",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gps_tracks/<uuid:id>/",
+        "module": "speleodb.api.v2.views.gps_track.GPSTrackSpecificAPIView",
+        "name": "api:v2:gps-track-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/import/gpx/",
+        "module": "speleodb.api.v2.views.gpx_import.GPXImportView",
+        "name": "api:v2:gpx-import",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/import/kml_kmz/",
+        "module": "speleodb.api.v2.views.kml_kmz_import.KML_KMZ_ImportView",
+        "name": "api:v2:kml-kmz-import",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/landmarks/",
+        "module": "speleodb.api.v2.views.landmark.LandmarkAPIView",
+        "name": "api:v2:landmarks",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/landmarks/<uuid:id>/",
+        "module": "speleodb.api.v2.views.landmark.LandmarkSpecificAPIView",
+        "name": "api:v2:landmark-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/landmarks/geojson/",
+        "module": "speleodb.api.v2.views.landmark.LandmarkGeoJSONView",
+        "name": "api:v2:landmarks-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/logs/<uuid:id>/",
+        "module": "speleodb.api.v2.views.log_entry.StationLogEntrySpecificApiView",
+        "name": "api:v2:log-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/plugin_releases/",
+        "module": "speleodb.api.v2.views.plugin_release.PluginReleasesApiView",
+        "name": "api:v2:plugin-releases",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/",
+        "module": "speleodb.api.v2.views.project.ProjectApiView",
+        "name": "api:v2:projects",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/",
+        "module": "speleodb.api.v2.views.project.ProjectSpecificApiView",
+        "name": "api:v2:project-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/acquire/",
+        "module": "speleodb.api.v2.views.mutex.ProjectAcquireApiView",
+        "name": "api:v2:project-acquire",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/download/<download_format:fileformat>/",
+        "module": "speleodb.api.v2.views.file.FileDownloadView",
+        "name": "api:v2:project-download",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/download/<download_format:fileformat>/<gitsha:hexsha>/",
+        "module": "speleodb.api.v2.views.file.FileDownloadAtHashView",
+        "name": "api:v2:project-download-at-hash",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/download/blob/<blobsha:hexsha>/",
+        "module": "speleodb.api.v2.views.file.BlobDownloadView",
+        "name": "api:v2:project-download-blob",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/exploration-leads/",
+        "module": "speleodb.api.v2.views.exploration_lead.ProjectExplorationLeadsApiView",
+        "name": "api:v2:project-exploration-leads",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/exploration-leads/geojson/",
+        "module": "speleodb.api.v2.views.exploration_lead.ProjectExplorationLeadsGeoJSONView",
+        "name": "api:v2:project-exploration-leads-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/geojson/",
+        "module": "speleodb.api.v2.views.project_geojson.ProjectGeoJsonCommitsApiView",
+        "name": "api:v2:project-geojson-commits",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/git_explorer/<gitsha:hexsha>/",
+        "module": "speleodb.api.v2.views.project_explorer.ProjectGitExplorerApiView",
+        "name": "api:v2:project-gitexplorer",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/permission/team/detail/",
+        "module": "speleodb.api.v2.views.team_project_permission.ProjectTeamPermissionSpecificApiView",
+        "name": "api:v2:project-team-permissions-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/permission/user/detail/",
+        "module": "speleodb.api.v2.views.user_project_permission.ProjectUserPermissionSpecificApiView",
+        "name": "api:v2:project-user-permissions-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/permissions/team/",
+        "module": "speleodb.api.v2.views.team_project_permission.ProjectTeamPermissionListApiView",
+        "name": "api:v2:project-team-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/permissions/user/",
+        "module": "speleodb.api.v2.views.user_project_permission.ProjectUserPermissionListApiView",
+        "name": "api:v2:project-user-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/release/",
+        "module": "speleodb.api.v2.views.mutex.ProjectReleaseApiView",
+        "name": "api:v2:project-release",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/revisions/",
+        "module": "speleodb.api.v2.views.project_explorer.ProjectRevisionsApiView",
+        "name": "api:v2:project-revisions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/stations/",
+        "module": "speleodb.api.v2.views.station.ProjectStationsApiView",
+        "name": "api:v2:project-stations",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/stations/geojson/",
+        "module": "speleodb.api.v2.views.station.ProjectStationsGeoJSONView",
+        "name": "api:v2:project-stations-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/upload/<upload_format:fileformat>/",
+        "module": "speleodb.api.v2.views.file.FileUploadView",
+        "name": "api:v2:project-upload",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/geojson/",
+        "module": "speleodb.api.v2.views.project_geojson.ProjectAllProjectGeoJsonApiView",
+        "name": "api:v2:all-projects-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/resources/<uuid:id>/",
+        "module": "speleodb.api.v2.views.resource.StationResourceSpecificApiView",
+        "name": "api:v2:resource-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/sensor-fleets/",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetApiView",
+        "name": "api:v2:sensor-fleets",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/sensor-fleets/<uuid:fleet_id>/",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetSpecificApiView",
+        "name": "api:v2:sensor-fleet-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/sensor-fleets/<uuid:fleet_id>/permissions/",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetPermissionApiView",
+        "name": "api:v2:sensor-fleet-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/sensor-fleets/<uuid:fleet_id>/sensors/",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorApiView",
+        "name": "api:v2:sensor-fleet-sensors",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/sensor-fleets/<uuid:fleet_id>/sensors/export/",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetExportExcelApiView",
+        "name": "api:v2:sensor-fleet-sensors-export",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/sensor-fleets/<uuid:fleet_id>/sensors/watchlist/",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetWatchlistApiView",
+        "name": "api:v2:sensor-fleet-watchlist",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/sensor-fleets/<uuid:fleet_id>/sensors/watchlist/export/",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorFleetWatchlistExportExcelApiView",
+        "name": "api:v2:sensor-fleet-watchlist-export",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/sensors/<uuid:id>/",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorSpecificApiView",
+        "name": "api:v2:sensor-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/sensors/<uuid:id>/toggle-functional/",
+        "module": "speleodb.api.v2.views.sensor_fleet.SensorToggleFunctionalApiView",
+        "name": "api:v2:sensor-toggle-functional",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/station_tags/",
+        "module": "speleodb.api.v2.views.station_tag.StationTagsApiView",
+        "name": "api:v2:station-tags",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/station_tags/<uuid:id>/",
+        "module": "speleodb.api.v2.views.station_tag.StationTagSpecificApiView",
+        "name": "api:v2:station-tag-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/station_tags/colors/",
+        "module": "speleodb.api.v2.views.station_tag.StationTagColorsApiView",
+        "name": "api:v2:station-tag-colors",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/<uuid:id>/",
+        "module": "speleodb.api.v2.views.station.StationSpecificApiView",
+        "name": "api:v2:station-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/<uuid:id>/experiment/<uuid:exp_id>/records/",
+        "module": "speleodb.api.v2.views.experiment.ExperimentRecordApiView",
+        "name": "api:v2:experiment-records",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/<uuid:id>/logs/",
+        "module": "speleodb.api.v2.views.log_entry.StationLogEntryApiView",
+        "name": "api:v2:station-logs",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/<uuid:id>/resources/",
+        "module": "speleodb.api.v2.views.resource.StationResourceApiView",
+        "name": "api:v2:station-resources",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/<uuid:id>/sensor-installs/",
+        "module": "speleodb.api.v2.views.sensor_fleet.StationSensorInstallApiView",
+        "name": "api:v2:station-sensor-installs",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/<uuid:id>/sensor-installs/<uuid:install_id>/",
+        "module": "speleodb.api.v2.views.sensor_fleet.StationSensorInstallSpecificApiView",
+        "name": "api:v2:station-sensor-install-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/<uuid:id>/sensor-installs/export/excel/",
+        "module": "speleodb.api.v2.views.sensor_fleet.StationSensorInstallExportExcelApiView",
+        "name": "api:v2:station-sensor-installs-export",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/<uuid:id>/tags/",
+        "module": "speleodb.api.v2.views.station_tag.StationTagsManageApiView",
+        "name": "api:v2:station-tags-manage",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/subsurface/",
+        "module": "speleodb.api.v2.views.station.SubSurfaceStationsApiView",
+        "name": "api:v2:subsurface-stations",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/subsurface/geojson/",
+        "module": "speleodb.api.v2.views.station.SubSurfaceStationsGeoJSONApiView",
+        "name": "api:v2:subsurface-stations-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/surface/",
+        "module": "speleodb.api.v2.views.station.SurfaceStationsApiView",
+        "name": "api:v2:surface-stations",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/stations/surface/geojson/",
+        "module": "speleodb.api.v2.views.station.SurfaceStationsGeoJSONApiView",
+        "name": "api:v2:surface-stations-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/surface-networks/",
+        "module": "speleodb.api.v2.views.surface_network.SurfaceMonitoringNetworkApiView",
+        "name": "api:v2:surface-networks",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/surface-networks/<uuid:network_id>/",
+        "module": "speleodb.api.v2.views.surface_network.SurfaceMonitoringNetworkSpecificApiView",
+        "name": "api:v2:surface-network",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/surface-networks/<uuid:network_id>/permissions/",
+        "module": "speleodb.api.v2.views.surface_network.SurfaceMonitoringNetworkPermissionApiView",
+        "name": "api:v2:surface-network-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/surface-networks/<uuid:network_id>/stations/",
+        "module": "speleodb.api.v2.views.station.NetworkStationsApiView",
+        "name": "api:v2:network-stations",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/surface-networks/<uuid:network_id>/stations/geojson/",
+        "module": "speleodb.api.v2.views.station.NetworkStationsGeoJSONView",
+        "name": "api:v2:network-stations-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/teams/",
+        "module": "speleodb.api.v2.views.team.TeamApiView",
+        "name": "api:v2:teams",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/teams/<uuid:id>/",
+        "module": "speleodb.api.v2.views.team.TeamSpecificApiView",
+        "name": "api:v2:team-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/teams/<uuid:id>/memberships/",
+        "module": "speleodb.api.v2.views.team_membership.TeamMembershipListApiView",
+        "name": "api:v2:team-memberships",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/teams/<uuid:id>/memberships/detail/",
+        "module": "speleodb.api.v2.views.team_membership.TeamMembershipApiView",
+        "name": "api:v2:team-memberships-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/tools/dmp-doctor/",
+        "module": "speleodb.api.v2.views.tools.ToolDMPDoctor",
+        "name": "api:v2:tool-dmp-doctor",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/tools/dmp2json/",
+        "module": "speleodb.api.v2.views.tools.ToolDMP2JSON",
+        "name": "api:v2:tool-dmp2json",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/tools/xls2compass/",
+        "module": "speleodb.api.v2.views.tools.ToolXLSToCompass",
+        "name": "api:v2:tool-xls2compass",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/tools/xls2dmp/",
+        "module": "speleodb.api.v2.views.tools.ToolXLSToDMP",
+        "name": "api:v2:tool-xls2dmp",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/",
+        "module": "speleodb.api.v2.views.user.UserInfo",
+        "name": "api:v2:user-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/auth-token/",
+        "module": "speleodb.api.v2.views.user.UserAuthTokenView",
+        "name": "api:v2:user-auth-token",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/autocomplete/",
+        "module": "speleodb.api.v2.views.user.UserAutocompleteView",
+        "name": "api:v2:user-autocomplete",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/dashboard-stats/",
+        "module": "speleodb.api.v2.views.user_dashboard.UserDashboardStatsView",
+        "name": "api:v2:user-dashboard-stats",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/gis_views/",
+        "module": "speleodb.api.v2.views.gis_view_management.GISViewManagementListApiView",
+        "name": "api:v2:gis-views",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/gis_views/<uuid:id>/",
+        "module": "speleodb.api.v2.views.gis_view_management.GISViewManagementDetailApiView",
+        "name": "api:v2:gis-view-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/password/",
+        "module": "speleodb.api.v2.views.user.UserPasswordChangeView",
+        "name": "api:v2:user-password-update",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/release_all_locks/",
+        "module": "speleodb.api.v2.views.user.ReleaseAllUserLocksView",
+        "name": "api:v2:release-all-locks",
         "decorators": ""
     },
     {

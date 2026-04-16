@@ -35,13 +35,7 @@ export const StationResources = {
         try {
             // Fetch resources from API
             const response = await API.getStationResources(stationId);
-            let resources = [];
-
-            if (response && response.success && response.data) {
-                resources = response.data;
-            } else if (Array.isArray(response)) {
-                resources = response;
-            }
+            const resources = Array.isArray(response) ? response : [];
 
             // Sort resources by modified date (newest first)
             resources.sort((a, b) => new Date(b.modified_date || b.creation_date) - new Date(a.modified_date || a.creation_date));
@@ -523,28 +517,22 @@ export const StationResources = {
         const hasFile = formData.get('file') && formData.get('file').size > 0;
 
         try {
-            let response;
-            
             // Use progress upload for file-based resources
             if (hasFile && ['photo', 'video', 'document'].includes(resourceType)) {
                 const uploadController = new UploadProgressController('resource-upload');
                 buttonsContainer.classList.add('hidden');
-                
-                response = await uploadController.upload(
-                    Urls['api:v1:station-resources'](stationId),
+
+                await uploadController.upload(
+                    Urls['api:v2:station-resources'](stationId),
                     formData,
                     'POST'
                 );
             } else {
-                response = await API.createStationResource(stationId, formData);
+                await API.createStationResource(stationId, formData);
             }
 
-            if (response && (response.success || response.data || response.id)) {
-                Utils.showNotification('success', 'Resource saved successfully!');
-                this.render(stationId, document.getElementById('station-modal-content'));
-            } else {
-                throw new Error('Failed to save resource');
-            }
+            Utils.showNotification('success', 'Resource saved successfully!');
+            this.render(stationId, document.getElementById('station-modal-content'));
         } catch (error) {
             console.error('Error saving resource:', error);
             Utils.showNotification('error', error.message || 'Failed to save resource');
@@ -674,28 +662,22 @@ export const StationResources = {
         const hasFile = formData.get('file') && formData.get('file').size > 0;
 
         try {
-            let response;
-            
             // Use progress upload if there's a file being uploaded
             if (hasFile) {
                 const uploadController = new UploadProgressController('resource-edit-upload');
                 buttonsContainer.classList.add('hidden');
-                
-                response = await uploadController.upload(
-                    Urls['api:v1:resource-detail'](resourceId),
+
+                await uploadController.upload(
+                    Urls['api:v2:resource-detail'](resourceId),
                     formData,
                     'PATCH'
                 );
             } else {
-                response = await API.updateStationResource(resourceId, formData);
+                await API.updateStationResource(resourceId, formData);
             }
 
-            if (response && (response.success || response.data || response.id)) {
-                Utils.showNotification('success', 'Resource updated successfully!');
-                this.render(stationId, document.getElementById('station-modal-content'));
-            } else {
-                throw new Error('Failed to update resource');
-            }
+            Utils.showNotification('success', 'Resource updated successfully!');
+            this.render(stationId, document.getElementById('station-modal-content'));
         } catch (error) {
             console.error('Error updating resource:', error);
             Utils.showNotification('error', error.message || 'Failed to update resource');

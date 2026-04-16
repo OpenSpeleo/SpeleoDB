@@ -7,31 +7,31 @@ from typing import Any
 
 import pytest
 
-from speleodb.api.v1.serializers.announcement import PublicAnnoucementSerializer
-from speleodb.api.v1.serializers.cylinder_fleet import CylinderFleetSerializer
-from speleodb.api.v1.serializers.cylinder_fleet import CylinderInstallSerializer
-from speleodb.api.v1.serializers.cylinder_fleet import CylinderPressureCheckSerializer
-from speleodb.api.v1.serializers.cylinder_fleet import CylinderSerializer
-from speleodb.api.v1.serializers.experiment import ExperimentRecordSerializer
-from speleodb.api.v1.serializers.experiment import ExperimentSerializer
-from speleodb.api.v1.serializers.exploration_lead import ExplorationLeadSerializer
-from speleodb.api.v1.serializers.gis_view import GISViewCreateUpdateSerializer
-from speleodb.api.v1.serializers.gps_track import GPSTrackSerializer
-from speleodb.api.v1.serializers.landmark import LandmarkSerializer
-from speleodb.api.v1.serializers.log_entry import StationLogEntrySerializer
-from speleodb.api.v1.serializers.project import ProjectSerializer
-from speleodb.api.v1.serializers.sensor_fleet import SensorFleetSerializer
-from speleodb.api.v1.serializers.sensor_fleet import SensorSerializer
-from speleodb.api.v1.serializers.station import StationResourceSerializer
-from speleodb.api.v1.serializers.station import StationSerializer
-from speleodb.api.v1.serializers.station import SubSurfaceStationSerializer
-from speleodb.api.v1.serializers.station import SurfaceStationSerializer
-from speleodb.api.v1.serializers.station_tag import StationTagSerializer
-from speleodb.api.v1.serializers.surface_network import (
+from speleodb.api.v2.serializers.announcement import PublicAnnoucementSerializer
+from speleodb.api.v2.serializers.cylinder_fleet import CylinderFleetSerializer
+from speleodb.api.v2.serializers.cylinder_fleet import CylinderInstallSerializer
+from speleodb.api.v2.serializers.cylinder_fleet import CylinderPressureCheckSerializer
+from speleodb.api.v2.serializers.cylinder_fleet import CylinderSerializer
+from speleodb.api.v2.serializers.experiment import ExperimentRecordSerializer
+from speleodb.api.v2.serializers.experiment import ExperimentSerializer
+from speleodb.api.v2.serializers.exploration_lead import ExplorationLeadSerializer
+from speleodb.api.v2.serializers.gis_view import GISViewCreateUpdateSerializer
+from speleodb.api.v2.serializers.gps_track import GPSTrackSerializer
+from speleodb.api.v2.serializers.landmark import LandmarkSerializer
+from speleodb.api.v2.serializers.log_entry import StationLogEntrySerializer
+from speleodb.api.v2.serializers.project import ProjectSerializer
+from speleodb.api.v2.serializers.sensor_fleet import SensorFleetSerializer
+from speleodb.api.v2.serializers.sensor_fleet import SensorSerializer
+from speleodb.api.v2.serializers.station import StationResourceSerializer
+from speleodb.api.v2.serializers.station import StationSerializer
+from speleodb.api.v2.serializers.station import SubSurfaceStationSerializer
+from speleodb.api.v2.serializers.station import SurfaceStationSerializer
+from speleodb.api.v2.serializers.station_tag import StationTagSerializer
+from speleodb.api.v2.serializers.surface_network import (
     SurfaceMonitoringNetworkSerializer,
 )
-from speleodb.api.v1.serializers.team import SurveyTeamSerializer
-from speleodb.api.v1.serializers.user import UserSerializer
+from speleodb.api.v2.serializers.team import SurveyTeamSerializer
+from speleodb.api.v2.serializers.user import UserSerializer
 from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 if TYPE_CHECKING:

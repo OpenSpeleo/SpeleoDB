@@ -30,7 +30,7 @@ class PersonModelTestMixin:
         """Create a test image file."""
         # Load real image from artifacts
         artifacts_dir = (
-            Path(__file__).parent.parent.parent / "speleodb/api/v1/tests/artifacts"
+            Path(__file__).parent.parent.parent / "speleodb/api/v2/tests/artifacts"
         )
         with (artifacts_dir / "image.jpg").open(mode="rb") as f:
             content = f.read()

@@ -209,7 +209,7 @@ describe('ExplorationLeadManager', () => {
                 creation_date: '2025-01-01',
                 created_by: 'tester',
             };
-            API.createExplorationLead.mockResolvedValue({ success: true, data: createdLead });
+            API.createExplorationLead.mockResolvedValue(createdLead);
 
             const result = await ExplorationLeadManager.createLead('p1', [6.5, 46.5], 'A new lead');
 
@@ -221,10 +221,7 @@ describe('ExplorationLeadManager', () => {
         });
 
         it('formats coordinates to 7 decimal places', async () => {
-            API.createExplorationLead.mockResolvedValue({
-                success: true,
-                data: { id: 'l1', latitude: '46.5', longitude: '6.5' },
-            });
+            API.createExplorationLead.mockResolvedValue({ id: 'l1', latitude: '46.5', longitude: '6.5' });
 
             await ExplorationLeadManager.createLead('p1', [6.123456789, 46.987654321], 'desc');
 
@@ -234,10 +231,7 @@ describe('ExplorationLeadManager', () => {
         });
 
         it('handles string coordinates without throwing', async () => {
-            API.createExplorationLead.mockResolvedValue({
-                success: true,
-                data: { id: 'l2', latitude: '46.5', longitude: '6.5' },
-            });
+            API.createExplorationLead.mockResolvedValue({ id: 'l2', latitude: '46.5', longitude: '6.5' });
 
             await ExplorationLeadManager.createLead('p1', ['6.123456789', '46.987654321'], 'desc');
 
@@ -246,12 +240,10 @@ describe('ExplorationLeadManager', () => {
             expect(leadData.longitude).toBe('6.1234568');
         });
 
-        it('throws when API response is unsuccessful', async () => {
-            API.createExplorationLead.mockResolvedValue({ success: false });
+        it('throws when API rejects', async () => {
+            API.createExplorationLead.mockRejectedValue(new Error('network'));
 
-            await expect(ExplorationLeadManager.createLead('p1', [6.5, 46.5], 'desc')).rejects.toThrow(
-                'Failed to create exploration lead'
-            );
+            await expect(ExplorationLeadManager.createLead('p1', [6.5, 46.5], 'desc')).rejects.toThrow();
         });
 
         it('throws when API returns null', async () => {
@@ -275,8 +267,10 @@ describe('ExplorationLeadManager', () => {
             });
 
             API.updateExplorationLead.mockResolvedValue({
-                success: true,
-                data: { id: 'l1', latitude: '47.0', longitude: '7.0', description: 'Updated' },
+                id: 'l1',
+                latitude: '47.0',
+                longitude: '7.0',
+                description: 'Updated',
             });
 
             const result = await ExplorationLeadManager.updateLead('l1', { description: 'Updated' });
@@ -287,8 +281,14 @@ describe('ExplorationLeadManager', () => {
             expect(stored.description).toBe('Updated');
         });
 
-        it('throws when API response is unsuccessful', async () => {
-            API.updateExplorationLead.mockResolvedValue({ success: false });
+        it('throws when API rejects', async () => {
+            API.updateExplorationLead.mockRejectedValue(new Error('network'));
+
+            await expect(ExplorationLeadManager.updateLead('l1', {})).rejects.toThrow();
+        });
+
+        it('throws when API returns empty object', async () => {
+            API.updateExplorationLead.mockResolvedValue({});
 
             await expect(ExplorationLeadManager.updateLead('l1', {})).rejects.toThrow(
                 'Failed to update exploration lead'
@@ -325,8 +325,10 @@ describe('ExplorationLeadManager', () => {
         it('delegates to updateLead with formatted coordinates', async () => {
             State.explorationLeads.set('l1', { id: 'l1', coordinates: [6.0, 46.0] });
             API.updateExplorationLead.mockResolvedValue({
-                success: true,
-                data: { id: 'l1', latitude: '47.5', longitude: '7.5', description: '' },
+                id: 'l1',
+                latitude: '47.5',
+                longitude: '7.5',
+                description: '',
             });
 
             const result = await ExplorationLeadManager.moveLead('l1', [7.5, 47.5]);
@@ -341,8 +343,10 @@ describe('ExplorationLeadManager', () => {
         it('handles string coordinates without throwing', async () => {
             State.explorationLeads.set('l1', { id: 'l1', coordinates: [6.0, 46.0] });
             API.updateExplorationLead.mockResolvedValue({
-                success: true,
-                data: { id: 'l1', latitude: '47.5', longitude: '7.5', description: '' },
+                id: 'l1',
+                latitude: '47.5',
+                longitude: '7.5',
+                description: '',
             });
 
             await ExplorationLeadManager.moveLead('l1', ['7.5', '47.5']);

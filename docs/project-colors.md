@@ -71,8 +71,8 @@ entry at creation time. Format: 7-character hex string (`#rrggbb`).
 
 ## Serializer Validation
 
-**Files:** `speleodb/api/v1/serializers/project.py`,
-`speleodb/api/v1/serializers/gps_track.py`
+**Files:** `speleodb/api/v2/serializers/project.py`,
+`speleodb/api/v2/serializers/gps_track.py`
 
 Both serializers implement `validate_color()`:
 
@@ -177,9 +177,9 @@ The public viewer does not have GPS tracks.
 | `speleodb/common/enums.py` | `ColorPalette` — canonical palette, validation, random assignment |
 | `speleodb/surveys/models/project.py` | `Project.color` field |
 | `speleodb/gis/models/gps_track.py` | `GPSTrack.color` field |
-| `speleodb/api/v1/serializers/project.py` | `ProjectSerializer.validate_color()` |
-| `speleodb/api/v1/serializers/gps_track.py` | `GPSTrackSerializer.validate_color()`, custom `update()` |
-| `speleodb/api/v1/serializers/gis_view.py` | `PublicGISProjectViewSerializer` with `color` field |
+| `speleodb/api/v2/serializers/project.py` | `ProjectSerializer.validate_color()` |
+| `speleodb/api/v2/serializers/gps_track.py` | `GPSTrackSerializer.validate_color()`, custom `update()` |
+| `speleodb/api/v2/serializers/gis_view.py` | `PublicGISProjectViewSerializer` with `color` field |
 | `speleodb/surveys/templatetags/project_colors.py` | `get_project_color_palette` tag, `country_flag` filter |
 | `frontend_private/static/private/js/map_viewer/map/colors.js` | `getProjectColor()`, `getGPSTrackColor()`, `FALLBACK_COLOR` |
 | `frontend_private/static/private/js/map_viewer/config.js` | `loadProjects()`, `loadGPSTracks()`, `setPublicProjects()`, `getGPSTrackById()` |

@@ -107,23 +107,20 @@ describe('Config loading and data methods', () => {
 
     describe('loadProjects()', () => {
         it('calls API.getAllProjects and maps response data', async () => {
-            API.getAllProjects.mockResolvedValue({
-                success: true,
-                data: [
-                    {
-                        id: 'p-1',
-                        name: 'Project 1',
-                        permission: 'ADMIN',
-                        description: 'Desc',
-                        country: 'US',
-                        color: '#e41a1c',
-                        latitude: 45.0,
-                        longitude: -73.0,
-                        visibility: 'public',
-                        geojson_url: '/geojson/p1',
-                    },
-                ],
-            });
+            API.getAllProjects.mockResolvedValue([
+                {
+                    id: 'p-1',
+                    name: 'Project 1',
+                    permission: 'ADMIN',
+                    description: 'Desc',
+                    country: 'US',
+                    color: '#e41a1c',
+                    latitude: 45.0,
+                    longitude: -73.0,
+                    visibility: 'public',
+                    geojson_url: '/geojson/p1',
+                },
+            ]);
 
             const result = await Config.loadProjects();
 
@@ -145,10 +142,9 @@ describe('Config loading and data methods', () => {
         });
 
         it('maps the color field from the API response', async () => {
-            API.getAllProjects.mockResolvedValue({
-                success: true,
-                data: [{ id: 'p-1', name: 'Test', permission: 'ADMIN', color: '#377eb8' }],
-            });
+            API.getAllProjects.mockResolvedValue([
+                { id: 'p-1', name: 'Test', permission: 'ADMIN', color: '#377eb8' },
+            ]);
 
             await Config.loadProjects();
 
@@ -156,10 +152,9 @@ describe('Config loading and data methods', () => {
         });
 
         it('renames API "permission" field to "permissions"', async () => {
-            API.getAllProjects.mockResolvedValue({
-                success: true,
-                data: [{ id: 'p-1', name: 'Test', permission: 'READ_ONLY' }],
-            });
+            API.getAllProjects.mockResolvedValue([
+                { id: 'p-1', name: 'Test', permission: 'READ_ONLY' },
+            ]);
 
             await Config.loadProjects();
 
@@ -168,10 +163,9 @@ describe('Config loading and data methods', () => {
         });
 
         it('returns cached projects on subsequent calls without re-fetching', async () => {
-            API.getAllProjects.mockResolvedValue({
-                success: true,
-                data: [{ id: 'p-1', name: 'Project', permission: 'ADMIN' }],
-            });
+            API.getAllProjects.mockResolvedValue([
+                { id: 'p-1', name: 'Project', permission: 'ADMIN' },
+            ]);
 
             const first = await Config.loadProjects();
             const second = await Config.loadProjects();
@@ -180,15 +174,15 @@ describe('Config loading and data methods', () => {
             expect(first).toBe(second);
         });
 
-        it('sets empty array when response success is false', async () => {
-            API.getAllProjects.mockResolvedValue({ success: false });
+        it('sets empty array when API rejects', async () => {
+            API.getAllProjects.mockRejectedValue(new Error('network'));
 
             const result = await Config.loadProjects();
             expect(result).toEqual([]);
         });
 
-        it('sets empty array when response data is not an array', async () => {
-            API.getAllProjects.mockResolvedValue({ success: true, data: 'not-array' });
+        it('sets empty array when response is not an array', async () => {
+            API.getAllProjects.mockResolvedValue('not-array');
 
             const result = await Config.loadProjects();
             expect(result).toEqual([]);
@@ -209,14 +203,11 @@ describe('Config loading and data methods', () => {
         });
 
         it('maps multiple projects correctly', async () => {
-            API.getAllProjects.mockResolvedValue({
-                success: true,
-                data: [
-                    { id: 'p-1', name: 'Cave A', permission: 'ADMIN' },
-                    { id: 'p-2', name: 'Cave B', permission: 'READ_ONLY' },
-                    { id: 'p-3', name: 'Cave C', permission: 'READ_AND_WRITE' },
-                ],
-            });
+            API.getAllProjects.mockResolvedValue([
+                { id: 'p-1', name: 'Cave A', permission: 'ADMIN' },
+                { id: 'p-2', name: 'Cave B', permission: 'READ_ONLY' },
+                { id: 'p-3', name: 'Cave C', permission: 'READ_AND_WRITE' },
+            ]);
 
             await Config.loadProjects();
 
@@ -231,22 +222,19 @@ describe('Config loading and data methods', () => {
 
     describe('loadNetworks()', () => {
         it('calls API.getAllSurfaceNetworks and maps response data', async () => {
-            API.getAllSurfaceNetworks.mockResolvedValue({
-                success: true,
-                data: [
-                    {
-                        id: 'n-1',
-                        name: 'Network 1',
-                        description: 'A network',
-                        is_active: true,
-                        created_by: 'user-1',
-                        creation_date: '2024-01-01',
-                        modified_date: '2024-06-01',
-                        user_permission_level_label: 'ADMIN',
-                        user_permission_level: 3,
-                    },
-                ],
-            });
+            API.getAllSurfaceNetworks.mockResolvedValue([
+                {
+                    id: 'n-1',
+                    name: 'Network 1',
+                    description: 'A network',
+                    is_active: true,
+                    created_by: 'user-1',
+                    creation_date: '2024-01-01',
+                    modified_date: '2024-06-01',
+                    user_permission_level_label: 'ADMIN',
+                    user_permission_level: 3,
+                },
+            ]);
 
             const result = await Config.loadNetworks();
 
@@ -267,10 +255,9 @@ describe('Config loading and data methods', () => {
         });
 
         it('maps user_permission_level_label to permissions', async () => {
-            API.getAllSurfaceNetworks.mockResolvedValue({
-                success: true,
-                data: [{ id: 'n-1', name: 'Net', user_permission_level_label: 'READ_ONLY', user_permission_level: 1 }],
-            });
+            API.getAllSurfaceNetworks.mockResolvedValue([
+                { id: 'n-1', name: 'Net', user_permission_level_label: 'READ_ONLY', user_permission_level: 1 },
+            ]);
 
             await Config.loadNetworks();
 
@@ -279,10 +266,9 @@ describe('Config loading and data methods', () => {
         });
 
         it('returns cached networks on subsequent calls', async () => {
-            API.getAllSurfaceNetworks.mockResolvedValue({
-                success: true,
-                data: [{ id: 'n-1', name: 'Net', user_permission_level_label: 'ADMIN', user_permission_level: 3 }],
-            });
+            API.getAllSurfaceNetworks.mockResolvedValue([
+                { id: 'n-1', name: 'Net', user_permission_level_label: 'ADMIN', user_permission_level: 3 },
+            ]);
 
             const first = await Config.loadNetworks();
             const second = await Config.loadNetworks();
@@ -291,15 +277,15 @@ describe('Config loading and data methods', () => {
             expect(first).toBe(second);
         });
 
-        it('sets empty array on invalid response', async () => {
-            API.getAllSurfaceNetworks.mockResolvedValue({ success: false });
+        it('sets empty array on API rejection', async () => {
+            API.getAllSurfaceNetworks.mockRejectedValue(new Error('network'));
 
             const result = await Config.loadNetworks();
             expect(result).toEqual([]);
         });
 
-        it('sets empty array when data is not an array', async () => {
-            API.getAllSurfaceNetworks.mockResolvedValue({ success: true, data: {} });
+        it('sets empty array when response is not an array', async () => {
+            API.getAllSurfaceNetworks.mockResolvedValue({});
 
             const result = await Config.loadNetworks();
             expect(result).toEqual([]);
@@ -319,20 +305,17 @@ describe('Config loading and data methods', () => {
 
     describe('loadGPSTracks()', () => {
         it('calls API.getGPSTracks and maps response data including color', async () => {
-            API.getGPSTracks.mockResolvedValue({
-                success: true,
-                data: [
-                    {
-                        id: 't-1',
-                        name: 'Track 1',
-                        color: '#e41a1c',
-                        file: '/tracks/t1.geojson',
-                        sha256_hash: 'abc123',
-                        creation_date: '2024-01-01',
-                        modified_date: '2024-06-01',
-                    },
-                ],
-            });
+            API.getGPSTracks.mockResolvedValue([
+                {
+                    id: 't-1',
+                    name: 'Track 1',
+                    color: '#e41a1c',
+                    file: '/tracks/t1.geojson',
+                    sha256_hash: 'abc123',
+                    creation_date: '2024-01-01',
+                    modified_date: '2024-06-01',
+                },
+            ]);
 
             const result = await Config.loadGPSTracks();
 
@@ -351,10 +334,9 @@ describe('Config loading and data methods', () => {
         });
 
         it('returns cached tracks on subsequent calls', async () => {
-            API.getGPSTracks.mockResolvedValue({
-                success: true,
-                data: [{ id: 't-1', name: 'Track', file: '/t.geojson' }],
-            });
+            API.getGPSTracks.mockResolvedValue([
+                { id: 't-1', name: 'Track', file: '/t.geojson' },
+            ]);
 
             const first = await Config.loadGPSTracks();
             const second = await Config.loadGPSTracks();
@@ -363,15 +345,15 @@ describe('Config loading and data methods', () => {
             expect(first).toBe(second);
         });
 
-        it('sets empty array when data is not an array', async () => {
-            API.getGPSTracks.mockResolvedValue({ success: true, data: null });
+        it('sets empty array when response is null', async () => {
+            API.getGPSTracks.mockResolvedValue(null);
 
             const result = await Config.loadGPSTracks();
             expect(result).toEqual([]);
         });
 
         it('sets empty array on invalid response', async () => {
-            API.getGPSTracks.mockResolvedValue({ success: false });
+            API.getGPSTracks.mockResolvedValue({});
 
             const result = await Config.loadGPSTracks();
             expect(result).toEqual([]);
@@ -385,21 +367,18 @@ describe('Config loading and data methods', () => {
         });
 
         it('maps all expected fields', async () => {
-            API.getGPSTracks.mockResolvedValue({
-                success: true,
-                data: [
-                    {
-                        id: 't-1',
-                        name: 'Track',
-                        color: '#ff0000',
-                        file: '/file.geojson',
-                        sha256_hash: 'hash',
-                        creation_date: '2024-01-01',
-                        modified_date: '2024-02-01',
-                        extra_field: 'should be excluded',
-                    },
-                ],
-            });
+            API.getGPSTracks.mockResolvedValue([
+                {
+                    id: 't-1',
+                    name: 'Track',
+                    color: '#ff0000',
+                    file: '/file.geojson',
+                    sha256_hash: 'hash',
+                    creation_date: '2024-01-01',
+                    modified_date: '2024-02-01',
+                    extra_field: 'should be excluded',
+                },
+            ]);
 
             await Config.loadGPSTracks();
 

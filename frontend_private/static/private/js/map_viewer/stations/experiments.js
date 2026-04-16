@@ -207,7 +207,7 @@ export const StationExperiments = {
 
         try {
             const experimentsResponse = await API.getExperiments();
-            const experiments = experimentsResponse?.data || experimentsResponse || [];
+            const experiments = Array.isArray(experimentsResponse) ? experimentsResponse : [];
             const activeExperiments = experiments.filter(exp => exp.is_active);
 
             if (activeExperiments.length === 0) {
@@ -313,7 +313,7 @@ export const StationExperiments = {
                             const dataLoadingOverlay = Utils.showLoadingOverlay('Loading experiment data...');
                             try {
                                 const response = await API.getExperimentData(stationId, selectedExperimentId);
-                                experimentDataRows = response?.data || response || [];
+                                experimentDataRows = Array.isArray(response) ? response : [];
                             } catch (err) {
                                 console.error('Error fetching experiment data:', err);
                                 experimentDataRows = [];
@@ -377,7 +377,7 @@ export const StationExperiments = {
     async openAddRowModal(stationId, projectId, experimentId) {
         try {
             const experimentsResponse = await API.getExperiments();
-            const experiments = experimentsResponse?.data || experimentsResponse || [];
+            const experiments = Array.isArray(experimentsResponse) ? experimentsResponse : [];
             const experiment = experiments.find(exp => exp.id === experimentId);
 
             if (!experiment) {
@@ -610,7 +610,7 @@ export const StationExperiments = {
                 submitLoading.classList.remove('hidden');
 
                 try {
-                    const url = Urls["api:v1:experiment-records"](stationId, experimentId);
+                    const url = Urls["api:v2:experiment-records"](stationId, experimentId);
 
                     const response = await fetch(url, {
                         method: 'POST',
@@ -625,26 +625,16 @@ export const StationExperiments = {
                     if (response.ok) {
                         const responseData = await response.json();
 
-                        if (responseData && responseData.success) {
-                            let savedRow = null;
-                            if (responseData.data) {
-                                savedRow = Array.isArray(responseData.data)
-                                    ? responseData.data[0] || responseData.data
-                                    : responseData.data;
-                            }
+                        const savedRow = responseData && typeof responseData === 'object'
+                            ? responseData
+                            : rowData;
 
-                            if (!savedRow) savedRow = rowData;
-
-                            if (typeof window.updateExperimentTable === 'function') {
-                                window.updateExperimentTable(savedRow);
-                            }
-
-                            Utils.showNotification('success', 'Data record added successfully');
-                            this.closeAddRowModal();
-                        } else {
-                            const errorMsg = responseData.errors ? Object.values(responseData.errors).flat().join(', ') : 'Failed to save record';
-                            Utils.showNotification('error', errorMsg);
+                        if (typeof window.updateExperimentTable === 'function') {
+                            window.updateExperimentTable(savedRow);
                         }
+
+                        Utils.showNotification('success', 'Data record added successfully');
+                        this.closeAddRowModal();
                     } else {
                         let errorMsg = 'Failed to save record';
                         try {
@@ -726,7 +716,7 @@ export const StationExperiments = {
         this.closeDeleteRowModal();
 
         try {
-            const url = Urls["api:v1:experiment-records-detail"](rowId);
+            const url = Urls["api:v2:experiment-records-detail"](rowId);
 
             const response = await fetch(url, {
                 method: 'DELETE',

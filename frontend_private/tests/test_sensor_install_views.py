@@ -13,11 +13,11 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
-from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import SensorFactory
-from speleodb.api.v1.tests.factories import SensorInstallFactory
-from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
-from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
+from speleodb.api.v2.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.factories import SensorFactory
+from speleodb.api.v2.tests.factories import SensorInstallFactory
+from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
+from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.users.tests.factories import UserFactory
@@ -222,14 +222,14 @@ class TestSensorHistoryIntegration(TestCase):
 
         # Make API call without status filter
         response = self.client.get(
-            reverse("api:v1:station-sensor-installs", kwargs={"id": self.station.id}),
+            reverse("api:v2:station-sensor-installs", kwargs={"id": self.station.id}),
         )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
 
         # Should return both installs
-        assert len(data["data"]) == 2  # noqa: PLR2004
+        assert len(data) == 2  # noqa: PLR2004
 
     def test_api_filters_by_installed_status(self) -> None:
         """Verify API filters to only installed sensors when status=installed."""
@@ -237,12 +237,12 @@ class TestSensorHistoryIntegration(TestCase):
 
         # Make API call with status filter
         response = self.client.get(
-            f"{reverse('api:v1:station-sensor-installs', kwargs={'id': self.station.id})}?status=installed",  # noqa: E501
+            f"{reverse('api:v2:station-sensor-installs', kwargs={'id': self.station.id})}?status=installed",  # noqa: E501
         )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
 
         # Should return only installed sensor
-        assert len(data["data"]) == 1
-        assert data["data"][0]["status"] == InstallStatus.INSTALLED
+        assert len(data) == 1
+        assert data[0]["status"] == InstallStatus.INSTALLED

@@ -135,30 +135,28 @@ export const ExplorationLeadManager = {
             description: description
         };
 
-        const response = await API.createExplorationLead(projectId, leadData);
+        const lead = await API.createExplorationLead(projectId, leadData);
 
-        if (response && response.success && response.data) {
-            const lead = response.data;
-
-            // Store in state
-            State.explorationLeads.set(lead.id, {
-                id: lead.id,
-                coordinates: [parseFloat(lead.longitude), parseFloat(lead.latitude)],
-                description: lead.description || '',
-                projectId: projectId,
-                lineName: 'Survey Line',
-                createdAt: lead.creation_date,
-                createdBy: lead.created_by
-            });
-
-            // Invalidate cache so next refresh fetches fresh data
-            this.invalidateCache();
-
-            console.log(`✅ Created exploration lead: ${lead.id}`);
-            return lead;
+        if (!lead || !lead.id) {
+            throw new Error('Failed to create exploration lead');
         }
 
-        throw new Error('Failed to create exploration lead');
+        // Store in state
+        State.explorationLeads.set(lead.id, {
+            id: lead.id,
+            coordinates: [parseFloat(lead.longitude), parseFloat(lead.latitude)],
+            description: lead.description || '',
+            projectId: projectId,
+            lineName: 'Survey Line',
+            createdAt: lead.creation_date,
+            createdBy: lead.created_by
+        });
+
+        // Invalidate cache so next refresh fetches fresh data
+        this.invalidateCache();
+
+        console.log(`✅ Created exploration lead: ${lead.id}`);
+        return lead;
     },
 
     /**
@@ -168,26 +166,24 @@ export const ExplorationLeadManager = {
      * @returns {Promise<Object>} The updated lead data
      */
     async updateLead(leadId, data) {
-        const response = await API.updateExplorationLead(leadId, data);
+        const lead = await API.updateExplorationLead(leadId, data);
 
-        if (response && response.success && response.data) {
-            const lead = response.data;
-
-            // Update in state
-            const existing = State.explorationLeads.get(leadId);
-            if (existing) {
-                State.explorationLeads.set(leadId, {
-                    ...existing,
-                    coordinates: [parseFloat(lead.longitude), parseFloat(lead.latitude)],
-                    description: lead.description || ''
-                });
-            }
-
-            console.log(`✅ Updated exploration lead: ${leadId}`);
-            return lead;
+        if (!lead || !lead.id) {
+            throw new Error('Failed to update exploration lead');
         }
 
-        throw new Error('Failed to update exploration lead');
+        // Update in state
+        const existing = State.explorationLeads.get(leadId);
+        if (existing) {
+            State.explorationLeads.set(leadId, {
+                ...existing,
+                coordinates: [parseFloat(lead.longitude), parseFloat(lead.latitude)],
+                description: lead.description || ''
+            });
+        }
+
+        console.log(`✅ Updated exploration lead: ${leadId}`);
+        return lead;
     },
 
     /**

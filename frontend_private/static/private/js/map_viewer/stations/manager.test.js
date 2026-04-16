@@ -166,7 +166,7 @@ describe('StationManager', () => {
     describe('createStation', () => {
         it('creates a station and updates state', async () => {
             const newStation = { id: 's-new', name: 'New Station' };
-            API.createStation.mockResolvedValue({ data: newStation });
+            API.createStation.mockResolvedValue(newStation);
             Layers.refreshStationsAfterChange.mockResolvedValue();
 
             const result = await StationManager.createStation('p1', { name: 'New Station' });
@@ -190,7 +190,7 @@ describe('StationManager', () => {
     describe('updateStation', () => {
         it('updates state with returned data', async () => {
             State.allStations.set('s1', { id: 's1', name: 'Old', project: 'p1', latitude: 46.0, longitude: 6.0 });
-            API.updateStation.mockResolvedValue({ data: { id: 's1', name: 'Updated' } });
+            API.updateStation.mockResolvedValue({ id: 's1', name: 'Updated' });
 
             const result = await StationManager.updateStation('s1', { name: 'Updated' });
 
@@ -200,7 +200,7 @@ describe('StationManager', () => {
 
         it('updates layer position when coordinates change', async () => {
             State.allStations.set('s1', { id: 's1', project: 'p1', latitude: 46.0, longitude: 6.0 });
-            API.updateStation.mockResolvedValue({ data: { id: 's1' } });
+            API.updateStation.mockResolvedValue({ id: 's1' });
 
             await StationManager.updateStation('s1', { latitude: 47.0, longitude: 7.0 });
 
@@ -209,7 +209,7 @@ describe('StationManager', () => {
 
         it('does not update layer position when coordinates are absent', async () => {
             State.allStations.set('s1', { id: 's1', project: 'p1' });
-            API.updateStation.mockResolvedValue({ data: { id: 's1', name: 'Renamed' } });
+            API.updateStation.mockResolvedValue({ id: 's1', name: 'Renamed' });
 
             await StationManager.updateStation('s1', { name: 'Renamed' });
 
@@ -264,7 +264,7 @@ describe('StationManager', () => {
     describe('moveStation', () => {
         it('delegates to updateStation with lat/lng from [lng, lat]', async () => {
             State.allStations.set('s1', { id: 's1', project: 'p1', latitude: 46.0, longitude: 6.0 });
-            API.updateStation.mockResolvedValue({ data: { id: 's1' } });
+            API.updateStation.mockResolvedValue({ id: 's1' });
 
             const result = await StationManager.moveStation('s1', [7.5, 47.5]);
 

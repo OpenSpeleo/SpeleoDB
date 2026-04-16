@@ -340,14 +340,10 @@ export const StationDetails = {
             // Fetch the full station details from the API (same endpoint for both types)
             const response = await API.getStationDetails(stationId);
 
-            let station;
-            if (response && response.success && response.data) {
-                station = response.data;
-            } else if (response && response.id) {
-                station = response;
-            } else {
+            if (!response || !response.id) {
                 throw new Error('Invalid station response');
             }
+            let station = response;
 
             // Update the appropriate state map with the complete data
             const stateMap = stationType === 'surface' ? State.allSurfaceStations : State.allStations;

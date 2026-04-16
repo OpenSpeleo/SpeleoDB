@@ -46,7 +46,7 @@ export const LandmarkManager = {
     async createLandmark(data) {
         try {
             const result = await API.createLandmark(data);
-            const landmarkData = result.data.landmark;
+            const landmarkData = result.landmark;
 
             // Refresh list and update map
             const featureCollection = await this.loadAllLandmarks();

@@ -48,7 +48,7 @@ class TestVideoProcessor:
 
     def test_extract_thumbnail_with_real_video(self) -> None:
         """Test thumbnail extraction with a real video file."""
-        artifacts_dir = Path(__file__).parent.parent.parent / "api/v1/tests/artifacts"
+        artifacts_dir = Path(__file__).parent.parent.parent / "api/v2/tests/artifacts"
 
         with (artifacts_dir / "video.mp4").open(mode="rb") as f:
             content = VideoProcessor.extract_thumbnail(f)

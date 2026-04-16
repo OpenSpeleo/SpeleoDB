@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
-from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
 from speleodb.gis.models import ProjectGeoJSON

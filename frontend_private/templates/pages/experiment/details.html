@@ -402,7 +402,7 @@
             }
 
             $.ajax({
-                url: "{% url 'api:v1:experiment-detail' id=experiment.id %}",
+                url: "{% url 'api:v2:experiment-detail' id=experiment.id %}",
                 method: "PUT",
                 data: JSON.stringify(dataObject),
                 contentType: "application/json; charset=utf-8",

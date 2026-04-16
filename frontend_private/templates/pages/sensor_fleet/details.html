@@ -41,7 +41,7 @@
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-semibold text-slate-100">Sensors in this Fleet</h3>
                             <div class="flex gap-2">
-                                <a href="{% url 'api:v1:sensor-fleet-sensors-export' fleet_id=sensor_fleet.id %}"
+                                <a href="{% url 'api:v2:sensor-fleet-sensors-export' fleet_id=sensor_fleet.id %}"
                                     class="btn-sm bg-green-500 hover:bg-green-400 text-white border border-slate-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" viewBox="4.5 2.5 15 19">
                                         <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
@@ -332,7 +332,7 @@
             console.log('✏️ Updating sensor:', currentSensorId, sensorData);
 
             $.ajax({
-                url: Urls['api:v1:sensor-detail'](currentSensorId),
+                url: Urls['api:v2:sensor-detail'](currentSensorId),
                 method: 'PUT',
                 data: JSON.stringify(sensorData),
                 contentType: 'application/json; charset=utf-8',
@@ -348,20 +348,9 @@
 
                     setTimeout(() => location.reload(), 2000);
                 },
-                error: function (xhr) {
-                    console.error('❌ Error updating sensor:', xhr);
-
-                    const response = xhr.responseJSON || {};
-                    let errorMsg = 'Failed to update sensor.';
-
-                    if (response.errors && response.errors.name) {
-                        errorMsg = response.errors.name[0];
-                    } else if (response.error) {
-                        errorMsg = response.error;
-                    }
-
-                    $("#modal_error_txt").text(errorMsg);
-                    $("#modal_error").css('display', 'flex');
+                error: function (data) {
+                    console.error('❌ Error updating sensor:', data);
+                    {% include 'snippets/ajax_error_modal_management.js' %}
                 }
             });
         } else {
@@ -369,7 +358,7 @@
             console.log('➕ Adding sensor:', sensorData);
 
             $.ajax({
-                url: "{% url 'api:v1:sensor-fleet-sensors' fleet_id=sensor_fleet.id %}",
+                url: "{% url 'api:v2:sensor-fleet-sensors' fleet_id=sensor_fleet.id %}",
                 method: 'POST',
                 data: JSON.stringify(sensorData),
                 contentType: 'application/json; charset=utf-8',
@@ -385,20 +374,9 @@
 
                     setTimeout(() => location.reload(), 2000);
                 },
-                error: function (xhr) {
-                    console.error('❌ Error adding sensor:', xhr);
-
-                    const response = xhr.responseJSON || {};
-                    let errorMsg = 'Failed to add sensor.';
-
-                    if (response.errors && response.errors.name) {
-                        errorMsg = response.errors.name[0];
-                    } else if (response.error) {
-                        errorMsg = response.error;
-                    }
-
-                    $("#modal_error_txt").text(errorMsg);
-                    $("#modal_error").css('display', 'flex');
+                error: function (data) {
+                    console.error('❌ Error adding sensor:', data);
+                    {% include 'snippets/ajax_error_modal_management.js' %}
                 }
             });
         }
@@ -417,7 +395,7 @@
 
         // REAL API CALL - uses toggle endpoint which switches between functional/broken
         $.ajax({
-            url: Urls['api:v1:sensor-toggle-functional'](sensorId),
+            url: Urls['api:v2:sensor-toggle-functional'](sensorId),
             method: 'PATCH',
             headers: {
                 'X-CSRFToken': csrftoken
@@ -428,12 +406,9 @@
                 // Reload to update UI
                 location.reload();
             },
-            error: function (xhr) {
-                console.error('❌ Error toggling sensor:', xhr);
-
-                const errorMsg = xhr.responseJSON?.error || 'Failed to toggle sensor status.';
-                $("#modal_error_txt").text(errorMsg);
-                $("#modal_error").css('display', 'flex');
+            error: function (data) {
+                console.error('❌ Error toggling sensor:', data);
+                {% include 'snippets/ajax_error_modal_management.js' %}
             }
         });
     });
@@ -460,7 +435,7 @@
 
         // REAL API CALL
         $.ajax({
-            url: Urls['api:v1:sensor-detail'](sensorId),
+            url: Urls['api:v2:sensor-detail'](sensorId),
             method: 'DELETE',
             headers: {
                 'X-CSRFToken': csrftoken
@@ -474,13 +449,10 @@
 
                 setTimeout(() => location.reload(), 2000);
             },
-            error: function (xhr) {
-                console.error('❌ Error deleting sensor:', xhr);
-
-                const errorMsg = xhr.responseJSON?.error || 'Failed to delete sensor.';
-                $("#modal_error_txt").text(errorMsg);
-                $("#modal_error").css('display', 'flex');
+            error: function (data) {
+                console.error('❌ Error deleting sensor:', data);
                 $('#delete_sensor_modal').css('display', 'none').addClass('hidden');
+                {% include 'snippets/ajax_error_modal_management.js' %}
             }
         });
     });
@@ -513,7 +485,7 @@
 
         // REAL API CALL
         $.ajax({
-            url: Urls['api:v1:sensor-fleet-detail']('{{ sensor_fleet.id }}'),
+            url: Urls['api:v2:sensor-fleet-detail']('{{ sensor_fleet.id }}'),
             method: 'PUT',
             data: JSON.stringify(dataObject),
             contentType: 'application/json; charset=utf-8',
@@ -530,25 +502,9 @@
                     window.location.reload();
                 }, 2000);
             },
-            error: function (xhr) {
-                console.error('❌ Error updating fleet:', xhr);
-
-                const response = xhr.responseJSON || {};
-                let errorMsg = 'Failed to update fleet.';
-
-                if (response.errors) {
-                    if (response.errors.name) {
-                        errorMsg = response.errors.name[0];
-                    } else {
-                        const firstError = Object.values(response.errors)[0];
-                        errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
-                    }
-                } else if (response.error) {
-                    errorMsg = response.error;
-                }
-
-                $("#modal_error_txt").text(errorMsg);
-                $("#modal_error").css('display', 'flex');
+            error: function (data) {
+                console.error('❌ Error updating fleet:', data);
+                {% include 'snippets/ajax_error_modal_management.js' %}
             }
         });
 

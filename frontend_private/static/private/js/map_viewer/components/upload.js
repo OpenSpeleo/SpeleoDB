@@ -37,11 +37,23 @@ export function uploadWithProgress(url, formData, options = {}) {
 
     xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
+            // 204 No Content (and any other 2xx with a genuinely empty body)
+            // is a valid "success, nothing to say" response. Surface it as
+            // null so callers can distinguish it from a parsed payload.
+            if (xhr.status === 204 || !xhr.responseText) {
+                onSuccess(null);
+                return;
+            }
             try {
                 const response = JSON.parse(xhr.responseText);
                 onSuccess(response);
             } catch {
-                onSuccess({ success: true });
+                // A 2xx status with a non-empty, unparseable body means the
+                // server (or a proxy/CDN) returned something we cannot trust
+                // -- treat this as an error rather than silently pretend
+                // the upload succeeded. The caller can decide whether to
+                // retry or surface it to the user.
+                onError(new Error('Upload succeeded but server returned an unreadable response. The upload state is unknown -- please refresh to verify.'));
             }
         } else {
             let errorMessage = 'Upload failed';

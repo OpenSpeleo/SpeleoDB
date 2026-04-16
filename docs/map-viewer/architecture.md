@@ -206,7 +206,7 @@ DOMContentLoaded
 │
 └─ map.on('load')
     │
-    ├─ fetch /api/v1/gis-ogc/view/{gisToken}/geojson
+    ├─ fetch /api/v2/gis-ogc/view/{gisToken}/geojson
     ├─ Config.setPublicProjects(projects)    Set read-only project list
     ├─ ProjectPanel.init()
     │

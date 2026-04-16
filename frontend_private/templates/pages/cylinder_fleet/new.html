@@ -108,7 +108,7 @@
 
             // REAL API CALL
             $.ajax({
-                url: "{% url 'api:v1:cylinder-fleets' %}",
+                url: "{% url 'api:v2:cylinder-fleets' %}",
                 method: 'POST',
                 data: JSON.stringify(dataObject),
                 contentType: 'application/json; charset=utf-8',
@@ -121,7 +121,7 @@
 
                     window.setTimeout(function(){
                         // Redirect to fleet details page
-                        window.location.href = Urls['private:cylinder_fleet_details'](response.data.id);
+                        window.location.href = Urls['private:cylinder_fleet_details'](response.id);
                     }, 2000);
                 },
                 error: function(xhr) {

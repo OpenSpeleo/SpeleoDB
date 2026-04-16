@@ -133,7 +133,7 @@ describe('LandmarkManager', () => {
     describe('createLandmark', () => {
         it('creates landmark, reloads all, and updates layers', async () => {
             const createdLandmark = { id: 'lm-new', name: 'New Landmark' };
-            API.createLandmark.mockResolvedValue({ data: { landmark: createdLandmark } });
+            API.createLandmark.mockResolvedValue({ landmark: createdLandmark });
 
             const reloadedFC = makeLandmarkFC([makeLandmarkFeature('lm-new')]);
             API.getAllLandmarksGeoJSON.mockResolvedValue(reloadedFC);
@@ -158,7 +158,7 @@ describe('LandmarkManager', () => {
 
     describe('updateLandmark', () => {
         it('updates landmark and refreshes layers', async () => {
-            const apiResult = { data: { id: 'lm1', name: 'Updated' } };
+            const apiResult = { id: 'lm1', name: 'Updated' };
             API.updateLandmark.mockResolvedValue(apiResult);
 
             const reloadedFC = makeLandmarkFC([makeLandmarkFeature('lm1')]);
@@ -210,7 +210,7 @@ describe('LandmarkManager', () => {
 
     describe('moveLandmark', () => {
         it('delegates to updateLandmark with lat/lng', async () => {
-            API.updateLandmark.mockResolvedValue({ data: { id: 'lm1' } });
+            API.updateLandmark.mockResolvedValue({ id: 'lm1' });
             const reloadedFC = makeLandmarkFC([makeLandmarkFeature('lm1')]);
             API.getAllLandmarksGeoJSON.mockResolvedValue(reloadedFC);
 

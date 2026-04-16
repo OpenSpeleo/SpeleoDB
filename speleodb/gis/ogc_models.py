@@ -31,7 +31,7 @@ def build_ogc_landing_page(request: Request) -> dict[str, Any]:
     ``rel: conformance`` link to the conformance declaration.
     """
     host = f"{request.scheme}://{request.get_host().rstrip('/')}"
-    # Base path without trailing slash - e.g. /api/v1/gis-ogc/view/<token>
+    # Base path without trailing slash - e.g. /api/v2/gis-ogc/view/<token>
     base_path = request.path.rstrip("/")
 
     return {

@@ -79,11 +79,13 @@ describe('StationCylinders XSS', () => {
     });
 
     it('escapes cylinder and fleet names and location in install UI HTML', async () => {
-        API.getCylinderFleets.mockResolvedValue({
-            data: [{ id: 'f1', name: '<script>fleet</script>', cylinder_count: 1 }],
-        });
-        API.getCylinderFleetCylinders.mockResolvedValue({
-            data: [{
+        // v2 API returns bare arrays for list endpoints (no {data: [...]}
+        // envelope). See speleodb/api/v2/views/cylinder_fleet.py.
+        API.getCylinderFleets.mockResolvedValue([
+            { id: 'f1', name: '<script>fleet</script>', cylinder_count: 1 },
+        ]);
+        API.getCylinderFleetCylinders.mockResolvedValue([
+            {
                 id: 'cyl-1',
                 name: '<img src=x onerror=1>',
                 serial: 'S1',
@@ -92,8 +94,8 @@ describe('StationCylinders XSS', () => {
                 pressure: 200,
                 unit_system: 'metric',
                 active_installs: [],
-            }],
-        });
+            },
+        ]);
 
         await CylinderInstalls.showInstallModal([-82.5, 27.5], '<b>loc</b>', 'proj-1');
 
@@ -118,10 +120,10 @@ describe('StationCylinders XSS', () => {
     });
 
     it('handles string coordinates in showInstallModal without throwing', async () => {
-        API.getCylinderFleets.mockResolvedValue({
-            data: [{ id: 'f1', name: 'Fleet', cylinder_count: 0 }],
-        });
-        API.getCylinderFleetCylinders.mockResolvedValue({ data: [] });
+        API.getCylinderFleets.mockResolvedValue([
+            { id: 'f1', name: 'Fleet', cylinder_count: 0 },
+        ]);
+        API.getCylinderFleetCylinders.mockResolvedValue([]);
 
         await CylinderInstalls.showInstallModal(['-82.5', '27.5'], 'Test', 'p1');
 
@@ -132,10 +134,10 @@ describe('StationCylinders XSS', () => {
     });
 
     it('escapes fleet name with double quotes in option label text', async () => {
-        API.getCylinderFleets.mockResolvedValue({
-            data: [{ id: 'f-q', name: '"><img src=x onerror=1>', cylinder_count: 1 }],
-        });
-        API.getCylinderFleetCylinders.mockResolvedValue({ data: [] });
+        API.getCylinderFleets.mockResolvedValue([
+            { id: 'f-q', name: '"><img src=x onerror=1>', cylinder_count: 1 },
+        ]);
+        API.getCylinderFleetCylinders.mockResolvedValue([]);
 
         await CylinderInstalls.showInstallModal([0, 0], '', 'p1');
 
@@ -146,10 +148,10 @@ describe('StationCylinders XSS', () => {
     });
 
     it('treats null and undefined location name as empty via local escapeHtml', async () => {
-        API.getCylinderFleets.mockResolvedValue({
-            data: [{ id: 'f3', name: 'Ok', cylinder_count: 0 }],
-        });
-        API.getCylinderFleetCylinders.mockResolvedValue({ data: [] });
+        API.getCylinderFleets.mockResolvedValue([
+            { id: 'f3', name: 'Ok', cylinder_count: 0 },
+        ]);
+        API.getCylinderFleetCylinders.mockResolvedValue([]);
 
         await CylinderInstalls.showInstallModal([1, 2], null, 'p1');
         expect(document.getElementById('install-location-name').value).toBe('');
@@ -176,18 +178,16 @@ describe('StationCylinders XSS', () => {
             unit_system: 'metric',
         };
 
-        API.getCylinderInstallDetails.mockResolvedValue({ data: baseInstall });
-        API.getCylinderPressureChecks.mockResolvedValue({
-            data: [{
-                id: 'chk-1',
-                user: '<b>who</b>',
-                notes: '"><img src=x onerror=1>',
-                pressure: 100,
-                unit_system: 'metric',
-                check_date: '2020-02-01',
-                creation_date: '2020-02-01',
-            }],
-        });
+        API.getCylinderInstallDetails.mockResolvedValue(baseInstall);
+        API.getCylinderPressureChecks.mockResolvedValue([{
+            id: 'chk-1',
+            user: '<b>who</b>',
+            notes: '"><img src=x onerror=1>',
+            pressure: 100,
+            unit_system: 'metric',
+            check_date: '2020-02-01',
+            creation_date: '2020-02-01',
+        }]);
 
         await CylinderInstalls.showCylinderDetails(installId);
         await vi.waitFor(() => {

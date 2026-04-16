@@ -16,11 +16,11 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
-from speleodb.api.v1.tests.factories import SensorFactory
-from speleodb.api.v1.tests.factories import SensorFleetFactory
-from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
-from speleodb.api.v1.tests.factories import SensorInstallFactory
-from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
+from speleodb.api.v2.tests.factories import SensorFactory
+from speleodb.api.v2.tests.factories import SensorFleetFactory
+from speleodb.api.v2.tests.factories import SensorFleetUserPermissionFactory
+from speleodb.api.v2.tests.factories import SensorInstallFactory
+from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.users.tests.factories import UserFactory

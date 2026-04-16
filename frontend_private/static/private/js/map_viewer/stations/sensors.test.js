@@ -77,17 +77,14 @@ describe('StationSensors XSS', () => {
 
     it('escapes sensor and fleet names and install user in current installs HTML', async () => {
         const payload = '<img src=x onerror=alert(1)>';
-        API.getStationSensorInstallsWithStatus.mockResolvedValue({
-            success: true,
-            data: [{
-                id: 'inst-1',
-                sensor_name: payload,
-                sensor_fleet_name: '<script>evil()</script>',
-                status: 'installed',
-                install_date: '2020-01-15',
-                install_user: '<b>user</b>',
-            }],
-        });
+        API.getStationSensorInstallsWithStatus.mockResolvedValue([{
+            id: 'inst-1',
+            sensor_name: payload,
+            sensor_fleet_name: '<script>evil()</script>',
+            status: 'installed',
+            install_date: '2020-01-15',
+            install_user: '<b>user</b>',
+        }]);
 
         await StationSensors.loadCurrentInstalls('st-safe', 'proj-safe', 'current', false);
 
@@ -102,17 +99,14 @@ describe('StationSensors XSS', () => {
     });
 
     it('escapes double quotes in sensor name used inside onclick attribute strings', async () => {
-        API.getStationSensorInstallsWithStatus.mockResolvedValue({
-            success: true,
-            data: [{
-                id: 'i2',
-                sensor_name: 'evil" onclick=alert(1)//',
-                sensor_fleet_name: 'F',
-                status: 'installed',
-                install_date: '2020-01-01',
-                install_user: 'u',
-            }],
-        });
+        API.getStationSensorInstallsWithStatus.mockResolvedValue([{
+            id: 'i2',
+            sensor_name: 'evil" onclick=alert(1)//',
+            sensor_fleet_name: 'F',
+            status: 'installed',
+            install_date: '2020-01-01',
+            install_user: 'u',
+        }]);
 
         await StationSensors.loadCurrentInstalls('st-1', 'proj-1', 'current', false);
 
@@ -122,19 +116,16 @@ describe('StationSensors XSS', () => {
     });
 
     it('escapes sensor fleet and user fields in history table HTML', async () => {
-        API.getStationSensorInstalls.mockResolvedValue({
-            success: true,
-            data: [{
-                sensor_name: '<td id=mal>',
-                sensor_fleet_name: '"><img src=x onerror=1>',
-                status: 'retrieved',
-                install_date: '2020-01-01',
-                install_user: '"break"',
-                uninstall_date: '2020-02-01',
-                uninstall_user: '<svg onload=1>',
-                modified_date: '2020-03-01',
-            }],
-        });
+        API.getStationSensorInstalls.mockResolvedValue([{
+            sensor_name: '<td id=mal>',
+            sensor_fleet_name: '"><img src=x onerror=1>',
+            status: 'retrieved',
+            install_date: '2020-01-01',
+            install_user: '"break"',
+            uninstall_date: '2020-02-01',
+            uninstall_user: '<svg onload=1>',
+            modified_date: '2020-03-01',
+        }]);
 
         await StationSensors.loadHistory('hist-st', 'hist-proj');
         await vi.waitFor(() => {
@@ -149,19 +140,13 @@ describe('StationSensors XSS', () => {
     });
 
     it('escapes fleet and sensor names in install form options', async () => {
-        API.getSensorFleets.mockResolvedValue({
-            success: true,
-            data: [{ id: 'fleet-a', name: '<option value=evil>' }],
-        });
-        API.getSensorFleetSensors.mockResolvedValue({
-            success: true,
-            data: [{
-                id: 'sen-1',
-                name: '<script>x</script>',
-                status: 'functional',
-                active_installs: [],
-            }],
-        });
+        API.getSensorFleets.mockResolvedValue([{ id: 'fleet-a', name: '<option value=evil>' }]);
+        API.getSensorFleetSensors.mockResolvedValue([{
+            id: 'sen-1',
+            name: '<script>x</script>',
+            status: 'functional',
+            active_installs: [],
+        }]);
 
         await StationSensors.loadInstallForm('st-f', 'proj-f');
 

@@ -358,12 +358,12 @@ $(document).ready(function() {
     // Load all tags
     function loadTags() {
         $.ajax({
-            url: '{% url "api:v1:station-tags" %}',
+            url: '{% url "api:v2:station-tags" %}',
             method: 'GET',
             dataType: 'json',
             success: function(response) {
-                if (response.success && response.data) {
-                    allTags = response.data;
+                if (Array.isArray(response)) {
+                    allTags = response;
                     renderTags();
                 } else {
                     $("#modal_error_txt").text("Failed to load tags");
@@ -647,7 +647,7 @@ $(document).ready(function() {
             return false;
         }
 
-        const url = tagId ? Urls['api:v1:station-tag-detail'](tagId) : "{% url 'api:v1:station-tags' %}";
+        const url = tagId ? Urls['api:v2:station-tag-detail'](tagId) : "{% url 'api:v2:station-tags' %}";
         const method = tagId ? 'PUT' : 'POST';
 
         $.ajax({
@@ -668,13 +668,8 @@ $(document).ready(function() {
                     loadTags();
                 }, 500);
             },
-            error: function(xhr) {
-                let errorMessage = "Failed to save tag";
-                if (xhr.responseJSON && xhr.responseJSON.error) {
-                    errorMessage = xhr.responseJSON.error;
-                }
-                $("#modal_error_txt").text(errorMessage);
-                $("#modal_error").css('display', 'flex');
+            error: function (data) {
+                {% include 'snippets/ajax_error_modal_management.js' %}
             }
         });
 
@@ -709,7 +704,7 @@ $(document).ready(function() {
         if (!tagId) return;
 
         $.ajax({
-            url: Urls['api:v1:station-tag-detail'](tagId),
+            url: Urls['api:v2:station-tag-detail'](tagId),
             method: 'DELETE',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
@@ -724,13 +719,8 @@ $(document).ready(function() {
                     loadTags();
                 }, 500);
             },
-            error: function(xhr) {
-                let errorMessage = "Failed to delete tag";
-                if (xhr.responseJSON && xhr.responseJSON.error) {
-                    errorMessage = xhr.responseJSON.error;
-                }
-                $("#modal_error_txt").text(errorMessage);
-                $("#modal_error").css('display', 'flex');
+            error: function (data) {
+                {% include 'snippets/ajax_error_modal_management.js' %}
             }
         });
     });

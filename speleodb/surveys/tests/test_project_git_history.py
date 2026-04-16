@@ -11,19 +11,20 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
-from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
-from speleodb.api.v1.tests.base_testcase import PermissionType
-from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v2.tests.base_testcase import PermissionType
+from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import ProjectCommit
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.exceptions import ProjectNotFound
 
-BASE_DIR = (
-    pathlib.Path(__file__).parent.parent.parent / "api" / "v1" / "tests" / "artifacts"
+TEST_FILE = (
+    pathlib.Path(__file__).parent.parent.parent
+    / "api/v2/tests/artifacts"
+    / "test_simple.tml"
 )
-TEST_FILE = BASE_DIR / "test_simple.tml"
 
 
 @pytest.mark.skip_if_lighttest
@@ -48,7 +49,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
         with TEST_FILE.open(mode="rb") as file_data:
             response = self.client.put(
                 reverse(
-                    "api:v1:project-upload",
+                    "api:v2:project-upload",
                     kwargs={
                         "id": self.project.id,
                         "fileformat": FileFormat.ARIANE_TML.label.lower(),
@@ -81,7 +82,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
             with TEST_FILE.open(mode="rb") as file_data:
                 response = self.client.put(
                     reverse(
-                        "api:v1:project-upload",
+                        "api:v2:project-upload",
                         kwargs={
                             "id": self.project.id,
                             "fileformat": FileFormat.ARIANE_TML.label.lower(),
@@ -118,7 +119,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
         with TEST_FILE.open(mode="rb") as file_data:
             _ = self.client.put(
                 reverse(
-                    "api:v1:project-upload",
+                    "api:v2:project-upload",
                     kwargs={
                         "id": self.project.id,
                         "fileformat": FileFormat.ARIANE_TML.label.lower(),
@@ -145,7 +146,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
         with TEST_FILE.open(mode="rb") as file_data:
             self.client.put(
                 reverse(
-                    "api:v1:project-upload",
+                    "api:v2:project-upload",
                     kwargs={
                         "id": self.project.id,
                         "fileformat": FileFormat.ARIANE_TML.label.lower(),
@@ -180,7 +181,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
         with TEST_FILE.open(mode="rb") as file_data:
             self.client.put(
                 reverse(
-                    "api:v1:project-upload",
+                    "api:v2:project-upload",
                     kwargs={
                         "id": self.project.id,
                         "fileformat": FileFormat.ARIANE_TML.label.lower(),
@@ -297,7 +298,7 @@ class TestGitRepoCorruptionRecovery(BaseAPIProjectTestCase):
         with TEST_FILE.open(mode="rb") as file_data:
             response = self.client.put(
                 reverse(
-                    "api:v1:project-upload",
+                    "api:v2:project-upload",
                     kwargs={
                         "id": self.project.id,
                         "fileformat": FileFormat.ARIANE_TML.label.lower(),

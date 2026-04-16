@@ -345,12 +345,12 @@ $(document).ready(function() {
     // Load all GPS tracks
     function loadTracks() {
         $.ajax({
-            url: '{% url "api:v1:gps-tracks" %}',
+            url: '{% url "api:v2:gps-tracks" %}',
             method: 'GET',
             dataType: 'json',
             success: function(response) {
-                if (response.success && response.data) {
-                    allTracks = response.data;
+                if (Array.isArray(response)) {
+                    allTracks = response;
                     renderTracks();
                 } else {
                     $("#modal_error_txt").text("Failed to load GPS tracks");
@@ -532,7 +532,7 @@ $(document).ready(function() {
         }
 
         $.ajax({
-            url: Urls['api:v1:gps-track-detail'](trackId),
+            url: Urls['api:v2:gps-track-detail'](trackId),
             method: 'PATCH',
             data: JSON.stringify({ name: name, color: color }),
             contentType: "application/json; charset=utf-8",
@@ -548,13 +548,8 @@ $(document).ready(function() {
                 // Refresh tracks list from API
                 loadTracks();
             },
-            error: function(xhr) {
-                let errorMessage = "Failed to update GPS track";
-                if (xhr.responseJSON && xhr.responseJSON.error) {
-                    errorMessage = xhr.responseJSON.error;
-                }
-                $("#modal_error_txt").text(errorMessage);
-                $("#modal_error").css('display', 'flex');
+            error: function (data) {
+                {% include 'snippets/ajax_error_modal_management.js' %}
             }
         });
 
@@ -592,7 +587,7 @@ $(document).ready(function() {
         if (!trackId) return;
 
         $.ajax({
-            url: Urls['api:v1:gps-track-detail'](trackId),
+            url: Urls['api:v2:gps-track-detail'](trackId),
             method: 'DELETE',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
@@ -606,13 +601,8 @@ $(document).ready(function() {
                 // Refresh tracks list from API
                 loadTracks();
             },
-            error: function(xhr) {
-                let errorMessage = "Failed to delete GPS track";
-                if (xhr.responseJSON && xhr.responseJSON.error) {
-                    errorMessage = xhr.responseJSON.error;
-                }
-                $("#modal_error_txt").text(errorMessage);
-                $("#modal_error").css('display', 'flex');
+            error: function (data) {
+                {% include 'snippets/ajax_error_modal_management.js' %}
             }
         });
     });

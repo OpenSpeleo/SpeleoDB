@@ -9,7 +9,7 @@ reporting works.
 ## Architecture overview
 
 ```
-Client PUT /api/v1/projects/<id>/upload/<format>/
+Client PUT /api/v2/projects/<id>/upload/<format>/
   │
   ▼
 FileUploadView.put()
@@ -83,7 +83,10 @@ error-level log records either.
    traceback to console/Railway logs) and
    `sentry_sdk.capture_exception(...)` (explicit Sentry event).
 2. `DRFWrapResponseMiddleware` does the same in its `except Exception`
-   block, catching anything that escapes the view layer.
+   block, catching anything that escapes the view layer. Note that this
+   middleware only runs for the legacy `/api/v1/` path — all `/api/v2/`
+   responses are returned verbatim without any wrapping or exception
+   re-handling, so v2 views rely on their own `handle_exception()` hooks.
 3. The `django.request` logger now includes the `console` handler so
    error records appear in stdout.
 
@@ -169,7 +172,8 @@ or rollback — those are expected outcomes, not internal failures.
 | `gis_view.py` | `GISViewDataApiView` | Yes | No | read-only |
 | `gis_view.py` | `PublicGISViewGeoJSONApiView` | Yes | No | read-only |
 | `tools.py` | `ToolDMP2JSON` | Yes | No | temp file only |
-| `middleware.py` | `DRFWrapResponseMiddleware` | Yes | No | last-resort backstop |
+| `tools.py` | `ToolDMPDoctor` | Yes | No | wraps `mnemo_lib.correct_dmp_cmd`; returns 400 but captures because `correct_dmp_cmd` failures can be either corrupt user input or upstream bugs |
+| `middleware.py` | `DRFWrapResponseMiddleware` | Yes | No | last-resort backstop (v1 only) |
 
 ### Savepoint rule for catching `IntegrityError`
 
@@ -221,8 +225,8 @@ except IntegrityError:
 pytest speleodb/git_engine/tests/test_git_retry.py -v
 
 # Upload error-handling tests (requires DB)
-pytest speleodb/api/v1/tests/test_file_upload_error_handling.py -v
+pytest speleodb/api/v2/tests/test_file_upload_error_handling.py -v
 
 # All error-reporting tests (Sentry capture across all views)
-pytest speleodb/api/v1/tests/test_error_reporting.py -v
+pytest speleodb/api/v2/tests/test_error_reporting.py -v
 ```

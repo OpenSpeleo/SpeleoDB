@@ -41,7 +41,7 @@
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-semibold text-slate-100">Cylinders in this Fleet</h3>
                             <div class="flex gap-2">
-                                <a href="{% url 'api:v1:cylinder-fleet-cylinders-export' fleet_id=cylinder_fleet.id %}"
+                                <a href="{% url 'api:v2:cylinder-fleet-cylinders-export' fleet_id=cylinder_fleet.id %}"
                                     class="btn-sm bg-green-500 hover:bg-green-400 text-white border border-slate-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" viewBox="4.5 2.5 15 19">
                                         <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
@@ -491,7 +491,7 @@
             if (currentCylinderId) {
                 // EDIT MODE - Real API Call
                 $.ajax({
-                    url: Urls['api:v1:cylinder-detail'](currentCylinderId),
+                    url: Urls['api:v2:cylinder-detail'](currentCylinderId),
                     method: 'PUT',
                     data: JSON.stringify(cylinderData),
                     contentType: 'application/json; charset=utf-8',
@@ -522,7 +522,7 @@
             } else {
                 // ADD MODE - Real API Call
                 $.ajax({
-                    url: "{% url 'api:v1:cylinder-fleet-cylinders' fleet_id=cylinder_fleet.id %}",
+                    url: "{% url 'api:v2:cylinder-fleet-cylinders' fleet_id=cylinder_fleet.id %}",
                     method: 'POST',
                     data: JSON.stringify(cylinderData),
                     contentType: 'application/json; charset=utf-8',
@@ -570,7 +570,7 @@
 
             // REAL API CALL
             $.ajax({
-                url: Urls['api:v1:cylinder-detail'](cylinderId),
+                url: Urls['api:v2:cylinder-detail'](cylinderId),
                 method: 'DELETE',
                 headers: {
                     'X-CSRFToken': csrftoken
@@ -581,11 +581,9 @@
                     $('#delete_cylinder_modal').css('display', 'none').addClass('hidden');
                     setTimeout(() => location.reload(), 2000);
                 },
-                error: function (xhr) {
-                    const errorMsg = xhr.responseJSON?.error || 'Failed to delete cylinder.';
-                    $("#modal_error_txt").text(errorMsg);
-                    $("#modal_error").css('display', 'flex');
+                error: function (data) {
                     $('#delete_cylinder_modal').css('display', 'none').addClass('hidden');
+                    {% include 'snippets/ajax_error_modal_management.js' %}
                 }
             });
         });
@@ -613,7 +611,7 @@
 
             // REAL API CALL
             $.ajax({
-                url: Urls['api:v1:cylinder-fleet-detail']('{{ cylinder_fleet.id }}'),
+                url: Urls['api:v2:cylinder-fleet-detail']('{{ cylinder_fleet.id }}'),
                 method: 'PUT',
                 data: JSON.stringify(dataObject),
                 contentType: 'application/json; charset=utf-8',

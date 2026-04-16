@@ -149,7 +149,7 @@
         async function loadUserProjects() {
             try {
                 const response = await fetch(
-                    "{% url 'api:v1:projects' %}", 
+                    "{% url 'api:v2:projects' %}", 
                     {
                         headers: {
                             'X-CSRFToken': getCSRFToken()
@@ -158,8 +158,8 @@
                     }
                 );
                 const data = await response.json();
-                if (data.success) {
-                    availableProjects = data.data;
+                if (Array.isArray(data)) {
+                    availableProjects = data;
                     // Sort projects alphabetically by name
                     availableProjects.sort((a, b) => a.name.localeCompare(b.name));
                 }
@@ -291,7 +291,7 @@
             try {
                     
                 const response = await fetch(
-                    Urls["api:v1:project-geojson-commits"](projectId),     
+                    Urls["api:v2:project-geojson-commits"](projectId),     
                     {
                         headers: {
                             'X-CSRFToken': getCSRFToken()
@@ -301,12 +301,12 @@
             );
                 const data = await response.json();
                 
-                if (data.success && data.data && data.data.length > 0) {
+                if (Array.isArray(data) && data.length > 0) {
                     // Clear and populate dropdown
                     selectElement.html('<option value="">Select a commit...</option>');
                     
                     // data is already sorted by commit_date descending
-                    data.data.forEach(commit => {
+                    data.forEach(commit => {
                         // Format: [date] author: message - sha[:8]
                         const date = commit.commit_date.split('T')[0]; // Get just the date part (YYYY-MM-DD)
                         const commitSha = commit.commit_sha;
@@ -464,7 +464,7 @@
             var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
 
             $.ajax({
-                url: "{% url 'api:v1:gis-views' %}",
+                url: "{% url 'api:v2:gis-views' %}",
                 method: "POST",
                 data: JSON.stringify(formData),
                 contentType: "application/json; charset=utf-8",
@@ -478,7 +478,7 @@
                     $("#modal_success").css('display', 'flex');
 
                     window.setTimeout(function(){
-                        window.location.href = Urls['private:gis_view_details'](data["data"]["id"]);
+                        window.location.href = Urls['private:gis_view_details'](data["id"]);
                     }, 2000);
                 },
                 error: function (data) {

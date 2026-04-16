@@ -320,7 +320,7 @@
         $('#btn_export_excel').click(function (e) {
             e.preventDefault();
             const days = $('#days').val() || '60';
-            const exportUrl = Urls['api:v1:cylinder-fleet-watchlist-export']('{{ cylinder_fleet.id }}') + '?days=' + days;
+            const exportUrl = Urls['api:v2:cylinder-fleet-watchlist-export']('{{ cylinder_fleet.id }}') + '?days=' + days;
             window.location.href = exportUrl;
         });
         {% endif %}
@@ -398,7 +398,7 @@
 
             // Edit mode API call
             $.ajax({
-                url: Urls['api:v1:cylinder-detail'](currentCylinderId),
+                url: Urls['api:v2:cylinder-detail'](currentCylinderId),
                 method: 'PUT',
                 data: JSON.stringify(cylinderData),
                 contentType: 'application/json; charset=utf-8',

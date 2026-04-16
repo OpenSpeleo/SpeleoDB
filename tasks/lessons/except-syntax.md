@@ -3,7 +3,7 @@
 ## What happened
 
 An agent added unnecessary parentheses to `except ValueError, TypeError:`
-in `speleodb/api/v1/views/gis_view.py`, changing it to
+in `speleodb/api/v2/views/gis_view.py`, changing it to
 `except (ValueError, TypeError):`. This is wrong — the project uses
 Python 3.14+ and deliberately uses PEP 758 bare-comma syntax.
 

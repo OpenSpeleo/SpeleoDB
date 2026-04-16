@@ -619,7 +619,7 @@ $( document ).ready(function() {
         $("#modal_confirmation_mass_unlock").hide();
 
         $.ajax({
-            url: "{% url 'api:v1:release-all-locks' %}",
+            url: "{% url 'api:v2:release-all-locks' %}",
             method: "DELETE",
             contentType: "application/json; charset=utf-8",
             cache: false,
@@ -658,7 +658,7 @@ $( document ).ready(function() {
         $("#modal_confirmation_unlock").hide();
 
         $.ajax({
-            url: Urls['api:v1:project-release']($(this).data('project_id')),
+            url: Urls['api:v2:project-release']($(this).data('project_id')),
             method: "POST",
             contentType: "application/json; charset=utf-8",
             cache: false,
@@ -685,14 +685,14 @@ $( document ).ready(function() {
 
     // Fetch all projects at once and update revision counts
     $.ajax({
-        url: Urls['api:v1:projects'](),
+        url: Urls['api:v2:projects'](),
         type: "GET",
         dataType: "json",
         success: function(data) {
-            if (data.success) {
+            if (Array.isArray(data)) {
                 // Create a map of project_id -> commit_count for quick lookup
                 var commitCounts = {};
-                data.data.forEach(function(project) {
+                data.forEach(function(project) {
                     commitCounts[project.id] = project.commit_count;
                 });
 
@@ -709,7 +709,7 @@ $( document ).ready(function() {
                     }
                 });
             } else {
-                console.log("ERROR: " + data.error);
+                console.log("ERROR: unexpected response", data);
                 // Set all elements to error state
                 $('.async_revision').each(function() {
                     $("#" + $(this).data('id')).html("-");

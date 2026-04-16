@@ -24,7 +24,7 @@ def test_something(self) -> None:
 
 # BAD — inline import inside setUp
 def setUp(self) -> None:
-    from speleodb.api.v1.tests.factories import TokenFactory
+    from speleodb.api.v2.tests.factories import TokenFactory
     ...
 
 # BAD — inline import "just for one test"
@@ -33,7 +33,7 @@ def test_gitlab_error(self) -> None:
     ...
 
 # GOOD — all imports at the top of the file
-from speleodb.api.v1.tests.factories import TokenFactory
+from speleodb.api.v2.tests.factories import TokenFactory
 from speleodb.common.enums import ProjectType
 from speleodb.git_engine.gitlab_manager import GitlabError
 

@@ -346,7 +346,7 @@
             dataObject.experiment_fields = customFields;
 
             $.ajax({
-                url: "{% url 'api:v1:experiments' %}",
+                url: "{% url 'api:v2:experiments' %}",
                 method: "POST",
                 data: JSON.stringify(dataObject),
                 contentType: "application/json; charset=utf-8",
@@ -360,7 +360,7 @@
                     $("#modal_success").css('display', 'flex');
 
                     window.setTimeout(function(){
-                        window.location.href = Urls['private:experiment_details'](data["data"]["id"]);
+                        window.location.href = Urls['private:experiment_details'](data["id"]);
                     }, 2000);
                 },
                 error: function (data) {

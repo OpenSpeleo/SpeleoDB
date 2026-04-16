@@ -274,28 +274,24 @@ window.GPXImport = (function() {
                 redirect: 'follow'
             };
             
-            const response = await fetch(Urls['api:v1:gpx-import'](), requestOptions);
+            const response = await fetch(Urls['api:v2:gpx-import'](), requestOptions);
             const data = await response.json();
             
             if (!response.ok) {
                 throw new Error(data.message || data.error || data.detail || 'Import failed');
             }
             
-            if (data.success) {
-                const landmarksCreated = data.data?.landmarks_created || 0;
-                const tracksCreated = data.data?.gps_tracks_created || 0;
-                
-                if (landmarksCreated > 0 || tracksCreated > 0) {
-                    // Success - show message and reload
-                    hideModal();
-                    showSuccessModal(landmarksCreated, tracksCreated);
-                } else {
-                    // Nothing imported - show warning
-                    hideModal();
-                    showWarningModal();
-                }
+            const landmarksCreated = data?.landmarks_created || 0;
+            const tracksCreated = data?.gps_tracks_created || 0;
+
+            if (landmarksCreated > 0 || tracksCreated > 0) {
+                // Success - show message and reload
+                hideModal();
+                showSuccessModal(landmarksCreated, tracksCreated);
             } else {
-                throw new Error(data.message || 'Import failed');
+                // Nothing imported - show warning
+                hideModal();
+                showWarningModal();
             }
             
         } catch (error) {

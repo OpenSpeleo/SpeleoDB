@@ -180,29 +180,30 @@ omit = ["*/migrations/*", "*/tests/*"]
 plugins = ["django_coverage_plugin"]
 
 # ==== mypy ====
+# NOTE: mypy's `exclude` is a list of Python regular expressions, not glob
+# patterns. Keep these as anchored regexes (`^name/`, or `\.ext$`).
 [tool.mypy]
 exclude = [
-    "**/*.pyc",
-    "**/node_modules",
-    "**/__pycache__",
-    ".devcontainer",
-    ".envs",
-    ".git",
-    ".github",
-    ".ipython",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
-    ".uv",
-    ".venv",
-    ".vscode",
-    ".workdir",
-    "~/.cache",
-    "bin",
-    "docs",
-    "fixtures",
-    "mediafiles",
-    "staticfiles",
+    "\\.pyc$",
+    "(^|/)node_modules(/|$)",
+    "(^|/)__pycache__(/|$)",
+    "^\\.devcontainer(/|$)",
+    "^\\.envs(/|$)",
+    "^\\.git(/|$)",
+    "^\\.github(/|$)",
+    "^\\.ipython(/|$)",
+    "^\\.mypy_cache(/|$)",
+    "^\\.pytest_cache(/|$)",
+    "^\\.ruff_cache(/|$)",
+    "^\\.uv(/|$)",
+    "^\\.venv(/|$)",
+    "^\\.vscode(/|$)",
+    "^\\.workdir(/|$)",
+    "^bin(/|$)",
+    "^docs(/|$)",
+    "^fixtures(/|$)",
+    "^mediafiles(/|$)",
+    "^staticfiles(/|$)",
 ]
 check_untyped_defs = true
 # ignore_missing_imports = true
@@ -217,7 +218,7 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
 
-[tool.mypy-speleodb.api.v1.tests]
+[tool.mypy-speleodb.api.v2.tests]
 disallow_untyped_calls = false
 allow_untyped_calls = true
 

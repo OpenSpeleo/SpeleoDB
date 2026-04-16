@@ -10,7 +10,7 @@ from django.urls import resolve
 from django.urls import reverse
 from rest_framework import status
 
-from speleodb.api.v1.tests.base_testcase import BaseUserTestCaseMixin
+from speleodb.api.v2.tests.base_testcase import BaseUserTestCaseMixin
 
 
 # ------------------------------------------------------------------ #

@@ -179,7 +179,7 @@ $(window).on('load', function() {
             
             // First, fetch experiment details to get field definitions
             const experimentResponse = await fetch(
-                Urls["api:v1:experiment-detail"](experimentId), 
+                Urls["api:v2:experiment-detail"](experimentId), 
                 { credentials: 'same-origin' }
             );
             
@@ -200,7 +200,7 @@ $(window).on('load', function() {
             }
             
             // Fetch GeoJSON data from the API
-            const apiUrl = "{{ request.scheme }}://{{ request.get_host }}{% url 'api:v1:gis-ogc:experiment' gis_token=experiment.gis_token %}";
+            const apiUrl = "{{ request.scheme }}://{{ request.get_host }}{% url 'api:v2:gis-ogc:experiment' gis_token=experiment.gis_token %}";
             const response = await fetch(apiUrl);
             
             if (!response.ok) {
@@ -382,7 +382,7 @@ $(window).on('load', function() {
             
             // Call export API
             const response = await fetch(
-                Urls['api:v1:experiment-export-excel'](experimentId), 
+                Urls['api:v2:experiment-export-excel'](experimentId), 
                 {
                     method: 'GET',
                     headers: {

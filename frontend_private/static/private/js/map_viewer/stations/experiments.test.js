@@ -100,8 +100,8 @@ describe('StationExperiments XSS', () => {
     it('escapes experiment name in select option text', async () => {
         const stationId = 'st-1';
         State.allStations.set(stationId, { id: stationId, project: 'proj-1' });
-        API.getExperiments.mockResolvedValue({ data: [baseExperiment()] });
-        API.getExperimentData.mockResolvedValue({ data: [] });
+        API.getExperiments.mockResolvedValue([baseExperiment()]);
+        API.getExperimentData.mockResolvedValue([]);
 
         await StationExperiments.render(stationId, container);
 
@@ -114,8 +114,8 @@ describe('StationExperiments XSS', () => {
     it('escapes experiment description when an experiment is selected', async () => {
         const stationId = 'st-1';
         State.allStations.set(stationId, { id: stationId, project: 'proj-1' });
-        API.getExperiments.mockResolvedValue({ data: [baseExperiment()] });
-        API.getExperimentData.mockResolvedValue({ data: [] });
+        API.getExperiments.mockResolvedValue([baseExperiment()]);
+        API.getExperimentData.mockResolvedValue([]);
 
         await StationExperiments.render(stationId, container);
 
@@ -137,10 +137,10 @@ describe('StationExperiments XSS', () => {
         const stationId = 'st-1';
         const cellPayload = '<svg onload=alert(1)>';
         State.allStations.set(stationId, { id: stationId, project: 'proj-1' });
-        API.getExperiments.mockResolvedValue({ data: [baseExperiment()] });
-        API.getExperimentData.mockResolvedValue({
-            data: [{ id: 'row-1', data: { [fieldUuid]: cellPayload } }],
-        });
+        API.getExperiments.mockResolvedValue([baseExperiment()]);
+        API.getExperimentData.mockResolvedValue([
+            { id: 'row-1', data: { [fieldUuid]: cellPayload } },
+        ]);
 
         await StationExperiments.render(stationId, container);
 
@@ -161,8 +161,8 @@ describe('StationExperiments XSS', () => {
         const stationId = 'ab\" onclick=\"evil\" data-x=';
         const projectId = 'proj\"p';
         State.allStations.set(stationId, { id: stationId, project: projectId });
-        API.getExperiments.mockResolvedValue({ data: [baseExperiment({ name: 'Safe', description: '' })] });
-        API.getExperimentData.mockResolvedValue({ data: [] });
+        API.getExperiments.mockResolvedValue([baseExperiment({ name: 'Safe', description: '' })]);
+        API.getExperimentData.mockResolvedValue([]);
 
         await StationExperiments.render(stationId, container);
 

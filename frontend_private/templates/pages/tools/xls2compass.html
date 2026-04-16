@@ -1480,7 +1480,7 @@ $(document).ready(function() {
 
         // AJAX call with all survey data
         $.ajax({
-            url: "{% url 'api:v1:tool-xls2compass' %}",
+            url: "{% url 'api:v2:tool-xls2compass' %}",
             method: "POST",
             data: JSON.stringify(ajaxData),
             contentType: "application/json; charset=utf-8",

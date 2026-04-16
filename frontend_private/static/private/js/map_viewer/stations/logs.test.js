@@ -109,11 +109,11 @@ describe('StationLogs', () => {
             State.allStations.set(stationId, { id: stationId, project: 'proj-1' });
         });
 
-        it('renders journal entries when logs exist (response.data format)', async () => {
+        it('renders journal entries when logs exist (v2 array format)', async () => {
             const logs = [
                 { id: 'log-1', title: 'First Entry', notes: 'Some notes', creation_date: '2024-01-01', created_by: 'Alice' },
             ];
-            API.getStationLogs.mockResolvedValue({ data: logs });
+            API.getStationLogs.mockResolvedValue(logs);
 
             await StationLogs.render(stationId, container);
 
@@ -123,26 +123,16 @@ describe('StationLogs', () => {
             expect(Utils.hideLoadingOverlay).toHaveBeenCalled();
         });
 
-        it('handles raw array response format', async () => {
-            const logs = [{ id: 'log-1', title: 'Raw Array', notes: 'test' }];
-            API.getStationLogs.mockResolvedValue(logs);
+        it('falls back to empty state when response is not an array', async () => {
+            API.getStationLogs.mockResolvedValue({});
 
             await StationLogs.render(stationId, container);
 
-            expect(container.innerHTML).toContain('Raw Array');
+            expect(container.innerHTML).toContain('No Journal Entries Yet');
         });
 
-        it('handles response.results format', async () => {
-            const logs = [{ id: 'log-1', title: 'Results Format', notes: 'test' }];
-            API.getStationLogs.mockResolvedValue({ results: logs });
-
-            await StationLogs.render(stationId, container);
-
-            expect(container.innerHTML).toContain('Results Format');
-        });
-
-        it('renders empty state when no logs exist', async () => {
-            API.getStationLogs.mockResolvedValue({ data: [] });
+        it('renders empty state when response is an empty array', async () => {
+            API.getStationLogs.mockResolvedValue([]);
 
             await StationLogs.render(stationId, container);
 
@@ -151,7 +141,7 @@ describe('StationLogs', () => {
 
         it('renders enabled new-entry button when user has write access', async () => {
             Config.getStationAccess.mockReturnValue({ write: true, delete: false });
-            API.getStationLogs.mockResolvedValue({ data: [] });
+            API.getStationLogs.mockResolvedValue([]);
 
             await StationLogs.render(stationId, container);
 
@@ -161,7 +151,7 @@ describe('StationLogs', () => {
 
         it('does not render enabled new-entry button without write access', async () => {
             Config.getStationAccess.mockReturnValue({ write: false, delete: false });
-            API.getStationLogs.mockResolvedValue({ data: [] });
+            API.getStationLogs.mockResolvedValue([]);
 
             await StationLogs.render(stationId, container);
 
@@ -183,7 +173,7 @@ describe('StationLogs', () => {
             State.allSurfaceStations.set(stationId, {
                 id: stationId, network: 'net-1', station_type: 'surface',
             });
-            API.getStationLogs.mockResolvedValue({ data: [] });
+            API.getStationLogs.mockResolvedValue([]);
 
             await StationLogs.render(stationId, container);
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 
-from speleodb.api.v1.tests.base_testcase import BaseAPITestCase
+from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
 
 USER_TEST_PASSWORD = "YeeOfLittleFaith"  # noqa: S105
 

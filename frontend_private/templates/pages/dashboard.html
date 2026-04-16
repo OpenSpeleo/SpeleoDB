@@ -798,20 +798,15 @@ $(document).ready(function() {
     }
 
     $.ajax({
-        url: Urls['api:v1:user-dashboard-stats'](),
+        url: Urls['api:v2:user-dashboard-stats'](),
         type: 'GET',
         dataType: 'json',
         success: function(response) {
-            if (response.success) {
-                var data = response.data;
-                populateStatCards(data.summary);
-                initCommitsChart(data.commits_over_time);
-                initProjectsChart(data.projects_by_type);
-                renderHeatmap(data.contribution_calendar);
-                renderActivityFeed(data.recent_activity);
-            } else {
-                showStatCardErrors();
-            }
+            populateStatCards(response.summary);
+            initCommitsChart(response.commits_over_time);
+            initProjectsChart(response.projects_by_type);
+            renderHeatmap(response.contribution_calendar);
+            renderActivityFeed(response.recent_activity);
         },
         error: function() {
             showStatCardErrors();

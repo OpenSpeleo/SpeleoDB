@@ -973,7 +973,7 @@ $(document).ready(function() {
 
         // AJAX call to process DMP file
         $.ajax({
-            url: "{% url 'api:v1:tool-dmp-doctor' %}",
+            url: "{% url 'api:v2:tool-dmp-doctor' %}",
             method: "POST",
             data: formData,
             processData: false,

@@ -335,11 +335,7 @@ export const StationSensors = {
         try {
             const response = await API.getStationSensorInstallsWithStatus(stationId, 'installed');
 
-            if (!response.success) {
-                throw new Error('Failed to load sensor installations');
-            }
-
-            const installs = response.data || [];
+            const installs = Array.isArray(response) ? response : [];
 
             Utils.hideLoadingOverlay(loadingOverlay);
 
@@ -495,11 +491,7 @@ export const StationSensors = {
         try {
             const response = await API.getStationSensorInstalls(stationId);
 
-            if (!response.success) {
-                throw new Error('Failed to load sensor history');
-            }
-
-            const allInstalls = response.data || [];
+            const allInstalls = Array.isArray(response) ? response : [];
 
             Utils.hideLoadingOverlay(loadingOverlay);
 
@@ -647,11 +639,7 @@ export const StationSensors = {
 
             const response = await API.getStationSensorInstalls(stationId);
 
-            if (!response.success) {
-                throw new Error('Failed to refresh sensor history');
-            }
-
-            const allInstalls = response.data || [];
+            const allInstalls = Array.isArray(response) ? response : [];
 
             sensorHistoryData = allInstalls;
 
@@ -694,11 +682,7 @@ export const StationSensors = {
             // Fetch fleets
             const fleetsResponse = await API.getSensorFleets();
 
-            if (!fleetsResponse.success) {
-                throw new Error('Failed to load sensor fleets');
-            }
-
-            const fleets = fleetsResponse.data || [];
+            const fleets = Array.isArray(fleetsResponse) ? fleetsResponse : [];
 
             if (fleets.length === 0) {
                 Utils.hideLoadingOverlay(loadingOverlay);
@@ -721,9 +705,9 @@ export const StationSensors = {
 
             // Fetch sensors for all fleets in parallel to calculate available counts
             const fleetSensorsPromises = fleets.map(fleet =>
-                API.getSensorFleetSensors(fleet.id).then(
-                    res => res.success ? res : { data: [] }
-                ).catch(() => ({ data: [] }))
+                API.getSensorFleetSensors(fleet.id)
+                    .then(res => Array.isArray(res) ? res : [])
+                    .catch(() => [])
             );
 
             const fleetSensorsResults = await Promise.all(fleetSensorsPromises);
@@ -731,7 +715,7 @@ export const StationSensors = {
             // Cache the fleet sensors for use by loadFleetSensors
             fleetSensorsCache = {};
             fleets.forEach((fleet, index) => {
-                fleetSensorsCache[fleet.id] = fleetSensorsResults[index]?.data || [];
+                fleetSensorsCache[fleet.id] = fleetSensorsResults[index] || [];
             });
 
             // Calculate available sensor count for each fleet
@@ -851,11 +835,7 @@ export const StationSensors = {
             } else {
                 const sensorsResponse = await API.getSensorFleetSensors(fleetId);
 
-                if (!sensorsResponse.success) {
-                    throw new Error('Failed to load fleet sensors');
-                }
-
-                allSensors = sensorsResponse.data || [];
+                allSensors = Array.isArray(sensorsResponse) ? sensorsResponse : [];
                 // Store in cache for future use
                 fleetSensorsCache[fleetId] = allSensors;
             }
@@ -953,13 +933,11 @@ export const StationSensors = {
         const loadingOverlay = Utils.showLoadingOverlay('Loading sensor installation...');
 
         try {
-            const installResponse = await API.getStationSensorInstallDetails(stationId, installId);
+            const install = await API.getStationSensorInstallDetails(stationId, installId);
 
-            if (!installResponse.success) {
+            if (!install || !install.id) {
                 throw new Error('Failed to load sensor installation details');
             }
-
-            const install = installResponse.data;
 
             if (install.status !== 'installed') {
                 Utils.hideLoadingOverlay(loadingOverlay);
@@ -971,19 +949,15 @@ export const StationSensors = {
             // Fetch fleets
             const fleetsResponse = await API.getSensorFleets();
 
-            if (!fleetsResponse.success) {
-                throw new Error('Failed to load sensor fleets');
-            }
-
-            const fleets = fleetsResponse.data || [];
+            const fleets = Array.isArray(fleetsResponse) ? fleetsResponse : [];
 
             const currentFleetId = install.sensor_fleet_id;
 
             // Fetch sensors for all fleets in parallel to calculate available counts
             const fleetSensorsPromises = fleets.map(fleet =>
-                API.getSensorFleetSensors(fleet.id).then(
-                    res => res.success ? res : { data: [] }
-                ).catch(() => ({ data: [] }))
+                API.getSensorFleetSensors(fleet.id)
+                    .then(res => Array.isArray(res) ? res : [])
+                    .catch(() => [])
             );
 
             const fleetSensorsResults = await Promise.all(fleetSensorsPromises);
@@ -991,7 +965,7 @@ export const StationSensors = {
             // Cache the fleet sensors for use by loadFleetSensors
             fleetSensorsCache = {};
             fleets.forEach((fleet, index) => {
-                fleetSensorsCache[fleet.id] = fleetSensorsResults[index]?.data || [];
+                fleetSensorsCache[fleet.id] = fleetSensorsResults[index] || [];
             });
 
             // Calculate available sensor count for each fleet

@@ -157,9 +157,8 @@ export const Config = {
             console.log('🔄 Loading projects from API...');
             const response = await API.getAllProjects();
 
-            if (response && response.success && Array.isArray(response.data)) {
-                // Map API response to expected format (permission -> permissions)
-                this._projects = response.data.map(p => ({
+            if (Array.isArray(response)) {
+                this._projects = response.map(p => ({
                     id: String(p.id),
                     name: p.name,
                     permissions: p.permission,  // API returns 'permission', code expects 'permissions'
@@ -194,9 +193,8 @@ export const Config = {
             console.log('🔄 Loading surface networks from API...');
             const response = await API.getAllSurfaceNetworks();
 
-            if (response && response.success && Array.isArray(response.data)) {
-                // Map API response to expected format
-                this._networks = response.data.map(n => ({
+            if (Array.isArray(response)) {
+                this._networks = response.map(n => ({
                     id: String(n.id),
                     name: n.name,
                     description: n.description,
@@ -426,9 +424,8 @@ export const Config = {
             console.log('🔄 Loading GPS tracks from API...');
             const response = await API.getGPSTracks();
 
-            if (response && response.success && Array.isArray(response.data)) {
-                // Map API response to expected format
-                this._gpsTracks = response.data.map(t => ({
+            if (Array.isArray(response)) {
+                this._gpsTracks = response.map(t => ({
                     id: String(t.id),
                     name: t.name,
                     color: t.color,

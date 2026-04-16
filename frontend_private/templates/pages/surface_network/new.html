@@ -110,7 +110,7 @@
 
             // REAL API CALL
             $.ajax({
-                url: "{% url 'api:v1:surface-networks' %}",
+                url: "{% url 'api:v2:surface-networks' %}",
                 method: 'POST',
                 data: JSON.stringify(dataObject),
                 contentType: 'application/json; charset=utf-8',
@@ -125,7 +125,7 @@
 
                     window.setTimeout(function(){
                         // Redirect to network details page
-                        window.location.href = Urls['private:surface_network_details'](response.data.id);
+                        window.location.href = Urls['private:surface_network_details'](response.id);
                     }, 2000);
                 },
                 error: function(xhr) {

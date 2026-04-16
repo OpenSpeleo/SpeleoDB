@@ -117,8 +117,8 @@ describe('frontend_public gis_view_main', () => {
     beforeEach(() => {
         vi.useFakeTimers();
         vi.clearAllMocks();
-        consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
         const mapSetup = createMapMock();
         mapMock = mapSetup.map;
@@ -137,6 +137,14 @@ describe('frontend_public gis_view_main', () => {
         window.MAPVIEWER_CONTEXT = {};
         globalThis.fetch = vi.fn();
         globalThis.mapboxgl = { LngLatBounds: MockLngLatBounds };
+        globalThis.Urls = new Proxy(
+            {},
+            {
+                get: (_target, prop) =>
+                    (...args) =>
+                        `/api/${prop}${args.length ? '/' + args.join('/') : ''}`,
+            }
+        );
 
         domReadyHandler = null;
         originalDocumentAddEventListener = document.addEventListener.bind(document);
@@ -159,6 +167,7 @@ describe('frontend_public gis_view_main', () => {
         delete window.MAPVIEWER_CONTEXT;
         delete globalThis.mapboxgl;
         delete globalThis.fetch;
+        delete globalThis.Urls;
     });
 
     it('shows invalid configuration notification and exits early', async () => {
@@ -194,14 +203,11 @@ describe('frontend_public gis_view_main', () => {
         globalThis.fetch.mockResolvedValue({
             ok: true,
             json: async () => ({
-                success: true,
-                data: {
-                    view_name: 'Public View',
-                    projects: [
-                        { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' },
-                        { id: 'p2', name: 'Project Two', geojson_file: '/g2.geojson' }
-                    ]
-                }
+                view_name: 'Public View',
+                projects: [
+                    { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' },
+                    { id: 'p2', name: 'Project Two', geojson_file: '/g2.geojson' }
+                ]
             })
         });
 
@@ -217,7 +223,7 @@ describe('frontend_public gis_view_main', () => {
 
         await mapHandlers.load();
 
-        expect(globalThis.fetch).toHaveBeenCalledWith('/api/v1/gis-ogc/view/public-token/geojson');
+        expect(globalThis.fetch).toHaveBeenCalledWith(Urls['api:v2:gis-ogc:view-geojson']('public-token'));
         expect(configMock._projects).toEqual([
             { id: 'p1', name: 'Project One', color: undefined, permissions: 'READ_ONLY', geojson_url: '/g1.geojson' },
             { id: 'p2', name: 'Project Two', color: undefined, permissions: 'READ_ONLY', geojson_url: '/g2.geojson' }
@@ -240,6 +246,7 @@ describe('frontend_public gis_view_main', () => {
         window.MAPVIEWER_CONTEXT = {
             viewMode: 'public',
             gisToken: 'public-token',
+
             mapboxToken: 'mapbox-token',
             allowPreciseZoom: true
         };
@@ -248,13 +255,10 @@ describe('frontend_public gis_view_main', () => {
         globalThis.fetch.mockResolvedValue({
             ok: true,
             json: async () => ({
-                success: true,
-                data: {
-                    view_name: 'Public View',
-                    projects: [
-                        { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' }
-                    ]
-                }
+                view_name: 'Public View',
+                projects: [
+                    { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' }
+                ]
             })
         });
 
@@ -274,19 +278,17 @@ describe('frontend_public gis_view_main', () => {
         window.MAPVIEWER_CONTEXT = {
             viewMode: 'public',
             gisToken: 'public-token',
+
             mapboxToken: 'mapbox-token',
         };
 
         globalThis.fetch.mockResolvedValue({
             ok: true,
             json: async () => ({
-                success: true,
-                data: {
-                    view_name: 'Color View',
-                    projects: [
-                        { id: 'p1', name: 'Red Cave', color: '#e41a1c', geojson_file: '/g1.geojson' },
-                    ]
-                }
+                view_name: 'Color View',
+                projects: [
+                    { id: 'p1', name: 'Red Cave', color: '#e41a1c', geojson_file: '/g1.geojson' },
+                ]
             })
         });
 
@@ -301,19 +303,17 @@ describe('frontend_public gis_view_main', () => {
         window.MAPVIEWER_CONTEXT = {
             viewMode: 'public',
             gisToken: 'public-token',
+
             mapboxToken: 'mapbox-token',
         };
 
         globalThis.fetch.mockResolvedValue({
             ok: true,
             json: async () => ({
-                success: true,
-                data: {
-                    view_name: 'No Country View',
-                    projects: [
-                        { id: 'p1', name: 'Cave A', geojson_file: '/g1.geojson' },
-                    ]
-                }
+                view_name: 'No Country View',
+                projects: [
+                    { id: 'p1', name: 'Cave A', geojson_file: '/g1.geojson' },
+                ]
             })
         });
 
@@ -328,6 +328,7 @@ describe('frontend_public gis_view_main', () => {
         window.MAPVIEWER_CONTEXT = {
             viewMode: 'public',
             gisToken: 'public-token',
+
             mapboxToken: 'mapbox-token'
         };
 

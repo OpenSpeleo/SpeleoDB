@@ -70,7 +70,7 @@ function attachUserAutocomplete($input, $suggestions, autocompleteUrl) {
                 url: autocompleteUrl,
                 method: "GET",
                 data: { query: val },
-                success: function(resp){ render(resp.data); },
+                success: function(resp){ render(Array.isArray(resp) ? resp : []); },
                 error: function(){ $suggestions.addClass('hidden').empty(); },
                 complete: function(){ pending = null; }
             });

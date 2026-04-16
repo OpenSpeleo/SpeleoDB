@@ -759,7 +759,7 @@ $(document).ready(function() {
         $("#loading_spinner").show();
 
         $.ajax({
-            url: "{% url 'api:v1:tool-xls2dmp' %}",
+            url: "{% url 'api:v2:tool-xls2dmp' %}",
             method: "POST",
             data: JSON.stringify({ 
                 shots: rows,

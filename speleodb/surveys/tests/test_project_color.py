@@ -6,9 +6,9 @@ import pytest
 from django.template.loader import render_to_string
 from rest_framework.exceptions import ValidationError
 
-from speleodb.api.v1.serializers.gps_track import GPSTrackSerializer
-from speleodb.api.v1.serializers.project import ProjectSerializer
-from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.api.v2.serializers.gps_track import GPSTrackSerializer
+from speleodb.api.v2.serializers.project import ProjectSerializer
+from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.common.enums import ColorPalette
 from speleodb.surveys.templatetags.project_colors import country_flag
 from speleodb.surveys.templatetags.project_colors import get_project_color_palette

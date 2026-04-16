@@ -7,6 +7,7 @@ from allauth.account.models import EmailAddress
 from allauth.core.context import request_context
 from django.core import mail
 from django.test import RequestFactory
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -58,7 +59,7 @@ class TestAccountAdapterSendMail:
 
     def test_user_email_change_sends_verification_email(self) -> None:
         """
-        Reproduce the code path triggered by ``PATCH /api/v1/user/``
+        Reproduce the code path triggered by ``PATCH /api/v2/user/``
         when the user changes their email address:
 
             UserSerializer.update()
@@ -84,13 +85,13 @@ class TestAccountAdapterSendMail:
         api_client.force_authenticate(user=user)
 
         response = api_client.patch(
-            "/api/v1/user/",
+            reverse("api:v2:user-detail"),
             data={"email": "new-email@example.com"},
             format="json",
         )
 
         assert response.status_code != status.HTTP_500_INTERNAL_SERVER_ERROR, (
-            f"PATCH /api/v1/user/ crashed: {response.content.decode()}"
+            f"PATCH /api/v2/user/ crashed: {response.content.decode()}"
         )
         assert response.status_code == status.HTTP_200_OK, (
             f"Unexpected status {response.status_code}: {response.content.decode()}"

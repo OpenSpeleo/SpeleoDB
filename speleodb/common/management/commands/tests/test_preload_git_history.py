@@ -10,10 +10,10 @@ import pytest
 from django.core.management import call_command
 from django.urls import reverse
 
-from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
-from speleodb.api.v1.tests.base_testcase import PermissionType
-from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
+from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v2.tests.base_testcase import PermissionType
+from speleodb.api.v2.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Project
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 BASE_DIR = (
     pathlib.Path(__file__).parent.parent.parent.parent.parent
     / "api"
-    / "v1"
+    / "v2"
     / "tests"
     / "artifacts"
 )
@@ -63,7 +63,7 @@ class TestPreloadGitHistory(BaseAPIProjectTestCase):
         with TEST_FILE.open(mode="rb") as file_data:
             self.client.put(
                 reverse(
-                    "api:v1:project-upload",
+                    "api:v2:project-upload",
                     kwargs={
                         "id": project_id,
                         "fileformat": FileFormat.ARIANE_TML.label.lower(),

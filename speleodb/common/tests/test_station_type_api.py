@@ -10,9 +10,9 @@ from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
-from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
-from speleodb.api.v1.tests.base_testcase import PermissionType
-from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
+from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v2.tests.base_testcase import PermissionType
+from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import SubSurfaceStationType
 from speleodb.gis.models import SubSurfaceStation
@@ -32,7 +32,7 @@ class TestUnauthenticatedStationTypeAPI(BaseAPIProjectTestCase):
             "type": "sensor",
         }
         response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             data=data,
             content_type="application/json",
         )
@@ -89,7 +89,7 @@ class TestStationTypeCreation(BaseAPIProjectTestCase):
         }
 
         response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -100,7 +100,7 @@ class TestStationTypeCreation(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_201_CREATED
-        station_data = response.data["data"]
+        station_data = response.data
         assert station_data["type"] == expected
 
     def test_create_station_without_type_fails(self) -> None:
@@ -114,7 +114,7 @@ class TestStationTypeCreation(BaseAPIProjectTestCase):
         }
 
         response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -138,7 +138,7 @@ class TestStationTypeCreation(BaseAPIProjectTestCase):
         }
 
         response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -190,7 +190,7 @@ class TestStationTypeModification(BaseAPIProjectTestCase):
         data = {"type": "bone"}
 
         response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
+            reverse("api:v2:station-detail", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -219,7 +219,7 @@ class TestStationTypeModification(BaseAPIProjectTestCase):
         }
 
         response = self.client.put(
-            reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
+            reverse("api:v2:station-detail", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -241,7 +241,7 @@ class TestStationTypeModification(BaseAPIProjectTestCase):
         }
 
         response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
+            reverse("api:v2:station-detail", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -252,7 +252,7 @@ class TestStationTypeModification(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_200_OK
-        station_data = response.data["data"]
+        station_data = response.data
         assert station_data["name"] == "Updated Station Name"
         assert station_data["description"] == "Updated description"
         # Type should remain unchanged
@@ -269,7 +269,7 @@ class TestStationTypeModification(BaseAPIProjectTestCase):
         }
 
         response = self.client.put(
-            reverse("api:v1:station-detail", kwargs={"id": self.station.id}),
+            reverse("api:v2:station-detail", kwargs={"id": self.station.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -281,7 +281,7 @@ class TestStationTypeModification(BaseAPIProjectTestCase):
 
         # Should succeed because type is not actually changing
         assert response.status_code == status.HTTP_200_OK
-        station_data = response.data["data"]
+        station_data = response.data
         assert station_data["name"] == "Updated Name"
         assert station_data["type"] == "sensor"
 
@@ -321,7 +321,7 @@ class TestStationTypeRetrieval(BaseAPIProjectTestCase):
         )
 
         response = self.client.get(
-            reverse("api:v1:station-detail", kwargs={"id": station.id}),
+            reverse("api:v2:station-detail", kwargs={"id": station.id}),
             headers={"authorization": self.auth},
         )
 
@@ -330,7 +330,7 @@ class TestStationTypeRetrieval(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_200_OK
-        station_data = response.data["data"]
+        station_data = response.data
         assert "type" in station_data
         assert station_data["type"] == "bone"
 
@@ -361,7 +361,7 @@ class TestStationTypeRetrieval(BaseAPIProjectTestCase):
         )
 
         response = self.client.get(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
@@ -370,7 +370,7 @@ class TestStationTypeRetrieval(BaseAPIProjectTestCase):
             return
 
         assert response.status_code == status.HTTP_200_OK
-        stations_data = response.json()["data"]
+        stations_data = response.json()
         assert len(stations_data) == 5  # noqa: PLR2004
 
         types = {s["type"] for s in stations_data}
@@ -412,7 +412,7 @@ class TestStationTypeGeoJSON(BaseAPIProjectTestCase):
         )
 
         response = self.client.get(
-            reverse("api:v1:project-stations-geojson", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations-geojson", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
 
@@ -441,7 +441,7 @@ class TestStationTypeGeoJSON(BaseAPIProjectTestCase):
         )
 
         response = self.client.get(
-            reverse("api:v1:subsurface-stations-geojson"),
+            reverse("api:v2:subsurface-stations-geojson"),
             headers={"authorization": self.auth},
         )
 
@@ -496,7 +496,7 @@ class TestStationTypeValidationEdgeCases(BaseAPIProjectTestCase):
         }
 
         response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -524,7 +524,7 @@ class TestStationTypeValidationEdgeCases(BaseAPIProjectTestCase):
         }
 
         response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -544,7 +544,7 @@ class TestStationTypeValidationEdgeCases(BaseAPIProjectTestCase):
         }
 
         response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -564,7 +564,7 @@ class TestStationTypeValidationEdgeCases(BaseAPIProjectTestCase):
         }
 
         response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -593,7 +593,7 @@ class TestStationTypeValidationEdgeCases(BaseAPIProjectTestCase):
         }
 
         response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             data=data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -625,42 +625,42 @@ class TestStationTypeIntegration(BaseAPIProjectTestCase):
         }
 
         create_response = self.client.post(
-            reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+            reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
             data=create_data,
             headers={"authorization": self.auth},
             content_type="application/json",
         )
 
         assert create_response.status_code == status.HTTP_201_CREATED
-        station_id = create_response.data["data"]["id"]
-        assert create_response.data["data"]["type"] == "bone"
+        station_id = create_response.data["id"]
+        assert create_response.data["type"] == "bone"
 
         # Read the station
         get_response = self.client.get(
-            reverse("api:v1:station-detail", kwargs={"id": station_id}),
+            reverse("api:v2:station-detail", kwargs={"id": station_id}),
             headers={"authorization": self.auth},
         )
 
         assert get_response.status_code == status.HTTP_200_OK
-        assert get_response.data["data"]["type"] == "bone"
+        assert get_response.data["type"] == "bone"
 
         # Update (other fields, not type)
         update_data = {"description": "Updated description"}
         update_response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": station_id}),
+            reverse("api:v2:station-detail", kwargs={"id": station_id}),
             data=update_data,
             headers={"authorization": self.auth},
             content_type="application/json",
         )
 
         assert update_response.status_code == status.HTTP_200_OK
-        assert update_response.data["data"]["description"] == "Updated description"
-        assert update_response.data["data"]["type"] == "bone"  # Type unchanged
+        assert update_response.data["description"] == "Updated description"
+        assert update_response.data["type"] == "bone"  # Type unchanged
 
         # Try to update type (should fail)
         type_update_data = {"type": "artifact"}
         type_update_response = self.client.patch(
-            reverse("api:v1:station-detail", kwargs={"id": station_id}),
+            reverse("api:v2:station-detail", kwargs={"id": station_id}),
             data=type_update_data,
             headers={"authorization": self.auth},
             content_type="application/json",
@@ -670,7 +670,7 @@ class TestStationTypeIntegration(BaseAPIProjectTestCase):
 
         # Delete the station
         delete_response = self.client.delete(
-            reverse("api:v1:station-detail", kwargs={"id": station_id}),
+            reverse("api:v2:station-detail", kwargs={"id": station_id}),
             headers={"authorization": self.auth},
         )
 
@@ -691,14 +691,14 @@ class TestStationTypeIntegration(BaseAPIProjectTestCase):
             }
 
             response = self.client.post(
-                reverse("api:v1:project-stations", kwargs={"id": self.project.id}),
+                reverse("api:v2:project-stations", kwargs={"id": self.project.id}),
                 data=data,
                 headers={"authorization": self.auth},
                 content_type="application/json",
             )
 
             assert response.status_code == status.HTTP_201_CREATED
-            assert response.data["data"]["type"] == "artifact"
+            assert response.data["type"] == "artifact"
 
         # Verify all 3 stations exist
         stations = SubSurfaceStation.objects.filter(

@@ -64,7 +64,7 @@
             $("#modal_confirmation").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:gis-view-detail' id=gis_view.id %}",
+                url: "{% url 'api:v2:gis-view-detail' id=gis_view.id %}",
                 method: "DELETE",
                 contentType: "application/json; charset=utf-8",
                 cache: false,

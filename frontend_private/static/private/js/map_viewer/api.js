@@ -41,156 +41,156 @@ const apiRequest = async (url, method = 'GET', body = null, isFormData = false) 
 export const API = {
     // Stations
     createStation: (projectId, stationData) =>
-        apiRequest(Urls['api:v1:project-stations'](projectId), 'POST', stationData),
+        apiRequest(Urls['api:v2:project-stations'](projectId), 'POST', stationData),
 
     updateStation: (stationId, stationData) =>
-        apiRequest(Urls['api:v1:station-detail'](stationId), 'PATCH', stationData),
+        apiRequest(Urls['api:v2:station-detail'](stationId), 'PATCH', stationData),
 
     deleteStation: (stationId) =>
-        apiRequest(Urls['api:v1:station-detail'](stationId), 'DELETE'),
+        apiRequest(Urls['api:v2:station-detail'](stationId), 'DELETE'),
 
     getProjectStations: (projectId) =>
-        apiRequest(Urls['api:v1:project-stations'](projectId)),
+        apiRequest(Urls['api:v2:project-stations'](projectId)),
 
     getStationDetails: (stationId) =>
-        apiRequest(Urls['api:v1:station-detail'](stationId)),
+        apiRequest(Urls['api:v2:station-detail'](stationId)),
 
     // All Stations GeoJSON (single API call for all stations)
     getAllStationsGeoJSON: () =>
-        apiRequest(Urls['api:v1:subsurface-stations-geojson']()),
+        apiRequest(Urls['api:v2:subsurface-stations-geojson']()),
 
     // Surface Networks
     getAllSurfaceNetworks: () =>
-        apiRequest(Urls['api:v1:surface-networks']()),
+        apiRequest(Urls['api:v2:surface-networks']()),
 
     // Surface Stations
     createSurfaceStation: (networkId, stationData) =>
-        apiRequest(Urls['api:v1:network-stations'](networkId), 'POST', stationData),
+        apiRequest(Urls['api:v2:network-stations'](networkId), 'POST', stationData),
 
     getNetworkStations: (networkId) =>
-        apiRequest(Urls['api:v1:network-stations'](networkId)),
+        apiRequest(Urls['api:v2:network-stations'](networkId)),
 
     getNetworkStationsGeoJSON: (networkId) =>
-        apiRequest(Urls['api:v1:network-stations-geojson'](networkId)),
+        apiRequest(Urls['api:v2:network-stations-geojson'](networkId)),
 
     getAllSurfaceStations: () =>
-        apiRequest(Urls['api:v1:surface-stations']()),
+        apiRequest(Urls['api:v2:surface-stations']()),
 
     getAllSurfaceStationsGeoJSON: () =>
-        apiRequest(Urls['api:v1:surface-stations-geojson']()),
+        apiRequest(Urls['api:v2:surface-stations-geojson']()),
 
     // Landmarks
     createLandmark: (landmarkData) =>
-        apiRequest(Urls['api:v1:landmarks'](), 'POST', landmarkData),
+        apiRequest(Urls['api:v2:landmarks'](), 'POST', landmarkData),
 
     updateLandmark: (landmarkId, landmarkData) =>
-        apiRequest(Urls['api:v1:landmark-detail'](landmarkId), 'PATCH', landmarkData),
+        apiRequest(Urls['api:v2:landmark-detail'](landmarkId), 'PATCH', landmarkData),
 
     deleteLandmark: (landmarkId) =>
-        apiRequest(Urls['api:v1:landmark-detail'](landmarkId), 'DELETE'),
+        apiRequest(Urls['api:v2:landmark-detail'](landmarkId), 'DELETE'),
 
     getAllLandmarks: () =>
-        apiRequest(Urls['api:v1:landmarks']()),
+        apiRequest(Urls['api:v2:landmarks']()),
 
     // All Landmarks GeoJSON (single API call)
     getAllLandmarksGeoJSON: () =>
-        apiRequest(Urls['api:v1:landmarks-geojson']()),
+        apiRequest(Urls['api:v2:landmarks-geojson']()),
 
     // Tags
     getUserTags: () =>
-        apiRequest(Urls['api:v1:station-tags']()),
+        apiRequest(Urls['api:v2:station-tags']()),
 
     getTagColors: () =>
-        apiRequest(Urls['api:v1:station-tag-colors']()),
+        apiRequest(Urls['api:v2:station-tag-colors']()),
 
     createTag: (name, color) =>
-        apiRequest(Urls['api:v1:station-tags'](), 'POST', { name, color }),
+        apiRequest(Urls['api:v2:station-tags'](), 'POST', { name, color }),
 
     setStationTag: (stationId, tagId) =>
-        apiRequest(Urls['api:v1:station-tags-manage'](stationId), 'POST', { tag_id: tagId }),
+        apiRequest(Urls['api:v2:station-tags-manage'](stationId), 'POST', { tag_id: tagId }),
 
     removeStationTag: (stationId) =>
-        apiRequest(Urls['api:v1:station-tags-manage'](stationId), 'DELETE'),
+        apiRequest(Urls['api:v2:station-tags-manage'](stationId), 'DELETE'),
 
     // Station Logs
     getStationLogs: (stationId) =>
-        apiRequest(Urls['api:v1:station-logs'](stationId)),
+        apiRequest(Urls['api:v2:station-logs'](stationId)),
 
     createStationLog: (stationId, formData) =>
-        apiRequest(Urls['api:v1:station-logs'](stationId), 'POST', formData, true),
+        apiRequest(Urls['api:v2:station-logs'](stationId), 'POST', formData, true),
 
     updateStationLog: (logId, formData) =>
-        apiRequest(Urls['api:v1:log-detail'](logId), 'PATCH', formData, true),
+        apiRequest(Urls['api:v2:log-detail'](logId), 'PATCH', formData, true),
 
     deleteStationLog: (logId) =>
-        apiRequest(Urls['api:v1:log-detail'](logId), 'DELETE'),
+        apiRequest(Urls['api:v2:log-detail'](logId), 'DELETE'),
 
     // Experiments
     getExperiments: () =>
-        apiRequest(Urls['api:v1:experiments']()),
+        apiRequest(Urls['api:v2:experiments']()),
 
     getExperimentData: (stationId, experimentId) =>
-        apiRequest(Urls['api:v1:experiment-records'](stationId, experimentId)),
+        apiRequest(Urls['api:v2:experiment-records'](stationId, experimentId)),
 
     // Resources
     getStationResources: (stationId) =>
-        apiRequest(Urls['api:v1:station-resources'](stationId)),
+        apiRequest(Urls['api:v2:station-resources'](stationId)),
 
     createStationResource: (stationId, formData) =>
-        apiRequest(Urls['api:v1:station-resources'](stationId), 'POST', formData, true),
+        apiRequest(Urls['api:v2:station-resources'](stationId), 'POST', formData, true),
 
     updateStationResource: (resourceId, formData) =>
-        apiRequest(Urls['api:v1:resource-detail'](resourceId), 'PATCH', formData, true),
+        apiRequest(Urls['api:v2:resource-detail'](resourceId), 'PATCH', formData, true),
 
     deleteStationResource: (resourceId) =>
-        apiRequest(Urls['api:v1:resource-detail'](resourceId), 'DELETE'),
+        apiRequest(Urls['api:v2:resource-detail'](resourceId), 'DELETE'),
 
     // Projects
     getAllProjects: () =>
-        apiRequest(Urls['api:v1:projects']()),
+        apiRequest(Urls['api:v2:projects']()),
 
     getAllProjectsGeoJSON: () =>
-        apiRequest(Urls['api:v1:all-projects-geojson']()),
+        apiRequest(Urls['api:v2:all-projects-geojson']()),
 
     // Exploration Leads
     getProjectExplorationLeadsGeoJSON: (projectId) =>
-        apiRequest(Urls['api:v1:project-exploration-leads-geojson'](projectId)),
+        apiRequest(Urls['api:v2:project-exploration-leads-geojson'](projectId)),
 
     getAllProjectExplorationLeadsGeoJSON: () =>
-        apiRequest(Urls['api:v1:exploration-lead-all-geojson']()),
+        apiRequest(Urls['api:v2:exploration-lead-all-geojson']()),
 
     getProjectExplorationLeads: (projectId) =>
-        apiRequest(Urls['api:v1:project-exploration-leads'](projectId)),
+        apiRequest(Urls['api:v2:project-exploration-leads'](projectId)),
 
     createExplorationLead: (projectId, leadData) =>
-        apiRequest(Urls['api:v1:project-exploration-leads'](projectId), 'POST', leadData),
+        apiRequest(Urls['api:v2:project-exploration-leads'](projectId), 'POST', leadData),
 
     updateExplorationLead: (leadId, leadData) =>
-        apiRequest(Urls['api:v1:exploration-lead-detail'](leadId), 'PATCH', leadData),
+        apiRequest(Urls['api:v2:exploration-lead-detail'](leadId), 'PATCH', leadData),
 
     deleteExplorationLead: (leadId) =>
-        apiRequest(Urls['api:v1:exploration-lead-detail'](leadId), 'DELETE'),
+        apiRequest(Urls['api:v2:exploration-lead-detail'](leadId), 'DELETE'),
 
     // Sensor-Fleets
     getSensorFleets: () =>
-        apiRequest(Urls['api:v1:sensor-fleets']()),
+        apiRequest(Urls['api:v2:sensor-fleets']()),
 
     getSensorFleetDetails: (fleetId) =>
-        apiRequest(Urls['api:v1:sensor-fleet-detail'](fleetId)),
+        apiRequest(Urls['api:v2:sensor-fleet-detail'](fleetId)),
 
     getSensorFleetSensors: (fleetId) =>
-        apiRequest(Urls['api:v1:sensor-fleet-sensors'](fleetId)),
+        apiRequest(Urls['api:v2:sensor-fleet-sensors'](fleetId)),
 
     // Sensor Installs
     getStationSensorInstalls: (stationId) =>
-        apiRequest(Urls['api:v1:station-sensor-installs'](stationId)),
+        apiRequest(Urls['api:v2:station-sensor-installs'](stationId)),
 
     getStationSensorInstallsWithStatus: (stationId, status) =>
-        apiRequest(Urls['api:v1:station-sensor-installs'](stationId) + "?status=" + status),
+        apiRequest(Urls['api:v2:station-sensor-installs'](stationId) + "?status=" + status),
 
     // Returns raw Response object for blob download (not parsed JSON)
     getStationSensorInstallsAsExcel: async (stationId) => {
-        const response = await fetch(Urls['api:v1:station-sensor-installs-export'](stationId), {
+        const response = await fetch(Urls['api:v2:station-sensor-installs-export'](stationId), {
             method: 'GET',
             headers: {
                 'X-CSRFToken': Utils.getCSRFToken()
@@ -201,37 +201,37 @@ export const API = {
     },
 
     getStationSensorInstallDetails: (stationId, installId) =>
-        apiRequest(Urls['api:v1:station-sensor-install-detail'](stationId, installId)),
+        apiRequest(Urls['api:v2:station-sensor-install-detail'](stationId, installId)),
 
     createStationSensorInstalls: (stationId, formData) =>
-        apiRequest(Urls['api:v1:station-sensor-installs'](stationId), 'POST', formData, true),
+        apiRequest(Urls['api:v2:station-sensor-installs'](stationId), 'POST', formData, true),
 
     updateStationSensorInstalls: (stationId, installId, formData) =>
-        apiRequest(Urls['api:v1:station-sensor-install-detail'](stationId, installId), 'PATCH', formData, true),
+        apiRequest(Urls['api:v2:station-sensor-install-detail'](stationId, installId), 'PATCH', formData, true),
 
     // GPS Tracks
     getGPSTracks: () =>
-        apiRequest(Urls['api:v1:gps-tracks']()),
+        apiRequest(Urls['api:v2:gps-tracks']()),
 
     // GPX Import
     importGPX: (formData) =>
-        apiRequest(Urls['api:v1:gpx-import'](), 'PUT', formData, true),
+        apiRequest(Urls['api:v2:gpx-import'](), 'PUT', formData, true),
 
     // ================== CYLINDER FLEETS ================== //
 
     // Cylinder Fleets
     getCylinderFleets: () =>
-        apiRequest(Urls['api:v1:cylinder-fleets']()),
+        apiRequest(Urls['api:v2:cylinder-fleets']()),
 
     getCylinderFleetDetails: (fleetId) =>
-        apiRequest(Urls['api:v1:cylinder-fleet-detail'](fleetId)),
+        apiRequest(Urls['api:v2:cylinder-fleet-detail'](fleetId)),
 
     getCylinderFleetCylinders: (fleetId) =>
-        apiRequest(Urls['api:v1:cylinder-fleet-cylinders'](fleetId)),
+        apiRequest(Urls['api:v2:cylinder-fleet-cylinders'](fleetId)),
 
     // Cylinder Installs
     getCylinderInstalls: (params = {}) => {
-        let url = Urls['api:v1:cylinder-installs']();
+        let url = Urls['api:v2:cylinder-installs']();
         const queryParams = [];
         if (params.cylinder_id) queryParams.push(`cylinder_id=${params.cylinder_id}`);
         if (params.fleet_id) queryParams.push(`fleet_id=${params.fleet_id}`);
@@ -241,38 +241,38 @@ export const API = {
     },
 
     getCylinderInstallsGeoJSON: () =>
-        apiRequest(Urls['api:v1:cylinder-installs-geojson']()),
+        apiRequest(Urls['api:v2:cylinder-installs-geojson']()),
 
     getAllCylinderInstallsGeoJSON: () =>
-        apiRequest(Urls['api:v1:cylinder-installs-geojson']()),
+        apiRequest(Urls['api:v2:cylinder-installs-geojson']()),
 
     createCylinderInstall: (installData) =>
-        apiRequest(Urls['api:v1:cylinder-installs'](), 'POST', installData),
+        apiRequest(Urls['api:v2:cylinder-installs'](), 'POST', installData),
 
     getCylinderInstallDetails: (installId) =>
-        apiRequest(Urls['api:v1:cylinder-install-detail'](installId)),
+        apiRequest(Urls['api:v2:cylinder-install-detail'](installId)),
 
     updateCylinderInstall: (installId, installData) =>
-        apiRequest(Urls['api:v1:cylinder-install-detail'](installId), 'PATCH', installData),
+        apiRequest(Urls['api:v2:cylinder-install-detail'](installId), 'PATCH', installData),
 
     deleteCylinderInstall: (installId) =>
-        apiRequest(Urls['api:v1:cylinder-install-detail'](installId), 'DELETE'),
+        apiRequest(Urls['api:v2:cylinder-install-detail'](installId), 'DELETE'),
 
     // Cylinder Pressure Checks
     getCylinderPressureChecks: (installId) =>
-        apiRequest(Urls['api:v1:cylinder-install-pressure-checks'](installId)),
+        apiRequest(Urls['api:v2:cylinder-install-pressure-checks'](installId)),
 
     createCylinderPressureCheck: (installId, checkData) =>
-        apiRequest(Urls['api:v1:cylinder-install-pressure-checks'](installId), 'POST', checkData),
+        apiRequest(Urls['api:v2:cylinder-install-pressure-checks'](installId), 'POST', checkData),
 
     getCylinderPressureCheckDetails: (installId, checkId) =>
-        apiRequest(Urls['api:v1:cylinder-pressure-check-detail'](installId, checkId)),
+        apiRequest(Urls['api:v2:cylinder-pressure-check-detail'](installId, checkId)),
 
     updateCylinderPressureCheck: (installId, checkId, checkData) =>
-        apiRequest(Urls['api:v1:cylinder-pressure-check-detail'](installId, checkId), 'PATCH', checkData),
+        apiRequest(Urls['api:v2:cylinder-pressure-check-detail'](installId, checkId), 'PATCH', checkData),
 
     deleteCylinderPressureCheck: (installId, checkId) =>
-        apiRequest(Urls['api:v1:cylinder-pressure-check-detail'](installId, checkId), 'DELETE'),
+        apiRequest(Urls['api:v2:cylinder-pressure-check-detail'](installId, checkId), 'DELETE'),
 };
 
 

@@ -87,8 +87,7 @@ export const SurfaceStationManager = {
 
     async createStation(networkId, stationData) {
         try {
-            const result = await API.createSurfaceStation(networkId, stationData);
-            const station = result.data;
+            const station = await API.createSurfaceStation(networkId, stationData);
 
             // Add to state
             State.allSurfaceStations.set(station.id, {
@@ -110,8 +109,7 @@ export const SurfaceStationManager = {
 
     async updateStation(stationId, updateData) {
         try {
-            const result = await API.updateStation(stationId, updateData);
-            const updatedStation = result.data;
+            const updatedStation = await API.updateStation(stationId, updateData);
 
             // Update State
             const existing = State.allSurfaceStations.get(stationId);

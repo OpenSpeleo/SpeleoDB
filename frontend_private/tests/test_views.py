@@ -13,16 +13,16 @@ from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
-from speleodb.api.v1.tests.base_testcase import BaseProjectTestCaseMixin
-from speleodb.api.v1.tests.base_testcase import BaseUserTestCaseMixin
-from speleodb.api.v1.tests.base_testcase import PermissionType
-from speleodb.api.v1.tests.factories import CylinderFleetFactory
-from speleodb.api.v1.tests.factories import CylinderFleetUserPermissionFactory
-from speleodb.api.v1.tests.factories import SensorFleetFactory
-from speleodb.api.v1.tests.factories import SensorFleetUserPermissionFactory
-from speleodb.api.v1.tests.factories import SurveyTeamFactory
-from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
-from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
+from speleodb.api.v2.tests.base_testcase import BaseProjectTestCaseMixin
+from speleodb.api.v2.tests.base_testcase import BaseUserTestCaseMixin
+from speleodb.api.v2.tests.base_testcase import PermissionType
+from speleodb.api.v2.tests.factories import CylinderFleetFactory
+from speleodb.api.v2.tests.factories import CylinderFleetUserPermissionFactory
+from speleodb.api.v2.tests.factories import SensorFleetFactory
+from speleodb.api.v2.tests.factories import SensorFleetUserPermissionFactory
+from speleodb.api.v2.tests.factories import SurveyTeamFactory
+from speleodb.api.v2.tests.factories import SurveyTeamMembershipFactory
+from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.users.tests.factories import UserFactory

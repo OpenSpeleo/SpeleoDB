@@ -8,8 +8,8 @@ from django.urls import reverse
 from parameterized.parameterized import parameterized
 from rest_framework import status
 
-from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import UserProjectPermissionFactory
+from speleodb.api.v2.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.users.tests.factories import UserFactory
 

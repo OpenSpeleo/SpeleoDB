@@ -85,7 +85,7 @@ class DRFWrapResponseMiddleware:
 
     def __call__(self, request: Request) -> Response | HttpResponse:
         # Skip for non-API calls
-        if "/api/" not in request.path:
+        if "/api/v1/" not in request.path:
             return self.get_response(request)
 
         payload = {}
@@ -97,11 +97,6 @@ class DRFWrapResponseMiddleware:
             wrapped_response = self.get_response(request)
 
             if wrapped_response.status_code == status.HTTP_304_NOT_MODIFIED:
-                return wrapped_response
-
-            if not any(
-                request.path.startswith(path) for path in ["/api/v1", "/api/health"]
-            ):
                 return wrapped_response
 
             match wrapped_response:
@@ -139,7 +134,6 @@ class DRFWrapResponseMiddleware:
                 raise
 
             logger.exception("API permission error at %s", request.path)
-            payload["data"] = {}
             payload["error"] = f"An error occured in the process: {e}"
             http_status = status.HTTP_403_FORBIDDEN
             exception = True
@@ -150,7 +144,6 @@ class DRFWrapResponseMiddleware:
 
             logger.exception("Unhandled API exception at %s", request.path)
             sentry_sdk.capture_exception(e)
-            payload["data"] = {}
             payload["error"] = f"An error occured in the process: {e}"
             http_status = status.HTTP_500_INTERNAL_SERVER_ERROR
             exception = True

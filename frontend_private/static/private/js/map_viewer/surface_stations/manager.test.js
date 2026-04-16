@@ -204,7 +204,7 @@ describe('SurfaceStationManager', () => {
 
         it('creates station via API and adds to state', async () => {
             const newStation = { id: 'new-1', name: 'New Station' };
-            API.createSurfaceStation.mockResolvedValue({ data: newStation });
+            API.createSurfaceStation.mockResolvedValue(newStation);
 
             const result = await SurfaceStationManager.createStation('net-1', { name: 'New Station' });
 
@@ -216,7 +216,7 @@ describe('SurfaceStationManager', () => {
         });
 
         it('invalidates cache after creation', async () => {
-            API.createSurfaceStation.mockResolvedValue({ data: { id: 'new-1' } });
+            API.createSurfaceStation.mockResolvedValue({ id: 'new-1' });
 
             await SurfaceStationManager.ensureAllSurfaceStationsLoaded();
             await SurfaceStationManager.createStation('net-1', {});
@@ -226,7 +226,7 @@ describe('SurfaceStationManager', () => {
         });
 
         it('refreshes surface station layers', async () => {
-            API.createSurfaceStation.mockResolvedValue({ data: { id: 'new-1' } });
+            API.createSurfaceStation.mockResolvedValue({ id: 'new-1' });
 
             await SurfaceStationManager.createStation('net-1', {});
 
@@ -249,7 +249,7 @@ describe('SurfaceStationManager', () => {
     describe('updateStation', () => {
         it('updates station via API and merges state', async () => {
             State.allSurfaceStations.set('surf-1', { id: 'surf-1', network: 'net-1', name: 'Old' });
-            API.updateStation.mockResolvedValue({ data: { name: 'Updated' } });
+            API.updateStation.mockResolvedValue({ name: 'Updated' });
 
             const result = await SurfaceStationManager.updateStation('surf-1', { name: 'Updated' });
 
@@ -259,7 +259,7 @@ describe('SurfaceStationManager', () => {
 
         it('updates map position when coordinates change', async () => {
             State.allSurfaceStations.set('surf-1', { id: 'surf-1', network: 'net-1' });
-            API.updateStation.mockResolvedValue({ data: {} });
+            API.updateStation.mockResolvedValue({});
 
             await SurfaceStationManager.updateStation('surf-1', { latitude: 49.0, longitude: 3.0 });
 
@@ -270,7 +270,7 @@ describe('SurfaceStationManager', () => {
 
         it('does not update position when only non-coordinate fields change', async () => {
             State.allSurfaceStations.set('surf-1', { id: 'surf-1', network: 'net-1' });
-            API.updateStation.mockResolvedValue({ data: { name: 'Updated' } });
+            API.updateStation.mockResolvedValue({ name: 'Updated' });
 
             await SurfaceStationManager.updateStation('surf-1', { name: 'Updated' });
 
@@ -278,7 +278,7 @@ describe('SurfaceStationManager', () => {
         });
 
         it('handles station not in state', async () => {
-            API.updateStation.mockResolvedValue({ data: { name: 'New' } });
+            API.updateStation.mockResolvedValue({ name: 'New' });
 
             const result = await SurfaceStationManager.updateStation('unknown', { name: 'New' });
 

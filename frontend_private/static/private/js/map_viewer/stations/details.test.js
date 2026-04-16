@@ -1,6 +1,8 @@
 import { StationDetails } from './details.js';
 import { Utils } from '../utils.js';
 import { Config } from '../config.js';
+import { State } from '../state.js';
+import { API } from '../api.js';
 
 vi.mock('../api.js', () => ({
     API: {
@@ -208,5 +210,134 @@ describe('StationDetails XSS', () => {
         expect(Utils.escapeHtml).toHaveBeenCalledWith(parentXss);
         expect(content).toContain('&lt;svg/onload=alert(1)&gt;');
         expect(content).not.toContain('<svg/onload=alert(1)>');
+    });
+});
+
+describe('StationDetails.loadStationDetails (no const-reassignment regression)', () => {
+    beforeEach(() => {
+        window.MAPVIEWER_CONTEXT = {
+            icons: {
+                sensor: '/static/sensor.svg',
+                biology: '/static/biology.svg',
+                artifact: '/static/artifact.svg',
+                bone: '/static/bone.svg',
+                geology: '/static/geology.svg',
+            },
+        };
+        document.body.innerHTML = `
+            <div id="station-modal-title"></div>
+            <div id="station-modal-content"></div>
+        `;
+        Config.projects = [{ id: 'project-1', name: 'Safe Project' }];
+        Config.networks = [{ id: 'net-1', name: 'Safe Network' }];
+        Config.getScopedAccess.mockReturnValue({ write: true, delete: true });
+        State.allStations.clear();
+        State.allSurfaceStations.clear();
+        vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        document.body.innerHTML = '';
+        delete window.MAPVIEWER_CONTEXT;
+        State.allStations.clear();
+        State.allSurfaceStations.clear();
+    });
+
+    it('loads a subsurface station without throwing when state has no prior entry', async () => {
+        API.getStationDetails.mockResolvedValue({
+            id: 'st-new-1',
+            name: 'Fresh Station',
+            latitude: '12.34',
+            longitude: '-56.78',
+            type: 'sensor',
+        });
+
+        await StationDetails.loadStationDetails('st-new-1', 'project-1', 'subsurface');
+
+        expect(API.getStationDetails).toHaveBeenCalledWith('st-new-1');
+        expect(State.allStations.get('st-new-1')).toMatchObject({
+            id: 'st-new-1',
+            name: 'Fresh Station',
+            latitude: 12.34,
+            longitude: -56.78,
+            station_type: 'subsurface',
+            project: 'project-1',
+        });
+        const content = document.getElementById('station-modal-content').innerHTML;
+        expect(content).toContain('Fresh Station');
+        expect(content).not.toContain('Error loading station details');
+    });
+
+    it('loads a subsurface station that already exists in state (merge branch)', async () => {
+        State.allStations.set('st-1', {
+            id: 'st-1',
+            name: 'Stale Name',
+            latitude: 0,
+            longitude: 0,
+            project: 'project-1',
+        });
+        API.getStationDetails.mockResolvedValue({
+            id: 'st-1',
+            name: 'Updated Name',
+            latitude: '9.99',
+            longitude: '8.88',
+            type: 'biology',
+        });
+
+        await StationDetails.loadStationDetails('st-1', 'project-1', 'subsurface');
+
+        const merged = State.allStations.get('st-1');
+        expect(merged).toMatchObject({
+            id: 'st-1',
+            name: 'Updated Name',
+            latitude: 9.99,
+            longitude: 8.88,
+            station_type: 'subsurface',
+            project: 'project-1',
+        });
+        const content = document.getElementById('station-modal-content').innerHTML;
+        expect(content).toContain('Updated Name');
+        expect(content).not.toContain('Error loading station details');
+    });
+
+    it('loads a surface station and stores it under the network parent', async () => {
+        API.getStationDetails.mockResolvedValue({
+            id: 'sf-1',
+            name: 'Surface New',
+            latitude: '1.11',
+            longitude: '2.22',
+        });
+
+        await StationDetails.loadStationDetails('sf-1', 'net-1', 'surface');
+
+        expect(State.allSurfaceStations.get('sf-1')).toMatchObject({
+            id: 'sf-1',
+            name: 'Surface New',
+            latitude: 1.11,
+            longitude: 2.22,
+            station_type: 'surface',
+            network: 'net-1',
+        });
+        expect(State.allStations.has('sf-1')).toBe(false);
+        const content = document.getElementById('station-modal-content').innerHTML;
+        expect(content).toContain('Surface New');
+    });
+
+    it('shows an error surface when the API response is missing id', async () => {
+        API.getStationDetails.mockResolvedValue({ name: 'no id' });
+
+        await StationDetails.loadStationDetails('st-bad', 'project-1', 'subsurface');
+
+        const content = document.getElementById('station-modal-content').innerHTML;
+        expect(content).toContain('Error loading station details');
+    });
+
+    it('shows an error surface when the API rejects', async () => {
+        API.getStationDetails.mockRejectedValue(new Error('network boom'));
+
+        await StationDetails.loadStationDetails('st-err', 'project-1', 'subsurface');
+
+        const content = document.getElementById('station-modal-content').innerHTML;
+        expect(content).toContain('Error loading station details');
     });
 });

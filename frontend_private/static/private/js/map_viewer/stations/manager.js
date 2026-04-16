@@ -91,8 +91,7 @@ export const StationManager = {
 
     async createStation(projectId, stationData) {
         try {
-            const result = await API.createStation(projectId, stationData);
-            const station = result.data;
+            const station = await API.createStation(projectId, stationData);
 
             // Add to state
             State.allStations.set(station.id, {
@@ -113,8 +112,7 @@ export const StationManager = {
 
     async updateStation(stationId, updateData) {
         try {
-            const result = await API.updateStation(stationId, updateData);
-            const updatedStation = result.data;
+            const updatedStation = await API.updateStation(stationId, updateData);
 
             // Update State
             const existing = State.allStations.get(stationId);

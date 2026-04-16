@@ -170,7 +170,7 @@ if DEBUG:
 
 LOCAL_APPS = [
     # API Apps
-    "speleodb.api.v1",
+    "speleodb.api.v2",
     # Git Apps
     "speleodb.git_proxy",
     # Object Apps
@@ -572,8 +572,8 @@ ACCOUNT_SIGNUP_FORM_CLASS = "speleodb.users.forms.SignupForm"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
-        "speleodb.api.v1.authentication.SDBTokenAuthentication",
-        "speleodb.api.v1.authentication.BearerAuthentication",
+        "speleodb.api.v2.authentication.SDBTokenAuthentication",
+        "speleodb.api.v2.authentication.BearerAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
@@ -582,7 +582,7 @@ REST_FRAMEWORK = {
 if env.bool("DJANGO_DEBUG_DRF_AUTH", default=False):
     # Needs to be insert as the very first Auth Processor to ensure it being processed.
     REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] = [
-        "speleodb.api.v1.authentication.DebugHeaderAuthentication",
+        "speleodb.api.v2.authentication.DebugHeaderAuthentication",
         *REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"],
     ]
 
@@ -609,6 +609,12 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX_TRIM": True,
     "SORT_OPERATION_PARAMETERS": True,
     "PERSIST_AUTH": False,
+    # Drop the legacy /api/v1/ mirror routes from the generated schema so they
+    # don't collide with the canonical /api/v2/ operationIds. See
+    # `speleodb.utils.schema_hooks.exclude_legacy_v1_paths`.
+    "PREPROCESSING_HOOKS": [
+        "speleodb.utils.schema_hooks.exclude_legacy_v1_paths",
+    ],
     "POSTPROCESSING_HOOKS": [],
     "COMPONENT_NO_READ_ONLY_REQUIRED": True,
 }

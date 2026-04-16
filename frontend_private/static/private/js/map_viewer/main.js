@@ -374,8 +374,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             console.log('🔄 Fetching all projects\' GeoJSON metadata via single API call...');
             const response = await API.getAllProjectsGeoJSON();
-            if (response && response.success && Array.isArray(response.data)) {
-                geojsonMetadata = response.data;
+            if (Array.isArray(response)) {
+                geojsonMetadata = response;
                 console.log(`✅ Cached GeoJSON metadata for ${geojsonMetadata.length} projects`);
             }
         } catch (e) {

@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
-from speleodb.api.v1.tests.test_project_geojson_commits_api import sha1_hash
+from speleodb.api.v2.tests.test_project_geojson_commits_api import sha1_hash
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import ProjectCommit
 

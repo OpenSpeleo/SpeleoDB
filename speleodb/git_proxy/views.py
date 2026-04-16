@@ -19,11 +19,11 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import GenericAPIView
 from rest_framework.renderers import BaseRenderer
 
-from speleodb.api.v1.authentication import BearerAuthentication
-from speleodb.api.v1.authentication import GitOAuth2Authentication
-from speleodb.api.v1.permissions import SDB_ReadAccess
-from speleodb.api.v1.permissions import SDB_WriteAccess
-from speleodb.api.v1.serializers import ProjectSerializer
+from speleodb.api.v2.authentication import BearerAuthentication
+from speleodb.api.v2.authentication import GitOAuth2Authentication
+from speleodb.api.v2.permissions import SDB_ReadAccess
+from speleodb.api.v2.permissions import SDB_WriteAccess
+from speleodb.api.v2.serializers import ProjectSerializer
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import Project

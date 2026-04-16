@@ -16,10 +16,10 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
-from speleodb.api.v1.tests.factories import CylinderFactory
-from speleodb.api.v1.tests.factories import CylinderFleetFactory
-from speleodb.api.v1.tests.factories import CylinderFleetUserPermissionFactory
-from speleodb.api.v1.tests.factories import CylinderInstallFactory
+from speleodb.api.v2.tests.factories import CylinderFactory
+from speleodb.api.v2.tests.factories import CylinderFleetFactory
+from speleodb.api.v2.tests.factories import CylinderFleetUserPermissionFactory
+from speleodb.api.v2.tests.factories import CylinderInstallFactory
 from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.users.tests.factories import UserFactory

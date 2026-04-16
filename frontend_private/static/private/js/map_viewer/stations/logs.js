@@ -38,14 +38,7 @@ export const StationLogs = {
 
         try {
             const response = await API.getStationLogs(stationId);
-            let logs = [];
-            if (Array.isArray(response)) {
-                logs = response;
-            } else if (response.data && Array.isArray(response.data)) {
-                logs = response.data;
-            } else if (response.results && Array.isArray(response.results)) {
-                logs = response.results;
-            }
+            const logs = Array.isArray(response) ? response : [];
 
             console.log(`📝 Loaded ${logs.length} journal entries for station ${stationId}`);
 
@@ -321,7 +314,7 @@ export const StationLogs = {
                     buttonsContainer.classList.add('hidden');
                     
                     await uploadController.upload(
-                        Urls['api:v1:station-logs'](stationId),
+                        Urls['api:v2:station-logs'](stationId),
                         formData,
                         'POST'
                     );

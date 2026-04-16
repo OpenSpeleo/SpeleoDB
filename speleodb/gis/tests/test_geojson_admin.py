@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
-from speleodb.api.v1.tests.test_project_geojson_commits_api import sha1_hash
+from speleodb.api.v2.tests.test_project_geojson_commits_api import sha1_hash
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit

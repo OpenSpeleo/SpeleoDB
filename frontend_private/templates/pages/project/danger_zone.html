@@ -64,7 +64,7 @@
             $("#modal_confirmation").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:project-detail' id=project.id %}",
+                url: "{% url 'api:v2:project-detail' id=project.id %}",
                 method: "DELETE",
                 contentType: "application/json; charset=utf-8",
                 cache: false,

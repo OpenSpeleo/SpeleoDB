@@ -75,19 +75,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             // Fetch GeoJSON URLs from public API
-            const response = await fetch(`/api/v1/gis-ogc/view/${context.gisToken}/geojson`);
+            const response = await fetch(Urls['api:v2:gis-ogc:view-geojson'](context.gisToken));
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const apiResponse = await response.json();
+            const viewData = await response.json();
 
-            if (!apiResponse.success || !apiResponse.data) {
-                throw new Error(apiResponse.message || 'Invalid API response');
+            if (!viewData || typeof viewData !== 'object') {
+                throw new Error('Invalid API response');
             }
 
-            const viewData = apiResponse.data;
             const projects = viewData.projects || [];
 
             console.log(`✅ Received ${projects.length} projects from GIS View "${viewData.view_name}"`);

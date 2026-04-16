@@ -10,8 +10,8 @@ from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 
-from speleodb.api.v1.tests.factories import ProjectCommitFactory
-from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.factories import ProjectCommitFactory
+from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.surveys.models import ProjectCommit
 from speleodb.users.tests.factories import UserFactory
 

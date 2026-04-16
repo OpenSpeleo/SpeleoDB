@@ -117,7 +117,7 @@
         $('#btn_export_excel').click(function (e) {
             e.preventDefault();
             const days = $('#days').val() || '60';
-            const exportUrl = Urls['api:v1:sensor-fleet-watchlist-export']('{{ sensor_fleet.id }}') + '?days=' + days;
+            const exportUrl = Urls['api:v2:sensor-fleet-watchlist-export']('{{ sensor_fleet.id }}') + '?days=' + days;
             window.location.href = exportUrl;
         });
 

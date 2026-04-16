@@ -12,8 +12,8 @@ from django.core.management import call_command
 from django.urls import reverse
 from rest_framework import status
 
-from speleodb.api.v1.tests.base_testcase import BaseAPIProjectTestCase
-from speleodb.api.v1.tests.base_testcase import PermissionType
+from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.gis.models import ProjectGeoJSON
@@ -22,7 +22,7 @@ from speleodb.surveys.models import FileFormat
 BASE_DIR = (
     pathlib.Path(__file__).parent.parent.parent.parent.parent
     / "api"
-    / "v1"
+    / "v2"
     / "tests"
     / "artifacts"
 )
@@ -56,7 +56,7 @@ class TestBuildAllProjectGeoJSONs(BaseAPIProjectTestCase):
             ]
             response = self.client.put(
                 reverse(
-                    "api:v1:project-upload",
+                    "api:v2:project-upload",
                     kwargs={
                         "id": self.project.id,
                         "fileformat": fileformat.label.lower(),
@@ -68,7 +68,7 @@ class TestBuildAllProjectGeoJSONs(BaseAPIProjectTestCase):
             )
 
         assert response.status_code == status.HTTP_200_OK, response.data
-        response_data = cast("dict[str, Any]", response.data["data"])
+        response_data = cast("dict[str, Any]", response.data)
         return cast("str", response_data["hexsha"])
 
     def test_command_builds_geojson_for_ariane_project(self) -> None:

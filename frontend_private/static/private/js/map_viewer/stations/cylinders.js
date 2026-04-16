@@ -215,7 +215,7 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
 async function loadFleets() {
     try {
         const response = await API.getCylinderFleets();
-        const fleets = response.data || [];
+        const fleets = Array.isArray(response) ? response : [];
 
         const loadingEl = document.getElementById('cylinder-install-loading');
         const formEl = document.getElementById('cylinder-install-form');
@@ -289,7 +289,7 @@ async function loadFleetCylinders(fleetId) {
         // Check cache first
         if (!fleetCylindersCache[fleetId]) {
             const response = await API.getCylinderFleetCylinders(fleetId);
-            fleetCylindersCache[fleetId] = response.data || [];
+            fleetCylindersCache[fleetId] = Array.isArray(response) ? response : [];
         }
 
         const cylinders = fleetCylindersCache[fleetId];
@@ -449,8 +449,7 @@ async function showCylinderDetails(installId) {
     openCylinderModal('Cylinder Details');
 
     try {
-        const response = await API.getCylinderInstallDetails(installId);
-        const install = response.data;
+        const install = await API.getCylinderInstallDetails(installId);
 
         renderCylinderDetails(install);
 
@@ -532,8 +531,8 @@ function switchTab(tabName, installId) {
 
     if (tabName === 'info') {
         // Re-fetch and render info tab
-        API.getCylinderInstallDetails(installId).then(response => {
-            contentEl.innerHTML = renderCylinderInfoTab(response.data);
+        API.getCylinderInstallDetails(installId).then(install => {
+            contentEl.innerHTML = renderCylinderInfoTab(install);
         });
     } else if (tabName === 'pressure') {
         renderPressureChecksTab(installId, contentEl);
@@ -650,7 +649,7 @@ async function renderPressureChecksTab(installId, contentEl) {
 
     try {
         const response = await API.getCylinderPressureChecks(installId);
-        const checks = response.data || [];
+        const checks = Array.isArray(response) ? response : [];
 
         contentEl.innerHTML = `
             <div class="space-y-4">
@@ -861,8 +860,7 @@ async function editPressureCheck(installId, checkId) {
     `;
 
     try {
-        const response = await API.getCylinderPressureCheckDetails(installId, checkId);
-        const check = response.data;
+        const check = await API.getCylinderPressureCheckDetails(installId, checkId);
 
         const safeInstallId = Utils.escapeHtml(installId);
         const safeCheckId = Utils.escapeHtml(checkId);

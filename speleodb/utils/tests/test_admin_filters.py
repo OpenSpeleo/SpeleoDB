@@ -11,7 +11,7 @@ from django.contrib.admin.sites import AdminSite
 from django.test import RequestFactory
 from django_countries import countries
 
-from speleodb.api.v1.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.surveys.admin import ProjectAdmin
 from speleodb.surveys.models import Project
 from speleodb.users.tests.factories import UserFactory

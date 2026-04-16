@@ -42,7 +42,7 @@ class TestDocumentProcessor:
 
     def test_generate_preview_pdf_with_real_file(self) -> None:
         """Test preview generation for real PDF files."""
-        artifacts_dir = Path(__file__).parent.parent.parent / "api/v1/tests/artifacts"
+        artifacts_dir = Path(__file__).parent.parent.parent / "api/v2/tests/artifacts"
 
         with (artifacts_dir / "document.pdf").open(mode="rb") as f:
             preview = DocumentProcessor.generate_preview(f, filename="test.pdf")

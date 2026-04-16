@@ -225,15 +225,15 @@ $(window).on('load', function() {
     $("#loading_spinner").show();
 
     $.ajax({
-        url : "{% url 'api:v1:project-revisions' id=project.id %}",
+        url : "{% url 'api:v2:project-revisions' id=project.id %}",
         type : "GET",
         dataType : "json",
         async: false,
         success: function(data){
-            if (data.success && data.data.commits) {
+            if (data && data.commits) {
 
                 // Iterate over each commit and append a new row to the table
-                data.data.commits.forEach(function (commit, index) {
+                data.commits.forEach(function (commit, index) {
 
                     if (commit.message == "[Automated] Project Creation" && commit.author_name == "SpeleoDB") {
                         return;  // Skip automated project creation commits

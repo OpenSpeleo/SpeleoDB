@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 import pytest
 from django.core.exceptions import ValidationError
 
-from speleodb.api.v1.tests.factories import ProjectFactory
-from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
+from speleodb.api.v2.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import SubSurfaceStationType
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.users.tests.factories import UserFactory

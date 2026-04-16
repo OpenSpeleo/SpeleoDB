@@ -96,7 +96,7 @@
 
             // REAL API CALL
             $.ajax({
-                url: Urls['api:v1:surface-network']('{{ network.id }}'),
+                url: Urls['api:v2:surface-network']('{{ network.id }}'),
                 method: 'PUT',
                 data: JSON.stringify(dataObject),
                 contentType: 'application/json; charset=utf-8',

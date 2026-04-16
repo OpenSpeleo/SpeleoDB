@@ -39,7 +39,7 @@ describe('API module', () => {
 
     describe('request configuration', () => {
         it('includes CSRF token and Content-Type headers for JSON requests', async () => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
 
             await API.getAllProjects();
 
@@ -55,7 +55,7 @@ describe('API module', () => {
         });
 
         it('omits Content-Type header for FormData requests', async () => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
             const formData = new FormData();
             formData.append('file', 'test');
 
@@ -67,7 +67,7 @@ describe('API module', () => {
         });
 
         it('sets credentials to same-origin', async () => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
 
             await API.getAllProjects();
 
@@ -78,7 +78,7 @@ describe('API module', () => {
         });
 
         it('JSON-stringifies body for non-FormData POST requests', async () => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
             const stationData = { name: 'Test Station', lat: 45.0 };
 
             await API.createStation('proj-1', stationData);
@@ -88,7 +88,7 @@ describe('API module', () => {
         });
 
         it('passes FormData body directly without JSON.stringify', async () => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
             const formData = new FormData();
             formData.append('file', 'test');
 
@@ -99,7 +99,7 @@ describe('API module', () => {
         });
 
         it('does not include body for GET requests', async () => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
 
             await API.getAllProjects();
 
@@ -123,7 +123,7 @@ describe('API module', () => {
         });
 
         it('returns parsed JSON for successful responses', async () => {
-            const responseData = { success: true, data: [{ id: '1' }] };
+            const responseData = [{ id: '1' }];
             globalThis.fetch = mockFetchResponse(responseData);
 
             const result = await API.getAllProjects();
@@ -185,7 +185,7 @@ describe('API module', () => {
 
     describe('HTTP method routing', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('uses GET for read operations', async () => {
@@ -221,13 +221,13 @@ describe('API module', () => {
 
     describe('station endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('createStation calls project-stations URL with POST', async () => {
             await API.createStation('proj-1', { name: 'New' });
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:project-stations');
+            expect(url).toContain('api:v2:project-stations');
             expect(url).toContain('proj-1');
             expect(config.method).toBe('POST');
         });
@@ -235,7 +235,7 @@ describe('API module', () => {
         it('updateStation calls station-detail URL with PATCH', async () => {
             await API.updateStation('st-1', { name: 'Updated' });
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:station-detail');
+            expect(url).toContain('api:v2:station-detail');
             expect(url).toContain('st-1');
             expect(config.method).toBe('PATCH');
         });
@@ -243,44 +243,44 @@ describe('API module', () => {
         it('deleteStation calls station-detail URL with DELETE', async () => {
             await API.deleteStation('st-1');
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:station-detail');
+            expect(url).toContain('api:v2:station-detail');
             expect(config.method).toBe('DELETE');
         });
 
         it('getProjectStations calls project-stations URL with GET', async () => {
             await API.getProjectStations('proj-1');
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:project-stations');
+            expect(url).toContain('api:v2:project-stations');
             expect(config.method).toBe('GET');
         });
 
         it('getStationDetails calls station-detail URL with GET', async () => {
             await API.getStationDetails('st-1');
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:station-detail');
+            expect(url).toContain('api:v2:station-detail');
             expect(config.method).toBe('GET');
         });
 
         it('getAllStationsGeoJSON calls subsurface-stations-geojson', async () => {
             await API.getAllStationsGeoJSON();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:subsurface-stations-geojson');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:subsurface-stations-geojson');
         });
     });
 
     describe('surface network and station endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getAllSurfaceNetworks calls surface-networks URL', async () => {
             await API.getAllSurfaceNetworks();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:surface-networks');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:surface-networks');
         });
 
         it('createSurfaceStation posts to network-stations URL', async () => {
             await API.createSurfaceStation('net-1', { name: 'Surface' });
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:network-stations');
+            expect(url).toContain('api:v2:network-stations');
             expect(url).toContain('net-1');
             expect(config.method).toBe('POST');
         });
@@ -293,37 +293,37 @@ describe('API module', () => {
         it('getNetworkStationsGeoJSON includes networkId in URL', async () => {
             await API.getNetworkStationsGeoJSON('net-1');
             const url = fetch.mock.calls[0][0];
-            expect(url).toContain('api:v1:network-stations-geojson');
+            expect(url).toContain('api:v2:network-stations-geojson');
             expect(url).toContain('net-1');
         });
 
         it('getAllSurfaceStations calls surface-stations URL', async () => {
             await API.getAllSurfaceStations();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:surface-stations');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:surface-stations');
         });
 
         it('getAllSurfaceStationsGeoJSON calls surface-stations-geojson', async () => {
             await API.getAllSurfaceStationsGeoJSON();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:surface-stations-geojson');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:surface-stations-geojson');
         });
     });
 
     describe('landmark endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('createLandmark posts to landmarks URL', async () => {
             await API.createLandmark({ name: 'Entrance' });
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:landmarks');
+            expect(url).toContain('api:v2:landmarks');
             expect(config.method).toBe('POST');
         });
 
         it('updateLandmark patches landmark-detail URL', async () => {
             await API.updateLandmark('lm-1', { name: 'Updated' });
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:landmark-detail');
+            expect(url).toContain('api:v2:landmark-detail');
             expect(config.method).toBe('PATCH');
         });
 
@@ -334,28 +334,28 @@ describe('API module', () => {
 
         it('getAllLandmarks calls landmarks URL', async () => {
             await API.getAllLandmarks();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:landmarks');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:landmarks');
         });
 
         it('getAllLandmarksGeoJSON calls landmarks-geojson', async () => {
             await API.getAllLandmarksGeoJSON();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:landmarks-geojson');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:landmarks-geojson');
         });
     });
 
     describe('tag endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getUserTags calls station-tags URL', async () => {
             await API.getUserTags();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:station-tags');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:station-tags');
         });
 
         it('getTagColors calls station-tag-colors URL', async () => {
             await API.getTagColors();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:station-tag-colors');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:station-tag-colors');
         });
 
         it('createTag posts name and color to station-tags', async () => {
@@ -367,26 +367,26 @@ describe('API module', () => {
         it('setStationTag posts tag_id to station-tags-manage', async () => {
             await API.setStationTag('st-1', 'tag-1');
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:station-tags-manage');
+            expect(url).toContain('api:v2:station-tags-manage');
             expect(JSON.parse(config.body)).toEqual({ tag_id: 'tag-1' });
         });
 
         it('removeStationTag deletes from station-tags-manage', async () => {
             await API.removeStationTag('st-1');
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:station-tags-manage');
+            expect(url).toContain('api:v2:station-tags-manage');
             expect(config.method).toBe('DELETE');
         });
     });
 
     describe('station log endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getStationLogs calls station-logs URL', async () => {
             await API.getStationLogs('st-1');
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:station-logs');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:station-logs');
         });
 
         it('createStationLog sends FormData with POST', async () => {
@@ -401,7 +401,7 @@ describe('API module', () => {
             const formData = new FormData();
             await API.updateStationLog('log-1', formData);
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:log-detail');
+            expect(url).toContain('api:v2:log-detail');
             expect(config.method).toBe('PATCH');
             expect(config.body).toBe(formData);
         });
@@ -409,25 +409,25 @@ describe('API module', () => {
         it('deleteStationLog calls log-detail with DELETE', async () => {
             await API.deleteStationLog('log-1');
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:log-detail');
+            expect(url).toContain('api:v2:log-detail');
             expect(config.method).toBe('DELETE');
         });
     });
 
     describe('experiment endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getExperiments calls experiments URL', async () => {
             await API.getExperiments();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:experiments');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:experiments');
         });
 
         it('getExperimentData passes stationId and experimentId', async () => {
             await API.getExperimentData('st-1', 'exp-1');
             const url = fetch.mock.calls[0][0];
-            expect(url).toContain('api:v1:experiment-records');
+            expect(url).toContain('api:v2:experiment-records');
             expect(url).toContain('st-1');
             expect(url).toContain('exp-1');
         });
@@ -435,12 +435,12 @@ describe('API module', () => {
 
     describe('resource endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getStationResources calls station-resources URL', async () => {
             await API.getStationResources('st-1');
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:station-resources');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:station-resources');
         });
 
         it('createStationResource sends FormData with POST', async () => {
@@ -455,7 +455,7 @@ describe('API module', () => {
             const formData = new FormData();
             await API.updateStationResource('res-1', formData);
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:resource-detail');
+            expect(url).toContain('api:v2:resource-detail');
             expect(config.method).toBe('PATCH');
             expect(config.body).toBe(formData);
         });
@@ -468,46 +468,46 @@ describe('API module', () => {
 
     describe('project endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getAllProjects calls projects URL', async () => {
             await API.getAllProjects();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:projects');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:projects');
         });
 
         it('getAllProjectsGeoJSON calls all-projects-geojson', async () => {
             await API.getAllProjectsGeoJSON();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:all-projects-geojson');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:all-projects-geojson');
         });
     });
 
     describe('exploration lead endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getProjectExplorationLeadsGeoJSON includes projectId', async () => {
             await API.getProjectExplorationLeadsGeoJSON('proj-1');
             const url = fetch.mock.calls[0][0];
-            expect(url).toContain('api:v1:project-exploration-leads-geojson');
+            expect(url).toContain('api:v2:project-exploration-leads-geojson');
             expect(url).toContain('proj-1');
         });
 
         it('getAllProjectExplorationLeadsGeoJSON calls all geojson URL', async () => {
             await API.getAllProjectExplorationLeadsGeoJSON();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:exploration-lead-all-geojson');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:exploration-lead-all-geojson');
         });
 
         it('getProjectExplorationLeads calls project leads URL', async () => {
             await API.getProjectExplorationLeads('proj-1');
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:project-exploration-leads');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:project-exploration-leads');
         });
 
         it('createExplorationLead posts to project exploration leads', async () => {
             await API.createExplorationLead('proj-1', { description: 'A lead' });
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:project-exploration-leads');
+            expect(url).toContain('api:v2:project-exploration-leads');
             expect(url).toContain('proj-1');
             expect(config.method).toBe('POST');
         });
@@ -515,7 +515,7 @@ describe('API module', () => {
         it('updateExplorationLead patches exploration-lead-detail', async () => {
             await API.updateExplorationLead('lead-1', { description: 'Updated' });
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:exploration-lead-detail');
+            expect(url).toContain('api:v2:exploration-lead-detail');
             expect(config.method).toBe('PATCH');
         });
 
@@ -527,29 +527,29 @@ describe('API module', () => {
 
     describe('sensor fleet and install endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getSensorFleets calls sensor-fleets URL', async () => {
             await API.getSensorFleets();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:sensor-fleets');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:sensor-fleets');
         });
 
         it('getSensorFleetDetails includes fleetId', async () => {
             await API.getSensorFleetDetails('fleet-1');
             const url = fetch.mock.calls[0][0];
-            expect(url).toContain('api:v1:sensor-fleet-detail');
+            expect(url).toContain('api:v2:sensor-fleet-detail');
             expect(url).toContain('fleet-1');
         });
 
         it('getSensorFleetSensors includes fleetId', async () => {
             await API.getSensorFleetSensors('fleet-1');
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:sensor-fleet-sensors');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:sensor-fleet-sensors');
         });
 
         it('getStationSensorInstalls calls station-sensor-installs URL', async () => {
             await API.getStationSensorInstalls('st-1');
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:station-sensor-installs');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:station-sensor-installs');
         });
 
         it('getStationSensorInstallsWithStatus appends status query param', async () => {
@@ -601,19 +601,19 @@ describe('API module', () => {
 
     describe('GPS track and GPX import endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getGPSTracks calls gps-tracks URL', async () => {
             await API.getGPSTracks();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:gps-tracks');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:gps-tracks');
         });
 
         it('importGPX sends FormData with PUT', async () => {
             const formData = new FormData();
             await API.importGPX(formData);
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:gpx-import');
+            expect(url).toContain('api:v2:gpx-import');
             expect(config.method).toBe('PUT');
             expect(config.body).toBe(formData);
         });
@@ -621,24 +621,24 @@ describe('API module', () => {
 
     describe('cylinder fleet endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getCylinderFleets calls cylinder-fleets URL', async () => {
             await API.getCylinderFleets();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:cylinder-fleets');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:cylinder-fleets');
         });
 
         it('getCylinderFleetDetails includes fleetId', async () => {
             await API.getCylinderFleetDetails('fleet-1');
             const url = fetch.mock.calls[0][0];
-            expect(url).toContain('api:v1:cylinder-fleet-detail');
+            expect(url).toContain('api:v2:cylinder-fleet-detail');
             expect(url).toContain('fleet-1');
         });
 
         it('getCylinderFleetCylinders includes fleetId', async () => {
             await API.getCylinderFleetCylinders('fleet-1');
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:cylinder-fleet-cylinders');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:cylinder-fleet-cylinders');
         });
 
         it('getCylinderInstalls builds query params from options', async () => {
@@ -669,7 +669,7 @@ describe('API module', () => {
 
         it('getCylinderInstallsGeoJSON calls cylinder-installs-geojson', async () => {
             await API.getCylinderInstallsGeoJSON();
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:cylinder-installs-geojson');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:cylinder-installs-geojson');
         });
 
         it('createCylinderInstall posts install data as JSON', async () => {
@@ -687,7 +687,7 @@ describe('API module', () => {
         it('updateCylinderInstall patches install-detail URL', async () => {
             await API.updateCylinderInstall('inst-1', { status: 'removed' });
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:cylinder-install-detail');
+            expect(url).toContain('api:v2:cylinder-install-detail');
             expect(config.method).toBe('PATCH');
         });
 
@@ -699,12 +699,12 @@ describe('API module', () => {
 
     describe('cylinder pressure check endpoints', () => {
         beforeEach(() => {
-            globalThis.fetch = mockFetchResponse({ success: true });
+            globalThis.fetch = mockFetchResponse({});
         });
 
         it('getCylinderPressureChecks calls pressure-checks URL', async () => {
             await API.getCylinderPressureChecks('inst-1');
-            expect(fetch.mock.calls[0][0]).toContain('api:v1:cylinder-install-pressure-checks');
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:cylinder-install-pressure-checks');
         });
 
         it('createCylinderPressureCheck posts check data', async () => {
@@ -724,14 +724,14 @@ describe('API module', () => {
         it('updateCylinderPressureCheck patches check detail', async () => {
             await API.updateCylinderPressureCheck('inst-1', 'check-1', { pressure: 180 });
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:cylinder-pressure-check-detail');
+            expect(url).toContain('api:v2:cylinder-pressure-check-detail');
             expect(config.method).toBe('PATCH');
         });
 
         it('deleteCylinderPressureCheck calls detail URL with DELETE', async () => {
             await API.deleteCylinderPressureCheck('inst-1', 'check-1');
             const [url, config] = fetch.mock.calls[0];
-            expect(url).toContain('api:v1:cylinder-pressure-check-detail');
+            expect(url).toContain('api:v2:cylinder-pressure-check-detail');
             expect(config.method).toBe('DELETE');
         });
     });

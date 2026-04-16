@@ -11,8 +11,8 @@ from django.db import connection
 from django.db import transaction
 from django.utils import timezone
 
-from speleodb.api.v1.tests.factories import SensorFactory
-from speleodb.api.v1.tests.factories import SubSurfaceStationFactory
+from speleodb.api.v2.tests.factories import SensorFactory
+from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import InstallStatus
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorInstall

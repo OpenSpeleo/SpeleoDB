@@ -8,7 +8,7 @@ import pytest
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import IntegrityError
 
-from speleodb.api.v1.tests.factories import SurveyTeamMembershipFactory
+from speleodb.api.v2.tests.factories import SurveyTeamMembershipFactory
 from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.users.tests.factories import UserFactory
 

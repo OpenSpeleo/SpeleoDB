@@ -17,7 +17,7 @@ export const StationTags = {
     async loadUserTags() {
         try {
             const response = await API.getUserTags();
-            State.userTags = response.data || [];
+            State.userTags = Array.isArray(response) ? response : [];
             console.log(`✅ Loaded ${State.userTags.length} user tags`);
         } catch (error) {
             console.error('Error loading user tags:', error);
@@ -29,7 +29,7 @@ export const StationTags = {
     async loadTagColors() {
         try {
             const response = await API.getTagColors();
-            State.tagColors = response.data?.colors || FALLBACK_COLORS;
+            State.tagColors = response?.colors || FALLBACK_COLORS;
             console.log(`✅ Loaded ${State.tagColors.length} tag colors`);
         } catch (error) {
             console.error('Error loading tag colors:', error);
@@ -236,8 +236,7 @@ export const StationTags = {
         }
 
         try {
-            const response = await API.createTag(name, color);
-            const newTag = response.data;
+            const newTag = await API.createTag(name, color);
             State.userTags.push(newTag);
             Utils.showNotification('success', `Tag "${name}" created successfully`);
             this.closeTagCreationModal();
@@ -255,13 +254,13 @@ export const StationTags = {
     // Set tag on station
     async setStationTag(stationId, tagId) {
         try {
-            const response = await API.setStationTag(stationId, tagId);
+            const tag = await API.setStationTag(stationId, tagId);
 
             // Check both subsurface and surface stations
             const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
             if (station) {
-                // response.data is the tag object
-                station.tag = response.data;
+                // The returned tag is the tag object
+                station.tag = tag;
 
                 // Update marker color on map
                 this.updateStationMarkerColor(stationId, station);

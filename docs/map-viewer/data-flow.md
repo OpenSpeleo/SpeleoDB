@@ -10,21 +10,21 @@ per-project GeoJSON loading.
 ```
 Django Backend
   │
-  ├─ GET /api/v1/projects/                    → Config.loadProjects()
+  ├─ GET /api/v2/projects/                    → Config.loadProjects()
   │   Response: { success, data: [{ id, name, permission, country, color, ... }] }
   │   Stored in: Config._projects
   │   Note: `country` (ISO alpha-2 code) drives country grouping in ProjectPanel.
   │         `color` (hex string) is the model-assigned project color.
   │
-  ├─ GET /api/v1/surface-networks/            → Config.loadNetworks()
+  ├─ GET /api/v2/surface-networks/            → Config.loadNetworks()
   │   Response: { success, data: [{ id, name, user_permission_level, ... }] }
   │   Stored in: Config._networks
   │
-  ├─ GET /api/v1/gps-tracks/                  → Config.loadGPSTracks()
+  ├─ GET /api/v2/gps-tracks/                  → Config.loadGPSTracks()
   │   Response: { success, data: [{ id, name, color, file, ... }] }
   │   Stored in: Config._gpsTracks
   │
-  └─ GET /api/v1/all-projects-geojson/        → API.getAllProjectsGeoJSON()
+  └─ GET /api/v2/all-projects-geojson/        → API.getAllProjectsGeoJSON()
       Response: { success, data: [{ id, geojson_file, ... }] }
       Used for: Config.filterProjectsByGeoJSON()
       Purpose: Identify which projects have GeoJSON data, prune the rest
@@ -111,7 +111,7 @@ Colors are fully model-driven. There is no JS-side palette array.
 The public viewer has a simpler single-phase pipeline:
 
 ```
-fetch /api/v1/gis-ogc/view/{gisToken}/geojson
+fetch /api/v2/gis-ogc/view/{gisToken}/geojson
   │
   └─ Response: { success, data: { view_name, projects: [{ id, name, color, geojson_file }] } }
       │
@@ -158,11 +158,11 @@ User Action (UI)
 
 | Action | API Method | Endpoint | Refresh Event |
 |---|---|---|---|
-| Create | `POST` | `/api/v1/projects/{projectId}/stations/` | `speleo:refresh-stations` |
-| Read | `GET` | `/api/v1/stations/{stationId}/` | — |
-| Update | `PATCH` | `/api/v1/stations/{stationId}/` | `speleo:refresh-stations` |
-| Delete | `DELETE` | `/api/v1/stations/{stationId}/` | `speleo:refresh-stations` |
-| Move (drag) | `PATCH` | `/api/v1/stations/{stationId}/` | `speleo:refresh-stations` |
+| Create | `POST` | `/api/v2/projects/{projectId}/stations/` | `speleo:refresh-stations` |
+| Read | `GET` | `/api/v2/stations/{stationId}/` | — |
+| Update | `PATCH` | `/api/v2/stations/{stationId}/` | `speleo:refresh-stations` |
+| Delete | `DELETE` | `/api/v2/stations/{stationId}/` | `speleo:refresh-stations` |
+| Move (drag) | `PATCH` | `/api/v2/stations/{stationId}/` | `speleo:refresh-stations` |
 
 Move flow includes magnetic snap: `Geometry.findNearestSnapPointWithinRadius()`
 checks cached snap points within `MAGNETIC_SNAP_RADIUS` (default 10m). If
@@ -172,35 +172,35 @@ snapped, coordinates are adjusted to the nearest survey line vertex.
 
 | Action | API Method | Endpoint | Refresh Event |
 |---|---|---|---|
-| Create | `POST` | `/api/v1/networks/{networkId}/stations/` | `speleo:refresh-surface-stations` |
-| Update | `PATCH` | `/api/v1/stations/{stationId}/` | `speleo:refresh-surface-stations` |
-| Delete | `DELETE` | `/api/v1/stations/{stationId}/` | `speleo:refresh-surface-stations` |
+| Create | `POST` | `/api/v2/networks/{networkId}/stations/` | `speleo:refresh-surface-stations` |
+| Update | `PATCH` | `/api/v2/stations/{stationId}/` | `speleo:refresh-surface-stations` |
+| Delete | `DELETE` | `/api/v2/stations/{stationId}/` | `speleo:refresh-surface-stations` |
 
 ### Landmark CRUD
 
 | Action | API Method | Endpoint | Refresh Event |
 |---|---|---|---|
-| Create | `POST` | `/api/v1/landmarks/` | `speleo:refresh-landmarks` |
-| Update | `PATCH` | `/api/v1/landmarks/{landmarkId}/` | `speleo:refresh-landmarks` |
-| Delete | `DELETE` | `/api/v1/landmarks/{landmarkId}/` | `speleo:refresh-landmarks` |
+| Create | `POST` | `/api/v2/landmarks/` | `speleo:refresh-landmarks` |
+| Update | `PATCH` | `/api/v2/landmarks/{landmarkId}/` | `speleo:refresh-landmarks` |
+| Delete | `DELETE` | `/api/v2/landmarks/{landmarkId}/` | `speleo:refresh-landmarks` |
 | Move (drag) | `PATCH` via `LandmarkManager.moveLandmark()` | — | Inline source update |
 
 ### Exploration Lead CRUD
 
 | Action | API Method | Endpoint | Refresh Event |
 |---|---|---|---|
-| Create | `POST` | `/api/v1/projects/{projectId}/exploration-leads/` | Layer refresh inline |
-| Update | `PATCH` | `/api/v1/exploration-leads/{leadId}/` | Layer refresh inline |
-| Delete | `DELETE` | `/api/v1/exploration-leads/{leadId}/` | Layer refresh inline |
+| Create | `POST` | `/api/v2/projects/{projectId}/exploration-leads/` | Layer refresh inline |
+| Update | `PATCH` | `/api/v2/exploration-leads/{leadId}/` | Layer refresh inline |
+| Delete | `DELETE` | `/api/v2/exploration-leads/{leadId}/` | Layer refresh inline |
 | Move (drag) | `PATCH` via `ExplorationLeadManager.moveLead()` | — | Inline position update |
 
 ### Cylinder Install CRUD
 
 | Action | API Method | Endpoint | Refresh Event |
 |---|---|---|---|
-| Create | `POST` | `/api/v1/cylinder-installs/` | `speleo:refresh-cylinder-installs` |
-| Update | `PATCH` | `/api/v1/cylinder-installs/{installId}/` | `speleo:refresh-cylinder-installs` |
-| Delete | `DELETE` | `/api/v1/cylinder-installs/{installId}/` | `speleo:refresh-cylinder-installs` |
+| Create | `POST` | `/api/v2/cylinder-installs/` | `speleo:refresh-cylinder-installs` |
+| Update | `PATCH` | `/api/v2/cylinder-installs/{installId}/` | `speleo:refresh-cylinder-installs` |
+| Delete | `DELETE` | `/api/v2/cylinder-installs/{installId}/` | `speleo:refresh-cylinder-installs` |
 
 ---
 

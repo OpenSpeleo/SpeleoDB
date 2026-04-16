@@ -64,7 +64,7 @@
             $("#modal_confirmation").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:surface-network' network_id=network.id %}",
+                url: "{% url 'api:v2:surface-network' network_id=network.id %}",
                 method: "DELETE",
                 contentType: "application/json; charset=utf-8",
                 cache: false,

@@ -64,7 +64,7 @@ describe('uploadWithProgress', () => {
             send: vi.fn(),
             abort: vi.fn(),
             status: 200,
-            responseText: '{"success": true}',
+            responseText: '{}',
         };
         // Must use a regular function so `new XMLHttpRequest()` works
         globalThis.XMLHttpRequest = function () { return mockXHR; };
@@ -140,16 +140,58 @@ describe('uploadWithProgress', () => {
         expect(onSuccess).toHaveBeenCalledWith({ data: 'test' });
     });
 
-    it('falls back to { success: true } when response is not valid JSON', () => {
+    it('calls onError when a 2xx response has a non-empty, unparseable body', () => {
+        // A 2xx status with a garbage body means the upload state is
+        // unknown. Surfacing this as an error is strictly safer than
+        // pretending success, especially when downstream code re-renders
+        // a list that may not actually include the uploaded resource.
         const onSuccess = vi.fn();
-        uploadWithProgress('/api/upload', new FormData(), { onSuccess });
+        const onError = vi.fn();
+        uploadWithProgress('/api/upload', new FormData(), { onSuccess, onError });
 
         mockXHR.status = 201;
         mockXHR.responseText = 'not-json';
         const loadCb = mockXHR.addEventListener.mock.calls.find(c => c[0] === 'load')[1];
         loadCb();
 
-        expect(onSuccess).toHaveBeenCalledWith({ success: true });
+        expect(onSuccess).not.toHaveBeenCalled();
+        expect(onError).toHaveBeenCalledWith(
+            expect.objectContaining({
+                message: expect.stringMatching(/unreadable response/i),
+            }),
+        );
+    });
+
+    it('resolves with null on 204 No Content', () => {
+        const onSuccess = vi.fn();
+        const onError = vi.fn();
+        uploadWithProgress('/api/upload', new FormData(), { onSuccess, onError });
+
+        mockXHR.status = 204;
+        mockXHR.responseText = '';
+        const loadCb = mockXHR.addEventListener.mock.calls.find(c => c[0] === 'load')[1];
+        loadCb();
+
+        expect(onSuccess).toHaveBeenCalledWith(null);
+        expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('resolves with null on 2xx with an empty body', () => {
+        // Some CDNs or proxies may strip a response body but keep the 2xx
+        // status; treat that as a legitimate "no content" outcome rather
+        // than an error. We lose nothing because uploads do not normally
+        // return an empty body for resources we care about.
+        const onSuccess = vi.fn();
+        const onError = vi.fn();
+        uploadWithProgress('/api/upload', new FormData(), { onSuccess, onError });
+
+        mockXHR.status = 200;
+        mockXHR.responseText = '';
+        const loadCb = mockXHR.addEventListener.mock.calls.find(c => c[0] === 'load')[1];
+        loadCb();
+
+        expect(onSuccess).toHaveBeenCalledWith(null);
+        expect(onError).not.toHaveBeenCalled();
     });
 
     it('calls onError with parsed message on non-2xx response', () => {

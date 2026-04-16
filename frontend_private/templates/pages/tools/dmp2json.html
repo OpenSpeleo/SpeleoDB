@@ -562,7 +562,7 @@ $(document).ready(function() {
 
         // AJAX call to convert DMP to JSON
         $.ajax({
-            url: "{% url 'api:v1:tool-dmp2json' %}",
+            url: "{% url 'api:v2:tool-dmp2json' %}",
             method: "POST",
             data: formData,
             processData: false,

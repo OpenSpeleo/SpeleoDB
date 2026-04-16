@@ -108,7 +108,7 @@
             $("#success_div").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:user-detail' %}",
+                url: "{% url 'api:v2:user-detail' %}",
                 method: "PATCH",
                 data: JSON.stringify(Object.fromEntries(formData)),
                 contentType: "application/json; charset=utf-8",

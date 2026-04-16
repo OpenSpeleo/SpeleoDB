@@ -30,12 +30,12 @@ item and the header user dropdown.
 ## API Endpoint
 
 ```
-GET /api/v1/user/dashboard-stats/
+GET /api/v2/user/dashboard-stats/
 Authorization: Token <token>
 ```
 
 Returns a single JSON response with all dashboard data. See
-`speleodb/api/v1/views/user_dashboard.py` for the response schema.
+`speleodb/api/v2/views/user_dashboard.py` for the response schema.
 
 ## Architecture
 
@@ -44,7 +44,7 @@ Login → /private/ → DashboardView → pages/dashboard.html
                                           ↓
                                     jQuery AJAX GET
                                           ↓
-                              /api/v1/user/dashboard-stats/
+                              /api/v2/user/dashboard-stats/
                                           ↓
                                   UserDashboardStatsView
                                    (pure ORM queries)
@@ -81,7 +81,7 @@ Three test files cover the dashboard exhaustively:
 
 | File | Scope | Tests |
 |------|-------|-------|
-| `speleodb/api/v1/tests/test_user_dashboard_stats.py` | Backend API | ~50 tests: auth, empty state, summary counts, projects-by-level, commits-over-time, contribution calendar, recent activity, edge cases |
+| `speleodb/api/v2/tests/test_user_dashboard_stats.py` | Backend API | ~50 tests: auth, empty state, summary counts, projects-by-level, commits-over-time, contribution calendar, recent activity, edge cases |
 | `frontend_private/tests/test_dashboard_views.py` | Django views + templates | ~35 tests: page access, template structure, profile page, URL routing, sidebar navigation, responsive CSS |
 | `frontend_private/static/private/js/tests/dashboard.test.js` | JS unit tests | ~25 tests: heatmap rendering, stat cards, activity feed XSS, time formatting, level thresholds |
 

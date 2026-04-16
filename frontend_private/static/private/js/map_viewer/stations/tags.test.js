@@ -75,15 +75,15 @@ describe('StationTags', () => {
     describe('loadUserTags', () => {
         it('sets State.userTags from API response', async () => {
             const tags = [{ id: '1', name: 'Important', color: '#ff0000' }];
-            API.getUserTags.mockResolvedValue({ data: tags });
+            API.getUserTags.mockResolvedValue(tags);
 
             await StationTags.loadUserTags();
 
             expect(State.userTags).toEqual(tags);
         });
 
-        it('defaults to empty array when response.data is null', async () => {
-            API.getUserTags.mockResolvedValue({ data: null });
+        it('defaults to empty array when response is not an array', async () => {
+            API.getUserTags.mockResolvedValue(null);
 
             await StationTags.loadUserTags();
 
@@ -106,7 +106,7 @@ describe('StationTags', () => {
     describe('loadTagColors', () => {
         it('sets State.tagColors from API response', async () => {
             const colors = ['#ff0000', '#00ff00'];
-            API.getTagColors.mockResolvedValue({ data: { colors } });
+            API.getTagColors.mockResolvedValue({ colors });
 
             await StationTags.loadTagColors();
 
@@ -122,8 +122,8 @@ describe('StationTags', () => {
             expect(State.tagColors[0]).toBe('#ef4444');
         });
 
-        it('uses fallback colors when response.data.colors is missing', async () => {
-            API.getTagColors.mockResolvedValue({ data: {} });
+        it('uses fallback colors when response.colors is missing', async () => {
+            API.getTagColors.mockResolvedValue({});
 
             await StationTags.loadTagColors();
 
@@ -137,8 +137,8 @@ describe('StationTags', () => {
 
     describe('init', () => {
         it('loads both tags and colors in parallel', async () => {
-            API.getUserTags.mockResolvedValue({ data: [] });
-            API.getTagColors.mockResolvedValue({ data: { colors: ['#aaa'] } });
+            API.getUserTags.mockResolvedValue([]);
+            API.getTagColors.mockResolvedValue({ colors: ['#aaa'] });
 
             await StationTags.init();
 
@@ -154,7 +154,7 @@ describe('StationTags', () => {
     describe('setStationTag', () => {
         it('calls API and updates subsurface station tag', async () => {
             const tag = { id: 'tag-1', name: 'Active', color: '#00ff00' };
-            API.setStationTag.mockResolvedValue({ data: tag });
+            API.setStationTag.mockResolvedValue(tag);
             State.allStations.set('st-1', { id: 'st-1', project: 'proj-1', tag: null });
 
             await StationTags.setStationTag('st-1', 'tag-1');
@@ -166,7 +166,7 @@ describe('StationTags', () => {
 
         it('updates surface station tag', async () => {
             const tag = { id: 'tag-1', name: 'Active', color: '#00ff00' };
-            API.setStationTag.mockResolvedValue({ data: tag });
+            API.setStationTag.mockResolvedValue(tag);
             State.allSurfaceStations.set('surf-1', {
                 id: 'surf-1', network: 'net-1', station_type: 'surface', tag: null,
             });
@@ -414,7 +414,7 @@ describe('StationTags', () => {
     describe('createNewTag', () => {
         it('creates tag via API and adds to State.userTags', async () => {
             const newTag = { id: 'tag-new', name: 'New', color: '#ff0000' };
-            API.createTag.mockResolvedValue({ data: newTag });
+            API.createTag.mockResolvedValue(newTag);
             State.currentStationForTagging = null;
             document.body.innerHTML = `
                 <input id="new-tag-name" value="New" />
@@ -430,7 +430,7 @@ describe('StationTags', () => {
 
         it('reopens tag selector after creating tag when tagging a station', async () => {
             const newTag = { id: 'tag-new', name: 'New', color: '#ff0000' };
-            API.createTag.mockResolvedValue({ data: newTag });
+            API.createTag.mockResolvedValue(newTag);
             State.currentStationForTagging = 'st-1';
             State.allStations.set('st-1', { id: 'st-1', tag: null });
             document.body.innerHTML = `

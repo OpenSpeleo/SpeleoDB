@@ -38,7 +38,7 @@ custom icon images loaded from `window.MAPVIEWER_CONTEXT.icons`.
 
 `StationManager.ensureAllStationsLoaded()` fetches **all** subsurface
 stations visible to the current user in a single
-`GET /api/v1/stations/subsurface/geojson/` call, then caches the
+`GET /api/v2/stations/subsurface/geojson/` call, then caches the
 `FeatureCollection` in the module-level `allStationsGeoJson` variable.
 Project-specific views (`loadStationsForProject`) filter the cached
 collection client-side.  The cache is invalidated on any create/delete
@@ -74,16 +74,16 @@ requires `write` access checked via
 Surface stations are **network-scoped** (belong to a
 `SurfaceMonitoringNetwork`, not a project). They render as diamond symbols
 on layers prefixed `surface-stations-`.  The data loading strategy mirrors
-subsurface stations: a single `GET /api/v1/stations/surface/geojson/` call
+subsurface stations: a single `GET /api/v2/stations/surface/geojson/` call
 returns all surface stations, which are filtered by network client-side.
 
 Surface stations are managed via:
 
 | API method                          | HTTP  | URL pattern                                        |
 |-------------------------------------|-------|----------------------------------------------------|
-| `API.createSurfaceStation`          | POST  | `/api/v1/surface-networks/<network_id>/stations/`  |
-| `API.getNetworkStationsGeoJSON`     | GET   | `/api/v1/surface-networks/<network_id>/stations/geojson/` |
-| `API.getAllSurfaceStationsGeoJSON`   | GET   | `/api/v1/stations/surface/geojson/`                |
+| `API.createSurfaceStation`          | POST  | `/api/v2/surface-networks/<network_id>/stations/`  |
+| `API.getNetworkStationsGeoJSON`     | GET   | `/api/v2/surface-networks/<network_id>/stations/geojson/` |
+| `API.getAllSurfaceStationsGeoJSON`   | GET   | `/api/v2/stations/surface/geojson/`                |
 
 ### 1.3 Station Details Modal
 
@@ -179,7 +179,7 @@ areas for future exploration. They are placed at survey line endpoints
 ### Data loading strategy
 
 Identical to `StationManager`: a single
-`GET /api/v1/exploration-leads/geojson/` call fetches all leads into a
+`GET /api/v2/exploration-leads/geojson/` call fetches all leads into a
 module-level `allLeadsGeoJson` cache. `loadLeadsForProject(projectId)`
 filters client-side. The cache is invalidated after create/delete
 operations.
@@ -227,7 +227,7 @@ GPS tracks are **user-owned** track files. The panel is only rendered if
 ### GPX import
 
 New tracks are imported via `API.importGPX(formData)` which hits
-`PUT /api/v1/import/gpx/`. The server converts GPX to GeoJSON for storage.
+`PUT /api/v2/import/gpx/`. The server converts GPX to GeoJSON for storage.
 
 ### Panel behavior
 
@@ -266,7 +266,7 @@ cylinders placed underground for emergency use).
 
 Cylinder installs render as a dedicated `cylinder-installs-layer`.
 GeoJSON is fetched via `API.getAllCylinderInstallsGeoJSON()` at
-`GET /api/v1/cylinder-installs/geojson/`.
+`GET /api/v2/cylinder-installs/geojson/`.
 
 Cylinder installs support:
 - Click to view details (`onCylinderInstallClick` handler).

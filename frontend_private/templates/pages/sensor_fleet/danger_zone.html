@@ -64,7 +64,7 @@
             $("#modal_confirmation").hide();
 
             $.ajax({
-                url: "{% url 'api:v1:sensor-fleet-detail' fleet_id=sensor_fleet.id %}",
+                url: "{% url 'api:v2:sensor-fleet-detail' fleet_id=sensor_fleet.id %}",
                 method: "DELETE",
                 contentType: "application/json; charset=utf-8",
                 cache: false,
