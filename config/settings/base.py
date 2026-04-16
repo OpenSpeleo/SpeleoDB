@@ -388,13 +388,13 @@ AWS_DEFAULT_ACL = "private"
 # Static and Media Storage
 STORAGES = {
     "default": {
-        "BACKEND": "speleodb.utils.storages.S3MediaStorage",
+        "BACKEND": "speleodb.utils.s3_storages.S3MediaStorage",
     },
     "staticfiles": {
         "BACKEND": (
             "django.contrib.staticfiles.storage.StaticFilesStorage"
             if DEBUG
-            else "speleodb.utils.storages.S3StaticStorage"
+            else "speleodb.utils.s3_storages.S3StaticStorage"
         ),
     },
 }
@@ -405,7 +405,7 @@ MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
 # In non-debug (production) use S3 for static files with fixed prefix and timestamped URLs
 if not DEBUG:
     STORAGES["staticfiles"] = {
-        "BACKEND": "speleodb.utils.storages.S3StaticStorage",
+        "BACKEND": "speleodb.utils.s3_storages.S3StaticStorage",
     }
     STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/staticfiles/"
 

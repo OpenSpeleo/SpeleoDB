@@ -10,7 +10,7 @@ from django.db import models
 
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
-from speleodb.utils.storages import GeoJSONStorage
+from speleodb.utils.s3_storages import GeoJSONStorage
 from speleodb.utils.validators import GeoJsonValidator
 
 if TYPE_CHECKING:

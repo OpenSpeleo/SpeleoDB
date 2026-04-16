@@ -7,9 +7,9 @@ import re
 from django.conf import settings
 from django.test import TestCase
 
-from speleodb.utils.storages import AttachmentStorage
-from speleodb.utils.storages import PersonPhotoStorage
-from speleodb.utils.storages import S3MediaStorage
+from speleodb.utils.s3_storages import AttachmentStorage
+from speleodb.utils.s3_storages import PersonPhotoStorage
+from speleodb.utils.s3_storages import S3MediaStorage
 
 
 class PersonPhotoStorageS3Tests(TestCase):

@@ -12,7 +12,7 @@ from django.db import models
 from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
-from speleodb.utils.storages import AttachmentStorage
+from speleodb.utils.s3_storages import AttachmentStorage
 from speleodb.utils.validators import AttachmentValidator
 
 logger = logging.getLogger(__name__)

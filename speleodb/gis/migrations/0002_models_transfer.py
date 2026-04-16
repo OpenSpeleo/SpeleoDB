@@ -10,7 +10,7 @@ import speleodb.gis.models.experiment
 import speleodb.gis.models.project_geojson
 import speleodb.gis.models.log_entry
 import speleodb.gis.models.station
-import speleodb.utils.storages
+import speleodb.utils.s3_storages
 import speleodb.utils.validators
 
 
@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
                     name='GeoJSON',
                     fields=[
                         ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                        ('file', models.FileField(storage=speleodb.utils.storages.GeoJSONStorage(), upload_to=speleodb.gis.models.project_geojson.get_geojson_upload_path, validators=[speleodb.utils.validators.GeoJsonValidator()])),
+                        ('file', models.FileField(storage=speleodb.utils.s3_storages.GeoJSONStorage(), upload_to=speleodb.gis.models.project_geojson.get_geojson_upload_path, validators=[speleodb.utils.validators.GeoJsonValidator()])),
                         ('commit_sha', models.CharField(max_length=40, unique=True, validators=[django.core.validators.RegexValidator(message='Enter a valid sha1 value', regex='^[0-9a-f]{40}$')])),
                         ('commit_date', models.DateTimeField()),
                         ('creation_date', models.DateTimeField(auto_now_add=True)),

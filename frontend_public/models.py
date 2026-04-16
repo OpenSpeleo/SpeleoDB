@@ -13,7 +13,7 @@ from django.db.models import F
 from PIL import Image
 
 from speleodb.utils.image_processing import ImageProcessor  # Import ImageProcessor
-from speleodb.utils.storages import PersonPhotoStorage
+from speleodb.utils.s3_storages import PersonPhotoStorage
 from speleodb.utils.validators import ImageWithHeicSupportValidator
 
 if TYPE_CHECKING:

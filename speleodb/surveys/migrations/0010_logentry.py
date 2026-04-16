@@ -2,7 +2,7 @@
 
 import django.db.models.deletion
 import speleodb.gis.models.log_entry
-import speleodb.utils.storages
+import speleodb.utils.s3_storages
 import speleodb.utils.validators
 import uuid
 from django.db import migrations, models
@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('notes', models.TextField(blank=True, help_text='Detailed field notes, observations, or measurements.')),
                 ('creation_date', models.DateTimeField(auto_now_add=True)),
                 ('modified_date', models.DateTimeField(auto_now=True)),
-                ('attachment', models.FileField(blank=True, help_text='Any relevant file (sketch, lab sheet, sensor data, etc.).', null=True, storage=speleodb.utils.storages.AttachmentStorage(), upload_to=speleodb.gis.models.log_entry.get_log_entry_path, validators=[speleodb.utils.validators.AttachmentValidator()])),
+                ('attachment', models.FileField(blank=True, help_text='Any relevant file (sketch, lab sheet, sensor data, etc.).', null=True, storage=speleodb.utils.s3_storages.AttachmentStorage(), upload_to=speleodb.gis.models.log_entry.get_log_entry_path, validators=[speleodb.utils.validators.AttachmentValidator()])),
                 ('station', models.ForeignKey(help_text='The station or location this log entry is associated with.', on_delete=django.db.models.deletion.CASCADE, related_name='log_entries', to='surveys.station')),
             ],
             options={

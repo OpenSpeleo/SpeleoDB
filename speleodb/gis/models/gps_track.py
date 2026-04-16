@@ -14,7 +14,7 @@ from django.db.models import UniqueConstraint
 from speleodb.common.enums import ColorPalette
 from speleodb.surveys.fields import Sha256Field
 from speleodb.users.models import User
-from speleodb.utils.storages import GPSTrackStorage
+from speleodb.utils.s3_storages import GPSTrackStorage
 from speleodb.utils.validators import GeoJsonValidator
 
 

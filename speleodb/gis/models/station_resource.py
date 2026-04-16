@@ -22,7 +22,7 @@ from speleodb.gis.models import SurfaceStation
 from speleodb.gis.models.station import SubSurfaceStation
 from speleodb.utils.document_processing import DocumentProcessor
 from speleodb.utils.image_processing import ImageProcessor
-from speleodb.utils.storages import AttachmentStorage
+from speleodb.utils.s3_storages import AttachmentStorage
 from speleodb.utils.validators import AttachmentValidator
 from speleodb.utils.video_processing import VideoProcessor
 

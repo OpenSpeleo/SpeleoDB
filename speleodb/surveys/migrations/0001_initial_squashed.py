@@ -3,7 +3,7 @@
 import django.core.validators
 import django_countries.fields
 import speleodb.surveys.fields
-import speleodb.utils.storages
+import speleodb.utils.s3_storages
 import uuid
 
 import django.db.models.deletion
@@ -167,7 +167,7 @@ class Migration(migrations.Migration):
                 ('resource_type', models.CharField(choices=[('photo', 'Photo'), ('video', 'Video'), ('sketch', 'Sketch'), ('note', 'Note'), ('document', 'Document')], max_length=20)),
                 ('title', models.CharField(help_text='Title or name of the resource', max_length=200)),
                 ('description', models.TextField(blank=True, default='', help_text='Optional description of the resource')),
-                ('file', models.FileField(blank=True, null=True, storage=speleodb.utils.storages.AttachmentStorage(), upload_to='stations/resources/%Y/%m/%d/', validators=[django.core.validators.FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'pdf', 'doc', 'docx', 'txt', 'rtf', 'svg'])])),
+                ('file', models.FileField(blank=True, null=True, storage=speleodb.utils.s3_storages.AttachmentStorage(), upload_to='stations/resources/%Y/%m/%d/', validators=[django.core.validators.FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'pdf', 'doc', 'docx', 'txt', 'rtf', 'svg'])])),
                 ('text_content', models.TextField(blank=True, default='', help_text='Text content for notes or sketch SVG data')),
                 ('creation_date', models.DateTimeField(auto_now_add=True)),
                 ('modified_date', models.DateTimeField(auto_now=True)),

@@ -3,7 +3,7 @@
 import django.core.validators
 import django.db.models.deletion
 import speleodb.gis.models.project_geojson
-import speleodb.utils.storages
+import speleodb.utils.s3_storages
 import speleodb.utils.validators
 from django.db import migrations, models
 
@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
             name='ProjectGeoJSON',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file', models.FileField(storage=speleodb.utils.storages.GeoJSONStorage(), upload_to=speleodb.gis.models.project_geojson.get_geojson_upload_path, validators=[speleodb.utils.validators.GeoJsonValidator()])),
+                ('file', models.FileField(storage=speleodb.utils.s3_storages.GeoJSONStorage(), upload_to=speleodb.gis.models.project_geojson.get_geojson_upload_path, validators=[speleodb.utils.validators.GeoJsonValidator()])),
                 ('commit_author_name', models.CharField(max_length=255, verbose_name='Name of User')),
                 ('commit_author_email', models.EmailField(max_length=254, verbose_name='email address')),
                 ('commit_message', models.CharField(max_length=1024, verbose_name='commit message')),

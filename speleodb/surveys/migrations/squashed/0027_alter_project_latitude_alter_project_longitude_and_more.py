@@ -2,7 +2,7 @@
 
 import django.core.validators
 import django.db.models.deletion
-import speleodb.utils.storages
+import speleodb.utils.s3_storages
 import uuid
 from decimal import Decimal
 from django.conf import settings

@@ -5,7 +5,7 @@ import django.db.models.deletion
 import speleodb.gis.models.utils
 import speleodb.gis.models.log_entry
 import speleodb.gis.models.station
-import speleodb.utils.storages
+import speleodb.utils.s3_storages
 import speleodb.utils.validators
 import uuid
 from django.db import migrations, models
@@ -70,7 +70,7 @@ class Migration(migrations.Migration):
                 ('notes', models.TextField(blank=True, help_text='Detailed field notes, observations, or measurements.')),
                 ('creation_date', models.DateTimeField(auto_now_add=True)),
                 ('modified_date', models.DateTimeField(auto_now=True)),
-                ('attachment', models.FileField(blank=True, help_text='Any relevant file (sketch, lab sheet, sensor data, etc.).', null=True, storage=speleodb.utils.storages.AttachmentStorage(), upload_to=speleodb.gis.models.log_entry.get_log_entry_path, validators=[speleodb.utils.validators.AttachmentValidator()])),
+                ('attachment', models.FileField(blank=True, help_text='Any relevant file (sketch, lab sheet, sensor data, etc.).', null=True, storage=speleodb.utils.s3_storages.AttachmentStorage(), upload_to=speleodb.gis.models.log_entry.get_log_entry_path, validators=[speleodb.utils.validators.AttachmentValidator()])),
                 ('station', models.ForeignKey(help_text='The station or location this log entry is associated with.', on_delete=django.db.models.deletion.CASCADE, related_name='log_entries', to='gis.station')),
             ],
             options={
@@ -85,8 +85,8 @@ class Migration(migrations.Migration):
                 ('resource_type', models.CharField(choices=[('photo', 'Photo'), ('video', 'Video'), ('sketch', 'Sketch'), ('note', 'Note'), ('document', 'Document')], max_length=20)),
                 ('title', models.CharField(help_text='Title or name of the resource', max_length=200)),
                 ('description', models.TextField(blank=True, default='', help_text='Optional description of the resource')),
-                ('file', models.FileField(blank=True, max_length=255, null=True, storage=speleodb.utils.storages.AttachmentStorage(), upload_to=speleodb.gis.models.station_resource.get_station_resource_path, validators=[speleodb.utils.validators.AttachmentValidator()])),
-                ('miniature', models.ImageField(blank=True, help_text='Thumbnail/preview image for the resource', max_length=255, null=True, storage=speleodb.utils.storages.AttachmentStorage(), upload_to=speleodb.gis.models.station_resource.get_station_resource_path)),
+                ('file', models.FileField(blank=True, max_length=255, null=True, storage=speleodb.utils.s3_storages.AttachmentStorage(), upload_to=speleodb.gis.models.station_resource.get_station_resource_path, validators=[speleodb.utils.validators.AttachmentValidator()])),
+                ('miniature', models.ImageField(blank=True, help_text='Thumbnail/preview image for the resource', max_length=255, null=True, storage=speleodb.utils.s3_storages.AttachmentStorage(), upload_to=speleodb.gis.models.station_resource.get_station_resource_path)),
                 ('text_content', models.TextField(blank=True, default='', help_text='Text content for notes or sketch descriptions')),
                 ('created_by', models.EmailField(help_text='User who created or submitted the entry.', max_length=254)),
                 ('creation_date', models.DateTimeField(auto_now_add=True)),
