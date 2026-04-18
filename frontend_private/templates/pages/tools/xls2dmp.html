@@ -1,5 +1,5 @@
 {% extends "pages/tools/base.html" %}
-{% load static % }
+{% load static %}
 
 {% block extra_css %}
 {{ block.super }}
@@ -379,6 +379,7 @@
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/survey_table_tool.js' %}"></script>
 <script>
 $(document).ready(function() {
     const COLUMNS = ['depth', 'length', 'azimuth', 'left', 'right', 'up', 'down'];
@@ -432,298 +433,106 @@ $(document).ready(function() {
         $(this).removeClass('invalid-date');
     });
 
-    function validateCell(value, column, isLastRow = false) {
-        const v = (value ?? '').trim();
-        
-        if (column === 'depth') {
-            if (v === '') return false;
-            const n = parseFloat(v);
-            return !isNaN(n) && isFinite(n) && n >= 0;
-        }
-        
-        if (column === 'length') {
-            if (isLastRow) return v === '';
-            if (v === '') return false;
-            const n = parseFloat(v);
-            return !isNaN(n) && isFinite(n) && n >= 0;
-        }
-        
-        if (column === 'azimuth') {
-            if (isLastRow) return v === '';
-            if (v === '') return false;
-            const n = parseFloat(v);
-            return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
-        }
-        
-        if (['left', 'right', 'up', 'down'].includes(column)) {
-            if (isLastRow) return v === '';
-            if (v === '') return true;
-            const n = parseFloat(v);
-            return !isNaN(n) && isFinite(n) && n >= 0;
-        }
-        
-        return true;
-    }
-
-    function addRow(values = [], idx) {
-        const index = idx ?? $tbody.children().length + 1;
-        const html = `
-<td>${index}</td>` + COLUMNS.map((col, j) => `
-<td contenteditable="true" data-col="${col}">${escapeHtml(values[j] ?? '')}</td>`).join('') + `
-<td class="actions">
-    <button class="trash" title="Delete row">🗑️</button>
-</td>`;
-        const $tr = $('<tr>').html(html);
-        $tbody.append($tr);
-        $tr.find('.trash').on('click', function() {
-            $tr.remove();
-            refreshIndexes();
-            validateTable();
-        });
-    }
-
-    function refreshIndexes() {
-        $tbody.children('tr').each(function(i) {
-            $(this).children('td').first().text(i + 1);
-        });
-    }
-
-    function renderRows(rows) {
-        $tbody.empty();
-        rows.forEach((r, i) => addRow(r, i + 1));
-        refreshIndexes();
-        validateTable();
-    }
-
-    function parseClipboardText(text) {
-        if (!text) return [];
-        
-        const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
-        
-        let rows = lines.map(line => {
-            let parts = line.split('\t');
-            
-            if (parts.length === 1 && line.includes(',')) {
-                parts = [];
-                let current = '';
-                let inQuotes = false;
-                
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    const nextChar = line[i + 1];
-                    
-                    if (char === '"') {
-                        if (inQuotes && nextChar === '"') {
-                            current += '"';
-                            i++;
+    const surveyTable = attachSurveyTableTool({
+        tableBodySelector: '#dataTable tbody',
+        dataTableSelector: '#dataTable',
+        statusSelector:    '#status',
+        addRowBtnSelector: '#addRowBtn',
+        clearBtnSelector:  '#clearBtn',
+        pasteBtnSelector:  '#pasteExcelBtn',
+        COLUMNS: COLUMNS,
+        lastRowAllowedColumns: ['depth'],
+        lastRowErrorMessage: function (remove) {
+            return 'Error: The last row should only have Station Depth. Remove: ' + remove.join(', ') + '.';
+        },
+        validateCell: function (value, column, isLastRow) {
+            const v = (value ?? '').trim();
+            if (column === 'depth') {
+                if (v === '') return false;
+                const n = parseFloat(v);
+                return !isNaN(n) && isFinite(n) && n >= 0;
+            }
+            if (column === 'length') {
+                if (isLastRow) return v === '';
+                if (v === '') return false;
+                const n = parseFloat(v);
+                return !isNaN(n) && isFinite(n) && n >= 0;
+            }
+            if (column === 'azimuth') {
+                if (isLastRow) return v === '';
+                if (v === '') return false;
+                const n = parseFloat(v);
+                return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
+            }
+            if (['left', 'right', 'up', 'down'].includes(column)) {
+                if (isLastRow) return v === '';
+                if (v === '') return true;
+                const n = parseFloat(v);
+                return !isNaN(n) && isFinite(n) && n >= 0;
+            }
+            return true;
+        },
+        parseClipboardText: function (text) {
+            // xls2dmp accepts clipboard data that may include an optional
+            // leading "Station #" column which we strip so the shot
+            // columns line up with COLUMNS.
+            if (!text) return [];
+            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
+            let rows = lines.map(line => {
+                let parts = line.split('\t');
+                if (parts.length === 1 && line.includes(',')) {
+                    parts = [];
+                    let current = '';
+                    let inQuotes = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        const nextChar = line[i + 1];
+                        if (char === '"') {
+                            if (inQuotes && nextChar === '"') {
+                                current += '"'; i++;
+                            } else {
+                                inQuotes = !inQuotes;
+                            }
+                        } else if (char === ',' && !inQuotes) {
+                            parts.push(current); current = '';
                         } else {
-                            inQuotes = !inQuotes;
+                            current += char;
                         }
-                    } else if (char === ',' && !inQuotes) {
-                        parts.push(current);
-                        current = '';
-                    } else {
-                        current += char;
                     }
+                    parts.push(current);
                 }
-                parts.push(current);
-            }
-            
-            return parts.map(p => {
-                let cleaned = p.replace(/^\uFEFF/, '').trim();
-                if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-                    cleaned = cleaned.slice(1, -1);
-                }
-                return cleaned;
+                return parts.map(p => {
+                    let cleaned = p.replace(/^\uFEFF/, '').trim();
+                    if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+                        cleaned = cleaned.slice(1, -1);
+                    }
+                    return cleaned;
+                });
             });
-        });
-        
-        if (rows.length > 0 && rows[0].length > 0) {
-            const firstCell = rows[0][0].trim();
-            
-            if (/^station/i.test(firstCell)) {
-                const headerRow = rows[0];
-                const stationColIndex = headerRow.findIndex(cell => 
-                    /^station\s*#?$/i.test(cell.trim())
-                );
-                
-                rows.shift();
-                
-                if (stationColIndex !== -1) {
-                    rows = rows.map(row => {
-                        const newRow = [...row];
-                        newRow.splice(stationColIndex, 1);
-                        return newRow;
-                    });
-                }
-            }
-        }
-        
-        rows = rows.filter(row => row.some(cell => cell.trim() !== ''));
-        
-        return rows;
-    }
-
-    $('#pasteExcelBtn').on('click', async function() {
-        try {
-            const text = await navigator.clipboard.readText();
-            const rows = parseClipboardText(text);
-            renderRows(rows);
-            $statusEl.text(`Imported ${rows.length} rows.`);
-        } catch {
-            $statusEl.text('Unable to read clipboard. Try Ctrl+V directly.');
-        }
-    });
-
-    function onCellInput(td) {
-        const $td = $(td);
-        const col = $td.data('col');
-        const $row = $td.parent();
-        const $allRows = $tbody.children('tr');
-        const isLastRow = $allRows.last().is($row);
-        const ok = validateCell($td.text(), col, isLastRow);
-        $td.toggleClass('invalid', !ok);
-        validateTable();
-    }
-
-    function validateTable() {
-        let allValid = true;
-        let lastRowErrors = [];
-        const $allRows = $tbody.children('tr');
-        const $lastRow = $allRows.last();
-        
-        $('#dataTable tbody td[data-col]').each(function() {
-            const $td = $(this);
-            const col = $td.data('col');
-            const $row = $td.parent();
-            const isLastRow = $lastRow.is($row);
-            const ok = validateCell($td.text(), col, isLastRow);
-            $td.toggleClass('invalid', !ok);
-            
-            if (!ok) {
-                allValid = false;
-                if (isLastRow && $td.text().trim() !== '' && col !== 'depth') {
-                    const fieldName = col.charAt(0).toUpperCase() + col.slice(1);
-                    if (!lastRowErrors.includes(fieldName)) {
-                        lastRowErrors.push(fieldName);
+            if (rows.length > 0 && rows[0].length > 0) {
+                const firstCell = rows[0][0].trim();
+                if (/^station/i.test(firstCell)) {
+                    const headerRow = rows[0];
+                    const stationColIndex = headerRow.findIndex(cell =>
+                        /^station\s*#?$/i.test(cell.trim())
+                    );
+                    rows.shift();
+                    if (stationColIndex !== -1) {
+                        rows = rows.map(row => {
+                            const newRow = [...row];
+                            newRow.splice(stationColIndex, 1);
+                            return newRow;
+                        });
                     }
                 }
             }
-        });
-        
-        let statusMessage = 'All cells valid.';
-        if (!allValid) {
-            if (lastRowErrors.length > 0) {
-                statusMessage = `Error: The last row should only have Station Depth. Remove: ${lastRowErrors.join(', ')}.`;
-            } else {
-                statusMessage = 'Some cells are invalid.';
-            }
-        }
-        
-        $('#status').text(statusMessage)
-                    .css({ 'color': allValid ? 'green' : 'red', 'font-weight': 'bold' });
-        return allValid;
-    }
-
-    $('#addRowBtn').on('click', function() { 
-        addRow(); 
-        validateTable(); 
-    });
-    
-    $('#clearBtn').on('click', function() { 
-        $tbody.empty(); 
-        $statusEl.text('Cleared.'); 
+            return rows.filter(row => row.some(cell => cell.trim() !== ''));
+        },
     });
 
-    function getEditableTdFromTarget(target) {
-        if (!target) return null;
-        const node = target.nodeType === 3 ? target.parentElement : target;  // 3 = TEXT_NODE
-        if (!node) return null;
-        const $node = $(node);
-        const $td = $node.closest('td[data-col]');
-        return $td.length ? $td[0] : null;
-    }
-
-    function placeCaretAtEnd(el) {
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        range.collapse(false);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-    }
-
-    function focusCell(cell) {
-        if (!cell) return;
-        $(cell).focus();
-        placeCaretAtEnd(cell);
-    }
-
-    function moveToCellBelow(currentTd) {
-        const $currentTd = $(currentTd);
-        const $currentRow = $currentTd.parent();
-        const $currentRowCells = $currentRow.find('td[data-col]');
-        const colIndex = $currentRowCells.index($currentTd);
-        const $nextRow = $currentRow.next();
-        if ($nextRow.length) {
-            const $nextRowCells = $nextRow.find('td[data-col]');
-            focusCell($nextRowCells.eq(colIndex)[0] || $nextRowCells.last()[0]);
-        } else {
-            $currentTd.blur();
-            $('#dataTable').blur();
-            const sel = window.getSelection();
-            if (sel) sel.removeAllRanges();
-        }
-    }
-
-    $tbody[0].addEventListener('keydown', function(e) {
-        if (e.key !== 'Enter') return;
-        const td = getEditableTdFromTarget(e.target);
-        if (!td) return;
-        e.preventDefault();
-        validateTable();
-        moveToCellBelow(td);
-    }, true);
-
-    $tbody.on('input', 'td[data-col]', function(e) {
-        const td = getEditableTdFromTarget(e.target);
-        if (!td) return;
-        onCellInput(td);
-    });
-
-    $tbody[0].addEventListener('beforeinput', function(e) {
-        const td = getEditableTdFromTarget(e.target);
-        if (!td) return;
-        setTimeout(() => onCellInput(td), 0);
-    });
-
-    $tbody.on('keyup', 'td[data-col]', function(e) {
-        const td = getEditableTdFromTarget(e.target);
-        if (!td) return;
-        onCellInput(td);
-    });
-
-    $tbody[0].addEventListener('blur', function(e) {
-        const td = getEditableTdFromTarget(e.target);
-        if (!td) return;
-        onCellInput(td);
-    }, true);
-
-    function tableToCsv() {
-        const rows = [];
-        $tbody.children('tr').each(function() {
-            const row = [];
-            $(this).find('td[data-col]').each(function() {
-                row.push($(this).text().trim());
-            });
-            rows.push(row);
-        });
-        return rows.map(r => r.map(cell => { 
-            if(cell.includes(',') || cell.includes('"') || cell.includes('\n')) 
-                return '"'+cell.replace(/"/g,'""')+'"'; 
-            return cell; 
-        }).join(',')).join('\n');
-    }
+    // Expose the helpers the rest of the template expects.
+    const renderRows = surveyTable.renderRows;
+    const validateTable = surveyTable.validateTable;
 
     $('#downloadBtn').on('click', function() {
         if (!validateTable()) {

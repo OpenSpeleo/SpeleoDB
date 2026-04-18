@@ -66,83 +66,25 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
 <script>
     $(window).on('load', function () {
-        // Form submission handler for network details
-        $('#btn_submit').click(function (e) {
-            e.preventDefault();
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            const name = $('#name').val().trim();
-            const description = $('#description').val().trim();
-
-            if (!name) {
-                $("#modal_error_txt").html("Network name is required.");
-                $("#modal_error").css('display', 'flex');
-                return false;
-            }
-
-            const dataObject = {
-                name: name,
-                description: description
-            };
-
-            console.log('💾 Updating network:', '{{ network.id }}', dataObject);
-
-            // Get CSRF token
-            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
-
-            // REAL API CALL
-            $.ajax({
-                url: Urls['api:v2:surface-network']('{{ network.id }}'),
-                method: 'PUT',
-                data: JSON.stringify(dataObject),
-                contentType: 'application/json; charset=utf-8',
-                headers: {
-                    'X-CSRFToken': csrftoken
-                },
-                success: function (response) {
-                    console.log('✅ Network updated successfully:', response);
-
-                    $("#modal_success_txt").html("The surface network has been updated.");
-                    $("#modal_success").css('display', 'flex');
-
-                    window.setTimeout(function () {
-                        window.location.reload();
-                    }, 2000);
-                },
-                error: function (xhr) {
-                    console.error('❌ Error updating network:', xhr);
-
-                    const response = xhr.responseJSON || {};
-                    let errorMsg = 'Failed to update network.';
-
-                    if (response.errors) {
-                        if (response.errors.name) {
-                            errorMsg = response.errors.name[0];
-                        } else {
-                            const firstError = Object.values(response.errors)[0];
-                            errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
-                        }
-                    } else if (response.error) {
-                        errorMsg = response.error;
-                    }
-
-                    $("#modal_error_txt").text(errorMsg);
-                    $("#modal_error").css('display', 'flex');
+        attachEntityCrudForm({
+            formId: 'surface_network_details_form',
+            endpoint: Urls['api:v2:surface-network']('{{ network.id }}'),
+            method: 'PUT',
+            successMessage: 'The surface network has been updated.',
+            beforeSubmit: function (payload) {
+                if (!payload.name || !payload.name.trim()) {
+                    FormModals.showError('Network name is required.');
+                    return false;
                 }
-            });
-
-            return false;
-        });
-
-        // Close modal handlers
-        $('#modal_error button, #modal_success button').click(function () {
-            $(this).closest('.fixed').fadeOut(200);
+                return true;
+            },
+            reloadOnSuccess: true
         });
     });
-
 </script>
 {% endblock inline_extra_js %}

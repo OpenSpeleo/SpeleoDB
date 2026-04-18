@@ -19,6 +19,7 @@ from speleodb.gis.models import ExperimentUserPermission
 from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import BadRequestError
+from speleodb.utils.exceptions import MissingFieldError
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import UserNotActiveError
 from speleodb.utils.exceptions import UserNotFoundError
@@ -121,9 +122,7 @@ class ExperimentUserPermissionSpecificApiView(
                         raise ValueNotFoundError(f"Unknown key: {key}")
 
             except KeyError as e:
-                raise ValueNotFoundError(
-                    f"Attribute: `{key}` is missing. {data}"
-                ) from e
+                raise MissingFieldError(f"Attribute: `{key}` is missing. {data}") from e
 
         return perm_data
 
@@ -150,21 +149,19 @@ class ExperimentUserPermissionSpecificApiView(
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # Reactivate permission
+            # `reactivate` persists internally; no extra `save()` needed here.
             permission.reactivate(level=perm_data["level"])
 
         else:
-            # Now assign the role. Couldn't do it during object creation because
-            # of the use of `get_or_create`
+            # Fresh row from `get_or_create` — assign the level and persist.
             permission.level = perm_data["level"]
-
-        permission.save()
+            permission.save()
 
         permission_serializer = ExperimentUserPermissionSerializer(permission)
         experiment_serializer = self.get_serializer(experiment)
 
-        # Refresh the `modified_date` field
-        experiment.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        experiment.save(update_fields=["modified_date"])
 
         return SuccessResponse(
             {
@@ -176,16 +173,10 @@ class ExperimentUserPermissionSpecificApiView(
 
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         experiment = self.get_object()
-        user = self.get_user()
 
         perm_data = self._process_request_data(request=request, data=request.data)
-
-        # Can't edit your own permission
-        if user == perm_data["user"]:
-            return ErrorResponse(
-                {"error": ("A user can not edit their own permission")},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Self-target is already caught by `_process_request_data` (raises
+        # NotAuthorizedError -> 401). No second guard here.
 
         target_user: User = perm_data["user"]
         try:
@@ -206,13 +197,13 @@ class ExperimentUserPermissionSpecificApiView(
             )
 
         permission.level = perm_data["level"]
-        permission.save()
+        permission.save(update_fields=["level", "modified_date"])
 
         permission_serializer = ExperimentUserPermissionSerializer(permission)
         experiment_serializer = self.get_serializer(experiment)
 
-        # Refresh the `modified_date` field
-        experiment.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        experiment.save(update_fields=["modified_date"])
 
         return SuccessResponse(
             {
@@ -228,13 +219,8 @@ class ExperimentUserPermissionSpecificApiView(
         perm_data = self._process_request_data(
             request=request, data=request.data, skip_level=True
         )
-
-        # Can't edit your own permission
-        if user == perm_data["user"]:
-            return ErrorResponse(
-                {"error": ("A user can not edit their own permission")},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Self-target is already caught by `_process_request_data` (raises
+        # NotAuthorizedError -> 401). No second guard here.
 
         target_user: User = perm_data["user"]
         try:
@@ -254,12 +240,13 @@ class ExperimentUserPermissionSpecificApiView(
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        # `deactivate` persists internally; no explicit save() needed.
         permission.deactivate(deactivated_by=user)
 
         experiment_serializer = self.get_serializer(experiment)
 
-        # Refresh the `modified_date` field
-        experiment.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        experiment.save(update_fields=["modified_date"])
 
         return SuccessResponse(
             {

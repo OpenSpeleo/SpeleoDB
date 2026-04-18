@@ -83,47 +83,18 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/fleet_watchlist.js' %}"></script>
 <script>
     $(window).on('load', function () {
-        let dataTable = null;
-
-        // Initialize DataTables for sortable table
-        // Note: order is empty array to preserve database sorting (by minimum expiry date)
-        dataTable = $('#watchlist_sensors_table').DataTable({
-            paging: false,
-            searching: false,
-            info: false,
-            order: [], // Preserve database order (sorted by minimum expiry date)
-        });
-
-        // Form submission handler - validate before allowing normal form submission
-        $('#watchlist_form').on('submit', function (e) {
-            const days = $('#days').val().trim();
-            
-            if (!days || parseInt(days) < 0) {
-                e.preventDefault();
-                $("#modal_error_txt").html("Please enter a valid number of days (0 or greater).");
-                $("#modal_error").css('display', 'flex');
-                return false;
-            }
-
-            // Show loading state
-            $('#btn_update_watchlist').prop('disabled', true).text('Loading...');
-            
-            // Allow normal form submission - server will handle the rest
-        });
-
-        // Export to Excel button handler
-        $('#btn_export_excel').click(function (e) {
-            e.preventDefault();
-            const days = $('#days').val() || '60';
-            const exportUrl = Urls['api:v2:sensor-fleet-watchlist-export']('{{ sensor_fleet.id }}') + '?days=' + days;
-            window.location.href = exportUrl;
-        });
-
-        // Close modal handlers
-        $('#modal_error button, #modal_success button').click(function () {
-            $(this).closest('.fixed').fadeOut(200);
+        attachFleetWatchlist({
+            tableSelector: '#watchlist_sensors_table',
+            formSelector: '#watchlist_form',
+            exportBtnSelector: '#btn_export_excel',
+            exportUrlBuilder: function (days) {
+                return Urls['api:v2:sensor-fleet-watchlist-export']('{{ sensor_fleet.id }}') + '?days=' + days;
+            },
         });
     });
 </script>

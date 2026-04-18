@@ -302,166 +302,20 @@
 {% if has_admin_access %}
 {% block inline_extra_js %}
 <script src="{% static 'private/js/user_autocomplete.js' %}"></script>
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/permission_modal.js' %}"></script>
 <script>
-
-    $(window).on('load', function() {
-        $(".btn_close").click(function () {
-            if ($("#permission_modal").is(":visible")) {
-                $("#permission_modal").hide();
-            }
-            return false; // prevent default
+    $(window).on('load', function () {
+        attachPermissionModal({
+            endpoint: "{% url 'api:v2:cylinder-fleet-permissions' fleet_id=cylinder_fleet.id %}",
+            autocompleteUrl: "{% url 'api:v2:user-autocomplete' %}",
+            addModalTitle: "Add a collaborator to the cylinder fleet",
+            addModalHeader: "Who would you like to add 🙌 ?",
+            editModalTitle: "How shall we modify this user's access?",
+            fieldName: 'level',
+            fieldLabel: 'Access Level'
         });
-
-        $("body").click(function () {
-            if ($("#modal_success").is(":visible")) {
-                $("#modal_success").hide();
-            }
-            if ($("#modal_error").is(":visible")) {
-                $("#modal_error").hide();
-            }
-        });
-
-        /* ------------------------------------------------------------------------- */
-        /* --------------------------- ADDING PERMISSION --------------------------- */
-        /* ------------------------------------------------------------------------- */
-
-        $("#btn_open_add_user").click(function () {
-            var form = $("#permission_form");
-            form[0].reset();
-            form.data("method", "POST");
-            $("#permission_modal_title").text("Add a collaborator to the cylinder fleet");
-            $("#permission_modal_header").text("Who would you like to add 🙌 ?");
-            $("#permission_modal").css('display', 'flex');
-            $("#user").prop("readonly", false);
-            attachUserAutocomplete($("#user"), $("#user_suggestions"), "{% url 'api:v2:user-autocomplete' %}");
-            return false; // prevent default
-        });
-
-        /* ------------------------------------------------------------------------- */
-        /* --------------------------- EDITING PERMISSION -------------------------- */
-        /* ------------------------------------------------------------------------- */
-
-        $(".btn_open_edit_perm").click(function () {
-            var form = $("#permission_form");
-            form[0].reset();
-            form.data("method", "PUT");
-            $("#permission_modal_title").text("How shall we modify this user's access ?");
-            $("#permission_modal_header").text("");
-            $("#permission_modal").css('display', 'flex');
-            $("#user").val($(this).data("user")).prop("readonly", true);
-            $("#level").val($(this).data("level"));
-            return false; // prevent default
-        });
-
-        /* ------------------------------------------------------------------------- */
-        /* ---------------------- ADD/EDITING PERMISSION AJAX ---------------------- */
-        /* ------------------------------------------------------------------------- */
-
-        function validateEmail(email) {
-            var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-            return re.test(email);
-        }
-
-        $('#btn_submit_add').click(function () {
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let permission_form = $("#permission_form");
-            var formData = new FormData(permission_form[0]);
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            $.ajax({
-                url: "{% url 'api:v2:cylinder-fleet-permissions' fleet_id=cylinder_fleet.id %}",
-                method: $("#permission_form").data("method"),
-                data: JSON.stringify(Object.fromEntries(formData)),
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-
-                    if (!validateEmail($("#user").val()) || $("#user").val() == "") {
-                        $("#modal_error_txt").text("The Email Address is not valid !");
-                        $("#modal_error").css('display', 'flex');
-                        return false;
-                    }
-
-                    if ($("#level").val() == "") {
-                        $("#modal_error_txt").text("The Access Level field is empty !");
-                        $("#modal_error").css('display', 'flex');
-                        return false;
-                    }
-                    return true;
-
-                },
-                success: function () {
-                    $("#modal_success_txt").text("Action executed with success!");
-                    $("#modal_success").css('display', 'flex');
-
-                    window.setTimeout(function () {
-                        // Refresh the page
-                        window.location.reload();
-                    }, 2000);
-                },
-                error: function () {
-                    {% include 'snippets/ajax_error_modal_management.js' %}
-                }
-            });
-            return false; // prevent default
-        });
-
-        /* ------------------------------------------------------------------------- */
-        /* -------------------------- REMOVING PERMISSION -------------------------- */
-        /* ------------------------------------------------------------------------- */
-
-        $(".btn_delete_perm").click(function () {
-            var $this = $(this);
-
-            // Check if the icon is already disabled
-            if ($this.hasClass('disabled')) {
-                return false;
-            }
-            
-            // Disable the button to prevent double-clicks
-            $this.addClass('disabled');
-
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-
-            var formData = new FormData();
-            formData.append("user", $this.data("user"));
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            $.ajax({
-                url: "{% url 'api:v2:cylinder-fleet-permissions' fleet_id=cylinder_fleet.id %}",
-                method: "DELETE",
-                data: JSON.stringify(Object.fromEntries(formData)),
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-
-                },
-                success: function () {
-                    $("#modal_success_txt").html("The permission has been deleted succesfully.");
-                    $("#modal_success").css('display', 'flex');
-
-                    window.setTimeout(function () {
-                        // Refresh the page
-                        window.location.reload();
-                    }, 2000);
-                },
-                error: function () {
-                    {% include 'snippets/ajax_error_modal_management.js' %}
-                    
-                    // Re-enable the button in case of error
-                    $this.removeClass('disabled');
-                }
-            });
-            return false; // prevent default
-        });
-
     });
 </script>
 {% endblock inline_extra_js %}

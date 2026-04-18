@@ -109,8 +109,23 @@ class TeamSpecificApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
         )
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        # Soft-delete: we do not hard-delete the team. Mirroring
+        # `ProjectSpecificApiView.delete` (`speleodb/api/v2/views/project.py`):
+        # deactivate all memberships and team project permissions.
+        #
+        # This renders the team invisible to every user without touching any
+        # historical data — `User.teams` filters by
+        # `memberships__is_active=True`, `UserHasMemberAccess` rejects anyone
+        # without an active membership, and team project permissions only
+        # grant project access while active (see `Project.team_permissions`).
+        user = self.get_user()
         team = self.get_object()
         team_id = team.id
-        team.delete()
+
+        for membership in team.memberships.filter(is_active=True):
+            membership.deactivate(deactivated_by=user)
+
+        for team_perm in team.project_permissions.filter(is_active=True):
+            team_perm.deactivate(deactivated_by=user)
 
         return SuccessResponse({"id": str(team_id)}, status=status.HTTP_200_OK)

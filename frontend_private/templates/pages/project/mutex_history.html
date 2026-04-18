@@ -318,86 +318,17 @@
 
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/mutex_lock.js' %}"></script>
 <script>
-
-    $(window).on('load', function() {
-
-        $("body").click(function() {
-            if ($("#modal_success").is(":visible")) {
-                $("#modal_success").hide();
-            }
-            if ($("#modal_error").is(":visible")) {
-                $("#modal_error").hide();
-            }
+    $(window).on('load', function () {
+        attachMutexLock({
+            unlockUrl: "{% url 'api:v2:project-release' id=project.id %}",
+            {% if not project.mutex_owner and has_write_access %}
+            lockUrl: "{% url 'api:v2:project-acquire' id=project.id %}",
+            {% endif %}
         });
-
-        $('.btn_unlock').click(function () {
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            $.ajax({
-                url: "{% url 'api:v2:project-release' id=project.id %}",
-                method: "POST",
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-
-                },
-                success: function (data) {
-                    $("#modal_success_txt").html("The project has been unlocked for edition.");
-                    $("#modal_success").css('display', 'flex');
-
-                    window.setTimeout(function(){
-                        // Refresh the page
-                        window.location.reload();
-                    }, 2000);
-                },
-                error: function (data) {
-                    {% include 'snippets/ajax_error_modal_management.js' %}
-                }
-            });
-            return false; // prevent default
-        });
-
-    {% if not project.mutex_owner and has_write_access %}
-        $('#btn_lock_project').click(function () {
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            $.ajax({
-                url: "{% url 'api:v2:project-acquire' id=project.id %}",
-                method: "POST",
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-
-                },
-                success: function (data) {
-                    $("#modal_success_txt").html("The project has been locked for edition.");
-                    $("#modal_success").css('display', 'flex');
-
-                    window.setTimeout(function(){
-                        // Refresh the page
-                        window.location.reload();
-                    }, 2000);
-                },
-                error: function (data) {
-                    {% include 'snippets/ajax_error_modal_management.js' %}
-                }
-            });
-            return false; // prevent default
-        });
-    {% endif %}
-
     });
 </script>
-
 {% endblock inline_extra_js %}

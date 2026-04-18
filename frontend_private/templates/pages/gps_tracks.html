@@ -317,18 +317,14 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/tagged_entity_list.js' %}"></script>
 <script>
 $(document).ready(function() {
-    // Global variables
-    let allTracks = [];
+    let allTracks = [];  // kept in sync by renderList
 
-    // Initialize GPX Import module
     GPXImport.init("{{ csrf_token }}");
-
-    // Utility: Get CSRF Token
-    function getCSRFToken() {
-        return $('input[name^=csrfmiddlewaretoken]').val();
-    }
 
     // Format date for display
     function formatDate(dateString) {
@@ -342,30 +338,9 @@ $(document).ready(function() {
         });
     }
 
-    // Load all GPS tracks
-    function loadTracks() {
-        $.ajax({
-            url: '{% url "api:v2:gps-tracks" %}',
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (Array.isArray(response)) {
-                    allTracks = response;
-                    renderTracks();
-                } else {
-                    $("#modal_error_txt").text("Failed to load GPS tracks");
-                    $("#modal_error").css('display', 'flex');
-                }
-            },
-            error: function() {
-                $("#modal_error_txt").text("Error loading GPS tracks");
-                $("#modal_error").css('display', 'flex');
-            }
-        });
-    }
-
     // Render tracks in table and cards
-    function renderTracks() {
+    function renderTracks(tracks) {
+        allTracks = tracks;
         const tableBody = $('#tracks-table-body');
         const cardsContainer = $('#tracks-cards-container');
 
@@ -480,13 +455,11 @@ $(document).ready(function() {
     // Attach event handlers to dynamically created elements
     function attachEventHandlers() {
         $('.btn-edit-track').off('click').on('click', function() {
-            const trackId = $(this).data('track-id');
-            openEditModal(trackId);
+            listApi.openEditModal($(this).data('track-id'));
         });
 
         $('.btn-delete-track').off('click').on('click', function() {
-            const trackId = $(this).data('track-id');
-            openDeleteModal(trackId);
+            listApi.openDeleteModal($(this).data('track-id'));
         });
     }
 
@@ -500,130 +473,55 @@ $(document).ready(function() {
         presets:      '.edit-track-color-preset',
     });
 
-    // Open edit track modal
-    function openEditModal(trackId) {
-        const track = allTracks.find(t => t.id === trackId);
-        if (!track) return;
+    const listApi = attachTaggedEntityList({
+        listEndpoint: "{% url 'api:v2:gps-tracks' %}",
+        detailEndpointBuilder: function (id) { return Urls['api:v2:gps-track-detail'](id); },
+        editMethod: 'PATCH',
 
-        $('#edit-track-id').val(track.id);
-        $('#edit-track-name').val(track.name);
-        setTrackColor(track.color || '#94a3b8');
-        
-        $('#edit-track-modal').css('display', 'flex').removeClass('hidden');
-    }
+        renderList: renderTracks,
 
-    // Close edit modal
-    $('.btn-close-edit-modal').click(function() {
-        $('#edit-track-modal').css('display', 'none').addClass('hidden');
-    });
+        entityLabel: 'GPS track',
+        loadFailedMessage: 'Error loading GPS tracks',
 
-    // Handle form submission (edit)
-    $('#edit-track-form').submit(function(e) {
-        e.preventDefault();
+        editFormSelector: '#edit-track-form',
+        editIdInputSelector: '#edit-track-id',
+        editModalSelector: '#edit-track-modal',
+        closeEditModalSelectors: '.btn-close-edit-modal',
 
-        const trackId = $('#edit-track-id').val();
-        const name = $('#edit-track-name').val().trim();
-        const color = $('#edit-track-color-value').val();
+        deleteModalSelector: '#delete-track-modal',
+        deleteIdInputSelector: '#delete-track-id',
+        confirmDeleteSelector: '#btn-confirm-delete',
+        closeDeleteModalSelectors: '.btn-close-delete-modal',
 
-        if (!name) {
-            $("#modal_error_txt").text("Please enter a track name");
-            $("#modal_error").css('display', 'flex');
-            return false;
-        }
-
-        $.ajax({
-            url: Urls['api:v2:gps-track-detail'](trackId),
-            method: 'PATCH',
-            data: JSON.stringify({ name: name, color: color }),
-            contentType: "application/json; charset=utf-8",
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
-            },
-            success: function(response) {
-                $("#modal_success_txt").text("GPS track updated successfully!");
-                $("#modal_success").css('display', 'flex');
-                
-                $('#edit-track-modal').css('display', 'none').addClass('hidden');
-                
-                // Refresh tracks list from API
-                loadTracks();
-            },
-            error: function (data) {
-                {% include 'snippets/ajax_error_modal_management.js' %}
-            }
-        });
-
-        return false;
-    });
-
-    // Open delete confirmation modal
-    function openDeleteModal(trackId) {
-        const track = allTracks.find(t => t.id === trackId);
-        if (!track) return;
-
-        $('#delete-track-id').val(track.id);
-        $('#delete-track-info').html(`
-            <div class="flex items-center gap-2 bg-slate-700/50 rounded-lg p-3">
-                <div class="track-icon">
-                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                    </svg>
-                </div>
-                <span class="text-slate-100 font-medium">${escapeHtml(track.name)}</span>
-            </div>
-        `);
-        
-        $('#delete-track-modal').css('display', 'flex').removeClass('hidden');
-    }
-
-    // Close delete modal
-    $('.btn-close-delete-modal').click(function() {
-        $('#delete-track-modal').css('display', 'none').addClass('hidden');
-    });
-
-    // Handle delete confirmation
-    $('#btn-confirm-delete').click(function() {
-        const trackId = $('#delete-track-id').val();
-        if (!trackId) return;
-
-        $.ajax({
-            url: Urls['api:v2:gps-track-detail'](trackId),
-            method: 'DELETE',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
-            },
-            success: function() {
-                $("#modal_success_txt").text("GPS track deleted successfully!");
-                $("#modal_success").css('display', 'flex');
-                
-                $('#delete-track-modal').css('display', 'none').addClass('hidden');
-                
-                // Refresh tracks list from API
-                loadTracks();
-            },
-            error: function (data) {
-                {% include 'snippets/ajax_error_modal_management.js' %}
-            }
-        });
-    });
-
-    // Modal backdrop click handlers
-    $("body").click(function() {
-        if ($("#modal_success").is(":visible")) {
-            $("#modal_success").hide();
-        }
-        if ($("#modal_error").is(":visible")) {
-            $("#modal_error").hide();
-        }
+        openEditModalForEntity: function (track) {
+            $('#edit-track-id').val(track.id);
+            $('#edit-track-name').val(track.name);
+            setTrackColor(track.color || '#94a3b8');
+        },
+        openDeleteModalForEntity: function (track) {
+            $('#delete-track-info').html(
+                '<div class="flex items-center gap-2 bg-slate-700/50 rounded-lg p-3">' +
+                '  <div class="track-icon">' +
+                '    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                '      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>' +
+                '    </svg>' +
+                '  </div>' +
+                '  <span class="text-slate-100 font-medium">' + escapeHtml(track.name) + '</span>' +
+                '</div>'
+            );
+        },
+        collectEditPayload: function () {
+            const name = $('#edit-track-name').val().trim();
+            const color = $('#edit-track-color-value').val();
+            if (!name) { FormModals.showError('Please enter a track name'); return null; }
+            return { name: name, color: color };
+        },
     });
 
     // Listen for GPX import event to refresh tracks
     window.addEventListener('speleo:refresh-gps-tracks', function() {
-        loadTracks();
+        listApi.reload();
     });
-
-    // Load tracks on page load
-    loadTracks();
 });
 </script>
 {% endblock inline_extra_js %}

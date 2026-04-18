@@ -77,91 +77,27 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
 <script>
-    $(window).on('load', function() {
-        // Form submission handler
-        $('#btn_submit').click(function (e) {
-            e.preventDefault();
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            // Get form data
-            const name = $('#name').val().trim();
-            const description = $('#description').val().trim();
-
-            // Validation
-            if (!name) {
-                $("#modal_error_txt").html("Network name is required.");
-                $("#modal_error").css('display', 'flex');
-                return false;
-            }
-
-            // Prepare data object
-            const dataObject = {
-                name: name,
-                description: description
-            };
-
-            console.log('🚀 Creating surface network:', dataObject);
-
-            // Get CSRF token
-            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
-
-            // REAL API CALL
-            $.ajax({
-                url: "{% url 'api:v2:surface-networks' %}",
-                method: 'POST',
-                data: JSON.stringify(dataObject),
-                contentType: 'application/json; charset=utf-8',
-                headers: {
-                    'X-CSRFToken': csrftoken
-                },
-                success: function(response) {
-                    console.log('✅ Network created successfully:', response);
-                    
-                    $("#modal_success_txt").html("The surface network has been created successfully.");
-                    $("#modal_success").css('display', 'flex');
-
-                    window.setTimeout(function(){
-                        // Redirect to network details page
-                        window.location.href = Urls['private:surface_network_details'](response.id);
-                    }, 2000);
-                },
-                error: function(xhr) {
-                    console.error('❌ Error creating network:', xhr);
-                    
-                    const response = xhr.responseJSON || {};
-                    let errorMsg = 'Failed to create surface network.';
-                    
-                    // Extract specific error message
-                    if (response.errors) {
-                        if (response.errors.name) {
-                            errorMsg = response.errors.name[0];
-                        } else if (response.errors.non_field_errors) {
-                            errorMsg = response.errors.non_field_errors[0];
-                        } else {
-                            // Get first error from any field
-                            const firstError = Object.values(response.errors)[0];
-                            errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
-                        }
-                    } else if (response.error) {
-                        errorMsg = response.error;
-                    }
-                    
-                    $("#modal_error_txt").text(errorMsg);
-                    $("#modal_error").css('display', 'flex');
+    $(window).on('load', function () {
+        attachEntityCrudForm({
+            formId: 'new_surface_network_form',
+            endpoint: "{% url 'api:v2:surface-networks' %}",
+            method: 'POST',
+            successMessage: 'The surface network has been created successfully.',
+            beforeSubmit: function (payload) {
+                if (!payload.name || !payload.name.trim()) {
+                    FormModals.showError('Network name is required.');
+                    return false;
                 }
-            });
-
-            return false; // prevent default
-        });
-
-        // Close modal handlers
-        $('#modal_error button, #modal_success button').click(function() {
-            $(this).closest('.fixed').fadeOut(200);
+                return true;
+            },
+            redirectFromResponse: function (response) {
+                return Urls['private:surface_network_details'](response.id);
+            }
         });
     });
-
 </script>
 {% endblock inline_extra_js %}

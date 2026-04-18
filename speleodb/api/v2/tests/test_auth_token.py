@@ -227,6 +227,7 @@ class TestTokenAuth(BaseAPITestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
         assert "token" not in response.data, response.data
+        assert "errors" in response.data, response.data
 
     def test_not_existing_email(self) -> None:
         response = self.client.post(
@@ -236,6 +237,7 @@ class TestTokenAuth(BaseAPITestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
         assert "token" not in response.data, response.data
+        assert "errors" in response.data, response.data
 
     def test_missing_password(self) -> None:
         response = self.client.post(

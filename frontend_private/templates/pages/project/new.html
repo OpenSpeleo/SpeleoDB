@@ -154,19 +154,11 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
 <script>
-
-    $(window).on('load', function() {
-
-        $("body").click(function() {
-            if ($("#modal_success").is(":visible")) {
-                $("#modal_success").hide();
-            }
-            if ($("#modal_error").is(":visible")) {
-                $("#modal_error").hide();
-            }
-        });
-
+    $(window).on('load', function () {
         initColorPicker({
             preview:      '#color-preview',
             hiddenInput:  '#color-value',
@@ -176,42 +168,15 @@
             presets:      '.color-preset',
         });
 
-        $('#btn_submit').click(function (e) {
-            e.preventDefault();
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let new_project_form = document.getElementById('new_project_form');
-            var formData = new FormData(new_project_form);
-
-            $.ajax({
-                url: "{% url 'api:v2:projects' %}",
-                method: "POST",
-                data: JSON.stringify(Object.fromEntries(formData)),
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-
-                },
-                success: function (data) {
-                    $("#modal_success_txt").html("The project has been created.");
-                    $("#modal_success").css('display', 'flex');
-
-                    window.setTimeout(function(){
-                        window.location.href = Urls['private:project_details'](data["id"]);
-                    }, 2000);
-                },
-                error: function (data) {
-                    {% include 'snippets/ajax_error_modal_management.js' %}
-                }
-            });
-            return false; // prevent default
+        attachEntityCrudForm({
+            formId: 'new_project_form',
+            endpoint: "{% url 'api:v2:projects' %}",
+            method: 'POST',
+            successMessage: 'The project has been created.',
+            redirectFromResponse: function (response) {
+                return Urls['private:project_details'](response['id']);
+            }
         });
-
     });
 </script>
 {% endblock inline_extra_js %}

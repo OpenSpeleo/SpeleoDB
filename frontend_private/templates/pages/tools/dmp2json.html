@@ -452,16 +452,11 @@
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/tool_file_upload.js' %}"></script>
 <script>
 $(document).ready(function() {
-    const $fileDropZone = $('#fileDropZone');
-    const $fileInput = $('#fileInput');
-    const $fileNameDisplay = $('#fileNameDisplay');
-    const $fileErrorDisplay = $('#fileErrorDisplay');
     const $downloadBtn = $('#downloadBtn');
     const $statusEl = $('#status');
-    
-    let selectedFile = null;
 
     $(window).on('load', function() {
         $("body").click(function () {
@@ -471,82 +466,22 @@ $(document).ready(function() {
         });
     });
 
-    // Click to browse
-    $fileDropZone.on('click', function() {
-        $fileInput.click();
+    const dropzone = attachToolFileUpload({
+        dropZoneSelector:   '#fileDropZone',
+        fileInputSelector:  '#fileInput',
+        fileNameSelector:   '#fileNameDisplay',
+        fileErrorSelector:  '#fileErrorDisplay',
+        statusSelector:     '#status',
+        actionButtonSelector: '#downloadBtn',
+        allowedExtensions: ['dmp'],
+        readyMessage: 'File ready for conversion',
+        invalidMessage: 'Invalid file type. Please upload a .dmp file',
     });
-
-    // Prevent default drag behaviors
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        $fileDropZone[0].addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    // Highlight drop zone when item is dragged over it
-    ['dragenter', 'dragover'].forEach(eventName => {
-        $fileDropZone[0].addEventListener(eventName, function() {
-            $fileDropZone.addClass('drag-over');
-        }, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        $fileDropZone[0].addEventListener(eventName, function() {
-            $fileDropZone.removeClass('drag-over');
-        }, false);
-    });
-
-    // Handle dropped files
-    $fileDropZone[0].addEventListener('drop', function(e) {
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFile(files[0]);
-        }
-    }, false);
-
-    // Handle file selection
-    $fileInput.on('change', function(e) {
-        if (e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
-        }
-    });
-
-    function handleFile(file) {
-        // Reset states
-        $fileDropZone.removeClass('has-file invalid-file');
-        $fileNameDisplay.hide();
-        $fileErrorDisplay.hide();
-        selectedFile = null;
-        $downloadBtn.prop('disabled', true);
-        $statusEl.text('');
-
-        // Check file extension (case insensitive)
-        const fileName = file.name;
-        const fileExtension = fileName.split('.').pop().toLowerCase();
-        
-        if (fileExtension !== 'dmp') {
-            $fileDropZone.addClass('invalid-file');
-            $fileErrorDisplay.text('Invalid file type. Please upload a .dmp file').show();
-            return;
-        }
-
-        // File is valid
-        selectedFile = file;
-        $fileDropZone.addClass('has-file');
-        $fileNameDisplay.text(fileName).show();
-        $downloadBtn.prop('disabled', false);
-        $statusEl.text('File ready for conversion')
-                  .css({ 'color': 'green', 'font-weight': 'bold' });
-    }
 
     $('#downloadBtn').on('click', function() {
+        const selectedFile = dropzone.getFile();
         if (!selectedFile) {
-            $statusEl.text('Please select a DMP file first.')
-                      .css({ 'color': 'red', 'font-weight': 'bold' });
+            dropzone.setStatus('Please select a DMP file first.', 'red', 'bold');
             return;
         }
 

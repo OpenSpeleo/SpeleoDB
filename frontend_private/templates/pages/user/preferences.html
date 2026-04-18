@@ -104,49 +104,24 @@
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
 <script>
-    $(window).on('load', function() {
-        $("body").click(function() {
-            if ($("#modal_success").is(":visible")) {
-                $("#modal_success").hide();
+    $(window).on('load', function () {
+        attachEntityCrudForm({
+            formId: 'preference_form',
+            endpoint: "{% url 'api:v2:user-detail' %}",
+            method: 'PATCH',
+            successMessage: 'Preferences updated.',
+            serialize: function (payload) {
+                // FormData doesn't include unchecked checkboxes - add their boolean values explicitly.
+                $('#preference_form').find('input[type=checkbox]').each(function () {
+                    payload[$(this).attr('name')] = $(this).is(':checked');
+                });
+                return JSON.stringify(payload);
             }
-            if ($("#modal_error").is(":visible")) {
-                $("#modal_error").hide();
-            }
-         });
-
-        $('#btn_submit').click(function () {
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let preference_form = document.getElementById('preference_form');
-            var formData = new FormData(preference_form);
-
-            var checkbox = $("#preference_form").find("input[type=checkbox]");
-            $.each(checkbox, function(key, val) {
-                formData.append($(val).attr('name'), $(this).is(':checked'))
-
-            });
-
-            $.ajax({
-                url: "{% url 'api:v2:user-detail' %}",
-                method: "PATCH",
-                data: JSON.stringify(Object.fromEntries(formData)),
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-
-                },
-                success: function (data) {
-                    $("#modal_success").css('display', 'flex');  // show modal
-                },
-                error: function (data) {
-                    {% include 'snippets/ajax_error_modal_management.js' %}
-                }
-            });
-            return false; // prevent default
         });
-
     });
 </script>
 {% endblock inline_extra_js %}

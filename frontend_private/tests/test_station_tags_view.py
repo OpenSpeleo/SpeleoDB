@@ -108,7 +108,14 @@ class TestStationTagsView:
     def test_station_tags_page_javascript_functions(
         self, authenticated_client: Client, user: User
     ) -> None:
-        """Test that necessary JavaScript functions are present."""
+        """Test that the page wires up the shared tagged-entity CRUD module.
+
+        The load/edit/delete flow lives in
+        `frontend_private/static/private/js/forms/tagged_entity_list.js`; the
+        template is only responsible for pulling that module in and calling
+        `attachTaggedEntityList({...})` with the right options. The template
+        also keeps the color-picker wiring inline.
+        """
         url = reverse("private:station_tags")
         response = authenticated_client.get(url)
 
@@ -116,13 +123,19 @@ class TestStationTagsView:
 
         content = response.content.decode("utf-8")
 
-        # Check for JavaScript functions
-        assert "loadTags()" in content or "loadTags" in content
-        assert "renderTags()" in content or "renderTags" in content
-        assert "btn-create-tag" in content  # Button exists
-        assert "openEditModal" in content or "btn-edit-tag" in content
-        assert "openDeleteModal" in content or "btn-delete-tag" in content
+        # Shared CRUD module is loaded and invoked.
+        assert "forms/tagged_entity_list.js" in content
+        assert "attachTaggedEntityList" in content
+
+        # Template-specific callbacks / wiring still live inline.
+        assert "renderTags" in content  # renderList callback
+        assert "populateColorPicker" in content  # color-picker callback
         assert "selectColor" in content
+
+        # DOM hooks that the shared module binds to still exist.
+        assert "btn-create-tag" in content
+        assert "btn-edit-tag" in content
+        assert "btn-delete-tag" in content
 
     def test_station_tags_page_color_picker(
         self, authenticated_client: Client, user: User

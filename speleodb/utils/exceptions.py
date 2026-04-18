@@ -16,6 +16,19 @@ class BadRequestError(APIException):
     default_code = "bad_request"
 
 
+class MissingFieldError(APIException):
+    """Raised when a required request body field is absent.
+
+    Distinct from `ValueNotFoundError` (404), which is reserved for the case
+    where a lookup by key returns no row. Missing-body-field is a malformed
+    request, so it maps to 400.
+    """
+
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "A required field is missing from the request body."
+    default_code = "missing_field"
+
+
 class NotAuthorizedError(APIException):
     status_code = status.HTTP_401_UNAUTHORIZED
     default_detail = "You are not allowed to execute this action."

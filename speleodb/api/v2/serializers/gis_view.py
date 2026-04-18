@@ -180,12 +180,14 @@ class GISViewCreateUpdateSerializer(
             **validated_data,
         )
 
-        # Create project associations
+        # Create project associations. ``commit_sha`` may be missing or null in
+        # the validated payload; normalize to "" because the model field is
+        # `CharField(blank=True, default="")` (not nullable).
         for project_data in projects_data:
             GISProjectView.objects.create(
                 gis_view=gis_view,
                 project_id=project_data["project_id"],
-                commit_sha=project_data.get("commit_sha"),
+                commit_sha=project_data.get("commit_sha") or "",
                 use_latest=project_data.get("use_latest", False),
             )
 
@@ -208,12 +210,14 @@ class GISViewCreateUpdateSerializer(
             # Delete existing associations
             instance.project_views.all().delete()
 
-            # Create new associations
+            # Create new associations. ``commit_sha`` may be missing or null in
+            # the validated payload; normalize to "" because the model field is
+            # `CharField(blank=True, default="")` (not nullable).
             for project_data in projects_data:
                 GISProjectView.objects.create(
                     gis_view=instance,
                     project_id=project_data["project_id"],
-                    commit_sha=project_data.get("commit_sha"),
+                    commit_sha=project_data.get("commit_sha") or "",
                     use_latest=project_data.get("use_latest", False),
                 )
 

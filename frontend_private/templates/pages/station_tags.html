@@ -336,10 +336,11 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/tagged_entity_list.js' %}"></script>
 <script>
 $(document).ready(function() {
-    // Global variables
-    let allTags = [];
     const predefinedColors = [
         "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16",
         "#22c55e", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9",
@@ -347,38 +348,11 @@ $(document).ready(function() {
         "#ec4899", "#f43f5e", "#fb7185", "#fb923c", "#facc15"
     ];
 
-    // Utility: Get CSRF Token
-    function getCSRFToken() {
-        return $('input[name^=csrfmiddlewaretoken]').val();
-    }
-
-    // Utility: Escape HTML to prevent XSS
-    // escapeHtml() and safeCssColor() are provided by xss-helpers.js
-
-    // Load all tags
-    function loadTags() {
-        $.ajax({
-            url: '{% url "api:v2:station-tags" %}',
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (Array.isArray(response)) {
-                    allTags = response;
-                    renderTags();
-                } else {
-                    $("#modal_error_txt").text("Failed to load tags");
-                    $("#modal_error").css('display', 'flex');
-                }
-            },
-            error: function() {
-                $("#modal_error_txt").text("Error loading tags");
-                $("#modal_error").css('display', 'flex');
-            }
-        });
-    }
+    let allTags = [];  // mirror updated by renderList()
 
     // Render tags in table and cards
-    function renderTags() {
+    function renderTags(tags) {
+        allTags = tags;
         const tableBody = $('#tags-table-body');
         const cardsContainer = $('#tags-cards-container');
 
@@ -510,49 +484,13 @@ $(document).ready(function() {
     // Attach event handlers to dynamically created elements
     function attachEventHandlers() {
         $('.btn-edit-tag').off('click').on('click', function() {
-            const tagId = $(this).data('tag-id');
-            openEditModal(tagId);
+            listApi.openEditModal($(this).data('tag-id'));
         });
 
         $('.btn-delete-tag').off('click').on('click', function() {
-            const tagId = $(this).data('tag-id');
-            openDeleteModal(tagId);
+            listApi.openDeleteModal($(this).data('tag-id'));
         });
     }
-
-    // Open create tag modal
-    $('#btn-create-tag').click(function() {
-        $('#edit-tag-form')[0].reset();
-        $('#edit-tag-id').val('');
-        $('#edit-modal-title').text('Create New Tag');
-        $('#edit-submit-text').text('Create Tag');
-        
-        populateColorPicker(null);
-        
-        $('#edit-tag-modal').css('display', 'flex').removeClass('hidden');
-        return false;
-    });
-
-    // Open edit tag modal
-    function openEditModal(tagId) {
-        const tag = allTags.find(t => t.id === tagId);
-        if (!tag) return;
-
-        $('#edit-tag-id').val(tag.id);
-        $('#edit-tag-name').val(tag.name);
-        $('#edit-tag-color').val(tag.color);
-        $('#edit-modal-title').text('Edit Tag');
-        $('#edit-submit-text').text('Save Changes');
-        
-        populateColorPicker(tag.color);
-        
-        $('#edit-tag-modal').css('display', 'flex').removeClass('hidden');
-    }
-
-    // Close edit modal
-    $('.btn-close-edit-modal').click(function() {
-        $('#edit-tag-modal').css('display', 'none').addClass('hidden');
-    });
 
     // Populate color picker
     function populateColorPicker(selectedColor) {
@@ -606,137 +544,69 @@ $(document).ready(function() {
     // Use custom color from color picker (auto-triggered on change)
     window.useCustomColor = function() {
         const customColorInput = document.getElementById('custom-color-input');
-        if (!customColorInput) {
-            console.error('Custom color input not found');
-            return;
-        }
-        
+        if (!customColorInput) { return; }
         const customColor = customColorInput.value.toUpperCase();
-        console.log('Custom color selected:', customColor);
-        
         $('#edit-tag-color').val(customColor);
         $('.tag-color-picker-option').removeClass('selected');
     };
 
-    // Handle form submission (create or edit)
-    $('#edit-tag-form').submit(function(e) {
-        e.preventDefault();
+    const listApi = attachTaggedEntityList({
+        listEndpoint: "{% url 'api:v2:station-tags' %}",
+        detailEndpointBuilder: function (id) { return Urls['api:v2:station-tag-detail'](id); },
+        editMethod: 'PUT',
 
-        const tagId = $('#edit-tag-id').val();
-        const name = $('#edit-tag-name').val().trim();
-        const color = $('#edit-tag-color').val();
+        renderList: renderTags,
 
-        console.log('Submitting tag form:', { tagId, name, color });
+        entityLabel: 'tag',
+        loadFailedMessage: 'Error loading tags',
 
-        if (!name) {
-            $("#modal_error_txt").text("Please enter a tag name");
-            $("#modal_error").css('display', 'flex');
-            return false;
-        }
+        editFormSelector: '#edit-tag-form',
+        editIdInputSelector: '#edit-tag-id',
+        editModalSelector: '#edit-tag-modal',
+        editModalTitleSelector: '#edit-modal-title',
+        createModalTitle: 'Create New Tag',
+        editModalTitle: 'Edit Tag',
+        createBtnSelector: '#btn-create-tag',
+        closeEditModalSelectors: '.btn-close-edit-modal',
+        createSubmitLabelSelector: '#edit-submit-text',
+        createSubmitLabel: 'Create Tag',
+        editSubmitLabel: 'Save Changes',
 
-        if (!color) {
-            $("#modal_error_txt").text("Please select a color");
-            $("#modal_error").css('display', 'flex');
-            return false;
-        }
-        
-        // Validate hex color format
-        if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
-            $("#modal_error_txt").text("Invalid color format. Please use hex format (#RRGGBB)");
-            $("#modal_error").css('display', 'flex');
-            return false;
-        }
+        deleteModalSelector: '#delete-tag-modal',
+        deleteIdInputSelector: '#delete-tag-id',
+        confirmDeleteSelector: '#btn-confirm-delete',
+        closeDeleteModalSelectors: '.btn-close-delete-modal',
 
-        const url = tagId ? Urls['api:v2:station-tag-detail'](tagId) : "{% url 'api:v2:station-tags' %}";
-        const method = tagId ? 'PUT' : 'POST';
-
-        $.ajax({
-            url: url,
-            method: method,
-            data: JSON.stringify({ name: name, color: color }),
-            contentType: "application/json; charset=utf-8",
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
-            },
-            success: function(response) {
-                $("#modal_success_txt").text(tagId ? "Tag updated successfully!" : "Tag created successfully!");
-                $("#modal_success").css('display', 'flex');
-                
-                $('#edit-tag-modal').css('display', 'none').addClass('hidden');
-                
-                setTimeout(function() {
-                    loadTags();
-                }, 500);
-            },
-            error: function (data) {
-                {% include 'snippets/ajax_error_modal_management.js' %}
+        resetEditModal: function () {
+            populateColorPicker(null);
+        },
+        openEditModalForEntity: function (tag) {
+            $('#edit-tag-id').val(tag.id);
+            $('#edit-tag-name').val(tag.name);
+            $('#edit-tag-color').val(tag.color);
+            populateColorPicker(tag.color);
+        },
+        openDeleteModalForEntity: function (tag) {
+            $('#delete-tag-info').html(
+                '<div class="flex items-center gap-2 bg-slate-700/50 rounded-lg p-3">' +
+                '  <span class="color-swatch" style="background-color: ' + safeCssColor(tag.color) + '"></span>' +
+                '  <span class="text-slate-100 font-medium">' + escapeHtml(tag.name) + '</span>' +
+                '</div>'
+            );
+            $('#delete-tag-station-count').text(tag.station_count || 0);
+        },
+        collectEditPayload: function () {
+            const name = $('#edit-tag-name').val().trim();
+            const color = $('#edit-tag-color').val();
+            if (!name) { FormModals.showError('Please enter a tag name'); return null; }
+            if (!color) { FormModals.showError('Please select a color'); return null; }
+            if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+                FormModals.showError('Invalid color format. Please use hex format (#RRGGBB)');
+                return null;
             }
-        });
-
-        return false;
+            return { name: name, color: color };
+        },
     });
-
-    // Open delete confirmation modal
-    function openDeleteModal(tagId) {
-        const tag = allTags.find(t => t.id === tagId);
-        if (!tag) return;
-
-        $('#delete-tag-id').val(tag.id);
-        $('#delete-tag-info').html(`
-            <div class="flex items-center gap-2 bg-slate-700/50 rounded-lg p-3">
-                <span class="color-swatch" style="background-color: ${safeCssColor(tag.color)}"></span>
-                <span class="text-slate-100 font-medium">${escapeHtml(tag.name)}</span>
-            </div>
-        `);
-        $('#delete-tag-station-count').text(tag.station_count || 0);
-        
-        $('#delete-tag-modal').css('display', 'flex').removeClass('hidden');
-    }
-
-    // Close delete modal
-    $('.btn-close-delete-modal').click(function() {
-        $('#delete-tag-modal').css('display', 'none').addClass('hidden');
-    });
-
-    // Handle delete confirmation
-    $('#btn-confirm-delete').click(function() {
-        const tagId = $('#delete-tag-id').val();
-        if (!tagId) return;
-
-        $.ajax({
-            url: Urls['api:v2:station-tag-detail'](tagId),
-            method: 'DELETE',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
-            },
-            success: function() {
-                $("#modal_success_txt").text("Tag deleted successfully!");
-                $("#modal_success").css('display', 'flex');
-                
-                $('#delete-tag-modal').css('display', 'none').addClass('hidden');
-                
-                setTimeout(function() {
-                    loadTags();
-                }, 500);
-            },
-            error: function (data) {
-                {% include 'snippets/ajax_error_modal_management.js' %}
-            }
-        });
-    });
-
-    // Modal backdrop click handlers
-    $("body").click(function() {
-        if ($("#modal_success").is(":visible")) {
-            $("#modal_success").hide();
-        }
-        if ($("#modal_error").is(":visible")) {
-            $("#modal_error").hide();
-        }
-    });
-
-    // Load tags on page load
-    loadTags();
 });
 </script>
 {% endblock inline_extra_js %}

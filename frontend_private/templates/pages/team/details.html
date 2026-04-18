@@ -75,50 +75,17 @@
 
 {% if is_team_leader %}
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
 <script>
-
-    $(window).on('load', function() {
-
-        $("body").click(function() {
-            if ($("#modal_success").is(":visible")) {
-                $("#modal_success").hide();
-            }
-            if ($("#modal_error").is(":visible")) {
-                $("#modal_error").hide();
-            }
+    $(window).on('load', function () {
+        attachEntityCrudForm({
+            formId: 'team_details_form',
+            endpoint: "{% url 'api:v2:team-detail' id=team.id %}",
+            method: 'PUT',
+            successMessage: 'The team has been updated.'
         });
-
-        $('#btn_submit').click(function (e) {
-            e.preventDefault();
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let team_details_form = document.getElementById('team_details_form');
-            var formData = new FormData(team_details_form);
-
-            $.ajax({
-                url: "{% url 'api:v2:team-detail' id=team.id %}",
-                method: "PUT",
-                data: JSON.stringify(Object.fromEntries(formData)),
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-                },
-                success: function (data) {
-                    $("#modal_success_txt").html("The team your has been updated.");
-                    $("#modal_success").css('display', 'flex');
-                },
-                error: function (data) {
-                    {% include 'snippets/ajax_error_modal_management.js' %}
-                }
-            });
-            return false; // prevent default
-        });
-
     });
 </script>
 {% endblock inline_extra_js %}

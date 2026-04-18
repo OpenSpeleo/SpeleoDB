@@ -98,12 +98,14 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
 <script>
-    $(window).on('load', function() {
+    $(window).on('load', function () {
         let sensorIdCounter = 0;
 
-        // Add sensor functionality
-        $('#add_sensor_btn').click(function() {
+        $('#add_sensor_btn').click(function () {
             sensorIdCounter++;
             const sensorHtml = `
                 <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-slate-600 sensor-item" data-sensor-id="${sensorIdCounter}">
@@ -130,122 +132,41 @@
             $('#sensors_container').append(sensorHtml);
         });
 
-        // Remove sensor functionality
-        $(document).on('click', '.remove-sensor-btn', function() {
+        $(document).on('click', '.remove-sensor-btn', function () {
             $(this).closest('.sensor-item').remove();
         });
 
-        // Collect sensors data
         function collectSensors() {
             const sensors = [];
-            $('.sensor-item').each(function() {
+            $('.sensor-item').each(function () {
                 const name = $(this).find('.sensor-name').val().trim();
                 const notes = $(this).find('.sensor-notes').val().trim();
-                
-                if (name) { // Only add if name is provided
-                    sensors.push({
-                        name: name,
-                        notes: notes,
-                    });
+                if (name) {
+                    sensors.push({ name: name, notes: notes });
                 }
             });
             return sensors;
         }
 
-        // Form submission handler
-        $('#btn_submit').click(function (e) {
-            e.preventDefault();
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            // Get form data
-            const name = $('#name').val().trim();
-            const description = $('#description').val().trim();
-            const isActive = $('#is_active').is(':checked');
-
-            // Validation
-            if (!name) {
-                $("#modal_error_txt").html("Fleet name is required.");
-                $("#modal_error").css('display', 'flex');
-                return false;
-            }
-
-            // Collect sensors
-            const sensors = collectSensors();
-
-            // Prepare data object
-            const dataObject = {
-                name: name,
-                description: description
-            };
-
-            // Add sensors if any
-            if (sensors.length > 0) {
-                dataObject.sensors = sensors;
-            }
-
-            console.log('🚀 Creating sensor fleet:', dataObject);
-
-            // Get CSRF token
-            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
-
-            // REAL API CALL
-            $.ajax({
-                url: "{% url 'api:v2:sensor-fleets' %}",
-                method: 'POST',
-                data: JSON.stringify(dataObject),
-                contentType: 'application/json; charset=utf-8',
-                headers: {
-                    'X-CSRFToken': csrftoken
-                },
-                success: function(response) {
-                    console.log('✅ Fleet created successfully:', response);
-                    
-                    $("#modal_success_txt").html("The sensor fleet has been created successfully.");
-                    $("#modal_success").css('display', 'flex');
-
-                    window.setTimeout(function(){
-                        // Redirect to fleet details page
-                        window.location.href = Urls['private:sensor_fleet_details'](response.id);
-                    }, 2000);
-                },
-                error: function(xhr) {
-                    console.error('❌ Error creating fleet:', xhr);
-                    
-                    const response = xhr.responseJSON || {};
-                    let errorMsg = 'Failed to create sensor fleet.';
-                    
-                    // Extract specific error message
-                    if (response.errors) {
-                        if (response.errors.name) {
-                            errorMsg = response.errors.name[0];
-                        } else if (response.errors.sensors) {
-                            errorMsg = response.errors.sensors[0];
-                        } else if (response.errors.non_field_errors) {
-                            errorMsg = response.errors.non_field_errors[0];
-                        } else {
-                            // Get first error from any field
-                            const firstError = Object.values(response.errors)[0];
-                            errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
-                        }
-                    } else if (response.error) {
-                        errorMsg = response.error;
-                    }
-                    
-                    $("#modal_error_txt").text(errorMsg);
-                    $("#modal_error").css('display', 'flex');
+        attachEntityCrudForm({
+            formId: 'new_sensor_fleet_form',
+            endpoint: "{% url 'api:v2:sensor-fleets' %}",
+            method: 'POST',
+            successMessage: 'The sensor fleet has been created successfully.',
+            beforeSubmit: function (payload) {
+                if (!payload.name || !payload.name.trim()) {
+                    FormModals.showError('Fleet name is required.');
+                    return false;
                 }
-            });
-
-            return false; // prevent default
-        });
-
-        // Close modal handlers
-        $('#modal_error button, #modal_success button').click(function() {
-            $(this).closest('.fixed').fadeOut(200);
+                // Inline-row "sensors" aren't in the form - attach them explicitly.
+                const sensors = collectSensors();
+                if (sensors.length > 0) { payload.sensors = sensors; }
+                return true;
+            },
+            redirectFromResponse: function (response) {
+                return Urls['private:sensor_fleet_details'](response.id);
+            }
         });
     });
-
 </script>
 {% endblock inline_extra_js %}

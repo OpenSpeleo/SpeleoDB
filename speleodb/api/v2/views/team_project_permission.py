@@ -133,18 +133,16 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # Reactivate permission
+            # `reactivate` persists internally; no extra `save()` needed here.
             permission.reactivate(level=perm_data["level"])
 
         else:
-            # Now assign the role. Couldn't do it during object creation because
-            # of the use of `get_or_create`
+            # Fresh row from `get_or_create` — assign the level and persist.
             permission.level = perm_data["level"]
+            permission.save()
 
-        permission.save()
-
-        # Refresh the `modified_date` field
-        project.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        project.save(update_fields=["modified_date"])
 
         permission_serializer = ProjectTeamPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
@@ -191,10 +189,10 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             )
 
         permission.level = access_level
-        permission.save()
+        permission.save(update_fields=["level", "modified_date"])
 
-        # Refresh the `modified_date` field
-        project.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        project.save(update_fields=["modified_date"])
 
         permission_serializer = ProjectTeamPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
@@ -236,12 +234,11 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Deactivate the project permission
+        # `deactivate` persists internally; no explicit save() needed.
         permission.deactivate(deactivated_by=user)
-        permission.save()
 
-        # Refresh the `modified_date` field
-        project.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        project.save(update_fields=["modified_date"])
 
         project_serializer = ProjectSerializer(project, context={"user": user})
 

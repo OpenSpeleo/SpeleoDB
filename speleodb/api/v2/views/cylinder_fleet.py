@@ -51,6 +51,7 @@ from speleodb.gis.models import CylinderPressureCheck
 from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import BadRequestError
+from speleodb.utils.exceptions import MissingFieldError
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import UserNotActiveError
 from speleodb.utils.exceptions import UserNotFoundError
@@ -364,9 +365,7 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
                         raise ValueNotFoundError(f"Unknown key: {key}")
 
             except KeyError as e:
-                raise ValueNotFoundError(
-                    f"Attribute: `{key}` is missing. {data}"
-                ) from e
+                raise MissingFieldError(f"Attribute: `{key}` is missing. {data}") from e
 
         return perm_data
 
@@ -410,18 +409,19 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            # `reactivate` persists internally; no extra `save()` needed here.
             permission.reactivate(level=perm_data["level"])
 
         else:
+            # Fresh row from `get_or_create` — assign the level and persist.
             permission.level = perm_data["level"]
-
-        permission.save()
+            permission.save()
 
         permission_serializer = CylinderFleetUserPermissionSerializer(permission)
         fleet_serializer = self.get_serializer(fleet)
 
-        # Refresh the `modified_date` field
-        fleet.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        fleet.save(update_fields=["modified_date"])
 
         return SuccessResponse(
             {
@@ -433,15 +433,10 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
 
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         fleet = self.get_object()
-        user = self.get_user()
 
         perm_data = self._process_request_data(request=request, data=request.data)
-
-        if user == perm_data["user"]:
-            return ErrorResponse(
-                {"error": ("A user can not edit their own permission")},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Self-target is already caught by `_process_request_data` (raises
+        # NotAuthorizedError -> 401). No second guard here.
 
         target_user: User = perm_data["user"]
         try:
@@ -456,12 +451,13 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
             ) from e
 
         permission.level = perm_data["level"]
-        permission.save()
+        permission.save(update_fields=["level", "modified_date"])
 
         permission_serializer = CylinderFleetUserPermissionSerializer(permission)
         fleet_serializer = self.get_serializer(fleet)
 
-        fleet.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        fleet.save(update_fields=["modified_date"])
         return SuccessResponse(
             {
                 "fleet": fleet_serializer.data,
@@ -476,12 +472,8 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
         perm_data = self._process_request_data(
             request=request, data=request.data, skip_level=True
         )
-
-        if user == perm_data["user"]:
-            return ErrorResponse(
-                {"error": ("A user can not edit their own permission")},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Self-target is already caught by `_process_request_data` (raises
+        # NotAuthorizedError -> 401). No second guard here.
 
         target_user: User = perm_data["user"]
         try:
@@ -496,12 +488,13 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
                 f"A permission for this user: `{target_user}` does not exist."
             ) from e
 
+        # `deactivate` persists internally; no explicit save() needed.
         permission.deactivate(deactivated_by=user)
 
         fleet_serializer = self.get_serializer(fleet)
 
-        # Refresh the `modified_date` field
-        fleet.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        fleet.save(update_fields=["modified_date"])
 
         return SuccessResponse(
             {

@@ -68,8 +68,12 @@ class TeamRequestSerializer(serializers.Serializer[SurveyTeam]):
 
 
 class TeamRequestWithProjectLevelSerializer(TeamRequestSerializer):
+    # Teams cannot hold ADMIN level on a project. The DB enforces this via a
+    # CheckConstraint on TeamProjectPermission.level; excluding ADMIN here too
+    # prevents the serializer from accepting a value the DB will reject with
+    # IntegrityError (which would surface as an unhandled 500).
     level = serializers.ChoiceField(
-        choices=[name for _, name in PermissionLevel.choices]
+        choices=[name for _, name in PermissionLevel.choices_no_admin]
     )
 
     def validate_level(self, value: str) -> PermissionLevel:

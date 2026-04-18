@@ -835,6 +835,7 @@
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
+<script src="{% static 'private/js/forms/survey_table_tool.js' %}"></script>
 <script>
 $(document).ready(function() {
     const COLUMNS = ["station", "depth", "length", "azimuth", "left", "right", "up", "down", "flags", "comment"];
@@ -1151,271 +1152,67 @@ $(document).ready(function() {
         $(this).removeClass('invalid-date');
     });
 
-    function validateCell(value, column, isLastRow = false) {
-        const v = (value ?? '').trim();
-        
-        // Station must always be non-empty (any value accepted)
-        if (column === 'station') {
-            return v !== '';
-        }
-        
-        // Depth: must be non-empty, numeric, and >= 0
-        if (column === 'depth') {
-            if (v === '') return false;
-            const n = Number(v);
-            return !isNaN(n) && isFinite(n) && n >= 0;
-        }
-        
-        // Length: MUST be empty on last row, required and >= 0 for all other rows
-        if (column === 'length') {
-            if (isLastRow) return v === ''; // Must be empty on last row
-            if (v === '') return false;
-            const n = Number(v);
-            return !isNaN(n) && isFinite(n) && n >= 0;
-        }
-        
-        // Azimuth: MUST be empty on last row, required and in [0, 360) for all other rows
-        if (column === 'azimuth') {
-            if (isLastRow) return v === ''; // Must be empty on last row
-            if (v === '') return false;
-            const n = Number(v);
-            return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
-        }
-        
-        // Left, right, up, down: MUST be empty on last row, optional but if provided must be >= 0 for all other rows
-        if (['left', 'right', 'up', 'down'].includes(column)) {
-            if (isLastRow) return v === ''; // Must be empty on last row
-            if (v === '') return true;
-            const n = Number(v);
-            return !isNaN(n) && isFinite(n) && n >= 0;
-        }
-        
-        // Flags and comment: MUST be empty on last row, optional for all other rows
-        if (['flags', 'comment'].includes(column)) {
-            if (isLastRow) return v === ''; // Must be empty on last row
-            return true; // Always valid for non-last rows
-        }
-        
-        return true;
-    }
-
-    function addRow(values = [], idx) {
-        const index = idx ?? $tbody.children().length + 1;
-        const html = `
-<td>${index}</td>` + COLUMNS.map((col, j) => `
-<td contenteditable="true" data-col="${col}">${escapeHtml(values[j] ?? '')}</td>`).join('') + `
-<td class="actions">
-    <button class="trash" title="Delete row">🗑️</button>
-</td>`;
-        const $tr = $('<tr>').html(html);
-        $tbody.append($tr);
-        // listeners are delegated; no per-cell binding needed
-        // delete handler
-        $tr.find('.trash').on('click', function() {
-            $tr.remove();
-            refreshIndexes();
-            validateTable();
-        });
-    }
-
-    function refreshIndexes() {
-        $tbody.children('tr').each(function(i) {
-            $(this).children('td').first().text(i + 1);
-        });
-    }
-
-    function renderRows(rows) {
-        $tbody.empty();
-        rows.forEach((r, i) => addRow(r, i + 1));
-        refreshIndexes();
-        validateTable();
-    }
-
-    function parseClipboardText(text) {
-        if (!text) return [];
-        const lines = text.replace(/\r/g, '\n').split(/\n/).filter(l => l.trim());
-        const rows = lines.map(line => {
-            let parts = line.split('\t');
-            if (parts.length === 1) parts = line.split(',');
-            return parts.map(p => p.replace(/^\uFEFF/, '').trim());
-        });
-        if (rows.length > 0 && /station/i.test(rows[0][0])) rows.shift();
-        return rows;
-    }
-
-    $('#pasteExcelBtn').on('click', async function() {
-        try {
-            const text = await navigator.clipboard.readText();
-            const rows = parseClipboardText(text);
-            renderRows(rows);
-            $statusEl.text(`Imported ${rows.length} rows.`);
-        } catch {
-            $statusEl.text('Unable to read clipboard. Try Ctrl+V directly.');
-        }
-    });
-
-    function onCellInput(td) {
-        const $td = $(td);
-        const col = $td.data('col');
-        const $row = $td.parent();
-        const $allRows = $tbody.children('tr');
-        const isLastRow = $allRows.last().is($row);
-        const ok = validateCell($td.text(), col, isLastRow);
-        $td.toggleClass('invalid', !ok);
-        validateTable();
-    }
-
-    function validateTable() {
-        let allValid = true;
-        let lastRowErrors = [];
-        const $allRows = $tbody.children('tr');
-        const $lastRow = $allRows.last();
-        
-        $('#dataTable tbody td[data-col]').each(function() {
-            const $td = $(this);
-            const col = $td.data('col');
-            const $row = $td.parent();
-            const isLastRow = $lastRow.is($row);
-            const ok = validateCell($td.text(), col, isLastRow);
-            $td.toggleClass('invalid', !ok);
-            
-            if (!ok) {
-                allValid = false;
-                // Check if it's a last row error with data that should be empty
-                if (isLastRow && $td.text().trim() !== '' && col !== 'station' && col !== 'depth') {
-                    const fieldName = col.charAt(0).toUpperCase() + col.slice(1);
-                    if (!lastRowErrors.includes(fieldName)) {
-                        lastRowErrors.push(fieldName);
-                    }
-                }
+    const surveyTable = attachSurveyTableTool({
+        tableBodySelector: '#dataTable tbody',
+        dataTableSelector: '#dataTable',
+        statusSelector:    '#status',
+        addRowBtnSelector: '#addRowBtn',
+        clearBtnSelector:  '#clearBtn',
+        pasteBtnSelector:  '#pasteExcelBtn',
+        COLUMNS: COLUMNS,
+        lastRowAllowedColumns: ['station', 'depth'],
+        lastRowErrorMessage: function (remove) {
+            return 'Error: The last row should only have Station and Depth. Remove: ' + remove.join(', ') + '.';
+        },
+        validateCell: function (value, column, isLastRow) {
+            const v = (value ?? '').trim();
+            if (column === 'station') {
+                return v !== '';
             }
-        });
-        
-        // Create specific error message
-        let statusMessage = 'All cells valid.';
-        if (!allValid) {
-            if (lastRowErrors.length > 0) {
-                statusMessage = `Error: The last row should only have Station and Depth. Remove: ${lastRowErrors.join(', ')}.`;
-            } else {
-                statusMessage = 'Some cells are invalid.';
+            if (column === 'depth') {
+                if (v === '') return false;
+                const n = Number(v);
+                return !isNaN(n) && isFinite(n) && n >= 0;
             }
-        }
-        
-        $('#status').text(statusMessage)
-                    .css({ 'color': allValid ? 'green' : 'red', 'font-weight': 'bold' });
-        return allValid;
-    }
-
-    $('#addRowBtn').on('click', function() { 
-        addRow(); 
-        validateTable(); 
-    });
-    
-    $('#clearBtn').on('click', function() { 
-        $tbody.empty(); 
-        $statusEl.text('Cleared.'); 
-    });
-
-    // Navigation helpers for Excel-like Enter behavior
-    function getEditableTdFromTarget(target) {
-        if (!target) return null;
-        // If it's a text node, climb to its parent element first
-        let node = target.nodeType === 3 ? target.parentElement : target; // 3 = TEXT_NODE
-        if (!node) return null;
-        const $node = $(node);
-        const $td = $node.closest('td[data-col]');
-        return $td.length ? $td[0] : null;
-    }
-
-    function placeCaretAtEnd(el) {
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        range.collapse(false);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-    }
-
-    function focusCell(cell) {
-        if (!cell) return;
-        $(cell).focus();
-        placeCaretAtEnd(cell);
-    }
-
-    function moveToCellBelow(currentTd) {
-        const $currentTd = $(currentTd);
-        const $currentRow = $currentTd.parent();
-        const $currentRowCells = $currentRow.find('td[data-col]');
-        const colIndex = $currentRowCells.index($currentTd);
-        const $nextRow = $currentRow.next();
-        if ($nextRow.length) {
-            const $nextRowCells = $nextRow.find('td[data-col]');
-            focusCell($nextRowCells.eq(colIndex)[0] || $nextRowCells.last()[0]);
-        } else {
-            // Last row: blur to avoid inserting newlines
-            $currentTd.blur();
-            $('#dataTable').blur();
-            // Also clear selection
-            const sel = window.getSelection();
-            if (sel) sel.removeAllRanges();
-        }
-    }
-
-    // Prevent Enter from inserting line breaks; move to cell below instead
-    $tbody[0].addEventListener('keydown', function(e) {
-        if (e.key !== 'Enter') return;
-        const td = getEditableTdFromTarget(e.target);
-        if (!td) return;
-        e.preventDefault();
-        // Re-validate the whole table on commit-like action
-        validateTable();
-        moveToCellBelow(td);
-    }, true);
-
-    // Delegated input listener so ANY change in any cell revalidates the table
-    $tbody.on('input', 'td[data-col]', function(e) {
-        const td = getEditableTdFromTarget(e.target);
-        if (!td) return;
-        onCellInput(td);
-    });
-
-    // Some browsers fire beforeinput more consistently for contenteditable
-    $tbody[0].addEventListener('beforeinput', function(e) {
-        const td = getEditableTdFromTarget(e.target);
-        if (!td) return;
-        // Defer until after DOM mutation to read updated textContent
-        setTimeout(() => onCellInput(td), 0);
-    });
-
-    // Keyup fallback to ensure validation runs after typing
-    $tbody.on('keyup', 'td[data-col]', function(e) {
-        const td = getEditableTdFromTarget(e.target);
-        if (!td) return;
-        onCellInput(td);
-    });
-
-    // Also validate on blur to catch edits that don't emit input in some browsers
-    $tbody[0].addEventListener('blur', function(e) {
-        const td = getEditableTdFromTarget(e.target);
-        if (!td) return;
-        onCellInput(td);
-    }, true);
-
-    function tableToCsv() {
-        const rows = [];
-        $tbody.children('tr').each(function() {
-            const row = [];
-            $(this).find('td[data-col]').each(function() {
-                row.push($(this).text().trim());
+            if (column === 'length') {
+                if (isLastRow) return v === '';
+                if (v === '') return false;
+                const n = Number(v);
+                return !isNaN(n) && isFinite(n) && n >= 0;
+            }
+            if (column === 'azimuth') {
+                if (isLastRow) return v === '';
+                if (v === '') return false;
+                const n = Number(v);
+                return !isNaN(n) && isFinite(n) && n >= 0 && n < 360;
+            }
+            if (['left', 'right', 'up', 'down'].includes(column)) {
+                if (isLastRow) return v === '';
+                if (v === '') return true;
+                const n = Number(v);
+                return !isNaN(n) && isFinite(n) && n >= 0;
+            }
+            if (['flags', 'comment'].includes(column)) {
+                if (isLastRow) return v === '';
+                return true;
+            }
+            return true;
+        },
+        parseClipboardText: function (text) {
+            if (!text) return [];
+            const lines = text.replace(/\r/g, '\n').split(/\n/).filter(l => l.trim());
+            const rows = lines.map(line => {
+                let parts = line.split('\t');
+                if (parts.length === 1) parts = line.split(',');
+                return parts.map(p => p.replace(/^\uFEFF/, '').trim());
             });
-            rows.push(row);
-        });
-        return rows.map(r => r.map(cell => { 
-            if(cell.includes(',') || cell.includes('"') || cell.includes('\n')) 
-                return '"'+cell.replace(/"/g,'""')+'"'; 
-            return cell; 
-        }).join(',')).join('\n');
-    }
+            if (rows.length > 0 && /station/i.test(rows[0][0])) rows.shift();
+            return rows;
+        },
+    });
+
+    const renderRows = surveyTable.renderRows;
+    const validateTable = surveyTable.validateTable;
 
     $('#downloadBtn').on('click', function() {
         // Validate form fields first

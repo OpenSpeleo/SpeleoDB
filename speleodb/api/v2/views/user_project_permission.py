@@ -19,6 +19,7 @@ from speleodb.surveys.models import UserProjectPermission
 from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import BadRequestError
+from speleodb.utils.exceptions import MissingFieldError
 from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import UserNotActiveError
 from speleodb.utils.exceptions import UserNotFoundError
@@ -116,9 +117,7 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
                         raise ValueNotFoundError(f"Unknown key: {key}")
 
             except KeyError as e:
-                raise ValueNotFoundError(
-                    f"Attribute: `{key}` is missing. {data}"
-                ) from e
+                raise MissingFieldError(f"Attribute: `{key}` is missing. {data}") from e
 
         return perm_data
 
@@ -146,21 +145,19 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # Reactivate permission
+            # `reactivate` persists internally; no extra `save()` needed here.
             permission.reactivate(level=perm_data["level"])
 
         else:
-            # Now assign the role. Couldn't do it during object creation because
-            # of the use of `get_or_create`
+            # Fresh row from `get_or_create` — assign the level and persist.
             permission.level = perm_data["level"]
-
-        permission.save()
+            permission.save()
 
         permission_serializer = ProjectUserPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
 
-        # Refresh the `modified_date` field
-        project.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        project.save(update_fields=["modified_date"])
 
         return SuccessResponse(
             {
@@ -175,13 +172,8 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
         user = self.get_user()
 
         perm_data = self._process_request_data(request=request, data=request.data)
-
-        # Can't edit your own permission
-        if user == perm_data["user"]:
-            return ErrorResponse(
-                {"error": ("A user can not edit their own permission")},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Self-target is already caught by `_process_request_data` (raises
+        # NotAuthorizedError -> 401). No second guard here.
 
         target_user: User = perm_data["user"]
         try:
@@ -202,13 +194,13 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             )
 
         permission.level = perm_data["level"]
-        permission.save()
+        permission.save(update_fields=["level", "modified_date"])
 
         permission_serializer = ProjectUserPermissionSerializer(permission)
         project_serializer = ProjectSerializer(project, context={"user": user})
 
-        # Refresh the `modified_date` field
-        project.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        project.save(update_fields=["modified_date"])
 
         return SuccessResponse(
             {
@@ -224,13 +216,8 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
         perm_data = self._process_request_data(
             request=request, data=request.data, skip_level=True
         )
-
-        # Can't edit your own permission
-        if user == perm_data["user"]:
-            return ErrorResponse(
-                {"error": ("A user can not edit their own permission")},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Self-target is already caught by `_process_request_data` (raises
+        # NotAuthorizedError -> 401). No second guard here.
 
         target_user: User = perm_data["user"]
         try:
@@ -250,11 +237,12 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        # `deactivate` persists internally; no explicit save() needed.
         permission.deactivate(deactivated_by=user)
         project_serializer = ProjectSerializer(project, context={"user": user})
 
-        # Refresh the `modified_date` field
-        project.save()
+        # Refresh the `modified_date` field (single-column UPDATE).
+        project.save(update_fields=["modified_date"])
 
         return SuccessResponse(
             {
