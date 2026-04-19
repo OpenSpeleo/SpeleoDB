@@ -66,7 +66,7 @@ class GISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
 
         try:
             expires_in = int(request.query_params.get("expires_in", 3600))
-            expires_in = min(max(expires_in, 60), 86400)
+            expires_in = min(max(expires_in, 60), 24 * 60 * 60)
         except ValueError, TypeError:
             expires_in = 3600
 

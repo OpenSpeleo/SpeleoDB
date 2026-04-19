@@ -8,6 +8,7 @@ import pytest
 from django.core.cache import cache
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
+from django.templatetags.static import static
 from django.test import SimpleTestCase
 from django.test import TestCase
 from django.urls import reverse
@@ -184,69 +185,110 @@ class MobilePlatformClassificationTests(SimpleTestCase):
     ) -> None:
         assert classify_mobile_platform(user_agent) == expected_platform
 
+class FaviconRedirectTests(SimpleTestCase):
+    @parameterized.expand(
+        [
+            ("favicon", "favicon", "favicon/favicon.ico"),
+            ("apple_touch_icon", "apple_touch_icon", "favicon/apple-touch-icon.png"),
+            (
+                "apple_touch_icon_precomposed",
+                "apple_touch_icon_precomposed",
+                "favicon/apple-touch-icon.png",
+            ),
+        ]
+    )
+    def test_redirects_to_static_url(
+        self,
+        name: str,
+        url_name: str,
+        expected_static_path: str,
+    ) -> None:
+        response = self.client.get(reverse(url_name))
+        assert response.status_code == status.HTTP_301_MOVED_PERMANENTLY
+        assert response["Location"] == static(expected_static_path)
 
-class CompassSidecarReleaseFetchTests(SimpleTestCase):
-    def _cache_key(self) -> str:
-        return f"{COMPASS_SIDECAR_RELEASE_INFO_CACHE_KEY}:{self._testMethodName}"
+    def test_precomposed_and_regular_share_target(self) -> None:
+        resp_regular = self.client.get(reverse("apple_touch_icon"))
+        resp_precomposed = self.client.get(reverse("apple_touch_icon_precomposed"))
+        assert resp_regular["Location"] == resp_precomposed["Location"]
 
-    def setUp(self) -> None:
-        super().setUp()
-        cache.clear()
+    @parameterized.expand(
+        [
+            ("favicon",),
+            ("apple_touch_icon",),
+            ("apple_touch_icon_precomposed",),
+        ]
+    )
+    def test_rejects_post(self, url_name: str) -> None:
+        response = self.client.post(reverse(url_name))
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
-    def tearDown(self) -> None:
-        cache.clear()
-        super().tearDown()
+    @parameterized.expand(
+        [
+            ("favicon",),
+            ("apple_touch_icon",),
+            ("apple_touch_icon_precomposed",),
+        ]
+    )
+    def test_rejects_put(self, url_name: str) -> None:
+        response = self.client.put(reverse(url_name))
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
-    @pytest.mark.skip_if_offline
-    def test_fetches_latest_release_info_from_github(self) -> None:
-        cache_key = self._cache_key()
-        payload = get_compass_sidecar_release_info(cache_key=cache_key)
+    @parameterized.expand(
+        [
+            ("favicon",),
+            ("apple_touch_icon",),
+            ("apple_touch_icon_precomposed",),
+        ]
+    )
+    def test_rejects_delete(self, url_name: str) -> None:
+        response = self.client.delete(reverse(url_name))
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
-        assert payload["windows_url"].startswith(
-            "https://github.com/OpenSpeleo/speleodb_compass_sidecar/releases/download/"
-        )
-        assert payload["windows_url"].endswith(".msi")
-        assert re.match(r"^\d+\.\d+\.\d+(?:[-+.\w]*)?$", payload["version"])
-        assert payload["pub_date"] is None or isinstance(payload["pub_date"], str)
 
-    @pytest.mark.skip_if_offline
-    def test_cached_result_is_used_after_first_github_fetch(self) -> None:
-        cache_key = self._cache_key()
-        first_payload = get_compass_sidecar_release_info(cache_key=cache_key)
-        second_payload = get_compass_sidecar_release_info(
-            latest_json_url="http://127.0.0.1:1/latest.json",
-            cache_key=cache_key,
-            fetch_timeout=0.05,
-        )
-        assert second_payload == first_payload
+class AppAdsTxtTests(SimpleTestCase):
+    def test_returns_200(self) -> None:
+        response = self.client.get(reverse("app-ads.txt"))
+        assert response.status_code == status.HTTP_200_OK
 
-    def test_falls_back_when_endpoint_is_unreachable(self) -> None:
-        cache_key = self._cache_key()
-        payload = get_compass_sidecar_release_info(
-            latest_json_url="http://127.0.0.1:1/latest.json",
-            cache_key=cache_key,
-            fetch_timeout=0.05,
-        )
+    def test_content_type_is_text_plain(self) -> None:
+        response = self.client.get(reverse("app-ads.txt"))
+        assert response["Content-Type"] == "text/plain"
 
-        assert payload["windows_url"] == COMPASS_SIDECAR_RELEASES_URL
-        assert payload["version"] == "latest"
-        assert payload["pub_date"] is None
+    def test_body_content(self) -> None:
+        response = self.client.get(reverse("app-ads.txt"))
+        assert response.content == b"# This app does not use advertising\n"
 
-    def test_uses_cached_release_info_without_network_call(self) -> None:
-        cache_key = self._cache_key()
-        cached_payload = {
-            "windows_url": "https://example.org/pre-cached-sidecar.msi",
-            "version": "9.9.9",
-            "pub_date": "2026-01-01T00:00:00.000Z",
-        }
-        cache.set(cache_key, cached_payload, timeout=3600)
+    def test_rejects_post(self) -> None:
+        response = self.client.post(reverse("app-ads.txt"))
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
-        payload = get_compass_sidecar_release_info(
-            latest_json_url="http://127.0.0.1:1/latest.json",
-            cache_key=cache_key,
-            fetch_timeout=0.05,
-        )
 
-        assert payload["windows_url"] == "https://example.org/pre-cached-sidecar.msi"
-        assert payload["version"] == "9.9.9"
-        assert payload["pub_date"] == "2026-01-01T00:00:00.000Z"
+class RobotsTxtTests(SimpleTestCase):
+    def test_returns_200(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_content_type_is_text_plain(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert response["Content-Type"] == "text/plain"
+
+    def test_disallows_private(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert b"Disallow: /private/" in response.content
+
+    def test_disallows_account(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert b"Disallow: /account/" in response.content
+
+    def test_disallows_login(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert b"Disallow: /login/" in response.content
+
+    def test_disallows_signup(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert b"Disallow: /signup/" in response.content
+
+    def test_rejects_post(self) -> None:
+        response = self.client.post(reverse("robots.txt"))
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED

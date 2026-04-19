@@ -83,6 +83,19 @@ def apple_app_site_association(request: HttpRequest) -> JsonResponse:
     )
 
 
+@extend_schema(exclude=True)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def passkey_endpoints(request: HttpRequest) -> JsonResponse:
+    """FIDO Alliance passkey-endpoints discovery.
+
+    Returns an empty object while SpeleoDB does not yet support WebAuthn
+    passkeys.  Browsers / password managers probe this URL to discover
+    passkey enroll/manage pages; an empty response signals "not supported".
+    """
+    return JsonResponse({}, content_type="application/json")
+
+
 @permission_classes([AllowAny])
 def change_password(request: HttpRequest) -> HttpResponsePermanentRedirect:
     """Helps browser/password managers send users directly to change-password when

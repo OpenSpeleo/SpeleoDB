@@ -21,6 +21,9 @@ from frontend_public.views import PasswordResetView
 from frontend_public.views import PeoplePageView
 from frontend_public.views import PublicGISViewMapViewer
 from frontend_public.views import SignUpView
+from frontend_public.views import app_ads_txt
+from frontend_public.views import apple_touch_icon_redirect
+from frontend_public.views import favicon_redirect
 from frontend_public.views import robots_txt
 
 ArianeWebView = TemplateView.as_view(template_name="webviews/ariane.html")
@@ -36,12 +39,32 @@ urlpatterns = [
     # ------------------ SEO PAGES ------------------ #
     path(
         "robots.txt",
-        cache_page(86400)(robots_txt),
+        cache_page(24 * 60 * 60)(robots_txt),
         name="robots.txt",
     ),
     path(
+        "app-ads.txt",
+        cache_page(24 * 60 * 60)(app_ads_txt),
+        name="app-ads.txt",
+    ),
+    path(
+        "favicon.ico",
+        cache_page(24 * 60 * 60)(favicon_redirect),
+        name="favicon",
+    ),
+    path(
+        "apple-touch-icon.png",
+        cache_page(24 * 60 * 60)(apple_touch_icon_redirect),
+        name="apple_touch_icon",
+    ),
+    path(
+        "apple-touch-icon-precomposed.png",
+        cache_page(24 * 60 * 60)(apple_touch_icon_redirect),
+        name="apple_touch_icon_precomposed",
+    ),
+    path(
         "sitemap.xml",
-        cache_page(86400)(sitemap),
+        cache_page(24 * 60 * 60)(sitemap),
         {"sitemaps": sitemaps},
         name="sitemap.xml",
     ),
