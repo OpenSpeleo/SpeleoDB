@@ -188,16 +188,16 @@ wheels = [
 
 [[package]]
 name = "botocore"
-version = "1.42.83"
+version = "1.42.88"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jmespath" },
     { name = "python-dateutil" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4e/01/b46a3f8b6e9362258f78f1890db1a96d4ed73214d6a36420dc158dcfd221/botocore-1.42.83.tar.gz", hash = "sha256:34bc8cb64b17ac17f8901f073fe4fc9572a5cac9393a37b2b3ea372a83b87f4a", size = 15140337, upload-time = "2026-04-03T19:34:08.779Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/50/87966238f7aa3f7e5f87081185d5a407a95ede8b551e11bbe134ca3306dc/botocore-1.42.88.tar.gz", hash = "sha256:cbb59ee464662039b0c2c95a520cdf85b1e8ce00b72375ab9cd9f842cc001301", size = 15195331, upload-time = "2026-04-10T19:40:57.012Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a3/97/0d6f50822dc8c1df7f3eadb0bc6822fc0f98f02287c4efc7c7c88fde129a/botocore-1.42.83-py3-none-any.whl", hash = "sha256:ec0c3ecb3772936ed22a3bdda09883b34858933f71004686d460d829bab39d8e", size = 14818388, upload-time = "2026-04-03T19:34:03.333Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/46/ad14e41245adb8b0c83663ba13e822b68a0df08999dd250e75b0750fdf6c/botocore-1.42.88-py3-none-any.whl", hash = "sha256:032375b213305b6b81eedb269eaeefdf96f674620799bbf96117dca86052cc1a", size = 14876640, upload-time = "2026-04-10T19:40:53.663Z" },
 ]
 
 [[package]]
@@ -2515,7 +2515,7 @@ requires-dist = [
     { name = "argon2-cffi", specifier = "==25.1.0" },
     { name = "av", specifier = "==17.0.0" },
     { name = "boto3", specifier = "==1.42.78" },
-    { name = "botocore", specifier = "==1.42.83" },
+    { name = "botocore", specifier = "==1.42.88" },
     { name = "celery", specifier = "==5.6.3" },
     { name = "celery-types", marker = "extra == 'local'", specifier = "==0.26.0" },
     { name = "compass-lib", specifier = "==0.0.6" },
