@@ -13,8 +13,10 @@ from django.conf import settings
 from django.core.cache import cache
 from django.http import Http404
 from django.http.response import HttpResponse
+from django.http.response import HttpResponsePermanentRedirect
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.templatetags.static import static
 from django.views import View
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
@@ -199,6 +201,24 @@ Disallow: /login/
 Disallow: /private/
 Disallow: /signup/
 """,
+        content_type="text/plain",
+    )
+
+
+@require_GET
+def favicon_redirect(request: HttpRequest) -> HttpResponsePermanentRedirect:
+    return HttpResponsePermanentRedirect(static("favicon/favicon.ico"))
+
+
+@require_GET
+def apple_touch_icon_redirect(request: HttpRequest) -> HttpResponsePermanentRedirect:
+    return HttpResponsePermanentRedirect(static("favicon/apple-touch-icon.png"))
+
+
+@require_GET
+def app_ads_txt(request: HttpRequest) -> HttpResponse:
+    return HttpResponse(
+        "# This app does not use advertising\n",
         content_type="text/plain",
     )
 

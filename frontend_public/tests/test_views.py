@@ -8,6 +8,7 @@ import pytest
 from django.core.cache import cache
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
+from django.templatetags.static import static
 from django.test import SimpleTestCase
 from django.test import TestCase
 from django.urls import reverse
@@ -250,3 +251,112 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
         assert payload["windows_url"] == "https://example.org/pre-cached-sidecar.msi"
         assert payload["version"] == "9.9.9"
         assert payload["pub_date"] == "2026-01-01T00:00:00.000Z"
+
+
+class FaviconRedirectTests(SimpleTestCase):
+    @parameterized.expand(
+        [
+            ("favicon", "favicon", "favicon/favicon.ico"),
+            ("apple_touch_icon", "apple_touch_icon", "favicon/apple-touch-icon.png"),
+            (
+                "apple_touch_icon_precomposed",
+                "apple_touch_icon_precomposed",
+                "favicon/apple-touch-icon.png",
+            ),
+        ]
+    )
+    def test_redirects_to_static_url(
+        self,
+        name: str,
+        url_name: str,
+        expected_static_path: str,
+    ) -> None:
+        response = self.client.get(reverse(url_name))
+        assert response.status_code == status.HTTP_301_MOVED_PERMANENTLY
+        assert response["Location"] == static(expected_static_path)
+
+    def test_precomposed_and_regular_share_target(self) -> None:
+        resp_regular = self.client.get(reverse("apple_touch_icon"))
+        resp_precomposed = self.client.get(reverse("apple_touch_icon_precomposed"))
+        assert resp_regular["Location"] == resp_precomposed["Location"]
+
+    @parameterized.expand(
+        [
+            ("favicon",),
+            ("apple_touch_icon",),
+            ("apple_touch_icon_precomposed",),
+        ]
+    )
+    def test_rejects_post(self, url_name: str) -> None:
+        response = self.client.post(reverse(url_name))
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+    @parameterized.expand(
+        [
+            ("favicon",),
+            ("apple_touch_icon",),
+            ("apple_touch_icon_precomposed",),
+        ]
+    )
+    def test_rejects_put(self, url_name: str) -> None:
+        response = self.client.put(reverse(url_name))
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+    @parameterized.expand(
+        [
+            ("favicon",),
+            ("apple_touch_icon",),
+            ("apple_touch_icon_precomposed",),
+        ]
+    )
+    def test_rejects_delete(self, url_name: str) -> None:
+        response = self.client.delete(reverse(url_name))
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+
+class AppAdsTxtTests(SimpleTestCase):
+    def test_returns_200(self) -> None:
+        response = self.client.get(reverse("app-ads.txt"))
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_content_type_is_text_plain(self) -> None:
+        response = self.client.get(reverse("app-ads.txt"))
+        assert response["Content-Type"] == "text/plain"
+
+    def test_body_content(self) -> None:
+        response = self.client.get(reverse("app-ads.txt"))
+        assert response.content == b"# This app does not use advertising\n"
+
+    def test_rejects_post(self) -> None:
+        response = self.client.post(reverse("app-ads.txt"))
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+
+class RobotsTxtTests(SimpleTestCase):
+    def test_returns_200(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_content_type_is_text_plain(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert response["Content-Type"] == "text/plain"
+
+    def test_disallows_private(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert b"Disallow: /private/" in response.content
+
+    def test_disallows_account(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert b"Disallow: /account/" in response.content
+
+    def test_disallows_login(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert b"Disallow: /login/" in response.content
+
+    def test_disallows_signup(self) -> None:
+        response = self.client.get(reverse("robots.txt"))
+        assert b"Disallow: /signup/" in response.content
+
+    def test_rejects_post(self) -> None:
+        response = self.client.post(reverse("robots.txt"))
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
