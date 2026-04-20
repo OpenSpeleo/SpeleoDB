@@ -105,7 +105,7 @@ class UserAdminBase(ExportMixin, auth_admin.UserAdmin):  # type: ignore[type-arg
         ),
     )
 
-    resource_class = UserImportExportResource
+    resource_class = UserImportExportResource  # type: ignore[assignment]
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         return request.user.is_superuser

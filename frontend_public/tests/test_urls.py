@@ -12,6 +12,12 @@ from django.urls import reverse
 @pytest.mark.parametrize(
     ("name", "path", "kwargs"),
     [
+        # SEO / browser-probed root files
+        ("robots.txt", "robots.txt", None),
+        ("app-ads.txt", "app-ads.txt", None),
+        ("favicon", "favicon.ico", None),
+        ("apple_touch_icon", "apple-touch-icon.png", None),
+        ("apple_touch_icon_precomposed", "apple-touch-icon-precomposed.png", None),
         # General routes
         ("home", "", None),
         ("download", "download/", None),

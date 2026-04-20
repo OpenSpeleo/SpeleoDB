@@ -24,6 +24,12 @@
         "decorators": ""
     },
     {
+        "url": "/.well-known/passkey-endpoints",
+        "module": "well_known.views.passkey_endpoints",
+        "name": "well_known:passkey-endpoints",
+        "decorators": ""
+    },
+    {
         "url": "/400/",
         "module": "django.views.defaults.bad_request",
         "name": "errors:400_page",
@@ -1788,6 +1794,24 @@
         "decorators": ""
     },
     {
+        "url": "/app-ads.txt",
+        "module": "frontend_public.views.app_ads_txt",
+        "name": "app-ads.txt",
+        "decorators": ""
+    },
+    {
+        "url": "/apple-touch-icon-precomposed.png",
+        "module": "frontend_public.views.apple_touch_icon_redirect",
+        "name": "apple_touch_icon_precomposed",
+        "decorators": ""
+    },
+    {
+        "url": "/apple-touch-icon.png",
+        "module": "frontend_public.views.apple_touch_icon_redirect",
+        "name": "apple_touch_icon",
+        "decorators": ""
+    },
+    {
         "url": "/changelog/",
         "module": "django.views.generic.base.TemplateView",
         "name": "changelog",
@@ -1803,6 +1827,12 @@
         "url": "/download/mobile/",
         "module": "frontend_public.views.AdaptiveDownloadRedirectView",
         "name": "download_redirect",
+        "decorators": ""
+    },
+    {
+        "url": "/favicon.ico",
+        "module": "frontend_public.views.favicon_redirect",
+        "name": "favicon",
         "decorators": ""
     },
     {
