@@ -45,14 +45,14 @@ dependencies = [
     "fastkml[lxml]==1.4.0",  # https://github.com/cleder/fastkml
     "geojson==3.2.0",        # https://github.com/jazzband/geojson
     "gpxpy==1.6.2",          # https://github.com/tkrajina/gpxpy
-    "jsonschema-rs==0.45.0", # https://github.com/Stranger6667/jsonschema
+    "jsonschema-rs==0.46.0", # https://github.com/Stranger6667/jsonschema
     "orjson==3.11.8",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
     # ------------------------------------------------------------------------------
-    "mnemo-lib==0.0.7",       # https://github.com/OpenSpeleo/pytool_mnemo_lib
-    "compass-lib==0.0.6",     # https://github.com/OpenSpeleo/pytool_compass_lib
-    "openspeleo-lib==0.0.15", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
+    "mnemo-lib==0.0.8",       # https://github.com/OpenSpeleo/pytool_mnemo_lib
+    "compass-lib==0.0.7",     # https://github.com/OpenSpeleo/pytool_compass_lib
+    "openspeleo-lib==0.0.16", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 
     # Git Management
     # ------------------------------------------------------------------------------
@@ -82,7 +82,7 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.42.83", # https://github.com/boto/botocore
+    "botocore==1.42.88", # https://github.com/boto/botocore
     "boto3==1.42.78",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
@@ -107,7 +107,7 @@ local = [
     # ------------------------------------------------------------------------------
     "deepdiff>=9.0.0,<10.0", # https://github.com/seperman/deepdiff
     "factory-boy==3.3.3",    # https://github.com/FactoryBoy/factory_boy
-    "mypy==1.19.1",          # https://github.com/python/mypy
+    "mypy==1.20.0",          # https://github.com/python/mypy
     "parameterized==0.9.0",  # https://github.com/wolever/parameterized
     "pytest-sugar==1.1.1",   # https://github.com/Frozenball/pytest-sugar
     "pytest==9.0.3",         # https://github.com/pytest-dev/pytest
@@ -118,7 +118,7 @@ local = [
     "django-stubs[compatible-mypy]==6.0.2",               # https://github.com/typeddjango/django-stubs
     "celery-types==0.26.0",                               # https://github.com/sbdchd/celery-types
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
-    "types-pytz==2026.1.1.20260402",                      # https://github.com/python/typeshed
+    "types-pytz==2026.1.1.20260408",                      # https://github.com/python/typeshed
 
     # Django Testing
     # ------------------------------------------------------------------------------
@@ -127,7 +127,7 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.15.9",     # https://github.com/astral-sh/ruff
+    "ruff==0.15.10",     # https://github.com/astral-sh/ruff
     "coverage==7.13.5", # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",   # https://github.com/Riverside-Healthcare/djLint
     "prek==0.3.8",      # https://github.com/j178/prek
