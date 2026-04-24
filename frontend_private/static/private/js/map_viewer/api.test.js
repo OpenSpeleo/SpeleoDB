@@ -6,12 +6,30 @@ vi.mock('./utils.js', () => ({
     },
 }));
 
-function mockFetchResponse(data, { ok = true, status = 200 } = {}) {
+function mockFetchResponse(
+    data,
+    {
+        ok = true,
+        status = 200,
+        headers = { 'content-type': 'application/json' },
+        statusText = '',
+        text,
+    } = {}
+) {
     return vi.fn(() =>
         Promise.resolve({
             ok,
             status,
+            statusText,
+            headers: {
+                get: name => headers[name.toLowerCase()] || headers[name] || null,
+            },
             json: () => Promise.resolve(data),
+            text: () => Promise.resolve(
+                text !== undefined
+                    ? text
+                    : (typeof data === 'string' ? data : JSON.stringify(data) || '')
+            ),
         })
     );
 }
@@ -129,6 +147,23 @@ describe('API module', () => {
             const result = await API.getAllProjects();
             expect(result).toEqual(responseData);
         });
+
+        it('returns null when a successful JSON response has an empty body', async () => {
+            globalThis.fetch = vi.fn(() =>
+                Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    headers: {
+                        get: () => 'application/json',
+                    },
+                    json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+                    text: () => Promise.resolve(''),
+                })
+            );
+
+            const result = await API.getAllProjects();
+            expect(result).toBeNull();
+        });
     });
 
     describe('error handling', () => {
@@ -170,6 +205,20 @@ describe('API module', () => {
             globalThis.fetch = mockFetchResponse({ foo: 'bar' }, { ok: false, status: 500 });
 
             await expect(API.getAllProjects()).rejects.toThrow('API request failed');
+        });
+
+        it('uses plain-text error bodies when JSON is unavailable', async () => {
+            globalThis.fetch = mockFetchResponse('Proxy exploded', {
+                ok: false,
+                status: 502,
+                headers: { 'content-type': 'text/plain' },
+            });
+
+            await expect(API.getAllProjects()).rejects.toMatchObject({
+                message: 'Proxy exploded',
+                status: 502,
+                data: 'Proxy exploded',
+            });
         });
 
         it('rejects when fetch itself throws (network error)', async () => {
@@ -430,6 +479,35 @@ describe('API module', () => {
             expect(url).toContain('api:v2:experiment-records');
             expect(url).toContain('st-1');
             expect(url).toContain('exp-1');
+        });
+
+        it('createExperimentRecord posts JSON to experiment-records URL', async () => {
+            const payload = { field: 'value' };
+            await API.createExperimentRecord('st-1', 'exp-1', payload);
+            const [url, config] = fetch.mock.calls[0];
+            expect(url).toContain('api:v2:experiment-records');
+            expect(url).toContain('st-1');
+            expect(url).toContain('exp-1');
+            expect(config.method).toBe('POST');
+            expect(JSON.parse(config.body)).toEqual(payload);
+        });
+
+        it('updateExperimentRecord sends PUT to experiment-records-detail URL', async () => {
+            const payload = { field: 'updated' };
+            await API.updateExperimentRecord('record-1', payload);
+            const [url, config] = fetch.mock.calls[0];
+            expect(url).toContain('api:v2:experiment-records-detail');
+            expect(url).toContain('record-1');
+            expect(config.method).toBe('PUT');
+            expect(JSON.parse(config.body)).toEqual(payload);
+        });
+
+        it('deleteExperimentRecord calls experiment-records-detail with DELETE', async () => {
+            await API.deleteExperimentRecord('record-1');
+            const [url, config] = fetch.mock.calls[0];
+            expect(url).toContain('api:v2:experiment-records-detail');
+            expect(url).toContain('record-1');
+            expect(config.method).toBe('DELETE');
         });
     });
 

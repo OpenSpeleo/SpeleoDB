@@ -194,12 +194,20 @@ class BaseAccessLevel(permissions.BasePermission):
             # Experiment Models
             # -----------------------------------------------------------------
             case ExperimentRecord():
-                # Call on the `Experiment` underlying object
-                return self.has_object_permission(
+                # Record mutations are station-scoped. A caller must still be
+                # able to see the owning station, but the edit/delete level is
+                # determined by the related experiment permission.
+                station_perm = SDB_ReadAccess().has_object_permission(
+                    request,
+                    view,
+                    obj.station,
+                )
+                experiment_perm = self.has_object_permission(
                     request,
                     view,
                     obj.experiment,
                 )
+                return station_perm and experiment_perm
 
             # SensorFleet Models
             # -----------------------------------------------------------------

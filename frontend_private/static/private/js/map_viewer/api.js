@@ -1,5 +1,52 @@
 import { Utils } from './utils.js';
 
+const parseResponseBody = async response => {
+    const contentType = response.headers?.get?.('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+        try {
+            return await response.json();
+        } catch {
+            return null;
+        }
+    }
+
+    if (typeof response.text === 'function') {
+        const text = await response.text();
+        if (!text) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(text);
+        } catch {
+            return text;
+        }
+    }
+
+    if (typeof response.json === 'function') {
+        try {
+            return await response.json();
+        } catch {
+            return null;
+        }
+    }
+
+    return null;
+};
+
+const getErrorMessage = (response, data) => {
+    if (data && typeof data === 'object') {
+        return data.message || data.error || data.detail || response.statusText || 'API request failed';
+    }
+
+    if (typeof data === 'string' && data.trim()) {
+        return data;
+    }
+
+    return response.statusText || 'API request failed';
+};
+
 const apiRequest = async (url, method = 'GET', body = null, isFormData = false) => {
     const headers = {
         'X-CSRFToken': Utils.getCSRFToken()
@@ -26,10 +73,10 @@ const apiRequest = async (url, method = 'GET', body = null, isFormData = false) 
         return { ok: true, status: 204 };
     }
 
-    const data = await response.json();
+    const data = await parseResponseBody(response);
 
     if (!response.ok) {
-        const error = new Error(data.message || data.error || data.detail || 'API request failed');
+        const error = new Error(getErrorMessage(response, data));
         error.data = data;
         error.status = response.status;
         throw error;
@@ -131,6 +178,15 @@ export const API = {
 
     getExperimentData: (stationId, experimentId) =>
         apiRequest(Urls['api:v2:experiment-records'](stationId, experimentId)),
+
+    createExperimentRecord: (stationId, experimentId, recordData) =>
+        apiRequest(Urls['api:v2:experiment-records'](stationId, experimentId), 'POST', recordData),
+
+    updateExperimentRecord: (recordId, recordData) =>
+        apiRequest(Urls['api:v2:experiment-records-detail'](recordId), 'PUT', recordData),
+
+    deleteExperimentRecord: (recordId) =>
+        apiRequest(Urls['api:v2:experiment-records-detail'](recordId), 'DELETE'),
 
     // Resources
     getStationResources: (stationId) =>

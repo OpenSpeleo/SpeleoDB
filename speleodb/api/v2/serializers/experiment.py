@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any
 from typing import ClassVar
 
+from django.utils.dateparse import parse_date
+from django.utils.dateparse import parse_datetime
 from drf_spectacular.utils import extend_schema_field
 from geojson import Feature  # type: ignore[attr-defined]
 from geojson import Point  # type: ignore[attr-defined]
@@ -18,6 +21,7 @@ from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models.experiment import ExperimentFieldDefinition
+from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.users.models import User
 from speleodb.utils.sanitize import sanitize_text
@@ -65,6 +69,46 @@ class ExperimentFieldsField(DRFField):  # type: ignore[type-arg]
         return value
 
 
+class ExperimentListSerializer(serializers.ListSerializer):  # type: ignore[type-arg]
+    """Eagerly load per-user permission levels for all experiments in a batch.
+
+    ``ExperimentSerializer.can_write`` / ``can_delete`` falls back to a
+    per-object ``ExperimentUserPermission`` query when
+    ``experiment_levels_by_id`` is missing from context. That's fine for
+    detail endpoints (one query per response), but any list-shaped use
+    without manual pre-loading would N+1.
+
+    This subclass detects that case and resolves it to a single
+    ``filter(experiment_id__in=...)`` round trip before delegating to
+    the child serializer. When the view already populated the context map
+    (e.g. ``ExperimentApiView.get`` builds it for free during its existing
+    ``ExperimentUserPermission`` iteration), the eager load is skipped
+    and zero extra queries run.
+    """
+
+    def to_representation(self, data: Any) -> Any:
+        if self.child is None:
+            return super().to_representation(data)
+        ctx = self.child.context
+        if "experiment_levels_by_id" not in ctx:
+            request = ctx.get("request")
+            if request is not None and request.user.is_authenticated:
+                experiments = list(data)
+                experiment_ids = [exp.id for exp in experiments]
+                if experiment_ids:
+                    ctx["experiment_levels_by_id"] = dict(
+                        ExperimentUserPermission.objects.filter(
+                            user=request.user,
+                            experiment_id__in=experiment_ids,
+                            is_active=True,
+                        ).values_list("experiment_id", "level")
+                    )
+                else:
+                    ctx["experiment_levels_by_id"] = {}
+                data = experiments
+        return super().to_representation(data)
+
+
 class ExperimentSerializer(
     SanitizedFieldsMixin, serializers.ModelSerializer[Experiment]
 ):
@@ -75,15 +119,58 @@ class ExperimentSerializer(
     # Use custom field that accepts both list (API) and dict (internal)
     experiment_fields = ExperimentFieldsField(required=False, allow_null=True)
 
+    # Effective per-user permission flags. Computed from the authenticated
+    # caller's ExperimentUserPermission level so the frontend can mirror the
+    # backend's gating contract without re-implementing permission logic.
+    can_write = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+
     class Meta:
         model = Experiment
         fields = "__all__"
+        list_serializer_class = ExperimentListSerializer
         read_only_fields = [
             "id",
             "created_by",
             "creation_date",
             "modified_date",
         ]
+
+    def _user_permission_level(self, obj: Experiment) -> int | None:
+        """
+        Return the authenticated caller's permission level on ``obj``.
+
+        Fast path: views that already iterate ``ExperimentUserPermission``
+        can pass an ``experiment_levels_by_id`` map via context to avoid
+        a per-object query (used by the list endpoint).
+
+        Fallback: a single ``filter().first()`` for detail endpoints (no N+1
+        because detail returns one object per response).
+        """
+        levels_by_id = self.context.get("experiment_levels_by_id")
+        if isinstance(levels_by_id, dict):
+            cached = levels_by_id.get(obj.id)
+            if cached is not None:
+                return int(cached)
+
+        request = self.context.get("request")
+        if request is None or not request.user.is_authenticated:
+            return None
+
+        perm = ExperimentUserPermission.objects.filter(
+            user=request.user, experiment=obj, is_active=True
+        ).first()
+        return perm.level if perm is not None else None
+
+    @extend_schema_field({"type": "boolean"})
+    def get_can_write(self, obj: Experiment) -> bool:
+        level = self._user_permission_level(obj)
+        return level is not None and level >= PermissionLevel.READ_AND_WRITE
+
+    @extend_schema_field({"type": "boolean"})
+    def get_can_delete(self, obj: Experiment) -> bool:
+        level = self._user_permission_level(obj)
+        return level is not None and level >= PermissionLevel.ADMIN
 
     def to_internal_value(self, data: dict[str, Any]) -> dict[str, Any]:
         """Convert incoming list format to dict format before validation."""
@@ -551,13 +638,121 @@ class ExperimentRecordSerializer(serializers.ModelSerializer[ExperimentRecord]):
         ]
 
     def validate_data(self, value: dict[str, Any]) -> dict[str, Any]:
-        """Sanitize string values inside the experiment data JSON."""
-        if isinstance(value, dict):
-            return {
-                k: sanitize_text(v) if isinstance(v, str) else v
-                for k, v in value.items()
-            }
+        """Defer JSON sanitization until schema-aware validation runs."""
         return value
+
+    def _get_record_field_type(self, field_definition: dict[str, Any]) -> Any:
+        field_type = field_definition.get("type")
+        if isinstance(field_type, FieldType):
+            return field_type.value
+        return field_type
+
+    def _is_blank_record_value(self, value: Any) -> bool:
+        return value is None or value == ""
+
+    def _sanitize_record_value(
+        self, *, field_definition: dict[str, Any], value: Any
+    ) -> Any:
+        if not isinstance(value, str):
+            return value
+        if self._get_record_field_type(field_definition) == FieldType.TEXT.value:
+            return sanitize_text(value)
+        return value
+
+    def _validate_record_value(
+        self,
+        *,
+        field_id: str,
+        field_definition: dict[str, Any],
+        value: Any,
+    ) -> str | None:
+        field_name = str(field_definition.get("name") or field_id)
+        field_type = self._get_record_field_type(field_definition)
+
+        if self._is_blank_record_value(value):
+            if field_definition.get("required"):
+                return f"Field '{field_name}' is required."
+            return None
+
+        if field_type == FieldType.TEXT.value:
+            if not isinstance(value, str):
+                return f"Field '{field_name}' must be a string."
+            return None
+
+        if field_type == FieldType.NUMBER.value:
+            if isinstance(value, bool) or not isinstance(value, int | float):
+                return f"Field '{field_name}' must be a number."
+            if not math.isfinite(float(value)):
+                return f"Field '{field_name}' must be a finite number."
+            return None
+
+        if field_type == FieldType.BOOLEAN.value:
+            if not isinstance(value, bool):
+                return f"Field '{field_name}' must be a boolean."
+            return None
+
+        if field_type == FieldType.DATE.value:
+            if not isinstance(value, str):
+                return f"Field '{field_name}' must be an ISO date string."
+            if parse_date(value) is None and parse_datetime(value) is None:
+                return f"Field '{field_name}' must be a valid date."
+            return None
+
+        if field_type == FieldType.SELECT.value:
+            if not isinstance(value, str):
+                return f"Field '{field_name}' must be a string."
+            options = field_definition.get("options") or []
+            if value not in options:
+                return f"Field '{field_name}' must match one of the configured options."
+            return None
+
+        return None
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        """Reject any ``data`` key that isn't defined on the target experiment.
+
+        ``experiment.experiment_fields`` always includes the mandatory
+        MEASUREMENT_DATE / SUBMITTER_EMAIL UUIDs plus any custom fields
+        declared on the experiment. Keys outside that set are either client
+        bugs or malicious payloads; silently storing them would leak garbage
+        into the JSON blob forever.
+        """
+        experiment = attrs.get("experiment") or (
+            self.instance.experiment if self.instance is not None else None
+        )
+        new_data = attrs.get("data")
+
+        if experiment is not None and isinstance(new_data, dict):
+            field_definitions = experiment.experiment_fields or {}
+            valid_keys = set(field_definitions.keys())
+            errors: list[str] = []
+            sanitized_data = dict(new_data)
+            unknown = sorted(set(new_data.keys()) - valid_keys)
+            if unknown:
+                errors.append(
+                    f"Unknown field UUID(s): {', '.join(unknown)}. "
+                    "Keys must match the experiment's defined fields."
+                )
+
+            for field_id, field_definition in field_definitions.items():
+                error = self._validate_record_value(
+                    field_id=field_id,
+                    field_definition=field_definition,
+                    value=new_data.get(field_id),
+                )
+                if error is not None:
+                    errors.append(error)
+                elif field_id in sanitized_data:
+                    sanitized_data[field_id] = self._sanitize_record_value(
+                        field_definition=field_definition,
+                        value=sanitized_data[field_id],
+                    )
+
+            if errors:
+                raise serializers.ValidationError({"data": errors})
+            attrs["data"] = sanitized_data
+
+        return attrs
 
 
 class ExperimentRecordGISSerializer(serializers.Serializer[ExperimentRecord]):

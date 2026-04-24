@@ -92,7 +92,7 @@ class PersonPhotoStorage(BaseS3Storage):
     """
 
     location = "media/people/photos"
-    default_acl = None  # No ACL - bucket policy handles public access
+    default_acl: str | None = None  # No ACL - bucket policy handles public access
     querystring_auth = False  # No signed URLs - relies on bucket policy
 
 

@@ -90,6 +90,24 @@ should use `Utils.escapeHtml` from `utils.js`.
 
 See `docs/xss-protection.md` for the full rationale and patterns.
 
+### Stable `data-*` hooks
+
+Some `data-*` attributes are queried by runtime JS, tests, or both
+(e.g. `data-experiment-readonly-notice`, `data-experiment-action`,
+`data-modal-close`). Treat them as stable DOM hooks, not styling hooks.
+
+- **Runtime JS and tests** may query them via `querySelector`,
+  `querySelectorAll`, or `closest`.
+- **CSS** must NOT take a dependency on them. Style with classes
+  instead.
+- **Removing or renaming** a `data-*` test hook is a coordinated
+  change: every caller (runtime code and every spec that queries it)
+  must be updated in the same commit. Treat it like a public API rename.
+
+When introducing a new test-stable attribute, add a JSDoc-style comment
+above the rendering function that documents the contract. See
+`renderReadOnlyExperimentNotice` in `experiments.js` for the pattern.
+
 ---
 
 ## Python / Backend

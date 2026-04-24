@@ -8,8 +8,11 @@ import uuid
 from typing import TYPE_CHECKING
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.test import APIRequestFactory
 
 from speleodb.api.v2.serializers import ExperimentSerializer
 from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
@@ -2556,3 +2559,240 @@ class TestExperimentFieldEdgeCases(BaseAPITestCase):
         field_names = [f["name"] for f in response_data["experiment_fields"]]
         assert "Edited Field" in field_names
         assert "Brand New Field" in field_names
+
+
+@pytest.mark.django_db
+class TestExperimentPermissionFlagsOnList(BaseAPITestCase):
+    """ExperimentSerializer exposes per-user can_write / can_delete on the
+    list endpoint so the frontend mirrors the backend's gating contract."""
+
+    def _fetch_experiment(self, experiment_id: uuid.UUID) -> dict[str, Any]:
+        response = self.client.get(
+            reverse("api:v2:experiments"), headers={"authorization": self.auth}
+        )
+        assert response.status_code == status.HTTP_200_OK, response.data
+        for exp in response.json():
+            if exp["id"] == str(experiment_id):
+                return dict(exp)
+        pytest.fail(f"Experiment {experiment_id} not found in list response")
+
+    def test_read_only_user_gets_false_for_both_flags(self) -> None:
+        experiment = ExperimentFactory.create(created_by=self.user.email)
+        UserExperimentPermissionFactory.create(
+            user=self.user, experiment=experiment, level=PermissionLevel.READ_ONLY
+        )
+
+        data = self._fetch_experiment(experiment.id)
+        assert data["can_write"] is False
+        assert data["can_delete"] is False
+
+    def test_write_user_gets_can_write_true_can_delete_false(self) -> None:
+        experiment = ExperimentFactory.create(created_by=self.user.email)
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        data = self._fetch_experiment(experiment.id)
+        assert data["can_write"] is True
+        assert data["can_delete"] is False
+
+    def test_admin_user_gets_both_flags_true(self) -> None:
+        experiment = ExperimentFactory.create(created_by=self.user.email)
+        UserExperimentPermissionFactory.create(
+            user=self.user, experiment=experiment, level=PermissionLevel.ADMIN
+        )
+
+        data = self._fetch_experiment(experiment.id)
+        assert data["can_write"] is True
+        assert data["can_delete"] is True
+
+    def test_list_flags_stay_bound_to_each_experiment(self) -> None:
+        read_only_experiment = ExperimentFactory.create(created_by=self.user.email)
+        admin_experiment = ExperimentFactory.create(created_by=self.user.email)
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=read_only_experiment,
+            level=PermissionLevel.READ_ONLY,
+        )
+        UserExperimentPermissionFactory.create(
+            user=self.user, experiment=admin_experiment, level=PermissionLevel.ADMIN
+        )
+
+        response = self.client.get(
+            reverse("api:v2:experiments"), headers={"authorization": self.auth}
+        )
+        assert response.status_code == status.HTTP_200_OK, response.data
+
+        by_id = {exp["id"]: exp for exp in response.json()}
+        assert by_id[str(read_only_experiment.id)]["can_write"] is False
+        assert by_id[str(read_only_experiment.id)]["can_delete"] is False
+        assert by_id[str(admin_experiment.id)]["can_write"] is True
+        assert by_id[str(admin_experiment.id)]["can_delete"] is True
+
+
+@pytest.mark.django_db
+class TestExperimentPermissionFlagsOnDetail(BaseAPITestCase):
+    """The detail endpoint also exposes can_write / can_delete via the
+    same serializer, exercising the fallback query path."""
+
+    def _detail_for(self, experiment: Experiment) -> dict[str, Any]:
+        response = self.client.get(
+            reverse("api:v2:experiment-detail", kwargs={"id": experiment.id}),
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_200_OK, response.data
+        return dict(response.json())
+
+    def test_read_only_on_detail(self) -> None:
+        experiment = ExperimentFactory.create(created_by=self.user.email)
+        UserExperimentPermissionFactory.create(
+            user=self.user, experiment=experiment, level=PermissionLevel.READ_ONLY
+        )
+
+        data = self._detail_for(experiment)
+        assert data["can_write"] is False
+        assert data["can_delete"] is False
+
+    def test_write_on_detail(self) -> None:
+        experiment = ExperimentFactory.create(created_by=self.user.email)
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=experiment,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        data = self._detail_for(experiment)
+        assert data["can_write"] is True
+        assert data["can_delete"] is False
+
+    def test_admin_on_detail(self) -> None:
+        experiment = ExperimentFactory.create(created_by=self.user.email)
+        UserExperimentPermissionFactory.create(
+            user=self.user, experiment=experiment, level=PermissionLevel.ADMIN
+        )
+
+        data = self._detail_for(experiment)
+        assert data["can_write"] is True
+        assert data["can_delete"] is True
+
+
+@pytest.mark.django_db
+class TestExperimentListSerializerN1Protection(BaseAPITestCase):
+    """``ExperimentListSerializer`` must auto-eager-load per-user permission
+    levels for any list-shaped use, even if the caller forgot to populate
+    ``experiment_levels_by_id`` in context. This protects future endpoints
+    using ``ExperimentSerializer(experiments, many=True)`` from N+1.
+    """
+
+    BATCH_SIZE = 5
+
+    def _build_batch(self) -> list[Experiment]:
+        experiments: list[Experiment] = []
+        for index in range(self.BATCH_SIZE):
+            experiment = ExperimentFactory.create(
+                name=f"Experiment {index}",
+                created_by=self.user.email,
+            )
+            level = PermissionLevel.READ_AND_WRITE
+            if index == 0:
+                level = PermissionLevel.READ_ONLY
+            elif index == self.BATCH_SIZE - 1:
+                level = PermissionLevel.ADMIN
+            UserExperimentPermissionFactory.create(
+                user=self.user, experiment=experiment, level=level
+            )
+            experiments.append(experiment)
+        return experiments
+
+    def _request_for(self) -> Any:
+        request = APIRequestFactory().get("/")
+        request.user = self.user
+        return request
+
+    def _count_perm_queries(self, ctx: CaptureQueriesContext) -> int:
+        """Number of executed queries that hit the experiment-permission table."""
+        return sum(
+            1
+            for query in ctx.captured_queries
+            if "gis_experimentuserpermission" in query["sql"].lower()
+        )
+
+    def test_eager_loads_levels_when_context_unset(self) -> None:
+        """Without a pre-built ``experiment_levels_by_id``, the ListSerializer
+        must issue exactly one query against ``ExperimentUserPermission`` to
+        cover the whole batch. An N+1 regression would yield BATCH_SIZE."""
+        experiments = self._build_batch()
+        request = self._request_for()
+
+        serializer = ExperimentSerializer(
+            experiments, many=True, context={"request": request}
+        )
+
+        with CaptureQueriesContext(connection) as ctx:
+            data = serializer.data
+            # Force evaluation of every entry's per-user fields
+            for entry in data:
+                _ = entry["can_write"], entry["can_delete"]
+
+        assert self._count_perm_queries(ctx) == 1, (
+            "Expected exactly one ExperimentUserPermission query for the "
+            f"batch of {self.BATCH_SIZE}, got {self._count_perm_queries(ctx)}"
+        )
+
+    def test_skips_eager_load_when_context_already_populated(self) -> None:
+        """When the caller (e.g. ``ExperimentApiView.get``) already supplies
+        ``experiment_levels_by_id``, the ListSerializer must NOT run the
+        eager-load query. Pins the existing view's optimization."""
+        experiments = self._build_batch()
+        request = self._request_for()
+        levels_map = {
+            exp.id: PermissionLevel.READ_AND_WRITE.value for exp in experiments
+        }
+
+        serializer = ExperimentSerializer(
+            experiments,
+            many=True,
+            context={"request": request, "experiment_levels_by_id": levels_map},
+        )
+
+        with CaptureQueriesContext(connection) as ctx:
+            data = serializer.data
+            for entry in data:
+                _ = entry["can_write"], entry["can_delete"]
+
+        assert self._count_perm_queries(ctx) == 0, (
+            "Expected zero ExperimentUserPermission queries when context "
+            f"already has the levels map, got {self._count_perm_queries(ctx)}"
+        )
+        # All flags should reflect the supplied levels (READ_AND_WRITE).
+        for entry in data:
+            assert entry["can_write"] is True
+            assert entry["can_delete"] is False
+
+    def test_eager_load_correctness_matches_per_object_path(self) -> None:
+        """The eager-loaded path must yield the same can_write / can_delete
+        as the view-driven path for READ_ONLY / READ_AND_WRITE / ADMIN."""
+        experiments = self._build_batch()
+        request = self._request_for()
+
+        # Eager-loaded: no levels_by_id in context
+        eager_data = ExperimentSerializer(
+            experiments, many=True, context={"request": request}
+        ).data
+        eager_by_id = {entry["id"]: entry for entry in eager_data}
+
+        # Detail / fallback path: serialize each individually
+        for experiment in experiments:
+            detail = ExperimentSerializer(experiment, context={"request": request}).data
+            assert eager_by_id[detail["id"]]["can_write"] == detail["can_write"]
+            assert eager_by_id[detail["id"]]["can_delete"] == detail["can_delete"]
+
+        # Spot-check the spread of permission levels survives both paths.
+        first_id = str(experiments[0].id)  # READ_ONLY
+        last_id = str(experiments[-1].id)  # ADMIN
+        assert eager_by_id[first_id]["can_write"] is False
+        assert eager_by_id[first_id]["can_delete"] is False
+        assert eager_by_id[last_id]["can_write"] is True
+        assert eager_by_id[last_id]["can_delete"] is True

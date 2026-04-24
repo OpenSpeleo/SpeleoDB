@@ -32,6 +32,10 @@ from speleodb.api.v2.serializers.surface_network import (
 )
 from speleodb.api.v2.serializers.team import SurveyTeamSerializer
 from speleodb.api.v2.serializers.user import UserSerializer
+from speleodb.api.v2.tests.factories import ExperimentFactory
+from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
+from speleodb.gis.models import ExperimentRecord
+from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 if TYPE_CHECKING:
@@ -178,33 +182,94 @@ class TestHTMLStrippingPerField:
 
 @pytest.mark.django_db
 class TestExperimentRecordDataSanitization:
-    """Test that ExperimentRecordSerializer.validate_data sanitizes JSON strings."""
+    """Test schema-aware sanitization for experiment record JSON values."""
 
-    def test_script_tag_in_json_value_stripped(self) -> None:
-        ser = ExperimentRecordSerializer()
-        data: dict[str, Any] = {
-            "field-uuid-1": '<script>alert("xss")</script>value',
-            "field-uuid-2": "clean value",
-            "field-uuid-3": 42,
+    TEXT_FIELD_UUID = "11111111-1111-1111-1111-111111111111"
+    SELECT_FIELD_UUID = "22222222-2222-2222-2222-222222222222"
+
+    def _build_record_serializer(
+        self,
+        *,
+        text_value: str,
+        select_value: str | None = None,
+    ) -> ExperimentRecordSerializer:
+        experiment_fields: dict[str, dict[str, Any]] = {
+            MandatoryFieldUuid.MEASUREMENT_DATE.value: {
+                "name": "Measurement Date",
+                "type": "date",
+                "required": True,
+                "order": 0,
+            },
+            MandatoryFieldUuid.SUBMITTER_EMAIL.value: {
+                "name": "Submitter Email",
+                "type": "text",
+                "required": True,
+                "order": 1,
+            },
+            self.TEXT_FIELD_UUID: {
+                "name": "Notes",
+                "type": "text",
+                "required": False,
+                "order": 2,
+            },
         }
-        result = ser.validate_data(data)
-        assert "<script>" not in result["field-uuid-1"]
-        assert result["field-uuid-2"] == "clean value"
-        assert result["field-uuid-3"] == data["field-uuid-3"]
+        payload: dict[str, Any] = {
+            MandatoryFieldUuid.MEASUREMENT_DATE.value: "2025-01-01",
+            MandatoryFieldUuid.SUBMITTER_EMAIL.value: "submitter@example.com",
+            self.TEXT_FIELD_UUID: text_value,
+        }
 
-    def test_img_tag_in_json_value_stripped(self) -> None:
-        ser = ExperimentRecordSerializer()
-        data: dict[str, Any] = {"field-1": "<img>text"}
-        result = ser.validate_data(data)
-        assert "<img" not in result["field-1"]
-        assert "text" in result["field-1"]
+        if select_value is not None:
+            experiment_fields[self.SELECT_FIELD_UUID] = {
+                "name": "Quality",
+                "type": "select",
+                "required": False,
+                "order": 3,
+                "options": ["Très bon", "bad"],
+            }
+            payload[self.SELECT_FIELD_UUID] = select_value
 
-    def test_bold_tag_in_json_value_stripped(self) -> None:
-        ser = ExperimentRecordSerializer()
-        data: dict[str, Any] = {"field-1": "<b>val</b>"}
-        result = ser.validate_data(data)
-        assert "<" not in result["field-1"]
-        assert "val" in result["field-1"]
+        experiment = ExperimentFactory.create(
+            created_by="owner@example.com",
+            experiment_fields=experiment_fields,
+        )
+        station = SubSurfaceStationFactory.create()
+        record = ExperimentRecord.objects.create(
+            station=station,
+            experiment=experiment,
+            data={MandatoryFieldUuid.SUBMITTER_EMAIL.value: "submitter@example.com"},
+        )
+        return ExperimentRecordSerializer(
+            record,
+            data={
+                "experiment": experiment.id,
+                "station": station.id,
+                "data": payload,
+            },
+        )
+
+    def test_script_tag_in_text_value_is_stripped_on_save(self) -> None:
+        serializer = self._build_record_serializer(
+            text_value='<script>alert("xss")</script>value'
+        )
+        assert serializer.is_valid(), serializer.errors
+        updated_record = serializer.save()
+        assert "<script>" not in updated_record.data[self.TEXT_FIELD_UUID]
+        assert updated_record.data[self.TEXT_FIELD_UUID] == "value"
+
+    def test_img_tag_in_text_value_is_stripped_on_save(self) -> None:
+        serializer = self._build_record_serializer(text_value="<img>text")
+        assert serializer.is_valid(), serializer.errors
+        updated_record = serializer.save()
+        assert "<img" not in updated_record.data[self.TEXT_FIELD_UUID]
+        assert updated_record.data[self.TEXT_FIELD_UUID] == "text"
+
+    def test_bold_tag_in_text_value_is_stripped_on_save(self) -> None:
+        serializer = self._build_record_serializer(text_value="<b>val</b>")
+        assert serializer.is_valid(), serializer.errors
+        updated_record = serializer.save()
+        assert "<" not in updated_record.data[self.TEXT_FIELD_UUID]
+        assert updated_record.data[self.TEXT_FIELD_UUID] == "val"
 
     def test_non_string_values_untouched(self) -> None:
         ser = ExperimentRecordSerializer()
@@ -219,3 +284,267 @@ class TestExperimentRecordDataSanitization:
     def test_non_dict_returns_as_is(self) -> None:
         ser = ExperimentRecordSerializer()
         assert ser.validate_data("not a dict") == "not a dict"  # type: ignore[arg-type, comparison-overlap]
+
+    def test_update_sanitizes_strings_and_preserves_native_types(self) -> None:
+        expected_float = 12.5
+        text_field = "aaaaaaaa-1111-1111-1111-111111111111"
+        num_field = "bbbbbbbb-2222-2222-2222-222222222222"
+        bool_field = "cccccccc-3333-3333-3333-333333333333"
+        select_field = "dddddddd-4444-4444-4444-444444444444"
+        select_value = "Très bon"
+        experiment = ExperimentFactory.create(
+            created_by="owner@example.com",
+            experiment_fields={
+                MandatoryFieldUuid.MEASUREMENT_DATE.value: {
+                    "name": "Measurement Date",
+                    "type": "date",
+                    "required": True,
+                    "order": 0,
+                },
+                MandatoryFieldUuid.SUBMITTER_EMAIL.value: {
+                    "name": "Submitter Email",
+                    "type": "text",
+                    "required": True,
+                    "order": 1,
+                },
+                text_field: {
+                    "name": "Notes",
+                    "type": "text",
+                    "required": False,
+                    "order": 2,
+                },
+                num_field: {
+                    "name": "Ph",
+                    "type": "number",
+                    "required": False,
+                    "order": 3,
+                },
+                bool_field: {
+                    "name": "Confirmed",
+                    "type": "boolean",
+                    "required": False,
+                    "order": 4,
+                },
+                select_field: {
+                    "name": "Quality",
+                    "type": "select",
+                    "required": False,
+                    "order": 5,
+                    "options": [select_value, "bad"],
+                },
+            },
+        )
+        station = SubSurfaceStationFactory.create()
+        record = ExperimentRecord.objects.create(
+            station=station,
+            experiment=experiment,
+            data={MandatoryFieldUuid.SUBMITTER_EMAIL.value: "submitter@example.com"},
+        )
+        serializer = ExperimentRecordSerializer(
+            record,
+            data={
+                "experiment": experiment.id,
+                "station": station.id,
+                "data": {
+                    MandatoryFieldUuid.MEASUREMENT_DATE.value: "2025-01-01",
+                    MandatoryFieldUuid.SUBMITTER_EMAIL.value: "submitter@example.com",
+                    text_field: "<b>unsafe</b>",
+                    num_field: expected_float,
+                    bool_field: False,
+                    select_field: select_value,
+                },
+            },
+        )
+
+        assert serializer.is_valid(), serializer.errors
+        updated_record = serializer.save()
+
+        assert "<" not in updated_record.data[text_field]
+        assert updated_record.data[num_field] == expected_float
+        assert updated_record.data[bool_field] is False
+        assert updated_record.data[select_field] == select_value
+
+    def test_unknown_key_in_data_is_rejected_at_serializer_level(self) -> None:
+        """Serializer-level strict-key validation: an unknown UUID in the
+        payload must fail ``is_valid()`` with a clear ``data`` error."""
+        declared_uuid = "aaaaaaaa-1111-2222-3333-444444444444"
+        experiment = ExperimentFactory.create(
+            created_by="owner@example.com",
+            experiment_fields={
+                MandatoryFieldUuid.MEASUREMENT_DATE.value: {
+                    "name": "Measurement Date",
+                    "type": "date",
+                    "required": True,
+                    "order": 0,
+                },
+                MandatoryFieldUuid.SUBMITTER_EMAIL.value: {
+                    "name": "Submitter Email",
+                    "type": "text",
+                    "required": True,
+                    "order": 1,
+                },
+                declared_uuid: {
+                    "name": "Notes",
+                    "type": "text",
+                    "required": False,
+                    "order": 2,
+                },
+            },
+        )
+        station = SubSurfaceStationFactory.create()
+        serializer = ExperimentRecordSerializer(
+            data={
+                "experiment": experiment.id,
+                "station": station.id,
+                "data": {
+                    MandatoryFieldUuid.MEASUREMENT_DATE.value: "2025-01-01",
+                    MandatoryFieldUuid.SUBMITTER_EMAIL.value: "s@example.com",
+                    "undeclared-uuid": "junk",
+                },
+            }
+        )
+        assert not serializer.is_valid()
+        assert "data" in serializer.errors
+        assert "Unknown field UUID" in str(serializer.errors["data"])
+
+    def test_required_record_field_missing_is_rejected_at_serializer_level(
+        self,
+    ) -> None:
+        required_uuid = "eeeeeeee-1111-2222-3333-444444444444"
+        experiment = ExperimentFactory.create(
+            created_by="owner@example.com",
+            experiment_fields={
+                MandatoryFieldUuid.MEASUREMENT_DATE.value: {
+                    "name": "Measurement Date",
+                    "type": "date",
+                    "required": True,
+                    "order": 0,
+                },
+                MandatoryFieldUuid.SUBMITTER_EMAIL.value: {
+                    "name": "Submitter Email",
+                    "type": "text",
+                    "required": True,
+                    "order": 1,
+                },
+                required_uuid: {
+                    "name": "Sample Label",
+                    "type": "text",
+                    "required": True,
+                    "order": 2,
+                },
+            },
+        )
+        station = SubSurfaceStationFactory.create()
+
+        serializer = ExperimentRecordSerializer(
+            data={
+                "experiment": experiment.id,
+                "station": station.id,
+                "data": {
+                    MandatoryFieldUuid.MEASUREMENT_DATE.value: "2025-01-01",
+                    MandatoryFieldUuid.SUBMITTER_EMAIL.value: "s@example.com",
+                },
+            }
+        )
+
+        assert not serializer.is_valid()
+        assert "data" in serializer.errors
+        assert "Sample Label" in str(serializer.errors["data"])
+
+    def test_invalid_record_types_are_rejected_at_serializer_level(self) -> None:
+        number_uuid = "11111111-aaaa-bbbb-cccc-222222222222"
+        boolean_uuid = "33333333-aaaa-bbbb-cccc-444444444444"
+        select_uuid = "55555555-aaaa-bbbb-cccc-666666666666"
+        experiment = ExperimentFactory.create(
+            created_by="owner@example.com",
+            experiment_fields={
+                MandatoryFieldUuid.MEASUREMENT_DATE.value: {
+                    "name": "Measurement Date",
+                    "type": "date",
+                    "required": True,
+                    "order": 0,
+                },
+                MandatoryFieldUuid.SUBMITTER_EMAIL.value: {
+                    "name": "Submitter Email",
+                    "type": "text",
+                    "required": True,
+                    "order": 1,
+                },
+                number_uuid: {
+                    "name": "Ph",
+                    "type": "number",
+                    "required": False,
+                    "order": 2,
+                },
+                boolean_uuid: {
+                    "name": "Confirmed",
+                    "type": "boolean",
+                    "required": False,
+                    "order": 3,
+                },
+                select_uuid: {
+                    "name": "Quality",
+                    "type": "select",
+                    "required": False,
+                    "order": 4,
+                    "options": ["good", "bad"],
+                },
+            },
+        )
+        station = SubSurfaceStationFactory.create()
+
+        serializer = ExperimentRecordSerializer(
+            data={
+                "experiment": experiment.id,
+                "station": station.id,
+                "data": {
+                    MandatoryFieldUuid.MEASUREMENT_DATE.value: 20250101,
+                    MandatoryFieldUuid.SUBMITTER_EMAIL.value: "s@example.com",
+                    number_uuid: "12.5",
+                    boolean_uuid: "false",
+                    select_uuid: "excellent",
+                },
+            }
+        )
+
+        assert not serializer.is_valid()
+        assert "data" in serializer.errors
+        assert "Measurement Date" in str(serializer.errors["data"])
+        assert "must be a number" in str(serializer.errors["data"])
+        assert "must be a boolean" in str(serializer.errors["data"])
+        assert "configured options" in str(serializer.errors["data"])
+
+    def test_validate_record_value_select_with_missing_options_is_safe(self) -> None:
+        """The model layer rejects select fields without ``options`` (Pydantic
+        validation in ``ExperimentFieldDefinition``), so malformed
+        definitions cannot reach the validator through the normal API path.
+
+        This pins the validator's defensive ``options or []`` branch in
+        case the model invariant is ever loosened: the validator must
+        reject every value rather than crash on missing-key access.
+        """
+        ser = ExperimentRecordSerializer()
+
+        for missing_options_def in (
+            {"name": "Misconfigured", "type": "select", "required": False},
+            {
+                "name": "Misconfigured",
+                "type": "select",
+                "required": False,
+                "options": None,
+            },
+            {
+                "name": "Misconfigured",
+                "type": "select",
+                "required": False,
+                "options": [],
+            },
+        ):
+            error = ser._validate_record_value(  # noqa: SLF001
+                field_id="select-no-opts",
+                field_definition=missing_options_def,
+                value="anything",
+            )
+            assert error is not None
+            assert "Misconfigured" in error
+            assert "configured options" in error

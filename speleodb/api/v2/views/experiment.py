@@ -158,14 +158,25 @@ class ExperimentApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 
-        experiments = [
-            perm.experiment
-            for perm in ExperimentUserPermission.objects.filter(
-                user=user, is_active=True
-            ).prefetch_related("experiment")
-            if perm.experiment.is_active
-        ]
-        serializer = self.get_serializer(experiments, many=True)
+        # Build the list of active experiments AND a per-id level map in a
+        # single DB round trip. The map is passed to the serializer via
+        # context so can_write/can_delete resolve without per-object queries
+        # (avoids N+1 inside SerializerMethodField). Swap the previous
+        # prefetch_related("experiment") for select_related: it's a
+        # many-to-one FK, so a JOIN is the correct load strategy.
+        experiments: list[Experiment] = []
+        levels_by_id: dict[Any, int] = {}
+        for perm in ExperimentUserPermission.objects.filter(
+            user=user, is_active=True
+        ).select_related("experiment"):
+            experiment = perm.experiment
+            if experiment.is_active:
+                levels_by_id[experiment.id] = perm.level
+                experiments.append(experiment)
+
+        context = self.get_serializer_context()
+        context["experiment_levels_by_id"] = levels_by_id
+        serializer = self.get_serializer(experiments, many=True, context=context)
 
         return SuccessResponse(serializer.data)
 
@@ -349,12 +360,46 @@ class ExperimentSpecificApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
 
 
 class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
+    """List or create experiment records for a (station, experiment) pair.
+
+    Permission contract is intentionally split across two layers because two
+    distinct objects must each be authorized:
+
+      - **station** (URL ``id``): class-level :class:`SDB_ReadAccess` enforces
+        the caller can see the station at all. Resolved by ``get_object()``
+        and applied via DRF's standard object-permission machinery.
+      - **experiment** (URL ``exp_id``): an inline ``SDB_WriteAccess`` check
+        inside :meth:`post` requires write access on the experiment, traversed
+        by the permission machinery to ``ExperimentUserPermission``. ``GET``
+        only requires station READ + experiment READ via an inline
+        ``SDB_ReadAccess`` check.
+
+    DRF's permission framework runs object-level checks against
+    ``get_object()`` only, so there is no clean way to express the second
+    check declaratively on this view without doubling up URL routing. The
+    inline check is therefore the authoritative gate for write access; the
+    class-level station permission is a necessary precondition.
+
+    The frontend mirrors this contract by reading
+    :attr:`ExperimentSerializer.can_write` / ``can_delete`` for UI gating
+    instead of any project / network heuristic. Future record-mutation
+    endpoints should follow the same pattern.
+    """
+
     queryset = Station.objects.all()
     permission_classes = [SDB_ReadAccess]
     lookup_field = "id"
     serializer_class = ExperimentRecordSerializer  # type: ignore[assignment]
 
     def _get_experiment(self, **kwargs: Any) -> Experiment | Response:
+        """Resolve the target experiment from the URL or return a 400/404.
+
+        Inactive experiments are rejected with 404: they are not exposed on
+        the list endpoint, and the frontend filters them out, so allowing
+        mutations against them through a direct URL would be a silent
+        backdoor. Any future "read historical inactive data" requirement is
+        a deliberate product decision, not a silent regression.
+        """
         if not (experiment_id := kwargs.get("exp_id")):
             return ErrorResponse(
                 {"error": "The URL parameter `exp_id` was not received."},
@@ -362,7 +407,7 @@ class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
             )
 
         try:
-            return Experiment.objects.get(id=experiment_id)
+            return Experiment.objects.get(id=experiment_id, is_active=True)
         except Experiment.DoesNotExist:
             return ErrorResponse(
                 {"error": f"The Experiment `{experiment_id}` was not found."},
@@ -422,7 +467,14 @@ class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
                         status=status.HTTP_403_FORBIDDEN,
                     )
 
-                data = request.data.copy()
+                incoming = request.data
+                if not isinstance(incoming, dict):
+                    return ErrorResponse(
+                        {"errors": {"data": ["Request body must be a JSON object."]}},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                data = incoming.copy()
                 data[MandatoryFieldUuid.SUBMITTER_EMAIL.value] = user.email
 
                 serializer = self.get_serializer(
@@ -452,10 +504,107 @@ class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
 class ExperimentRecordSpecificApiView(
     GenericAPIView[ExperimentRecord], SDBAPIViewMixin
 ):
+    """Edit or delete a single experiment record by id (PUT / PATCH / DELETE).
+
+    Permission contract is **dual-gated**, despite ``permission_classes``
+    only mentioning experiment-level access. Both gates apply:
+
+      - **station READ** is required via the
+        ``BaseAccessLevel.has_object_permission(ExperimentRecord)``
+        traversal in :mod:`speleodb.api.v2.permissions`, which calls
+        ``SDB_ReadAccess().has_object_permission(request, view, obj.station)``
+        before evaluating the experiment-level check.
+      - **experiment-level access** (WRITE for PUT / PATCH, ADMIN for
+        DELETE) is required via the OR-of-permissions chain declared on
+        ``permission_classes`` and resolved against the record's
+        ``obj.experiment``.
+
+    A user with experiment WRITE / ADMIN but no project access on the
+    record's station is therefore rejected with 403, matching the POST
+    behavior on :class:`ExperimentRecordApiView`. The contract is pinned
+    by :class:`TestExperimentRecordDetailRequiresStationAccess` in
+    ``test_experiment_records_api.py``.
+    """
+
     queryset = ExperimentRecord.objects.all()
-    permission_classes = [SDB_AdminAccess]
+    permission_classes = [
+        (IsObjectDeletion & SDB_AdminAccess) | (IsObjectEdition & SDB_WriteAccess)
+    ]
     lookup_field = "id"
     serializer_class = ExperimentRecordSerializer
+
+    def get_queryset(self) -> Any:
+        """Only expose records whose experiment is still active.
+
+        Matches the list/POST contract enforced via ``_get_experiment`` on
+        ``ExperimentRecordApiView``. Editing or deleting records on a
+        deactivated experiment returns 404 rather than silently mutating
+        historical data.
+        """
+        return ExperimentRecord.objects.filter(experiment__is_active=True)
+
+    def _update_obj(self, request: Request, *, partial: bool) -> Response:
+        """
+        Update a record's editable JSON data.
+
+        Contract:
+          - PUT (partial=False): the request body fully replaces ``data``.
+            Any field omitted from the payload is removed from ``data``.
+          - PATCH (partial=True): the request body is merged into the existing
+            ``data``. Only the keys present in the payload are overwritten.
+
+        In both modes the server-owned identity is preserved:
+          - ``station`` and ``experiment`` stay bound to the existing record.
+          - ``submitter_email`` is restored from the existing record (or the
+            current user if unset historically) and cannot be spoofed.
+        """
+        exp_record = self.get_object()
+        existing_data: dict[str, Any] = (
+            dict(exp_record.data) if isinstance(exp_record.data, dict) else {}
+        )
+
+        incoming = request.data
+        if not isinstance(incoming, dict):
+            return ErrorResponse(
+                {"errors": {"data": ["Request body must be a JSON object."]}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if partial:
+            new_data: dict[str, Any] = {**existing_data, **incoming}
+        else:
+            new_data = dict(incoming)
+
+        new_data[MandatoryFieldUuid.SUBMITTER_EMAIL.value] = existing_data.get(
+            MandatoryFieldUuid.SUBMITTER_EMAIL.value,
+            self.get_user().email,
+        )
+
+        serializer = self.get_serializer(
+            exp_record,
+            data={
+                "experiment": exp_record.experiment_id,
+                "station": exp_record.station_id,
+                "data": new_data,
+            },
+            partial=partial,
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return SuccessResponse(serializer.data)
+
+        return ErrorResponse(
+            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Replace a record's editable data while preserving server-owned fields."""
+        return self._update_obj(request, partial=False)
+
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Merge the payload into the record's data, preserving server-owned fields."""
+        return self._update_obj(request, partial=True)
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete an experiment record for a given station & experiment."""
