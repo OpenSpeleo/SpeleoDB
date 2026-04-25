@@ -10,7 +10,6 @@ from django.contrib import admin
 
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
-from speleodb.gis.models import LandmarkCollectionUserPermission
 
 if TYPE_CHECKING:
     from typing import Any
@@ -128,19 +127,3 @@ class LandmarkCollectionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_filter = ["collection_type", "is_active", "creation_date", "modified_date"]
     search_fields = ["name", "description", "created_by", "personal_owner__email"]
     readonly_fields = ("id", "gis_token", "creation_date", "modified_date")
-
-
-@admin.register(LandmarkCollectionUserPermission)
-class LandmarkCollectionUserPermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = (
-        "user",
-        "collection",
-        "level",
-        "is_active",
-        "creation_date",
-        "modified_date",
-    )
-    ordering = ("collection__name", "user__email")
-    list_filter = ["level", "is_active", "creation_date", "modified_date"]
-    search_fields = ["user__email", "collection__name"]
-    readonly_fields = ("id", "creation_date", "modified_date")
