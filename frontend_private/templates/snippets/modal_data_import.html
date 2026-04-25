@@ -45,6 +45,13 @@
                     </p>
                 </div>
 
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-300 mb-2" for="gpx-landmark-collection">Landmark Collection</label>
+                    <select id="gpx-landmark-collection" class="form-input w-full">
+                        <option value="">Personal Landmarks</option>
+                    </select>
+                </div>
+
                 <!-- Drop Zone -->
                 <div id="gpx-drop-zone" class="file-upload-area border-2 border-dashed border-slate-500 rounded-lg p-8 text-center transition-all duration-200 hover:border-cyan-400">
                     <input type="file" id="gpx-file-input" accept=".gpx" class="hidden">
@@ -146,6 +153,13 @@
                     </div>
                 </div>
 
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-300 mb-2" for="kml-landmark-collection">Landmark Collection</label>
+                    <select id="kml-landmark-collection" class="form-input w-full">
+                        <option value="">Personal Landmarks</option>
+                    </select>
+                </div>
+
                 <!-- Drop Zone -->
                 <div id="kml-drop-zone" class="file-upload-area border-2 border-dashed border-slate-500 rounded-lg p-8 text-center transition-all duration-200 hover:border-amber-400">
                     <input type="file" id="kml-file-input" accept=".kml,.kmz" class="hidden">
@@ -242,6 +256,7 @@ window.DataImport = (function() {
     let selectedKMLFile = null;
     let csrfToken = '';
     let currentTab = 'gpx';
+    let landmarkCollectionsLoaded = false;
     
     // Initialize with CSRF token
     function init(token) {
@@ -443,7 +458,64 @@ window.DataImport = (function() {
             modal.classList.remove('hidden');
             clearGPXFile();
             clearKMLFile();
+            loadLandmarkCollectionSelectors();
             switchTab('gpx');
+        }
+    }
+
+    async function loadLandmarkCollectionSelectors() {
+        if (landmarkCollectionsLoaded) return;
+
+        try {
+            const response = await fetch(Urls['api:v2:landmark-collections'](), {
+                method: 'GET',
+                headers: { 'X-CSRFToken': csrfToken },
+                credentials: 'same-origin'
+            });
+            const collections = await response.json();
+
+            if (!response.ok || !Array.isArray(collections)) {
+                return;
+            }
+
+            ['gpx-landmark-collection', 'kml-landmark-collection'].forEach(function(selectId) {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+
+                select.innerHTML = '';
+                const writableCollections = collections
+                    .filter(function(collection) { return Number(collection.user_permission_level) >= 2; })
+                    .sort(function(a, b) {
+                        const aPersonal = a.is_personal === true || a.collection_type === 'PERSONAL';
+                        const bPersonal = b.is_personal === true || b.collection_type === 'PERSONAL';
+                        if (aPersonal !== bPersonal) return aPersonal ? -1 : 1;
+                        return String(a.name || '').localeCompare(String(b.name || ''));
+                    });
+
+                const hasPersonalCollection = writableCollections.some(function(collection) {
+                    return collection.is_personal === true || collection.collection_type === 'PERSONAL';
+                });
+
+                if (!hasPersonalCollection) {
+                    const personalOption = document.createElement('option');
+                    personalOption.value = '';
+                    personalOption.textContent = 'Personal Landmarks';
+                    select.appendChild(personalOption);
+                }
+
+                writableCollections
+                    .forEach(function(collection) {
+                        const isPersonal = collection.is_personal === true || collection.collection_type === 'PERSONAL';
+                        const option = document.createElement('option');
+                        option.value = collection.id;
+                        option.textContent = isPersonal ? `${collection.name} (Private)` : collection.name;
+                        select.appendChild(option);
+                    });
+            });
+
+            landmarkCollectionsLoaded = true;
+        } catch (error) {
+            console.error('Failed to load Landmark Collections:', error);
         }
     }
     
@@ -526,6 +598,10 @@ window.DataImport = (function() {
             
             const formData = new FormData();
             formData.append('file', selectedGPXFile, selectedGPXFile.name);
+            const collectionId = document.getElementById('gpx-landmark-collection')?.value;
+            if (collectionId) {
+                formData.append('collection', collectionId);
+            }
             
             const requestOptions = {
                 method: 'PUT',
@@ -585,6 +661,10 @@ window.DataImport = (function() {
             
             const formData = new FormData();
             formData.append('file', selectedKMLFile, selectedKMLFile.name);
+            const collectionId = document.getElementById('kml-landmark-collection')?.value;
+            if (collectionId) {
+                formData.append('collection', collectionId);
+            }
             
             const requestOptions = {
                 method: 'PUT',

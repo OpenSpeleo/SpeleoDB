@@ -28,6 +28,13 @@ from speleodb.api.v2.serializers.gps_track import GPSTrackSerializer
 from speleodb.api.v2.serializers.gps_track import GPSTrackWithFileSerializer
 from speleodb.api.v2.serializers.landmark import LandmarkGeoJSONSerializer
 from speleodb.api.v2.serializers.landmark import LandmarkSerializer
+from speleodb.api.v2.serializers.landmark_collection import LandmarkCollectionSerializer
+from speleodb.api.v2.serializers.landmark_collection import (
+    LandmarkCollectionUserPermissionSerializer,
+)
+from speleodb.api.v2.serializers.landmark_collection import (
+    LandmarkCollectionWithPermSerializer,
+)
 from speleodb.api.v2.serializers.log_entry import StationLogEntrySerializer
 from speleodb.api.v2.serializers.password import PasswordChangeSerializer
 from speleodb.api.v2.serializers.permissions import ExperimentUserPermissionSerializer
@@ -80,6 +87,9 @@ __all__ = [
     "GPSTrackWithFileSerializer",
     "GitCommitSerializer",
     "GitFileSerializer",
+    "LandmarkCollectionSerializer",
+    "LandmarkCollectionUserPermissionSerializer",
+    "LandmarkCollectionWithPermSerializer",
     "LandmarkGeoJSONSerializer",
     "LandmarkSerializer",
     "PasswordChangeSerializer",

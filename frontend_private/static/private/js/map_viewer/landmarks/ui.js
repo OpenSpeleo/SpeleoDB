@@ -4,6 +4,111 @@ import { Utils } from '../utils.js';
 import { Modal } from '../components/modal.js';
 
 export const LandmarkUI = {
+    getPersonalCollection() {
+        const collectionMap = State.landmarkCollections instanceof Map
+            ? State.landmarkCollections
+            : new Map();
+        return Array.from(collectionMap.values()).find(collection => collection.is_personal) || null;
+    },
+
+    getCollectionLabel(collection) {
+        if (!collection) return 'Personal Landmarks';
+        return collection.is_personal
+            ? `${collection.name || 'Personal Landmarks'} (Private)`
+            : collection.name || 'Unnamed Collection';
+    },
+
+    getLandmarkCollectionLabel(landmark) {
+        if (landmark?.is_personal_collection) {
+            return `${landmark.collection_name || 'Personal Landmarks'} (Private)`;
+        }
+        return landmark?.collection_name || 'Personal Landmarks';
+    },
+
+    getLandmarkCollectionColor(landmark) {
+        if (landmark?.collection_color) return landmark.collection_color;
+        const collectionId = landmark?.collection ? String(landmark.collection) : null;
+        const collection = collectionId && State.landmarkCollections instanceof Map
+            ? State.landmarkCollections.get(collectionId)
+            : null;
+        return collection?.color || null;
+    },
+
+    getLandmarkCollectionGroups(landmarks) {
+        const groups = new Map();
+        landmarks.forEach(landmark => {
+            const collectionId = landmark.collection ? String(landmark.collection) : '__personal__';
+            const collection = collectionId !== '__personal__' && State.landmarkCollections instanceof Map
+                ? State.landmarkCollections.get(collectionId)
+                : null;
+            const label = collection
+                ? this.getCollectionLabel(collection)
+                : this.getLandmarkCollectionLabel(landmark);
+            const isPersonal = collection?.is_personal === true || landmark.is_personal_collection === true;
+            const group = groups.get(collectionId) || {
+                id: collectionId,
+                label,
+                color: collection?.color || landmark.collection_color || null,
+                isPersonal,
+                canWrite: collection ? collection.can_write === true : landmark.can_write === true,
+                landmarks: [],
+            };
+            if (!group.color && landmark.collection_color) group.color = landmark.collection_color;
+            group.landmarks.push(landmark);
+            groups.set(collectionId, group);
+        });
+
+        return Array.from(groups.values())
+            .map(group => ({
+                ...group,
+                landmarks: group.landmarks.sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+            }))
+            .sort((a, b) => {
+                if (a.isPersonal !== b.isPersonal) return a.isPersonal ? -1 : 1;
+                return (a.label || '').localeCompare(b.label || '');
+            });
+    },
+
+    getWritableCollectionOptions(selectedCollectionId = null) {
+        const collectionMap = State.landmarkCollections instanceof Map
+            ? State.landmarkCollections
+            : new Map();
+        const collections = Array.from(collectionMap.values())
+            .filter(collection => collection.can_write)
+            .sort((a, b) => {
+                if (a.is_personal !== b.is_personal) return a.is_personal ? -1 : 1;
+                return (a.name || '').localeCompare(b.name || '');
+            });
+
+        return collections.map(collection => Utils.safeHtml`
+            <option value="${collection.id}" ${collection.id === selectedCollectionId ? 'selected' : ''}>
+                ${this.getCollectionLabel(collection)}
+            </option>
+        `).join('');
+    },
+
+    getCollectionSelectHtml(selectId, selectedCollectionId = null) {
+        const personalCollection = this.getPersonalCollection();
+        const effectiveSelectedCollectionId = selectedCollectionId || personalCollection?.id || null;
+        const options = this.getWritableCollectionOptions(effectiveSelectedCollectionId);
+        const fallbackPersonalOption = personalCollection ? '' : '<option value="">Personal Landmarks</option>';
+        return Utils.safeHtml`
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Collection</label>
+                <select id="${selectId}" class="form-input">
+                    ${Utils.raw(fallbackPersonalOption)}
+                    ${Utils.raw(options)}
+                </select>
+            </div>
+        `;
+    },
+
+    getSelectedCollectionValue(selectId) {
+        const select = document.getElementById(selectId);
+        if (!select || !select.value) return null;
+        return select.value;
+    },
+
     openManagerModal() {
         const modal = document.getElementById('landmark-manager-modal');
         if (!modal) {
@@ -44,11 +149,15 @@ export const LandmarkUI = {
         const landmarks = Array.from(State.allLandmarks.values());
         const totalLandmarks = landmarks.length;
 
-        // Sort Landmarks by name
-        landmarks.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        const collectionGroups = this.getLandmarkCollectionGroups(landmarks);
 
         // Build HTML
         let html = `
+            <style>
+                .landmark-collection-group[open] .landmark-collection-toggle-icon {
+                    transform: rotate(90deg);
+                }
+            </style>
             <div class="p-6 overflow-y-auto" style="max-height: calc(100vh - 200px);">
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
@@ -80,44 +189,83 @@ export const LandmarkUI = {
         } else {
             html += `<div class="space-y-2">`;
 
-            landmarks.forEach(landmark => {
-                html += `
-                    <div class="bg-slate-700/50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-3 flex-1 cursor-pointer landmark-item" data-landmark-id="${landmark.id}">
-                                <div class="w-4 h-5 flex-shrink-0">
-                                    <svg viewBox="0 0 24 32" fill="none">
-                                        <path d="M12 14 L12 30" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round"/>
-                                        <circle cx="12" cy="8" r="6.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/>
-                                        <circle cx="12" cy="8" r="4" fill="#dc2626" opacity="0.6"/>
-                                    </svg>
+            collectionGroups.forEach(group => {
+                const groupColor = Utils.safeCssColor(group.color);
+                const groupAccessLabel = group.canWrite === true ? 'Writable' : 'Read only';
+                const privateBadge = group.isPersonal
+                    ? '<span class="ml-2 text-[10px] uppercase tracking-wide rounded-full bg-slate-700 text-slate-300 px-2 py-0.5">Private</span>'
+                    : '';
+                const rows = group.landmarks.map(landmark => {
+                    const markerColor = Utils.safeCssColor(this.getLandmarkCollectionColor(landmark) || group.color);
+                    const markerStrokeColor = markerColor.toLowerCase() === '#ffffff' ? '#0f172a' : '#ffffff';
+                    const accessLabel = landmark.can_write === true ? 'Writable' : 'Read only';
+                    return Utils.safeHtml`
+                        <div class="bg-slate-700/50 p-3 hover:bg-slate-700 transition-colors group border-t border-slate-700 first:border-t-0">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3 flex-1 cursor-pointer landmark-item" data-landmark-id="${landmark.id}">
+                                    <div class="w-4 h-5 flex-shrink-0">
+                                        ${Utils.raw(`
+                                            <svg viewBox="0 0 24 32" fill="none">
+                                                <path d="M12 14 L12 30" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round"/>
+                                                <circle cx="12" cy="8" r="6.5" fill="${markerColor}" stroke="${markerStrokeColor}" stroke-width="1.5"/>
+                                                <circle cx="12" cy="8" r="4" fill="${markerColor}" opacity="0.6"/>
+                                            </svg>
+                                        `)}
+                                    </div>
+                                    <div>
+                                        <h5 class="text-white font-medium">${landmark.name}</h5>
+                                        <p class="text-xs text-slate-400">
+                                            ${Number(landmark.latitude).toFixed(5)}, ${Number(landmark.longitude).toFixed(5)}
+                                        </p>
+                                        <p class="text-xs text-slate-500 mt-1">
+                                            ${accessLabel}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h5 class="text-white font-medium">${Utils.escapeHtml(landmark.name)}</h5>
-                                    <p class="text-xs text-slate-400">
-                                        ${Number(landmark.latitude).toFixed(5)}, ${Number(landmark.longitude).toFixed(5)}
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <button class="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded transition-all go-to-landmark-btn" 
+                                <div class="flex items-center space-x-2">
+                                    <button class="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded transition-all go-to-landmark-btn"
+                                            data-landmark-id="${landmark.id}"
+                                            data-lat="${Number(landmark.latitude)}"
+                                            data-lon="${Number(landmark.longitude)}"
+                                            title="Go to Landmark on map">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        </svg>
+                                    </button>
+                                    <svg class="w-5 h-5 text-slate-400 group-hover:text-white transition-colors cursor-pointer open-landmark-btn"
                                         data-landmark-id="${landmark.id}"
-                                        data-lat="${Number(landmark.latitude)}"
-                                        data-lon="${Number(landmark.longitude)}"
-                                        title="Go to Landmark on map">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                     </svg>
-                                </button>
-                                <svg class="w-5 h-5 text-slate-400 group-hover:text-white transition-colors cursor-pointer open-landmark-btn"
-                                    data-landmark-id="${landmark.id}"
-                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    `;
+                }).join('');
+
+                html += Utils.safeHtml`
+                    <details class="landmark-collection-group bg-slate-800/60 rounded-lg border border-slate-700 overflow-hidden" data-collection-id="${group.id}">
+                        <summary class="cursor-pointer list-none px-4 py-3 hover:bg-slate-700/60 transition-colors" title="Expand or collapse collection group">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex items-center min-w-0">
+                                    <svg class="landmark-collection-toggle-icon w-4 h-4 text-slate-400 shrink-0 mr-2 transition-transform duration-150" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                    <span class="w-3 h-3 rounded-full border border-slate-500 shrink-0 mr-3" style="background-color: ${Utils.raw(groupColor)}"></span>
+                                    <span class="text-sm font-semibold text-slate-100 truncate">${group.label}</span>
+                                    ${Utils.raw(privateBadge)}
+                                </div>
+                                <div class="flex items-center gap-3 shrink-0 text-xs text-slate-400">
+                                    <span>${group.landmarks.length} Landmark${group.landmarks.length !== 1 ? 's' : ''}</span>
+                                    <span>${groupAccessLabel}</span>
+                                </div>
+                            </div>
+                        </summary>
+                        <div>
+                            ${Utils.raw(rows)}
+                        </div>
+                    </details>
                 `;
             });
 
@@ -170,6 +318,7 @@ export const LandmarkUI = {
 
         const title = landmark ? `Landmark: ${Utils.escapeHtml(landmark.name)}` : 'Landmark Details';
         const extraTitle = isNewlyCreated ? '<span class="ml-2 text-sm text-emerald-400">✨ Newly Created</span>' : '';
+        const collectionLabel = this.getLandmarkCollectionLabel(landmark);
 
         const content = landmark ? Utils.safeHtml`
             <div class="space-y-4">
@@ -179,23 +328,37 @@ export const LandmarkUI = {
                 </div>
                 <div class="bg-slate-700/50 rounded-lg p-4 space-y-2">
                     <p class="text-slate-300"><strong>Coordinates:</strong> ${Number(landmark.latitude).toFixed(7)}, ${Number(landmark.longitude).toFixed(7)}</p>
+                    <p class="text-slate-300"><strong>Collection:</strong> ${collectionLabel}</p>
                     <p class="text-slate-300"><strong>Created:</strong> ${landmark.creation_date ? new Date(landmark.creation_date).toLocaleDateString() : 'Unknown'}</p>
                 </div>
             </div>` :
             `<div class="text-center py-8"><h3 class="text-white text-lg font-medium mb-2">Landmark Not Found</h3></div>`;
 
-        // Any authenticated user can manage their Landmarks
-        const footer = landmark ? `
-            <button id="edit-landmark-btn" class="btn-secondary" style="min-width: 120px;">Edit</button>
-            <button id="delete-landmark-btn" class="btn-danger" style="min-width: 120px;">Delete</button>
+        const canWriteLandmark = landmark?.can_write === true;
+        const canDeleteLandmark = landmark?.can_delete === true;
+        const footer = landmark && (canWriteLandmark || canDeleteLandmark) ? `
+            ${canWriteLandmark ? '<button id="edit-landmark-btn" class="btn-secondary" style="min-width: 120px;">Edit</button>' : ''}
+            ${canDeleteLandmark ? '<button id="delete-landmark-btn" class="btn-danger" style="min-width: 120px;">Delete</button>' : ''}
         ` : '';
 
         const html = Modal.base('landmark-details-modal', title + extraTitle, content, footer);
 
         Modal.open('landmark-details-modal', html, () => {
             if (landmark) {
-                document.getElementById('edit-landmark-btn').onclick = () => this.openEditModal(landmarkId);
-                document.getElementById('delete-landmark-btn').onclick = () => this.showDeleteConfirmModal(landmark);
+                const editBtn = document.getElementById('edit-landmark-btn');
+                const deleteBtn = document.getElementById('delete-landmark-btn');
+                if (editBtn) {
+                    editBtn.onclick = () => {
+                        if (landmark.can_write !== true) {
+                            Utils.showNotification('error', 'This collection Landmark is read-only for you.');
+                            return;
+                        }
+                        this.openEditModal(landmarkId);
+                    };
+                }
+                if (deleteBtn) {
+                    deleteBtn.onclick = () => this.showDeleteConfirmModal(landmark);
+                }
             }
         });
     },
@@ -211,6 +374,7 @@ export const LandmarkUI = {
                     <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
                     <textarea id="landmark-description" rows="3" class="form-input form-textarea" placeholder="Optional description"></textarea>
                 </div>
+                ${this.getCollectionSelectHtml('landmark-collection')}
                 <div class="bg-slate-700/50 rounded-lg p-3 text-sm text-slate-300">
                     Location: ${Number(coordinates[1]).toFixed(7)}, ${Number(coordinates[0]).toFixed(7)}
                 </div>
@@ -234,6 +398,7 @@ export const LandmarkUI = {
                     const landmark = await LandmarkManager.createLandmark({
                         name,
                         description: document.getElementById('landmark-description').value.trim(),
+                        collection: this.getSelectedCollectionValue('landmark-collection'),
                         latitude: coordinates[1],
                         longitude: coordinates[0]
                     });
@@ -258,6 +423,7 @@ export const LandmarkUI = {
                     <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
                     <textarea id="landmark-description-manual" rows="3" class="form-input form-textarea" placeholder="Optional description"></textarea>
                 </div>
+                ${this.getCollectionSelectHtml('landmark-collection-manual')}
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">Latitude * <span class="text-xs text-slate-500">(e.g., 38.8977)</span></label>
@@ -317,6 +483,7 @@ export const LandmarkUI = {
                     const landmark = await LandmarkManager.createLandmark({
                         name,
                         description,
+                        collection: this.getSelectedCollectionValue('landmark-collection-manual'),
                         latitude: lat,
                         longitude: lon
                     });
@@ -340,6 +507,10 @@ export const LandmarkUI = {
     openEditModal(landmarkId) {
         const landmark = State.allLandmarks.get(landmarkId);
         if (!landmark) return;
+        if (landmark.can_write !== true) {
+            Utils.showNotification('error', 'This collection Landmark is read-only for you.');
+            return;
+        }
 
         const formHtml = Utils.safeHtml`
             <form id="edit-landmark-form" class="space-y-4">
@@ -351,6 +522,7 @@ export const LandmarkUI = {
                     <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
                     <textarea id="edit-landmark-description" rows="3" class="form-input form-textarea">${landmark.description || ''}</textarea>
                 </div>
+                ${Utils.raw(this.getCollectionSelectHtml('edit-landmark-collection', landmark.collection))}
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">Latitude <span class="text-xs text-slate-500">(-90 to 90)</span></label>
@@ -410,6 +582,7 @@ export const LandmarkUI = {
                     await LandmarkManager.updateLandmark(landmarkId, {
                         name,
                         description,
+                        collection: this.getSelectedCollectionValue('edit-landmark-collection'),
                         latitude: lat,
                         longitude: lon
                     });
@@ -432,6 +605,11 @@ export const LandmarkUI = {
     },
 
     showDeleteConfirmModal(landmark) {
+        if (landmark.can_delete !== true) {
+            Utils.showNotification('error', 'This collection Landmark is read-only for you.');
+            return;
+        }
+
         const content = Utils.safeHtml`
             <div class="mb-6">
                 <p class="text-slate-300 mb-2">Are you sure you want to delete this Landmark?</p>

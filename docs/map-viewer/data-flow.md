@@ -399,3 +399,23 @@ Layers.applyProjectScopedMarkerVisibility()
 
 This avoids rebuilding these layers when project visibility changes — only the
 Mapbox filter expression is updated.
+
+### Landmark Collections
+
+Landmark collection state is loaded independently from Landmark GeoJSON:
+
+```
+LandmarkManager.loadCollections()
+  └─ GET /api/v2/landmark-collections/
+      └─ State.landmarkCollections: Map<collectionId, permission-aware metadata + color>
+
+LandmarkManager.loadAllLandmarks()
+  └─ GET /api/v2/landmarks/geojson/
+      └─ State.allLandmarks: Map<landmarkId, geometry + collection + color + can_* flags>
+```
+
+The order matters for selectors, grouping, and color fallback. Collection rows
+provide the write/admin flags and model color used by assignment dropdowns and
+collection group headers; Landmark GeoJSON provides per-feature `can_write`,
+`can_delete`, and `collection_color` flags used by the manager, map layer,
+context menu, and drag confirmation path.

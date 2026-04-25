@@ -12,12 +12,16 @@ from django.urls import reverse
 from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 
 from speleodb.api.v2.tests.base_testcase import BaseProjectTestCaseMixin
 from speleodb.api.v2.tests.base_testcase import BaseUserTestCaseMixin
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.factories import CylinderFleetFactory
 from speleodb.api.v2.tests.factories import CylinderFleetUserPermissionFactory
+from speleodb.api.v2.tests.factories import LandmarkCollectionFactory
+from speleodb.api.v2.tests.factories import LandmarkCollectionUserPermissionFactory
+from speleodb.api.v2.tests.factories import LandmarkFactory
 from speleodb.api.v2.tests.factories import SensorFleetFactory
 from speleodb.api.v2.tests.factories import SensorFleetUserPermissionFactory
 from speleodb.api.v2.tests.factories import SurveyTeamFactory
@@ -25,6 +29,7 @@ from speleodb.api.v2.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import SurveyTeamMembershipRole
+from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -281,3 +286,404 @@ class CylinderFleetViewsTest(BaseTestCase):
             view_name,
             {"fleet_id": self.fleet.id},
         )
+
+
+class LandmarkCollectionViewsTest(BaseTestCase):
+    """Tests for Landmark Collection frontend views."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.token.delete()
+        self.token = Token.objects.create(
+            user=self.user,
+            key="abcdef1234567890abcdef1234567890abcdef12",
+        )
+        self.collection = LandmarkCollectionFactory.create(created_by=self.user.email)
+        LandmarkCollectionUserPermissionFactory.create(
+            user=self.user,
+            collection=self.collection,
+            level=PermissionLevel.READ_ONLY,
+        )
+
+    @parameterized.expand(
+        [
+            "landmark_collections",
+            "landmark_collection_new",
+        ]
+    )
+    def test_view_with_no_args(self, view_name: str) -> None:
+        self.execute_test(view_name)
+
+    @parameterized.expand(
+        [
+            "landmark_collection_details",
+            "landmark_collection_user_permissions",
+            "landmark_collection_gis_integration",
+            "landmark_collection_danger_zone",
+        ]
+    )
+    def test_view_with_collection_id(self, view_name: str) -> None:
+        expected_status = (
+            status.HTTP_302_FOUND
+            if view_name == "landmark_collection_danger_zone"
+            else status.HTTP_200_OK
+        )
+
+        self.execute_test(
+            view_name,
+            {"collection_id": self.collection.id},
+            expected_status=expected_status,
+        )
+
+    def test_details_view_renders_landmark_table_and_export_links(self) -> None:
+        LandmarkFactory.create(
+            collection=self.collection,
+            owner=self.user,
+            name="Main Entrance",
+            latitude="45.1234567",
+            longitude="-122.1234567",
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:landmark_collection_details",
+                kwargs={"collection_id": self.collection.id},
+            )
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        content = response.content.decode()
+        assert "collection_landmarks_table" in content
+        assert "#collection_landmarks_table thead th" in content
+        assert "text-align: center !important;" in content
+        assert '<th class="px-4 py-3 text-center">Name</th>' in content
+        assert '<th class="px-4 py-3 text-center">Created By</th>' in content
+        assert '<td class="px-4 py-3 text-center">' in content
+        assert '<td class="px-4 py-3 text-center text-sm text-slate-300">' in content
+        assert "Main Entrance" in content
+        assert "-122.1234567" in content
+        assert "45.1234567" in content
+        assert self.user.email in content
+        assert "/private/map_viewer/?goto=45.1234567,-122.1234567" in content
+        assert (
+            reverse(
+                "api:v2:landmark-collection-landmarks-export-excel",
+                kwargs={"collection_id": self.collection.id},
+            )
+            in content
+        )
+        assert (
+            reverse(
+                "api:v2:landmark-collection-landmarks-export-gpx",
+                kwargs={"collection_id": self.collection.id},
+            )
+            in content
+        )
+
+    def test_details_view_renders_empty_landmark_table_state(self) -> None:
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:landmark_collection_details",
+                kwargs={"collection_id": self.collection.id},
+            )
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert "No landmarks in this collection yet" in response.content.decode()
+
+    def test_listing_shows_personal_collection_management_row(self) -> None:
+        personal_collection = get_or_create_personal_landmark_collection(user=self.user)
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("private:landmark_collections"))
+
+        content = response.content.decode()
+        assert response.status_code == status.HTTP_200_OK
+        assert self.collection.name in content
+        assert str(personal_collection.id) in content
+        assert personal_collection.name in content
+        assert "Private" in content
+
+    def test_listing_shows_all_landmark_collections_gis_card(self) -> None:
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("private:landmark_collections"))
+
+        user_token = Token.objects.get(user=self.user)
+        content = response.content.decode()
+        assert response.status_code == status.HTTP_200_OK
+        assert "All Landmark Collections GIS" in content
+        assert "all active Landmark Collections you can read" in content
+        assert "Sharing this link grants read access" in content
+        assert 'id="landmark-collections-refresh-token-form"' in content
+        assert "Refresh Application Token?" in content
+        assert "Ariane, Compass, the mobile app" in content
+        assert "any other connected app" in content
+        assert (
+            reverse(
+                "api:v2:gis-ogc:landmark-collections-user-landing",
+                kwargs={"key": user_token.key},
+            )
+            in content
+        )
+        assert 'id="landmark-collections-copy-btn"' in content
+
+    def test_listing_refreshes_application_token(self) -> None:
+        old_token_key = self.token.key
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("private:landmark_collections"),
+            {"_refresh_user_token": "1"},
+        )
+
+        new_token = Token.objects.get(user=self.user)
+        assert response.status_code == status.HTTP_302_FOUND
+        assert isinstance(response, HttpResponseRedirect)
+        assert response.url == reverse("private:landmark_collections")
+        assert new_token.key != old_token_key
+        assert not Token.objects.filter(key=old_token_key).exists()
+
+    def test_listing_escapes_collection_names_and_descriptions(self) -> None:
+        unsafe_collection = LandmarkCollectionFactory.create(
+            name='<script>alert("name")</script>',
+            description='<img src=x onerror="alert(1)">',
+            created_by=self.user.email,
+        )
+        LandmarkCollectionUserPermissionFactory.create(
+            user=self.user,
+            collection=unsafe_collection,
+            level=PermissionLevel.READ_ONLY,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("private:landmark_collections"))
+
+        content = response.content.decode()
+        assert "&lt;script&gt;alert(&quot;name&quot;)&lt;/script&gt;" in content
+        assert "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;" in content
+        assert '<script>alert("name")</script>' not in content
+        assert '<img src=x onerror="alert(1)">' not in content
+
+    def test_personal_collection_details_page_hides_shared_management(self) -> None:
+        personal_collection = get_or_create_personal_landmark_collection(user=self.user)
+
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:landmark_collection_details",
+                kwargs={"collection_id": personal_collection.id},
+            )
+        )
+
+        content = response.content.decode()
+        assert response.status_code == status.HTTP_200_OK
+        assert "Private" in content
+        assert "User Access Control" not in content
+        assert "GIS Integration" in content
+        assert "Danger Zone" not in content
+        assert "Collection Settings" not in content
+        assert 'id="landmark_collection_details_form"' not in content
+        assert 'id="name"' not in content
+        assert 'id="description"' not in content
+        assert 'id="color-picker-btn"' not in content
+        assert 'name="color"' not in content
+        assert "collection_landmarks_table" in content
+        assert (
+            reverse(
+                "api:v2:landmark-collection-landmarks-export-excel",
+                kwargs={"collection_id": personal_collection.id},
+            )
+            in content
+        )
+        assert (
+            reverse(
+                "api:v2:landmark-collection-landmarks-export-gpx",
+                kwargs={"collection_id": personal_collection.id},
+            )
+            in content
+        )
+
+    def test_personal_collection_gis_page_shows_endpoint(self) -> None:
+        personal_collection = get_or_create_personal_landmark_collection(user=self.user)
+
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:landmark_collection_gis_integration",
+                kwargs={"collection_id": personal_collection.id},
+            )
+        )
+
+        content = response.content.decode()
+        assert response.status_code == status.HTTP_200_OK
+        assert "GIS Integration" in content
+        assert (
+            reverse(
+                "api:v2:gis-ogc:landmark-collection-landing",
+                kwargs={"gis_token": personal_collection.gis_token},
+            )
+            in content
+        )
+
+    def test_personal_collection_gis_page_refreshes_token(self) -> None:
+        personal_collection = get_or_create_personal_landmark_collection(user=self.user)
+        old_token = personal_collection.gis_token
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse(
+                "private:landmark_collection_gis_integration",
+                kwargs={"collection_id": personal_collection.id},
+            ),
+            {"_refresh_token": "1"},
+        )
+
+        assert response.status_code == status.HTTP_302_FOUND
+        assert isinstance(response, HttpResponseRedirect)
+        assert response.url == reverse(
+            "private:landmark_collection_gis_integration",
+            kwargs={"collection_id": personal_collection.id},
+        )
+        personal_collection.refresh_from_db()
+        assert personal_collection.gis_token != old_token
+
+    def test_shared_collection_permissions_match_project_action_design(self) -> None:
+        self.collection.permissions.filter(user=self.user).update(
+            level=PermissionLevel.ADMIN,
+        )
+        collaborator = UserFactory.create()
+        LandmarkCollectionUserPermissionFactory.create(
+            user=collaborator,
+            collection=self.collection,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:landmark_collection_user_permissions",
+                kwargs={"collection_id": self.collection.id},
+            )
+        )
+
+        content = response.content.decode()
+        assert response.status_code == status.HTTP_200_OK
+        assert "permissions-cards" in content
+        assert "permissions-table bg-slate-800 shadow-lg rounded-sm" in content
+        assert "Grant Access" in content
+        assert "btn bg-slate-700 hover:bg-slate-600 text-slate-200" not in content
+        assert "Remove" not in content
+        assert "icon-tabler-lock-open" in content
+        assert "icon-tabler-x" in content
+        assert 'class="cursor-pointer btn_open_edit_perm"' in content
+        assert 'class="cursor-pointer btn_delete_perm"' in content
+        assert f'data-user="{collaborator.email}"' in content
+        assert "modal_user_landmark_collection_permission_form" not in content
+        assert "Select an option ..." in content
+
+    def test_shared_collection_permissions_match_project_sorting(self) -> None:
+        admin_user = UserFactory.create(email="z-admin@example.com")
+        writer_user = UserFactory.create(email="a-writer@example.com")
+        reader_user = UserFactory.create(email="m-reader@example.com")
+        self.collection.permissions.filter(user=self.user).update(
+            level=PermissionLevel.ADMIN,
+        )
+        LandmarkCollectionUserPermissionFactory.create(
+            user=reader_user,
+            collection=self.collection,
+            level=PermissionLevel.READ_ONLY,
+        )
+        LandmarkCollectionUserPermissionFactory.create(
+            user=admin_user,
+            collection=self.collection,
+            level=PermissionLevel.ADMIN,
+        )
+        LandmarkCollectionUserPermissionFactory.create(
+            user=writer_user,
+            collection=self.collection,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:landmark_collection_user_permissions",
+                kwargs={"collection_id": self.collection.id},
+            )
+        )
+
+        content = response.content.decode()
+        assert response.status_code == status.HTTP_200_OK
+        admin_position = content.index(admin_user.email)
+        writer_position = content.index(writer_user.email)
+        reader_position = content.index(reader_user.email)
+        assert admin_position < writer_position < reader_position
+
+    @parameterized.expand(
+        [
+            "landmark_collection_user_permissions",
+            "landmark_collection_danger_zone",
+        ]
+    )
+    def test_personal_collection_management_subpages_redirect(
+        self,
+        view_name: str,
+    ) -> None:
+        personal_collection = get_or_create_personal_landmark_collection(user=self.user)
+
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                f"private:{view_name}",
+                kwargs={"collection_id": personal_collection.id},
+            )
+        )
+
+        assert response.status_code == status.HTTP_302_FOUND
+        assert isinstance(response, HttpResponseRedirect)
+        assert response.url == reverse(
+            "private:landmark_collection_details",
+            kwargs={"collection_id": personal_collection.id},
+        )
+
+    def test_write_collection_details_show_color_picker(self) -> None:
+        self.collection.permissions.filter(user=self.user).update(
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:landmark_collection_details",
+                kwargs={"collection_id": self.collection.id},
+            )
+        )
+
+        content = response.content.decode()
+        assert response.status_code == status.HTTP_200_OK
+        assert 'id="color-picker-btn"' in content
+        assert 'name="color"' in content
+        assert self.collection.color in content
+
+    def test_details_view_escapes_landmark_table_values(self) -> None:
+        LandmarkFactory.create(
+            collection=self.collection,
+            owner=self.user,
+            name="<script>alert(1)</script>",
+            latitude="45.1234567",
+            longitude="-122.1234567",
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:landmark_collection_details",
+                kwargs={"collection_id": self.collection.id},
+            )
+        )
+
+        content = response.content.decode()
+        assert "&lt;script&gt;alert(1)&lt;/script&gt;" in content
+        assert "<script>alert(1)</script>" not in content

@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 from django.contrib import admin
 
 from speleodb.gis.models import Landmark
+from speleodb.gis.models import LandmarkCollection
+from speleodb.gis.models import LandmarkCollectionUserPermission
 
 if TYPE_CHECKING:
     from typing import Any
@@ -22,20 +24,28 @@ class LandmarkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "name",
         "description_preview",
-        "user",
+        "collection",
+        "created_by",
         "creation_date",
         "modified_date",
     )
     ordering = ("name",)
-    list_filter = ["creation_date", "modified_date"]
-    search_fields = ["name", "description"]
-    readonly_fields = ("id", "coordinates", "creation_date", "modified_date", "user")
+    list_filter = ["collection", "creation_date", "modified_date"]
+    search_fields = ["name", "description", "created_by"]
+    readonly_fields = (
+        "id",
+        "coordinates",
+        "creation_date",
+        "modified_date",
+        "created_by",
+    )
 
     # For confidentiality reason - these fields should only be visible to `superusers`
     _SUPERUSER_ONLY_FIELDS: frozenset[str] = frozenset({"latitude", "longitude"})
 
     fieldsets = (
         ("Basic Information", {"fields": ("name", "description")}),
+        ("Collection", {"fields": ("collection",)}),
         (
             "Location",
             {
@@ -48,7 +58,7 @@ class LandmarkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             {
                 "fields": (
                     "id",
-                    "user",
+                    "created_by",
                     "creation_date",
                     "modified_date",
                 ),
@@ -97,7 +107,40 @@ class LandmarkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         form: forms.ModelForm[Landmark],
         change: bool,
     ) -> None:
-        # Auto-populate user field when creating a new Landmark
-        if not change:  # Only on creation, not on edit
-            obj.user = request.user  # type: ignore[assignment]
+        if not change and not obj.created_by and request.user.is_authenticated:
+            obj.created_by = request.user.email
         super().save_model(request, obj, form, change)
+
+
+@admin.register(LandmarkCollection)
+class LandmarkCollectionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "name",
+        "collection_type",
+        "color",
+        "personal_owner",
+        "created_by",
+        "is_active",
+        "creation_date",
+        "modified_date",
+    )
+    ordering = ("name",)
+    list_filter = ["collection_type", "is_active", "creation_date", "modified_date"]
+    search_fields = ["name", "description", "created_by", "personal_owner__email"]
+    readonly_fields = ("id", "gis_token", "creation_date", "modified_date")
+
+
+@admin.register(LandmarkCollectionUserPermission)
+class LandmarkCollectionUserPermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "user",
+        "collection",
+        "level",
+        "is_active",
+        "creation_date",
+        "modified_date",
+    )
+    ordering = ("collection__name", "user__email")
+    list_filter = ["level", "is_active", "creation_date", "modified_date"]
+    search_fields = ["user__email", "collection__name"]
+    readonly_fields = ("id", "creation_date", "modified_date")

@@ -134,15 +134,18 @@ property in the GeoJSON source data.
 
 **Module:** `landmarks/manager.js`
 
-Landmarks are **user-scoped** (personal to the authenticated user, not
-project-scoped). Every authenticated user sees only their own landmarks.
+Landmarks are **collection-scoped**, not project-scoped. A user's private
+Landmarks live in their personal Landmark Collection, and shared Landmarks are
+visible through Landmark Collection permissions.
 
 ### Data loading
 
 `LandmarkManager.loadAllLandmarks()` calls
 `API.getAllLandmarksGeoJSON()` and populates `State.allLandmarks`.
 Properties stored per landmark: `id`, `name`, `description`,
-`latitude`, `longitude`, `coordinates`, `created_by`, `creation_date`.
+`latitude`, `longitude`, `coordinates`, `collection`, `collection_name`,
+`collection_type`, `collection_color`, `created_by`, `creation_date`,
+`can_write`, and `can_delete`.
 
 ### CRUD operations
 
@@ -475,17 +478,22 @@ project panel resize (including country group collapse/expand) via a
 
 ## 9. Project & GPS Track Colors
 
-**Model fields:** `Project.color`, `GPSTrack.color` (both `CharField(max_length=7)`)
+**Model fields:** `Project.color`, `GPSTrack.color`, `LandmarkCollection.color`
+(all `CharField(max_length=7)`)
 **Palette:** `ColorPalette` in `speleodb/common/enums.py`
 **JS module:** `map/colors.js`
 
 ### Model-stored colors
 
-Both `Project` and `GPSTrack` store a hex color on the Django model,
-assigned randomly from `ColorPalette.COLORS` (20 perceptually distinct
-entries) at creation time via `ColorPalette.random_color()`. Users can
-change the color via a color picker on the project details, new-project,
-and GPS track edit pages.
+`Project`, `GPSTrack`, and `LandmarkCollection` store a hex color on the
+Django model, assigned randomly from `ColorPalette.COLORS` (20 perceptually
+distinct entries) at creation time via `ColorPalette.random_color()`. Users can
+change the color via color pickers on project pages, GPS track edit pages, and
+Landmark Collection create/details pages.
+
+Personal Landmark Collections are the exception to random assignment: they
+default to white (`#ffffff`) so private Landmarks have a consistent visual
+identity. The map uses a dark halo for white Landmark markers and labels.
 
 ### Color resolution in the map viewer
 
@@ -496,6 +504,10 @@ caching**, so the next call retries (resolves timing issues during init).
 
 `Colors.getGPSTrackColor(trackId)` follows the same pattern via
 `Config.getGPSTrackById(trackId).color`, falling back to `FALLBACK_COLOR`.
+
+Landmark marker and label colors come directly from each GeoJSON feature's
+`collection_color` property, falling back to `FALLBACK_COLOR` if the property is
+missing.
 
 There is **no palette array in JS**. All color assignment is model-driven.
 
@@ -513,8 +525,8 @@ The palette is exposed to Django templates via the
 
 ### Serializer validation
 
-Both `ProjectSerializer.validate_color()` and
-`GPSTrackSerializer.validate_color()` enforce hex format via
+`ProjectSerializer.validate_color()`, `GPSTrackSerializer.validate_color()`, and
+`LandmarkCollectionSerializer.validate_color()` enforce hex format via
 `ColorPalette.is_valid_hex()` and normalize to lowercase.
 
 `GPSTrackSerializer` has a custom `update()` method that passes
@@ -524,7 +536,8 @@ to skip S3 file re-hashing. `GPSTrack.save()` skips file hashing when
 
 ### Color picker UI
 
-**Pages:** `details.html`, `new.html` (projects), GPS track edit modal
+**Pages:** `details.html`, `new.html` (projects and Landmark Collections), GPS
+track edit modal
 
 The color picker renders:
 
@@ -609,3 +622,26 @@ name). The template renders collapsible sections with flag emojis via the
 
 Both convert a two-letter code to the corresponding regional indicator
 emoji pair (e.g. `"FR"` -> the French flag emoji).
+
+---
+
+## 11. Landmark Collections
+
+Landmarks always belong to one Landmark Collection. Private Landmarks live in
+the user's lazily-created personal collection; collaborative Landmarks live in
+shared collections. The private map viewer loads accessible collections before
+loading Landmark GeoJSON so create/edit/import flows can offer collection
+selectors.
+
+Map behavior:
+
+- Manager rows are grouped by collection and collapsed by default. Group headers
+  show the collection label, landmark count, permission state, and color.
+- Create from map, manual create, edit, GPX import, and KML/KMZ import can
+  assign new Landmarks to collections where the user has WRITE access. The
+  default selector value is the user's personal collection.
+- Landmark markers and labels use the collection's `color`.
+- Read-only collection Landmarks remain visible but edit, delete, and drag
+  actions are disabled or rejected before the API call.
+- API responses include `can_write` and `can_delete`; the frontend uses these
+  server-derived flags instead of reimplementing collection permission logic.

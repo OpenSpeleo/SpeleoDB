@@ -386,6 +386,11 @@ describe('API module', () => {
             expect(fetch.mock.calls[0][0]).toContain('api:v2:landmarks');
         });
 
+        it('getLandmarkCollections calls landmark-collections URL', async () => {
+            await API.getLandmarkCollections();
+            expect(fetch.mock.calls[0][0]).toContain('api:v2:landmark-collections');
+        });
+
         it('getAllLandmarksGeoJSON calls landmarks-geojson', async () => {
             await API.getAllLandmarksGeoJSON();
             expect(fetch.mock.calls[0][0]).toContain('api:v2:landmarks-geojson');

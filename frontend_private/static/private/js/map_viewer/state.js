@@ -12,6 +12,7 @@ export const State = {
     allStations: new Map(), // Track all subsurface stations (demo + API) by ID for easy access
     allSurfaceStations: new Map(), // Track all surface stations by ID for easy access
     allLandmarks: new Map(), // Track all Landmarks by ID for easy access
+    landmarkCollections: new Map(), // Track Landmark Collections by ID for selectors/grouping
     projectDepthDomains: new Map(), // Per-project depth domain cache ({ min, max } | null)
     activeDepthDomain: null, // Merged depth domain for currently visible projects
     projectBounds: new Map(), // Track bounds for each project for auto-zoom and fly-to
@@ -44,6 +45,7 @@ export const State = {
         this.allStations = new Map();
         this.allSurfaceStations = new Map();
         this.allLandmarks = new Map();
+        this.landmarkCollections = new Map();
         this.projectDepthDomains = new Map();
         this.activeDepthDomain = null;
         this.projectBounds = new Map();
@@ -59,5 +61,4 @@ export const State = {
         this.gpsTrackBounds = new Map();
     }
 };
-
 

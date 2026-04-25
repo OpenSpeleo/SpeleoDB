@@ -1,0 +1,115 @@
+{% extends "base_private.html" %}
+{% load static %}
+{% load project_colors %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+            <div class="mb-4 sm:mb-0">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
+                    Create Landmark Collection
+                </h1>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
+            <form id="new_landmark_collection_form" autocomplete="off">
+                {% csrf_token %}
+                <div class="p-6 space-y-6">
+                    <section>
+                        <h2 class="text-xl text-slate-100 font-bold mb-4">Collection Information</h2>
+                        <div class="flex flex-wrap mt-5 gap-4">
+                            <div class="w-full lg:flex-1">
+                                <label class="block text-sm font-medium mb-1" for="name">Collection Name:<span class="text-rose-600"> *</span></label>
+                                <input id="name" name="name" class="form-input max-w-full w-full" type="text" placeholder="e.g., Entrance benchmarks" />
+                            </div>
+                        </div>
+                        <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                            <div class="w-full">
+                                <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                                <textarea id="description" name="description" class="form-textarea max-w-full w-full focus:border-slate-300" rows="4" placeholder="Optional description of this collaborative landmark dataset"></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-5">
+                            <label class="block text-sm font-medium mb-1">Collection Color:</label>
+                            <div class="color-picker-group">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div id="color-preview" class="w-8 h-8 rounded border-2 border-slate-500 shrink-0" style="background-color: {{ default_color }}"></div>
+                                    <button type="button" id="color-picker-btn" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer" title="Custom color">
+                                        <img src="{% static 'private/media/color-picker.svg' %}" class="w-6 h-6 invert opacity-60 hover:opacity-100 transition-opacity" alt="Pick color">
+                                    </button>
+                                    <input type="color" id="color-picker" value="{{ default_color }}" class="sr-only">
+                                    <input type="hidden" name="color" id="color-value" value="{{ default_color }}">
+                                    <div class="flex items-stretch">
+                                        <span class="inline-flex items-center px-2 text-sm font-mono text-slate-400 bg-slate-600 border border-r-0 border-slate-600 rounded-l select-none">#</span>
+                                        <input type="text" id="color-hex-input" value="{{ default_color|cut:'#' }}" maxlength="6" class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-none" spellcheck="false">
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    {% get_project_color_palette as palette %}
+                                    {% for c in palette %}
+                                    <button type="button" class="color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer{% if c == default_color %} ring-2 ring-white ring-offset-2 ring-offset-slate-800{% endif %}" style="background-color: {{ c }}" data-color="{{ c }}"></button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <footer>
+                    <div class="flex flex-col px-6 py-5 border-t border-slate-700">
+                        <div class="flex self-end">
+                            <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:landmark_collections' %}">Cancel</a>
+                            <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Create Collection</button>
+                        </div>
+                    </div>
+                </footer>
+            </form>
+
+            {% include 'snippets/modal_success.html' %}
+            {% include 'snippets/modal_error.html' %}
+        </div>
+    </div>
+</main>
+{% endblock content %}
+
+{% block extra_js %}
+<script src="{% url 'url_reverse.js' %}"></script>
+<script src="{% static 'private/js/color-picker.js' %}"></script>
+{% endblock extra_js %}
+
+{% block inline_extra_js %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
+<script>
+    $(window).on('load', function () {
+        initColorPicker({
+            preview: '#color-preview',
+            hiddenInput: '#color-value',
+            nativePicker: '#color-picker',
+            pickerBtn: '#color-picker-btn',
+            hexInput: '#color-hex-input',
+            presets: '.color-preset',
+        });
+
+        attachEntityCrudForm({
+            formId: 'new_landmark_collection_form',
+            endpoint: "{% url 'api:v2:landmark-collections' %}",
+            method: 'POST',
+            successMessage: 'The landmark collection has been created successfully.',
+            beforeSubmit: function (payload) {
+                if (!payload.name || !payload.name.trim()) {
+                    FormModals.showError('Collection name is required.');
+                    return false;
+                }
+                return true;
+            },
+            redirectFromResponse: function (response) {
+                return Urls['private:landmark_collection_details'](response.id);
+            }
+        });
+    });
+</script>
+{% endblock inline_extra_js %}

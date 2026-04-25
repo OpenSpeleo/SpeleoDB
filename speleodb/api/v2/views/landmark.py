@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from django.db import transaction
 from django.db.utils import IntegrityError
 from drf_spectacular.utils import extend_schema
 from geojson import FeatureCollection  # type: ignore[attr-defined]
@@ -12,7 +13,12 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
-from speleodb.api.v2.permissions import LandmarkOwnershipPermission
+from speleodb.api.v2.landmark_access import accessible_landmarks_queryset
+from speleodb.api.v2.permissions import IsObjectDeletion
+from speleodb.api.v2.permissions import IsObjectEdition
+from speleodb.api.v2.permissions import IsReadOnly
+from speleodb.api.v2.permissions import SDB_ReadAccess
+from speleodb.api.v2.permissions import SDB_WriteAccess
 from speleodb.api.v2.serializers.landmark import LandmarkGeoJSONSerializer
 from speleodb.api.v2.serializers.landmark import LandmarkSerializer
 from speleodb.gis.models import Landmark
@@ -28,20 +34,21 @@ if TYPE_CHECKING:
 
 
 class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
-    """API View for managing personal Landmarks.
+    """API view for managing Landmarks through collection permissions."""
 
-    Landmarks are personal/private - users can only see and modify their own Landmarks.
-    - Shows only Landmarks created by the authenticated user
-    - Requires authentication and ownership
-    """
-
-    queryset = Landmark.objects.all().select_related("user")
-    permission_classes = [LandmarkOwnershipPermission]
+    queryset = Landmark.objects.filter(collection__is_active=True).select_related(
+        "collection"
+    )
+    permission_classes = [
+        (IsObjectDeletion & SDB_WriteAccess)
+        | (IsObjectEdition & SDB_WriteAccess)
+        | (IsReadOnly & SDB_ReadAccess)
+    ]
     serializer_class = LandmarkSerializer
     lookup_field = "id"
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Get detailed Landmark information (only if owned by user)."""
+        """Get detailed Landmark information when the user has collection access."""
         landmark = self.get_object()
         serializer = self.get_serializer(landmark)
         return SuccessResponse({"landmark": serializer.data})
@@ -55,20 +62,34 @@ class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
     def _update(
         self, request: Request, partial: bool, *args: Any, **kwargs: Any
     ) -> Response:
-        """Update a Landmark (only if owned by user)."""
+        """Update a Landmark when the user has collection WRITE access."""
         landmark = self.get_object()
 
         serializer = self.get_serializer(landmark, data=request.data, partial=partial)
         if serializer.is_valid():
-            serializer.save()
-            return SuccessResponse({"landmark": serializer.data})
+            try:
+                with transaction.atomic():
+                    serializer.save()
+                return SuccessResponse({"landmark": serializer.data})
+            except IntegrityError:
+                lat = serializer.validated_data.get("latitude", landmark.latitude)
+                long = serializer.validated_data.get("longitude", landmark.longitude)
+                return ErrorResponse(
+                    {
+                        "error": (
+                            "A landmark for GPS coordinate "
+                            f"({lat}, {long}) already exists or is invalid."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         return ErrorResponse(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Delete a Landmark (only if owned by user)."""
+        """Delete a Landmark when the user has collection WRITE access."""
         landmark = self.get_object()
         landmark_id = landmark.id
         landmark.delete()
@@ -78,21 +99,16 @@ class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
 
 
 class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
-    """API View for managing personal Landmarks.
-
-    Landmarks are personal/private - users can only see and modify their own Landmarks.
-    - Shows only Landmarks created by the authenticated user
-    - Requires authentication and ownership
-    """
+    """API view for listing and creating collection-backed Landmarks."""
 
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = LandmarkSerializer
     lookup_field = "id"
 
     def get_queryset(self) -> QuerySet[Landmark]:
-        """Get only Landmarks created by the authenticated user."""
+        """Get Landmarks visible to the authenticated user."""
         user = self.get_user()
-        return Landmark.objects.filter(user=user).select_related("user")
+        return accessible_landmarks_queryset(user=user)
 
     @extend_schema(operation_id="v2_landmarks_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -101,21 +117,20 @@ class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
         return SuccessResponse({"landmarks": serializer.data})
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Create a new Landmark for the authenticated user."""
-        user = self.get_user()
-
+        """Create a new Landmark in a writable collection."""
         serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid():
             try:
-                serializer.save(user=user)
+                with transaction.atomic():
+                    serializer.save()
                 return SuccessResponse(
                     {"landmark": serializer.data},
                     status=status.HTTP_201_CREATED,
                 )
             except IntegrityError:
-                lat = serializer.data.get("latitude")
-                long = serializer.data.get("longitude")
+                lat = serializer.validated_data.get("latitude")
+                long = serializer.validated_data.get("longitude")
                 return ErrorResponse(
                     {
                         "error": (
@@ -136,16 +151,16 @@ class LandmarkGeoJSONView(GenericAPIView[Landmark], SDBAPIViewMixin):
     """
     View to get user's Landmarks as GeoJSON-compatible data.
     Used by the map viewer to display Landmark markers.
-    Only shows Landmarks created by the authenticated user.
+    Only shows Landmarks visible through active collection permissions.
     """
 
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = LandmarkGeoJSONSerializer
 
     def get_queryset(self) -> QuerySet[Landmark]:
-        """Get only Landmarks created by the authenticated user."""
+        """Get Landmarks visible to the authenticated user."""
         user = self.get_user()
-        return Landmark.objects.filter(user=user).select_related("user")
+        return accessible_landmarks_queryset(user=user)
 
     def get(self, request: Request) -> Response:
         """Get user's Landmarks in a map-friendly format."""

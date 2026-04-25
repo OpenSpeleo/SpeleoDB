@@ -124,6 +124,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             showStationDragConfirmModal(stationId, projectId, snapResult, originalCoords);
         },
         onLandmarkDragEnd: (landmarkId, newCoords, originalCoords) => {
+            const landmark = State.allLandmarks.get(landmarkId);
+            if (!landmark || landmark.can_write !== true) {
+                Layers.revertLandmarkPosition(landmarkId, originalCoords);
+                Utils.showNotification('error', 'This collection Landmark is read-only for you.');
+                return;
+            }
             // Show Landmark drag confirm modal
             showLandmarkDragConfirmModal(landmarkId, newCoords, originalCoords);
         },
@@ -217,13 +223,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const landmark = State.allLandmarks.get(data.id);
                     const landmarkName = landmark?.name || data.feature?.properties?.name || 'Landmark';
 
-                    // Delete Landmark (any authenticated user can manage their Landmarks)
-                    items.push({
-                        label: 'Delete Landmark',
-                        subtitle: landmarkName,
-                        icon: '🗑️',
-                        onClick: () => LandmarkUI.showDeleteConfirmModal(landmark || data.feature.properties)
-                    });
+                    if (landmark?.can_delete === true) {
+                        items.push({
+                            label: 'Delete Landmark',
+                            subtitle: landmarkName,
+                            icon: '🗑️',
+                            onClick: () => LandmarkUI.showDeleteConfirmModal(landmark)
+                        });
+                    }
                     break;
 
                 case "cylinder-install":
@@ -470,6 +477,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Load Landmarks (no delay - load immediately to ensure spinner waits for all data)
         try {
+            await LandmarkManager.loadCollections();
             const landmarksData = await LandmarkManager.loadAllLandmarks();
             Layers.addLandmarkLayer(landmarksData);
             // Reorder again after Landmarks are loaded
@@ -588,6 +596,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('speleo:refresh-landmarks', async () => {
         console.log('📍 Refreshing landmarks...');
         try {
+            await LandmarkManager.loadCollections();
             const landmarksData = await LandmarkManager.loadAllLandmarks();
             Layers.addLandmarkLayer(landmarksData);
             Layers.reorderLayers();

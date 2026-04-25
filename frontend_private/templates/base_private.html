@@ -424,6 +424,29 @@
                                 </a>
                             </li>
 
+
+
+                            <!-- GIS Landmark Collections -->
+                            {% if request.url_name|is_in_list:"landmark_collections,landmark_collection_new,landmark_collection_details,landmark_collection_user_permissions,landmark_collection_gis_integration,landmark_collection_danger_zone" %}
+                            {% set stroke_color = 'indigo' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:landmark_collections' %}">
+                            {% else %}
+                            {% set stroke_color = 'slate' %}
+                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:landmark_collections' %}">
+                            {% endif %}
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="shrink-0 h-6 w-6 text-{{stroke_color}}-400 fill-current" viewBox="531 240 1138 1720">
+                                                <path d="M1669 809c0 424-404 661-544 949a28 28 0 0 1-50 0c-140-288-544-525-544-949a569 569 0 0 1 1138 0m-955 0a387 387 0 1 0 773 0 387 387 0 1 0-773 0m108 0a279 279 0 1 0 557 0 279 279 0 1 0-557 0m511 877q-56-14-114-20l-22 32q83 15 156 57c12 7 38 25 36 40q-3 7-11 15l-13 9c-77 44-260 49-351 42q-63-4-125-21-28-8-54-22c-8-5-25-16-24-26 2-15 23-30 36-38q72-39 156-55l-23-34q-57 6-113 21c-52 16-120 46-123 109-2 46 36 80 72 100 84 48 189 63 284 65 98 1 198-16 284-65 36-21 73-55 72-100-2-63-71-94-123-109"/>
+                                            </svg>
+                                            <span class="text-sm font-medium ml-3 duration-200">GIS Landmark Collections</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+
                             <!-- GIS Sensors -->
                             {% if request.url_name|is_in_list:"sensor_fleets,sensor_fleet_new,sensor_fleet_details,sensor_fleet_danger_zone,sensor_fleet_user_permissions,sensor_fleet_history,sensor_fleet_watchlist" %}
                             {% set stroke_color = 'indigo' %}

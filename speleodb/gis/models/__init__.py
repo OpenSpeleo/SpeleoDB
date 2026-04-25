@@ -12,6 +12,8 @@ from speleodb.gis.models.gps_track import GPSTrack
 
 # Landmark Related Models
 from speleodb.gis.models.landmark import Landmark
+from speleodb.gis.models.landmark import LandmarkCollection
+from speleodb.gis.models.landmark import LandmarkCollectionUserPermission
 
 # Surface Monitoring Network Related Models
 from speleodb.gis.models.network import SurfaceMonitoringNetwork
@@ -64,6 +66,8 @@ __all__ = [
     "GISView",
     "GPSTrack",
     "Landmark",
+    "LandmarkCollection",
+    "LandmarkCollectionUserPermission",
     "ProjectGeoJSON",
     "Sensor",
     "SensorFleet",

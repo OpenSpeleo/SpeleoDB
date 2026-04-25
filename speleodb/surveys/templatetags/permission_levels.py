@@ -35,5 +35,10 @@ def get_surface_network_permission_levels() -> list[PermissionLevel]:
 
 
 @register.simple_tag
+def get_landmark_collection_permission_levels() -> list[PermissionLevel]:
+    return PermissionLevel.members_no_webviewer
+
+
+@register.simple_tag
 def get_team_permission_levels() -> list[PermissionLevel]:
     return PermissionLevel.members_no_admin

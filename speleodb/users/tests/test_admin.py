@@ -18,6 +18,7 @@ from rest_framework import status
 
 from speleodb.common.enums import UserAction
 from speleodb.common.enums import UserApplication
+from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.gis.models import ExplorationLead
 from speleodb.gis.models import GISView
 from speleodb.gis.models import Landmark
@@ -320,8 +321,15 @@ class TestStaffAdminAccess:
 
     @pytest.fixture
     def landmark(self, staff_user: User) -> Landmark:
+        personal_collection = get_or_create_personal_landmark_collection(
+            user=staff_user
+        )
         return Landmark.objects.create(
-            name="Test Cave", latitude=46.0, longitude=7.0, user=staff_user
+            name="Test Cave",
+            latitude=46.0,
+            longitude=7.0,
+            created_by=staff_user.email,
+            collection=personal_collection,
         )
 
     def test_staff_landmark_list_hides_coordinates(

@@ -60,6 +60,25 @@ Level model:
 
 If numeric `permission_level` is present, it takes precedence over label fallback.
 
+### Landmark Collection permissions
+
+Landmark Collection permissions use the same numeric levels as fleets and
+surface networks:
+
+- read: level >= 1
+- write: level >= 2
+- admin: level >= 3
+
+All Landmarks belong to a collection. Private Landmarks use the user's personal
+collection, where the owner has ADMIN access. Collection permission is
+authoritative for read, edit, delete, drag, and import-assignment behavior. The
+map viewer consumes backend `can_write` and `can_delete` flags for individual
+Landmarks and uses collection-level write flags only to populate collection
+selectors. WRITE access can update a shared collection's map color; personal
+collection details show only the Landmark table and keep sharing and
+danger-zone management hidden. Personal collection owners can still use the GIS
+integration tab for tokenized OGC access.
+
 ## Scope Routing Rules
 
 `Config.getStationScope(station)` determines project vs network scope:
@@ -115,4 +134,3 @@ When touching permission code:
    - `READ_ONLY`
    - `READ_AND_WRITE`
    - `ADMIN`
-

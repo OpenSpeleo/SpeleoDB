@@ -30,10 +30,16 @@ from frontend_private.views import GISViewDetailsView
 from frontend_private.views import GISViewGISIntegrationView
 from frontend_private.views import GISViewListingView
 from frontend_private.views import GPSTrackListView
+from frontend_private.views import LandmarkCollectionDangerZoneView
+from frontend_private.views import LandmarkCollectionDetailsView
+from frontend_private.views import LandmarkCollectionGISView
+from frontend_private.views import LandmarkCollectionListingView
+from frontend_private.views import LandmarkCollectionUserPermissionsView
 from frontend_private.views import MapViewerView
 from frontend_private.views import NewCylinderFleetView
 from frontend_private.views import NewExperimentView
 from frontend_private.views import NewGISViewView
+from frontend_private.views import NewLandmarkCollectionView
 from frontend_private.views import NewProjectView
 from frontend_private.views import NewSensorFleetView
 from frontend_private.views import NewSurfaceNetworkView
@@ -215,6 +221,29 @@ surface_network_patterns = [
     ),
 ]
 
+landmark_collection_patterns = [
+    path(
+        "",
+        LandmarkCollectionDetailsView.as_view(),
+        name="landmark_collection_details",
+    ),
+    path(
+        "danger_zone/",
+        LandmarkCollectionDangerZoneView.as_view(),
+        name="landmark_collection_danger_zone",
+    ),
+    path(
+        "permissions/",
+        LandmarkCollectionUserPermissionsView.as_view(),
+        name="landmark_collection_user_permissions",
+    ),
+    path(
+        "gis/",
+        LandmarkCollectionGISView.as_view(),
+        name="landmark_collection_gis_integration",
+    ),
+]
+
 gis_view_patterns: list[URLPattern] = [
     path("", GISViewDetailsView.as_view(), name="gis_view_details"),
     path(
@@ -288,6 +317,21 @@ urlpatterns: list[URLPattern | URLResolver] = [
         name="surface_network_new",
     ),
     path("surface-network/<uuid:network_id>/", include(surface_network_patterns)),
+    # Landmark Collections URLs
+    path(
+        "landmark-collections/",
+        LandmarkCollectionListingView.as_view(),
+        name="landmark_collections",
+    ),
+    path(
+        "landmark-collection/new/",
+        NewLandmarkCollectionView.as_view(),
+        name="landmark_collection_new",
+    ),
+    path(
+        "landmark-collection/<uuid:collection_id>/",
+        include(landmark_collection_patterns),
+    ),
     # GIS Views URLs
     path("gis_views/", GISViewListingView.as_view(), name="gis_views"),
     path("gis_view/new/", NewGISViewView.as_view(), name="gis_view_new"),

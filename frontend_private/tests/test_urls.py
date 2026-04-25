@@ -83,6 +83,29 @@ from django.urls import reverse
             "project/{project_id}/danger_zone/",
             {"project_id": uuid.uuid4()},
         ),
+        # Landmark Collection routes
+        ("private:landmark_collections", "landmark-collections/", None),
+        ("private:landmark_collection_new", "landmark-collection/new/", None),
+        (
+            "private:landmark_collection_details",
+            "landmark-collection/{collection_id}/",
+            {"collection_id": uuid.uuid4()},
+        ),
+        (
+            "private:landmark_collection_user_permissions",
+            "landmark-collection/{collection_id}/permissions/",
+            {"collection_id": uuid.uuid4()},
+        ),
+        (
+            "private:landmark_collection_gis_integration",
+            "landmark-collection/{collection_id}/gis/",
+            {"collection_id": uuid.uuid4()},
+        ),
+        (
+            "private:landmark_collection_danger_zone",
+            "landmark-collection/{collection_id}/danger_zone/",
+            {"collection_id": uuid.uuid4()},
+        ),
     ],
 )
 def test_routes(name: str, path: str, kwargs: Any) -> None:

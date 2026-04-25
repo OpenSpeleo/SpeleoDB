@@ -25,6 +25,7 @@ from speleodb.api.v2.views.user_dashboard import CONTRIBUTION_CALENDAR_DAYS
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import SurveyTeamMembershipRole
+from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.surveys.models import Project
@@ -165,15 +166,33 @@ class TestDashboardStatsSummaryCounts(BaseAPITestCase):
             user=self.user, team=team, role=SurveyTeamMembershipRole.MEMBER
         )
 
-        # Landmarks: 2 for user, 1 for other
-        Landmark.objects.create(
-            name="LM1", user=self.user, latitude=20.0, longitude=-87.0
+        # Landmarks: 2 in user's personal collection, 1 in another user's.
+        user_personal_collection = get_or_create_personal_landmark_collection(
+            user=self.user
+        )
+        other_personal_collection = get_or_create_personal_landmark_collection(
+            user=self.other_user
         )
         Landmark.objects.create(
-            name="LM2", user=self.user, latitude=21.0, longitude=-88.0
+            name="LM1",
+            created_by=self.user.email,
+            collection=user_personal_collection,
+            latitude=20.0,
+            longitude=-87.0,
         )
         Landmark.objects.create(
-            name="LM3", user=self.other_user, latitude=22.0, longitude=-89.0
+            name="LM2",
+            created_by=self.user.email,
+            collection=user_personal_collection,
+            latitude=21.0,
+            longitude=-88.0,
+        )
+        Landmark.objects.create(
+            name="LM3",
+            created_by=self.other_user.email,
+            collection=other_personal_collection,
+            latitude=22.0,
+            longitude=-89.0,
         )
 
         # Stations: 2 by user email, 1 by other email

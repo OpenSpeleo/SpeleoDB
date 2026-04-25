@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import zipfile
 from typing import TYPE_CHECKING
@@ -13,7 +12,6 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
-from django.db import IntegrityError
 from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -26,7 +24,11 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.v2.landmark_access import user_has_collection_access
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.gis.models import Landmark
+from speleodb.gis.models import LandmarkCollection
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import ErrorResponse
@@ -96,13 +98,41 @@ class KML_KMZ_ImportView(GenericAPIView[Project], SDBAPIViewMixin):  # noqa: N80
         **kwargs: Any,
     ) -> SuccessResponse | ErrorResponse:
         user = self.get_user()
+        collection_id = request.data.get("collection")
+        if collection_id:
+            try:
+                collection = LandmarkCollection.objects.get(
+                    id=collection_id,
+                    is_active=True,
+                )
+            except LandmarkCollection.DoesNotExist, ValidationError, ValueError:
+                return ErrorResponse(
+                    {"error": "Landmark collection does not exist."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if not user_has_collection_access(
+                user=user,
+                collection=collection,
+                min_level=PermissionLevel.READ_AND_WRITE,
+            ):
+                return ErrorResponse(
+                    {
+                        "error": (
+                            "WRITE access is required to import landmarks into this "
+                            "collection."
+                        )
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        else:
+            collection = get_or_create_personal_landmark_collection(user=user)
 
         # ~~~~~~~~~~~~~~~~~~ START of Form Data Validation ~~~~~~~~~~~~~~~~~~ #
-        try:
-            files = request.FILES.getlist("file")
-        except KeyError:
+        files = request.FILES.getlist("file")
+        if not files:
             return ErrorResponse(
-                {"error": "Uploaded file(s) `artifact` is/are missing."},
+                {"error": "Missing required `file` upload."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -124,7 +154,7 @@ class KML_KMZ_ImportView(GenericAPIView[Project], SDBAPIViewMixin):  # noqa: N80
                 {
                     "error": (
                         f"The file size for `{file.name}` "
-                        f"[{file.size / 1024.0 / 1204.0} Mb], exceeds the limit: "
+                        f"[{file.size / 1024.0 / 1024.0} Mb], exceeds the limit: "
                         f"{settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT} Mb"
                     )
                 },
@@ -147,14 +177,15 @@ class KML_KMZ_ImportView(GenericAPIView[Project], SDBAPIViewMixin):  # noqa: N80
         try:
             kml = load_kml_kmz(file=file)
 
-            for point_data in iter_points(kml):
-                # Skip if Landmark already exists.
-                with contextlib.suppress(IntegrityError, ValidationError):
+            with transaction.atomic():
+                for point_data in iter_points(kml):
+                    # Skip if Landmark already exists.
                     _, created = Landmark.objects.get_or_create(
                         latitude=point_data["latitude"],
                         longitude=point_data["longitude"],
-                        user=user,
+                        collection=collection,
                         defaults={
+                            "created_by": user.email,
                             "name": point_data["name"],
                             "description": point_data["description"],
                         },
@@ -168,7 +199,6 @@ class KML_KMZ_ImportView(GenericAPIView[Project], SDBAPIViewMixin):  # noqa: N80
 
             logger.exception("Error importing KML/KMZ file")
             sentry_sdk.capture_exception(e)
-            transaction.set_rollback(True)
             return ErrorResponse(
                 {"error": "There has been a problem importing the KML/KMZ file"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

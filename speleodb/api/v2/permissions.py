@@ -22,6 +22,8 @@ from speleodb.gis.models import ExplorationLead
 from speleodb.gis.models import GISView
 from speleodb.gis.models import GPSTrack
 from speleodb.gis.models import Landmark
+from speleodb.gis.models import LandmarkCollection
+from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
@@ -139,6 +141,20 @@ class BaseAccessLevel(permissions.BasePermission):
                 except ObjectDoesNotExist, NotAuthorizedError:
                     return False
 
+            case LandmarkCollection():
+                try:
+                    return (
+                        obj.is_active
+                        and LandmarkCollectionUserPermission.objects.get(
+                            user=request.user,
+                            collection=obj,
+                            is_active=True,
+                        ).level
+                        >= self.MIN_ACCESS_LEVEL
+                    )
+                except ObjectDoesNotExist:
+                    return False
+
             # =============================================================== #
             #                        TRANSITIVE MODELS                        #
             # =============================================================== #
@@ -226,6 +242,14 @@ class BaseAccessLevel(permissions.BasePermission):
             case CylinderFleetUserPermission():
                 # Call on the `CylinderFleet` underlying object
                 return self.has_object_permission(request, view, obj.cylinder_fleet)
+
+            # LandmarkCollection Models
+            # -----------------------------------------------------------------
+            case Landmark():
+                return self.has_object_permission(request, view, obj.collection)
+
+            case LandmarkCollectionUserPermission():
+                return self.has_object_permission(request, view, obj.collection)
 
             # SensorFleet & Station Models
             # -----------------------------------------------------------------
@@ -334,36 +358,6 @@ class UserHasLeaderAccess(BaseTeamAccessLevel):
 
 class UserHasMemberAccess(BaseTeamAccessLevel):
     MIN_ACCESS_LEVEL = SurveyTeamMembershipRole.MEMBER
-
-
-# ================ Landmark ================ #
-
-
-class LandmarkOwnershipPermission(permissions.BasePermission):
-    """
-    Permission class specifically for Landmark ownership.
-    - Users can only see/modify their own Landmarks
-    - No sharing or public access to Landmarks
-    """
-
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        if request.user and request.user.is_authenticated:
-            return True
-
-        raise NotAuthenticated("Authentication credentials were not provided.")
-
-    def has_object_permission(
-        self,
-        request: AuthenticatedDRFRequest,  # type: ignore[override]
-        view: APIView,
-        obj: Landmark,
-    ) -> bool:
-        """Users can only access Landmarks they created."""
-        # Check if the object has a created_by field and if it matches the user
-        if not isinstance(obj, Landmark):
-            raise TypeError(f"Expected a `Landmark` object, got {type(obj)}")
-
-        return obj.user == request.user
 
 
 # =============== GPS Track =============== #

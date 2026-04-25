@@ -1,0 +1,166 @@
+{% extends "pages/landmark_collection/base.html" %}
+{% load static %}
+{% load project_colors %}
+
+{% block extra_css %}
+<style>
+    #collection_landmarks_table thead th,
+    #collection_landmarks_table tbody td {
+        text-align: center !important;
+    }
+    .color-picker-disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block right_panel %}
+<div class="grow">
+    {% if not collection.is_personal %}
+    <form id="landmark_collection_details_form" autocomplete="off">
+        <fieldset {% if not has_write_access %}disabled{% endif %}>
+            {% csrf_token %}
+            <div class="p-6 space-y-6">
+                <h2 class="text-2xl text-slate-100 font-bold mb-5">Collection Settings</h2>
+                <section>
+                    <div class="flex flex-wrap mt-5 gap-4">
+                        <div class="w-full lg:flex-1">
+                            <label class="block text-sm font-medium mb-1" for="name">Collection Name:<span class="text-rose-600"> *</span></label>
+                            <input id="name" name="name" class="form-input max-w-full w-full" type="text" value="{{ collection.name }}" />
+                        </div>
+                    </div>
+                    <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                        <div class="w-full">
+                            <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                            <textarea id="description" name="description" class="form-textarea max-w-full w-full focus:border-slate-300" rows="4">{% if collection.description %}{{ collection.description }}{% endif %}</textarea>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <div class="mt-5">
+                        <label class="block text-sm font-medium mb-1">Collection Color:</label>
+                        <div class="color-picker-group{% if not has_write_access %} color-picker-disabled{% endif %}">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div id="color-preview" class="w-8 h-8 rounded border-2 border-slate-500 shrink-0" style="background-color: {{ collection.color }}"></div>
+                                {% if has_write_access %}
+                                <button type="button" id="color-picker-btn" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer" title="Custom color">
+                                    <img src="{% static 'private/media/color-picker.svg' %}" class="w-6 h-6 invert opacity-60 hover:opacity-100 transition-opacity" alt="Pick color">
+                                </button>
+                                {% endif %}
+                                <input type="color" id="color-picker" value="{{ collection.color }}" class="sr-only">
+                                <input type="hidden" name="color" id="color-value" value="{{ collection.color }}">
+                                <div class="flex items-stretch">
+                                    <span class="inline-flex items-center px-2 text-sm font-mono text-slate-400 bg-slate-600 border border-r-0 border-slate-600 rounded-l select-none">#</span>
+                                    <input type="text" id="color-hex-input" value="{{ collection.color|cut:'#' }}" maxlength="6" class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-none" spellcheck="false" {% if not has_write_access %}disabled{% endif %}>
+                                </div>
+                            </div>
+                            {% if has_write_access %}
+                            <div class="flex flex-wrap gap-2">
+                                {% get_project_color_palette as palette %}
+                                {% for c in palette %}
+                                <button type="button" class="color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer{% if c == collection.color %} ring-2 ring-white ring-offset-2 ring-offset-slate-800{% endif %}" style="background-color: {{ c }}" data-color="{{ c }}"></button>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <footer>
+                <div class="flex flex-col px-6 py-5 border-t border-slate-700">
+                    <div class="flex self-end">
+                        <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:landmark_collections' %}">Cancel</a>
+                        {% if has_write_access %}
+                        <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </footer>
+        </fieldset>
+    </form>
+    {% endif %}
+
+    <section class="p-6{% if not collection.is_personal %} border-t border-slate-700{% endif %}">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+            <h2 class="text-lg font-semibold text-slate-100">Landmarks in this Collection</h2>
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'api:v2:landmark-collection-landmarks-export-excel' collection_id=collection.id %}"
+                    class="btn-sm bg-green-500 hover:bg-green-400 text-white border border-slate-600">
+                    Export to Excel
+                </a>
+                <a href="{% url 'api:v2:landmark-collection-landmarks-export-gpx' collection_id=collection.id %}"
+                    class="btn-sm bg-cyan-500 hover:bg-cyan-400 text-white border border-slate-600">
+                    Export GPX
+                </a>
+            </div>
+        </div>
+
+        {% include 'snippets/landmark_table.html' with landmarks=landmarks table_id='collection_landmarks_table' show_count=True %}
+    </section>
+
+    {% if not collection.is_personal %}
+    {% include 'snippets/modal_success.html' %}
+    {% include 'snippets/modal_error.html' %}
+    {% endif %}
+</div>
+{% endblock right_panel %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+{% endblock extra_js %}
+
+{% block inline_extra_js %}
+<script src="{% static 'private/js/forms/fleet_watchlist.js' %}"></script>
+{% if not collection.is_personal %}
+<script src="{% static 'private/js/forms/modals.js' %}"></script>
+<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
+<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
+<script src="{% static 'private/js/color-picker.js' %}"></script>
+{% endif %}
+<script>
+    $(window).on('load', function () {
+        {% if not collection.is_personal %}
+        {% if has_write_access %}
+        initColorPicker({
+            preview: '#color-preview',
+            hiddenInput: '#color-value',
+            nativePicker: '#color-picker',
+            pickerBtn: '#color-picker-btn',
+            hexInput: '#color-hex-input',
+            presets: '.color-preset',
+        });
+        {% endif %}
+        {% endif %}
+
+        {% if landmarks %}
+        attachFleetWatchlist({
+            tableSelector: '#collection_landmarks_table',
+            dataTableOptions: {
+                order: [[0, 'asc']],
+            },
+        });
+        {% endif %}
+
+        {% if not collection.is_personal %}
+        attachEntityCrudForm({
+            formId: 'landmark_collection_details_form',
+            endpoint: "{% url 'api:v2:landmark-collection-detail' collection_id=collection.id %}",
+            method: 'PUT',
+            successMessage: 'The landmark collection has been updated.',
+            beforeSubmit: function (payload) {
+                if (!payload.name || !payload.name.trim()) {
+                    FormModals.showError('Collection name is required.');
+                    return false;
+                }
+                return true;
+            },
+            reloadOnSuccess: true
+        });
+        {% endif %}
+    });
+</script>
+{% endblock inline_extra_js %}

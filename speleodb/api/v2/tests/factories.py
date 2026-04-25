@@ -26,6 +26,7 @@ from speleodb.common.enums import StationResourceType
 from speleodb.common.enums import SurveyPlatformEnum
 from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.common.enums import UnitSystem
+from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.gis.models import Cylinder
 from speleodb.gis.models import CylinderFleet
 from speleodb.gis.models import CylinderFleetUserPermission
@@ -34,6 +35,9 @@ from speleodb.gis.models import CylinderPressureCheck
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import ExplorationLead
+from speleodb.gis.models import Landmark
+from speleodb.gis.models import LandmarkCollection
+from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.gis.models import Sensor
 from speleodb.gis.models import SensorFleet
 from speleodb.gis.models import SensorFleetUserPermission
@@ -343,6 +347,62 @@ class SurfaceStationFactory(DjangoModelFactory[SurfaceStation]):
     ) -> SurfaceStation:
         """Create a surface station with specific coordinates."""
         return cls.create(latitude=lat, longitude=lng, **kwargs)
+
+
+# ================ LANDMARK COLLECTION FACTORIES ================ #
+
+
+class LandmarkCollectionFactory(DjangoModelFactory[LandmarkCollection]):
+    """Factory for creating LandmarkCollection instances."""
+
+    class Meta:
+        model = LandmarkCollection
+
+    id = factory.LazyFunction(uuid.uuid4)
+    name = factory.Sequence(lambda n: f"Landmark Collection {n:03d}")
+    description: str = factory.Faker("text", max_nb_chars=200)  # type: ignore[assignment]
+    is_active = True
+    collection_type = LandmarkCollection.CollectionType.SHARED
+    personal_owner = None
+    created_by: str = factory.LazyAttribute(  # type: ignore[assignment]
+        lambda _: UserFactory.create().email
+    )
+
+
+class LandmarkCollectionUserPermissionFactory(
+    DjangoModelFactory[LandmarkCollectionUserPermission]
+):
+    """Factory for creating LandmarkCollectionUserPermission instances."""
+
+    class Meta:
+        model = LandmarkCollectionUserPermission
+
+    user: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
+    collection: LandmarkCollection = factory.SubFactory(  # type: ignore[assignment]
+        LandmarkCollectionFactory
+    )
+    level = PermissionLevel.READ_AND_WRITE
+    is_active = True
+
+
+class LandmarkFactory(DjangoModelFactory[Landmark]):
+    """Factory for creating Landmark instances."""
+
+    class Meta:
+        model = Landmark
+
+    class Params:
+        owner: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
+
+    id = factory.LazyFunction(uuid.uuid4)
+    name = factory.Sequence(lambda n: f"Landmark {n:03d}")
+    description: str = factory.Faker("text", max_nb_chars=100)  # type: ignore[assignment]
+    latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
+    longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
+    created_by: str = factory.LazyAttribute(lambda obj: obj.owner.email)  # type: ignore[assignment]
+    collection: factory.LazyAttribute[Any, LandmarkCollection] = factory.LazyAttribute(
+        lambda obj: get_or_create_personal_landmark_collection(user=obj.owner)
+    )
 
 
 class StationResourceFactory(DjangoModelFactory[StationResource]):

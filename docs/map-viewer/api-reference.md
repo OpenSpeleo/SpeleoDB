@@ -154,13 +154,40 @@ Project-scoped lead endpoints are under the project prefix (see Section 2.1).
 
 | Method         | URL Pattern                     | Name               | Description                   |
 |----------------|---------------------------------|--------------------|-------------------------------|
-| GET/POST       | `/api/v2/landmarks/`            | `landmarks`        | List/create user landmarks    |
-| GET            | `/api/v2/landmarks/geojson/`    | `landmarks-geojson`| All user landmarks as GeoJSON |
+| GET/POST       | `/api/v2/landmarks/`            | `landmarks`        | List/create accessible landmarks |
+| GET            | `/api/v2/landmarks/geojson/`    | `landmarks-geojson`| Accessible landmarks as GeoJSON |
 | GET/PATCH/DELETE | `/api/v2/landmarks/<id>/`     | `landmark-detail`  | Landmark CRUD                 |
 
-Landmarks are **user-scoped** — each user sees only their own landmarks.
+All Landmarks belong to a Landmark Collection. Missing collection values on
+create/import default to the user's personal collection. Collection READ access
+controls visibility; WRITE access controls create, edit, delete, drag, and
+reassignment behavior. Standard Landmark responses include `collection`,
+`collection_name`, `created_by`, `collection_color`, `can_write`, and
+`can_delete`; GeoJSON Landmark properties also include `collection_color`,
+which the private map uses for marker and label color.
 
-### 2.6 GPS Tracks
+### 2.6 Landmark Collections
+
+**URL file:** `speleodb/api/v2/urls/landmark_collection.py`
+
+| Method         | URL Pattern                                         | Name                              | Description                    |
+|----------------|-----------------------------------------------------|-----------------------------------|--------------------------------|
+| GET/POST       | `/api/v2/landmark-collections/`                     | `landmark-collections`            | List/create collections        |
+| GET/PUT/PATCH/DELETE | `/api/v2/landmark-collections/<collection_id>/` | `landmark-collection-detail` | Collection CRUD/soft delete    |
+| GET/POST/PUT/DELETE | `/api/v2/landmark-collections/<collection_id>/permissions/` | `landmark-collection-permissions` | User permission management |
+
+Collection responses include `color`. Shared collections can update name,
+description, and color with WRITE access. Personal collections appear in
+authenticated listings, but their private details page does not expose the
+name, description, or color form. Permission and deletion management are
+disabled for personal collections, but owners can still use the GIS integration
+tab for that collection's tokenized OGC endpoint.
+`is_active` is internal lifecycle state and is not part of collection or
+permission response payloads. Create requests are forced active, update attempts
+containing `is_active` are rejected, and inactive collection
+object/export/permission routes return 404.
+
+### 2.7 GPS Tracks
 
 **URL file:** `speleodb/api/v2/urls/gps_track.py`
 
@@ -279,6 +306,38 @@ for personal QGIS connections.
 |--------|------------------------------------------------|--------------|-------------------------------|
 | GET    | `/api/v2/gis-ogc/experiment/<gis_token>/`      | `experiment` | Experiment data via GIS token |
 
+### 3.4 Landmark Collection endpoints
+
+Landmark Collections expose a single OGC collection named `landmarks`.
+Unlike project OGC endpoints, `/items` is generated dynamically from the
+database and returns Point GeoJSON.
+
+| Method | URL Pattern                                                            | Name                              | Description                         |
+|--------|------------------------------------------------------------------------|-----------------------------------|-------------------------------------|
+| GET    | `/api/v2/gis-ogc/landmark-collection/<gis_token>/`                     | `landmark-collection-landing`     | OGC landing page                    |
+| GET    | `/api/v2/gis-ogc/landmark-collection/<gis_token>/conformance`          | `landmark-collection-conformance` | OGC conformance declaration         |
+| GET    | `/api/v2/gis-ogc/landmark-collection/<gis_token>/collections`          | `landmark-collection-collections` | Collections list                    |
+| GET    | `/api/v2/gis-ogc/landmark-collection/<gis_token>/collections/landmarks` | `landmark-collection-collection`  | Single Landmark layer metadata      |
+| GET    | `/api/v2/gis-ogc/landmark-collection/<gis_token>/collections/landmarks/items` | `landmark-collection-collection-items` | Landmark Point GeoJSON FeatureCollection |
+
+The legacy bare-token aliases remain available for existing callers:
+`landmark-collection-data`, `landmark-collection-layer`, and
+`landmark-collection-layer-items`. New integrations should use the landing page
+URL and follow its `/collections` discovery links.
+
+User-scoped Landmark Collection OGC uses the existing application token and
+lists every active Landmark Collection the token owner can READ. Each collection
+UUID becomes one OGC collection id, and each `/items` endpoint returns only that
+collection's Point GeoJSON.
+
+| Method | URL Pattern                                                            | Name                              | Description                         |
+|--------|------------------------------------------------------------------------|-----------------------------------|-------------------------------------|
+| GET    | `/api/v2/gis-ogc/landmark-collections/user/<key>/`                     | `landmark-collections-user-landing` | OGC landing page for all readable Landmark Collections |
+| GET    | `/api/v2/gis-ogc/landmark-collections/user/<key>/conformance`          | `landmark-collections-user-conformance` | OGC conformance declaration |
+| GET    | `/api/v2/gis-ogc/landmark-collections/user/<key>/collections`          | `landmark-collections-user-collections` | Readable Landmark Collection list |
+| GET    | `/api/v2/gis-ogc/landmark-collections/user/<key>/collections/<collection_uuid>` | `landmark-collections-user-collection` | Single Landmark Collection metadata |
+| GET    | `/api/v2/gis-ogc/landmark-collections/user/<key>/collections/<collection_uuid>/items` | `landmark-collections-user-collection-items` | Landmark Point GeoJSON FeatureCollection |
+
 ---
 
 ## 4. Authentication Model
@@ -317,8 +376,16 @@ External GIS clients (e.g., QGIS) connect via:
 - **View tokens** (`gis_token`) — access a single shared view.
 - **User tokens** (`user_token`) — access all projects the user has
   permission to see.
+- **Landmark Collection tokens** (`gis_token`) — read-only public access
+  to one active Landmark Collection as Point GeoJSON.
+- **User Landmark Collection tokens** (`user_token`) — the same application
+  token pattern as Personal GIS View, but for all active Landmark Collections
+  the user can READ.
 
 Both token types are embedded in the URL path, not as headers or query
 params. The OGC endpoints follow the OGC API - Features standard,
 providing landing pages, conformance declarations, collections lists,
-and item endpoints that QGIS auto-discovers.
+and item endpoints that QGIS auto-discovers. Landmark Collection tokens work
+for active personal and shared collections; treat both as public read secrets.
+Refreshing the application token from a user-scoped OGC card invalidates every
+app currently authenticating with that token, not only the GIS URL.

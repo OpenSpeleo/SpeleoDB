@@ -921,6 +921,13 @@ export const Layers = {
 
         // Determine initial visibility based on state
         const visibility = State.landmarksVisible ? 'visible' : 'none';
+        const landmarkColorExpression = ['coalesce', ['get', 'collection_color'], Colors.FALLBACK_COLOR];
+        const landmarkHaloColorExpression = [
+            'case',
+            ['==', ['get', 'collection_color'], '#ffffff'],
+            '#0f172a',
+            '#ffffff'
+        ];
 
         // Landmark symbol layer (triangle marker visible from far zoom)
         map.addLayer({
@@ -937,8 +944,8 @@ export const Layers = {
                 'visibility': visibility
             },
             paint: {
-                'text-color': '#3b82f6',
-                'text-halo-color': '#ffffff',
+                'text-color': landmarkColorExpression,
+                'text-halo-color': landmarkHaloColorExpression,
                 'text-halo-width': 2,
                 'text-halo-blur': 0.5
             }
@@ -960,8 +967,8 @@ export const Layers = {
                 'visibility': visibility
             },
             paint: {
-                'text-color': '#3b82f6',
-                'text-halo-color': '#ffffff',
+                'text-color': landmarkColorExpression,
+                'text-halo-color': landmarkHaloColorExpression,
                 'text-halo-width': 1.5
             }
         });

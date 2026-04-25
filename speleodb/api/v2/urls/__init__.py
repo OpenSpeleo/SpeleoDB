@@ -26,6 +26,9 @@ from speleodb.api.v2.urls.gis import urlpatterns as gis_urlpatterns
 from speleodb.api.v2.urls.gis_view import urlpatterns as gis_view_urlpatterns
 from speleodb.api.v2.urls.gps_track import urlpatterns as gps_track_urlpatterns
 from speleodb.api.v2.urls.landmark import urlpatterns as landmark_urlpatterns
+from speleodb.api.v2.urls.landmark_collection import (
+    urlpatterns as landmark_collection_urlpatterns,
+)
 from speleodb.api.v2.urls.log_entry import urlpatterns as log_entry_urlpatterns
 from speleodb.api.v2.urls.project import urlpatterns as project_urlpatterns
 from speleodb.api.v2.urls.resource import urlpatterns as resource_urlpatterns
@@ -64,6 +67,7 @@ urlpatterns: list[URLResolver | URLPattern] = [
     path("import/", include(file_import_urlpatterns)),
     path("logs/", include(log_entry_urlpatterns)),
     path("landmarks/", include(landmark_urlpatterns)),
+    path("landmark-collections/", include(landmark_collection_urlpatterns)),
     path("projects/", include(project_urlpatterns)),
     path("resources/", include(resource_urlpatterns)),
     path("cylinder-fleets/", include(cylinder_fleet_urlpatterns)),

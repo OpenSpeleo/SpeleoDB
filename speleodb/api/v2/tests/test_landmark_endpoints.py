@@ -10,6 +10,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.gis.models import Landmark
 from speleodb.users.models import User
 
@@ -42,12 +43,14 @@ class TestLandmarkEndpoints:
     @pytest.fixture
     def landmark(self, user: User) -> Landmark:
         """Create a test Landmark."""
+        personal_collection = get_or_create_personal_landmark_collection(user=user)
         return Landmark.objects.create(
             name="Test Landmark",
             description="Test description",
             latitude=45.123456,
             longitude=-122.654321,
-            user=user,
+            created_by=user.email,
+            collection=personal_collection,
         )
 
     # List endpoint tests
@@ -84,13 +87,15 @@ class TestLandmarkEndpoints:
 
     def test_list_landmarks_multiple(self, api_client: APIClient, user: User) -> None:
         """Test listing multiple Landmarks."""
+        personal_collection = get_or_create_personal_landmark_collection(user=user)
         # Create multiple Landmarks
         for i in range(3):
             Landmark.objects.create(
                 name=f"Landmark {i}",
                 latitude=45.0 + i,
                 longitude=-122.0 + i,
-                user=user,
+                created_by=user.email,
+                collection=personal_collection,
             )
 
         api_client.force_authenticate(user=user)
@@ -121,7 +126,8 @@ class TestLandmarkEndpoints:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["landmark"]["user"] == "testuser@example.com"
+        assert data["landmark"]["created_by"] == "testuser@example.com"
+        assert "user" not in data["landmark"]
 
     def test_retrieve_landmark_not_found(
         self, api_client: APIClient, user: User
@@ -166,11 +172,15 @@ class TestLandmarkEndpoints:
         assert response.status_code == status.HTTP_201_CREATED
         response_data = response.json()
         assert response_data["landmark"]["name"] == "New Landmark"
-        assert response_data["landmark"]["user"] == "testuser@example.com"
+        assert response_data["landmark"]["created_by"] == "testuser@example.com"
+        assert "user" not in response_data["landmark"]
 
         # Verify Landmark was created in database
         landmark = Landmark.objects.get(name="New Landmark")
-        assert landmark.user == user
+        assert landmark.created_by == user.email
+        assert landmark.collection == get_or_create_personal_landmark_collection(
+            user=user
+        )
 
     def test_create_landmark_minimal_data(
         self, api_client: APIClient, user: User
@@ -189,6 +199,7 @@ class TestLandmarkEndpoints:
         assert response.status_code == status.HTTP_201_CREATED
         landmark = Landmark.objects.get(name="Minimal Landmark")
         assert landmark.description == ""
+        assert landmark.collection.is_personal
 
     def test_create_landmark_missing_latitude(
         self, api_client: APIClient, user: User
@@ -350,6 +361,37 @@ class TestLandmarkEndpoints:
         assert landmark.latitude == 48.0  # noqa: PLR2004
         assert landmark.longitude == -123.0  # noqa: PLR2004
 
+    def test_update_landmark_duplicate_collection_coordinates_returns_400(
+        self,
+        api_client: APIClient,
+        user: User,
+        landmark: Landmark,
+    ) -> None:
+        """Moving onto an occupied collection coordinate should not 500."""
+        Landmark.objects.create(
+            name="Already There",
+            latitude=46.0,
+            longitude=-123.0,
+            created_by=user.email,
+            collection=landmark.collection,
+        )
+
+        api_client.force_authenticate(user=user)
+        response = api_client.patch(
+            reverse("api:v2:landmark-detail", kwargs={"id": landmark.id}),
+            {
+                "latitude": "46.0",
+                "longitude": "-123.0",
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "already exists" in response.json()["error"]
+        landmark.refresh_from_db()
+        assert landmark.latitude != 46.0  # noqa: PLR2004
+        assert landmark.longitude != -123.0  # noqa: PLR2004
+
     def test_update_landmark_invalid_data(
         self, api_client: APIClient, user: User, landmark: Landmark
     ) -> None:
@@ -408,19 +450,22 @@ class TestLandmarkEndpoints:
         self, api_client: APIClient, user: User
     ) -> None:
         """Test geojson endpoint without authentication (should work)."""
+        personal_collection = get_or_create_personal_landmark_collection(user=user)
         # Create Landmarks with different properties
         Landmark.objects.create(
             name="Landmark 1",
             description="Description 1",
             latitude=45.0,
             longitude=-122.0,
-            user=user,
+            created_by=user.email,
+            collection=personal_collection,
         )
         Landmark.objects.create(
             name="Landmark 2",
             latitude=46.0,
             longitude=-123.0,
-            user=user,  # Using the same user
+            created_by=user.email,
+            collection=personal_collection,
         )
 
         url = reverse("api:v2:landmarks-geojson")

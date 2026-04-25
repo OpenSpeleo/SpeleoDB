@@ -20,6 +20,14 @@ from frontend_private.views.gis_views import GISViewGISIntegrationView
 from frontend_private.views.gis_views import GISViewListingView
 from frontend_private.views.gis_views import NewGISViewView
 from frontend_private.views.gps_tracks import GPSTrackListView
+from frontend_private.views.landmark_collections import LandmarkCollectionDangerZoneView
+from frontend_private.views.landmark_collections import LandmarkCollectionDetailsView
+from frontend_private.views.landmark_collections import LandmarkCollectionGISView
+from frontend_private.views.landmark_collections import LandmarkCollectionListingView
+from frontend_private.views.landmark_collections import (
+    LandmarkCollectionUserPermissionsView,
+)
+from frontend_private.views.landmark_collections import NewLandmarkCollectionView
 from frontend_private.views.map import MapViewerView
 from frontend_private.views.project import NewProjectView
 from frontend_private.views.project import ProjectDangerZoneView
@@ -85,10 +93,16 @@ __all__ = [
     "GISViewGISIntegrationView",
     "GISViewListingView",
     "GPSTrackListView",
+    "LandmarkCollectionDangerZoneView",
+    "LandmarkCollectionDetailsView",
+    "LandmarkCollectionGISView",
+    "LandmarkCollectionListingView",
+    "LandmarkCollectionUserPermissionsView",
     "MapViewerView",
     "NewCylinderFleetView",
     "NewExperimentView",
     "NewGISViewView",
+    "NewLandmarkCollectionView",
     "NewProjectView",
     "NewSensorFleetView",
     "NewSurfaceNetworkView",

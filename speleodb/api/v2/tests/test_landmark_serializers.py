@@ -9,7 +9,11 @@ import pytest
 
 from speleodb.api.v2.serializers.landmark import LandmarkGeoJSONSerializer
 from speleodb.api.v2.serializers.landmark import LandmarkSerializer
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.gis.models import Landmark
+from speleodb.gis.models import LandmarkCollection
+from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.users.models import User
 
 
@@ -25,12 +29,14 @@ def user() -> User:
 @pytest.fixture
 def landmark(user: User) -> Landmark:
     """Create a test Landmark."""
+    personal_collection = get_or_create_personal_landmark_collection(user=user)
     return Landmark.objects.create(
         name="Test Landmark",
         description="Test description",
         latitude=45.123456,
         longitude=-122.654321,
-        user=user,
+        created_by=user.email,
+        collection=personal_collection,
     )
 
 
@@ -48,7 +54,9 @@ class TestLandmarkSerializer:
         assert data["description"] == "Test description"
         assert data["latitude"] == 45.123456  # noqa: PLR2004
         assert data["longitude"] == -122.654321  # noqa: PLR2004
-        assert data["user"] == landmark.user.email
+        assert "user" not in data
+        assert data["created_by"] == landmark.created_by
+        assert str(data["collection"]) == str(landmark.collection_id)
         assert "creation_date" in data
         assert "modified_date" in data
 
@@ -78,7 +86,10 @@ class TestLandmarkSerializer:
         assert saved_landmark.description == "New description"
         assert saved_landmark.latitude == round(latitude, 7)
         assert saved_landmark.longitude == round(longitude, 7)
-        assert saved_landmark.user == user
+        assert saved_landmark.created_by == user.email
+        assert saved_landmark.collection == get_or_create_personal_landmark_collection(
+            user=user
+        )
 
     def test_deserialize_landmark_update(self, landmark: Landmark) -> None:
         """Test updating a Landmark from JSON data."""
@@ -142,14 +153,14 @@ class TestLandmarkSerializer:
     def test_read_only_fields(self, landmark: Landmark) -> None:
         """Test that read-only fields cannot be updated."""
         original_id = landmark.id
-        original_user = landmark.user
+        original_created_by = landmark.created_by
         original_creation_date = landmark.creation_date
         data = {
             "id": uuid.uuid4(),
             "name": landmark.name,
             "latitude": f"{landmark.latitude}",
             "longitude": f"{landmark.longitude}",
-            "user": "johndoe@example.com",
+            "created_by": "johndoe@example.com",
             "creation_date": "2020-01-01T00:00:00Z",
             "modified_date": "2020-01-01T00:00:00Z",
         }
@@ -160,8 +171,42 @@ class TestLandmarkSerializer:
 
         # Read-only fields should not change
         assert updated_landmark.id == original_id
-        assert updated_landmark.user == original_user
+        assert updated_landmark.created_by == original_created_by
         assert updated_landmark.creation_date == original_creation_date
+
+    def test_collection_fields_and_write_flags(self, user: User) -> None:
+        collection = LandmarkCollection.objects.create(
+            name="Shared Collection",
+            created_by=user.email,
+        )
+        LandmarkCollectionUserPermission.objects.create(
+            collection=collection,
+            user=user,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+        landmark = Landmark.objects.create(
+            name="Shared",
+            latitude=45,
+            longitude=-122,
+            created_by=user.email,
+            collection=collection,
+        )
+
+        class MockRequest:
+            def __init__(self, request_user: User) -> None:
+                self.user = request_user
+
+        serializer = LandmarkSerializer(
+            landmark,
+            context={"request": MockRequest(user)},
+        )
+        data = serializer.data
+
+        assert str(data["collection"]) == str(collection.id)
+        assert data["collection_name"] == "Shared Collection"
+        assert data["collection_color"] == collection.color
+        assert data["can_write"] is True
+        assert data["can_delete"] is True
 
 
 @pytest.mark.django_db
@@ -190,20 +235,31 @@ class TestLandmarkGeoJSONSerializer:
         properties = data["properties"]
         assert properties["name"] == "Test Landmark"
         assert properties["description"] == "Test description"
+        assert properties["created_by"] == landmark.created_by
+        assert properties["collection"] == str(landmark.collection_id)
+        assert properties["collection_name"] == "Personal Landmarks"
+        assert properties["collection_color"] == landmark.collection.color
+        assert (
+            properties["collection_type"] == LandmarkCollection.CollectionType.PERSONAL
+        )
+        assert properties["is_personal_collection"] is True
 
     def test_map_serializer_feature_collection(self, user: User) -> None:
         """Test serializing multiple Landmarks as GeoJSON FeatureCollection."""
+        personal_collection = get_or_create_personal_landmark_collection(user=user)
         _ = Landmark.objects.create(
             name="Landmark 1",
             latitude=45.0,
             longitude=-122.0,
-            user=user,
+            created_by=user.email,
+            collection=personal_collection,
         )
         _ = Landmark.objects.create(
             name="Landmark 2",
             latitude=46.0,
             longitude=-123.0,
-            user=user,
+            created_by=user.email,
+            collection=personal_collection,
         )
 
         landmarks = Landmark.objects.all()
@@ -231,7 +287,8 @@ class TestLandmarkGeoJSONSerializer:
             description="",
             latitude=45.0,
             longitude=-122.0,
-            user=user,
+            created_by=user.email,
+            collection=get_or_create_personal_landmark_collection(user=user),
         )
 
         serializer = LandmarkGeoJSONSerializer(landmark)

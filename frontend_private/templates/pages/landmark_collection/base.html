@@ -1,0 +1,77 @@
+{% extends "base_private.html" %}
+{% load static %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+            <div class="mb-4 sm:mb-0">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
+                    Landmark Collection: {{ collection.name }}
+                    {% if collection.is_personal %}
+                    <span class="ml-2 align-middle text-xs font-semibold uppercase tracking-wide rounded-full bg-slate-700 text-slate-300 px-2 py-1">Private</span>
+                    {% endif %}
+                </h1>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
+            <div class="flex flex-col md:flex-row md:-mr-px">
+                <div class="px-3 py-6 border-b md:border-b-0 md:border-r border-slate-700 md:min-w-60">
+                    <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Settings</div>
+                    <ul class="flex flex-wrap md:block gap-2 md:gap-0">
+                        <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                            <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'landmark_collection_details' %}bg-indigo-500/30{% endif %}" href="{% url 'private:landmark_collection_details' collection_id=collection.id %}">
+                                <svg class="w-4 h-4 shrink-0 stroke-current mr-2 {% if request.url_name == 'landmark_collection_details' %}text-indigo-400{% else %}text-slate-500{% endif %}" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                                    <path d="M5 5h14v14H5z"></path>
+                                    <path d="M8 9h8"></path>
+                                    <path d="M8 13h5"></path>
+                                </svg>
+                                <span class="text-sm font-medium {% if request.url_name == 'landmark_collection_details' %}text-indigo-400{% else %}text-slate-300 hover:text-slate-200{% endif %}">Collection Details</span>
+                            </a>
+                        </li>
+                        {% if show_permission_management %}
+                        <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                            <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'landmark_collection_user_permissions' %}bg-indigo-500/30{% endif %}" href="{% url 'private:landmark_collection_user_permissions' collection_id=collection.id %}">
+                                <svg class="w-4 h-4 shrink-0 fill-current mr-2 {% if request.url_name == 'landmark_collection_user_permissions' %}text-indigo-400{% else %}text-slate-500{% endif %}" viewBox="0 0 16 16">
+                                    <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+                                </svg>
+                                <span class="text-sm font-medium {% if request.url_name == 'landmark_collection_user_permissions' %}text-indigo-400{% else %}text-slate-300 hover:text-slate-200{% endif %}">User Access Control</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if show_gis_integration %}
+                        <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                            <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'landmark_collection_gis_integration' %}bg-indigo-500/30{% endif %}" href="{% url 'private:landmark_collection_gis_integration' collection_id=collection.id %}">
+                                <svg class="w-4 h-4 shrink-0 stroke-current mr-2 {% if request.url_name == 'landmark_collection_gis_integration' %}text-indigo-400{% else %}text-slate-500{% endif %}" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                </svg>
+                                <span class="text-sm font-medium {% if request.url_name == 'landmark_collection_gis_integration' %}text-indigo-400{% else %}text-slate-300 hover:text-slate-200{% endif %}">GIS Integration</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+
+                    {% if show_danger_zone %}
+                    <div class="text-xs font-semibold text-slate-400 uppercase mt-5 mb-2">Administration</div>
+                    <ul>
+                        <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                            <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'landmark_collection_danger_zone' %}bg-rose-500/20{% endif %}" href="{% url 'private:landmark_collection_danger_zone' collection_id=collection.id %}">
+                                <svg class="w-4 h-4 shrink-0 stroke-current mr-2 {% if request.url_name == 'landmark_collection_danger_zone' %}text-rose-400{% else %}text-slate-500{% endif %}" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                                    <path d="M12 9v4"></path>
+                                    <path d="M12 17h.01"></path>
+                                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                </svg>
+                                <span class="text-sm font-medium {% if request.url_name == 'landmark_collection_danger_zone' %}text-rose-400{% else %}text-slate-300 hover:text-slate-200{% endif %}">Danger Zone</span>
+                            </a>
+                        </li>
+                    </ul>
+                    {% endif %}
+                </div>
+
+                {% block right_panel %}{% endblock right_panel %}
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock content %}

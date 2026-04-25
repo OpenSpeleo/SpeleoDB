@@ -251,7 +251,11 @@ export const Interactions = {
             );
 
             if (poiFeature) {
-                // Any authenticated user can drag their Landmarks
+                const landmark = State.allLandmarks.get(poiFeature.id);
+                if (!landmark || landmark.can_write !== true) {
+                    return;
+                }
+
                 isPotentialDrag = true;
                 hasMoved = false;
                 isDragging = false;
@@ -498,6 +502,4 @@ export const Interactions = {
         });
     }
 };
-
-
 

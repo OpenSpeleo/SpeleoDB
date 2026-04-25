@@ -15,6 +15,8 @@ from rest_framework import permissions
 from rest_framework.generics import GenericAPIView
 
 from speleodb.gis.models import ExplorationLead
+from speleodb.gis.models import Landmark
+from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
@@ -112,7 +114,11 @@ class UserDashboardStatsView(GenericAPIView[User], SDBAPIViewMixin):
             "total_teams": user.teams.count(),
             "total_commits": commit_qs.count(),
             "user_commits": commit_qs.filter(author_email=user.email).count(),
-            "total_landmarks": user.landmarks.count(),
+            "total_landmarks": Landmark.objects.filter(
+                collection__personal_owner=user,
+                collection__collection_type=LandmarkCollection.CollectionType.PERSONAL,
+                collection__is_active=True,
+            ).count(),
             "total_gps_tracks": user.gps_tracks.count(),
             "total_stations_created": SubSurfaceStation.objects.filter(
                 created_by=user.email

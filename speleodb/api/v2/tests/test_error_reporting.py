@@ -15,7 +15,6 @@ from unittest.mock import patch
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connection
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
@@ -25,6 +24,7 @@ from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.views.gis_view import GISViewDataApiView
 from speleodb.api.v2.views.tools import ToolDMP2JSON
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import Landmark
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import FileFormat
@@ -246,16 +246,17 @@ class GPXImportSentryTests(BaseAPIProjectTestCase):
         "speleodb.api.v2.views.gpx_import.sentry_sdk.capture_exception",
         autospec=True,
     )
-    def test_gpx_import_failure_marks_rollback(
+    def test_gpx_import_failure_does_not_commit_partial_landmarks(
         self,
         mock_sentry: MagicMock,
     ) -> None:
-        """GPX import failure should mark the transaction for rollback
-        so partially created Landmarks are not committed."""
+        """GPX import failure should not commit partial Landmark rows."""
+        landmarks_before = Landmark.objects.count()
+
         response = self._do_gpx_import(b"not valid gpx")
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert connection.needs_rollback
+        assert Landmark.objects.count() == landmarks_before
 
 
 # ---------------------------------------------------------------------------
@@ -297,15 +298,17 @@ class KMLImportSentryTests(BaseAPIProjectTestCase):
         "speleodb.api.v2.views.kml_kmz_import.sentry_sdk.capture_exception",
         autospec=True,
     )
-    def test_kml_import_failure_marks_rollback(
+    def test_kml_import_failure_does_not_commit_partial_landmarks(
         self,
         mock_sentry: MagicMock,
     ) -> None:
-        """KML import failure should mark the transaction for rollback."""
+        """KML import failure should not commit partial Landmark rows."""
+        landmarks_before = Landmark.objects.count()
+
         response = self._do_kml_import(b"not valid kml")
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert connection.needs_rollback
+        assert Landmark.objects.count() == landmarks_before
 
 
 # ---------------------------------------------------------------------------

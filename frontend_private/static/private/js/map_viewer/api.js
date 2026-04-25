@@ -139,6 +139,9 @@ export const API = {
     getAllLandmarks: () =>
         apiRequest(Urls['api:v2:landmarks']()),
 
+    getLandmarkCollections: () =>
+        apiRequest(Urls['api:v2:landmark-collections']()),
+
     // All Landmarks GeoJSON (single API call)
     getAllLandmarksGeoJSON: () =>
         apiRequest(Urls['api:v2:landmarks-geojson']()),
@@ -330,7 +333,6 @@ export const API = {
     deleteCylinderPressureCheck: (installId, checkId) =>
         apiRequest(Urls['api:v2:cylinder-pressure-check-detail'](installId, checkId), 'DELETE'),
 };
-
 
 
 

@@ -1,0 +1,84 @@
+{% extends "pages/landmark_collection/base.html" %}
+
+{% block right_panel %}
+<div class="grow">
+    <div class="p-6 space-y-6">
+        <div class="flex flex-col items-center justify-center">
+            <svg class="w-20 h-20 mx-auto text-slate-400 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+            </svg>
+            <h2 class="text-3xl text-slate-100 font-bold mb-4">GIS Integration</h2>
+            <p class="text-lg text-slate-200 w-full text-center mb-8">
+                Use this OGC API Features endpoint to access collection landmarks as Point GeoJSON.
+            </p>
+
+            <div class="w-full mb-6">
+                <div class="flex items-center gap-2 mb-3">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <h3 class="text-lg font-semibold text-slate-100">OGC Endpoint</h3>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 overflow-x-auto">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+                        <code id="api-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
+                            {{ request.scheme }}://{{ request.get_host }}{% url 'api:v2:gis-ogc:landmark-collection-landing' gis_token=collection.gis_token %}
+                        </code>
+                        <button id="copy-api-btn" type="button" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2">
+                            <svg id="copy-api-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <span id="copy-api-text">Copy</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full mb-6">
+                <div class="bg-orange-900/30 border border-orange-600/50 rounded-lg p-4">
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-orange-200 mb-1">Security Warning</p>
+                                <p class="text-sm text-orange-300/90">
+                                    This token grants public read access to all active landmarks in the collection.
+                                </p>
+                            </div>
+                        </div>
+                        {% if has_admin_access %}
+                        <form method="post" id="refresh-token-form" class="w-full">
+                            {% csrf_token %}
+                            <button type="submit" name="_refresh_token" class="w-full md:w-auto px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-md text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                <span>Refresh Token</span>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock right_panel %}
+
+{% block inline_extra_js %}
+<script>
+    $(document).ready(function() {
+        $('#copy-api-btn').click(function() {
+            var url = $('#api-url').text().trim();
+            navigator.clipboard.writeText(url).then(function() {
+                $('#copy-api-text').text('Copied!');
+                window.setTimeout(function() {
+                    $('#copy-api-text').text('Copy');
+                }, 2000);
+            });
+        });
+    });
+</script>
+{% endblock inline_extra_js %}

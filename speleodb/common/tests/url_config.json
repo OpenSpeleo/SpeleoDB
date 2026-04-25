@@ -612,6 +612,84 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gis-ogc/landmark-collection/<gis_token>",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionsApiView",
+        "name": "api:v1:gis-ogc:landmark-collection-data",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collection/<gis_token>/",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCLandingPageApiView",
+        "name": "api:v1:gis-ogc:landmark-collection-landing",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collection/<gis_token>/<str:collection_id>",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionApiView",
+        "name": "api:v1:gis-ogc:landmark-collection-layer",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collection/<gis_token>/<str:collection_id>/items",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionItemsApiView",
+        "name": "api:v1:gis-ogc:landmark-collection-layer-items",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collection/<gis_token>/collections",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionsApiView",
+        "name": "api:v1:gis-ogc:landmark-collection-collections",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collection/<gis_token>/collections/<str:collection_id>",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionApiView",
+        "name": "api:v1:gis-ogc:landmark-collection-collection",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collection/<gis_token>/collections/<str:collection_id>/items",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionItemsApiView",
+        "name": "api:v1:gis-ogc:landmark-collection-collection-items",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collection/<gis_token>/conformance",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCConformanceApiView",
+        "name": "api:v1:gis-ogc:landmark-collection-conformance",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collections/user/<user_token:key>/",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCLandingPageApiView",
+        "name": "api:v1:gis-ogc:landmark-collections-user-landing",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collections/user/<user_token:key>/collections",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCCollectionsApiView",
+        "name": "api:v1:gis-ogc:landmark-collections-user-collections",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collections/user/<user_token:key>/collections/<uuid:collection_id>",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCCollectionApiView",
+        "name": "api:v1:gis-ogc:landmark-collections-user-collection",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collections/user/<user_token:key>/collections/<uuid:collection_id>/items",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCCollectionItemsApiView",
+        "name": "api:v1:gis-ogc:landmark-collections-user-collection-items",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/landmark-collections/user/<user_token:key>/conformance",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCConformanceApiView",
+        "name": "api:v1:gis-ogc:landmark-collections-user-conformance",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/gis-ogc/user/<user_token:key>",
         "module": "speleodb.api.v2.views.project_geojson.OGCGISUserProjectsApiView",
         "name": "api:v1:gis-ogc:user-data",
@@ -705,6 +783,36 @@
         "url": "/api/v1/import/kml_kmz/",
         "module": "speleodb.api.v2.views.kml_kmz_import.KML_KMZ_ImportView",
         "name": "api:v1:kml-kmz-import",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/landmark-collections/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionApiView",
+        "name": "api:v1:landmark-collections",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/landmark-collections/<uuid:collection_id>/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionSpecificApiView",
+        "name": "api:v1:landmark-collection-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/landmark-collections/<uuid:collection_id>/landmarks/export/excel/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionLandmarksExportExcelApiView",
+        "name": "api:v1:landmark-collection-landmarks-export-excel",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/landmark-collections/<uuid:collection_id>/landmarks/export/gpx/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionLandmarksExportGPXApiView",
+        "name": "api:v1:landmark-collection-landmarks-export-gpx",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/landmark-collections/<uuid:collection_id>/permissions/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionPermissionApiView",
+        "name": "api:v1:landmark-collection-permissions",
         "decorators": ""
     },
     {
@@ -1272,6 +1380,84 @@
         "decorators": ""
     },
     {
+        "url": "/api/v2/gis-ogc/landmark-collection/<gis_token>",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionsApiView",
+        "name": "api:v2:gis-ogc:landmark-collection-data",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collection/<gis_token>/",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCLandingPageApiView",
+        "name": "api:v2:gis-ogc:landmark-collection-landing",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collection/<gis_token>/<str:collection_id>",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionApiView",
+        "name": "api:v2:gis-ogc:landmark-collection-layer",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collection/<gis_token>/<str:collection_id>/items",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionItemsApiView",
+        "name": "api:v2:gis-ogc:landmark-collection-layer-items",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collection/<gis_token>/collections",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionsApiView",
+        "name": "api:v2:gis-ogc:landmark-collection-collections",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collection/<gis_token>/collections/<str:collection_id>",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionApiView",
+        "name": "api:v2:gis-ogc:landmark-collection-collection",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collection/<gis_token>/collections/<str:collection_id>/items",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCCollectionItemsApiView",
+        "name": "api:v2:gis-ogc:landmark-collection-collection-items",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collection/<gis_token>/conformance",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCConformanceApiView",
+        "name": "api:v2:gis-ogc:landmark-collection-conformance",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collections/user/<user_token:key>/",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCLandingPageApiView",
+        "name": "api:v2:gis-ogc:landmark-collections-user-landing",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collections/user/<user_token:key>/collections",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCCollectionsApiView",
+        "name": "api:v2:gis-ogc:landmark-collections-user-collections",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collections/user/<user_token:key>/collections/<uuid:collection_id>",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCCollectionApiView",
+        "name": "api:v2:gis-ogc:landmark-collections-user-collection",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collections/user/<user_token:key>/collections/<uuid:collection_id>/items",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCCollectionItemsApiView",
+        "name": "api:v2:gis-ogc:landmark-collections-user-collection-items",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/landmark-collections/user/<user_token:key>/conformance",
+        "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCConformanceApiView",
+        "name": "api:v2:gis-ogc:landmark-collections-user-conformance",
+        "decorators": ""
+    },
+    {
         "url": "/api/v2/gis-ogc/user/<user_token:key>",
         "module": "speleodb.api.v2.views.project_geojson.OGCGISUserProjectsApiView",
         "name": "api:v2:gis-ogc:user-data",
@@ -1365,6 +1551,36 @@
         "url": "/api/v2/import/kml_kmz/",
         "module": "speleodb.api.v2.views.kml_kmz_import.KML_KMZ_ImportView",
         "name": "api:v2:kml-kmz-import",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/landmark-collections/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionApiView",
+        "name": "api:v2:landmark-collections",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/landmark-collections/<uuid:collection_id>/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionSpecificApiView",
+        "name": "api:v2:landmark-collection-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/landmark-collections/<uuid:collection_id>/landmarks/export/excel/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionLandmarksExportExcelApiView",
+        "name": "api:v2:landmark-collection-landmarks-export-excel",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/landmark-collections/<uuid:collection_id>/landmarks/export/gpx/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionLandmarksExportGPXApiView",
+        "name": "api:v2:landmark-collection-landmarks-export-gpx",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/landmark-collections/<uuid:collection_id>/permissions/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionPermissionApiView",
+        "name": "api:v2:landmark-collection-permissions",
         "decorators": ""
     },
     {
@@ -2031,6 +2247,42 @@
         "url": "/private/gps-tracks/",
         "module": "frontend_private.views.gps_tracks.GPSTrackListView",
         "name": "private:gps_tracks",
+        "decorators": ""
+    },
+    {
+        "url": "/private/landmark-collection/<uuid:collection_id>/",
+        "module": "frontend_private.views.landmark_collections.LandmarkCollectionDetailsView",
+        "name": "private:landmark_collection_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/landmark-collection/<uuid:collection_id>/danger_zone/",
+        "module": "frontend_private.views.landmark_collections.LandmarkCollectionDangerZoneView",
+        "name": "private:landmark_collection_danger_zone",
+        "decorators": ""
+    },
+    {
+        "url": "/private/landmark-collection/<uuid:collection_id>/gis/",
+        "module": "frontend_private.views.landmark_collections.LandmarkCollectionGISView",
+        "name": "private:landmark_collection_gis_integration",
+        "decorators": ""
+    },
+    {
+        "url": "/private/landmark-collection/<uuid:collection_id>/permissions/",
+        "module": "frontend_private.views.landmark_collections.LandmarkCollectionUserPermissionsView",
+        "name": "private:landmark_collection_user_permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/landmark-collection/new/",
+        "module": "frontend_private.views.landmark_collections.NewLandmarkCollectionView",
+        "name": "private:landmark_collection_new",
+        "decorators": ""
+    },
+    {
+        "url": "/private/landmark-collections/",
+        "module": "frontend_private.views.landmark_collections.LandmarkCollectionListingView",
+        "name": "private:landmark_collections",
         "decorators": ""
     },
     {

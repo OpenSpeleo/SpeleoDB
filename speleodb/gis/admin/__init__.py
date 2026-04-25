@@ -14,6 +14,8 @@ from speleodb.gis.admin.experiment import ExperimentRecordAdmin
 from speleodb.gis.admin.explo_lead import ExplorationLeadAdmin
 from speleodb.gis.admin.gps_track import GPSTrackAdmin
 from speleodb.gis.admin.landmark import LandmarkAdmin
+from speleodb.gis.admin.landmark import LandmarkCollectionAdmin
+from speleodb.gis.admin.landmark import LandmarkCollectionUserPermissionAdmin
 from speleodb.gis.admin.log import StationLogEntryAdmin
 from speleodb.gis.admin.network import SurfaceMonitoringNetworkAdmin
 from speleodb.gis.admin.project_geojson import ProjectGeoJSONAdmin
@@ -39,6 +41,8 @@ __all__ = [
     "GISViewAdmin",
     "GPSTrackAdmin",
     "LandmarkAdmin",
+    "LandmarkCollectionAdmin",
+    "LandmarkCollectionUserPermissionAdmin",
     "ProjectGeoJSONAdmin",
     "SensorAdmin",
     "SensorFleetAdmin",

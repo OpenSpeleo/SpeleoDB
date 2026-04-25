@@ -16,9 +16,9 @@ load_data:
 	python manage.py loaddata fixtures/surveys.json
 	python manage.py loaddata fixtures/emailaddresses.json
 
-test: test-python test-js
+test: test-py test-js
 
-test-python:
+test-py:
 	pytest
 
 test-js:
