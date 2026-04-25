@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from speleodb.gis.admin.cylinder import CylinderAdmin
 from speleodb.gis.admin.cylinder import CylinderFleetAdmin
-from speleodb.gis.admin.cylinder import CylinderFleetUserPermissionAdmin
 from speleodb.gis.admin.cylinder import CylinderInstallAdmin
 from speleodb.gis.admin.cylinder import CylinderPressureCheckAdmin
 from speleodb.gis.admin.experiment import ExperimentAdmin
@@ -15,7 +14,6 @@ from speleodb.gis.admin.explo_lead import ExplorationLeadAdmin
 from speleodb.gis.admin.gps_track import GPSTrackAdmin
 from speleodb.gis.admin.landmark import LandmarkAdmin
 from speleodb.gis.admin.landmark import LandmarkCollectionAdmin
-from speleodb.gis.admin.landmark import LandmarkCollectionUserPermissionAdmin
 from speleodb.gis.admin.log import StationLogEntryAdmin
 from speleodb.gis.admin.network import SurfaceMonitoringNetworkAdmin
 from speleodb.gis.admin.project_geojson import ProjectGeoJSONAdmin
@@ -31,7 +29,6 @@ from speleodb.gis.admin.view import GISViewAdmin
 __all__ = [
     "CylinderAdmin",
     "CylinderFleetAdmin",
-    "CylinderFleetUserPermissionAdmin",
     "CylinderInstallAdmin",
     "CylinderPressureCheckAdmin",
     "ExperimentAdmin",
@@ -42,7 +39,6 @@ __all__ = [
     "GPSTrackAdmin",
     "LandmarkAdmin",
     "LandmarkCollectionAdmin",
-    "LandmarkCollectionUserPermissionAdmin",
     "ProjectGeoJSONAdmin",
     "SensorAdmin",
     "SensorFleetAdmin",
