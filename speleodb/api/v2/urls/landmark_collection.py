@@ -8,6 +8,12 @@ from django.urls import path
 
 from speleodb.api.v2.views.landmark_collection import LandmarkCollectionApiView
 from speleodb.api.v2.views.landmark_collection import (
+    LandmarkCollectionBulkDeleteApiView,
+)
+from speleodb.api.v2.views.landmark_collection import (
+    LandmarkCollectionBulkTransferApiView,
+)
+from speleodb.api.v2.views.landmark_collection import (
     LandmarkCollectionLandmarksExportExcelApiView,
 )
 from speleodb.api.v2.views.landmark_collection import (
@@ -20,6 +26,16 @@ from speleodb.api.v2.views.landmark_collection import LandmarkCollectionSpecific
 
 urlpatterns: list[URLPattern | URLResolver] = [
     path("", LandmarkCollectionApiView.as_view(), name="landmark-collections"),
+    path(
+        "<uuid:collection_id>/landmarks/transfer/",
+        LandmarkCollectionBulkTransferApiView.as_view(),
+        name="landmark-collection-landmarks-transfer",
+    ),
+    path(
+        "<uuid:collection_id>/landmarks/bulk_delete/",
+        LandmarkCollectionBulkDeleteApiView.as_view(),
+        name="landmark-collection-landmarks-bulk-delete",
+    ),
     path(
         "<uuid:collection_id>/landmarks/export/excel/",
         LandmarkCollectionLandmarksExportExcelApiView.as_view(),

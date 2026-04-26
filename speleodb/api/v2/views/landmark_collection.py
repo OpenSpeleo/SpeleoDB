@@ -11,6 +11,7 @@ from typing import Any
 import gpxpy.gpx
 import xlsxwriter
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.db.models import Count
 from django.http import Http404
 from django.http import StreamingHttpResponse
@@ -37,6 +38,7 @@ from speleodb.api.v2.serializers.landmark_collection import (
     LandmarkCollectionWithPermSerializer,
 )
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.users.models import User
@@ -543,3 +545,132 @@ class LandmarkCollectionLandmarksExportGPXApiView(
         )
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
+
+
+class LandmarkCollectionBulkTransferApiView(
+    GenericAPIView[LandmarkCollection],
+    SDBAPIViewMixin,
+):
+    """POST: transfer landmarks from one collection to another."""
+
+    queryset = LandmarkCollection.objects.filter(is_active=True)
+    permission_classes = [SDB_WriteAccess]
+    serializer_class = LandmarkCollectionSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "collection_id"
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        source = self.get_object()
+        user = self.get_user()
+
+        raw_ids: list[str] = request.data.get("landmark_ids", [])
+        landmark_ids: list[str] = list(dict.fromkeys(raw_ids))
+        target_id: str | None = request.data.get("target_collection")
+
+        if not landmark_ids:
+            return ErrorResponse(
+                {"error": "landmark_ids is required and must not be empty."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not target_id:
+            return ErrorResponse(
+                {"error": "target_collection is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if str(target_id) == str(source.id):
+            return ErrorResponse(
+                {"error": "Cannot transfer landmarks to the same collection."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            target = LandmarkCollection.objects.get(id=target_id, is_active=True)
+        except ObjectDoesNotExist:
+            return ErrorResponse(
+                {"error": "Target collection not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            target_perm = LandmarkCollectionUserPermission.objects.get(
+                user=user,
+                collection=target,
+                is_active=True,
+            )
+            if target_perm.level < PermissionLevel.READ_AND_WRITE:
+                return ErrorResponse(
+                    {
+                        "error": (
+                            "You don't have WRITE access to the target collection."
+                        )
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        except ObjectDoesNotExist:
+            return ErrorResponse(
+                {"error": "You don't have access to the target collection."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        with transaction.atomic():
+            source_landmarks = Landmark.objects.select_for_update().filter(
+                id__in=landmark_ids,
+                collection=source,
+            )
+            if source_landmarks.count() != len(landmark_ids):
+                return ErrorResponse(
+                    {"error": "Some landmark IDs do not belong to this collection."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            transferred: int = source_landmarks.update(collection=target)
+
+        return SuccessResponse(
+            {
+                "transferred": transferred,
+                "target_collection": {
+                    "id": str(target.id),
+                    "name": target.name,
+                },
+            }
+        )
+
+
+class LandmarkCollectionBulkDeleteApiView(
+    GenericAPIView[LandmarkCollection],
+    SDBAPIViewMixin,
+):
+    """POST: bulk-delete landmarks from a collection."""
+
+    queryset = LandmarkCollection.objects.filter(is_active=True)
+    permission_classes = [SDB_WriteAccess]
+    serializer_class = LandmarkCollectionSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "collection_id"
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        collection = self.get_object()
+
+        raw_ids: list[str] = request.data.get("landmark_ids", [])
+        landmark_ids: list[str] = list(dict.fromkeys(raw_ids))
+        if not landmark_ids:
+            return ErrorResponse(
+                {"error": "landmark_ids is required and must not be empty."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            collection_landmarks = Landmark.objects.select_for_update().filter(
+                id__in=landmark_ids,
+                collection=collection,
+            )
+            if collection_landmarks.count() != len(landmark_ids):
+                return ErrorResponse(
+                    {"error": "Some landmark IDs do not belong to this collection."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            deleted_count: int
+            deleted_count, _ = collection_landmarks.delete()
+
+        return SuccessResponse({"deleted": deleted_count})

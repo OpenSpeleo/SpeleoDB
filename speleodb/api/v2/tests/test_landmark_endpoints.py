@@ -10,8 +10,11 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from speleodb.common.enums import PermissionLevel
 from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.gis.models import Landmark
+from speleodb.gis.models import LandmarkCollection
+from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.users.models import User
 
 
@@ -531,3 +534,493 @@ class TestLandmarkEndpoints:
         landmark_data = response.json()["landmark"]
         assert landmark_data["latitude"] == 45.1234567  # noqa: PLR2004
         assert landmark_data["longitude"] == -122.7654321  # noqa: PLR2004
+
+
+@pytest.mark.django_db
+class TestBulkTransfer:
+    """Tests for POST /landmark-collections/<id>/landmarks/transfer/."""
+
+    @pytest.fixture
+    def api_client(self) -> APIClient:
+        return APIClient()
+
+    @pytest.fixture
+    def owner(self) -> User:
+        return User.objects.create_user(
+            email="owner@example.com",
+            password="pass",  # noqa: S106
+        )
+
+    @pytest.fixture
+    def other_user(self) -> User:
+        return User.objects.create_user(
+            email="other@example.com",
+            password="pass",  # noqa: S106
+        )
+
+    @pytest.fixture
+    def source(self, owner: User) -> LandmarkCollection:
+        c = LandmarkCollection.objects.create(name="Source", created_by=owner.email)
+        LandmarkCollectionUserPermission.objects.create(
+            collection=c, user=owner, level=PermissionLevel.ADMIN
+        )
+        return c
+
+    @pytest.fixture
+    def target(self, owner: User) -> LandmarkCollection:
+        c = LandmarkCollection.objects.create(name="Target", created_by=owner.email)
+        LandmarkCollectionUserPermission.objects.create(
+            collection=c, user=owner, level=PermissionLevel.READ_AND_WRITE
+        )
+        return c
+
+    @pytest.fixture
+    def landmarks(self, owner: User, source: LandmarkCollection) -> list[Landmark]:
+        return [
+            Landmark.objects.create(
+                name=f"LM-{i}",
+                latitude=45 + i,
+                longitude=-122 + i,
+                created_by=owner.email,
+                collection=source,
+            )
+            for i in range(3)
+        ]
+
+    def _url(self, collection_id: uuid.UUID | str) -> str:
+        return reverse(
+            "api:v2:landmark-collection-landmarks-transfer",
+            kwargs={"collection_id": collection_id},
+        )
+
+    def test_happy_path(
+        self,
+        api_client: APIClient,
+        owner: User,
+        source: LandmarkCollection,
+        target: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        ids = [str(lm.id) for lm in landmarks]
+        response = api_client.post(
+            self._url(source.id),
+            {"landmark_ids": ids, "target_collection": str(target.id)},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["transferred"] == 3  # noqa: PLR2004
+        assert data["target_collection"]["id"] == str(target.id)
+        assert data["target_collection"]["name"] == "Target"
+        for lm in landmarks:
+            lm.refresh_from_db()
+            assert lm.collection_id == target.id
+
+    def test_read_only_user_on_source_gets_403(
+        self,
+        api_client: APIClient,
+        other_user: User,
+        source: LandmarkCollection,
+        target: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        LandmarkCollectionUserPermission.objects.create(
+            collection=source,
+            user=other_user,
+            level=PermissionLevel.READ_ONLY,
+        )
+        api_client.force_authenticate(user=other_user)
+        response = api_client.post(
+            self._url(source.id),
+            {
+                "landmark_ids": [str(landmarks[0].id)],
+                "target_collection": str(target.id),
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_read_only_user_on_target_gets_403(
+        self,
+        api_client: APIClient,
+        owner: User,
+        other_user: User,
+        source: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        read_target = LandmarkCollection.objects.create(
+            name="ReadOnly Target", created_by=owner.email
+        )
+        LandmarkCollectionUserPermission.objects.create(
+            collection=source,
+            user=other_user,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+        LandmarkCollectionUserPermission.objects.create(
+            collection=read_target,
+            user=other_user,
+            level=PermissionLevel.READ_ONLY,
+        )
+        api_client.force_authenticate(user=other_user)
+        response = api_client.post(
+            self._url(source.id),
+            {
+                "landmark_ids": [str(landmarks[0].id)],
+                "target_collection": str(read_target.id),
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_empty_landmark_ids_returns_400(
+        self,
+        api_client: APIClient,
+        owner: User,
+        source: LandmarkCollection,
+        target: LandmarkCollection,
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        response = api_client.post(
+            self._url(source.id),
+            {"landmark_ids": [], "target_collection": str(target.id)},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_missing_target_collection_returns_400(
+        self,
+        api_client: APIClient,
+        owner: User,
+        source: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        response = api_client.post(
+            self._url(source.id),
+            {"landmark_ids": [str(landmarks[0].id)]},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_transfer_to_same_collection_returns_400(
+        self,
+        api_client: APIClient,
+        owner: User,
+        source: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        response = api_client.post(
+            self._url(source.id),
+            {
+                "landmark_ids": [str(landmarks[0].id)],
+                "target_collection": str(source.id),
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_nonexistent_target_returns_404(
+        self,
+        api_client: APIClient,
+        owner: User,
+        source: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        response = api_client.post(
+            self._url(source.id),
+            {
+                "landmark_ids": [str(landmarks[0].id)],
+                "target_collection": str(uuid.uuid4()),
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_landmark_ids_not_in_source_returns_400(
+        self,
+        api_client: APIClient,
+        owner: User,
+        source: LandmarkCollection,
+        target: LandmarkCollection,
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        response = api_client.post(
+            self._url(source.id),
+            {
+                "landmark_ids": [str(uuid.uuid4())],
+                "target_collection": str(target.id),
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_partial_invalid_ids_rejects_entire_request(
+        self,
+        api_client: APIClient,
+        owner: User,
+        source: LandmarkCollection,
+        target: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        mixed_ids = [str(landmarks[0].id), str(uuid.uuid4())]
+        response = api_client.post(
+            self._url(source.id),
+            {"landmark_ids": mixed_ids, "target_collection": str(target.id)},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        landmarks[0].refresh_from_db()
+        assert landmarks[0].collection_id == source.id
+
+    def test_personal_collection_as_target(
+        self,
+        api_client: APIClient,
+        owner: User,
+        source: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        personal = get_or_create_personal_landmark_collection(user=owner)
+        api_client.force_authenticate(user=owner)
+        response = api_client.post(
+            self._url(source.id),
+            {
+                "landmark_ids": [str(landmarks[0].id)],
+                "target_collection": str(personal.id),
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK
+        landmarks[0].refresh_from_db()
+        assert landmarks[0].collection_id == personal.id
+
+    def test_duplicate_landmark_ids_are_deduplicated(
+        self,
+        api_client: APIClient,
+        owner: User,
+        source: LandmarkCollection,
+        target: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        dup_id = str(landmarks[0].id)
+        response = api_client.post(
+            self._url(source.id),
+            {
+                "landmark_ids": [dup_id, dup_id, dup_id],
+                "target_collection": str(target.id),
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["transferred"] == 1
+        landmarks[0].refresh_from_db()
+        assert landmarks[0].collection_id == target.id
+
+    def test_unauthenticated_returns_403(
+        self,
+        api_client: APIClient,
+        source: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        response = api_client.post(
+            self._url(source.id),
+            {
+                "landmark_ids": [str(landmarks[0].id)],
+                "target_collection": str(uuid.uuid4()),
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+class TestBulkDelete:
+    """Tests for POST /landmark-collections/<id>/landmarks/bulk_delete/."""
+
+    @pytest.fixture
+    def api_client(self) -> APIClient:
+        return APIClient()
+
+    @pytest.fixture
+    def owner(self) -> User:
+        return User.objects.create_user(
+            email="delowner@example.com",
+            password="pass",  # noqa: S106
+        )
+
+    @pytest.fixture
+    def reader_user(self) -> User:
+        return User.objects.create_user(
+            email="delreader@example.com",
+            password="pass",  # noqa: S106
+        )
+
+    @pytest.fixture
+    def collection(self, owner: User) -> LandmarkCollection:
+        c = LandmarkCollection.objects.create(
+            name="Delete Collection", created_by=owner.email
+        )
+        LandmarkCollectionUserPermission.objects.create(
+            collection=c, user=owner, level=PermissionLevel.ADMIN
+        )
+        return c
+
+    @pytest.fixture
+    def landmarks(self, owner: User, collection: LandmarkCollection) -> list[Landmark]:
+        return [
+            Landmark.objects.create(
+                name=f"Del-{i}",
+                latitude=45 + i,
+                longitude=-122 + i,
+                created_by=owner.email,
+                collection=collection,
+            )
+            for i in range(3)
+        ]
+
+    def _url(self, collection_id: uuid.UUID | str) -> str:
+        return reverse(
+            "api:v2:landmark-collection-landmarks-bulk-delete",
+            kwargs={"collection_id": collection_id},
+        )
+
+    def test_happy_path(
+        self,
+        api_client: APIClient,
+        owner: User,
+        collection: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        ids = [str(lm.id) for lm in landmarks]
+        response = api_client.post(
+            self._url(collection.id),
+            {"landmark_ids": ids},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["deleted"] == 3  # noqa: PLR2004
+        assert Landmark.objects.filter(id__in=ids).count() == 0
+
+    def test_read_only_user_gets_403(
+        self,
+        api_client: APIClient,
+        reader_user: User,
+        collection: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        LandmarkCollectionUserPermission.objects.create(
+            collection=collection,
+            user=reader_user,
+            level=PermissionLevel.READ_ONLY,
+        )
+        api_client.force_authenticate(user=reader_user)
+        response = api_client.post(
+            self._url(collection.id),
+            {"landmark_ids": [str(landmarks[0].id)]},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_empty_landmark_ids_returns_400(
+        self,
+        api_client: APIClient,
+        owner: User,
+        collection: LandmarkCollection,
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        response = api_client.post(
+            self._url(collection.id),
+            {"landmark_ids": []},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_ids_not_in_collection_returns_400(
+        self,
+        api_client: APIClient,
+        owner: User,
+        collection: LandmarkCollection,
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        response = api_client.post(
+            self._url(collection.id),
+            {"landmark_ids": [str(uuid.uuid4())]},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_partial_invalid_ids_rejects_entire_request(
+        self,
+        api_client: APIClient,
+        owner: User,
+        collection: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        mixed_ids = [str(landmarks[0].id), str(uuid.uuid4())]
+        response = api_client.post(
+            self._url(collection.id),
+            {"landmark_ids": mixed_ids},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert Landmark.objects.filter(id=landmarks[0].id).exists()
+
+    def test_personal_collection_delete(
+        self,
+        api_client: APIClient,
+        owner: User,
+    ) -> None:
+        personal = get_or_create_personal_landmark_collection(user=owner)
+        lm = Landmark.objects.create(
+            name="Personal LM",
+            latitude=45,
+            longitude=-122,
+            created_by=owner.email,
+            collection=personal,
+        )
+        api_client.force_authenticate(user=owner)
+        response = api_client.post(
+            self._url(personal.id),
+            {"landmark_ids": [str(lm.id)]},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["deleted"] == 1
+        assert not Landmark.objects.filter(id=lm.id).exists()
+
+    def test_duplicate_landmark_ids_are_deduplicated(
+        self,
+        api_client: APIClient,
+        owner: User,
+        collection: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        api_client.force_authenticate(user=owner)
+        dup_id = str(landmarks[0].id)
+        response = api_client.post(
+            self._url(collection.id),
+            {"landmark_ids": [dup_id, dup_id, dup_id]},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["deleted"] == 1
+        assert not Landmark.objects.filter(id=landmarks[0].id).exists()
+
+    def test_unauthenticated_returns_403(
+        self,
+        api_client: APIClient,
+        collection: LandmarkCollection,
+        landmarks: list[Landmark],
+    ) -> None:
+        response = api_client.post(
+            self._url(collection.id),
+            {"landmark_ids": [str(landmarks[0].id)]},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN

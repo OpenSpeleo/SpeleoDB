@@ -444,68 +444,7 @@ input[type="number"] {
     margin-bottom: 8px;
 }
 
-.btn-primary {
-    background: #38bdf8;
-    color: white;
-    padding: 12px 24px;
-    border-radius: 6px;
-    border: none;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-}
-
-.btn-primary:hover {
-    background: #0284c7;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
-}
-
-.btn-secondary {
-    background: rgba(100, 116, 139, 0.8);
-    color: white;
-    padding: 12px 24px;
-    border-radius: 6px;
-    border: none;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-}
-
-.btn-secondary:hover {
-    background: rgba(71, 85, 105, 0.9);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.btn-danger {
-    background: #ef4444;
-    color: white;
-    padding: 12px 24px;
-    border-radius: 6px;
-    border: none;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-}
-
-.btn-danger:hover {
-    background: #dc2626;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
+/* .btn-primary, .btn-secondary, .btn-danger are in shared-modal.css */
 
 .btn-warning {
     background: linear-gradient(135deg, #f59e0b, #d97706);

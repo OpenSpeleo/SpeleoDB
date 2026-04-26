@@ -59,6 +59,8 @@ Authenticated management:
 - `GET/POST/PUT/DELETE /api/v2/landmark-collections/<uuid>/permissions/`
 - `GET /api/v2/landmark-collections/<uuid>/landmarks/export/excel/`
 - `GET /api/v2/landmark-collections/<uuid>/landmarks/export/gpx/`
+- `POST /api/v2/landmark-collections/<uuid>/landmarks/transfer/`
+- `POST /api/v2/landmark-collections/<uuid>/landmarks/bulk_delete/`
 
 Existing Landmark endpoints accept an optional `collection` UUID. Missing or
 null collection values are assigned to the caller's personal collection.
@@ -78,6 +80,17 @@ and `Created By` columns. GPX export emits GPX 1.1 with the standard
 Topografix namespace/schema declaration, `creator="SpeleoDB"`, and one
 waypoint per Landmark. Waypoint descriptions include Landmark description plus
 creator email.
+
+The bulk transfer endpoint accepts `{ landmark_ids: [...], target_collection:
+"<uuid>" }` and moves landmarks between collections. WRITE permission is
+required on both the source and target collections. All landmark IDs must
+belong to the source collection; partial matches are rejected atomically.
+The response returns `{ transferred: N, target_collection: { id, name } }`.
+
+The bulk delete endpoint accepts `{ landmark_ids: [...] }` and permanently
+removes landmarks from the collection. WRITE permission is required. All
+landmark IDs must belong to the collection; partial matches are rejected.
+The response returns `{ deleted: N }`.
 
 GPX/KML imports validate the target collection and WRITE permission before
 creating objects. Landmark creation runs inside a transaction, so parser or
@@ -135,6 +148,25 @@ The card can refresh the application token after a confirmation modal. Refresh
 invalidates authentication for every connected app using that token, including
 Ariane, Compass, mobile apps, GIS clients, API scripts, and Git integrations.
 
+The collection details page renders an interactive Landmark table powered by
+DataTables (sort only, no search/paging). WRITE users see per-row checkboxes
+for multi-select, icon action buttons (locate in blue, edit in orange, delete
+in red), and a "+ New Landmark" button. Selecting one or more rows reveals a
+floating batch action bar with Transfer and Delete buttons. The batch transfer
+modal shows a collection picker (excludes the current collection, only writable
+targets). The batch delete modal requires confirmation. Both operations reload
+the page on success. An inline hint below the section header reads "Select
+landmarks to batch transfer or delete" to guide discovery. The table hides
+until DataTables finishes initialization to prevent layout shift. In debug mode
+the page loads the ES module source directly; in production it loads the
+minified esbuild bundle.
+
+The shared `forms.js` module is the single source of truth for all landmark
+create/edit/delete/bulk-transfer/bulk-delete modal markup and validation. It is
+consumed by both the map viewer (`landmarks/ui.js`) and the collection details
+page bundle (`details_main.js`). The module uses direct `fetch` calls with CSRF
+headers and surfaces backend errors inline in the modal.
+
 The map Landmark manager loads collections, groups landmarks by collection in
 collapsed groups, exposes collection selectors when creating or importing
 landmarks, colors markers from `collection_color`, and disables edit/delete/drag
@@ -151,12 +183,17 @@ Coverage is split by ownership boundary:
   personal collection helper behavior, personal collection constraints,
   collection-scoped uniqueness, and hard-delete cascade behavior.
 - API tests cover collection CRUD, soft delete, permission flows, Landmark
-  visibility/write matrices, import assignment guards, and Excel/GPX exports.
+  visibility/write matrices, import assignment guards, Excel/GPX exports,
+  bulk transfer (happy path, permission matrix, atomicity, same-collection
+  rejection, personal collection targets), and bulk delete (happy path,
+  READ-only rejection, atomicity, personal collection).
 - OGC tests cover landing/conformance/collections/metadata/items, inactive or
   invalid tokens, Point GeoJSON, ETag, and 304 behavior.
-- Frontend tests cover URL/view availability and map-viewer client/manager
-  collection hydration, the details-page Landmark table, export links, and
-  read-only movement guard.
+- Frontend tests cover URL/view availability, map-viewer client/manager
+  collection hydration, the details-page Landmark table, export links,
+  read-only movement guard, details-page multi-select/bulk-bar behavior,
+  and shared forms module (create/edit/delete/bulk-transfer/bulk-delete
+  modals, inline validation, CSRF headers, XSS escaping).
 - Color tests cover default generation, API validation/normalization, shared
   WRITE updates, shared view picker rendering, personal detail form hiding,
   Landmark GeoJSON `collection_color`, grouped Landmark manager rows, and map

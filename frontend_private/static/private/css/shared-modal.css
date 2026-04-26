@@ -1,0 +1,94 @@
+/*
+ * Shared modal button and form-input styles.
+ *
+ * Loaded on any private page that opens modals rendered by forms.js
+ * (map viewer, landmark collection details, etc.).
+ */
+
+/* ---- Form inputs inside modals ---- */
+
+.fixed .form-input,
+.fixed .form-textarea {
+    display: block;
+    width: 100%;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid #475569;
+    border-radius: 0.5rem;
+    color: #e2e8f0;
+    font-size: 0.875rem;
+    padding: 0.625rem 0.875rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.fixed .form-input:focus,
+.fixed .form-textarea:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+    outline: none;
+}
+.fixed .form-input::placeholder,
+.fixed .form-textarea::placeholder {
+    color: #64748b;
+}
+.fixed .form-textarea {
+    resize: vertical;
+}
+
+/* ---- Modal action buttons ---- */
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    background: #6366f1;
+    color: white;
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 2.5rem;
+}
+.btn-primary:hover {
+    background: #4f46e5;
+}
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    background: #334155;
+    color: #e2e8f0;
+    border: 1px solid #475569;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 2.5rem;
+}
+.btn-secondary:hover {
+    background: #475569;
+    color: white;
+}
+
+.btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    background: #ef4444;
+    color: white;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 2.5rem;
+}
+.btn-danger:hover {
+    background: #dc2626;
+}

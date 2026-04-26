@@ -798,6 +798,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/landmark-collections/<uuid:collection_id>/landmarks/bulk_delete/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionBulkDeleteApiView",
+        "name": "api:v1:landmark-collection-landmarks-bulk-delete",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/landmark-collections/<uuid:collection_id>/landmarks/export/excel/",
         "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionLandmarksExportExcelApiView",
         "name": "api:v1:landmark-collection-landmarks-export-excel",
@@ -807,6 +813,12 @@
         "url": "/api/v1/landmark-collections/<uuid:collection_id>/landmarks/export/gpx/",
         "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionLandmarksExportGPXApiView",
         "name": "api:v1:landmark-collection-landmarks-export-gpx",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/landmark-collections/<uuid:collection_id>/landmarks/transfer/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionBulkTransferApiView",
+        "name": "api:v1:landmark-collection-landmarks-transfer",
         "decorators": ""
     },
     {
@@ -1566,6 +1578,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v2/landmark-collections/<uuid:collection_id>/landmarks/bulk_delete/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionBulkDeleteApiView",
+        "name": "api:v2:landmark-collection-landmarks-bulk-delete",
+        "decorators": ""
+    },
+    {
         "url": "/api/v2/landmark-collections/<uuid:collection_id>/landmarks/export/excel/",
         "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionLandmarksExportExcelApiView",
         "name": "api:v2:landmark-collection-landmarks-export-excel",
@@ -1575,6 +1593,12 @@
         "url": "/api/v2/landmark-collections/<uuid:collection_id>/landmarks/export/gpx/",
         "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionLandmarksExportGPXApiView",
         "name": "api:v2:landmark-collection-landmarks-export-gpx",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/landmark-collections/<uuid:collection_id>/landmarks/transfer/",
+        "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionBulkTransferApiView",
+        "name": "api:v2:landmark-collection-landmarks-transfer",
         "decorators": ""
     },
     {

@@ -115,9 +115,28 @@ class LandmarkCollectionDetailsView(_BaseLandmarkCollectionView):
         except ObjectDoesNotExist:
             return redirect(reverse("private:landmark_collections"))
 
-        data["landmarks"] = list(
-            collection_landmarks_queryset(collection=data["collection"])
-        )
+        landmarks = list(collection_landmarks_queryset(collection=data["collection"]))
+        data["landmarks"] = landmarks
+
+        collection: LandmarkCollection = data["collection"]
+        data["landmarks_data"] = [
+            {
+                "id": str(lm.id),
+                "name": lm.name,
+                "description": lm.description,
+                "latitude": str(lm.latitude),
+                "longitude": str(lm.longitude),
+                "created_by": lm.created_by,
+                "collection": str(lm.collection_id),
+            }
+            for lm in landmarks
+        ]
+        data["collection_data"] = {
+            "id": str(collection.id),
+            "name": collection.name,
+            "color": collection.color,
+            "is_personal": collection.is_personal,
+        }
 
         return super().get(request, *args, **data, **kwargs)
 
