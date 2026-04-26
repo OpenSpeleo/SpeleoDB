@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import zipfile
+from decimal import Decimal
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -54,7 +55,9 @@ def load_kml_kmz(file: InMemoryUploadedFile | TemporaryUploadedFile) -> KML:
     return KML.from_string(file.read(), strict=False)
 
 
-def iter_points(feature: KML | KML_Feature) -> Generator[dict[str, str | float]]:
+def iter_points(
+    feature: KML | KML_Feature,
+) -> Generator[dict[str, str | Decimal]]:
     if isinstance(feature, Placemark):
         geom = feature.kml_geometry
         if isinstance(geom, Point):
@@ -64,8 +67,8 @@ def iter_points(feature: KML | KML_Feature) -> Generator[dict[str, str | float]]
             for lon, lat, *_ in geom.kml_coordinates.coords:
                 yield {
                     "name": feature.name or f"Imported on {timezone.now().isoformat()}",
-                    "longitude": round(lon, OSPL_GEOJSON_DIGIT_PRECISION),
-                    "latitude": round(lat, OSPL_GEOJSON_DIGIT_PRECISION),
+                    "longitude": Decimal(str(round(lon, OSPL_GEOJSON_DIGIT_PRECISION))),
+                    "latitude": Decimal(str(round(lat, OSPL_GEOJSON_DIGIT_PRECISION))),
                     "description": feature.description or "",
                 }
 

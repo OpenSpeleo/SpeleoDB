@@ -37,3 +37,7 @@ wipe_test_user_projects:
 
 generate_enc_key:
 	python manage.py generate_field_encryption_key
+
+update:
+	npx --yes npm-check-updates -u --peer
+	npm install

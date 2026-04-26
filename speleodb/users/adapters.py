@@ -29,5 +29,5 @@ class AccountAdapter(DefaultAccountAdapter):
             "current_site": get_current_site(request),
         }
         ctx.update(context)
-        msg = self.render_mail(template_prefix, email, ctx)  # type: ignore[no-untyped-call]
+        msg = self.render_mail(template_prefix, email, ctx)
         msg.send(fail_silently=True)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+from decimal import Decimal
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -158,8 +159,8 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
                 for waypoint in gpx.waypoints:
                     # Skip if Landmark already exists.
                     _, created = Landmark.objects.get_or_create(
-                        latitude=waypoint.latitude,
-                        longitude=waypoint.longitude,
+                        latitude=Decimal(str(waypoint.latitude)),
+                        longitude=Decimal(str(waypoint.longitude)),
                         collection=collection,
                         defaults={
                             "created_by": user.email,
