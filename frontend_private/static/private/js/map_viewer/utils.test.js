@@ -1,5 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Utils } from './utils.js';
+
+const VALID_CSRF_SECRET = 'a'.repeat(32);
+const VALID_CSRF_TOKEN = 'b'.repeat(64);
+
+function clearCSRFTestState() {
+    document.body.innerHTML = '';
+    document.cookie = 'csrftoken=; Max-Age=0; path=/';
+    delete window.MAPVIEWER_CONTEXT;
+}
 
 describe('Utils.escapeHtml', () => {
     it('escapes HTML special characters', () => {
@@ -65,6 +74,40 @@ describe('Utils.raw', () => {
     it('converts non-string values to string', () => {
         const result = Utils.raw(42);
         expect(result.value).toBe('42');
+    });
+});
+
+describe('Utils.getCSRFToken', () => {
+    beforeEach(() => {
+        clearCSRFTestState();
+    });
+
+    it('uses a valid Django csrfmiddlewaretoken input before other sources', () => {
+        document.body.innerHTML = `<input type="hidden" name="csrfmiddlewaretoken" value="${VALID_CSRF_TOKEN}">`;
+        document.cookie = `csrftoken=${VALID_CSRF_SECRET}; path=/`;
+
+        expect(Utils.getCSRFToken()).toBe(VALID_CSRF_TOKEN);
+    });
+
+    it('falls back to the csrftoken cookie when no valid hidden input exists', () => {
+        document.body.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="NOTPROVIDED">';
+        document.cookie = `csrftoken=${VALID_CSRF_SECRET}; path=/`;
+
+        expect(Utils.getCSRFToken()).toBe(VALID_CSRF_SECRET);
+    });
+
+    it('falls back to the map viewer context token when form and cookie sources are missing', () => {
+        window.MAPVIEWER_CONTEXT = { csrfToken: VALID_CSRF_TOKEN };
+
+        expect(Utils.getCSRFToken()).toBe(VALID_CSRF_TOKEN);
+    });
+
+    it('returns an empty string instead of malformed tokens that Django rejects', () => {
+        document.body.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="">';
+        document.cookie = 'csrftoken=short; path=/';
+        window.MAPVIEWER_CONTEXT = { csrfToken: 'NOTPROVIDED' };
+
+        expect(Utils.getCSRFToken()).toBe('');
     });
 });
 

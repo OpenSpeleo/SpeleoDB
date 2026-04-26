@@ -60,6 +60,11 @@ export const DEFAULTS = Object.freeze({
         MAX_FILE_SIZE: 500 * 1024 * 1024,
     },
 
+    CSRF: {
+        SECRET_LENGTH: 32,
+        TOKEN_LENGTH: 64,
+    },
+
     COLORS: {
         DEFAULT_STATION: '#fb923c',
         FALLBACK: '#94a3b8',

@@ -82,6 +82,10 @@ describe('initLandmarkCollectionDetails', () => {
         window.Urls = {
             'api:v2:landmark-collections': () => '/api/v2/landmark-collections/',
         };
+        global.fetch = vi.fn(() => Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([]),
+        }));
     });
 
     it('returns early when collection context is missing', () => {
@@ -153,6 +157,43 @@ describe('initLandmarkCollectionDetails', () => {
 
         const checked = document.querySelectorAll('.landmark-row-select:checked');
         expect(checked.length).toBe(0);
+    });
+
+    it('bulk transfer button opens transfer modal with selected landmarks', () => {
+        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
+        initLandmarkCollectionDetails();
+
+        const first = document.querySelector('.landmark-row-select[data-landmark-id="lm-1"]');
+        const third = document.querySelector('.landmark-row-select[data-landmark-id="lm-3"]');
+        first.checked = true;
+        third.checked = true;
+        first.onchange();
+        third.onchange();
+
+        const transferBtn = document.querySelector('#landmarks-bulk-transfer-btn');
+        transferBtn.onclick();
+
+        expect(LandmarkForms.openLandmarkBulkTransferModal).toHaveBeenCalledTimes(1);
+        const call = LandmarkForms.openLandmarkBulkTransferModal.mock.calls[0][0];
+        expect(call.sourceCollection.id).toBe('col-1');
+        expect(call.landmarks.map(lm => lm.id)).toEqual(['lm-1', 'lm-3']);
+    });
+
+    it('bulk delete button opens delete modal with selected landmarks', () => {
+        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
+        initLandmarkCollectionDetails();
+
+        const second = document.querySelector('.landmark-row-select[data-landmark-id="lm-2"]');
+        second.checked = true;
+        second.onchange();
+
+        const deleteBtn = document.querySelector('#landmarks-bulk-delete-btn');
+        deleteBtn.onclick();
+
+        expect(LandmarkForms.openLandmarkBulkDeleteModal).toHaveBeenCalledTimes(1);
+        const call = LandmarkForms.openLandmarkBulkDeleteModal.mock.calls[0][0];
+        expect(call.sourceCollection.id).toBe('col-1');
+        expect(call.landmarks.map(lm => lm.id)).toEqual(['lm-2']);
     });
 
     it('edit button opens edit modal via LandmarkForms', () => {

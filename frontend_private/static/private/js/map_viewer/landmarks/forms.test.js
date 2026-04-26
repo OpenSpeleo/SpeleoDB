@@ -41,10 +41,15 @@ vi.mock('../components/modal.js', () => ({
 }));
 
 import {
+    openLandmarkBulkDeleteModal,
+    openLandmarkBulkTransferModal,
     renderLandmarkFormHtml,
     readLandmarkFormPayload,
     validateLandmarkFormPayload,
 } from './forms.js';
+import { Utils } from '../utils.js';
+
+const VALID_CSRF_TOKEN = 'c'.repeat(64);
 
 describe('renderLandmarkFormHtml', () => {
     it('renders create-mode form with empty fields', () => {
@@ -246,5 +251,75 @@ describe('validateLandmarkFormPayload', () => {
     it('accepts boundary values', () => {
         expect(validateLandmarkFormPayload({ name: 'N', latitude: 90, longitude: 180 })).toBeNull();
         expect(validateLandmarkFormPayload({ name: 'S', latitude: -90, longitude: -180 })).toBeNull();
+    });
+});
+
+describe('bulk landmark modals', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '';
+        vi.clearAllMocks();
+        Utils.getCSRFToken.mockReturnValue(VALID_CSRF_TOKEN);
+        window.Urls = {
+            'private:landmark_collection_new': () => '/landmark-collections/new/',
+            'api:v2:landmark-collection-landmarks-transfer': sourceId => `/api/collections/${sourceId}/landmarks/transfer/`,
+            'api:v2:landmark-collection-landmarks-bulk-delete': sourceId => `/api/collections/${sourceId}/landmarks/bulk_delete/`,
+        };
+        global.fetch = vi.fn(() => Promise.resolve({
+            ok: true,
+            status: 200,
+            statusText: 'OK',
+            text: () => Promise.resolve(JSON.stringify({ ok: true })),
+        }));
+    });
+
+    it('posts bulk transfer with a valid-length CSRF header', async () => {
+        openLandmarkBulkTransferModal({
+            landmarks: [
+                { id: 'lm-1', name: 'Alpha' },
+                { id: 'lm-2', name: 'Beta' },
+            ],
+            sourceCollection: { id: 'source', name: 'Source Collection' },
+            collections: [
+                { id: 'source', name: 'Source Collection', can_write: true },
+                { id: 'target', name: 'Target Collection', can_write: true },
+            ],
+        });
+
+        await document.getElementById('bulk-transfer-confirm').onclick();
+
+        expect(fetch).toHaveBeenCalledTimes(1);
+        const [url, config] = fetch.mock.calls[0];
+        expect(url).toBe('/api/collections/source/landmarks/transfer/');
+        expect(config.method).toBe('POST');
+        expect(config.credentials).toBe('same-origin');
+        expect(config.headers['X-CSRFToken']).toBe(VALID_CSRF_TOKEN);
+        expect(config.headers['X-CSRFToken']).toHaveLength(64);
+        expect(JSON.parse(config.body)).toEqual({
+            landmark_ids: ['lm-1', 'lm-2'],
+            target_collection: 'target',
+        });
+    });
+
+    it('posts bulk delete with a valid-length CSRF header', async () => {
+        openLandmarkBulkDeleteModal({
+            landmarks: [
+                { id: 'lm-1', name: 'Alpha' },
+                { id: 'lm-2', name: 'Beta' },
+            ],
+            sourceCollection: { id: 'source', name: 'Source Collection' },
+        });
+
+        await document.getElementById('bulk-delete-confirm').onclick();
+
+        expect(fetch).toHaveBeenCalledTimes(1);
+        const [url, config] = fetch.mock.calls[0];
+        expect(url).toBe('/api/collections/source/landmarks/bulk_delete/');
+        expect(config.method).toBe('POST');
+        expect(config.credentials).toBe('same-origin');
+        expect(config.headers['X-CSRFToken']).toBe(VALID_CSRF_TOKEN);
+        expect(config.headers['X-CSRFToken']).toHaveLength(64);
+        expect(JSON.parse(config.body)).toEqual({
+            landmark_ids: ['lm-1', 'lm-2'],
+        });
     });
 });

@@ -130,6 +130,9 @@
 
 {% block right_panel %}
 <div class="grow">
+    <div class="hidden" aria-hidden="true">
+        {% csrf_token %}
+    </div>
     {% if not collection.is_personal %}
     <form id="landmark_collection_details_form" autocomplete="off">
         <fieldset {% if not has_write_access %}disabled{% endif %}>

@@ -3,6 +3,37 @@ import { DEFAULTS } from './config.js';
 
 const RAW_HTML = Symbol('RAW_HTML');
 
+function isValidCSRFToken(token) {
+    const pattern = new RegExp(
+        `^[A-Za-z0-9]{${DEFAULTS.CSRF.SECRET_LENGTH}}$|^[A-Za-z0-9]{${DEFAULTS.CSRF.TOKEN_LENGTH}}$`
+    );
+    return pattern.test(token);
+}
+
+function normalizeCSRFToken(token) {
+    if (typeof token !== 'string') return '';
+    const trimmed = token.trim();
+    return isValidCSRFToken(trimmed) ? trimmed : '';
+}
+
+function getCSRFTokenFromInput() {
+    const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    return normalizeCSRFToken(input?.value);
+}
+
+function getCSRFTokenFromCookie() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.slice('csrftoken='.length);
+    if (!cookieValue) return '';
+    try {
+        return normalizeCSRFToken(decodeURIComponent(cookieValue));
+    } catch {
+        return normalizeCSRFToken(cookieValue);
+    }
+}
+
 export const Utils = {
     raw: function(htmlString) {
         return { [RAW_HTML]: true, value: String(htmlString) };
@@ -22,11 +53,9 @@ export const Utils = {
     },
 
     getCSRFToken: function() {
-        const cookieValue = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrftoken='))
-            ?.split('=')[1];
-        return cookieValue || (window.MAPVIEWER_CONTEXT ? window.MAPVIEWER_CONTEXT.csrfToken : '');
+        return getCSRFTokenFromInput()
+            || getCSRFTokenFromCookie()
+            || normalizeCSRFToken(window.MAPVIEWER_CONTEXT?.csrfToken);
     },
 
     formatDateString: function(dateStr) {
