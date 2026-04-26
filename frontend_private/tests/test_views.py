@@ -406,6 +406,38 @@ class LandmarkCollectionViewsTest(BaseTestCase):
         assert personal_collection.name in content
         assert "Private" in content
 
+    def test_listing_shows_landmark_count_column(self) -> None:
+        for i in range(3):
+            LandmarkFactory.create(
+                collection=self.collection,
+                owner=self.user,
+                name=f"LM {i}",
+                latitude=str(45 + i),
+                longitude=str(-122 + i),
+            )
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("private:landmark_collections"))
+
+        content = response.content.decode()
+        assert response.status_code == status.HTTP_200_OK
+        assert '<div class="font-semibold text-center">Landmarks</div>' in content
+
+        rows = content.split("<tr>")
+        collection_row = next(r for r in rows if self.collection.name in r)
+        assert ">3<" in collection_row
+
+    def test_listing_shows_zero_landmark_count_for_empty_collection(self) -> None:
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("private:landmark_collections"))
+
+        content = response.content.decode()
+        assert response.status_code == status.HTTP_200_OK
+
+        rows = content.split("<tr>")
+        collection_row = next(r for r in rows if self.collection.name in r)
+        assert ">0<" in collection_row
+
     def test_listing_shows_all_landmark_collections_gis_card(self) -> None:
         self.client.force_login(self.user)
         response = self.client.get(reverse("private:landmark_collections"))

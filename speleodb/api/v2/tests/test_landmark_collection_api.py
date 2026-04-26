@@ -162,6 +162,58 @@ class TestLandmarkCollectionAPI:
         assert personal["user_permission_level"] == PermissionLevel.ADMIN
         assert hidden.name not in names
 
+    def test_list_returns_landmark_count(
+        self,
+        api_client: APIClient,
+        owner: User,
+        collection: LandmarkCollection,
+    ) -> None:
+        for i in range(3):
+            Landmark.objects.create(
+                name=f"Point {i}",
+                latitude=45 + i,
+                longitude=-122 + i,
+                created_by=owner.email,
+                collection=collection,
+            )
+
+        api_client.force_authenticate(user=owner)
+        response = api_client.get(reverse("api:v2:landmark-collections"))
+
+        assert response.status_code == status.HTTP_200_OK
+        shared = next(
+            item for item in response.json() if item["name"] == collection.name
+        )
+        assert shared["landmark_count"] == 3  # noqa: PLR2004
+
+        personal = next(item for item in response.json() if item.get("is_personal"))
+        assert personal["landmark_count"] == 0
+
+    def test_detail_returns_landmark_count(
+        self,
+        api_client: APIClient,
+        owner: User,
+        collection: LandmarkCollection,
+    ) -> None:
+        Landmark.objects.create(
+            name="Single",
+            latitude=45,
+            longitude=-122,
+            created_by=owner.email,
+            collection=collection,
+        )
+
+        api_client.force_authenticate(user=owner)
+        response = api_client.get(
+            reverse(
+                "api:v2:landmark-collection-detail",
+                kwargs={"collection_id": collection.id},
+            )
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["landmark_count"] == 1
+
     def test_detail_does_not_expose_active_flag(
         self,
         api_client: APIClient,

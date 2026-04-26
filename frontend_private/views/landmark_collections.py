@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count
 from django.shortcuts import redirect
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
@@ -45,6 +46,7 @@ class LandmarkCollectionListingView(AuthenticatedTemplateView):
                 collection__is_active=True,
             )
             .select_related("collection")
+            .annotate(landmark_count=Count("collection__landmarks"))
             .order_by("collection__collection_type", "collection__name")
         )
         context["user_token"] = user_token
