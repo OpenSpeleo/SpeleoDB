@@ -19,12 +19,17 @@
 
             <!-- Message -->
             <p class="text-lg text-slate-200 w-full text-center my-6">
-                Use this URL to access your experiment's data in GIS software (QGIS, ArcGIS, etc.) via WFS (Web Feature Service).
+                Direct GeoJSON download URL for this experiment's records. Drop the link into any
+                tool that can read a GeoJSON FeatureCollection (QGIS, GDAL, custom scripts).
+                <strong class="text-amber-300">Note:</strong> this is a single-document download &mdash;
+                it is not a full OGC API - Features service, so OGC-discovery clients (e.g. ArcGIS Pro
+                "Add OGC Server") will not be able to follow it. Use the project GIS-View / Personal
+                GIS-View landing pages for those clients.
             </p>
             
             <!-- API URL -->
             <div class="w-full mb-6">
-                <label class="block text-sm font-medium text-slate-300 mb-2">API Endpoint URL</label>
+                <label class="block text-sm font-medium text-slate-300 mb-2">GeoJSON Download URL</label>
                 <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 overflow-x-auto relative group">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
                         <code id="api-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">

@@ -14,8 +14,14 @@ Rules from the adversarial Landmark Collection review:
    permission rows only; `POST` owns reactivation semantics.
 5. Import endpoints must validate collection access before object creation and
    create Landmarks in one transaction so failed imports leave no partial rows.
-6. OGC child links must be built from `request.path`, not `get_full_path()`, or
-   query parameters such as `?f=json` will corrupt discoverable URLs.
+6. OGC child links MUST be built from `request.path` everywhere — that
+   includes `speleodb/gis/ogc_helpers.py`, `speleodb/api/v2/views/ogc_base.py`,
+   and every concrete `OGCFeatureService` adapter. `request.get_full_path()`
+   is forbidden in OGC link builders: any `?f=json` or proxy/CDN query
+   string would otherwise leak into the path of every child href and 404
+   on follow-up requests. The shared helper `absolute_url()` in
+   `ogc_helpers.py` is the single place that constructs absolute URLs;
+   nothing in the OGC layer should re-implement it.
 7. Frontend read-only controls need absence, not disabled theater. Hide edit,
    delete, context-menu, and drag affordances unless the API state says the user
    can write/delete.

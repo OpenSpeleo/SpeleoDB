@@ -1,127 +1,86 @@
 # -*- coding: utf-8 -*-
 
+"""OGC API - Features views for SpeleoDB Landmark Collections.
+
+Two endpoint families share the same generic view layer (defined in
+:mod:`speleodb.api.v2.views.ogc_base`) via the ``OGCFeatureService``
+abstraction:
+
+* :class:`LandmarkSingleOGCService` — public ``gis_token``-scoped
+  access to one specific :class:`LandmarkCollection`. Always exactly
+  one OGC collection, conventionally named ``landmarks``.
+* :class:`LandmarkUserOGCService` — application-token-scoped access to
+  every active Landmark Collection the token's user is allowed to
+  read; one OGC collection per UUID.
+
+Both services hand back point-geometry features built by
+:class:`LandmarkGeoJSONSerializer`, with conditional-request support via
+an ETag derived from the collection state.
+"""
+
 from __future__ import annotations
 
 import hashlib
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import ClassVar
+from uuid import UUID
 
-import orjson
 from django.db.models import Count
 from django.db.models import Max
-from django.http import Http404
-from django.http import HttpResponseNotModified
-from django.http import StreamingHttpResponse
-from django.urls import reverse
-from geojson import FeatureCollection  # type: ignore[attr-defined]
-from rest_framework import permissions
+from django.db.models import Min
 from rest_framework.authtoken.models import Token
-from rest_framework.generics import GenericAPIView
-from rest_framework.renderers import JSONRenderer
 
 from speleodb.api.v2.landmark_access import accessible_landmark_collections_queryset
 from speleodb.api.v2.serializers.landmark import LandmarkGeoJSONSerializer
+from speleodb.api.v2.views.ogc_base import BaseOGCCollectionApiView
+from speleodb.api.v2.views.ogc_base import BaseOGCCollectionItemsApiView
+from speleodb.api.v2.views.ogc_base import BaseOGCCollectionsApiView
 from speleodb.api.v2.views.ogc_base import BaseOGCConformanceApiView
 from speleodb.api.v2.views.ogc_base import BaseOGCLandingPageApiView
-from speleodb.api.v2.views.ogc_base import GeoJSONRenderer
-from speleodb.api.v2.views.ogc_base import LegacyGeoJSONRenderer
+from speleodb.api.v2.views.ogc_base import BaseOGCSingleFeatureApiView
+from speleodb.api.v2.views.ogc_base import OGCCollectionMeta
+from speleodb.api.v2.views.ogc_base import OGCFeatureService
+from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
-from speleodb.gis.ogc_models import build_ogc_conformance
-from speleodb.utils.api_mixin import SDBAPIViewMixin
-from speleodb.utils.response import NoWrapResponse
 
 if TYPE_CHECKING:
     from datetime import datetime
-    from uuid import UUID
 
-    from rest_framework.request import Request
+# Stable id for the singular collection exposed by the gis_token-scoped
+# (Landmark single) service. Persistence layer uses UUIDs but this
+# token-scoped service has by definition exactly one collection, so a
+# human-readable id is friendlier and matches the existing public
+# contract.
+#
+# Disambiguation in client UIs: ArcGIS Pro and QGIS both display the
+# OGC ``title`` field (not ``id``) in the layer table-of-contents.
+# ``title`` is set to ``scope.name`` so multiple landmark tokens added
+# to the same workspace render with distinct human labels even though
+# all share the static collection id ``landmarks``. The static id
+# keeps the public URL contract stable for users who bookmarked the
+# ``/collections/landmarks/items`` form.
+_LANDMARKS_COLLECTION_ID: str = "landmarks"
 
-    from speleodb.users.models import User
-
-_LANDMARKS_COLLECTION_ID = "landmarks"
-_LANDMARK_COLLECTION_CACHE_CONTROL = "public, max-age=60, must-revalidate"
-
-
-def _host(request: Request) -> str:
-    return f"{request.scheme}://{request.get_host().rstrip('/')}"
-
-
-def _landing_page(request: Request) -> dict[str, Any]:
-    host = _host(request)
-    base_path = request.path.rstrip("/")
-
-    return {
-        "title": "SpeleoDB Landmark Collection",
-        "description": "OGC API - Features endpoint for Landmark Point data.",
-        "links": [
-            {
-                "href": f"{host}{base_path}/",
-                "rel": "self",
-                "type": "application/json",
-                "title": "This document",
-            },
-            {
-                "href": f"{host}{base_path}/conformance",
-                "rel": "conformance",
-                "type": "application/json",
-                "title": "Conformance declaration",
-            },
-            {
-                "href": f"{host}{base_path}/collections",
-                "rel": "data",
-                "type": "application/json",
-                "title": "Feature collections",
-            },
-            {
-                "href": f"{host}{reverse('api-schema')}",
-                "rel": "service-desc",
-                "type": "application/vnd.oai.openapi+json;version=3.0",
-                "title": "OpenAPI definition",
-            },
-        ],
-    }
+# Cache-Control for landmark items. Data is mutable so we use a short
+# revalidating window; clients should rely on the strong ETag for fresh
+# reads rather than the cache window.
+_LANDMARK_CACHE_CONTROL: str = "public, max-age=60, must-revalidate"
 
 
-def _user_landing_page(request: Request) -> dict[str, Any]:
-    host = _host(request)
-    base_path = request.path.rstrip("/")
-
-    return {
-        "title": "SpeleoDB Landmark Collections",
-        "description": (
-            "OGC API - Features endpoint for all active Landmark Collections "
-            "the token owner can read."
-        ),
-        "links": [
-            {
-                "href": f"{host}{base_path}/",
-                "rel": "self",
-                "type": "application/json",
-                "title": "This document",
-            },
-            {
-                "href": f"{host}{base_path}/conformance",
-                "rel": "conformance",
-                "type": "application/json",
-                "title": "Conformance declaration",
-            },
-            {
-                "href": f"{host}{base_path}/collections",
-                "rel": "data",
-                "type": "application/json",
-                "title": "Feature collections",
-            },
-            {
-                "href": f"{host}{reverse('api-schema')}",
-                "rel": "service-desc",
-                "type": "application/vnd.oai.openapi+json;version=3.0",
-                "title": "OpenAPI definition",
-            },
-        ],
-    }
+# ---------------------------------------------------------------------------
+# Shared ETag + serialization helpers (used by both landmark services)
+# ---------------------------------------------------------------------------
 
 
-def _collection_items_etag(collection: LandmarkCollection) -> str:
+def _landmark_collection_etag(collection: LandmarkCollection) -> str:
+    """Return a strong ETag for *collection* derived from its state.
+
+    The ETag captures everything that could change the items
+    response: the collection's own ``modified_date``, the latest
+    landmark ``modified_date``, and the landmark count. Any landmark
+    add / update / delete invalidates the ETag.
+    """
     agg = collection.landmarks.aggregate(
         latest=Max("modified_date"),
         landmark_count=Count("id"),
@@ -137,72 +96,265 @@ def _collection_items_etag(collection: LandmarkCollection) -> str:
         f"{latest_modified}:"
         f"{landmark_count}"
     )
-    digest = hashlib.sha256(payload.encode()).hexdigest()
-    return f'"{digest}"'
+    return hashlib.sha256(payload.encode()).hexdigest()
 
 
-def _collection_items_response(
-    request: Request,
-    collection: LandmarkCollection,
-) -> StreamingHttpResponse | HttpResponseNotModified:
-    etag = _collection_items_etag(collection)
-
-    if request.headers.get("if-none-match") == etag:
-        response_nm = HttpResponseNotModified()
-        response_nm["ETag"] = etag
-        response_nm["Cache-Control"] = _LANDMARK_COLLECTION_CACHE_CONTROL
-        return response_nm
-
+def _landmark_features(collection: LandmarkCollection) -> list[dict[str, Any]]:
+    """Return the items list for *collection* using the shared serializer."""
     landmarks = collection.landmarks.select_related("collection").order_by("name")
     serializer = LandmarkGeoJSONSerializer(landmarks, many=True)
-    content = orjson.dumps(FeatureCollection(serializer.data))  # type: ignore[no-untyped-call]
-
-    response = StreamingHttpResponse(
-        streaming_content=[content],
-        content_type="application/geo+json",
-    )
-    response["ETag"] = etag
-    response["Cache-Control"] = _LANDMARK_COLLECTION_CACHE_CONTROL
-    response["Content-Disposition"] = "inline"
-    return response
+    return list(serializer.data)
 
 
-def _collection_document(
-    host: str,
-    collection_path: str,
-    collection: LandmarkCollection,
-) -> dict[str, Any]:
-    collection_id = str(collection.id)
-    return {
-        "id": collection_id,
-        "title": collection.name,
-        "description": collection.description or "",
-        "itemType": "feature",
-        "links": [
-            {
-                "href": f"{host}{collection_path}",
-                "rel": "self",
-                "type": "application/json",
-                "title": collection.name,
-            },
-            {
-                "href": f"{host}{collection_path}/items",
-                "rel": "items",
-                "type": "application/geo+json",
-                "title": f"{collection.name} Items",
-            },
-        ],
-    }
-
-
-def _user_collection_or_404(
-    user: User,
-    collection_id: UUID,
-) -> LandmarkCollection:
+def _landmark_feature(
+    collection: LandmarkCollection, landmark_id: UUID
+) -> dict[str, Any] | None:
+    """Look up a single Landmark by id within *collection*; ``None`` if absent."""
     try:
-        return accessible_landmark_collections_queryset(user=user).get(id=collection_id)
-    except LandmarkCollection.DoesNotExist as exc:
-        raise Http404(f"Collection `{collection_id}` does not exist.") from exc
+        landmark = collection.landmarks.select_related("collection").get(
+            id=landmark_id,
+        )
+    except Landmark.DoesNotExist:
+        return None
+    return LandmarkGeoJSONSerializer(landmark).data  # type: ignore[no-any-return]
+
+
+def _parse_uuid(raw: str) -> UUID | None:
+    """Return ``UUID(raw)`` or ``None`` if *raw* is not a valid UUID string."""
+    try:
+        return UUID(str(raw))
+    except ValueError, TypeError:
+        return None
+
+
+def _landmark_collection_bbox(
+    collection: LandmarkCollection,
+) -> tuple[float, float, float, float] | None:
+    """Compute the 2-D union bbox for *collection* via a single aggregate.
+
+    Returns ``None`` for collections with no landmarks (the metadata
+    falls back to the world-bbox fallback in
+    :func:`speleodb.gis.ogc_helpers.build_collection_metadata`).
+    """
+    agg = collection.landmarks.aggregate(
+        min_lon=Min("longitude"),
+        max_lon=Max("longitude"),
+        min_lat=Min("latitude"),
+        max_lat=Max("latitude"),
+    )
+    if (
+        agg["min_lon"] is None
+        or agg["max_lon"] is None
+        or agg["min_lat"] is None
+        or agg["max_lat"] is None
+    ):
+        return None
+    return (
+        float(agg["min_lon"]),
+        float(agg["min_lat"]),
+        float(agg["max_lon"]),
+        float(agg["max_lat"]),
+    )
+
+
+# ---------------------------------------------------------------------------
+# OGCFeatureService — public single-collection (gis_token-scoped)
+# ---------------------------------------------------------------------------
+
+
+class LandmarkSingleOGCService(OGCFeatureService[LandmarkCollection]):
+    """OGC feature service for a single ``LandmarkCollection``.
+
+    The auth scope IS the single collection (resolved by
+    ``gis_token`` lookup); the service exposes exactly one OGC
+    collection named ``landmarks``.
+    """
+
+    service_title: ClassVar[str] = "SpeleoDB Landmark Collection"
+    service_description: ClassVar[str] = (
+        "OGC API - Features endpoint for Landmark Point data."
+    )
+    cache_control: ClassVar[str] = _LANDMARK_CACHE_CONTROL
+
+    def list_collections(
+        self,
+        scope: LandmarkCollection,
+    ) -> list[OGCCollectionMeta]:
+        return [
+            OGCCollectionMeta(
+                id=_LANDMARKS_COLLECTION_ID,
+                title=scope.name,
+                description=scope.description or "",
+                bbox=_landmark_collection_bbox(scope),
+            ),
+        ]
+
+    def get_collection(
+        self,
+        scope: LandmarkCollection,
+        collection_id: str,
+    ) -> OGCCollectionMeta | None:
+        if collection_id != _LANDMARKS_COLLECTION_ID:
+            return None
+        return OGCCollectionMeta(
+            id=_LANDMARKS_COLLECTION_ID,
+            title=scope.name,
+            description=scope.description or "",
+            bbox=_landmark_collection_bbox(scope),
+        )
+
+    def get_features(
+        self,
+        scope: LandmarkCollection,
+        collection_id: str,
+    ) -> list[dict[str, Any]]:
+        # collection_id already validated by get_collection() in the
+        # generic view; retain a defensive check so direct callers
+        # cannot bypass the contract.
+        if collection_id != _LANDMARKS_COLLECTION_ID:
+            return []
+        return _landmark_features(scope)
+
+    def get_feature(
+        self,
+        scope: LandmarkCollection,
+        collection_id: str,
+        feature_id: str,
+    ) -> dict[str, Any] | None:
+        if collection_id != _LANDMARKS_COLLECTION_ID:
+            return None
+        landmark_id = _parse_uuid(feature_id)
+        if landmark_id is None:
+            return None
+        return _landmark_feature(scope, landmark_id)
+
+    def get_etag(
+        self,
+        scope: LandmarkCollection,
+        collection_id: str,
+    ) -> str | None:
+        if collection_id != _LANDMARKS_COLLECTION_ID:
+            return None
+        return _landmark_collection_etag(scope)
+
+
+# ---------------------------------------------------------------------------
+# OGCFeatureService — user-token-scoped (multiple collections)
+# ---------------------------------------------------------------------------
+
+
+class LandmarkUserOGCService(OGCFeatureService[Token]):
+    """OGC feature service for every active LandmarkCollection a user can read.
+
+    The auth scope is a DRF ``Token``; the service yields one OGC
+    collection per UUID the token's user has at least READ permission
+    on. Inactive collections and inactive permissions are excluded.
+    """
+
+    service_title: ClassVar[str] = "SpeleoDB Landmark Collections"
+    service_description: ClassVar[str] = (
+        "OGC API - Features endpoint for all active Landmark Collections "
+        "the token owner can read."
+    )
+    cache_control: ClassVar[str] = _LANDMARK_CACHE_CONTROL
+
+    def __init__(self) -> None:
+        self._resolved_collection_cache: dict[str, LandmarkCollection | None] = {}
+
+    def _resolve_collection(
+        self,
+        scope: Token,
+        collection_id: str,
+    ) -> LandmarkCollection | None:
+        """Resolve *collection_id* to an accessible LandmarkCollection."""
+        if collection_id in self._resolved_collection_cache:
+            return self._resolved_collection_cache[collection_id]
+
+        uuid_id = _parse_uuid(collection_id)
+        if uuid_id is None:
+            self._resolved_collection_cache[collection_id] = None
+            return None
+        try:
+            # OGC endpoints are read-only — never create the personal
+            # collection on a GET (read-replica safety, cold-start cost).
+            collection = accessible_landmark_collections_queryset(
+                user=scope.user,
+                ensure_personal=False,
+            ).get(id=uuid_id)
+        except LandmarkCollection.DoesNotExist:
+            self._resolved_collection_cache[collection_id] = None
+            return None
+        self._resolved_collection_cache[collection_id] = collection
+        return collection
+
+    def list_collections(self, scope: Token) -> list[OGCCollectionMeta]:
+        # Read-only path — see _resolve_collection. Per-collection bbox
+        # is computed lazily in ``get_collection`` (one aggregate query
+        # per /collections/{id} hit) rather than here, to keep the
+        # /collections list O(1) instead of O(N) aggregate queries.
+        return [
+            OGCCollectionMeta(
+                id=str(c.id),
+                title=c.name,
+                description=c.description or "",
+            )
+            for c in accessible_landmark_collections_queryset(
+                user=scope.user,
+                ensure_personal=False,
+            )
+        ]
+
+    def get_collection(
+        self,
+        scope: Token,
+        collection_id: str,
+    ) -> OGCCollectionMeta | None:
+        collection = self._resolve_collection(scope, collection_id)
+        if collection is None:
+            return None
+        return OGCCollectionMeta(
+            id=str(collection.id),
+            title=collection.name,
+            description=collection.description or "",
+            bbox=_landmark_collection_bbox(collection),
+        )
+
+    def get_features(
+        self,
+        scope: Token,
+        collection_id: str,
+    ) -> list[dict[str, Any]]:
+        collection = self._resolve_collection(scope, collection_id)
+        if collection is None:
+            return []
+        return _landmark_features(collection)
+
+    def get_feature(
+        self,
+        scope: Token,
+        collection_id: str,
+        feature_id: str,
+    ) -> dict[str, Any] | None:
+        collection = self._resolve_collection(scope, collection_id)
+        if collection is None:
+            return None
+        landmark_id = _parse_uuid(feature_id)
+        if landmark_id is None:
+            return None
+        return _landmark_feature(collection, landmark_id)
+
+    def get_etag(self, scope: Token, collection_id: str) -> str | None:
+        collection = self._resolve_collection(scope, collection_id)
+        if collection is None:
+            return None
+        return _landmark_collection_etag(collection)
+
+
+# ---------------------------------------------------------------------------
+# View bindings (each one is a 3-line wrapper)
+# ---------------------------------------------------------------------------
+
+# Single-collection (public gis_token) endpoints.
 
 
 class LandmarkCollectionOGCLandingPageApiView(BaseOGCLandingPageApiView):
@@ -210,10 +362,7 @@ class LandmarkCollectionOGCLandingPageApiView(BaseOGCLandingPageApiView):
 
     queryset = LandmarkCollection.objects.filter(is_active=True)
     lookup_field = "gis_token"
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        self.get_object()
-        return NoWrapResponse(_landing_page(request=request))
+    service_class = LandmarkSingleOGCService
 
 
 class LandmarkCollectionOGCConformanceApiView(BaseOGCConformanceApiView):
@@ -221,153 +370,42 @@ class LandmarkCollectionOGCConformanceApiView(BaseOGCConformanceApiView):
 
     queryset = LandmarkCollection.objects.filter(is_active=True)
     lookup_field = "gis_token"
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        self.get_object()
-        return NoWrapResponse(build_ogc_conformance())
+    service_class = LandmarkSingleOGCService
 
 
-class LandmarkCollectionOGCCollectionsApiView(
-    GenericAPIView[LandmarkCollection],
-    SDBAPIViewMixin,
-):
-    """OGC collections endpoint for the single Landmark Point layer."""
+class LandmarkCollectionOGCCollectionsApiView(BaseOGCCollectionsApiView):
+    """OGC ``/collections`` for a public Landmark Collection token."""
 
-    schema = None
-    permission_classes = [permissions.AllowAny]
     queryset = LandmarkCollection.objects.filter(is_active=True)
     lookup_field = "gis_token"
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        collection = self.get_object()
-        host = _host(request)
-        self_path = request.path.rstrip("/")
-        collection_path = request.path.rstrip("/")
-        landing_path = request.path.rstrip("/").removesuffix("/collections")
-
-        return NoWrapResponse(
-            {
-                "links": [
-                    {
-                        "href": f"{host}{self_path}",
-                        "rel": "self",
-                        "type": "application/json",
-                        "title": "Feature Collections",
-                    },
-                    {
-                        "href": f"{host}{self_path}",
-                        "rel": "data",
-                        "type": "application/json",
-                        "title": "Feature Collections",
-                    },
-                    {
-                        "href": f"{host}{landing_path}/",
-                        "rel": "root",
-                        "type": "application/json",
-                        "title": "Landing page",
-                    },
-                ],
-                "collections": [
-                    {
-                        "id": _LANDMARKS_COLLECTION_ID,
-                        "title": collection.name,
-                        "description": collection.description or "",
-                        "itemType": "feature",
-                        "links": [
-                            {
-                                "href": (
-                                    f"{host}{collection_path}/"
-                                    f"{_LANDMARKS_COLLECTION_ID}"
-                                ),
-                                "rel": "self",
-                                "type": "application/json",
-                                "title": collection.name,
-                            },
-                            {
-                                "href": (
-                                    f"{host}{collection_path}/"
-                                    f"{_LANDMARKS_COLLECTION_ID}/items"
-                                ),
-                                "rel": "items",
-                                "type": "application/geo+json",
-                                "title": f"{collection.name} Items",
-                            },
-                        ],
-                    }
-                ],
-            }
-        )
+    service_class = LandmarkSingleOGCService
 
 
-class LandmarkCollectionOGCCollectionApiView(
-    GenericAPIView[LandmarkCollection],
-    SDBAPIViewMixin,
-):
+class LandmarkCollectionOGCCollectionApiView(BaseOGCCollectionApiView):
     """OGC single-collection metadata for Landmark Points."""
 
-    schema = None
-    permission_classes = [permissions.AllowAny]
     queryset = LandmarkCollection.objects.filter(is_active=True)
     lookup_field = "gis_token"
-
-    def get(
-        self, request: Request, collection_id: str, *args: Any, **kwargs: Any
-    ) -> NoWrapResponse:
-        if collection_id != _LANDMARKS_COLLECTION_ID:
-            raise Http404(f"Collection `{collection_id}` does not exist.")
-
-        collection = self.get_object()
-        host = _host(request)
-        self_path = request.path.rstrip("/")
-
-        return NoWrapResponse(
-            {
-                "id": _LANDMARKS_COLLECTION_ID,
-                "title": collection.name,
-                "description": collection.description,
-                "itemType": "feature",
-                "links": [
-                    {
-                        "href": f"{host}{self_path}",
-                        "rel": "self",
-                        "type": "application/json",
-                        "title": collection.name,
-                    },
-                    {
-                        "href": f"{host}{self_path}/items",
-                        "rel": "items",
-                        "type": "application/geo+json",
-                        "title": f"{collection.name} Items",
-                    },
-                ],
-            }
-        )
+    service_class = LandmarkSingleOGCService
 
 
-class LandmarkCollectionOGCCollectionItemsApiView(
-    GenericAPIView[LandmarkCollection],
-    SDBAPIViewMixin,
-):
-    """OGC ``/items`` endpoint returning dynamic Point GeoJSON."""
+class LandmarkCollectionOGCCollectionItemsApiView(BaseOGCCollectionItemsApiView):
+    """OGC ``/items`` endpoint for a public Landmark Collection."""
 
-    schema = None
-    permission_classes = [permissions.AllowAny]
-    renderer_classes = [GeoJSONRenderer, LegacyGeoJSONRenderer, JSONRenderer]
     queryset = LandmarkCollection.objects.filter(is_active=True)
     lookup_field = "gis_token"
+    service_class = LandmarkSingleOGCService
 
-    def get(
-        self,
-        request: Request,
-        collection_id: str,
-        *args: Any,
-        **kwargs: Any,
-    ) -> StreamingHttpResponse | HttpResponseNotModified:
-        if collection_id != _LANDMARKS_COLLECTION_ID:
-            raise Http404(f"Collection `{collection_id}` does not exist.")
 
-        collection = self.get_object()
-        return _collection_items_response(request=request, collection=collection)
+class LandmarkCollectionOGCSingleFeatureApiView(BaseOGCSingleFeatureApiView):
+    """OGC ``/items/{featureId}`` endpoint for a public Landmark Collection."""
+
+    queryset = LandmarkCollection.objects.filter(is_active=True)
+    lookup_field = "gis_token"
+    service_class = LandmarkSingleOGCService
+
+
+# User-token (application token) endpoints.
 
 
 class LandmarkCollectionUserOGCLandingPageApiView(BaseOGCLandingPageApiView):
@@ -375,10 +413,7 @@ class LandmarkCollectionUserOGCLandingPageApiView(BaseOGCLandingPageApiView):
 
     queryset = Token.objects.select_related("user").all()
     lookup_field = "key"
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        self.get_object()
-        return NoWrapResponse(_user_landing_page(request=request))
+    service_class = LandmarkUserOGCService
 
 
 class LandmarkCollectionUserOGCConformanceApiView(BaseOGCConformanceApiView):
@@ -386,121 +421,36 @@ class LandmarkCollectionUserOGCConformanceApiView(BaseOGCConformanceApiView):
 
     queryset = Token.objects.select_related("user").all()
     lookup_field = "key"
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        self.get_object()
-        return NoWrapResponse(build_ogc_conformance())
+    service_class = LandmarkUserOGCService
 
 
-class LandmarkCollectionUserOGCCollectionsApiView(
-    GenericAPIView[Token],
-    SDBAPIViewMixin,
-):
-    """OGC collections endpoint for all readable Landmark Collections."""
+class LandmarkCollectionUserOGCCollectionsApiView(BaseOGCCollectionsApiView):
+    """OGC ``/collections`` for every user-readable Landmark Collection."""
 
-    schema = None
-    permission_classes = [permissions.AllowAny]
     queryset = Token.objects.select_related("user").all()
     lookup_field = "key"
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        token = self.get_object()
-        host = _host(request)
-        url_path = request.path.rstrip("/")
-        landing_path = url_path.removesuffix("/collections")
-        collections = accessible_landmark_collections_queryset(user=token.user)
-
-        return NoWrapResponse(
-            {
-                "links": [
-                    {
-                        "href": f"{host}{url_path}",
-                        "rel": "self",
-                        "type": "application/json",
-                        "title": "Feature Collections",
-                    },
-                    {
-                        "href": f"{host}{url_path}",
-                        "rel": "data",
-                        "type": "application/json",
-                        "title": "Feature Collections",
-                    },
-                    {
-                        "href": f"{host}{landing_path}/",
-                        "rel": "root",
-                        "type": "application/json",
-                        "title": "Landing page",
-                    },
-                ],
-                "collections": [
-                    _collection_document(
-                        host=host,
-                        collection_path=f"{url_path}/{collection.id}",
-                        collection=collection,
-                    )
-                    for collection in collections
-                ],
-            }
-        )
+    service_class = LandmarkUserOGCService
 
 
-class LandmarkCollectionUserOGCCollectionApiView(
-    GenericAPIView[Token],
-    SDBAPIViewMixin,
-):
+class LandmarkCollectionUserOGCCollectionApiView(BaseOGCCollectionApiView):
     """OGC metadata for one readable user-token Landmark Collection."""
 
-    schema = None
-    permission_classes = [permissions.AllowAny]
     queryset = Token.objects.select_related("user").all()
     lookup_field = "key"
-
-    def get(
-        self,
-        request: Request,
-        collection_id: UUID,
-        *args: Any,
-        **kwargs: Any,
-    ) -> NoWrapResponse:
-        token = self.get_object()
-        collection = _user_collection_or_404(
-            user=token.user,
-            collection_id=collection_id,
-        )
-        host = _host(request)
-        self_path = request.path.rstrip("/")
-
-        return NoWrapResponse(
-            _collection_document(
-                host=host,
-                collection_path=self_path,
-                collection=collection,
-            )
-        )
+    service_class = LandmarkUserOGCService
 
 
-class LandmarkCollectionUserOGCCollectionItemsApiView(
-    GenericAPIView[Token],
-    SDBAPIViewMixin,
-):
-    """OGC ``/items`` endpoint for one user-token Landmark Collection."""
+class LandmarkCollectionUserOGCCollectionItemsApiView(BaseOGCCollectionItemsApiView):
+    """OGC ``/items`` for one user-token Landmark Collection."""
 
-    schema = None
-    permission_classes = [permissions.AllowAny]
-    renderer_classes = [GeoJSONRenderer, LegacyGeoJSONRenderer, JSONRenderer]
     queryset = Token.objects.select_related("user").all()
     lookup_field = "key"
+    service_class = LandmarkUserOGCService
 
-    def get(
-        self,
-        request: Request,
-        collection_id: UUID,
-        *args: Any,
-        **kwargs: Any,
-    ) -> StreamingHttpResponse | HttpResponseNotModified:
-        token = self.get_object()
-        collection = _user_collection_or_404(
-            user=token.user,
-            collection_id=collection_id,
-        )
-        return _collection_items_response(request=request, collection=collection)
+
+class LandmarkCollectionUserOGCSingleFeatureApiView(BaseOGCSingleFeatureApiView):
+    """OGC ``/items/{featureId}`` for one user-token Landmark Collection."""
+
+    queryset = Token.objects.select_related("user").all()
+    lookup_field = "key"
+    service_class = LandmarkUserOGCService

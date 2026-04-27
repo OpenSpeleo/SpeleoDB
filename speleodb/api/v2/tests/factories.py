@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import binascii
 import hashlib
+import os
 import random
 import uuid
 from datetime import date
@@ -84,8 +86,20 @@ class SurveyTeamMembershipFactory(DjangoModelFactory[SurveyTeamMembership]):
         model = SurveyTeamMembership
 
 
+def _generate_hex_token_key() -> str:
+    """Mirror DRF's ``Token.generate_key``: 40 hex chars from 20 random bytes.
+
+    The OGC user-token URL converter (``<user_token:key>``) enforces
+    ``[0-9a-fA-F]{40}``; the Faker-generated alphanumeric+special-char
+    keys this factory used to produce did not match, forcing every test
+    that reverses an OGC user URL to swap ``self.token`` in setUp().
+    Generating real-shape tokens here removes the workaround.
+    """
+    return binascii.hexlify(os.urandom(20)).decode()
+
+
 class TokenFactory(DjangoModelFactory[Token]):
-    key: str = Faker("password", length=40, special_chars=True, upper_case=True)  # type: ignore[assignment]
+    key: str = factory.LazyFunction(_generate_hex_token_key)  # type: ignore[assignment]
     user: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
 
     class Meta:

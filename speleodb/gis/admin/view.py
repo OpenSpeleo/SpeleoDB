@@ -139,7 +139,7 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         """Display the public API URL for easy copying."""
         if obj and obj.pk and obj.gis_token:
             path = reverse(
-                "api:v2:gis-ogc:view-data",
+                "api:v2:gis-ogc:view-landing",
                 kwargs={"gis_token": obj.gis_token},
             )
 

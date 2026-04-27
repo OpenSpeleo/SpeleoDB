@@ -1,39 +1,59 @@
 # -*- coding: utf-8 -*-
 
-"""Abstract base classes for the OGC API - Features endpoint hierarchy.
+"""Generic OGC API - Features views and the ``OGCFeatureService`` interface.
 
-Every OGC endpoint pair (GIS-View and User) shares identical protocol
-logic.  The *only* things that change between the two are:
+The four OGC families served by SpeleoDB (project gis-view, project user
+token, landmark single, landmark user) used to each have their own
+landing/conformance/collections/collection/items implementations. Now
+they all share a single set of generic views in this module; each family
+is a ~60-line concrete :class:`OGCFeatureService` that the view binds to
+via its ``service_class`` attribute. The compliance layer
+(``links[rel=self]``, ``numberMatched``/``numberReturned``/``timeStamp``,
+``crs``/``extent``/``storageCrs``, ``bbox``/``limit``/``datetime``
+filtering, single-feature lookup) is implemented exactly once in
+:mod:`speleodb.gis.ogc_helpers` and consumed by every family.
 
-* The Django model and lookup field used to authenticate/authorize the
-  request (``GISView`` / ``gis_token`` vs ``Token`` / ``key``).
-* How the list of ``ProjectGeoJSON`` objects is obtained.
+Subclassing pattern (3 lines per binding)::
 
-This module defines one abstract base class per OGC endpoint type.
-Concrete subclasses in ``gis_view.py`` and ``project_geojson.py``
-are 3-10 lines each: they set ``queryset`` / ``lookup_field`` and
-implement the single abstract getter.
+    class OGCViewLandingPageApiView(BaseOGCLandingPageApiView):
+        queryset = GISView.objects.all()
+        lookup_field = "gis_token"
+        service_class = ProjectViewOGCService
+
+The ``BaseOGC*`` class names are preserved for import compatibility with
+existing URL configurations during the migration.
 """
 
 from __future__ import annotations
 
 import abc
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import ClassVar
 
 import orjson
-from django.core.cache import cache
+from django.http import Http404
 from django.http import HttpResponseNotModified
 from django.http import StreamingHttpResponse
-from geojson import FeatureCollection  # type: ignore[attr-defined]
+from django.utils.functional import cached_property
 from rest_framework import permissions
 from rest_framework.generics import GenericAPIView
 from rest_framework.renderers import BaseRenderer
 from rest_framework.renderers import JSONRenderer
 
-from speleodb.gis.ogc_models import OGCLayerList
-from speleodb.gis.ogc_models import build_ogc_conformance
-from speleodb.gis.ogc_models import build_ogc_landing_page
+from speleodb.gis.ogc_helpers import apply_ogc_query
+from speleodb.gis.ogc_helpers import build_collection_metadata
+from speleodb.gis.ogc_helpers import build_collections_response
+from speleodb.gis.ogc_helpers import build_conformance_declaration
+from speleodb.gis.ogc_helpers import build_items_envelope
+from speleodb.gis.ogc_helpers import build_landing_page
+from speleodb.gis.ogc_helpers import build_single_feature_response
+from speleodb.gis.ogc_helpers import parse_ogc_query
+from speleodb.gis.ogc_openapi import OGC_OPENAPI_BYTES
+from speleodb.gis.ogc_openapi import OGC_OPENAPI_CACHE_CONTROL
+from speleodb.gis.ogc_openapi import OGC_OPENAPI_CONTENT_TYPE
+from speleodb.gis.ogc_openapi import OGC_OPENAPI_ETAG
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.response import NoWrapResponse
 
@@ -41,77 +61,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from rest_framework.request import Request
-
-    from speleodb.gis.models import ProjectGeoJSON
-
-# ---------------------------------------------------------------------------
-# GeoJSON proxy helper
-# ---------------------------------------------------------------------------
-# Cache timeout: 24 hours.  Content is immutable (tied to a git commit SHA)
-# so this is actually conservative — the data can never change for a given key.
-_GEOJSON_CACHE_TIMEOUT: int = 60 * 60 * 24
-
-
-def serve_geojson_proxy(
-    project_geojson: ProjectGeoJSON,
-    request: Request,
-) -> StreamingHttpResponse | HttpResponseNotModified:
-    """Serve a filtered GeoJSON FeatureCollection with caching and ETag support.
-
-    Behaviour
-    ---------
-    * **LineString filter** — only ``LineString`` features are included so that
-      QGIS (which requires a single geometry type per layer) renders correctly.
-    * **Immutable cache** — the filtered result is cached under
-      ``ogc_geojson_{commit_sha}`` for 24 h.  Because the content is tied to
-      a git commit SHA it can never change, so every request after the first
-      one is served from cache without hitting S3.
-    * **ETag / 304** — the commit SHA is used as an ``ETag``.  If the client
-      sends ``If-None-Match`` with a matching value, a ``304 Not Modified``
-      is returned with zero body bytes.
-    * **StreamingHttpResponse** — required so that
-      ``DRFWrapResponseMiddleware`` skips this response (plain
-      ``HttpResponse`` would be wrapped in a JSON envelope, breaking GeoJSON
-      consumers).
-    * All query parameters (``limit``, ``bbox``, ``filter`` …) sent by QGIS
-      are silently ignored — the full dataset is always returned.
-    """
-    commit_sha: str = project_geojson.commit_sha
-    etag = f'"{commit_sha}"'
-
-    # HTTP conditional request — return 304 if client already has this version
-    if request.headers.get("if-none-match") == etag:
-        response_nm: HttpResponseNotModified = HttpResponseNotModified()
-        response_nm["ETag"] = etag
-        return response_nm
-
-    # Try Django cache first (Redis in production, LocMemCache in dev)
-    cache_key = f"ogc_geojson_{commit_sha}"
-    content: bytes | None = cache.get(cache_key)
-
-    if content is None:
-        # Read from S3 and filter to LineString features only
-        with project_geojson.file.open("rb") as f:
-            features = orjson.loads(f.read()).get("features", [])
-
-        filtered = FeatureCollection(  # type: ignore[no-untyped-call]
-            [
-                feature
-                for feature in features
-                if feature.get("geometry", {}).get("type") == "LineString"
-            ]
-        )
-        content = orjson.dumps(filtered)
-        cache.set(cache_key, content, timeout=_GEOJSON_CACHE_TIMEOUT)
-
-    response: StreamingHttpResponse = StreamingHttpResponse(
-        streaming_content=[content],
-        content_type="application/geo+json",
-    )
-    response["ETag"] = etag
-    response["Cache-Control"] = "public, max-age=86400"
-    response["Content-Disposition"] = "inline"
-    return response
 
 
 # ---------------------------------------------------------------------------
@@ -123,12 +72,13 @@ class GeoJSONRenderer(BaseRenderer):
     """Declares ``application/geo+json`` so DRF content negotiation accepts it.
 
     OGC API Features Part 1 (RFC 7946) mandates this media type for the
-    ``/items`` endpoint.  Clients like ArcGIS Pro send
-    ``Accept: application/geo+json``; without a matching renderer DRF rejects
-    the request with 406 before the view method runs.
+    ``/items`` endpoint. Clients like ArcGIS Pro send
+    ``Accept: application/geo+json``; without a matching renderer DRF
+    rejects the request with 406 before the view method runs.
 
-    The renderer is never used for actual serialisation — the view returns a
-    ``StreamingHttpResponse`` which bypasses DRF rendering entirely.
+    The renderer is never used for actual serialisation — items views
+    return a :class:`~django.http.StreamingHttpResponse` which bypasses
+    DRF rendering entirely.
     """
 
     media_type: str = "application/geo+json"
@@ -154,130 +104,447 @@ class LegacyGeoJSONRenderer(GeoJSONRenderer):
     format: str = "geojson-legacy"
 
 
+class OpenAPI30Renderer(BaseRenderer):
+    """Declares ``application/vnd.oai.openapi+json`` for the service-desc.
+
+    Strict OGC clients send ``Accept: application/vnd.oai.openapi+json``
+    when fetching the API definition. Without a matching renderer DRF's
+    content-negotiation step would 406 the request before our view's
+    ``get`` method runs.
+
+    The renderer is never used for actual serialisation — the view
+    returns a :class:`~django.http.StreamingHttpResponse` of the
+    pre-built bytes, which bypasses DRF rendering entirely.
+    """
+
+    media_type: str = "application/vnd.oai.openapi+json"
+    format: str = "openapi-json"
+
+    def render(
+        self,
+        data: Any,
+        accepted_media_type: str | None = None,
+        renderer_context: Mapping[str, Any] | None = None,
+    ) -> bytes:
+        return orjson.dumps(data)
+
+
 # ---------------------------------------------------------------------------
-# Abstract base classes
+# OGCFeatureService interface
 # ---------------------------------------------------------------------------
 
 
-class BaseOGCLandingPageApiView(GenericAPIView, SDBAPIViewMixin):  # type: ignore[type-arg]
-    """OGC API - Features landing page.
+@dataclass(frozen=True)
+class OGCCollectionMeta:
+    """Lightweight metadata for a single OGC collection.
 
-    Returns links to conformance and collections endpoints so that
-    GIS clients (QGIS, ArcGIS) can discover the service.
+    Yielded by :meth:`OGCFeatureService.list_collections` and
+    :meth:`OGCFeatureService.get_collection`. The generic view layer
+    expands this into a full OGC collection document via
+    :func:`speleodb.gis.ogc_helpers.build_collection_metadata`.
 
-    Subclasses must set ``queryset`` and ``lookup_field``.
+    The optional ``bbox`` carries the collection's 2-D spatial extent
+    (``min_lon, min_lat, max_lon, max_lat``) so ``extent.spatial.bbox``
+    on the response reflects real data instead of the world fallback.
+    Services that can cheaply compute the bbox (project services do so
+    from the cached features list; landmark services from a single
+    aggregate query) populate it; everything else leaves it ``None``.
     """
 
-    schema = None
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        self.get_object()  # validate token / lookup (404 if invalid)
-        return NoWrapResponse(build_ogc_landing_page(request=request))
+    id: str
+    title: str
+    description: str = ""
+    bbox: tuple[float, float, float, float] | None = None
 
 
-class BaseOGCConformanceApiView(GenericAPIView, SDBAPIViewMixin):  # type: ignore[type-arg]
-    """OGC API - Features conformance declaration.
+class OGCFeatureService[ScopeT](abc.ABC):
+    """Abstract OGC API - Features service.
 
-    Subclasses must set ``queryset`` and ``lookup_field``.
+    The four concrete subclasses (``ProjectViewOGCService``,
+    ``ProjectUserOGCService``, ``LandmarkSingleOGCService``,
+    ``LandmarkUserOGCService``) provide scope-aware data access. Generic
+    views consume this interface to produce uniformly OGC-compliant
+    responses.
+
+    The type parameter ``ScopeT`` is the scope object resolved by the
+    view's ``GenericAPIView.get_object()`` (e.g. ``GISView`` for the
+    project view family, ``Token`` for user-token families,
+    ``LandmarkCollection`` for landmark single).
     """
 
-    schema = None
-    permission_classes = [permissions.AllowAny]
+    #: Human-readable service name used in landing pages.
+    service_title: ClassVar[str] = "SpeleoDB OGC API - Features"
 
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        self.get_object()  # validate token / lookup
-        return NoWrapResponse(build_ogc_conformance())
+    #: Human-readable service description used in landing pages.
+    service_description: ClassVar[str] = (
+        "OGC API - Features endpoint for SpeleoDB GIS data."
+    )
 
-
-class BaseOGCCollectionsApiView(GenericAPIView, SDBAPIViewMixin, abc.ABC):  # type: ignore[type-arg]
-    """OGC API ``/collections`` endpoint.
-
-    Subclasses must set ``queryset`` and ``lookup_field``, and implement
-    :meth:`get_ogc_layer_data`.
-    """
-
-    schema = None
-    permission_classes = [permissions.AllowAny]
+    #: ``Cache-Control`` header to send on items responses. Project file
+    #: data is immutable (keyed by commit SHA) so 24 h is safe; landmark
+    #: data is mutable so subclasses override to a short revalidating
+    #: value.
+    cache_control: ClassVar[str] = "public, max-age=86400"
 
     @abc.abstractmethod
-    def get_ogc_layer_data(self) -> list[dict[str, Any]]:
+    def list_collections(self, scope: ScopeT) -> list[OGCCollectionMeta]:
+        """Yield metadata for every collection visible through *scope*."""
+
+    @abc.abstractmethod
+    def get_collection(
+        self,
+        scope: ScopeT,
+        collection_id: str,
+    ) -> OGCCollectionMeta | None:
+        """Return metadata for *collection_id* or ``None`` if not found."""
+
+    @abc.abstractmethod
+    def get_features(
+        self,
+        scope: ScopeT,
+        collection_id: str,
+    ) -> list[dict[str, Any]]:
+        """Return the normalized feature list for *collection_id*.
+
+        Implementations are responsible for any caching they want; the
+        generic view never caches the result, so the service can apply
+        commit-SHA-keyed cache for immutable data and live queries for
+        mutable data.
         """
-        Return a list of dicts with keys ``sha``, ``title``, ``description``, ``url``.
+
+    def get_feature(
+        self,
+        scope: ScopeT,
+        collection_id: str,
+        feature_id: str,
+    ) -> dict[str, Any] | None:
+        """Return a single feature by id, or ``None`` if not found.
+
+        Default implementation: linear scan of :meth:`get_features`.
+        Subclasses may override for efficiency (e.g. landmarks can do an
+        ORM lookup by primary key).
         """
-        ...
+        features = self.get_features(scope, collection_id)
+        target = str(feature_id)
+        for feat in features:
+            fid = feat.get("id")
+            if fid is not None and str(fid) == target:
+                return feat
+        return None
 
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        data: list[dict[str, Any]] = self.get_ogc_layer_data()
-        ogc_layers: OGCLayerList = OGCLayerList.model_validate({"layers": data})
-        return NoWrapResponse(ogc_layers.to_ogc_collections(request=request))
+    def get_etag(self, scope: ScopeT, collection_id: str) -> str | None:
+        """Return an ETag value for conditional requests, or ``None``.
+
+        The string returned here is wrapped in double quotes by the
+        view layer and sent as the ``ETag`` header. ``None`` disables
+        conditional handling for this collection.
+        """
+        return None
+
+    def get_cache_control(self, scope: ScopeT, collection_id: str) -> str:
+        """Return the ``Cache-Control`` header value for *collection_id*.
+
+        Default returns the service-wide :attr:`cache_control`. Project
+        services override this to ship a shorter TTL when the SHA was
+        resolved via a ``use_latest`` view: the URL stops being valid
+        as soon as a new commit lands, so a 24-hour Cache-Control would
+        let the CDN cache a 404 across deploys.
+        """
+        return self.cache_control
 
 
-class BaseOGCCollectionApiView(GenericAPIView, SDBAPIViewMixin, abc.ABC):  # type: ignore[type-arg]
-    """OGC API single-collection metadata endpoint.
+# ---------------------------------------------------------------------------
+# Generic OGC view base classes (consume an OGCFeatureService)
+# ---------------------------------------------------------------------------
 
-    Subclasses must set ``queryset`` and ``lookup_field``, and implement
-    :meth:`get_geojson_object`.
+
+class _OGCFeatureServiceView(GenericAPIView, SDBAPIViewMixin):  # type: ignore[type-arg]
+    """Common base for OGC views — wires a service to a Django view.
+
+    Subclasses set ``queryset``, ``lookup_field``, and ``service_class``;
+    everything else (auth, pagination, headers) is handled by the
+    generic view classes below.
     """
 
     schema = None
     permission_classes = [permissions.AllowAny]
+    service_class: ClassVar[type[OGCFeatureService[Any]]]
 
-    @abc.abstractmethod
-    def get_geojson_object(self, commit_sha: str) -> ProjectGeoJSON:
-        """Fetch and authorize a ``ProjectGeoJSON`` for *commit_sha*."""
-        ...
+    @cached_property
+    def service(self) -> OGCFeatureService[Any]:
+        """Return a (per-view) instance of the bound service."""
+        return self.service_class()
 
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> NoWrapResponse:
-        commit_sha: str = kwargs["commit_sha"]
-        project_geojson: ProjectGeoJSON = self.get_geojson_object(commit_sha)
 
-        host = f"{request.scheme}://{request.get_host().rstrip('/')}"
-        self_path: str = request.path.rstrip("/")
+class BaseOGCLandingPageApiView(_OGCFeatureServiceView):
+    """OGC API - Features landing page (§7.2).
 
+    Returns ``self``, ``conformance``, and ``data`` links. The ``data``
+    link points to the canonical ``<base>/collections`` URL — clients
+    follow it to discover collections.
+    """
+
+    def get(
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
+    ) -> NoWrapResponse:
+        # Validate the token / lookup; raises Http404 if invalid.
+        self.get_object()
+        landing_path = request.path.rstrip("/")
         return NoWrapResponse(
-            {
-                "id": project_geojson.commit_sha,
-                "title": project_geojson.project.name,
-                "description": f"Commit: {project_geojson.commit_sha}",
-                "itemType": "feature",
-                "links": [
-                    {
-                        "href": f"{host}{self_path}",
-                        "rel": "self",
-                        "type": "application/json",
-                        "title": project_geojson.project.name,
-                    },
-                    {
-                        "href": f"{host}{self_path}/items",
-                        "rel": "items",
-                        "type": "application/geo+json",
-                        "title": f"{project_geojson.project.name} Items",
-                    },
-                ],
-            }
+            build_landing_page(
+                request=request,
+                title=self.service.service_title,
+                description=self.service.service_description,
+                collections_path=f"{landing_path}/collections",
+            )
         )
 
 
-class BaseOGCCollectionItemApiView(GenericAPIView, SDBAPIViewMixin, abc.ABC):  # type: ignore[type-arg]
-    """OGC API ``/items`` endpoint — serves filtered GeoJSON via proxy + cache.
+class BaseOGCConformanceApiView(_OGCFeatureServiceView):
+    """OGC API - Features conformance declaration (§7.4)."""
 
-    Subclasses must set ``queryset`` and ``lookup_field``, and implement
-    :meth:`get_geojson_object`.
+    def get(
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
+    ) -> NoWrapResponse:
+        self.get_object()
+        return NoWrapResponse(build_conformance_declaration())
+
+
+class BaseOGCCollectionsApiView(_OGCFeatureServiceView):
+    """OGC API - Features ``/collections`` list (§7.13)."""
+
+    def get(
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
+    ) -> NoWrapResponse:
+        scope = self.get_object()
+        metas = self.service.list_collections(scope)
+        collections_path = request.path.rstrip("/")
+        collections = [
+            build_collection_metadata(
+                collection_id=meta.id,
+                title=meta.title,
+                description=meta.description,
+                request=request,
+                self_path=f"{collections_path}/{meta.id}",
+                items_path=f"{collections_path}/{meta.id}/items",
+                bbox=meta.bbox,
+            )
+            for meta in metas
+        ]
+        return NoWrapResponse(
+            build_collections_response(
+                request=request,
+                collections=collections,
+            )
+        )
+
+
+class BaseOGCCollectionApiView(_OGCFeatureServiceView):
+    """OGC API - Features single-collection metadata (§7.14)."""
+
+    def get(
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
+    ) -> NoWrapResponse:
+        scope = self.get_object()
+        collection_id: str = kwargs["collection_id"]
+        meta = self.service.get_collection(scope, collection_id)
+        if meta is None:
+            raise Http404(f"Collection '{collection_id}' not found.")
+        self_path = request.path.rstrip("/")
+        return NoWrapResponse(
+            build_collection_metadata(
+                collection_id=meta.id,
+                title=meta.title,
+                description=meta.description,
+                request=request,
+                self_path=self_path,
+                items_path=f"{self_path}/items",
+                bbox=meta.bbox,
+            )
+        )
+
+
+class BaseOGCCollectionItemsApiView(_OGCFeatureServiceView):
+    """OGC API - Features ``/items`` endpoint (§7.15-7.16).
+
+    Builds the response envelope per request via
+    :func:`build_items_envelope` so that ``timeStamp`` is fresh and
+    ``self`` reflects the actual request URL. Conditional requests
+    (``If-None-Match``) short-circuit to 304 when the service supplies
+    a stable ETag.
+    """
+
+    renderer_classes = [GeoJSONRenderer, LegacyGeoJSONRenderer, JSONRenderer]
+
+    def get(
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
+    ) -> StreamingHttpResponse | HttpResponseNotModified:
+        scope = self.get_object()
+        collection_id: str = kwargs["collection_id"]
+
+        meta = self.service.get_collection(scope, collection_id)
+        if meta is None:
+            raise Http404(f"Collection '{collection_id}' not found.")
+
+        # Parse OGC core query parameters; raises 400 on malformed input.
+        query = parse_ogc_query(request)
+
+        # Conditional request handling — only for the default item
+        # representation. Filtered/paged requests are different
+        # representations, so a collection-level ETag is not enough to
+        # safely short-circuit them to 304.
+        etag_value = self.service.get_etag(scope, collection_id)
+        etag_header = f'"{etag_value}"' if etag_value else None
+        cache_control = self.service.get_cache_control(scope, collection_id)
+        if (
+            etag_header
+            and not request.query_params
+            and request.headers.get("if-none-match") == etag_header
+        ):
+            response_nm = HttpResponseNotModified()
+            response_nm["ETag"] = etag_header
+            response_nm["Cache-Control"] = cache_control
+            return response_nm
+
+        features = self.service.get_features(scope, collection_id)
+        sliced, number_matched = apply_ogc_query(features, query)
+
+        payload = build_items_envelope(
+            features=sliced,
+            request=request,
+            number_matched=number_matched,
+            query=query,
+        )
+        content = orjson.dumps(payload)
+
+        response = StreamingHttpResponse(
+            streaming_content=[content],
+            content_type="application/geo+json",
+        )
+        if etag_header:
+            response["ETag"] = etag_header
+        response["Cache-Control"] = cache_control
+        response["Content-Disposition"] = "inline"
+        return response
+
+
+class BaseOGCSingleFeatureApiView(_OGCFeatureServiceView):
+    """OGC API - Features single-feature endpoint (§7.17).
+
+    Implements the OGC Core normative requirement (Req 31-33) of GET
+    support at ``/collections/{collectionId}/items/{featureId}``.
+    Returns 404 if either the collection or the feature is unknown.
+    """
+
+    renderer_classes = [GeoJSONRenderer, LegacyGeoJSONRenderer, JSONRenderer]
+
+    def get(
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
+    ) -> StreamingHttpResponse:
+        scope = self.get_object()
+        collection_id: str = kwargs["collection_id"]
+        feature_id: str = kwargs["feature_id"]
+
+        meta = self.service.get_collection(scope, collection_id)
+        if meta is None:
+            raise Http404(f"Collection '{collection_id}' not found.")
+
+        feature = self.service.get_feature(scope, collection_id, feature_id)
+        if feature is None:
+            raise Http404(f"Feature '{feature_id}' not found.")
+
+        payload = build_single_feature_response(
+            feature=feature,
+            request=request,
+        )
+        content = orjson.dumps(payload)
+
+        response = StreamingHttpResponse(
+            streaming_content=[content],
+            content_type="application/geo+json",
+        )
+        etag_value = self.service.get_etag(scope, collection_id)
+        if etag_value:
+            response["ETag"] = f'"{etag_value}"'
+        response["Cache-Control"] = self.service.get_cache_control(scope, collection_id)
+        response["Content-Disposition"] = "inline"
+        return response
+
+
+# ---------------------------------------------------------------------------
+# OGC OpenAPI service-desc — single document shared by every family
+# ---------------------------------------------------------------------------
+
+
+class OGCOpenAPIView(GenericAPIView, SDBAPIViewMixin):  # type: ignore[type-arg]
+    """Serves the focused OGC API definition advertised by every family.
+
+    OGC API - Features 1.0 §7.2.4 (Req 2 ``/req/core/root-success``)
+    requires every landing page to advertise a ``rel:service-desc``
+    link. The repository's global ``/api/schema/`` endpoint excludes
+    OGC routes (`schema = None`) and weighs in at ~684 kB; this view
+    serves a focused ~10-30 kB OpenAPI 3.0 document covering only the
+    OGC route surface.
+
+    The document, its bytes, and its ETag are pre-computed once at
+    import time (see :mod:`speleodb.gis.ogc_openapi`); every request
+    serves the same bytes from memory. ``If-None-Match`` requests
+    short-circuit to 304 so subsequent fetches across deploys do not
+    redownload identical content.
     """
 
     schema = None
     permission_classes = [permissions.AllowAny]
-    renderer_classes = [GeoJSONRenderer, LegacyGeoJSONRenderer, JSONRenderer]
+    # No DB lookup is performed — see ``get_object`` override below.
+    queryset = None  # type: ignore[assignment]
+    # The view returns a ``StreamingHttpResponse`` directly; no DRF
+    # rendering happens. We keep both renderers so DRF's content
+    # negotiation accepts ``Accept: application/vnd.oai.openapi+json``,
+    # ``Accept: application/json``, and ``Accept: */*`` without 406-ing
+    # before ``get`` runs.
+    renderer_classes = [OpenAPI30Renderer, JSONRenderer]
 
-    @abc.abstractmethod
-    def get_geojson_object(self, commit_sha: str) -> ProjectGeoJSON:
-        """Fetch and authorize a ``ProjectGeoJSON`` for *commit_sha*."""
-        ...
+    # The view does not consult the queryset at all — no model is being
+    # looked up. Override ``get_object`` to be a no-op so DRF doesn't
+    # try to evaluate ``self.queryset``.
+    def get_object(self) -> None:  # type: ignore[override]
+        return None
 
     def get(
-        self, request: Request, *args: Any, **kwargs: Any
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
     ) -> StreamingHttpResponse | HttpResponseNotModified:
-        commit_sha: str = kwargs["commit_sha"]
-        project_geojson: ProjectGeoJSON = self.get_geojson_object(commit_sha)
-        return serve_geojson_proxy(project_geojson, request)
+        if request.headers.get("if-none-match") == OGC_OPENAPI_ETAG:
+            response_nm = HttpResponseNotModified()
+            response_nm["ETag"] = OGC_OPENAPI_ETAG
+            response_nm["Cache-Control"] = OGC_OPENAPI_CACHE_CONTROL
+            return response_nm
+
+        response = StreamingHttpResponse(
+            streaming_content=[OGC_OPENAPI_BYTES],
+            content_type=OGC_OPENAPI_CONTENT_TYPE,
+        )
+        response["ETag"] = OGC_OPENAPI_ETAG
+        response["Cache-Control"] = OGC_OPENAPI_CACHE_CONTROL
+        response["Content-Disposition"] = "inline"
+        return response

@@ -19,7 +19,9 @@
 
             <!-- Message -->
             <p class="text-lg text-slate-200 w-full text-center my-6">
-                Use this URL to access your surface monitoring network's data in GIS software (QGIS, ArcGIS, etc.) via WFS (Web Feature Service).
+                External GIS access for surface monitoring networks is not yet available.
+                A future release will publish the network's stations as an OGC API - Features
+                service so QGIS and ArcGIS Pro can consume it directly.
             </p>
             
             <!-- API URL -->
@@ -28,18 +30,19 @@
                 <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 overflow-x-auto relative group">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
                         <code id="api-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
-                            <!-- {% comment %}{{ request.scheme }}://{{ request.get_host }}{% url 'api:v2:gis-ogc:surface_network' gis_token=network.gis_token %}{% endcomment %} -->
                             NOT SUPPORTED YET - TO BE COMING SOON !
                         </code>
                         <button 
                             id="copy-btn"
                             type="button"
-                            class="w-full md:w-auto md:flex-shrink-0 px-4 py-2.5 md:px-3 md:py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                            disabled
+                            aria-disabled="true"
+                            class="w-full md:w-auto md:flex-shrink-0 px-4 py-2.5 md:px-3 md:py-2 bg-slate-700 text-slate-400 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 cursor-not-allowed opacity-60"
                         >
                             <svg id="copy-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
-                            <span id="copy-text">Copy</span>
+                            <span id="copy-text">Unavailable</span>
                         </button>
                     </div>
                 </div>
@@ -220,6 +223,9 @@ $(window).on('load', function() {
     $copyBtn.on('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
+        if ($copyBtn.prop('disabled')) {
+            return;
+        }
         
         var url = $apiUrl.text().trim();
         

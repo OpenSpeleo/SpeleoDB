@@ -178,6 +178,24 @@ filterwarnings = [
 include = ["speleodb/**"]
 omit = ["*/migrations/*", "*/tests/*"]
 plugins = ["django_coverage_plugin"]
+branch = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "@abc\\.abstractmethod",
+]
+
+[tool.coverage.paths]
+ogc_core = [
+    "speleodb/gis/ogc_helpers.py",
+    "speleodb/api/v2/views/ogc_base.py",
+    "speleodb/api/v2/views/gis_view.py",
+    "speleodb/api/v2/views/project_geojson.py",
+    "speleodb/api/v2/views/landmark_collection_ogc.py",
+]
 
 # ==== mypy ====
 # NOTE: mypy's `exclude` is a list of Python regular expressions, not glob

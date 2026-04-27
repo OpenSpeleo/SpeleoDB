@@ -293,11 +293,8 @@ class LandmarkCollectionViewsTest(BaseTestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.token.delete()
-        self.token = Token.objects.create(
-            user=self.user,
-            key="abcdef1234567890abcdef1234567890abcdef12",
-        )
+        # ``TokenFactory`` already produces a 40-char hex key matching
+        # the ``<user_token:key>`` converter; no manual swap needed.
         self.collection = LandmarkCollectionFactory.create(created_by=self.user.email)
         LandmarkCollectionUserPermissionFactory.create(
             user=self.user,
@@ -719,3 +716,144 @@ class LandmarkCollectionViewsTest(BaseTestCase):
         content = response.content.decode()
         assert "&lt;script&gt;alert(1)&lt;/script&gt;" in content
         assert "<script>alert(1)</script>" not in content
+
+
+class GISViewTemplateOGCURLTest(BaseTestCase):
+    """ws7g: pin that the GIS-View integration pages render the OGC
+    landing-page URL, NOT the raw collections URL.
+
+    Per ``tasks/lessons/ogc-qgis-discovery.md``, user-facing OGC URLs
+    must be landing pages so QGIS / ArcGIS Pro can run the standard
+    discovery sequence (landing → conformance → collections → items).
+    The previous ``user-data`` / ``view-data`` URL names returned a
+    collections document directly, breaking the discovery contract.
+    """
+
+    def test_gis_views_listing_renders_user_landing_url(self) -> None:
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("private:gis_views"))
+        assert response.status_code == status.HTTP_200_OK
+        content = response.content.decode()
+        landing_url = reverse(
+            "api:v2:gis-ogc:user-landing",
+            kwargs={"key": self.token.key},
+        )
+        assert landing_url in content, (
+            "Personal-GIS-View page must render the user-landing URL"
+        )
+        # The legacy URL name was removed in ws3a; double-check no
+        # template still references the old route name as a string.
+        legacy_url_name = "user-data"
+        assert legacy_url_name not in content, (
+            f"Template still references legacy route name {legacy_url_name!r}"
+        )
+
+        # Re-fetch the rendered URL — must NOT 500. This is the exact
+        # class of bug that caused the original ArcGIS Pro empty-layer
+        # incident: the template generated a URL that the OGC layer
+        # then failed to serve. Logging-out before the re-fetch is
+        # important: OGC endpoints are deliberately public, the
+        # landing page must not depend on session state.
+        self.client.logout()
+        followed = self.client.get(landing_url)
+        assert followed.status_code == status.HTTP_200_OK, (
+            f"Rendered OGC URL {landing_url} returned {followed.status_code}, not 200"
+        )
+
+    def test_gis_view_integration_renders_view_landing_url(self) -> None:
+        from speleodb.gis.models import GISView  # noqa: PLC0415
+
+        gis_view = GISView.objects.create(
+            name="Cave Map",
+            owner=self.user,
+            allow_precise_zoom=False,
+        )
+        self.client.force_login(self.user)
+        # The integration page is registered under
+        # ``private:gis_view_gis_integration`` (NOT
+        # ``gis_view_details_integration`` — the URL conf names it after
+        # the template, not the controller).
+        response = self.client.get(
+            reverse(
+                "private:gis_view_gis_integration",
+                kwargs={"gis_view_id": gis_view.id},
+            )
+        )
+        assert response.status_code == status.HTTP_200_OK
+        content = response.content.decode()
+        landing_url = reverse(
+            "api:v2:gis-ogc:view-landing",
+            kwargs={"gis_token": gis_view.gis_token},
+        )
+        assert landing_url in content
+        # The legacy ``view-data`` URL name was removed in ws3a; ensure
+        # no template still references it as a string token.
+        assert "view-data" not in content
+
+        # Re-fetch the rendered URL with no auth — OGC public endpoint.
+        self.client.logout()
+        followed = self.client.get(landing_url)
+        assert followed.status_code == status.HTTP_200_OK, (
+            f"Rendered OGC URL {landing_url} returned {followed.status_code}, not 200"
+        )
+
+    def test_landmark_collection_integration_url_is_routable(self) -> None:
+        """The Landmark Collection GIS integration page renders the OGC
+        landing URL — it must be reachable."""
+        from speleodb.api.v2.tests.factories import (  # noqa: PLC0415
+            LandmarkCollectionFactory,
+        )
+        from speleodb.api.v2.tests.factories import (  # noqa: PLC0415
+            LandmarkCollectionUserPermissionFactory,
+        )
+
+        collection = LandmarkCollectionFactory.create(created_by=self.user.email)
+        LandmarkCollectionUserPermissionFactory.create(
+            user=self.user,
+            collection=collection,
+            level=PermissionLevel.READ_ONLY,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:landmark_collection_gis_integration",
+                kwargs={"collection_id": collection.id},
+            )
+        )
+        assert response.status_code == status.HTTP_200_OK
+        content = response.content.decode()
+        landing_url = reverse(
+            "api:v2:gis-ogc:landmark-collection-landing",
+            kwargs={"gis_token": collection.gis_token},
+        )
+        assert landing_url in content
+
+        self.client.logout()
+        followed = self.client.get(landing_url)
+        assert followed.status_code == status.HTTP_200_OK, (
+            f"Rendered Landmark OGC URL {landing_url} returned "
+            f"{followed.status_code}, not 200"
+        )
+
+    def test_landmark_collections_listing_user_landing_is_routable(self) -> None:
+        """The All Landmark Collections page renders the OGC user-landing
+        URL — it must be reachable for the token owner."""
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("private:landmark_collections"))
+        assert response.status_code == status.HTTP_200_OK
+
+        user_token = Token.objects.get(user=self.user)
+        landing_url = reverse(
+            "api:v2:gis-ogc:landmark-collections-user-landing",
+            kwargs={"key": user_token.key},
+        )
+        assert landing_url in response.content.decode()
+
+        # Re-fetch and assert the OGC layer serves the URL.
+        self.client.logout()
+        followed = self.client.get(landing_url)
+        assert followed.status_code == status.HTTP_200_OK, (
+            f"Rendered user-landing URL {landing_url} returned "
+            f"{followed.status_code}, not 200"
+        )

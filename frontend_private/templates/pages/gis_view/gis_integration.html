@@ -82,7 +82,7 @@
                 <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 overflow-x-auto">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
                         <code id="api-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
-                            {{ request.scheme }}://{{ request.get_host }}{% url 'api:v2:gis-ogc:view-data' gis_token=gis_view.gis_token %}
+                            {{ request.scheme }}://{{ request.get_host }}{% url 'api:v2:gis-ogc:view-landing' gis_token=gis_view.gis_token %}
                         </code>
                         <button 
                             id="copy-api-btn"

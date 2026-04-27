@@ -70,9 +70,22 @@ def user_has_landmark_access(
 
 def accessible_landmark_collections_queryset(
     user: User,
+    *,
+    ensure_personal: bool = True,
 ) -> QuerySet[LandmarkCollection]:
-    """Return active collections visible to the user with permission annotations."""
-    get_or_create_personal_landmark_collection(user=user)
+    """Return active collections visible to the user with permission annotations.
+
+    By default the user's personal Landmark Collection is materialised
+    on first access (legacy behavior — UI flows want it to exist before
+    the listing renders). Read-only callers (notably the OGC API
+    endpoints) MUST pass ``ensure_personal=False`` so the read does not
+    silently turn into a write: every OGC `/collections` /
+    `/collections/<id>` / `/items` request would otherwise issue a
+    ``get_or_create`` on every call, breaking read-replica routing and
+    causing a cold-start spike on every user's first OGC connect.
+    """
+    if ensure_personal:
+        get_or_create_personal_landmark_collection(user=user)
     permission_qs = LandmarkCollectionUserPermission.objects.filter(
         collection=OuterRef("pk"),
         user=user,
@@ -93,9 +106,18 @@ def accessible_landmark_collections_queryset(
     )
 
 
-def accessible_landmarks_queryset(user: User) -> QuerySet[Landmark]:
-    """Return Landmarks visible to the user through collection permissions."""
-    get_or_create_personal_landmark_collection(user=user)
+def accessible_landmarks_queryset(
+    user: User,
+    *,
+    ensure_personal: bool = True,
+) -> QuerySet[Landmark]:
+    """Return Landmarks visible to the user through collection permissions.
+
+    See :func:`accessible_landmark_collections_queryset` for the
+    ``ensure_personal`` contract.
+    """
+    if ensure_personal:
+        get_or_create_personal_landmark_collection(user=user)
     permission_qs = LandmarkCollectionUserPermission.objects.filter(
         collection=OuterRef("collection_id"),
         user=user,

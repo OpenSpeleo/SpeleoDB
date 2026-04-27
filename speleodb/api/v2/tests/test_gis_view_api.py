@@ -11,7 +11,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 
 from speleodb.api.v2.serializers.gis_view import GISViewDataSerializer
 from speleodb.api.v2.serializers.gis_view import PublicGISProjectViewSerializer
@@ -220,7 +219,8 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         client = self.client_class()
         response = client.get(
             reverse(
-                "api:v2:gis-ogc:view-data", kwargs={"gis_token": gis_view.gis_token}
+                "api:v2:gis-ogc:view-collections",
+                kwargs={"gis_token": gis_view.gis_token},
             )
         )
 
@@ -228,7 +228,11 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
 
         data = response.json()
 
-        assert len(data.get("links", [])) == 3  # noqa: PLR2004
+        # Collections response carries one rel:self link (the previous
+        # response also had `data` and `service-desc` links; the latter
+        # was dropped for the 684 KB OpenAPI fix and `data` only belongs
+        # on landing pages, not on the collections-list itself).
+        assert len(data.get("links", [])) == 1
         assert len(data.get("collections", [])) == 1
 
     def test_public_access_with_invalid_token(self) -> None:
@@ -237,7 +241,9 @@ class TestGISViewPublicDataAPI(BaseAPITestCase):
         fake_token = "0" * 40
 
         response = client.get(
-            reverse("api:v2:gis-ogc:view-data", kwargs={"gis_token": fake_token}),
+            reverse(
+                "api:v2:gis-ogc:view-collections", kwargs={"gis_token": fake_token}
+            ),
             headers={"authorization": self.auth},
         )
 
@@ -1372,14 +1378,8 @@ class TestOGCGISUserCollectionApi(BaseAPITestCase):
 
     def setUp(self) -> None:
         super().setUp()
-
-        # The user_token URL converter requires [0-9a-fA-F]{40}, so replace
-        # the token with one that has a hex-compatible key.
-        self.token.delete()
-        self.token = Token.objects.create(
-            user=self.user, key="a1b2c3d4e5f6a7b8c9d0" * 2
-        )
-
+        # ``TokenFactory`` (via ``BaseAPITestCase``) already produces a
+        # 40-char hex key matching the ``<user_token:key>`` converter.
         self.project = ProjectFactory.create(created_by=self.user.email)
         UserProjectPermissionFactory(
             target=self.user,
@@ -1407,7 +1407,7 @@ class TestOGCGISUserCollectionApi(BaseAPITestCase):
                 "api:v2:gis-ogc:user-collection",
                 kwargs={
                     "key": self.token.key,
-                    "commit_sha": commit_sha,
+                    "collection_id": commit_sha,
                 },
             )
         )
@@ -1434,7 +1434,23 @@ class TestOGCGISUserCollectionApi(BaseAPITestCase):
 
 
 def _temp_linestring_geojson_file() -> SimpleUploadedFile:
-    """Create a GeoJSON with both Point and LineString features."""
+    """Create a GeoJSON with mixed-geometry cave-survey features.
+
+    Fixture composition:
+
+    * 1 ``Point`` — entrance station with ``properties.id`` (regression
+      guard for ws1a2: top-level ``id`` must be lifted from
+      ``properties.id``).
+    * 2 ``LineString`` — cave passages.
+    * 1 ``MultiLineString`` — branched passage exported by some compass
+      tooling (ws7c5: regression guard against re-introducing a strict
+      ``geometry.type == "LineString"`` filter).
+    * 1 ``Polygon`` — sump room (ws5: ensures the formerly stripped
+      polygon geometry round-trips after the LineString-only filter
+      removal).
+    * 1 feature with ``Z`` coordinates — depth in metres (ws1c: pins
+      that the CRS84h declaration on collections matches the data).
+    """
     return SimpleUploadedFile(
         "test.geojson",
         orjson.dumps(
@@ -1447,16 +1463,19 @@ def _temp_linestring_geojson_file() -> SimpleUploadedFile:
                             "type": "Point",
                             "coordinates": [-87.5, 20.2],
                         },
-                        "properties": {"name": "Entrance"},
+                        "properties": {
+                            "name": "Entrance",
+                            "id": "entrance-uuid-0001",
+                        },
                     },
                     {
                         "type": "Feature",
                         "geometry": {
                             "type": "LineString",
                             "coordinates": [
-                                [-87.5, 20.2],
-                                [-87.6, 20.3],
-                                [-87.7, 20.4],
+                                [-87.5, 20.2, 0.0],
+                                [-87.6, 20.3, -1.83],
+                                [-87.7, 20.4, -3.05],
                             ],
                         },
                         "properties": {"name": "Passage A"},
@@ -1471,6 +1490,39 @@ def _temp_linestring_geojson_file() -> SimpleUploadedFile:
                             ],
                         },
                         "properties": {"name": "Passage B"},
+                    },
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "MultiLineString",
+                            "coordinates": [
+                                [
+                                    [-87.7, 20.4],
+                                    [-87.72, 20.42],
+                                ],
+                                [
+                                    [-87.72, 20.42],
+                                    [-87.74, 20.44],
+                                ],
+                            ],
+                        },
+                        "properties": {"name": "Branched passage"},
+                    },
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Polygon",
+                            "coordinates": [
+                                [
+                                    [-87.6, 20.3],
+                                    [-87.59, 20.3],
+                                    [-87.59, 20.31],
+                                    [-87.6, 20.31],
+                                    [-87.6, 20.3],
+                                ],
+                            ],
+                        },
+                        "properties": {"name": "Sump room"},
                     },
                 ],
             }
@@ -1566,10 +1618,17 @@ class TestOGCLandingPage(BaseOGCViewTestCase):
         assert len(data_links) == 1
         assert data_links[0]["type"] == "application/json"
 
-    def test_landing_page_has_service_desc_link(self) -> None:
+    def test_landing_page_does_not_advertise_huge_openapi(self) -> None:
+        # ws1e + ws7c4: dropping the service-desc link keeps ArcGIS Pro
+        # 3.6.1 from downloading the 684 KB /api/schema/ document on
+        # every connect. If a future change ever adds it back, it must
+        # point to a focused OGC OpenAPI document, not the global one.
         data = self._get_landing()
-        rels = {link["rel"] for link in data["links"]}
-        assert "service-desc" in rels
+        for link in data["links"]:
+            if link.get("rel") == "service-desc":
+                assert not link.get("href", "").endswith("/api/schema/"), (
+                    "service-desc must not point to /api/schema/ (684 KB)"
+                )
 
     def test_landing_page_all_links_have_required_fields(self) -> None:
         """Each link object must have href, rel, type."""
@@ -1649,7 +1708,7 @@ class TestOGCCollections(BaseOGCViewTestCase):
     def _get_collections(self) -> dict[str, Any]:
         resp = self.public_client.get(
             reverse(
-                "api:v2:gis-ogc:view-data",
+                "api:v2:gis-ogc:view-collections",
                 kwargs={"gis_token": self.gis_view.gis_token},
             )
         )
@@ -1726,7 +1785,7 @@ class TestOGCSingleCollection(BaseOGCViewTestCase):
                 "api:v2:gis-ogc:view-collection",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "commit_sha": self.commit_sha,
+                    "collection_id": self.commit_sha,
                 },
             )
         )
@@ -1763,7 +1822,7 @@ class TestOGCSingleCollection(BaseOGCViewTestCase):
                 "api:v2:gis-ogc:view-collection",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "commit_sha": "f" * 40,
+                    "collection_id": "f" * 40,
                 },
             )
         )
@@ -1780,7 +1839,7 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
                 "api:v2:gis-ogc:view-collection-items",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "commit_sha": self.commit_sha,
+                    "collection_id": self.commit_sha,
                 },
             ),
             **extra_kwargs,
@@ -1796,19 +1855,24 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
 
     def test_items_is_valid_feature_collection(self) -> None:
         resp = self._get_items_response()
-        data = orjson.loads(b"".join(resp.streaming_content))
+        data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
         assert data["type"] == "FeatureCollection"
         assert "features" in data
         assert isinstance(data["features"], list)
 
-    def test_items_filters_to_linestring_only(self) -> None:
-        """Proxy must strip non-LineString features for QGIS compatibility."""
+    def test_items_returns_all_geometry_types(self) -> None:
+        """ws5: every geometry type round-trips (LineString-only filter removed).
+
+        Fixture has 1 Point, 2 LineStrings, 1 MultiLineString, 1
+        Polygon. The previous LineString-only filter silently dropped
+        Point / Polygon / MultiLineString projects, which was the
+        latent empty-layer bug for non-cave-passage data.
+        """
         resp = self._get_items_response()
-        data = orjson.loads(b"".join(resp.streaming_content))
-        for feature in data["features"]:
-            assert feature["geometry"]["type"] == "LineString"
-        # Our fixture has 2 LineStrings and 1 Point -> expect 2
-        assert len(data["features"]) == 2  # noqa: PLR2004
+        data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
+        assert len(data["features"]) == 5  # noqa: PLR2004
+        types = {feature["geometry"]["type"] for feature in data["features"]}
+        assert types == {"Point", "LineString", "MultiLineString", "Polygon"}
 
     def test_items_has_etag_header(self) -> None:
         resp = self._get_items_response()
@@ -1834,27 +1898,58 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
         assert resp.status_code == status.HTTP_304_NOT_MODIFIED
         assert resp["ETag"] == etag
 
+    def test_items_conditional_request_with_query_returns_200(self) -> None:
+        """Collection ETags cannot 304 a different paged representation."""
+        etag = f'"{self.commit_sha}"'
+        resp = self.public_client.get(
+            reverse(
+                "api:v2:gis-ogc:view-collection-items",
+                kwargs={
+                    "gis_token": self.gis_view.gis_token,
+                    "collection_id": self.commit_sha,
+                },
+            )
+            + "?limit=2&offset=2",
+            headers={"if-none-match": etag},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
+        assert data["numberReturned"] == 2  # noqa: PLR2004
+
     def test_items_conditional_request_mismatched_etag_returns_200(self) -> None:
         resp = self._get_items_response(
             headers={"if-none-match": '"wrong"'},
         )
         assert resp.status_code == status.HTTP_200_OK
 
-    def test_items_ignores_query_params(self) -> None:
-        """limit, bbox, filter params must be silently ignored."""
+    def test_items_respects_limit_query_param(self) -> None:
+        """ws5b: ``?limit=N`` is honored; ``filter`` (CQL2) stays ignored.
+
+        Replaces the previous ``test_items_ignores_query_params``; the
+        old ``core`` conformance class declared spec-compliant ``bbox``
+        and ``limit`` behavior but the implementation silently ignored
+        both. With the OGC compliance work the parameters are honored,
+        with ``numberMatched`` / ``numberReturned`` reflecting the
+        pre-/post-slice counts. ``filter`` is *not* in our conformance
+        declaration and remains a pass-through.
+        """
         resp = self.public_client.get(
             reverse(
                 "api:v2:gis-ogc:view-collection-items",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "commit_sha": self.commit_sha,
+                    "collection_id": self.commit_sha,
                 },
             )
-            + "?limit=10&bbox=-90,19,-86,21&filter=name%3D%27test%27",
+            + "?limit=2&filter=name%3D%27test%27",
         )
         assert resp.status_code == status.HTTP_200_OK
         data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
-        assert len(data["features"]) == 2  # noqa: PLR2004
+        assert len(data["features"]) == 2  # noqa: PLR2004 — limit honoured
+        assert data["numberMatched"] == 5  # noqa: PLR2004 — fixture has 5
+        assert data["numberReturned"] == 2  # noqa: PLR2004
+        rels = [link["rel"] for link in data["links"]]
+        assert "next" in rels  # offset 0 + limit 2 < 5 -> next link present
 
     def test_items_invalid_commit_returns_404(self) -> None:
         resp = self.public_client.get(
@@ -1862,19 +1957,30 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
                 "api:v2:gis-ogc:view-collection-items",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "commit_sha": "f" * 40,
+                    "collection_id": "f" * 40,
                 },
             )
         )
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_items_caching_returns_same_content(self) -> None:
-        """Second request should be served from cache with identical bytes."""
+    def test_items_features_are_cached_consistently(self) -> None:
+        """Two sequential requests must yield IDENTICAL features and
+        numberMatched (the cache layer worked) but DIFFERENT or
+        equal-but-not-byte-identical envelopes (since timeStamp
+        is the response generation time per OGC Req 29). Bytes are
+        allowed to match if both responses happen within the same
+        wall-clock second; the contract is on the *features* parity,
+        not the byte-string parity.
+        """
         resp1 = self._get_items_response()
         resp2 = self._get_items_response()
         body1 = b"".join(resp1.streaming_content)
         body2 = b"".join(resp2.streaming_content)
-        assert body1 == body2
+        data1 = orjson.loads(body1)
+        data2 = orjson.loads(body2)
+        assert data1["features"] == data2["features"]
+        assert data1["numberMatched"] == data2["numberMatched"]
+        assert data1["numberReturned"] == data2["numberReturned"]
 
     def test_items_accept_geojson_returns_200(self) -> None:
         """OGC clients (ArcGIS Pro) send Accept: application/geo+json."""
@@ -1959,8 +2065,9 @@ class TestOGCDiscoveryFlow(BaseOGCViewTestCase):
 class BaseOGCUserTestCase(BaseAPITestCase):
     """Common setUp for all OGC User endpoint tests.
 
-    Provides ``self.project``, ``self.commit_sha``, and a hex-compatible
-    ``self.token`` suitable for the ``user_token`` URL converter.
+    ``TokenFactory`` already produces a 40-char hex key matching the
+    ``<user_token:key>`` converter, so ``self.token`` works directly
+    against the OGC URL config.
     """
 
     project: Project
@@ -1968,11 +2075,6 @@ class BaseOGCUserTestCase(BaseAPITestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        # The user_token URL converter requires [0-9a-fA-F]{40}
-        self.token.delete()
-        self.token = Token.objects.create(
-            user=self.user, key="a1b2c3d4e5f6a7b8c9d0" * 2
-        )
         self.project = ProjectFactory.create(created_by=self.user.email)
         UserProjectPermissionFactory(
             target=self.user,
@@ -1998,7 +2100,7 @@ class TestOGCUserCollections(BaseOGCUserTestCase):
     def _get_collections(self) -> dict[str, Any]:
         resp = self.client.get(
             reverse(
-                "api:v2:gis-ogc:user-data",
+                "api:v2:gis-ogc:user-collections",
                 kwargs={"key": self.token.key},
             )
         )
@@ -2073,7 +2175,7 @@ class TestOGCUserSingleCollection(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection",
                 kwargs={
                     "key": self.token.key,
-                    "commit_sha": self.commit_sha,
+                    "collection_id": self.commit_sha,
                 },
             )
         )
@@ -2110,7 +2212,7 @@ class TestOGCUserSingleCollection(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection",
                 kwargs={
                     "key": self.token.key,
-                    "commit_sha": "f" * 40,
+                    "collection_id": "f" * 40,
                 },
             )
         )
@@ -2134,7 +2236,7 @@ class TestOGCUserSingleCollection(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection",
                 kwargs={
                     "key": self.token.key,
-                    "commit_sha": other_sha,
+                    "collection_id": other_sha,
                 },
             )
         )
@@ -2154,7 +2256,7 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection-items",
                 kwargs={
                     "key": self.token.key,
-                    "commit_sha": self.commit_sha,
+                    "collection_id": self.commit_sha,
                 },
             ),
             **extra_kwargs,
@@ -2175,12 +2277,13 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
         assert "features" in data
         assert isinstance(data["features"], list)
 
-    def test_items_filters_to_linestring_only(self) -> None:
+    def test_items_returns_all_geometry_types(self) -> None:
+        """ws5 (user variant): all geometry types round-trip."""
         resp = self._get_items_response()
         data = orjson.loads(b"".join(resp.streaming_content))
-        for feature in data["features"]:
-            assert feature["geometry"]["type"] == "LineString"
-        assert len(data["features"]) == 2  # noqa: PLR2004
+        assert len(data["features"]) == 5  # noqa: PLR2004
+        types = {feature["geometry"]["type"] for feature in data["features"]}
+        assert types == {"Point", "LineString", "MultiLineString", "Polygon"}
 
     def test_items_has_etag_header(self) -> None:
         resp = self._get_items_response()
@@ -2211,20 +2314,23 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
         )
         assert resp.status_code == status.HTTP_200_OK
 
-    def test_items_ignores_query_params(self) -> None:
+    def test_items_respects_limit_query_param(self) -> None:
+        """ws5b (user variant): limit/offset honored with proper counts."""
         resp = self.client.get(
             reverse(
                 "api:v2:gis-ogc:user-collection-items",
                 kwargs={
                     "key": self.token.key,
-                    "commit_sha": self.commit_sha,
+                    "collection_id": self.commit_sha,
                 },
             )
-            + "?limit=10&bbox=-90,19,-86,21",
+            + "?limit=2",
         )
         assert resp.status_code == status.HTTP_200_OK
         data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
         assert len(data["features"]) == 2  # noqa: PLR2004
+        assert data["numberMatched"] == 5  # noqa: PLR2004
+        assert data["numberReturned"] == 2  # noqa: PLR2004
 
     def test_items_accept_geojson_returns_200(self) -> None:
         """OGC clients (ArcGIS Pro) send Accept: application/geo+json."""
@@ -2256,7 +2362,7 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection-items",
                 kwargs={
                     "key": self.token.key,
-                    "commit_sha": "f" * 40,
+                    "collection_id": "f" * 40,
                 },
             )
         )
@@ -2280,7 +2386,7 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection-items",
                 kwargs={
                     "key": self.token.key,
-                    "commit_sha": other_sha,
+                    "collection_id": other_sha,
                 },
             )
         )
@@ -2289,12 +2395,15 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
             status.HTTP_404_NOT_FOUND,
         )
 
-    def test_items_caching_returns_same_content(self) -> None:
+    def test_items_features_are_cached_consistently(self) -> None:
+        """cached features stay identical; envelope is rebuilt per-request."""
         resp1 = self._get_items_response()
         resp2 = self._get_items_response()
-        body1 = b"".join(resp1.streaming_content)
-        body2 = b"".join(resp2.streaming_content)
-        assert body1 == body2
+        data1 = orjson.loads(b"".join(resp1.streaming_content))  # type: ignore[attr-defined]
+        data2 = orjson.loads(b"".join(resp2.streaming_content))  # type: ignore[attr-defined]
+        assert data1["features"] == data2["features"]
+        assert data1["numberMatched"] == data2["numberMatched"]
+        assert data1["numberReturned"] == data2["numberReturned"]
 
 
 # ======================================================================
@@ -2346,10 +2455,17 @@ class TestOGCUserLandingPage(BaseOGCUserTestCase):
         assert len(data_links) == 1
         assert data_links[0]["type"] == "application/json"
 
-    def test_landing_page_has_service_desc_link(self) -> None:
+    def test_landing_page_does_not_advertise_huge_openapi(self) -> None:
+        # ws1e + ws7c4: dropping the service-desc link keeps ArcGIS Pro
+        # 3.6.1 from downloading the 684 KB /api/schema/ document on
+        # every connect. If a future change ever adds it back, it must
+        # point to a focused OGC OpenAPI document, not the global one.
         data = self._get_landing()
-        rels = {link["rel"] for link in data["links"]}
-        assert "service-desc" in rels
+        for link in data["links"]:
+            if link.get("rel") == "service-desc":
+                assert not link.get("href", "").endswith("/api/schema/"), (
+                    "service-desc must not point to /api/schema/ (684 KB)"
+                )
 
     def test_landing_page_all_links_have_required_fields(self) -> None:
         data = self._get_landing()

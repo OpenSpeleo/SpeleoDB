@@ -9,6 +9,8 @@ from typing import cast
 
 import orjson
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -251,29 +253,45 @@ class TestLandmarkCollectionOGC:
         )
         assert inactive.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_legacy_bare_collection_paths_remain_available(
+    def test_legacy_bare_collection_paths_are_404(
         self,
         api_client: APIClient,
         collection: LandmarkCollection,
     ) -> None:
-        legacy_collections = api_client.get(
-            reverse(
-                "api:v2:gis-ogc:landmark-collection-data",
-                kwargs={"gis_token": collection.gis_token},
-            )
-        )
-        legacy_metadata = api_client.get(
-            reverse(
-                "api:v2:gis-ogc:landmark-collection-layer",
-                kwargs={
-                    "gis_token": collection.gis_token,
-                    "collection_id": "landmarks",
-                },
-            )
-        )
+        """ws3a/ws7f: bare-token aliases were removed; old URLs must 404.
 
-        assert legacy_collections.status_code == status.HTTP_200_OK
-        assert legacy_metadata.status_code == status.HTTP_200_OK
+        The previous ``landmark-collection-data``,
+        ``landmark-collection-layer``, and
+        ``landmark-collection-layer-items`` aliases violated the OGC
+        discovery convention by exposing collection documents at
+        non-canonical paths. After ws3a they are gone — clients that
+        cached those URLs must re-fetch the landing page.
+        """
+        token = collection.gis_token
+        # Direct URL strings (not reverse() — those names are gone).
+        # The bare-token URL ``/landmark-collection/<token>`` is now
+        # absorbed by Django's APPEND_SLASH redirect into the landing
+        # page (``/landmark-collection/<token>/``); that's the desired
+        # UX so old bookmarks discover the new layout. The bare-sha
+        # collection / items routes have no such fallback and must
+        # 404 outright.
+        bare_collections = api_client.get(
+            f"/api/v2/gis-ogc/landmark-collection/{token}",
+        )
+        bare_layer = api_client.get(
+            f"/api/v2/gis-ogc/landmark-collection/{token}/landmarks",
+        )
+        bare_layer_items = api_client.get(
+            f"/api/v2/gis-ogc/landmark-collection/{token}/landmarks/items",
+        )
+        # /landmark-collection/<token> redirects to the landing page
+        # (status 301 -> 200). Bare-sha aliases are gone outright (404).
+        assert bare_collections.status_code in (
+            status.HTTP_301_MOVED_PERMANENTLY,
+            status.HTTP_200_OK,
+        )
+        assert bare_layer.status_code == status.HTTP_404_NOT_FOUND
+        assert bare_layer_items.status_code == status.HTTP_404_NOT_FOUND
 
     def test_user_token_landing_conformance_and_collections(
         self,
@@ -560,3 +578,152 @@ class TestLandmarkCollectionOGC:
         assert unknown.status_code == status.HTTP_404_NOT_FOUND
         assert inactive.status_code == status.HTTP_404_NOT_FOUND
         assert inaccessible.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_user_token_get_does_not_create_personal_collection(
+        self,
+        api_client: APIClient,
+        owner: User,
+        user_token: Token,
+    ) -> None:
+        """Read-only invariant: OGC GETs must NOT issue a write.
+
+        ``accessible_landmark_collections_queryset`` historically called
+        ``get_or_create_personal_landmark_collection`` unconditionally,
+        which made every OGC user-token GET produce a CREATE on first
+        connect (and a SELECT every time after). This breaks read-replica
+        deployments and adds latency on cold start. The OGC service
+        opts out via ``ensure_personal=False``; this test pins that
+        invariant.
+        """
+        # Sanity precondition: the user has no personal collection.
+        assert not LandmarkCollection.objects.filter(
+            collection_type=LandmarkCollection.CollectionType.PERSONAL,
+            personal_owner=owner,
+        ).exists()
+
+        # Hit the OGC endpoints that go through ``_resolve_collection``
+        # / ``list_collections``.
+        for url_name in (
+            "api:v2:gis-ogc:landmark-collections-user-landing",
+            "api:v2:gis-ogc:landmark-collections-user-collections",
+        ):
+            response = api_client.get(reverse(url_name, kwargs={"key": user_token.key}))
+            assert response.status_code == status.HTTP_200_OK
+
+        # Personal collection still does NOT exist — the OGC reads stayed
+        # reads.
+        assert not LandmarkCollection.objects.filter(
+            collection_type=LandmarkCollection.CollectionType.PERSONAL,
+            personal_owner=owner,
+        ).exists()
+
+    def test_two_landmark_tokens_render_with_distinct_titles(
+        self,
+        api_client: APIClient,
+        owner: User,
+    ) -> None:
+        """Multiple landmark single-collection tokens added to the same
+        ArcGIS Pro / QGIS workspace must be distinguishable.
+
+        OGC clients display the ``title`` field (not the ``id``) in the
+        layer table-of-contents. The static id ``landmarks`` is shared
+        across single-collection tokens, but each title is the
+        collection's own ``name`` — so two different collections render
+        as distinct rows in the client UI.
+        """
+        first = LandmarkCollection.objects.create(
+            name="Cave System Alpha",
+            created_by=owner.email,
+        )
+        LandmarkCollectionUserPermission.objects.create(
+            collection=first,
+            user=owner,
+            level=PermissionLevel.ADMIN,
+        )
+        second = LandmarkCollection.objects.create(
+            name="Cave System Beta",
+            created_by=owner.email,
+        )
+        LandmarkCollectionUserPermission.objects.create(
+            collection=second,
+            user=owner,
+            level=PermissionLevel.ADMIN,
+        )
+
+        first_meta = api_client.get(
+            reverse(
+                "api:v2:gis-ogc:landmark-collection-collection",
+                kwargs={
+                    "gis_token": first.gis_token,
+                    "collection_id": "landmarks",
+                },
+            )
+        )
+        second_meta = api_client.get(
+            reverse(
+                "api:v2:gis-ogc:landmark-collection-collection",
+                kwargs={
+                    "gis_token": second.gis_token,
+                    "collection_id": "landmarks",
+                },
+            )
+        )
+        assert first_meta.status_code == status.HTTP_200_OK
+        assert second_meta.status_code == status.HTTP_200_OK
+        assert first_meta.json()["id"] == "landmarks"
+        assert second_meta.json()["id"] == "landmarks"
+        # Distinct titles — the disambiguation contract.
+        assert first_meta.json()["title"] == "Cave System Alpha"
+        assert second_meta.json()["title"] == "Cave System Beta"
+        assert first_meta.json()["title"] != second_meta.json()["title"]
+
+    def test_landmark_items_query_count_is_bounded(
+        self,
+        api_client: APIClient,
+        owner: User,
+        collection: LandmarkCollection,
+    ) -> None:
+        """20 landmarks on one collection: the items endpoint must NOT
+        scale linearly with landmark count.
+
+        Baseline math:
+        * get_object — 1 query (collection by gis_token)
+        * get_collection — 0 queries (scope IS the collection)
+        * bbox aggregate — 1 query
+        * ETag aggregate — 1 query
+        * landmarks list — 1 query (with select_related)
+
+        Cap of 10 catches any per-landmark N+1 (e.g. permission checks
+        bleeding into the GeoJSON serializer).
+        """
+        for i in range(20):
+            Landmark.objects.create(
+                name=f"Station-{i:02d}",
+                description="",
+                latitude=45.0 + i * 0.001,
+                longitude=-122.0 + i * 0.001,
+                created_by=owner.email,
+                collection=collection,
+            )
+
+        url = reverse(
+            "api:v2:gis-ogc:landmark-collection-collection-items",
+            kwargs={
+                "gis_token": collection.gis_token,
+                "collection_id": "landmarks",
+            },
+        )
+        max_queries = 10
+        with CaptureQueriesContext(connection) as ctx:
+            response = api_client.get(url, HTTP_ACCEPT="application/geo+json")
+        assert response.status_code == status.HTTP_200_OK
+        # Sanity: all 20 features served.
+        payload = _streaming_json(response)
+        assert payload["numberMatched"] == 20  # noqa: PLR2004
+        actual = len(ctx.captured_queries)
+        assert actual <= max_queries, (
+            f"Landmark items endpoint issued {actual} queries (cap "
+            f"{max_queries}). Likely N+1 from a per-landmark permission "
+            f"check in LandmarkGeoJSONSerializer. SQL:\n"
+            + "\n".join(q["sql"] for q in ctx.captured_queries)
+        )
