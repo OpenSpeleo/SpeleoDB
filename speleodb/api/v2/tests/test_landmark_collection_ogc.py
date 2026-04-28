@@ -105,9 +105,11 @@ class TestLandmarkCollectionOGC:
             )
         )
         assert collections.status_code == status.HTTP_200_OK
-        assert collections.json()["collections"][0]["id"] == "landmarks"
-        items_link = collections.json()["collections"][0]["links"][1]
-        assert items_link["rel"] == "items"
+        collection_meta = collections.json()["collections"][0]
+        assert collection_meta["id"] == "landmarks"
+        items_link = next(
+            link for link in collection_meta["links"] if link["rel"] == "items"
+        )
         assert items_link["href"].endswith(
             reverse(
                 "api:v2:gis-ogc:landmark-collection-collection-items",
@@ -143,8 +145,8 @@ class TestLandmarkCollectionOGC:
 
         assert response.status_code == status.HTTP_200_OK
         layer = response.json()["collections"][0]
-        metadata_link = layer["links"][0]
-        items_link = layer["links"][1]
+        metadata_link = next(link for link in layer["links"] if link["rel"] == "self")
+        items_link = next(link for link in layer["links"] if link["rel"] == "items")
         expected_metadata_path = reverse(
             "api:v2:gis-ogc:landmark-collection-collection",
             kwargs={
@@ -269,14 +271,20 @@ class TestLandmarkCollectionOGC:
         """
         token = collection.gis_token
         # Direct URL strings (not reverse() — those names are gone).
-        # The bare-token URL ``/landmark-collection/<token>`` is now
-        # absorbed by Django's APPEND_SLASH redirect into the landing
-        # page (``/landmark-collection/<token>/``); that's the desired
-        # UX so old bookmarks discover the new layout. The bare-sha
-        # collection / items routes have no such fallback and must
-        # 404 outright.
-        bare_collections = api_client.get(
+        # The slash-free landing URL ``/landmark-collection/<token>``
+        # is now the canonical OGC discovery entry point and returns
+        # 200 directly. The trailing-slash variant
+        # ``/landmark-collection/<token>/`` returns 404 (Django's
+        # APPEND_SLASH only adds slashes, it does not remove them) —
+        # see ``test_landing_url_with_trailing_slash_returns_404`` in
+        # ``test_ogc_compliance.py``. The bare-sha
+        # collection / items routes from the previous API surface
+        # also 404.
+        bare_landing = api_client.get(
             f"/api/v2/gis-ogc/landmark-collection/{token}",
+        )
+        trailing_slash_landing = api_client.get(
+            f"/api/v2/gis-ogc/landmark-collection/{token}/",
         )
         bare_layer = api_client.get(
             f"/api/v2/gis-ogc/landmark-collection/{token}/landmarks",
@@ -284,12 +292,11 @@ class TestLandmarkCollectionOGC:
         bare_layer_items = api_client.get(
             f"/api/v2/gis-ogc/landmark-collection/{token}/landmarks/items",
         )
-        # /landmark-collection/<token> redirects to the landing page
-        # (status 301 -> 200). Bare-sha aliases are gone outright (404).
-        assert bare_collections.status_code in (
-            status.HTTP_301_MOVED_PERMANENTLY,
-            status.HTTP_200_OK,
-        )
+        assert bare_landing.status_code == status.HTTP_200_OK
+        assert trailing_slash_landing.status_code == status.HTTP_404_NOT_FOUND
+        # ``/landmarks`` and ``/landmarks/items`` were never canonical
+        # under the new API surface (those routes live under
+        # ``/collections/landmarks``); they 404 outright.
         assert bare_layer.status_code == status.HTTP_404_NOT_FOUND
         assert bare_layer_items.status_code == status.HTTP_404_NOT_FOUND
 

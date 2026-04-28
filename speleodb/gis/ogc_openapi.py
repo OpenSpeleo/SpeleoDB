@@ -47,42 +47,44 @@ import orjson
 from speleodb.gis.ogc_helpers import OGC_CONFORMANCE_CLASSES
 
 # ---------------------------------------------------------------------------
-# Path of the service-desc endpoint. Used by ``build_landing_page`` to
-# emit the ``rel:service-desc`` link on every OGC landing page.
-# ---------------------------------------------------------------------------
-OGC_OPENAPI_PATH: Final[str] = "/api/v2/gis-ogc/openapi/"
-
-# ---------------------------------------------------------------------------
 # OGC family route shapes — invariant per-deploy.
 # ---------------------------------------------------------------------------
 
 # Each family has the same six routes (landing/conformance/collections/
 # collection/items/feature) under a different prefix and with one of
-# two token parameter names.
+# two token parameter names. ``collection_id_pattern`` declares which
+# OAS schema/description applies to the ``{collection_id}`` parameter
+# for the family — the project families use the geometry-typed split
+# (``<sha>_points`` / ``<sha>_lines``); the landmark families keep
+# their existing collection ids (``landmarks`` literal or UUID).
 _FAMILIES: list[dict[str, str]] = [
     {
         "id": "view",
         "prefix": "/view/{gis_token}",
         "token_param": "gis_token",
         "title": "Project GIS view (gis_token)",
+        "collection_id_pattern": "geometry_typed",
     },
     {
         "id": "user",
         "prefix": "/user/{key}",
         "token_param": "key",
         "title": "Project user (user_token)",
+        "collection_id_pattern": "geometry_typed",
     },
     {
         "id": "landmarkCollection",
         "prefix": "/landmark-collection/{gis_token}",
         "token_param": "gis_token",
         "title": "Landmark single collection (gis_token)",
+        "collection_id_pattern": "landmark_literal",
     },
     {
         "id": "landmarkCollections",
         "prefix": "/landmark-collections/user/{key}",
         "token_param": "key",
         "title": "Landmark collections user (user_token)",
+        "collection_id_pattern": "landmark_uuid",
     },
 ]
 
@@ -282,18 +284,53 @@ _PARAMETERS: dict[str, Any] = {
         "description": "User application token (40 hexadecimal characters).",
         "schema": {"type": "string", "pattern": "^[0-9a-fA-F]{40}$"},
     },
-    "CollectionIdParam": {
+    # Per-family collection-id parameter components. The project
+    # families enforce the geometry-typed split (``<sha>_points`` /
+    # ``<sha>_lines``) at the URL routing layer via the
+    # ``ogc_typed_id`` converter; the OAS pattern advertises the same
+    # invariant. The landmark families keep their existing collection
+    # ids (a literal for the gis_token-scoped service, a UUID for
+    # user-token).
+    "CollectionIdParamGeometryTyped": {
         "name": "collection_id",
         "in": "path",
         "required": True,
         "description": (
-            "Collection identifier. For project endpoints this is a "
-            "git commit SHA (6-40 hex chars). For the public Landmark "
-            "single-collection endpoint this is the literal "
-            "``landmarks``. For Landmark user-token endpoints this is "
-            "the LandmarkCollection UUID."
+            "Collection identifier. Project per-commit collections are "
+            "split per geometry type so each OGC collection becomes a "
+            "uniform-geometry GIS layer (1 collection = 1 layer = "
+            "1 geometry type \u2014 the universal QGIS / ArcGIS Pro "
+            "expectation). The id is ``<commit-sha>_<group>`` where "
+            "``<group>`` is one of ``points`` (Point + MultiPoint) or "
+            "``lines`` (LineString + MultiLineString). Polygons are "
+            "not produced by SpeleoDB cave-survey data and are "
+            "intentionally excluded."
         ),
-        "schema": {"type": "string"},
+        "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{6,40}_(?:points|lines)$",
+        },
+    },
+    "CollectionIdParamLandmarkLiteral": {
+        "name": "collection_id",
+        "in": "path",
+        "required": True,
+        "description": (
+            "Collection identifier. The public Landmark "
+            "single-collection endpoint exposes exactly one OGC "
+            "collection named ``landmarks``."
+        ),
+        "schema": {"type": "string", "enum": ["landmarks"]},
+    },
+    "CollectionIdParamLandmarkUuid": {
+        "name": "collection_id",
+        "in": "path",
+        "required": True,
+        "description": (
+            "Collection identifier. For Landmark user-token endpoints "
+            "this is the LandmarkCollection UUID."
+        ),
+        "schema": {"type": "string", "format": "uuid"},
     },
     "FeatureIdParam": {
         "name": "feature_id",
@@ -455,14 +492,37 @@ def _token_param_ref(token_param: str) -> str:
     }[token_param]
 
 
+def _collection_id_param_ref(pattern: str) -> str:
+    """Return the ``$ref`` URI for the family's collection-id parameter."""
+    return {
+        "geometry_typed": "#/components/parameters/CollectionIdParamGeometryTyped",
+        "landmark_literal": (
+            "#/components/parameters/CollectionIdParamLandmarkLiteral"
+        ),
+        "landmark_uuid": "#/components/parameters/CollectionIdParamLandmarkUuid",
+    }[pattern]
+
+
 def _build_paths_for(family: dict[str, str]) -> dict[str, Any]:
-    """Build the six OGC route entries for a single family."""
+    """Build the six OGC route entries for a single family.
+
+    The landing-page entry uses ``prefix`` directly (no trailing slash)
+    so the OpenAPI document matches the canonical OGC URL convention
+    (every other path is also without trailing slash). OGC clients
+    that join ``servers.url`` + ``paths.*`` would otherwise produce
+    ``view/<token>//conformance`` (double slash, 404) when the landing
+    URL ended in ``/``. See ``tasks/lessons/ogc-trailing-slash-and-
+    geometry-split.md`` for the regression history.
+    """
     prefix = family["prefix"]
     family_id = family["id"]
     family_title = family["title"]
     token_ref = {"$ref": _token_param_ref(family["token_param"])}
+    collection_id_ref = {
+        "$ref": _collection_id_param_ref(family["collection_id_pattern"]),
+    }
     return {
-        f"{prefix}/": {
+        prefix: {
             "get": {
                 "operationId": f"{family_id}LandingPage",
                 "summary": f"{family_title} — landing page",
@@ -505,10 +565,7 @@ def _build_paths_for(family: dict[str, str]) -> dict[str, Any]:
                 "operationId": f"{family_id}Collection",
                 "summary": f"{family_title} — single collection metadata",
                 "tags": [family_title],
-                "parameters": [
-                    token_ref,
-                    {"$ref": "#/components/parameters/CollectionIdParam"},
-                ],
+                "parameters": [token_ref, collection_id_ref],
                 "responses": {
                     "200": {"$ref": "#/components/responses/Collection"},
                     "404": {"$ref": "#/components/responses/NotFound"},
@@ -522,7 +579,7 @@ def _build_paths_for(family: dict[str, str]) -> dict[str, Any]:
                 "tags": [family_title],
                 "parameters": [
                     token_ref,
-                    {"$ref": "#/components/parameters/CollectionIdParam"},
+                    collection_id_ref,
                     {"$ref": "#/components/parameters/BboxParam"},
                     {"$ref": "#/components/parameters/DatetimeParam"},
                     {"$ref": "#/components/parameters/LimitParam"},
@@ -542,7 +599,7 @@ def _build_paths_for(family: dict[str, str]) -> dict[str, Any]:
                 "tags": [family_title],
                 "parameters": [
                     token_ref,
-                    {"$ref": "#/components/parameters/CollectionIdParam"},
+                    collection_id_ref,
                     {"$ref": "#/components/parameters/FeatureIdParam"},
                 ],
                 "responses": {

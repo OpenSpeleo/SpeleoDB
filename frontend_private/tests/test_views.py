@@ -30,6 +30,7 @@ from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
+from speleodb.gis.models import GISView
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -761,7 +762,6 @@ class GISViewTemplateOGCURLTest(BaseTestCase):
         )
 
     def test_gis_view_integration_renders_view_landing_url(self) -> None:
-        from speleodb.gis.models import GISView  # noqa: PLC0415
 
         gis_view = GISView.objects.create(
             name="Cave Map",
@@ -800,12 +800,6 @@ class GISViewTemplateOGCURLTest(BaseTestCase):
     def test_landmark_collection_integration_url_is_routable(self) -> None:
         """The Landmark Collection GIS integration page renders the OGC
         landing URL — it must be reachable."""
-        from speleodb.api.v2.tests.factories import (  # noqa: PLC0415
-            LandmarkCollectionFactory,
-        )
-        from speleodb.api.v2.tests.factories import (  # noqa: PLC0415
-            LandmarkCollectionUserPermissionFactory,
-        )
 
         collection = LandmarkCollectionFactory.create(created_by=self.user.email)
         LandmarkCollectionUserPermissionFactory.create(

@@ -12,9 +12,9 @@ from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.authtoken.models import Token
 
 if TYPE_CHECKING:
-    from rest_framework.authtoken.models import Token
     from rest_framework.request import Request
 
     from speleodb.users.models import User
@@ -70,7 +70,6 @@ class GitOAuth2Authentication(BasicAuthentication):
     def get_model(self) -> type[Token]:
         if self.model is not None:
             return self.model
-        from rest_framework.authtoken.models import Token  # noqa: PLC0415
 
         return Token
 

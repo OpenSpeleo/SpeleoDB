@@ -18,6 +18,7 @@ from django.http.response import HttpResponseRedirectBase
 from django.urls import resolve
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.negotiation import DefaultContentNegotiation
 from rest_framework.renderers import JSONRenderer
 from rest_framework.settings import api_settings
 
@@ -72,10 +73,6 @@ class DRFWrapResponseMiddleware:
 
     def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
         # One-time configuration and initialization.
-        from rest_framework.negotiation import (  # noqa: PLC0415
-            DefaultContentNegotiation,
-        )
-
         self.get_response = get_response
         self.renderers = api_settings.DEFAULT_RENDERER_CLASSES
         self.negotiator = DefaultContentNegotiation()

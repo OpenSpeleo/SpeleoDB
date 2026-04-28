@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from django.apps import apps
+from django.test.client import Client
 from dotenv import load_dotenv
 
 from speleodb.api.v2.tests.factories import ProjectFactory
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from _pytest.compat import LEGACY_PATH
-    from django.test.client import Client
     from pytest_django.fixtures import SettingsWrapper
 
     from speleodb.surveys.models import Project
@@ -70,9 +70,8 @@ def staff_user(db: None) -> User:
 
 @pytest.fixture
 def staff_client(staff_user: User) -> Client:
-    from django.test.client import Client as DjangoClient  # noqa: PLC0415
 
-    client = DjangoClient()
+    client = Client()
     client.force_login(staff_user)
     return client
 

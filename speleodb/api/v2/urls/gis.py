@@ -5,19 +5,42 @@
 The four OGC families (project gis-view, project user, landmark single,
 landmark user) all expose the same canonical OGC URL surface:
 
-* ``<base>/`` — landing page (the URL users copy into ArcGIS / QGIS)
+* ``<base>`` — landing page (the URL users copy into ArcGIS / QGIS).
+  **No trailing slash** — every OGC convention (the spec examples,
+  GeoServer, pygeoapi, ArcGIS Server) treats path templates without
+  trailing slashes as canonical, and QGIS/ArcGIS Pro break when the
+  base URL ends in ``/`` because they construct child URLs by
+  concatenation (``view/<token>/`` + ``conformance`` →
+  ``view/<token>//conformance``).
 * ``<base>/conformance`` — conformance declaration
 * ``<base>/collections`` — collections list
 * ``<base>/collections/<id>`` — single collection metadata
 * ``<base>/collections/<id>/items`` — feature items
 * ``<base>/collections/<id>/items/<feature_id>`` — single feature
 
+URL convention invariant (enforced by
+``test_no_ogc_url_pattern_has_inconsistent_trailing_slash``): every
+OGC URL pattern in this file MUST NOT end with ``/``. The only
+exception is the static ``openapi/`` endpoint (a bare-resource fetch,
+not part of the OGC discovery contract). Django's ``APPEND_SLASH``
+middleware only **adds** trailing slashes, so ``view/<token>/``
+returns 404 — the intended user-facing signal so existing setups stop
+silently misbehaving.
+
 The previous bare-token aliases (``view/<token>``, ``user/<token>``,
 ``landmark-collection/<token>/<id>`` and friends) are intentionally
 removed: handing out a non-landing URL violated the OGC discovery
 pattern and the project's own ``tasks/lessons/ogc-qgis-discovery.md``
-lesson. Tests in ``test_legacy_bare_token_paths_are_404`` pin that
-those URLs now return 404.
+lesson.
+
+Project per-commit collections are split by geometry type so each
+OGC collection contains a uniform geometry (the universal GIS-client
+expectation: 1 OGC collection = 1 GIS layer = 1 geometry type). The
+``<ogc_typed_id:>`` URL converter only matches ``<sha>_points`` /
+``<sha>_lines``. The legacy mixed ``<sha>`` form returns 410 Gone via
+``OGCLegacyMixedCollectionGoneView`` with a ``Link: rel="alternate"``
+header pointing at the geometry-typed replacements. See
+``docs/map-viewer/ogc-url-and-geometry-contract.md`` for the design.
 
 The non-OGC ``experiment`` endpoint and the frontend-helper
 ``view-geojson`` endpoint stay where they are, with documentation
@@ -27,7 +50,8 @@ URL converter discipline: every ``gis_token`` segment uses the explicit
 ``<gis_token:gis_token>`` form so the registered converter's regex
 (``[0-9a-fA-F]{40}``) is enforced at the routing layer. Writing
 ``<gis_token>`` (no colon) silently falls back to the default ``str``
-converter and the regex never runs. Same rule applies to ``<user_token:key>``.
+converter and the regex never runs. Same rule applies to
+``<user_token:key>`` and ``<ogc_typed_id:collection_id>``.
 """
 
 from __future__ import annotations
@@ -81,6 +105,7 @@ from speleodb.api.v2.views.landmark_collection_ogc import (
 from speleodb.api.v2.views.landmark_collection_ogc import (
     LandmarkCollectionUserOGCSingleFeatureApiView,
 )
+from speleodb.api.v2.views.ogc_base import OGCLegacyMixedCollectionGoneView
 from speleodb.api.v2.views.ogc_base import OGCOpenAPIView
 from speleodb.api.v2.views.project_geojson import OGCGISUserCollectionApiView
 from speleodb.api.v2.views.project_geojson import OGCGISUserCollectionItemsApiView
@@ -109,7 +134,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
     # and tasks/.../ogc-arcgis-empty-layers.md.
     # ------------------------------------------------------------------
     path(
-        "experiment/<gis_token:gis_token>/",
+        "experiment/<gis_token:gis_token>",
         ExperimentGISApiView.as_view(),
         name="experiment",
     ),
@@ -117,7 +142,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
     # OGC API - Features: Landmark Collection (public gis_token)
     # ------------------------------------------------------------------
     path(
-        "landmark-collection/<gis_token:gis_token>/",
+        "landmark-collection/<gis_token:gis_token>",
         LandmarkCollectionOGCLandingPageApiView.as_view(),
         name="landmark-collection-landing",
     ),
@@ -156,7 +181,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
     # OGC API - Features: Landmark Collections (user_token)
     # ------------------------------------------------------------------
     path(
-        "landmark-collections/user/<user_token:key>/",
+        "landmark-collections/user/<user_token:key>",
         LandmarkCollectionUserOGCLandingPageApiView.as_view(),
         name="landmark-collections-user-landing",
     ),
@@ -193,9 +218,16 @@ urlpatterns: list[URLPattern | URLResolver] = [
     ),
     # ------------------------------------------------------------------
     # OGC API - Features: GIS-View (public gis_token)
+    #
+    # Per-collection routes are split by geometry type via the
+    # ``<ogc_typed_id:>`` converter (matches ``<sha>_points`` /
+    # ``<sha>_lines`` only). The legacy mixed ``<sha>`` form maps to
+    # ``OGCLegacyMixedCollectionGoneView`` (410 Gone + Link header)
+    # so existing setups get an explicit migration signal instead of
+    # silent empty layers in QGIS / ArcGIS Pro.
     # ------------------------------------------------------------------
     path(
-        "view/<gis_token:gis_token>/",
+        "view/<gis_token:gis_token>",
         OGCGISViewLandingPageApiView.as_view(),
         name="view-landing",
     ),
@@ -215,29 +247,56 @@ urlpatterns: list[URLPattern | URLResolver] = [
         OGCGISViewCollectionsApiView.as_view(),
         name="view-collections",
     ),
+    # New: geometry-typed collections (canonical).
     path(
-        "view/<gis_token:gis_token>/collections/<gitsha:collection_id>",
+        "view/<gis_token:gis_token>/collections/<ogc_typed_id:collection_id>",
         OGCGISViewCollectionApiView.as_view(),
         name="view-collection",
     ),
     path(
-        "view/<gis_token:gis_token>/collections/<gitsha:collection_id>/items",
+        ("view/<gis_token:gis_token>/collections/<ogc_typed_id:collection_id>/items"),
         OGCGISViewCollectionItemsApiView.as_view(),
         name="view-collection-items",
+    ),
+    path(
+        (
+            "view/<gis_token:gis_token>/collections/"
+            "<ogc_typed_id:collection_id>/items/<str:feature_id>"
+        ),
+        OGCGISViewSingleFeatureApiView.as_view(),
+        name="view-collection-feature",
+    ),
+    # Legacy mixed-SHA collection: 410 Gone + Link header to the
+    # geometry-typed replacements (computed from the request URL by
+    # ``OGCLegacyMixedCollectionGoneView``, no per-family wiring).
+    path(
+        "view/<gis_token:gis_token>/collections/<gitsha:collection_id>",
+        OGCLegacyMixedCollectionGoneView.as_view(),
+        name="view-collection-legacy-gone",
+    ),
+    path(
+        "view/<gis_token:gis_token>/collections/<gitsha:collection_id>/items",
+        OGCLegacyMixedCollectionGoneView.as_view(),
+        name="view-collection-items-legacy-gone",
     ),
     path(
         (
             "view/<gis_token:gis_token>/collections/<gitsha:collection_id>/"
             "items/<str:feature_id>"
         ),
-        OGCGISViewSingleFeatureApiView.as_view(),
-        name="view-collection-feature",
+        OGCLegacyMixedCollectionGoneView.as_view(),
+        name="view-collection-feature-legacy-gone",
     ),
     # ------------------------------------------------------------------
     # OGC API - Features: User (user_token)
+    #
+    # Same geometry-typed split as the GIS-View family above; legacy
+    # mixed-SHA collection routes return 410 Gone via the same
+    # ``OGCLegacyMixedCollectionGoneView`` (the Link header is built
+    # from the request URL, no per-family wiring).
     # ------------------------------------------------------------------
     path(
-        "user/<user_token:key>/",
+        "user/<user_token:key>",
         OGCGISUserLandingPageApiView.as_view(),
         name="user-landing",
     ),
@@ -251,22 +310,42 @@ urlpatterns: list[URLPattern | URLResolver] = [
         OGCGISUserProjectsApiView.as_view(),
         name="user-collections",
     ),
+    # New: geometry-typed collections (canonical).
     path(
-        "user/<user_token:key>/collections/<gitsha:collection_id>",
+        "user/<user_token:key>/collections/<ogc_typed_id:collection_id>",
         OGCGISUserCollectionApiView.as_view(),
         name="user-collection",
     ),
     path(
-        "user/<user_token:key>/collections/<gitsha:collection_id>/items",
+        "user/<user_token:key>/collections/<ogc_typed_id:collection_id>/items",
         OGCGISUserCollectionItemsApiView.as_view(),
         name="user-collection-items",
+    ),
+    path(
+        (
+            "user/<user_token:key>/collections/<ogc_typed_id:collection_id>/"
+            "items/<str:feature_id>"
+        ),
+        OGCGISUserSingleFeatureApiView.as_view(),
+        name="user-collection-feature",
+    ),
+    # Legacy mixed-SHA collection: 410 Gone + Link header.
+    path(
+        "user/<user_token:key>/collections/<gitsha:collection_id>",
+        OGCLegacyMixedCollectionGoneView.as_view(),
+        name="user-collection-legacy-gone",
+    ),
+    path(
+        "user/<user_token:key>/collections/<gitsha:collection_id>/items",
+        OGCLegacyMixedCollectionGoneView.as_view(),
+        name="user-collection-items-legacy-gone",
     ),
     path(
         (
             "user/<user_token:key>/collections/<gitsha:collection_id>/"
             "items/<str:feature_id>"
         ),
-        OGCGISUserSingleFeatureApiView.as_view(),
-        name="user-collection-feature",
+        OGCLegacyMixedCollectionGoneView.as_view(),
+        name="user-collection-feature-legacy-gone",
     ),
 ]

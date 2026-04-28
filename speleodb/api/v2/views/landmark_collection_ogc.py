@@ -116,7 +116,7 @@ def _landmark_feature(
         )
     except Landmark.DoesNotExist:
         return None
-    return LandmarkGeoJSONSerializer(landmark).data  # type: ignore[no-any-return]
+    return LandmarkGeoJSONSerializer(landmark).data
 
 
 def _parse_uuid(raw: str) -> UUID | None:

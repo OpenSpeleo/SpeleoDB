@@ -28,8 +28,10 @@ from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.permissions import SDB_WebViewerAccess
 from speleodb.api.v2.serializers import ProjectGeoJSONCommitSerializer
 from speleodb.api.v2.serializers import ProjectWithGeoJsonSerializer
+from speleodb.api.v2.views.gis_view import _build_typed_collection_meta
 from speleodb.api.v2.views.gis_view import _load_collection_bbox
 from speleodb.api.v2.views.gis_view import _load_feature_by_id
+from speleodb.api.v2.views.gis_view import _load_geometry_groups_present
 from speleodb.api.v2.views.gis_view import _load_normalized_features
 from speleodb.api.v2.views.ogc_base import BaseOGCCollectionApiView
 from speleodb.api.v2.views.ogc_base import BaseOGCCollectionItemsApiView
@@ -40,6 +42,9 @@ from speleodb.api.v2.views.ogc_base import BaseOGCSingleFeatureApiView
 from speleodb.api.v2.views.ogc_base import OGCCollectionMeta
 from speleodb.api.v2.views.ogc_base import OGCFeatureService
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.gis.ogc_helpers import GEOMETRY_GROUPS_ORDERED
+from speleodb.gis.ogc_helpers import filter_features_by_geometry_group
+from speleodb.gis.ogc_helpers import parse_typed_collection_id
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
 from speleodb.utils.exceptions import NotAuthorizedError
@@ -108,24 +113,28 @@ class ProjectAllProjectGeoJsonApiView(
 class ProjectUserOGCService(OGCFeatureService[Token]):
     """OGC feature service for projects the token's user can read.
 
-    The token is the auth scope; collections are the latest geojson per
-    accessible project. Permission is verified for every collection
-    lookup so that a token whose underlying user lost access mid-session
-    cannot continue to read the project's items.
+    Same geometry-typed split as :class:`ProjectViewOGCService`: each
+    accessible project's latest commit becomes up to two OGC
+    collections (``<sha>_points`` / ``<sha>_lines``) — only groups
+    actually present are listed. Permission is verified for every
+    collection lookup so that a token whose underlying user lost
+    access mid-session cannot continue to read the project's items.
     """
 
     service_title: ClassVar[str] = "SpeleoDB User OGC API"
     service_description: ClassVar[str] = (
         "OGC API - Features endpoint exposing every active GIS project "
-        "the token owner is currently allowed to read."
+        "the token owner is currently allowed to read. Each project "
+        "appears as one collection per geometry type actually present "
+        "(`<sha>_points`, `<sha>_lines`)."
     )
     cache_control: ClassVar[str] = "public, max-age=86400"
 
     def list_collections(self, scope: Token) -> list[OGCCollectionMeta]:
         user: User = scope.user
-        # One collection per accessible project — the latest geojson
-        # commit (already ordered by the prefetch) becomes its id.
-        # Per-collection bbox is deferred to /collections/{id}; see
+        # One collection per (accessible-project-latest-commit,
+        # geometry_group) tuple actually present. Per-collection bbox
+        # is deferred to /collections/{id}; see
         # ProjectViewOGCService.list_collections for the rationale.
         helper = BaseUserProjectGeoJsonApiView()
         projects = helper.get_user_projects(user)
@@ -135,13 +144,18 @@ class ProjectUserOGCService(OGCFeatureService[Token]):
             if not geojsons:
                 continue
             latest = geojsons[0]
-            out.append(
-                OGCCollectionMeta(
-                    id=latest.commit_sha,
-                    title=latest.project.name,
-                    description=f"Commit: {latest.commit_sha}",
-                ),
-            )
+            present = _load_geometry_groups_present(latest.commit_sha)
+            for group in GEOMETRY_GROUPS_ORDERED:
+                if group not in present:
+                    continue
+                out.append(
+                    _build_typed_collection_meta(
+                        project_name=latest.project.name,
+                        commit_sha=latest.commit_sha,
+                        group=group,
+                        bbox=None,
+                    )
+                )
         return out
 
     def get_collection(
@@ -150,14 +164,19 @@ class ProjectUserOGCService(OGCFeatureService[Token]):
         collection_id: str,
     ) -> OGCCollectionMeta | None:
         # Same SHA case-normalisation contract as ProjectViewOGCService:
-        # the URL converter accepts both cases, the DB stores lower.
-        collection_id = collection_id.lower()
+        # ``parse_typed_collection_id`` lower-cases the SHA half so the
+        # ORM lookup is canonical regardless of how the user-typed URL
+        # was cased.
+        parsed = parse_typed_collection_id(collection_id)
+        if parsed is None:
+            return None
+        sha, group = parsed
         user: User = scope.user
         try:
             project_geojson = ProjectGeoJSON.objects.select_related(
                 "project",
                 "commit",
-            ).get(commit__id=collection_id)
+            ).get(commit__id=sha)
         except ProjectGeoJSON.DoesNotExist:
             return None
         try:
@@ -166,11 +185,16 @@ class ProjectUserOGCService(OGCFeatureService[Token]):
             # Treat permission denial as "not found" — never leak the
             # existence of resources outside the user's read scope.
             return None
-        return OGCCollectionMeta(
-            id=collection_id,
-            title=project_geojson.project.name,
-            description=f"Commit: {collection_id}",
-            bbox=_load_collection_bbox(collection_id),
+        if group not in _load_geometry_groups_present(sha):
+            # SHA exists and the user is permitted, but this geometry
+            # group has no features at this commit — surface as 404
+            # so QGIS / ArcGIS Pro do not add an empty layer.
+            return None
+        return _build_typed_collection_meta(
+            project_name=project_geojson.project.name,
+            commit_sha=sha,
+            group=group,
+            bbox=_load_collection_bbox(sha, group),
         )
 
     def get_features(
@@ -179,9 +203,17 @@ class ProjectUserOGCService(OGCFeatureService[Token]):
         collection_id: str,
     ) -> list[dict[str, Any]]:
         # Authorization performed in get_collection() — the generic
-        # view always calls it first. The cached features list is keyed
-        # by commit SHA only.
-        return _load_normalized_features(collection_id.lower())
+        # view always calls it first. The cached features list is
+        # keyed by commit SHA only; the geometry filter is applied
+        # at request time.
+        parsed = parse_typed_collection_id(collection_id)
+        if parsed is None:
+            return []
+        sha, group = parsed
+        return filter_features_by_geometry_group(
+            _load_normalized_features(sha),
+            group,
+        )
 
     def get_feature(
         self,
@@ -189,11 +221,20 @@ class ProjectUserOGCService(OGCFeatureService[Token]):
         collection_id: str,
         feature_id: str,
     ) -> dict[str, Any] | None:
-        # O(1) lookup via the cached index — see ProjectViewOGCService.
-        return _load_feature_by_id(collection_id.lower(), feature_id)
+        # O(1) lookup via the cached index then a constant-time group
+        # filter — see ProjectViewOGCService.get_feature.
+        parsed = parse_typed_collection_id(collection_id)
+        if parsed is None:
+            return None
+        sha, group = parsed
+        return _load_feature_by_id(sha, feature_id, group)
 
     def get_etag(self, scope: Token, collection_id: str) -> str | None:
-        return collection_id.lower()
+        parsed = parse_typed_collection_id(collection_id)
+        if parsed is None:
+            return None
+        sha, group = parsed
+        return f"{sha}_{group}"
 
 
 # ---------------------------------------------------------------------------

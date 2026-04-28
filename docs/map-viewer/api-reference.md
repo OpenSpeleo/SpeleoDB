@@ -282,21 +282,28 @@ ArcGIS Pro.
 
 Every OGC family exposes the same six routes:
 
-* `<base>/` — landing page (the URL users copy into their GIS client)
+* `<base>` — landing page (the URL users copy into their GIS client).
+  **No trailing slash** — see
+  `docs/map-viewer/ogc-url-and-geometry-contract.md` §1 for the
+  reasoning. Pinned by
+  `test_no_ogc_url_pattern_has_inconsistent_trailing_slash`.
 * `<base>/conformance` — conformance declaration
 * `<base>/collections` — collections list
 * `<base>/collections/<id>` — single collection metadata
 * `<base>/collections/<id>/items` — feature items
 * `<base>/collections/<id>/items/<feature_id>` — single feature
 
-**Removed in this release** (October 2026 — ws3a): the old bare-token
+The trailing-slash variants of the landing URL (`view/<token>/`, etc.)
+return **404** — Django's `APPEND_SLASH` only adds slashes, so the
+hard-break is by design. Users re-copy the URL from the integration
+page (which renders the new format automatically through `{% url %}`)
+and the next paste works.
+
+**Removed in this release** (April 2026 — ws3a): the old bare-token
 aliases (`view/<token>` for collections, `view/<token>/<sha>` for the
 collection metadata, etc.) are gone. They violated the OGC discovery
 convention by exposing a non-landing URL as the user-facing entry
-point. Clients with cached old URLs must re-copy the landing-page URL
-from the integration page; the redirect from `landmark-collection/<token>`
-to `landmark-collection/<token>/` is preserved by Django's
-APPEND_SLASH so old bookmarks land on the discovery page.
+point.
 
 ### Response shape (uniform across all four families)
 
@@ -359,17 +366,36 @@ silently ignored per OGC §7.15 (server-defined extensions are allowed).
 The default response is bounded to 10,000 features; larger collections
 must be traversed through the emitted `rel:next` pagination links.
 
-### Mixed geometry types
+### Geometry-typed collections (one per geometry group)
 
-`/items` returns ALL geometry types in the source GeoJSON
-(`Point`, `LineString`, `MultiLineString`, `Polygon`, etc.). The
-previous LineString-only filter silently dropped Point/Polygon
-projects, which was the latent empty-layer bug for non-cave-passage
-data. If a future client (or a specific ArcGIS Pro version) shows
-issues with mixed-geometry FeatureCollections, the architecture
-supports splitting one project into multiple geometry-specific
-collections (e.g. `<sha>__linestring`, `<sha>__point`) — that's a
-documented future direction, not a current behavior.
+Each project commit is exposed as **up to two** OGC collections,
+one per geometry group actually present in the underlying GeoJSON:
+
+* `<commit-sha>_points` — `Point`, `MultiPoint`
+* `<commit-sha>_lines` — `LineString`, `MultiLineString`
+
+A geometry-typed collection is only listed in `/collections` when
+the corresponding group has at least one feature in the GeoJSON
+(no empty layers in QGIS / ArcGIS Pro). Polygons are intentionally
+not part of the contract — SpeleoDB cave-survey data does not
+produce them; a stray polygon is dropped with a structured warning.
+
+This split is the universal GIS-client convention: **1 OGC
+collection = 1 GIS layer = 1 uniform geometry type**. Every major
+platform (QGIS, ArcGIS Pro, GeoServer, pygeoapi, MapServer) enforces
+it at the layer-schema level. Serving a mixed-geometry collection
+caused QGIS to silently drop one geometry type per layer — the
+original empty-layer regression documented in
+`tasks/lessons/ogc-arcgis-empty-layers.md`.
+
+The pre-split collection URL `<base>/collections/<sha>` (without
+`_points` or `_lines` suffix) returns **`410 Gone`** with a
+`Link: rel="alternate"` header listing the geometry-typed
+replacements. The body is written for the human user (QGIS /
+ArcGIS Pro display it) and asks them to re-add the layer from
+their OGC connection. See
+`docs/map-viewer/ogc-url-and-geometry-contract.md` §2 for the full
+contract and migration story.
 
 ### `service-desc` points to a focused OGC OpenAPI document
 
@@ -418,35 +444,37 @@ Used by the **public map viewer** and external GIS clients. Access is
 granted via a `gis_token` embedded in the URL — no session authentication
 required.
 
-| Method | URL Pattern                                                              | Name                       | Description                            |
-|--------|--------------------------------------------------------------------------|----------------------------|----------------------------------------|
-| GET    | `/api/v2/gis-ogc/view/<gis_token>/`                                      | `view-landing`             | OGC landing page (service discovery)   |
-| GET    | `/api/v2/gis-ogc/view/<gis_token>/conformance`                           | `view-conformance`         | OGC conformance declaration            |
-| GET    | `/api/v2/gis-ogc/view/<gis_token>/geojson`                               | `view-geojson`             | (NOT OGC) frontend map viewer GeoJSON  |
-| GET    | `/api/v2/gis-ogc/view/<gis_token>/collections`                           | `view-collections`         | Collections list                       |
-| GET    | `/api/v2/gis-ogc/view/<gis_token>/collections/<commit_sha>`              | `view-collection`          | Single collection metadata             |
-| GET    | `/api/v2/gis-ogc/view/<gis_token>/collections/<commit_sha>/items`        | `view-collection-items`    | Collection items                       |
-| GET    | `/api/v2/gis-ogc/view/<gis_token>/collections/<commit_sha>/items/<id>`   | `view-collection-feature`  | Single feature (OGC Req 31-33)         |
+| Method | URL Pattern                                                                            | Name                                | Description                                          |
+|--------|----------------------------------------------------------------------------------------|-------------------------------------|------------------------------------------------------|
+| GET    | `/api/v2/gis-ogc/view/<gis_token>`                                                     | `view-landing`                      | OGC landing page (service discovery)                 |
+| GET    | `/api/v2/gis-ogc/view/<gis_token>/conformance`                                         | `view-conformance`                  | OGC conformance declaration                          |
+| GET    | `/api/v2/gis-ogc/view/<gis_token>/geojson`                                             | `view-geojson`                      | (NOT OGC) frontend map viewer GeoJSON                |
+| GET    | `/api/v2/gis-ogc/view/<gis_token>/collections`                                         | `view-collections`                  | Collections list (one per geometry group present)    |
+| GET    | `/api/v2/gis-ogc/view/<gis_token>/collections/<commit_sha>_<group>`                    | `view-collection`                   | Single collection metadata (`<group>` = `points`/`lines`) |
+| GET    | `/api/v2/gis-ogc/view/<gis_token>/collections/<commit_sha>_<group>/items`              | `view-collection-items`             | Collection items                                     |
+| GET    | `/api/v2/gis-ogc/view/<gis_token>/collections/<commit_sha>_<group>/items/<id>`         | `view-collection-feature`           | Single feature (OGC Req 31-33)                       |
+| GET    | `/api/v2/gis-ogc/view/<gis_token>/collections/<commit_sha>` (legacy mixed)             | `view-collection-legacy-gone`       | **410 Gone** + `Link: rel=alternate` header — old setups must re-add the layer |
 
 ### 3.2 User endpoints (public, `user_token`-based)
 
 Provide per-user access to all projects the token owner can see. Intended
 for personal QGIS connections.
 
-| Method | URL Pattern                                                          | Name                       | Description                        |
-|--------|----------------------------------------------------------------------|----------------------------|------------------------------------|
-| GET    | `/api/v2/gis-ogc/user/<key>/`                                        | `user-landing`             | OGC landing page                   |
-| GET    | `/api/v2/gis-ogc/user/<key>/conformance`                             | `user-conformance`         | OGC conformance declaration        |
-| GET    | `/api/v2/gis-ogc/user/<key>/collections`                             | `user-collections`         | Collections list (user's projects) |
-| GET    | `/api/v2/gis-ogc/user/<key>/collections/<commit_sha>`                | `user-collection`          | Single collection metadata         |
-| GET    | `/api/v2/gis-ogc/user/<key>/collections/<commit_sha>/items`          | `user-collection-items`    | Collection items (GeoJSON)         |
-| GET    | `/api/v2/gis-ogc/user/<key>/collections/<commit_sha>/items/<id>`     | `user-collection-feature`  | Single feature                     |
+| Method | URL Pattern                                                                          | Name                                | Description                                          |
+|--------|--------------------------------------------------------------------------------------|-------------------------------------|------------------------------------------------------|
+| GET    | `/api/v2/gis-ogc/user/<key>`                                                         | `user-landing`                      | OGC landing page                                     |
+| GET    | `/api/v2/gis-ogc/user/<key>/conformance`                                             | `user-conformance`                  | OGC conformance declaration                          |
+| GET    | `/api/v2/gis-ogc/user/<key>/collections`                                             | `user-collections`                  | Collections list (one per geometry group, per project) |
+| GET    | `/api/v2/gis-ogc/user/<key>/collections/<commit_sha>_<group>`                        | `user-collection`                   | Single collection metadata (`<group>` = `points`/`lines`) |
+| GET    | `/api/v2/gis-ogc/user/<key>/collections/<commit_sha>_<group>/items`                  | `user-collection-items`             | Collection items (GeoJSON)                           |
+| GET    | `/api/v2/gis-ogc/user/<key>/collections/<commit_sha>_<group>/items/<id>`             | `user-collection-feature`           | Single feature                                       |
+| GET    | `/api/v2/gis-ogc/user/<key>/collections/<commit_sha>` (legacy mixed)                 | `user-collection-legacy-gone`       | **410 Gone** + `Link: rel=alternate` header          |
 
 ### 3.3 Experiment endpoint (NOT OGC)
 
-| Method | URL Pattern                                    | Name         | Description                            |
-|--------|------------------------------------------------|--------------|----------------------------------------|
-| GET    | `/api/v2/gis-ogc/experiment/<gis_token>/`      | `experiment` | Single flat GeoJSON FeatureCollection  |
+| Method | URL Pattern                                   | Name         | Description                            |
+|--------|-----------------------------------------------|--------------|----------------------------------------|
+| GET    | `/api/v2/gis-ogc/experiment/<gis_token>`      | `experiment` | Single flat GeoJSON FeatureCollection  |
 
 The experiment endpoint is a single-document download, **not** an
 OGC API - Features service. It has no landing/conformance/collections
@@ -462,7 +490,7 @@ GeoJSON with stable per-feature UUIDs.
 
 | Method | URL Pattern                                                                                | Name                                       | Description                                   |
 |--------|--------------------------------------------------------------------------------------------|--------------------------------------------|-----------------------------------------------|
-| GET    | `/api/v2/gis-ogc/landmark-collection/<gis_token>/`                                         | `landmark-collection-landing`              | OGC landing page                              |
+| GET    | `/api/v2/gis-ogc/landmark-collection/<gis_token>`                                          | `landmark-collection-landing`              | OGC landing page                              |
 | GET    | `/api/v2/gis-ogc/landmark-collection/<gis_token>/conformance`                              | `landmark-collection-conformance`          | OGC conformance declaration                   |
 | GET    | `/api/v2/gis-ogc/landmark-collection/<gis_token>/collections`                              | `landmark-collection-collections`          | Collections list (always one: `landmarks`)    |
 | GET    | `/api/v2/gis-ogc/landmark-collection/<gis_token>/collections/landmarks`                    | `landmark-collection-collection`           | Single Landmark layer metadata                |
@@ -475,7 +503,7 @@ UUID becomes one OGC collection id.
 
 | Method | URL Pattern                                                                                       | Name                                            | Description                                  |
 |--------|---------------------------------------------------------------------------------------------------|-------------------------------------------------|----------------------------------------------|
-| GET    | `/api/v2/gis-ogc/landmark-collections/user/<key>/`                                                | `landmark-collections-user-landing`             | OGC landing page                             |
+| GET    | `/api/v2/gis-ogc/landmark-collections/user/<key>`                                                 | `landmark-collections-user-landing`             | OGC landing page                             |
 | GET    | `/api/v2/gis-ogc/landmark-collections/user/<key>/conformance`                                     | `landmark-collections-user-conformance`         | OGC conformance declaration                  |
 | GET    | `/api/v2/gis-ogc/landmark-collections/user/<key>/collections`                                     | `landmark-collections-user-collections`         | Readable Landmark Collection list            |
 | GET    | `/api/v2/gis-ogc/landmark-collections/user/<key>/collections/<uuid>`                              | `landmark-collections-user-collection`          | Single Landmark Collection metadata          |
@@ -519,21 +547,22 @@ Before announcing a release, run the four-step smoke test below
 against a staging or production-clone environment. Each step pins
 one of the live ArcGIS Pro 3.6.1 regression dimensions.
 
-1. **QGIS connection** (validates landing-page discovery and mixed
-   geometries):
+1. **QGIS connection** (validates landing-page discovery and
+   geometry-typed layers):
 
    * In QGIS, *Layer ▸ Add Layer ▸ Add WFS Layer ▸ New ▸ Service URL*
      and paste the personal-GIS-View landing URL from
      `/private/gis_views/`.
-   * Choose the first project, add it to the map.
-   * Pin: features visible (LineStrings + Points + Polygons),
+   * Choose the first project's `_points` and `_lines` layers, add
+     both to the map.
+   * Pin: point and line features visible,
      attribute table populated, no error in QGIS log.
 
 2. **ArcGIS Pro 3.6+** (validates the live regression fix):
 
    * *Insert ▸ Connections ▸ Add OGC API Server* and paste the
      personal-GIS-View landing URL.
-   * Drag a project layer onto the map.
+   * Drag the project's `_points` and `_lines` layers onto the map.
    * Pin: features visible, attribute table populated. The
      pre-fix behavior was an empty layer; if ArcGIS still shows no
      features the `links[*][rel=self]` / `numberMatched` /
@@ -542,15 +571,22 @@ one of the live ArcGIS Pro 3.6.1 regression dimensions.
 3. **`curl` envelope sanity** (validates per-request semantics):
 
    ```sh
-   curl -s "https://staging.speleodb.org/api/v2/gis-ogc/user/$KEY/" | jq '.links[].rel'
-   curl -s "https://staging.speleodb.org/api/v2/gis-ogc/user/$KEY/collections" | jq '.collections[0].crs'
-   curl -s "https://staging.speleodb.org/api/v2/gis-ogc/user/$KEY/collections/$SHA/items" | jq '{numberMatched, numberReturned, timeStamp, links: [.links[].rel]}'
+   # Landing URL is slash-free now; collection IDs are <sha>_<group>.
+   curl -s "https://staging.speleodb.org/api/v2/gis-ogc/user/$KEY" | jq '.links[].rel'
+   curl -s "https://staging.speleodb.org/api/v2/gis-ogc/user/$KEY/collections" | jq '.collections[].id'
+   curl -s "https://staging.speleodb.org/api/v2/gis-ogc/user/$KEY/collections/${SHA}_lines/items" | jq '{numberMatched, numberReturned, timeStamp, links: [.links[].rel]}'
+
+   # Legacy mixed <sha> URL must 410 with a Link header.
+   curl -si "https://staging.speleodb.org/api/v2/gis-ogc/user/$KEY/collections/$SHA" | grep -E '^(HTTP|Link)'
    ```
 
-   * Pin: landing has `self`, `conformance`, `data`. NO `service-desc`.
-   * Pin: collection has `crs` containing both CRS84 and CRS84h.
+   * Pin: landing has `self`, `conformance`, `data`, `service-desc`.
+   * Pin: every collection id matches `^[0-9a-f]{6,40}_(?:points|lines)$`.
    * Pin: items has `numberMatched`, `numberReturned`, `timeStamp`,
      and `links` containing `self` and `collection`.
+   * Pin: legacy `<sha>` URL returns `HTTP/1.1 410 Gone` with a
+     `Link: ...; rel="alternate"` header listing the geometry-typed
+     replacements.
 
 4. **Pagination round-trip**:
 

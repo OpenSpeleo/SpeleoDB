@@ -1389,7 +1389,8 @@ class TestOGCGISUserCollectionApi(BaseAPITestCase):
 
     def test_user_collection_returns_commit_sha_string(self) -> None:
         """Call the user-collection endpoint and verify the response ``id``
-        is the commit SHA string, not a ProjectCommit object."""
+        is the geometry-typed collection id (string), not a
+        ProjectCommit object."""
 
         commit_sha = "b" * 40
         create_project_geojson(
@@ -1401,13 +1402,16 @@ class TestOGCGISUserCollectionApi(BaseAPITestCase):
             message="Test commit",
             file=temp_geojson_file(),
         )
+        # ``temp_geojson_file()`` is Point-only, so the ``_points``
+        # collection is the one that exists for this commit.
+        collection_id = f"{commit_sha}_points"
 
         response = self.client.get(
             reverse(
                 "api:v2:gis-ogc:user-collection",
                 kwargs={
                     "key": self.token.key,
-                    "collection_id": commit_sha,
+                    "collection_id": collection_id,
                 },
             )
         )
@@ -1418,8 +1422,8 @@ class TestOGCGISUserCollectionApi(BaseAPITestCase):
 
         data = response.json()
 
-        # Verify the id field is the commit SHA string
-        assert data["id"] == commit_sha
+        # Verify the id field is the geometry-typed string
+        assert data["id"] == collection_id
         assert isinstance(data["id"], str)
 
         # Verify the rest of the response structure
@@ -1445,9 +1449,9 @@ def _temp_linestring_geojson_file() -> SimpleUploadedFile:
     * 1 ``MultiLineString`` — branched passage exported by some compass
       tooling (ws7c5: regression guard against re-introducing a strict
       ``geometry.type == "LineString"`` filter).
-    * 1 ``Polygon`` — sump room (ws5: ensures the formerly stripped
-      polygon geometry round-trips after the LineString-only filter
-      removal).
+    * 1 ``Polygon`` — sump room fixture noise; OGC project collections
+      intentionally drop it because SpeleoDB does not expose polygon
+      layers.
     * 1 feature with ``Z`` coordinates — depth in metres (ws1c: pins
       that the CRS84h declaration on collections matches the data).
     """
@@ -1703,7 +1707,21 @@ class TestOGCConformance(BaseOGCViewTestCase):
 
 @pytest.mark.django_db
 class TestOGCCollections(BaseOGCViewTestCase):
-    """OGC API - Features §7.13-14: Collections requirements."""
+    """OGC API - Features §7.13-14: Collections requirements.
+
+    The mixed fixture has Point + LineString + MultiLineString +
+    Polygon. Polygon is dropped (no GEOMETRY_GROUPS entry in
+    ``speleodb/gis/ogc_helpers.py``); the remaining geometries split
+    into one collection per group present (``_points``, ``_lines``).
+    """
+
+    @property
+    def _lines_id(self) -> str:
+        return f"{self.commit_sha}_lines"
+
+    @property
+    def _points_id(self) -> str:
+        return f"{self.commit_sha}_points"
 
     def _get_collections(self) -> dict[str, Any]:
         resp = self.public_client.get(
@@ -1732,7 +1750,8 @@ class TestOGCCollections(BaseOGCViewTestCase):
         data = self._get_collections()
         assert "collections" in data
         assert isinstance(data["collections"], list)
-        assert len(data["collections"]) >= 1
+        # Two geometry-typed collections present (points + lines).
+        assert len(data["collections"]) == 2  # noqa: PLR2004
 
     def test_collection_has_required_fields(self) -> None:
         """Each collection must have id, title, links."""
@@ -1764,10 +1783,12 @@ class TestOGCCollections(BaseOGCViewTestCase):
         )
         assert items_href.endswith("/items")
 
-    def test_collection_id_is_commit_sha(self) -> None:
+    def test_collection_ids_are_geometry_typed(self) -> None:
+        """Each collection id is ``<sha>_<group>``; the listing covers
+        every group actually present in the underlying GeoJSON."""
         data = self._get_collections()
-        coll = data["collections"][0]
-        assert coll["id"] == self.commit_sha
+        ids = {coll["id"] for coll in data["collections"]}
+        assert ids == {self._points_id, self._lines_id}
 
     def test_collection_has_item_type(self) -> None:
         data = self._get_collections()
@@ -1777,7 +1798,16 @@ class TestOGCCollections(BaseOGCViewTestCase):
 
 @pytest.mark.django_db
 class TestOGCSingleCollection(BaseOGCViewTestCase):
-    """OGC API - Features §7.14: Single collection requirements."""
+    """OGC API - Features §7.14: Single collection requirements.
+
+    Tests use the ``_lines`` collection by default (the fixture has
+    multiple line features); points are exercised by the geometry-
+    split regression suite in ``test_ogc_compliance.py``.
+    """
+
+    @property
+    def _lines_id(self) -> str:
+        return f"{self.commit_sha}_lines"
 
     def _get_collection(self) -> dict[str, Any]:
         resp = self.public_client.get(
@@ -1785,7 +1815,7 @@ class TestOGCSingleCollection(BaseOGCViewTestCase):
                 "api:v2:gis-ogc:view-collection",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "collection_id": self.commit_sha,
+                    "collection_id": self._lines_id,
                 },
             )
         )
@@ -1797,12 +1827,15 @@ class TestOGCSingleCollection(BaseOGCViewTestCase):
 
     def test_single_collection_has_id(self) -> None:
         data = self._get_collection()
-        assert data["id"] == self.commit_sha
+        assert data["id"] == self._lines_id
 
     def test_single_collection_has_title(self) -> None:
         data = self._get_collection()
         assert "title" in data
-        assert data["title"] == self.project.name
+        # Title is "<project_name> (<group>)" so the project name
+        # remains visible to users browsing the layer list.
+        assert data["title"].startswith(self.project.name)
+        assert "(lines)" in data["title"]
 
     def test_single_collection_has_self_link(self) -> None:
         data = self._get_collection()
@@ -1822,7 +1855,7 @@ class TestOGCSingleCollection(BaseOGCViewTestCase):
                 "api:v2:gis-ogc:view-collection",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "collection_id": "f" * 40,
+                    "collection_id": f"{'f' * 40}_lines",
                 },
             )
         )
@@ -1831,7 +1864,16 @@ class TestOGCSingleCollection(BaseOGCViewTestCase):
 
 @pytest.mark.django_db
 class TestOGCCollectionItems(BaseOGCViewTestCase):
-    """OGC API - Features §7.15-16: /items endpoint requirements."""
+    """OGC API - Features §7.15-16: /items endpoint requirements.
+
+    Tests target the ``_lines`` collection (3 features in the fixture:
+    2 LineStrings + 1 MultiLineString); the Point goes to ``_points``
+    and the Polygon is dropped (no GEOMETRY_GROUPS entry).
+    """
+
+    @property
+    def _lines_id(self) -> str:
+        return f"{self.commit_sha}_lines"
 
     def _get_items_response(self, **extra_kwargs: Any) -> Any:
         return self.public_client.get(
@@ -1839,7 +1881,7 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
                 "api:v2:gis-ogc:view-collection-items",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "collection_id": self.commit_sha,
+                    "collection_id": self._lines_id,
                 },
             ),
             **extra_kwargs,
@@ -1855,29 +1897,29 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
 
     def test_items_is_valid_feature_collection(self) -> None:
         resp = self._get_items_response()
-        data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
+        data = orjson.loads(b"".join(resp.streaming_content))
         assert data["type"] == "FeatureCollection"
         assert "features" in data
         assert isinstance(data["features"], list)
 
-    def test_items_returns_all_geometry_types(self) -> None:
-        """ws5: every geometry type round-trips (LineString-only filter removed).
-
-        Fixture has 1 Point, 2 LineStrings, 1 MultiLineString, 1
-        Polygon. The previous LineString-only filter silently dropped
-        Point / Polygon / MultiLineString projects, which was the
-        latent empty-layer bug for non-cave-passage data.
+    def test_items_returns_only_lines_geometry_types(self) -> None:
+        """The geometry-typed split contract: ``_lines`` MUST contain
+        only LineString and MultiLineString (no Point, no Polygon).
+        Pins the 1-collection-1-layer-1-geometry-type contract.
         """
         resp = self._get_items_response()
-        data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
-        assert len(data["features"]) == 5  # noqa: PLR2004
+        data = orjson.loads(b"".join(resp.streaming_content))
+        # Fixture lines subset: 2 LineStrings + 1 MultiLineString.
+        assert len(data["features"]) == 3  # noqa: PLR2004
         types = {feature["geometry"]["type"] for feature in data["features"]}
-        assert types == {"Point", "LineString", "MultiLineString", "Polygon"}
+        assert types <= {"LineString", "MultiLineString"}
 
     def test_items_has_etag_header(self) -> None:
         resp = self._get_items_response()
         assert "ETag" in resp
-        assert resp["ETag"] == f'"{self.commit_sha}"'
+        # ETag includes the geometry group so a content classifier
+        # change would invalidate cached responses.
+        assert resp["ETag"] == f'"{self._lines_id}"'
 
     def test_items_has_cache_control_header(self) -> None:
         resp = self._get_items_response()
@@ -1891,7 +1933,7 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
 
     def test_items_conditional_request_returns_304(self) -> None:
         """If-None-Match with matching ETag should return 304."""
-        etag = f'"{self.commit_sha}"'
+        etag = f'"{self._lines_id}"'
         resp = self._get_items_response(
             headers={"if-none-match": etag},
         )
@@ -1900,20 +1942,21 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
 
     def test_items_conditional_request_with_query_returns_200(self) -> None:
         """Collection ETags cannot 304 a different paged representation."""
-        etag = f'"{self.commit_sha}"'
+        etag = f'"{self._lines_id}"'
         resp = self.public_client.get(
             reverse(
                 "api:v2:gis-ogc:view-collection-items",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "collection_id": self.commit_sha,
+                    "collection_id": self._lines_id,
                 },
             )
-            + "?limit=2&offset=2",
+            + "?limit=2&offset=1",
             headers={"if-none-match": etag},
         )
         assert resp.status_code == status.HTTP_200_OK
         data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
+        # Lines subset has 3 features; limit=2, offset=1 → returns 2.
         assert data["numberReturned"] == 2  # noqa: PLR2004
 
     def test_items_conditional_request_mismatched_etag_returns_200(self) -> None:
@@ -1925,20 +1968,16 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
     def test_items_respects_limit_query_param(self) -> None:
         """ws5b: ``?limit=N`` is honored; ``filter`` (CQL2) stays ignored.
 
-        Replaces the previous ``test_items_ignores_query_params``; the
-        old ``core`` conformance class declared spec-compliant ``bbox``
-        and ``limit`` behavior but the implementation silently ignored
-        both. With the OGC compliance work the parameters are honored,
-        with ``numberMatched`` / ``numberReturned`` reflecting the
-        pre-/post-slice counts. ``filter`` is *not* in our conformance
-        declaration and remains a pass-through.
+        With the geometry-typed split the lines collection has 3
+        features (2 LineStrings + 1 MultiLineString); ``limit=2``
+        returns 2 with a ``next`` link to fetch the third.
         """
         resp = self.public_client.get(
             reverse(
                 "api:v2:gis-ogc:view-collection-items",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "collection_id": self.commit_sha,
+                    "collection_id": self._lines_id,
                 },
             )
             + "?limit=2&filter=name%3D%27test%27",
@@ -1946,10 +1985,10 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
         assert resp.status_code == status.HTTP_200_OK
         data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
         assert len(data["features"]) == 2  # noqa: PLR2004 — limit honoured
-        assert data["numberMatched"] == 5  # noqa: PLR2004 — fixture has 5
+        assert data["numberMatched"] == 3  # noqa: PLR2004 — lines subset
         assert data["numberReturned"] == 2  # noqa: PLR2004
         rels = [link["rel"] for link in data["links"]]
-        assert "next" in rels  # offset 0 + limit 2 < 5 -> next link present
+        assert "next" in rels  # offset 0 + limit 2 < 3 -> next link present
 
     def test_items_invalid_commit_returns_404(self) -> None:
         resp = self.public_client.get(
@@ -1957,7 +1996,7 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
                 "api:v2:gis-ogc:view-collection-items",
                 kwargs={
                     "gis_token": self.gis_view.gis_token,
-                    "collection_id": "f" * 40,
+                    "collection_id": f"{'f' * 40}_lines",
                 },
             )
         )
@@ -2034,7 +2073,11 @@ class TestOGCDiscoveryFlow(BaseOGCViewTestCase):
             link["href"] for link in landing["links"] if link["rel"] == "data"
         )
         collections = client.get(data_href).json()
-        assert len(collections["collections"]) >= 1
+        collection_ids = {coll["id"] for coll in collections["collections"]}
+        assert collection_ids == {
+            f"{self.commit_sha}_points",
+            f"{self.commit_sha}_lines",
+        }
 
         # 4. Follow collection self link -> single collection
         coll = collections["collections"][0]
@@ -2095,7 +2138,20 @@ class BaseOGCUserTestCase(BaseAPITestCase):
 
 @pytest.mark.django_db
 class TestOGCUserCollections(BaseOGCUserTestCase):
-    """OGC API - Features: user /collections endpoint."""
+    """OGC API - Features: user /collections endpoint.
+
+    Mirrors the gis-view family: project per-commit collections are
+    split per geometry group (``_points`` / ``_lines``); the Polygon
+    in the fixture is dropped (no ``GEOMETRY_GROUPS`` entry).
+    """
+
+    @property
+    def _lines_id(self) -> str:
+        return f"{self.commit_sha}_lines"
+
+    @property
+    def _points_id(self) -> str:
+        return f"{self.commit_sha}_points"
 
     def _get_collections(self) -> dict[str, Any]:
         resp = self.client.get(
@@ -2124,7 +2180,8 @@ class TestOGCUserCollections(BaseOGCUserTestCase):
         data = self._get_collections()
         assert "collections" in data
         assert isinstance(data["collections"], list)
-        assert len(data["collections"]) >= 1
+        # Two geometry-typed collections present (points + lines).
+        assert len(data["collections"]) == 2  # noqa: PLR2004
 
     def test_collection_has_required_fields(self) -> None:
         data = self._get_collections()
@@ -2154,10 +2211,10 @@ class TestOGCUserCollections(BaseOGCUserTestCase):
         )
         assert items_href.endswith("/items")
 
-    def test_collection_id_is_commit_sha(self) -> None:
+    def test_collection_ids_are_geometry_typed(self) -> None:
         data = self._get_collections()
-        coll = data["collections"][0]
-        assert coll["id"] == self.commit_sha
+        ids = {coll["id"] for coll in data["collections"]}
+        assert ids == {self._points_id, self._lines_id}
 
     def test_collection_has_item_type(self) -> None:
         data = self._get_collections()
@@ -2169,13 +2226,17 @@ class TestOGCUserCollections(BaseOGCUserTestCase):
 class TestOGCUserSingleCollection(BaseOGCUserTestCase):
     """OGC API - Features: user single collection endpoint."""
 
+    @property
+    def _lines_id(self) -> str:
+        return f"{self.commit_sha}_lines"
+
     def _get_collection(self) -> dict[str, Any]:
         resp = self.client.get(
             reverse(
                 "api:v2:gis-ogc:user-collection",
                 kwargs={
                     "key": self.token.key,
-                    "collection_id": self.commit_sha,
+                    "collection_id": self._lines_id,
                 },
             )
         )
@@ -2187,12 +2248,14 @@ class TestOGCUserSingleCollection(BaseOGCUserTestCase):
 
     def test_single_collection_has_id(self) -> None:
         data = self._get_collection()
-        assert data["id"] == self.commit_sha
+        assert data["id"] == self._lines_id
 
     def test_single_collection_has_title(self) -> None:
         data = self._get_collection()
         assert "title" in data
-        assert data["title"] == self.project.name
+        # Geometry-typed title format: "<project_name> (<group>)".
+        assert data["title"].startswith(self.project.name)
+        assert "(lines)" in data["title"]
 
     def test_single_collection_has_self_link(self) -> None:
         data = self._get_collection()
@@ -2212,14 +2275,14 @@ class TestOGCUserSingleCollection(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection",
                 kwargs={
                     "key": self.token.key,
-                    "collection_id": "f" * 40,
+                    "collection_id": f"{'f' * 40}_lines",
                 },
             )
         )
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_single_collection_no_permission_returns_error(self) -> None:
-        """User without access to the project gets an error (401 or 404)."""
+    def test_single_collection_no_permission_returns_404(self) -> None:
+        """User without project access gets 404, never existence leakage."""
         other_project = ProjectFactory.create()
         other_sha = "c" * 40
         create_project_geojson(
@@ -2236,19 +2299,24 @@ class TestOGCUserSingleCollection(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection",
                 kwargs={
                     "key": self.token.key,
-                    "collection_id": other_sha,
+                    "collection_id": f"{other_sha}_points",
                 },
             )
         )
-        assert resp.status_code in (
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_404_NOT_FOUND,
-        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.django_db
 class TestOGCUserCollectionItems(BaseOGCUserTestCase):
-    """OGC API - Features: user /items endpoint."""
+    """OGC API - Features: user /items endpoint.
+
+    Targets the ``_lines`` collection (3 features: 2 LineStrings + 1
+    MultiLineString); Polygon dropped, Point lives in ``_points``.
+    """
+
+    @property
+    def _lines_id(self) -> str:
+        return f"{self.commit_sha}_lines"
 
     def _get_items_response(self, **extra_kwargs: Any) -> Any:
         return self.client.get(
@@ -2256,7 +2324,7 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection-items",
                 kwargs={
                     "key": self.token.key,
-                    "collection_id": self.commit_sha,
+                    "collection_id": self._lines_id,
                 },
             ),
             **extra_kwargs,
@@ -2277,18 +2345,19 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
         assert "features" in data
         assert isinstance(data["features"], list)
 
-    def test_items_returns_all_geometry_types(self) -> None:
-        """ws5 (user variant): all geometry types round-trip."""
+    def test_items_returns_only_lines_geometry_types(self) -> None:
+        """User variant: ``_lines`` collection has only line geometries."""
         resp = self._get_items_response()
         data = orjson.loads(b"".join(resp.streaming_content))
-        assert len(data["features"]) == 5  # noqa: PLR2004
+        # Lines subset: 2 LineStrings + 1 MultiLineString.
+        assert len(data["features"]) == 3  # noqa: PLR2004
         types = {feature["geometry"]["type"] for feature in data["features"]}
-        assert types == {"Point", "LineString", "MultiLineString", "Polygon"}
+        assert types <= {"LineString", "MultiLineString"}
 
     def test_items_has_etag_header(self) -> None:
         resp = self._get_items_response()
         assert "ETag" in resp
-        assert resp["ETag"] == f'"{self.commit_sha}"'
+        assert resp["ETag"] == f'"{self._lines_id}"'
 
     def test_items_has_cache_control_header(self) -> None:
         resp = self._get_items_response()
@@ -2301,7 +2370,7 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
         assert resp.get("Content-Disposition") == "inline"
 
     def test_items_conditional_request_returns_304(self) -> None:
-        etag = f'"{self.commit_sha}"'
+        etag = f'"{self._lines_id}"'
         resp = self._get_items_response(
             headers={"if-none-match": etag},
         )
@@ -2321,7 +2390,7 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection-items",
                 kwargs={
                     "key": self.token.key,
-                    "collection_id": self.commit_sha,
+                    "collection_id": self._lines_id,
                 },
             )
             + "?limit=2",
@@ -2329,7 +2398,8 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
         assert resp.status_code == status.HTTP_200_OK
         data = orjson.loads(b"".join(resp.streaming_content))  # type: ignore[attr-defined]
         assert len(data["features"]) == 2  # noqa: PLR2004
-        assert data["numberMatched"] == 5  # noqa: PLR2004
+        # Lines subset has 3 features.
+        assert data["numberMatched"] == 3  # noqa: PLR2004
         assert data["numberReturned"] == 2  # noqa: PLR2004
 
     def test_items_accept_geojson_returns_200(self) -> None:
@@ -2362,14 +2432,14 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection-items",
                 kwargs={
                     "key": self.token.key,
-                    "collection_id": "f" * 40,
+                    "collection_id": f"{'f' * 40}_lines",
                 },
             )
         )
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_items_no_permission_returns_error(self) -> None:
-        """User without access to the project gets an error (401 or 404)."""
+    def test_items_no_permission_returns_404(self) -> None:
+        """User without project access gets 404, never existence leakage."""
         other_project = ProjectFactory.create()
         other_sha = "c" * 40
         create_project_geojson(
@@ -2386,21 +2456,18 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
                 "api:v2:gis-ogc:user-collection-items",
                 kwargs={
                     "key": self.token.key,
-                    "collection_id": other_sha,
+                    "collection_id": f"{other_sha}_lines",
                 },
             )
         )
-        assert resp.status_code in (
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_404_NOT_FOUND,
-        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_items_features_are_cached_consistently(self) -> None:
         """cached features stay identical; envelope is rebuilt per-request."""
         resp1 = self._get_items_response()
         resp2 = self._get_items_response()
-        data1 = orjson.loads(b"".join(resp1.streaming_content))  # type: ignore[attr-defined]
-        data2 = orjson.loads(b"".join(resp2.streaming_content))  # type: ignore[attr-defined]
+        data1 = orjson.loads(b"".join(resp1.streaming_content))
+        data2 = orjson.loads(b"".join(resp2.streaming_content))
         assert data1["features"] == data2["features"]
         assert data1["numberMatched"] == data2["numberMatched"]
         assert data1["numberReturned"] == data2["numberReturned"]
@@ -2545,7 +2612,11 @@ class TestOGCUserDiscoveryFlow(BaseOGCUserTestCase):
             link["href"] for link in landing["links"] if link["rel"] == "data"
         )
         collections = client.get(data_href).json()
-        assert len(collections["collections"]) >= 1
+        collection_ids = {coll["id"] for coll in collections["collections"]}
+        assert collection_ids == {
+            f"{self.commit_sha}_points",
+            f"{self.commit_sha}_lines",
+        }
 
         # 4. Follow collection self link -> single collection
         coll = collections["collections"][0]

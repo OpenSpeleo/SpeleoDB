@@ -29,12 +29,14 @@ the per-family ``OGCFeatureService`` implementations.
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 from datetime import UTC
 from datetime import datetime
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Final
 from urllib.parse import quote
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
@@ -50,6 +52,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from rest_framework.request import Request
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # OGC URI constants
@@ -73,6 +77,11 @@ WORLD_BBOX_2D: list[list[float]] = [[-180.0, -90.0, 180.0, 90.0]]
 # ~5 MB for typical cave-survey payloads.
 MAX_OGC_LIMIT: int = 10_000
 DEFAULT_OGC_LIMIT: int = MAX_OGC_LIMIT
+
+# Path of the service-desc endpoint. Shared here because landing-page
+# links are built in this module, while the OpenAPI document imports
+# conformance constants from here.
+OGC_OPENAPI_PATH: Final[str] = "/api/v2/gis-ogc/openapi/"
 
 # CRS84 coordinate ranges.
 _LON_MIN: float = -180.0
@@ -506,6 +515,172 @@ def normalize_features(
     return out
 
 
+# ---------------------------------------------------------------------------
+# Geometry-typed collection split (1 OGC collection = 1 GIS layer = 1
+# uniform geometry — the universal QGIS / ArcGIS Pro expectation)
+# ---------------------------------------------------------------------------
+#
+# SpeleoDB cave-survey data carries Point and LineString geometries (with
+# their Multi* variants). A single FeatureCollection mixing both fails
+# to render in QGIS and ArcGIS Pro because both clients treat one OGC
+# collection as one map layer, and a map layer can only hold one
+# geometry type. The fix is per-geometry-type collections.
+#
+# Polygons are intentionally NOT in ``GEOMETRY_GROUPS``: cave-survey
+# data does not produce them. ``classify_geometry`` returns ``None``
+# for any geometry type that is not in a declared group, so a stray
+# polygon gets dropped (and a warning logged via
+# ``filter_features_by_geometry_group`` / ``geometry_groups_present``)
+# rather than silently corrupting a layer. Adding a polygon group
+# later is a one-line change here plus the matching regex in
+# ``speleodb/utils/url_converters.py``.
+
+#: Geometry-group → set of GeoJSON geometry-type names mapped to it.
+#: Drives ``classify_geometry``, the URL converter shape, and the
+#: per-collection bbox loader.
+GEOMETRY_GROUPS: Final[dict[str, frozenset[str]]] = {
+    "points": frozenset({"Point", "MultiPoint"}),
+    "lines": frozenset({"LineString", "MultiLineString"}),
+}
+
+#: Stable iteration order for ``/collections`` listings — points first
+#: then lines so the per-project layer panel in QGIS / ArcGIS Pro
+#: presents stations above passages (the natural cave-survey reading
+#: order).
+GEOMETRY_GROUPS_ORDERED: Final[tuple[str, ...]] = ("points", "lines")
+
+
+def classify_geometry(geometry: dict[str, Any] | None) -> str | None:
+    """Return the geometry-group name for *geometry* or ``None``.
+
+    ``None`` means the geometry is unknown to this product
+    (e.g. ``Polygon``, ``MultiPolygon``, ``GeometryCollection``, or
+    a malformed payload). Callers MUST drop such features rather than
+    place them in a typed collection — pinning the "no polygons in
+    this product" invariant at the routing/filter boundary.
+    """
+    if not isinstance(geometry, dict):
+        return None
+    geom_type = geometry.get("type")
+    if not isinstance(geom_type, str):
+        return None
+    for group, members in GEOMETRY_GROUPS.items():
+        if geom_type in members:
+            return group
+    return None
+
+
+# ``<commit-sha>_<group>`` collection-id parser. Mirrored by the
+# ``ogc_typed_id`` URL converter regex
+# (``[0-9a-fA-F]{6,40}_(?:points|lines)``); kept here so the service
+# layer can validate ids that arrive through paths the URL routing
+# layer cannot enforce (cache keys, single-feature sub-resources
+# resolved through ``str:`` converters, etc.).
+_TYPED_COLLECTION_ID_RE: Final[re.Pattern[str]] = re.compile(
+    r"^(?P<sha>[0-9a-fA-F]{6,40})_(?P<group>"
+    + "|".join(re.escape(g) for g in GEOMETRY_GROUPS)
+    + r")$"
+)
+
+
+def parse_typed_collection_id(collection_id: str) -> tuple[str, str] | None:
+    """Return ``(commit_sha_lower, geometry_group)`` or ``None``.
+
+    Defensive parser for the geometry-typed collection-id contract.
+    Returns ``None`` for the legacy mixed ``<sha>``-only form (which
+    the routing layer maps to a 410 Gone view) and for any other
+    unrecognised shape.
+    """
+    if not isinstance(collection_id, str):
+        return None
+    match = _TYPED_COLLECTION_ID_RE.match(collection_id)
+    if match is None:
+        return None
+    return match.group("sha").lower(), match.group("group")
+
+
+def filter_features_by_geometry_group(
+    features: Iterable[dict[str, Any]],
+    group: str,
+) -> list[dict[str, Any]]:
+    """Return the subset of *features* whose geometry belongs to *group*.
+
+    Single-pass filter; non-dict features and features outside any
+    declared group are silently dropped. Callers that need to surface
+    "polygon was dropped" should use ``geometry_groups_present`` first
+    (it logs a warning when an unknown group is observed).
+    """
+    if group not in GEOMETRY_GROUPS:
+        return []
+    out: list[dict[str, Any]] = []
+    for feat in features:
+        if not isinstance(feat, dict):
+            continue
+        if classify_geometry(feat.get("geometry")) == group:
+            out.append(feat)
+    return out
+
+
+def geometry_groups_present(features: Iterable[dict[str, Any]]) -> set[str]:
+    """Return the set of geometry groups actually present in *features*.
+
+    Walks the features once. Any feature whose geometry classifies as
+    ``None`` (e.g. a Polygon — not part of this product) is dropped
+    from the count and a single structured warning is emitted per
+    encountered unknown geometry type so a future polygon-producing
+    pipeline change is loud, not silent.
+    """
+    present: set[str] = set()
+    unknown_types_seen: set[str] = set()
+    for feat in features:
+        if not isinstance(feat, dict):
+            continue
+        geometry = feat.get("geometry")
+        group = classify_geometry(geometry)
+        if group is not None:
+            present.add(group)
+            continue
+        # Unknown geometry: log once per type per call so a polygon-
+        # producing regression is visible in logs without flooding.
+        if isinstance(geometry, dict):
+            geom_type = geometry.get("type")
+            if isinstance(geom_type, str) and geom_type not in unknown_types_seen:
+                unknown_types_seen.add(geom_type)
+                logger.warning(
+                    "OGC geometry split: dropping unsupported geometry "
+                    "type %r (no GEOMETRY_GROUPS entry). Add a group "
+                    "in speleodb/gis/ogc_helpers.py and the matching "
+                    "URL-converter regex if this is intentional.",
+                    geom_type,
+                    extra={
+                        "unsupported_geometry_type": geom_type,
+                        "ogc_geometry_groups": tuple(GEOMETRY_GROUPS),
+                    },
+                )
+    return present
+
+
+def collection_bbox_2d_for_group(
+    features: Iterable[dict[str, Any]],
+    group: str,
+) -> tuple[float, float, float, float] | None:
+    """Return the union 2-D bbox of *features* belonging to *group*.
+
+    Wraps :func:`collection_bbox_2d` after filtering by geometry group;
+    callers use this to populate ``extent.spatial.bbox`` on a typed
+    collection's metadata response so QGIS / ArcGIS Pro auto-zoom
+    lands on the actual data envelope per geometry layer.
+    """
+    if group not in GEOMETRY_GROUPS:
+        return None
+    return collection_bbox_2d(filter_features_by_geometry_group(features, group))
+
+
+# ---------------------------------------------------------------------------
+# OGC core query application
+# ---------------------------------------------------------------------------
+
+
 def apply_ogc_query(
     features: list[dict[str, Any]],
     query: OGCQuery,
@@ -809,7 +984,7 @@ def build_landing_page(
     discover the service.
 
     The ``service-desc`` link points at the focused OGC OpenAPI
-    document at :data:`speleodb.gis.ogc_openapi.OGC_OPENAPI_PATH` —
+    document at :data:`OGC_OPENAPI_PATH` —
     a single static document, pre-built once at import time and
     shared by every OGC family. The repository's global
     ``/api/schema/`` endpoint is intentionally NOT used because it
@@ -817,12 +992,6 @@ def build_landing_page(
     weighs in at ~684 kB; advertising it would cost every connecting
     client a pointless egress on every connect.
     """
-    # Local import keeps the helpers module dependency-free of the
-    # OpenAPI document at module-import time (avoids a tiny circular
-    # risk when Django's URL configuration imports the helpers very
-    # early during startup).
-    from speleodb.gis.ogc_openapi import OGC_OPENAPI_PATH  # noqa: PLC0415
-
     host = request.get_host().rstrip("/")
     base = f"{request.scheme}://{host}"
     self_path = request.path

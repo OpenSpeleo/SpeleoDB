@@ -606,13 +606,13 @@
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis-ogc/experiment/<gis_token:gis_token>/",
+        "url": "/api/v1/gis-ogc/experiment/<gis_token:gis_token>",
         "module": "speleodb.api.v2.views.experiment.ExperimentGISApiView",
         "name": "api:v1:gis-ogc:experiment",
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis-ogc/landmark-collection/<gis_token:gis_token>/",
+        "url": "/api/v1/gis-ogc/landmark-collection/<gis_token:gis_token>",
         "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCLandingPageApiView",
         "name": "api:v1:gis-ogc:landmark-collection-landing",
         "decorators": ""
@@ -648,7 +648,7 @@
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis-ogc/landmark-collections/user/<user_token:key>/",
+        "url": "/api/v1/gis-ogc/landmark-collections/user/<user_token:key>",
         "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCLandingPageApiView",
         "name": "api:v1:gis-ogc:landmark-collections-user-landing",
         "decorators": ""
@@ -690,7 +690,7 @@
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis-ogc/user/<user_token:key>/",
+        "url": "/api/v1/gis-ogc/user/<user_token:key>",
         "module": "speleodb.api.v2.views.project_geojson.OGCGISUserLandingPageApiView",
         "name": "api:v1:gis-ogc:user-landing",
         "decorators": ""
@@ -703,18 +703,36 @@
     },
     {
         "url": "/api/v1/gis-ogc/user/<user_token:key>/collections/<gitsha:collection_id>",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v1:gis-ogc:user-collection-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/user/<user_token:key>/collections/<gitsha:collection_id>/items",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v1:gis-ogc:user-collection-items-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/user/<user_token:key>/collections/<gitsha:collection_id>/items/<str:feature_id>",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v1:gis-ogc:user-collection-feature-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/user/<user_token:key>/collections/<ogc_typed_id:collection_id>",
         "module": "speleodb.api.v2.views.project_geojson.OGCGISUserCollectionApiView",
         "name": "api:v1:gis-ogc:user-collection",
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis-ogc/user/<user_token:key>/collections/<gitsha:collection_id>/items",
+        "url": "/api/v1/gis-ogc/user/<user_token:key>/collections/<ogc_typed_id:collection_id>/items",
         "module": "speleodb.api.v2.views.project_geojson.OGCGISUserCollectionItemsApiView",
         "name": "api:v1:gis-ogc:user-collection-items",
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis-ogc/user/<user_token:key>/collections/<gitsha:collection_id>/items/<str:feature_id>",
+        "url": "/api/v1/gis-ogc/user/<user_token:key>/collections/<ogc_typed_id:collection_id>/items/<str:feature_id>",
         "module": "speleodb.api.v2.views.project_geojson.OGCGISUserSingleFeatureApiView",
         "name": "api:v1:gis-ogc:user-collection-feature",
         "decorators": ""
@@ -726,7 +744,7 @@
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis-ogc/view/<gis_token:gis_token>/",
+        "url": "/api/v1/gis-ogc/view/<gis_token:gis_token>",
         "module": "speleodb.api.v2.views.gis_view.OGCGISViewLandingPageApiView",
         "name": "api:v1:gis-ogc:view-landing",
         "decorators": ""
@@ -739,18 +757,36 @@
     },
     {
         "url": "/api/v1/gis-ogc/view/<gis_token:gis_token>/collections/<gitsha:collection_id>",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v1:gis-ogc:view-collection-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/view/<gis_token:gis_token>/collections/<gitsha:collection_id>/items",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v1:gis-ogc:view-collection-items-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/view/<gis_token:gis_token>/collections/<gitsha:collection_id>/items/<str:feature_id>",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v1:gis-ogc:view-collection-feature-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-ogc/view/<gis_token:gis_token>/collections/<ogc_typed_id:collection_id>",
         "module": "speleodb.api.v2.views.gis_view.OGCGISViewCollectionApiView",
         "name": "api:v1:gis-ogc:view-collection",
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis-ogc/view/<gis_token:gis_token>/collections/<gitsha:collection_id>/items",
+        "url": "/api/v1/gis-ogc/view/<gis_token:gis_token>/collections/<ogc_typed_id:collection_id>/items",
         "module": "speleodb.api.v2.views.gis_view.OGCGISViewCollectionItemsApiView",
         "name": "api:v1:gis-ogc:view-collection-items",
         "decorators": ""
     },
     {
-        "url": "/api/v1/gis-ogc/view/<gis_token:gis_token>/collections/<gitsha:collection_id>/items/<str:feature_id>",
+        "url": "/api/v1/gis-ogc/view/<gis_token:gis_token>/collections/<ogc_typed_id:collection_id>/items/<str:feature_id>",
         "module": "speleodb.api.v2.views.gis_view.OGCGISViewSingleFeatureApiView",
         "name": "api:v1:gis-ogc:view-collection-feature",
         "decorators": ""
@@ -1398,13 +1434,13 @@
         "decorators": ""
     },
     {
-        "url": "/api/v2/gis-ogc/experiment/<gis_token:gis_token>/",
+        "url": "/api/v2/gis-ogc/experiment/<gis_token:gis_token>",
         "module": "speleodb.api.v2.views.experiment.ExperimentGISApiView",
         "name": "api:v2:gis-ogc:experiment",
         "decorators": ""
     },
     {
-        "url": "/api/v2/gis-ogc/landmark-collection/<gis_token:gis_token>/",
+        "url": "/api/v2/gis-ogc/landmark-collection/<gis_token:gis_token>",
         "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionOGCLandingPageApiView",
         "name": "api:v2:gis-ogc:landmark-collection-landing",
         "decorators": ""
@@ -1440,7 +1476,7 @@
         "decorators": ""
     },
     {
-        "url": "/api/v2/gis-ogc/landmark-collections/user/<user_token:key>/",
+        "url": "/api/v2/gis-ogc/landmark-collections/user/<user_token:key>",
         "module": "speleodb.api.v2.views.landmark_collection_ogc.LandmarkCollectionUserOGCLandingPageApiView",
         "name": "api:v2:gis-ogc:landmark-collections-user-landing",
         "decorators": ""
@@ -1482,7 +1518,7 @@
         "decorators": ""
     },
     {
-        "url": "/api/v2/gis-ogc/user/<user_token:key>/",
+        "url": "/api/v2/gis-ogc/user/<user_token:key>",
         "module": "speleodb.api.v2.views.project_geojson.OGCGISUserLandingPageApiView",
         "name": "api:v2:gis-ogc:user-landing",
         "decorators": ""
@@ -1495,18 +1531,36 @@
     },
     {
         "url": "/api/v2/gis-ogc/user/<user_token:key>/collections/<gitsha:collection_id>",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v2:gis-ogc:user-collection-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/user/<user_token:key>/collections/<gitsha:collection_id>/items",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v2:gis-ogc:user-collection-items-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/user/<user_token:key>/collections/<gitsha:collection_id>/items/<str:feature_id>",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v2:gis-ogc:user-collection-feature-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/user/<user_token:key>/collections/<ogc_typed_id:collection_id>",
         "module": "speleodb.api.v2.views.project_geojson.OGCGISUserCollectionApiView",
         "name": "api:v2:gis-ogc:user-collection",
         "decorators": ""
     },
     {
-        "url": "/api/v2/gis-ogc/user/<user_token:key>/collections/<gitsha:collection_id>/items",
+        "url": "/api/v2/gis-ogc/user/<user_token:key>/collections/<ogc_typed_id:collection_id>/items",
         "module": "speleodb.api.v2.views.project_geojson.OGCGISUserCollectionItemsApiView",
         "name": "api:v2:gis-ogc:user-collection-items",
         "decorators": ""
     },
     {
-        "url": "/api/v2/gis-ogc/user/<user_token:key>/collections/<gitsha:collection_id>/items/<str:feature_id>",
+        "url": "/api/v2/gis-ogc/user/<user_token:key>/collections/<ogc_typed_id:collection_id>/items/<str:feature_id>",
         "module": "speleodb.api.v2.views.project_geojson.OGCGISUserSingleFeatureApiView",
         "name": "api:v2:gis-ogc:user-collection-feature",
         "decorators": ""
@@ -1518,7 +1572,7 @@
         "decorators": ""
     },
     {
-        "url": "/api/v2/gis-ogc/view/<gis_token:gis_token>/",
+        "url": "/api/v2/gis-ogc/view/<gis_token:gis_token>",
         "module": "speleodb.api.v2.views.gis_view.OGCGISViewLandingPageApiView",
         "name": "api:v2:gis-ogc:view-landing",
         "decorators": ""
@@ -1531,18 +1585,36 @@
     },
     {
         "url": "/api/v2/gis-ogc/view/<gis_token:gis_token>/collections/<gitsha:collection_id>",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v2:gis-ogc:view-collection-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/view/<gis_token:gis_token>/collections/<gitsha:collection_id>/items",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v2:gis-ogc:view-collection-items-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/view/<gis_token:gis_token>/collections/<gitsha:collection_id>/items/<str:feature_id>",
+        "module": "speleodb.api.v2.views.ogc_base.OGCLegacyMixedCollectionGoneView",
+        "name": "api:v2:gis-ogc:view-collection-feature-legacy-gone",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-ogc/view/<gis_token:gis_token>/collections/<ogc_typed_id:collection_id>",
         "module": "speleodb.api.v2.views.gis_view.OGCGISViewCollectionApiView",
         "name": "api:v2:gis-ogc:view-collection",
         "decorators": ""
     },
     {
-        "url": "/api/v2/gis-ogc/view/<gis_token:gis_token>/collections/<gitsha:collection_id>/items",
+        "url": "/api/v2/gis-ogc/view/<gis_token:gis_token>/collections/<ogc_typed_id:collection_id>/items",
         "module": "speleodb.api.v2.views.gis_view.OGCGISViewCollectionItemsApiView",
         "name": "api:v2:gis-ogc:view-collection-items",
         "decorators": ""
     },
     {
-        "url": "/api/v2/gis-ogc/view/<gis_token:gis_token>/collections/<gitsha:collection_id>/items/<str:feature_id>",
+        "url": "/api/v2/gis-ogc/view/<gis_token:gis_token>/collections/<ogc_typed_id:collection_id>/items/<str:feature_id>",
         "module": "speleodb.api.v2.views.gis_view.OGCGISViewSingleFeatureApiView",
         "name": "api:v2:gis-ogc:view-collection-feature",
         "decorators": ""

@@ -27,6 +27,7 @@ existing URL configurations during the migration.
 from __future__ import annotations
 
 import abc
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import Any
@@ -34,14 +35,18 @@ from typing import ClassVar
 
 import orjson
 from django.http import Http404
+from django.http import HttpResponse
 from django.http import HttpResponseNotModified
 from django.http import StreamingHttpResponse
 from django.utils.functional import cached_property
 from rest_framework import permissions
+from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.renderers import BaseRenderer
 from rest_framework.renderers import JSONRenderer
 
+from speleodb.gis.ogc_helpers import GEOMETRY_GROUPS_ORDERED
+from speleodb.gis.ogc_helpers import absolute_url
 from speleodb.gis.ogc_helpers import apply_ogc_query
 from speleodb.gis.ogc_helpers import build_collection_metadata
 from speleodb.gis.ogc_helpers import build_collections_response
@@ -514,7 +519,7 @@ class OGCOpenAPIView(GenericAPIView, SDBAPIViewMixin):  # type: ignore[type-arg]
     schema = None
     permission_classes = [permissions.AllowAny]
     # No DB lookup is performed — see ``get_object`` override below.
-    queryset = None  # type: ignore[assignment]
+    queryset = None
     # The view returns a ``StreamingHttpResponse`` directly; no DRF
     # rendering happens. We keep both renderers so DRF's content
     # negotiation accepts ``Accept: application/vnd.oai.openapi+json``,
@@ -525,7 +530,7 @@ class OGCOpenAPIView(GenericAPIView, SDBAPIViewMixin):  # type: ignore[type-arg]
     # The view does not consult the queryset at all — no model is being
     # looked up. Override ``get_object`` to be a no-op so DRF doesn't
     # try to evaluate ``self.queryset``.
-    def get_object(self) -> None:  # type: ignore[override]
+    def get_object(self) -> None:
         return None
 
     def get(
@@ -548,3 +553,145 @@ class OGCOpenAPIView(GenericAPIView, SDBAPIViewMixin):  # type: ignore[type-arg]
         response["Cache-Control"] = OGC_OPENAPI_CACHE_CONTROL
         response["Content-Disposition"] = "inline"
         return response
+
+
+# ---------------------------------------------------------------------------
+# Legacy mixed-collection 410 Gone view (geometry-typed split migration)
+# ---------------------------------------------------------------------------
+
+
+# OGC project per-commit collections used to be mixed-geometry under
+# ``<sha>``. They were split per geometry group (see
+# ``speleodb/gis/ogc_helpers.py`` / ``GEOMETRY_GROUPS``) so each
+# OGC collection becomes a single-geometry GIS layer (the universal
+# QGIS / ArcGIS Pro expectation). Requests to the old ``<sha>`` form
+# return ``410 Gone`` with a ``Link: rel="alternate"`` header pointing
+# at the geometry-typed replacements so existing clients see an
+# explicit migration signal instead of a silent empty layer.
+#
+# The view is family-agnostic: the replacement URLs are computed from
+# the request path itself by inserting ``_<group>`` after the SHA, so
+# the same view serves the project-view (``/view/<token>/...``) and
+# user-token (``/user/<key>/...``) families. Landmark families are
+# unaffected — their data is Point-only by construction and never went
+# through the mixed-collection era.
+# The body is what most GIS clients (QGIS / ArcGIS Pro) display to
+# the human user when they hit a 410. It must therefore READ LIKE A
+# USER MESSAGE, not a developer note: "what do I do now?" rather than
+# "what HTTP semantic was violated?". The Link header carries the
+# machine-readable migration target for clients that follow it.
+_LEGACY_GONE_BODY: bytes = orjson.dumps(
+    {
+        "title": (
+            "This layer has been replaced "
+            "\u2014 please re-add it from your OGC connection"
+        ),
+        "status": status.HTTP_410_GONE,
+        "detail": (
+            "This SpeleoDB project layer used to combine point stations "
+            "and line passages in a single OGC collection. To match how "
+            "QGIS and ArcGIS Pro handle geometry types (one collection "
+            "= one layer = one geometry type), each project is now "
+            "exposed as up to two separate collections: "
+            "'<commit-sha>_points' for stations and "
+            "'<commit-sha>_lines' for passages. "
+            "Action required: in your GIS client, REMOVE this layer "
+            "and re-add it from the same OGC server connection \u2014 "
+            "the collections list now shows the new '_points' and "
+            "'_lines' layers in its place. The exact replacement URLs "
+            "for this specific layer are in the response 'Link' "
+            'header (rel="alternate"). See '
+            "docs/map-viewer/ogc-url-and-geometry-contract.md for the "
+            "full migration guide."
+        ),
+        "type": "https://docs.ogc.org/is/17-069r4/17-069r4.html",
+    }
+)
+
+# Splits ``<base>/collections/<sha>[<rest>]`` so the legacy URL can be
+# rewritten to ``<base>/collections/<sha>_<group>[<rest>]``. The regex
+# is anchored to the ``/collections/<sha>`` segment that the URL
+# converter already validated, so unexpected shapes (none observed in
+# practice) yield an empty Link header rather than a malformed one.
+_LEGACY_GONE_LEADING_SHA_RE: re.Pattern[str] = re.compile(
+    r"/collections/(?P<sha>[0-9a-fA-F]{6,40})(?P<rest>(?:/items.*)?)$",
+)
+
+
+class OGCLegacyMixedCollectionGoneView(GenericAPIView, SDBAPIViewMixin):  # type: ignore[type-arg]
+    """410 Gone response for the pre-split ``<sha>`` collection URL.
+
+    Built as a small standalone view (not an ``OGCFeatureService``
+    subclass) because:
+
+    * it never reads from S3 or the DB beyond the URL-routing layer's
+      regex enforcement (the ``<gitsha:>`` converter already validated
+      the SHA shape);
+    * it returns the same structured 410 body for every family with a
+      ``Link`` header derived from the request URL — Cache-Control is
+      one-line simple (``no-store``: clients should not cache a
+      migration signal across deploys).
+    """
+
+    schema = None
+    permission_classes = [permissions.AllowAny]
+    queryset = None
+
+    def get_object(self) -> None:
+        # No DB lookup — the URL converter regex is the only contract
+        # the legacy form needs to satisfy and the response body does
+        # not depend on the token.
+        return None
+
+    def _replacement_links(self, request: Request) -> list[str]:
+        """Return RFC 5988 ``Link`` header entries for *request*.
+
+        Builds one ``rel=alternate`` link per geometry group. Order
+        matches ``GEOMETRY_GROUPS_ORDERED`` so logs and snapshots
+        round-trip stably.
+        """
+        full_url = absolute_url(request)
+        match = _LEGACY_GONE_LEADING_SHA_RE.search(full_url)
+        if match is None:
+            # The URL converter guaranteed the shape; defensive only.
+            return []
+        sha = match.group("sha").lower()
+        rest = match.group("rest") or ""
+        prefix = full_url[: match.start()]
+        out: list[str] = []
+        for group in GEOMETRY_GROUPS_ORDERED:
+            href = f"{prefix}/collections/{sha}_{group}{rest}"
+            out.append(f'<{href}>; rel="alternate"; type="application/geo+json"')
+        return out
+
+    def _gone_response(self, request: Request) -> HttpResponse:
+        response = HttpResponse(
+            content=_LEGACY_GONE_BODY,
+            content_type="application/json",
+            status=status.HTTP_410_GONE,
+        )
+        link_value = ", ".join(self._replacement_links(request))
+        if link_value:
+            response["Link"] = link_value
+        # 410 is a permanent migration signal — clients should never
+        # cache it across deploys (a future re-introduction of the
+        # mixed form would otherwise stay invisible to any client
+        # holding the cached response).
+        response["Cache-Control"] = "no-store"
+        return response
+
+    def get(
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        return self._gone_response(request)
+
+    def head(
+        self,
+        request: Request,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        return self._gone_response(request)

@@ -131,7 +131,7 @@ on the **staged** endpoint (not local-host):
 4. **Wire-format check on bbox/datetime in pagination links.** From a
    shell with `httpie` or `curl`:
    ```
-   http GET '<staged-host>/api/v2/gis-ogc/view/<token>/collections/<sha>/items?bbox=170,-10,-170,10&limit=2'
+   http GET '<staged-host>/api/v2/gis-ogc/view/<token>/collections/<sha>_lines/items?bbox=170,-10,-170,10&limit=2'
    ```
    Inspect the `links` block in the response for `rel:next` /
    `rel:prev`. The `bbox` and `datetime` parameters MUST contain
@@ -140,7 +140,7 @@ on the **staged** endpoint (not local-host):
    seen to mis-parse the encoded forms on pagination follow-up.
 
 5. **Cold-cache load test.** With Redis flushed, run a 50-RPS load
-   against `/api/v2/gis-ogc/view/<token>/collections/<sha>/items`
+   against `/api/v2/gis-ogc/view/<token>/collections/<sha>_lines/items`
    for 30 seconds. The lock in `_load_normalized_features` keeps S3
    reads bounded; verify CloudWatch S3 GET count stays under ~10
    for the test window.
@@ -149,3 +149,19 @@ Owner of any change in scope: file the artefacts of steps 1-4 in
 the PR description (screenshots / pcap / curl transcript) before
 merge. Skip step 5 only if the change does not touch
 `_load_normalized_features` or its callers.
+
+## Resolved (Apr 27 2026 follow-up)
+
+The two follow-up regressions discovered while shipping this fix —
+the trailing slash on the landing URLs (which broke OGC client URL
+construction) and the mixed-geometry `<sha>` collection (which is
+the same root cause as the original empty-layer bug, but at the
+collection level rather than the feature-id level) — are addressed
+in `tasks/lessons/ogc-trailing-slash-and-geometry-split.md`. Project
+per-commit collections are now split per geometry group
+(`<sha>_points`, `<sha>_lines`); the legacy mixed `<sha>` URL
+returns `410 Gone` with a `Link: rel="alternate"` header pointing
+at the geometry-typed replacements. Regression-killer tests live in
+`speleodb/api/v2/tests/test_ogc_compliance.py::TestOGCURLCanonicalForm`
+and
+`speleodb/api/v2/tests/test_ogc_compliance.py::TestOGCGeometrySplit`.
