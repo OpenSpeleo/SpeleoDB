@@ -37,6 +37,12 @@ jobs:
       REDIS_URL: "redis://redis:6379/0"
       # Dummy Key - Not Used
       DJANGO_SECRET_KEY: "s&=i@9h+)6bge)6!6vhbcx@=#^6nr73&7+6ep-xpbebhi5#)+_"
+      AWS_ACCESS_KEY_ID: "whatever"
+      AWS_SECRET_ACCESS_KEY: "whatever"
+      AWS_S3_REGION_NAME: "whatever"
+      AWS_STORAGE_BUCKET_NAME: "whatever"
+      AWS_S3_CUSTOM_DOMAIN: "whatever"
+      MAPBOX_API_TOKEN: "whatever"
 
     steps:
       - name: Checkout Code Repository
