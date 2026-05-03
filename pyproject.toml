@@ -45,7 +45,7 @@ dependencies = [
     "fastkml[lxml]==1.4.0",  # https://github.com/cleder/fastkml
     "geojson==3.2.0",        # https://github.com/jazzband/geojson
     "gpxpy==1.6.2",          # https://github.com/tkrajina/gpxpy
-    "jsonschema-rs==0.46.1", # https://github.com/Stranger6667/jsonschema
+    "jsonschema-rs==0.46.2", # https://github.com/Stranger6667/jsonschema
     "orjson==3.11.8",        # https://github.com/ijl/orjson
 
     # Speleo Libraries
