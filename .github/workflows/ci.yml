@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   linter:
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     env:
       CELERY_BROKER_URL: "redis://localhost:6379/0"
@@ -69,6 +70,7 @@ jobs:
           DJANGO_DEBUG: True # necessary to collect all URLs
 
   js-tests:
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
 
     steps:
@@ -87,6 +89,7 @@ jobs:
 
   # With no caching at all the entire ci process takes 3m to complete!
   pytest:
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
 
     services:

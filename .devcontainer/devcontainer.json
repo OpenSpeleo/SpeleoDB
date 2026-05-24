@@ -20,15 +20,15 @@
                 "[python]": {
                     "analysis.autoImportCompletions": true,
                     // https://github.com/microsoft/pylance-release/wiki/Pylance-Configuration-Tips
-                    "analysis.languageServerMode": "light",
-                    "analysis.indexing": false,
-                    "analysis.typeCheckingMode": "basic",
+                    // "analysis.languageServerMode": "light",
+                    // "analysis.indexing": false,
+                    // "analysis.typeCheckingMode": "basic",
                     "defaultInterpreterPath": "/usr/local/bin/python",
                     "editor.codeActionsOnSave": {
                         "source.organizeImports": "always"
                     },
                     "editor.defaultFormatter": "charliermarsh.ruff",
-                    "languageServer": "Pylance",
+                    // "languageServer": "Pylance",
                     "linting.enabled": true,
                     "linting.flake8Enabled": true,
                     "linting.mypyEnabled": true,
