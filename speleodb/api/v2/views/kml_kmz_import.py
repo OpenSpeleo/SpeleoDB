@@ -183,7 +183,7 @@ class KML_KMZ_ImportView(GenericAPIView[Project], SDBAPIViewMixin):  # noqa: N80
             with transaction.atomic():
                 for point_data in iter_points(kml):
                     # Skip if Landmark already exists.
-                    _, created = Landmark.objects.get_or_create(
+                    _, created = Landmark.objects.get_or_create(  # type: ignore[misc]
                         latitude=point_data["latitude"],
                         longitude=point_data["longitude"],
                         collection=collection,
