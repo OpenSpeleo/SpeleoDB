@@ -101,7 +101,7 @@ dependencies = [
 local = [
     "werkzeug[watchdog]==3.1.8", # https://github.com/pallets/werkzeug
     "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
-    "psycopg[binary]==3.3.3",    # https://github.com/psycopg/psycopg
+    "psycopg[binary]==3.3.4",    # https://github.com/psycopg/psycopg
 
     # Testing
     # ------------------------------------------------------------------------------
@@ -143,7 +143,7 @@ local = [
 production = [
     "gunicorn==26.0.0", # https://github.com/benoitc/gunicorn
     # "granian==2.5.2",  # https://github.com/emmett-framework/granian
-    "psycopg[c]==3.3.3", # https://github.com/psycopg/psycopg
+    "psycopg[c]==3.3.4", # https://github.com/psycopg/psycopg
 
     # AWS
     # ------------------------------------------------------------------------------
