@@ -122,7 +122,7 @@ def get_compass_sidecar_release_info(
             }
 
     try:
-        response = requests.api.get(  # type: ignore[no-untyped-call]
+        response = requests.api.get(
             latest_json_url,
             timeout=fetch_timeout,
         )

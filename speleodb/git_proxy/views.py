@@ -153,7 +153,7 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
 
             for tentative_id in range(2):
                 data = None if request.method == "GET" else request.body
-                gitlab_response = requests.api.request(  # type: ignore[no-untyped-call]
+                gitlab_response = requests.api.request(
                     method=request.method or "GET",
                     url=target_url,
                     headers=headers,
@@ -174,15 +174,15 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
                     service_name=path,
                 )
 
-            def stream_response() -> Generator[Any]:
+            def stream_response() -> Generator[bytes]:
                 for chunk in gitlab_response.iter_content(chunk_size=8192):
                     _chunk = chunk
                     if b"GitLab" in _chunk:
-                        _chunk = _chunk.decode("iso-8859-1")
-                        _chunk = _chunk.replace("GitLab", "SpeleoDB")
-                        length = int(_chunk[:4], 16)
-                        _chunk = f"{length + 2:04x}{_chunk[4:]}"
-                        _chunk = _chunk.encode("iso-8859-1")
+                        str_chunk = _chunk.decode("iso-8859-1")
+                        str_chunk = str_chunk.replace("GitLab", "SpeleoDB")
+                        length = int(str_chunk[:4], 16)
+                        str_chunk = f"{length + 2:04x}{str_chunk[4:]}"
+                        _chunk = str_chunk.encode("iso-8859-1")
                     yield _chunk
 
             django_response = StreamingHttpResponse(
