@@ -96,7 +96,7 @@ class ExperimentListSerializer(serializers.ListSerializer):  # type: ignore[type
                 experiments = list(data)
                 experiment_ids = [exp.id for exp in experiments]
                 if experiment_ids:
-                    ctx["experiment_levels_by_id"] = dict(
+                    ctx["experiment_levels_by_id"] = dict(  # type: ignore[index]
                         ExperimentUserPermission.objects.filter(
                             user=request.user,
                             experiment_id__in=experiment_ids,
@@ -104,7 +104,7 @@ class ExperimentListSerializer(serializers.ListSerializer):  # type: ignore[type
                         ).values_list("experiment_id", "level")
                     )
                 else:
-                    ctx["experiment_levels_by_id"] = {}
+                    ctx["experiment_levels_by_id"] = {}  # type: ignore[index]
                 data = experiments
         return super().to_representation(data)
 

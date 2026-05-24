@@ -175,7 +175,7 @@ class ExperimentApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
                 experiments.append(experiment)
 
         context = self.get_serializer_context()
-        context["experiment_levels_by_id"] = levels_by_id
+        context["experiment_levels_by_id"] = levels_by_id  # type: ignore[index]
         serializer = self.get_serializer(experiments, many=True, context=context)
 
         return SuccessResponse(serializer.data)

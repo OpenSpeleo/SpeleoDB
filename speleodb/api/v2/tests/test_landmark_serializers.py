@@ -79,7 +79,7 @@ class TestLandmarkSerializer:
             def __init__(self, user: User) -> None:
                 self.user = user
 
-        serializer.context["request"] = MockRequest(user)
+        serializer.context["request"] = MockRequest(user)  # type: ignore[index]
         saved_landmark = serializer.save()
 
         assert saved_landmark.name == "New Landmark"

@@ -50,7 +50,7 @@
                 // python
                 "ms-python.python",
                 // Language Server
-                "ms-python.vscode-pylance",
+                "meta.pyrefly",
                 // Type Checker
                 // "ms-python.mypy-type-checker",  // Very slow, only use when debugging type issues
                 // Linting
