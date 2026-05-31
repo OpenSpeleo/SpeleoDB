@@ -68,7 +68,7 @@ dependencies = [
     "django-environ==0.13.0",          # https://github.com/joke2k/django-environ
     "django-hijack==3.7.8",            # https://github.com/django-hijack/django-hijack/
     "django-import-export==4.4.1",     # https://github.com/django-import-export/django-import-export
-    "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
+    "django-js-reverse==1.0.0",       # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
     "django-polymorphic==4.11.3",      # https://github.com/jazzband/django-polymorphic
     "django-rest-polymorphic==0.1.10", # https://github.com/denisorehovsky/django-rest-polymorphic
