@@ -163,7 +163,7 @@ class UserDashboardStatsView(GenericAPIView[User], SDBAPIViewMixin):
         user: User,
         project_ids: list[uuid.UUID],
     ) -> list[dict[str, Any]]:
-        now = timezone.now()
+        now = timezone.localtime(timezone.now())
         start_date = _first_of_month(now, COMMITS_OVER_TIME_MONTHS - 1)
 
         commit_qs = ProjectCommit.objects.filter(
@@ -171,37 +171,38 @@ class UserDashboardStatsView(GenericAPIView[User], SDBAPIViewMixin):
             authored_date__gte=start_date,
         )
 
-        total_by_month = dict(
+        total_rows = (
             commit_qs.annotate(month=TruncMonth("authored_date"))
             .values("month")
             .annotate(count=Count("id"))
             .values_list("month", "count")
         )
+        total_by_month: dict[str, int] = {
+            month.strftime("%Y-%m"): count for month, count in total_rows
+        }
 
-        user_by_month = dict(
+        user_rows = (
             commit_qs.filter(author_email=user.email)
             .annotate(month=TruncMonth("authored_date"))
             .values("month")
             .annotate(count=Count("id"))
             .values_list("month", "count")
         )
+        user_by_month: dict[str, int] = {
+            month.strftime("%Y-%m"): count for month, count in user_rows
+        }
 
         result: list[dict[str, Any]] = []
         for i in range(COMMITS_OVER_TIME_MONTHS):
             months_back = COMMITS_OVER_TIME_MONTHS - 1 - i
             month_start = _first_of_month(now, months_back)
-
-            month_key = None
-            for key in total_by_month:
-                if key.year == month_start.year and key.month == month_start.month:
-                    month_key = key
-                    break
+            month_key = month_start.strftime("%Y-%m")
 
             result.append(
                 {
-                    "month": month_start.strftime("%Y-%m"),
-                    "total": total_by_month.get(month_key, 0) if month_key else 0,
-                    "user": user_by_month.get(month_key, 0) if month_key else 0,
+                    "month": month_key,
+                    "total": total_by_month.get(month_key, 0),
+                    "user": user_by_month.get(month_key, 0),
                 }
             )
 

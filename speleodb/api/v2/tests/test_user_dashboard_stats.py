@@ -448,20 +448,21 @@ class TestDashboardStatsCommitsOverTime(BaseAPITestCase):
             level=PermissionLevel.ADMIN,
         )
 
-        now = timezone.now()
+        now = timezone.localtime(timezone.now())
+        current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         # 5 commits this month: 3 by user, 2 by other
         for _ in range(3):
             ProjectCommitFactory.create(
                 project=self.project,
                 author_email=self.user.email,
-                authored_date=now - datetime.timedelta(days=1),
+                authored_date=current_month,
             )
         for _ in range(2):
             ProjectCommitFactory.create(
                 project=self.project,
                 author_email=self.other_user.email,
-                authored_date=now - datetime.timedelta(days=2),
+                authored_date=current_month,
             )
 
         # 2 commits 3 months ago
@@ -512,14 +513,14 @@ class TestDashboardStatsCommitsOverTime(BaseAPITestCase):
 
     def test_total_per_month_is_accurate(self) -> None:
         cot = self._get_cot()
-        current_month = timezone.now().strftime("%Y-%m")
+        current_month = timezone.localtime(timezone.now()).strftime("%Y-%m")
         current_entry = [e for e in cot if e["month"] == current_month]
         assert len(current_entry) == 1
         assert current_entry[0]["total"] == 5  # noqa: PLR2004
 
     def test_user_per_month_is_accurate(self) -> None:
         cot = self._get_cot()
-        current_month = timezone.now().strftime("%Y-%m")
+        current_month = timezone.localtime(timezone.now()).strftime("%Y-%m")
         current_entry = [e for e in cot if e["month"] == current_month]
         assert current_entry[0]["user"] == 3  # noqa: PLR2004
 
