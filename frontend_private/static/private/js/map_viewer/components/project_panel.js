@@ -11,6 +11,11 @@ export const ProjectPanel = {
         this._applyInitialCountryVisibility();
     },
 
+    refreshVisibilityState: function() {
+        this.refreshList();
+        this._applyInitialCountryVisibility();
+    },
+
     render: function() {
         if (!document.getElementById('project-panel')) {
             const panelHtml = `

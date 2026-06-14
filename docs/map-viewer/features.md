@@ -11,6 +11,58 @@ read-only, token-authenticated subset.
 
 ---
 
+## Map Source Selection
+
+The public and private viewers share a single base-map source system. Users
+select the base map from the in-map **Map Source** control; the choice is
+persisted in browser `localStorage` under
+`DEFAULTS.STORAGE_KEYS.MAP_SOURCE`.
+
+Supported sources are defined in one registry, `MAP_SOURCES` in
+`frontend_private/static/private/js/map_viewer/config.js`:
+
+- `MapBox - Satellite` uses the existing Mapbox satellite streets style and
+  requires the configured Mapbox token.
+- `ESRI - Satellite` uses the public ESRI World Imagery raster tile endpoint.
+- `ESRI - World Hillshade` uses the public ESRI raster tile endpoint.
+- `ESRI - World Hillshade Dark` uses the public ESRI dark hillshade raster
+  tile endpoint.
+
+The registry order is also the order shown in the selector. When no Mapbox
+token is available, the token-required `MapBox - Satellite` entry is filtered
+out and the first remaining source (`ESRI - Satellite`) becomes the default.
+
+The ESRI hillshade sources use raster provider `maxzoom: 16`; the viewer may
+zoom beyond 16, but Mapbox GL overzooms the zoom-16 ESRI tiles instead of
+requesting ESRI zoom 17+ tiles. ESRI Satellite uses provider `maxzoom: 18`.
+`DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES` is a global missing tile image hash
+list applied systematically to every configured raster source. The Mapbox CDN
+builds currently loaded by SpeleoDB do not expose a documented custom tile
+protocol API, so ESRI raster sources keep their normal provider URLs to avoid
+breaking rendering. `MapCore` installs a JavaScript `fetch` wrapper fallback
+before Mapbox GL is initialized; matching configured raster tile responses
+are hashed and converted to 404 responses when those requests pass through
+page `fetch`.
+
+Provider behavior lives in `map/sources.js`. It validates persisted source
+ids, filters token-required providers when a token is unavailable, builds the
+initial Mapbox style object, and switches ESRI sources by replacing one raster
+tile layer below all SpeleoDB overlays. It does not call `map.setStyle()` for
+ESRI switches, so survey/station/marker layers remain visible.
+
+To add another source, add one `MAP_SOURCES` entry with its id, label, source
+type, tile/style config, attribution, and token requirement. Do not add
+public/private entrypoint-specific provider logic. Raster tile URLs may include
+`{accessToken}` when a future provider needs a token.
+
+Source changes dispatch `speleo:map-source-changed`. ESRI switches set
+`reloadRequired: false`; private and public entrypoints ignore those events
+because the switch is a base-raster replacement, not a full style reset. The
+control icon is the trusted static `MAP_SOURCE_ICON_SVG` constant in
+`map/sources.js`; keep user/API data out of that `innerHTML` path.
+
+---
+
 ## 1. Station Management
 
 ### 1.1 Subsurface Stations

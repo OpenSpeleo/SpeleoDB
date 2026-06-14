@@ -1396,7 +1396,17 @@ export const Layers = {
      */
     loadMarkerImages: async function () {
         const map = State.map;
-        if (!map || markerImagesLoaded) return;
+        if (!map) return;
+
+        const requiredImageIds = [
+            'cylinder-icon',
+            'exploration-lead-icon',
+            'biology-station-icon',
+            'bone-station-icon',
+            'artifact-station-icon',
+            'geology-station-icon',
+        ];
+        if (markerImagesLoaded && requiredImageIds.every(imageId => map.hasImage(imageId))) return;
 
         // Helper to load image using Mapbox's loadImage (handles CORS properly)
         const loadImage = (url) => {

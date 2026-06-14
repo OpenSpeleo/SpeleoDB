@@ -1,11 +1,16 @@
 const stateMock = {
     resetLayerState: vi.fn(),
-    projectBounds: new Map()
+    projectBounds: new Map(),
+    allProjectLayers: new Map(),
+    effectiveProjectVisibility: new Map(),
+    projectDepthDomains: new Map(),
+    activeDepthDomain: null
 };
 
 const mapCoreMock = {
     init: vi.fn(),
-    setupColorModeToggle: vi.fn()
+    setupColorModeToggle: vi.fn(),
+    setupMapSourceControl: vi.fn()
 };
 
 const layersMock = {
@@ -18,11 +23,16 @@ const utilsMock = {
 };
 
 const projectPanelMock = {
-    init: vi.fn()
+    init: vi.fn(),
+    refreshList: vi.fn()
 };
 
 const depthLegendMock = {
     init: vi.fn()
+};
+
+const mapSourcesMock = {
+    requiresDataReload: vi.fn(),
 };
 
 const configMock = {
@@ -47,6 +57,10 @@ vi.mock('../../../frontend_private/static/private/js/map_viewer/state.js', () =>
 
 vi.mock('../../../frontend_private/static/private/js/map_viewer/map/core.js', () => ({
     MapCore: mapCoreMock
+}));
+
+vi.mock('../../../frontend_private/static/private/js/map_viewer/map/sources.js', () => ({
+    MapSources: mapSourcesMock
 }));
 
 vi.mock('../../../frontend_private/static/private/js/map_viewer/map/layers.js', () => ({
@@ -124,9 +138,14 @@ describe('frontend_public gis_view_main', () => {
         mapMock = mapSetup.map;
         mapHandlers = mapSetup.handlers;
         mapCoreMock.init.mockReturnValue(mapMock);
+        mapSourcesMock.requiresDataReload.mockReturnValue(true);
         layersMock.addProjectGeoJSON.mockResolvedValue(undefined);
 
         stateMock.projectBounds = new Map();
+        stateMock.allProjectLayers = new Map();
+        stateMock.effectiveProjectVisibility = new Map();
+        stateMock.projectDepthDomains = new Map();
+        stateMock.activeDepthDomain = null;
         configMock._projects = null;
 
         document.body.innerHTML = `
@@ -181,14 +200,15 @@ describe('frontend_public gis_view_main', () => {
         expect(depthLegendMock.init).not.toHaveBeenCalled();
     });
 
-    it('shows map configuration notification when token is missing', async () => {
+    it('initializes with an empty token so tokenless map sources can render', async () => {
         window.MAPVIEWER_CONTEXT = { viewMode: 'public', gisToken: 'abc', mapboxToken: '' };
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
         await onDomReady();
 
-        expect(utilsMock.showNotification).toHaveBeenCalledWith('error', 'Map configuration missing');
-        expect(mapCoreMock.init).not.toHaveBeenCalled();
+        expect(utilsMock.showNotification).not.toHaveBeenCalledWith('error', 'Map configuration missing');
+        expect(mapCoreMock.init).toHaveBeenCalledWith('', 'map');
+        expect(mapCoreMock.setupMapSourceControl).toHaveBeenCalledWith(mapMock, '');
     });
 
     it('initializes public viewer, loads projects, and wires shared depth legend', async () => {
@@ -219,6 +239,7 @@ describe('frontend_public gis_view_main', () => {
         expect(mapMock.setMaxZoom).toHaveBeenCalledWith(13);
         expect(depthLegendMock.init).toHaveBeenCalledWith(mapMock);
         expect(mapCoreMock.setupColorModeToggle).toHaveBeenCalledWith(mapMock);
+        expect(mapCoreMock.setupMapSourceControl).toHaveBeenCalledWith(mapMock, 'mapbox-token');
         expect(mapHandlers.load).toBeTypeOf('function');
 
         await mapHandlers.load();
@@ -347,5 +368,85 @@ describe('frontend_public gis_view_main', () => {
         expect(layersMock.addProjectGeoJSON).not.toHaveBeenCalled();
         expect(layersMock.reorderLayers).not.toHaveBeenCalled();
     });
-});
 
+    it('ignores non-destructive public map source changes', async () => {
+        window.MAPVIEWER_CONTEXT = {
+            viewMode: 'public',
+            gisToken: 'public-token',
+            mapboxToken: 'mapbox-token'
+        };
+        mapSourcesMock.requiresDataReload.mockReturnValue(false);
+
+        globalThis.fetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                view_name: 'Public View',
+                projects: [
+                    { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' }
+                ]
+            })
+        });
+
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+        await mapHandlers.load();
+
+        stateMock.allProjectLayers = new Map([['p1', ['project-layer-p1']]]);
+        layersMock.addProjectGeoJSON.mockClear();
+        layersMock.reorderLayers.mockClear();
+        projectPanelMock.refreshList.mockClear();
+        globalThis.fetch.mockClear();
+
+        window.dispatchEvent(new CustomEvent('speleo:map-source-changed', {
+            detail: { sourceId: 'esri-world-hillshade', reloadRequired: false }
+        }));
+
+        await Promise.resolve();
+
+        expect(layersMock.addProjectGeoJSON).not.toHaveBeenCalled();
+        expect(layersMock.reorderLayers).not.toHaveBeenCalled();
+        expect(projectPanelMock.refreshList).not.toHaveBeenCalled();
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+        expect(stateMock.allProjectLayers).toEqual(new Map([['p1', ['project-layer-p1']]]));
+    });
+
+    it('reloads existing public project layers only when a source event requires it', async () => {
+        window.MAPVIEWER_CONTEXT = {
+            viewMode: 'public',
+            gisToken: 'public-token',
+            mapboxToken: 'mapbox-token'
+        };
+
+        globalThis.fetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                view_name: 'Public View',
+                projects: [
+                    { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' }
+                ]
+            })
+        });
+
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+        await mapHandlers.load();
+
+        stateMock.allProjectLayers = new Map([['p1', ['project-layer-p1']]]);
+        layersMock.addProjectGeoJSON.mockClear();
+        layersMock.reorderLayers.mockClear();
+        projectPanelMock.refreshList.mockClear();
+        globalThis.fetch.mockClear();
+
+        window.dispatchEvent(new CustomEvent('speleo:map-source-changed', {
+            detail: { sourceId: 'future-destructive-source', reloadRequired: true }
+        }));
+
+        await vi.waitFor(() => {
+            expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/g1.geojson');
+            expect(layersMock.reorderLayers).toHaveBeenCalled();
+        });
+        expect(projectPanelMock.refreshList).toHaveBeenCalled();
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+        expect(stateMock.allProjectLayers.size).toBe(0);
+    });
+});

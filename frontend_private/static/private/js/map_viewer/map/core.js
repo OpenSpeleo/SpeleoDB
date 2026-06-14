@@ -1,14 +1,18 @@
-import { Config, DEFAULTS } from '../config.js';
+import { DEFAULTS } from '../config.js';
 import { State } from '../state.js';
 import { Layers } from './layers.js';
+import { MapSources } from './sources.js';
 
 export const MapCore = {
     init: function (accessToken, containerId = 'map') {
         mapboxgl.accessToken = accessToken;
+        MapSources.installCheckedTileProtocol();
+        MapSources.installCheckedTileFetch();
+        const sourceId = MapSources.getCurrentMapSourceId(accessToken);
 
         const map = new mapboxgl.Map({
             container: containerId,
-            style: DEFAULTS.MAP.STYLE,
+            style: MapSources.buildInitialMapStyle(sourceId, accessToken),
             center: DEFAULTS.MAP.CENTER,
             zoom: DEFAULTS.MAP.INITIAL_ZOOM,
             projection: 'globe',
@@ -29,28 +33,34 @@ export const MapCore = {
         this.setupMapHeight(map);
 
         map.on('load', () => {
-            // Hide street-level labels while keeping city/place names (matching old implementation)
-            const labelsToHide = [
-                'road-label', 'road-number-shield', 'road-exit-shield', 'landmark-label',
-                'airport-label', 'rail-label', 'water-point-label', 'natural-point-label',
-                'transit-label', 'road-crossing', 'road-label-simple', 'road-label-large',
-                'road-label-medium', 'road-label-small', 'bridge-case-label', 'bridge-label',
-                'tunnel-label', 'ferry-label', 'pedestrian-label', 'aerialway-label',
-                'building-label', 'housenum-label'
-            ];
-
-            labelsToHide.forEach(layerId => {
-                try {
-                    if (map.getLayer(layerId)) {
-                        map.setLayoutProperty(layerId, 'visibility', 'none');
-                    }
-                } catch (e) {
-                    // Layer might not exist in this style
-                }
-            });
+            this.hideStreetLevelLabels(map);
+            MapSources.applyInitialMapSource(map, sourceId, accessToken);
         });
+        map.on('style.load', () => this.hideStreetLevelLabels(map));
 
         return map;
+    },
+
+    hideStreetLevelLabels: function (map) {
+        // Hide street-level labels while keeping city/place names (matching old implementation)
+        const labelsToHide = [
+            'road-label', 'road-number-shield', 'road-exit-shield', 'landmark-label',
+            'airport-label', 'rail-label', 'water-point-label', 'natural-point-label',
+            'transit-label', 'road-crossing', 'road-label-simple', 'road-label-large',
+            'road-label-medium', 'road-label-small', 'bridge-case-label', 'bridge-label',
+            'tunnel-label', 'ferry-label', 'pedestrian-label', 'aerialway-label',
+            'building-label', 'housenum-label'
+        ];
+
+        labelsToHide.forEach(layerId => {
+            try {
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', 'none');
+                }
+            } catch (e) {
+                // Layer might not exist in this style
+            }
+        });
     },
 
     setupMapHeight: function (map) {
@@ -88,7 +98,9 @@ export const MapCore = {
             // Dispatch event for other listeners
             window.dispatchEvent(new CustomEvent('speleo:color-mode-changed', { detail: { mode: isDepthMode ? 'depth' : 'project' } }));
         });
+    },
+
+    setupMapSourceControl: function (map, accessToken) {
+        MapSources.renderControl(map, accessToken);
     }
 };
-
-

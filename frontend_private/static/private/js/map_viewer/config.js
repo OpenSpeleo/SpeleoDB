@@ -7,6 +7,8 @@ import { API } from './api.js';
 export const DEFAULTS = Object.freeze({
     MAP: {
         STYLE: 'mapbox://styles/mapbox/satellite-streets-v12',
+        DEFAULT_SOURCE_ID: 'mapbox-satellite',
+        RASTER_GLYPHS: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
         CENTER: [0, 0],
         INITIAL_ZOOM: 0,
         LIMITED_MAX_ZOOM: 13,
@@ -16,6 +18,9 @@ export const DEFAULTS = Object.freeze({
         FIT_BOUNDS_MAX_ZOOM: 16,
         SCALE_CONTROL_MAX_WIDTH: 200,
         RESIZE_DELAY_MS: 100,
+        MISSING_TILE_SHA256_HASHES: Object.freeze([
+            '9eafd300d61393184a4abc1d458564cfd1cd9b6f9c4e9c74687045c0a0e5b858',
+        ]),
     },
 
     ZOOM_LEVELS: {
@@ -79,9 +84,56 @@ export const DEFAULTS = Object.freeze({
         NETWORK_VISIBILITY: 'speleo_network_visibility',
         COUNTRY_COLLAPSED: 'speleo_country_collapsed',
         COUNTRY_VISIBILITY: 'speleo_country_visibility',
+        MAP_SOURCE: 'speleo_map_source',
         PROJECTS_COUNTRY_COLLAPSED: 'speleo_projects_collapsed_countries', // used by projects.html inline JS
     },
 });
+
+export const MAP_SOURCES = Object.freeze([
+    Object.freeze({
+        id: 'mapbox-satellite',
+        label: 'MapBox - Satellite',
+        type: 'mapbox-style',
+        style: DEFAULTS.MAP.STYLE,
+        requiresToken: true,
+    }),
+    Object.freeze({
+        id: 'esri-satellite',
+        label: 'ESRI - Satellite',
+        type: 'raster',
+        tiles: [
+            'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+        ],
+        tileSize: 256,
+        maxzoom: 18,
+        attribution: 'Sources: Esri, USGS, NOAA',
+        requiresToken: false,
+    }),
+    Object.freeze({
+        id: 'esri-world-hillshade',
+        label: 'ESRI - World Hillshade',
+        type: 'raster',
+        tiles: [
+            'https://services.arcgisonline.com/arcgis/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}'
+        ],
+        tileSize: 256,
+        maxzoom: 16,
+        attribution: 'Sources: Esri, USGS, NOAA',
+        requiresToken: false,
+    }),
+    Object.freeze({
+        id: 'esri-world-hillshade-dark',
+        label: 'ESRI - World Hillshade Dark',
+        type: 'raster',
+        tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade_Dark/MapServer/tile/{z}/{y}/{x}'
+        ],
+        tileSize: 256,
+        maxzoom: 16,
+        attribution: 'Sources: Esri, USGS, NOAA',
+        requiresToken: false,
+    }),
+]);
 
 const PermissionAction = Object.freeze({
     READ: 'read',

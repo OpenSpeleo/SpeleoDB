@@ -180,6 +180,92 @@ input[type="number"] {
     /* sky-600 and sky-400 with opacity */
 }
 
+/* Shared Mapbox control for base map selection. */
+.map-source-control {
+    position: relative;
+}
+
+.mapboxgl-ctrl-group button.map-source-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: none;
+    color: #111827;
+}
+
+.map-source-button svg {
+    width: 18px;
+    height: 18px;
+}
+
+.mapboxgl-ctrl-attrib {
+    background-color: #ffffff !important;
+    border: 1px solid #64748b;
+    color: #111827 !important;
+    opacity: 1;
+}
+
+.mapboxgl-ctrl-attrib a {
+    color: #111827 !important;
+}
+
+.map-source-menu {
+    position: absolute;
+    top: 33px;
+    right: 0;
+    min-width: 210px;
+    max-width: min(260px, calc(100vw - 20px));
+    padding: 5px;
+    background: #ffffff;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    color: #111827;
+}
+
+.map-source-menu-title {
+    padding: 5px 7px 4px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.map-source-option {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 7px;
+    border-radius: 3px;
+    color: #111827;
+    font-size: 13px;
+    line-height: 1.2;
+    cursor: pointer;
+    white-space: normal;
+}
+
+.map-source-option input {
+    flex: 0 0 auto;
+    margin: 0;
+    accent-color: #2563eb;
+}
+
+.map-source-option span {
+    min-width: 0;
+}
+
+.map-source-option:hover,
+.map-source-option.active {
+    background: #f3f4f6;
+}
+
+@media (max-width: 640px) {
+    .map-source-menu {
+        min-width: 190px;
+    }
+}
+
 /* Enhanced project button styling */
 .project-button {
     display: flex;

@@ -14,6 +14,7 @@
 
 import { State } from '../../../frontend_private/static/private/js/map_viewer/state.js';
 import { MapCore } from '../../../frontend_private/static/private/js/map_viewer/map/core.js';
+import { MapSources } from '../../../frontend_private/static/private/js/map_viewer/map/sources.js';
 import { Layers } from '../../../frontend_private/static/private/js/map_viewer/map/layers.js';
 import { Utils } from '../../../frontend_private/static/private/js/map_viewer/utils.js';
 import { ProjectPanel } from '../../../frontend_private/static/private/js/map_viewer/components/project_panel.js';
@@ -38,11 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 2. Initialize Map
     const token = context.mapboxToken || '';
-    if (!token) {
-        console.error('❌ Mapbox token not found');
-        Utils.showNotification('error', 'Map configuration missing');
-        return;
-    }
 
     // Limit max zoom to 12 if precise zoom is not allowed
     const allowPreciseZoom = context.allowPreciseZoom !== false;
@@ -69,37 +65,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Update map height on window resize
     window.addEventListener('resize', setMapHeight);
 
-    // 3. Load Data when map is ready
-    map.on('load', async () => {
-        console.log('🔄 Fetching GIS View GeoJSON data...');
+    function clearRenderedMapState() {
+        State.effectiveProjectVisibility = new Map();
+        State.allProjectLayers = new Map();
+        State.projectDepthDomains = new Map();
+        State.activeDepthDomain = null;
+        State.projectBounds = new Map();
+    }
+
+    async function fetchPublicViewData() {
+        const response = await fetch(Urls['api:v2:gis-ogc:view-geojson'](context.gisToken));
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const viewData = await response.json();
+
+        if (!viewData || typeof viewData !== 'object') {
+            throw new Error('Invalid API response');
+        }
+
+        return viewData;
+    }
+
+    async function loadPublicMapData(options = {}) {
+        const {
+            fetchProjects = false,
+            fitCamera = false,
+            hideOverlay = false,
+        } = options;
 
         try {
-            // Fetch GeoJSON URLs from public API
-            const response = await fetch(Urls['api:v2:gis-ogc:view-geojson'](context.gisToken));
+            let projects = Config.projects;
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            if (fetchProjects || projects.length === 0) {
+                console.log('🔄 Fetching GIS View GeoJSON data...');
+                const viewData = await fetchPublicViewData();
+                projects = viewData.projects || [];
+
+                console.log(`✅ Received ${projects.length} projects from GIS View "${viewData.view_name}"`);
+
+                Config.setPublicProjects(projects.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    color: p.color,
+                    geojson_file: p.geojson_file,
+                })));
+                projects = Config.projects;
+
+                // Initialize Project Panel (shows projects from the view)
+                ProjectPanel.init();
+            } else {
+                ProjectPanel.refreshList();
             }
-
-            const viewData = await response.json();
-
-            if (!viewData || typeof viewData !== 'object') {
-                throw new Error('Invalid API response');
-            }
-
-            const projects = viewData.projects || [];
-
-            console.log(`✅ Received ${projects.length} projects from GIS View "${viewData.view_name}"`);
-
-            Config.setPublicProjects(projects.map(p => ({
-                id: p.id,
-                name: p.name,
-                color: p.color,
-                geojson_file: p.geojson_file,
-            })));
-
-            // Initialize Project Panel (shows projects from the view)
-            ProjectPanel.init();
 
             // Load GeoJSON for each project
             const loadPromises = Config.projects.map(async (project) => {
@@ -121,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             Layers.reorderLayers();
 
             // Auto-zoom to fit all project bounds
-            if (State.projectBounds.size > 0) {
+            if (fitCamera && State.projectBounds.size > 0) {
                 const allBounds = new mapboxgl.LngLatBounds();
                 State.projectBounds.forEach(bounds => {
                     allBounds.extend(bounds);
@@ -140,15 +159,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             Utils.showNotification('error', 'Failed to load map data');
         }
 
-        // Hide Loading Overlay
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) {
-            overlay.classList.add('opacity-0', 'pointer-events-none');
-            setTimeout(() => overlay.remove(), DEFAULTS.UI.OVERLAY_FADE_DELAY_MS);
+        if (hideOverlay) {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => overlay.remove(), DEFAULTS.UI.OVERLAY_FADE_DELAY_MS);
+            }
         }
+    }
+
+    // 3. Load Data when map is ready
+    map.on('load', async () => {
+        await loadPublicMapData({ fetchProjects: true, fitCamera: true, hideOverlay: true });
+    });
+
+    window.addEventListener('speleo:map-source-changed', async (event) => {
+        if (!MapSources.requiresDataReload(event)) return;
+        clearRenderedMapState();
+        await loadPublicMapData();
     });
 
     // 4. Setup Color Mode Toggle
     MapCore.setupColorModeToggle(map);
+    MapCore.setupMapSourceControl(map, token);
 });
-

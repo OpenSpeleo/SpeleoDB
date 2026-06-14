@@ -131,7 +131,7 @@ flowchart TD
 | Permission-gated actions | Yes | No (all read-only) |
 
 **Shared modules used by public viewer:**
-`State`, `Config`, `MapCore`, `Layers`, `Utils`, `ProjectPanel`, `DepthLegend`
+`State`, `Config`, `MapCore`, `MapSources`, `Layers`, `Utils`, `ProjectPanel`, `DepthLegend`
 
 ---
 
@@ -148,10 +148,11 @@ DOMContentLoaded
 ├─ 2. Config.loadNetworks()                 Fetch surface network list from API
 ├─ 2. Config.loadGPSTracks()                Fetch GPS track metadata from API
 │
-├─ 3. MapCore.init(token, 'map')            Create Mapbox GL map instance
+├─ 3. MapCore.init(token, 'map')            Create Mapbox GL map instance from selected Map Source
 │     └─ State.map = map                    Store reference in State
 │     └─ Hide street-level labels
 │     └─ Add navigation/fullscreen/scale controls
+│     └─ Map Source comes from localStorage or DEFAULTS.MAP.DEFAULT_SOURCE_ID
 │
 ├─ 4. Interactions.init(map, handlers)      Wire click, hover, drag, context-menu
 │
@@ -202,6 +203,7 @@ DOMContentLoaded
 ├─ 1. Validate context (viewMode === 'public', gisToken present)
 ├─ 2. State.resetLayerState()
 ├─ 3. MapCore.init(token, 'map') + set maxZoom
+│     └─ Map Source comes from the shared registry used by private viewer
 ├─ 4. DepthLegend.init(map)
 │
 └─ map.on('load')
@@ -299,7 +301,7 @@ All Mapbox sources and layers follow consistent naming:
 
 `Layers.reorderLayers()` enforces this stacking order (bottom to top):
 
-1. Mapbox base tiles (satellite imagery)
+1. Selected base tiles from the Map Source registry
 2. Project survey lines (`project-layer-*`)
 3. Project labels + entry points
 4. GPS track lines (`gps-track-line-*`)
@@ -320,6 +322,40 @@ All Mapbox sources and layers follow consistent naming:
 - **Visibility**: Toggled via `map.setLayoutProperty(layerId, 'visibility', ...)`
   through centralized `applyProjectVisibility()` / `applyProjectScopedMarkerVisibility()`.
 - **Refresh**: Full re-fetch + re-render triggered by `speleo:refresh-*` events.
+- **Base map source changes**: `MapSources.applyMapSource()` persists the selected
+  source and switches ESRI sources by replacing one `speleo-base-raster-layer`
+  below the first SpeleoDB overlay layer. It hides/restores underlying Mapbox
+  base-style layers so only one visible base tile source is active while
+  survey/station/marker layers stay untouched above it. Non-destructive source
+  changes emit `reloadRequired: false`, and both entrypoints ignore those
+  events instead of rebuilding overlays.
+
+### Map Sources
+
+Base map providers are defined once in `MAP_SOURCES` in `config.js`.
+Each entry declares its id, label, style/tile URL, source type, attribution,
+and whether it needs a token. `MapSources` resolves the selected source from
+`DEFAULTS.STORAGE_KEYS.MAP_SOURCE`, filters token-required providers when no
+token is available, and builds either a Mapbox style URL or a raster style
+object for tile APIs. Raster tile URLs may include `{accessToken}` for future
+tokenized providers; ESRI hillshade sources do not need a token. ESRI
+hillshade raster sources use provider `maxzoom: 16`: the map can still zoom
+beyond 16, but Mapbox GL overzooms zoom-16 ESRI tiles instead of requesting
+ESRI zoom 17+ tiles, which showed unavailable-data imagery in Mexico testing.
+ESRI Satellite uses the public World Imagery raster endpoint with provider
+`maxzoom: 18`. `DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES` is a global missing
+tile image hash list applied systematically to every configured raster source,
+not a per-provider opt-in. Matching tile responses are rejected by JavaScript
+when the viewer can inspect the image bytes. The Mapbox CDN builds currently
+loaded by SpeleoDB do not expose a documented custom tile protocol API, so ESRI
+raster sources keep their normal provider URLs to avoid breaking rendering.
+`MapCore.init()` installs a JavaScript `fetch` wrapper fallback that hashes
+matching configured raster tile responses when those requests pass through page
+`fetch`. Tile validation is implemented in browser JavaScript, not in Python.
+
+The control icon uses `MAP_SOURCE_ICON_SVG` in `map/sources.js`. That SVG is
+inserted with `innerHTML` only as trusted static markup so the user can replace
+the icon manually. Do not interpolate user or API data into that constant.
 
 ### Zoom-Level Visibility
 
@@ -359,6 +395,7 @@ modules. All are dispatched on `window` unless noted.
 | Event | Payload | Purpose |
 |---|---|---|
 | `speleo:color-mode-changed` | `{ mode: 'project'\|'depth' }` | Dispatched by `MapCore.setupColorModeToggle()` when user toggles color mode |
+| `speleo:map-source-changed` | `{ sourceId, reloadRequired: boolean }` | Dispatched by `MapSources.applyMapSource()`; ESRI switches use `reloadRequired: false` and do not rebuild overlays |
 | `speleo:depth-domain-updated` | `{ domain, available, max }` | Dispatched by `Layers.emitDepthDomainUpdated()` when merged depth domain changes |
 | `speleo:depth-data-updated` | `{ domain, available, max }` | Legacy alias of `depth-domain-updated` |
 | `speleo:gps-track-loading-changed` | `{ trackId, isLoading }` | Dispatched by `Layers.setGPSTrackLoading()` for UI spinner updates |

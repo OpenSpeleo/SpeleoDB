@@ -23,7 +23,7 @@ item and the header user dropdown.
 | Landmarks | User's personal `LandmarkCollection` | Collection-scoped count |
 | GPS Tracks | `user.gps_tracks` | FK-based count |
 | Projects by Level | `user.permissions` | Breakdown by ADMIN / READ_AND_WRITE / READ_ONLY |
-| Commits Over Time | `ProjectCommit` | TruncMonth aggregation, 12-month window, total vs user |
+| Commits Over Time | `ProjectCommit` | TruncMonth aggregation in Django's configured local timezone, 12-month window, total vs user |
 | Contribution Calendar | `ProjectCommit` | Raw per-commit ISO timestamps for user, last 365 days (client groups by local date) |
 | Recent Activity | `ProjectCommit` | Last 15 commits across all accessible projects |
 

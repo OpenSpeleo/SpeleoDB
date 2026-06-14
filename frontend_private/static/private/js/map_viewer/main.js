@@ -1,6 +1,7 @@
 import { Config, DEFAULTS } from './config.js';
 import { State } from './state.js';
 import { MapCore } from './map/core.js';
+import { MapSources } from './map/sources.js';
 import { Layers } from './map/layers.js';
 import { Interactions } from './map/interactions.js';
 import { Geometry } from './map/geometry.js';
@@ -71,11 +72,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. Initialize Map
     const token = window.MAPVIEWER_CONTEXT?.mapboxToken || '';
-    if (!token) {
-        console.error('Mapbox token not found');
-        Utils.showNotification('error', 'Map configuration missing');
-        return;
-    }
 
     const map = MapCore.init(token, 'map');
 
@@ -367,48 +363,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     const legend = document.getElementById('map-legend');
     DepthLegend.init(map);
 
-    // 4. Load Data
-    map.on('load', async () => {
-        // Load custom marker images (cylinder icon for safety cylinders)
-        await Layers.loadMarkerImages();
+    let geojsonMetadataCache = null;
 
-        // Initialize Projects Layers visibility
-        Layers.loadProjectVisibilityPrefs();
+    async function loadGeoJSONMetadata() {
+        if (geojsonMetadataCache) {
+            return geojsonMetadataCache;
+        }
 
-        // Fetch GeoJSON metadata for all projects FIRST
-        // This allows us to filter out projects without GeoJSON before showing the panel
-        let geojsonMetadata = [];
         try {
             console.log('🔄 Fetching all projects\' GeoJSON metadata via single API call...');
             const response = await API.getAllProjectsGeoJSON();
             if (Array.isArray(response)) {
-                geojsonMetadata = response;
-                console.log(`✅ Cached GeoJSON metadata for ${geojsonMetadata.length} projects`);
+                geojsonMetadataCache = response;
+                console.log(`✅ Cached GeoJSON metadata for ${geojsonMetadataCache.length} projects`);
+                return geojsonMetadataCache;
             }
         } catch (e) {
             console.error('❌ Failed to load all-projects GeoJSON metadata:', e);
         }
 
-        // Filter projects to only include those with GeoJSON data
-        // This ensures the project panel only shows projects that can be displayed on the map
-        Config.filterProjectsByGeoJSON(geojsonMetadata);
+        geojsonMetadataCache = [];
+        return geojsonMetadataCache;
+    }
 
-        // Initialize Project Panel (now shows only projects with GeoJSON)
-        ProjectPanel.init();
+    function clearRenderedMapState() {
+        State.effectiveProjectVisibility = new Map();
+        State.allProjectLayers = new Map();
+        State.allNetworkLayers = new Map();
+        State.allStations = new Map();
+        State.allSurfaceStations = new Map();
+        State.allLandmarks = new Map();
+        State.landmarkCollections = new Map();
+        State.projectDepthDomains = new Map();
+        State.activeDepthDomain = null;
+        State.projectBounds = new Map();
+        State.networkBounds = new Map();
+        State.explorationLeads = new Map();
+        State.cylinderInstalls = new Map();
+        State.allGPSTrackLayers = new Map();
+        State.gpsTrackBounds = new Map();
+    }
 
-        // Initialize GPS Tracks Panel (collapsed by default, all tracks OFF)
-        GPSTracksPanel.init();
-
-        // Load user tags and colors for tag management
-        StationTags.init();
-
-        // Load Stations and GeoJSON for each project with progress tracking
+    async function loadProjectAndStationLayers(geojsonMetadata, showProgress) {
         const totalProjects = Config.projects.length;
         let loadedProjects = 0;
         const progressEl = document.getElementById('loading-progress');
 
         const updateProgress = () => {
-            if (progressEl) {
+            if (showProgress && progressEl) {
                 progressEl.textContent = `Downloading ${loadedProjects}/${totalProjects} Projects`;
             }
         };
@@ -459,8 +461,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         await Promise.all(loadPromises);
+    }
 
-        // Load Surface Stations for each network
+    async function loadSurfaceStationLayers() {
         Layers.loadNetworkVisibilityPrefs();
         const surfaceStationPromises = Config.networks.map(async (network) => {
             try {
@@ -471,22 +474,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
         await Promise.all(surfaceStationPromises);
+    }
 
-        // Reorder layers to ensure stations are on top of survey lines
-        Layers.reorderLayers();
-
-        // Load Landmarks (no delay - load immediately to ensure spinner waits for all data)
+    async function loadLandmarkLayers() {
         try {
             await LandmarkManager.loadCollections();
             const landmarksData = await LandmarkManager.loadAllLandmarks();
             Layers.addLandmarkLayer(landmarksData);
-            // Reorder again after Landmarks are loaded
             Layers.reorderLayers();
         } catch (e) {
             console.error('Error loading Landmarks', e);
         }
+    }
 
-        // Load Exploration Leads for all projects
+    async function loadExplorationLeadLayers() {
         try {
             await ExplorationLeadManager.loadAllLeads();
             Layers.refreshExplorationLeadsLayer();
@@ -495,20 +496,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {
             console.error('Error loading Exploration Leads', e);
         }
+    }
 
-        // Load Cylinder Installs (safety cylinders from fleets)
+    async function loadCylinderInstallLayers() {
         try {
             await Layers.loadCylinderInstalls();
             console.log('✅ Cylinder installs loaded');
         } catch (e) {
             console.error('Error loading Cylinder Installs', e);
         }
+    }
 
-        // Check for URL parameters to fly to a specific location
+    async function loadVisibleGPSTrackLayers() {
+        const visibleTracks = Config.gpsTracks.filter(track => Layers.isGPSTrackVisible(track.id));
+        await Promise.all(visibleTracks.map(async (track) => {
+            const trackId = String(track.id);
+            if (State.gpsTrackCache.has(trackId)) {
+                await Layers.addGPSTrackLayer(trackId, State.gpsTrackCache.get(trackId));
+            } else {
+                await Layers.toggleGPSTrackVisibility(trackId, true, track.file);
+            }
+        }));
+        GPSTracksPanel.refreshList();
+    }
+
+    function fitInitialCamera() {
         const urlParams = getUrlParams();
 
         if (urlParams.lat !== null && urlParams.long !== null) {
-            // Fly to the specified coordinates from URL
             console.log(`🎯 Flying to URL coordinates: ${urlParams.lat}, ${urlParams.long}`);
             map.flyTo({
                 center: [urlParams.long, urlParams.lat],
@@ -525,19 +540,82 @@ document.addEventListener('DOMContentLoaded', async () => {
                 map.fitBounds(allBounds, { padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING, maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM });
             }
         }
+    }
 
-        // Hide Loading Overlay - only after ALL data (projects, GeoJSON, stations, Landmarks) is loaded
+    function hideLoadingOverlay() {
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
             overlay.classList.add('opacity-0', 'pointer-events-none');
             setTimeout(() => overlay.remove(), DEFAULTS.UI.OVERLAY_FADE_DELAY_MS);
         }
+    }
+
+    async function loadMapData(options = {}) {
+        const {
+            initializePanels = false,
+            initializeTags = false,
+            showProgress = false,
+            fitCamera = false,
+            hideOverlay = false,
+        } = options;
+
+        await Layers.loadMarkerImages();
+        Layers.loadProjectVisibilityPrefs();
+
+        const geojsonMetadata = await loadGeoJSONMetadata();
+        Config.filterProjectsByGeoJSON(geojsonMetadata);
+
+        if (initializePanels) {
+            ProjectPanel.init();
+            GPSTracksPanel.init();
+        } else {
+            ProjectPanel.refreshVisibilityState();
+        }
+
+        if (initializeTags) {
+            StationTags.init();
+        }
+
+        await loadProjectAndStationLayers(geojsonMetadata, showProgress);
+        await loadSurfaceStationLayers();
+        Layers.reorderLayers();
+        await loadLandmarkLayers();
+        await loadExplorationLeadLayers();
+        await loadCylinderInstallLayers();
+        await loadVisibleGPSTrackLayers();
+
+        if (fitCamera) fitInitialCamera();
+        if (hideOverlay) hideLoadingOverlay();
 
         console.log('✅ Map Data Loaded (Projects, GeoJSON, Stations, Landmarks)');
+    }
+
+    // 4. Load Data
+    map.on('load', async () => {
+        await loadMapData({
+            initializePanels: true,
+            initializeTags: true,
+            showProgress: true,
+            fitCamera: true,
+            hideOverlay: true,
+        });
+    });
+
+    window.addEventListener('speleo:map-source-changed', async (event) => {
+        if (!MapSources.requiresDataReload(event)) return;
+        try {
+            clearRenderedMapState();
+            await loadMapData();
+            Utils.showNotification('success', 'Map source updated');
+        } catch (e) {
+            console.error('Error reloading map data after source change', e);
+            Utils.showNotification('error', 'Failed to reload map data');
+        }
     });
 
     // Setup UI listeners
     MapCore.setupColorModeToggle(map);
+    MapCore.setupMapSourceControl(map, token);
 
     // Setup Landmarks Toggle
     const landmarksToggle = document.getElementById('landmarks-toggle');
