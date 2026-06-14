@@ -61,7 +61,7 @@ dependencies = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django==6.0.5",                   # https://www.djangoproject.com/
+    "django==6.0.6",                   # https://www.djangoproject.com/
     "django-allauth==65.16.1",         # https://github.com/pennersr/django-allauth
     "django-countries==8.2.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
@@ -130,7 +130,7 @@ local = [
     "ruff==0.15.13",    # https://github.com/astral-sh/ruff
     "coverage==7.14.0", # https://github.com/nedbat/coveragepy
     "djlint==1.36.4",   # https://github.com/Riverside-Healthcare/djLint
-    "prek==0.4.0",     # https://github.com/j178/prek
+    "prek==0.4.0",      # https://github.com/j178/prek
 
     # Django
     # ------------------------------------------------------------------------------
