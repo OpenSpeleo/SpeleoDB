@@ -37,6 +37,23 @@ if TYPE_CHECKING:
 
 
 class TestUserAdmin:
+    def test_has_api_doc_access_defaults_to_false(self, db: None) -> None:
+        user = UserFactory.create()
+        assert user.has_api_doc_access is False
+
+    def test_user_admin_exposes_api_doc_access(self) -> None:
+        user_admin = admin.site._registry[User]  # noqa: SLF001
+
+        permissions_fieldset = next(
+            fieldset
+            for title, fieldset in user_admin.fieldsets  # type: ignore[union-attr]
+            if title == "Permissions"
+        )
+
+        assert "has_api_doc_access" in permissions_fieldset["fields"]
+        assert "has_api_doc_access" in user_admin.list_display
+        assert "has_api_doc_access" in user_admin.list_filter
+
     def test_changelist(self, admin_client: Client) -> None:
         url = reverse("admin:users_user_changelist")
         response = admin_client.get(url)

@@ -239,6 +239,14 @@ class TestSidebarNavigation(BaseUserTestCaseMixin, TestCase):
         assert response.status_code == status.HTTP_200_OK
         return response.content.decode()
 
+    def _assert_api_docs_links_visible(self, html: str) -> None:
+        assert f'href="{reverse("api-schema")}"' in html
+        assert f'href="{reverse("api-docs")}"' in html
+
+    def _assert_api_docs_links_hidden(self, html: str) -> None:
+        assert f'href="{reverse("api-schema")}"' not in html
+        assert f'href="{reverse("api-docs")}"' not in html
+
     def test_dashboard_sidebar_active_on_dashboard(self) -> None:
         html = self._get_html("user_dashboard")
         dashboard_url = reverse("private:user_dashboard")
@@ -297,6 +305,35 @@ class TestSidebarNavigation(BaseUserTestCaseMixin, TestCase):
         if link_pos != -1:
             preceding = sidebar[max(0, link_pos - 300) : link_pos]
             assert "bg-slate-900" in preceding
+
+    def test_api_docs_links_hidden_for_regular_user(self) -> None:
+        html = self._get_html("user_dashboard")
+        self._assert_api_docs_links_hidden(html)
+
+    def test_api_docs_links_visible_for_flagged_regular_user(self) -> None:
+        self.user.has_api_doc_access = True
+        self.user.save(update_fields=["has_api_doc_access"])
+
+        html = self._get_html("user_dashboard")
+
+        self._assert_api_docs_links_visible(html)
+        assert f'href="{reverse("admin:index")}"' not in html
+
+    def test_api_docs_links_visible_for_staff_user(self) -> None:
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+
+        html = self._get_html("user_dashboard")
+
+        self._assert_api_docs_links_visible(html)
+
+    def test_api_docs_links_visible_for_superuser(self) -> None:
+        self.user.is_superuser = True
+        self.user.save(update_fields=["is_superuser"])
+
+        html = self._get_html("user_dashboard")
+
+        self._assert_api_docs_links_visible(html)
 
 
 # ------------------------------------------------------------------ #

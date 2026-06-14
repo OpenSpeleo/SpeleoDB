@@ -22,6 +22,9 @@ Unlike product docs, these files prioritize:
 
 ### Feature Documentation
 
+- `api-docs-access.md`
+  - user-level API Docs/API Schema menu visibility flag, admin ownership,
+    and permission boundaries
 - `map-viewer/features.md`
   - station/landmark/exploration lead/GPS track/cylinder management,
     drag-and-drop, context menu, component library
@@ -61,4 +64,3 @@ Unlike product docs, these files prioritize:
 Repository-wide agent guardrails live at:
 
 - `AGENTS.md`
-

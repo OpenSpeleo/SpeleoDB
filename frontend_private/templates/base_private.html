@@ -613,8 +613,8 @@
                                 </a>
                             </li>
 
-                            {% if user.is_staff %}
-                            <!-- API Schema (mobile only, staff) -->
+                            {% if user.is_staff or user.is_superuser or user.has_api_doc_access %}
+                            <!-- API Schema (mobile only) -->
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 lg:hidden">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'api-schema' %}">
                                     <div class="flex items-center">
@@ -627,7 +627,7 @@
                                 </a>
                             </li>
 
-                            <!-- API Docs (mobile only, staff) -->
+                            <!-- API Docs (mobile only) -->
                             <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 lg:hidden">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'api-docs' %}" target="_blank">
                                     <div class="flex items-center">
@@ -743,7 +743,7 @@
 
                             {% endif %}
 
-                            {% if user.is_staff or user.is_superuser %}
+                            {% if user.is_staff or user.is_superuser or user.has_api_doc_access %}
                             <!-- Divider (desktop only) -->
                             <hr class="hidden lg:block w-px h-6 bg-slate-700 border-none" />
 

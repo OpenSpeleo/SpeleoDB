@@ -95,6 +95,14 @@ class User(AbstractUser):
             "Designates that this user has access to beta features before other users."
         ),
     )
+    has_api_doc_access = BooleanField(
+        default=False,
+        db_default=False,
+        help_text=(
+            "Designates that this user can see API Docs and API Schema links in "
+            "the private menu."
+        ),
+    )
     # # ------------------------------------------------------------ #
 
     USERNAME_FIELD = "email"

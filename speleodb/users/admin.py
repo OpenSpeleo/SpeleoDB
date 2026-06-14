@@ -68,6 +68,7 @@ class UserAdminBase(ExportMixin, auth_admin.UserAdmin):  # type: ignore[type-arg
                     "is_staff",
                     "is_superuser",
                     "is_beta_tester",
+                    "has_api_doc_access",
                     "groups",
                     "user_permissions",
                 ),
@@ -82,6 +83,7 @@ class UserAdminBase(ExportMixin, auth_admin.UserAdmin):  # type: ignore[type-arg
         "is_superuser",
         "is_staff",
         "is_beta_tester",
+        "has_api_doc_access",
         "date_joined",
         "last_login",
     ]
@@ -91,6 +93,7 @@ class UserAdminBase(ExportMixin, auth_admin.UserAdmin):  # type: ignore[type-arg
         "is_staff",
         "is_superuser",
         "is_beta_tester",
+        "has_api_doc_access",
         "is_active",
         "groups",
         UserCountryFilter,
