@@ -20,13 +20,13 @@ dependencies = [
     "pytz==2026.2",         # https://github.com/stub42/pytz
     "timeago==1.0.16",      # https://github.com/hustcc/timeago
     "tomlkit==0.15.0",      # https://github.com/python-poetry/tomlkit
-    "wrapt==2.1.2",         # https://github.com/GrahamDumpleton/wrapt
+    "wrapt==2.2.1",         # https://github.com/GrahamDumpleton/wrapt
 
     # Redis
     # ------------------------------------------------------------------------------
-    "django-redis==6.0.0", # https://github.com/jazzband/django-redis
-    "hiredis==3.3.1",      # https://github.com/redis/hiredis-py
-    "redis==7.4.0",        # https://github.com/redis/redis-py
+    "django-redis==7.0.0", # https://github.com/jazzband/django-redis
+    "hiredis==3.4.0",      # https://github.com/redis/hiredis-py
+    "redis==8.0.0",        # https://github.com/redis/redis-py
 
     # Data Processing & Writing
     # ------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ dependencies = [
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
     "fastkml[lxml]==1.4.0",  # https://github.com/cleder/fastkml
-    "geojson==3.2.0",        # https://github.com/jazzband/geojson
+    "geojson==3.3.0",        # https://github.com/jazzband/geojson
     "gpxpy==1.6.2",          # https://github.com/tkrajina/gpxpy
     "jsonschema-rs==0.46.5", # https://github.com/Stranger6667/jsonschema
     "orjson==3.11.9",        # https://github.com/ijl/orjson
@@ -52,25 +52,25 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "mnemo-lib==0.0.8",       # https://github.com/OpenSpeleo/pytool_mnemo_lib
     "compass-lib==0.0.7",     # https://github.com/OpenSpeleo/pytool_compass_lib
-    "openspeleo-lib==0.0.16", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
+    "openspeleo-lib==0.0.17", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 
     # Git Management
     # ------------------------------------------------------------------------------
     "GitPython==3.1.50",    # https://github.com/gitpython-developers/GitPython
-    "python-gitlab==8.3.0", # https://python-gitlab.readthedocs.io/en/stable/
+    "python-gitlab==8.4.0", # https://python-gitlab.readthedocs.io/en/stable/
 
     # Django
     # ------------------------------------------------------------------------------
     "django==6.0.6",                   # https://www.djangoproject.com/
-    "django-allauth==65.16.1",         # https://github.com/pennersr/django-allauth
+    "django-allauth==65.18.0",         # https://github.com/pennersr/django-allauth
     "django-countries==8.2.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.13.0",          # https://github.com/joke2k/django-environ
     "django-hijack==3.7.8",            # https://github.com/django-hijack/django-hijack/
     "django-import-export==4.4.1",     # https://github.com/django-import-export/django-import-export
-    "django-js-reverse==0.10.2",       # https://github.com/vintasoftware/django-js-reverse
+    "django-js-reverse==1.0.0",        # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
-    "django-polymorphic==4.11.3",      # https://github.com/jazzband/django-polymorphic
+    "django-polymorphic==4.11.5",      # https://github.com/jazzband/django-polymorphic
     "django-rest-polymorphic==0.1.10", # https://github.com/denisorehovsky/django-rest-polymorphic
     "django-storages[s3]==1.14.6",     # https://github.com/jschneier/django-storages
 
@@ -82,19 +82,19 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.43.9", # https://github.com/boto/botocore
-    "boto3==1.43.9",    # https://github.com/boto/boto3
+    "botocore==1.43.24", # https://github.com/boto/botocore
+    "boto3==1.43.24",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
     "celery==5.6.3",             # https://github.com/celery/celery
     "django-celery-beat==2.9.0", # https://github.com/celery/django-celery-beat
     "flower==2.0.1",             # https://github.com/mher/flower
-    "watchfiles==1.1.1",         # https://github.com/samuelcolvin/watchfiles
+    "watchfiles==1.2.0",         # https://github.com/samuelcolvin/watchfiles
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.60.0", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.61.1", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
@@ -107,7 +107,7 @@ local = [
     # ------------------------------------------------------------------------------
     "deepdiff>=9.1.0,<10.0", # https://github.com/seperman/deepdiff
     "factory-boy==3.3.3",    # https://github.com/FactoryBoy/factory_boy
-    "mypy==1.20.2",          # https://github.com/python/mypy
+    "mypy==2.1.0",           # https://github.com/python/mypy
     "parameterized==0.9.0",  # https://github.com/wolever/parameterized
     "pytest-sugar==1.1.1",   # https://github.com/Frozenball/pytest-sugar
     "pytest==9.0.3",         # https://github.com/pytest-dev/pytest
@@ -115,10 +115,10 @@ local = [
     # Typing
     # ------------------------------------------------------------------------------
     "djangorestframework-stubs[compatible-mypy]==3.17.0", # https://github.com/typeddjango/djangorestframework-stubs
-    "django-stubs[compatible-mypy]==6.0.4",               # https://github.com/typeddjango/django-stubs
+    "django-stubs[compatible-mypy]==6.0.5",               # https://github.com/typeddjango/django-stubs
     "celery-types==0.26.0",                               # https://github.com/sbdchd/celery-types
     "types-factory-boy==0.4.1",                           # https://github.com/youtux/types-factory-boy
-    "types-pytz==2026.2.0.20260506",                      # https://github.com/python/typeshed
+    "types-pytz==2026.2.0.20260518",                      # https://github.com/python/typeshed
 
     # Django Testing
     # ------------------------------------------------------------------------------
@@ -127,10 +127,10 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.15.13",    # https://github.com/astral-sh/ruff
-    "coverage==7.14.0", # https://github.com/nedbat/coveragepy
-    "djlint==1.36.4",   # https://github.com/Riverside-Healthcare/djLint
-    "prek==0.4.0",      # https://github.com/j178/prek
+    "ruff==0.15.16",    # https://github.com/astral-sh/ruff
+    "coverage==7.14.1", # https://github.com/nedbat/coveragepy
+    "djlint==1.39.0",   # https://github.com/Riverside-Healthcare/djLint
+    "prek==0.4.4",      # https://github.com/j178/prek
 
     # Django
     # ------------------------------------------------------------------------------

@@ -54,6 +54,9 @@ Unlike product docs, these files prioritize:
 
 - `map-viewer/testing-and-quality.md`
   - frontend test map, validation commands, and regression checklist
+- `node-tooling.md`
+  - root npm workspace constraints, Node runtime compatibility, install-script
+    approval policy, and verification commands
 
 ### Coding Rules
 

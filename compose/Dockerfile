@@ -1,4 +1,4 @@
-FROM python:3.14.5-bookworm
+FROM python:3.14.6-bookworm
 
 ARG BUILD_ENVIRONMENT=local
 ARG APP_HOME=/app
@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install NodeJS
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get update && apt-get install --no-install-recommends -y \
     nodejs \
     # cleaning up unused files
