@@ -263,6 +263,39 @@ describe('frontend_public gis_view_main', () => {
         expect(document.getElementById('loading-overlay')).toBeNull();
     });
 
+    it('prefetches the GIS View GeoJSON during init, before the map load event', async () => {
+        window.MAPVIEWER_CONTEXT = {
+            viewMode: 'public',
+            gisToken: 'public-token',
+            mapboxToken: 'mapbox-token'
+        };
+
+        globalThis.fetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                view_name: 'Public View',
+                projects: [
+                    { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' }
+                ]
+            })
+        });
+
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+
+        // The view data request is issued during init (concurrently with map
+        // init), before the map 'load' event handler runs.
+        expect(mapCoreMock.init).toHaveBeenCalledWith('mapbox-token', 'map');
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+        expect(globalThis.fetch).toHaveBeenCalledWith(Urls['api:v2:gis-ogc:view-geojson']('public-token'));
+
+        await mapHandlers.load();
+
+        // The load handler consumes the prefetch instead of issuing a 2nd request.
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+        expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/g1.geojson');
+    });
+
     it('uses precise zoom limits when allowPreciseZoom is enabled', async () => {
         window.MAPVIEWER_CONTEXT = {
             viewMode: 'public',
@@ -367,6 +400,61 @@ describe('frontend_public gis_view_main', () => {
         expect(projectPanelMock.init).not.toHaveBeenCalled();
         expect(layersMock.addProjectGeoJSON).not.toHaveBeenCalled();
         expect(layersMock.reorderLayers).not.toHaveBeenCalled();
+    });
+
+    it('retries a failed public prefetch on the next empty-project reload', async () => {
+        let sourceChangeHandler;
+        const originalWindowAddEventListener = window.addEventListener.bind(window);
+        const windowAddEventListenerSpy = vi.spyOn(window, 'addEventListener').mockImplementation((eventName, handler, options) => {
+            if (eventName === 'speleo:map-source-changed') {
+                sourceChangeHandler = handler;
+                return;
+            }
+            return originalWindowAddEventListener(eventName, handler, options);
+        });
+
+        window.MAPVIEWER_CONTEXT = {
+            viewMode: 'public',
+            gisToken: 'public-token',
+            mapboxToken: 'mapbox-token'
+        };
+
+        globalThis.fetch
+            .mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error'
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    view_name: 'Recovered Public View',
+                    projects: [
+                        { id: 'p1', name: 'Recovered Project', geojson_file: '/recovered.geojson' }
+                    ]
+                })
+            });
+
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+        windowAddEventListenerSpy.mockRestore();
+
+        await mapHandlers.load();
+
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+        expect(utilsMock.showNotification).toHaveBeenCalledWith('error', 'Failed to load map data');
+        expect(configMock.projects).toEqual([]);
+        expect(sourceChangeHandler).toBeTypeOf('function');
+
+        await sourceChangeHandler(new CustomEvent('speleo:map-source-changed', {
+            detail: { sourceId: 'future-destructive-source', reloadRequired: true }
+        }));
+
+        expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+        expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/recovered.geojson');
+        expect(configMock._projects).toEqual([
+            { id: 'p1', name: 'Recovered Project', color: undefined, permissions: 'READ_ONLY', geojson_url: '/recovered.geojson' }
+        ]);
     });
 
     it('ignores non-destructive public map source changes', async () => {

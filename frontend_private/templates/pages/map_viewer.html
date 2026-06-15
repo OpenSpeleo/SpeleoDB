@@ -2,6 +2,16 @@
 {% load static %}
 
 {% block extra_css %}
+{# Resource hints: warm cross-origin connections on the map load path so the #}
+{# Mapbox style/tiles, raster glyphs and ESRI tiles fetch faster. #}
+<link rel="preconnect" href="https://api.mapbox.com" crossorigin>
+<link rel="preconnect" href="https://fonts.openmaptiles.org" crossorigin>
+<link rel="preconnect" href="https://services.arcgisonline.com">
+<link rel="preconnect" href="https://server.arcgisonline.com">
+<link rel="dns-prefetch" href="https://api.mapbox.com">
+<link rel="dns-prefetch" href="https://fonts.openmaptiles.org">
+<link rel="dns-prefetch" href="https://services.arcgisonline.com">
+<link rel="dns-prefetch" href="https://server.arcgisonline.com">
 <link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css' rel='stylesheet' />
 <link href="{% static 'private/css/shared-modal.css' %}" rel='stylesheet' />
 <link href="{% static 'private/css/map_viewer.css' %}" rel='stylesheet' />

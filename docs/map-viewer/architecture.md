@@ -137,22 +137,29 @@ flowchart TD
 
 ## Initialization Sequence
 
+Both entrypoints schedule independent work **concurrently**: the map is
+initialized without waiting for data, and independent network requests are
+issued in parallel rather than serially. This is a pure scheduling concern — the
+set of functions called and the final rendered state are unchanged. See
+`data-flow.md` → "Startup Load Scheduling (Parallelism)" for the rationale and
+invariants.
+
 ### Private Viewer (`main.js`)
 
 ```
 DOMContentLoaded
 │
-├─ 1. State.resetLayerState()                          Reset all mutable runtime state
+├─ 1. State.resetLayerState()               Reset all mutable runtime state
 │
-├─ 2. Config.loadProjects()                 Fetch project list + permissions from API
-├─ 2. Config.loadNetworks()                 Fetch surface network list from API
-├─ 2. Config.loadGPSTracks()                Fetch GPS track metadata from API
-│
-├─ 3. MapCore.init(token, 'map')            Create Mapbox GL map instance from selected Map Source
-│     └─ State.map = map                    Store reference in State
+├─ 2. MapCore.init(token, 'map')            Init map IMMEDIATELY (decoupled from data),
+│     └─ State.map = map                    so style/tiles download while APIs run
 │     └─ Hide street-level labels
 │     └─ Add navigation/fullscreen/scale controls
 │     └─ Map Source comes from localStorage or DEFAULTS.MAP.DEFAULT_SOURCE_ID
+│
+├─ 3. Kick off in parallel (NOT awaited here):
+│     ├─ configReady = Promise.all([loadProjects, loadNetworks, loadGPSTracks])
+│     └─ metadataReady = loadGeoJSONMetadata()   prefetch all-projects GeoJSON metadata
 │
 ├─ 4. Interactions.init(map, handlers)      Wire click, hover, drag, context-menu
 │
@@ -160,35 +167,28 @@ DOMContentLoaded
 │
 └─ map.on('load')                           Data loading phase
     │
-    ├─ Layers.loadMarkerImages()            Load SVG icons (cylinder, biology, etc.)
+    ├─ await configReady                    Ensure project/network/track lists are ready
+    ├─ Promise.all([                        Markers + metadata concurrently
+    │     Layers.loadMarkerImages(),        Load SVG icons (cylinder, biology, etc.)
+    │     metadataReady,                    (already in-flight from step 3)
+    │   ])
     ├─ Layers.loadProjectVisibilityPrefs()  Restore from localStorage
-    │
-    ├─ API.getAllProjectsGeoJSON()           Fetch metadata for ALL projects (single call)
-    ├─ Config.filterProjectsByGeoJSON()      Remove projects without GeoJSON data
+    ├─ Config.filterProjectsByGeoJSON()     Remove projects without GeoJSON data
     │
     ├─ ProjectPanel.init()                  Render project list in sidebar
     │     └─ _applyInitialCountryVisibility()  Enforce country gates on load
     ├─ GPSTracksPanel.init()                Render GPS tracks panel (all OFF by default)
     ├─ StationTags.init()                   Load user tags + colors
     │
-    ├─ For each project (parallel):
-    │   ├─ StationManager.loadStationsForProject()
-    │   │   └─ Layers.addSubSurfaceStationLayer()
-    │   └─ Layers.addProjectGeoJSON(projectId, url)
-    │
-    ├─ For each network (parallel):
-    │   └─ SurfaceStationManager.loadStationsForNetwork()
-    │       └─ Layers.addSurfaceStationLayer()
-    │
-    ├─ Layers.reorderLayers()               Z-order: lines < stations < landmarks
-    │
-    ├─ LandmarkManager.loadAllLandmarks()
-    │   └─ Layers.addLandmarkLayer()
-    │
-    ├─ ExplorationLeadManager.loadAllLeads()
-    │   └─ Layers.refreshExplorationLeadsLayer()
-    │
-    ├─ Layers.loadCylinderInstalls()        Fetch + display safety cylinders
+    ├─ Promise.all([                        All independent layer phases concurrently:
+    │     loadProjectAndStationLayers(),    ├─ stations + project survey GeoJSON
+    │     loadSurfaceStationLayers(),       ├─ surface stations per network
+    │     loadLandmarkLayers(),             ├─ landmark collections + landmarks
+    │     loadExplorationLeadLayers(),      ├─ exploration leads
+    │     loadCylinderInstallLayers(),      ├─ safety cylinders
+    │     loadVisibleGPSTrackLayers(),      └─ visible GPS tracks
+    │   ])
+    ├─ Layers.reorderLayers()               Single authoritative z-order pass
     │
     ├─ Fly to ?goto= or fitBounds()         Position camera
     │
@@ -205,10 +205,12 @@ DOMContentLoaded
 ├─ 3. MapCore.init(token, 'map') + set maxZoom
 │     └─ Map Source comes from the shared registry used by private viewer
 ├─ 4. DepthLegend.init(map)
+├─ 5. pendingViewData = fetchPublicViewData()   prefetch GIS-View GeoJSON (concurrent)
 │
 └─ map.on('load')
     │
-    ├─ fetch /api/v2/gis-ogc/view/{gisToken}/geojson
+    ├─ loadPublicMapData(fetchProjects=true)
+    │   └─ await pendingViewData             Consume the prefetch (no 2nd request)
     ├─ Config.setPublicProjects(projects)    Set read-only project list
     ├─ ProjectPanel.init()
     │

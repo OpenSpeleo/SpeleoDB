@@ -48,6 +48,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     map.setMaxZoom(maxZoom);
     DepthLegend.init(map);
 
+    // Prefetch the GIS View GeoJSON concurrently with the Mapbox style/tile
+    // load so the (single) network request overlaps map init instead of only
+    // starting once the map 'load' event fires. The result is consumed once in
+    // loadPublicMapData; later reloads reuse Config.projects unless the list is
+    // empty or fresh project data is explicitly requested (original behavior).
+    let pendingViewData = fetchPublicViewData();
+    // Attach a no-op rejection handler so a failed prefetch is not reported as
+    // an unhandled rejection. Real error handling still happens on consume,
+    // where `await` rethrows into loadPublicMapData's try/catch.
+    pendingViewData.catch(() => { });
+
     // Simple function to set map height
     function setMapHeight() {
         const mapElement = document.getElementById('map');
@@ -101,7 +112,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (fetchProjects || projects.length === 0) {
                 console.log('🔄 Fetching GIS View GeoJSON data...');
-                const viewData = await fetchPublicViewData();
+                // Consume the prefetched request started during init, if still
+                // available; otherwise fetch fresh. Swap to null first so a
+                // failed prefetch can be retried by the next entry while
+                // Config.projects is still empty.
+                const pending = pendingViewData;
+                pendingViewData = null;
+                const viewData = await (pending ?? fetchPublicViewData());
                 projects = viewData.projects || [];
 
                 console.log(`✅ Received ${projects.length} projects from GIS View "${viewData.view_name}"`);

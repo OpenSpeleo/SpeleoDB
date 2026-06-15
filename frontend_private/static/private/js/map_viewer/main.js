@@ -65,15 +65,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. Initialize State
     State.resetLayerState();
 
-    // 2. Load Projects, Networks, and GPS Tracks from API (needed for permissions and lists)
-    await Config.loadProjects();
-    await Config.loadNetworks();
-    await Config.loadGPSTracks();
-
-    // 3. Initialize Map
+    // 2. Initialize Map immediately so the Mapbox style and tiles download
+    //    concurrently with the startup API calls below (the map does not need
+    //    project/network/GPS data to begin loading its style).
     const token = window.MAPVIEWER_CONTEXT?.mapboxToken || '';
 
     const map = MapCore.init(token, 'map');
+
+    // 3. Kick off the independent startup API loads in parallel instead of
+    //    awaiting them one after another. They are consumed later (in
+    //    loadMapData) via `configReady`, so nothing here blocks on them.
+    const configReady = Promise.all([
+        Config.loadProjects(),
+        Config.loadNetworks(),
+        Config.loadGPSTracks(),
+    ]);
+
+    // Prefetch the all-projects GeoJSON metadata concurrently as well. It is
+    // independent of map readiness, so kicking it off now overlaps its latency
+    // with map init and the config loads above. Consumed via `metadataReady`.
+    let geojsonMetadataCache = null;
+    const metadataReady = loadGeoJSONMetadata();
 
     // Simple function to set map height
     function setMapHeight() {
@@ -92,7 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Update map height on window resize
     window.addEventListener('resize', setMapHeight);
 
-    // 3. Setup Interactions
+    // 4. Setup Interactions
     Interactions.init(map, {
         onStationClick: (stationId, stationType) => {
             if (stationType === 'surface') {
@@ -363,8 +375,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const legend = document.getElementById('map-legend');
     DepthLegend.init(map);
 
-    let geojsonMetadataCache = null;
-
     async function loadGeoJSONMetadata() {
         if (geojsonMetadataCache) {
             return geojsonMetadataCache;
@@ -559,10 +569,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             hideOverlay = false,
         } = options;
 
-        await Layers.loadMarkerImages();
-        Layers.loadProjectVisibilityPrefs();
+        // Startup config (projects/networks/GPS tracks) was kicked off in
+        // parallel during init; make sure it has resolved before any consumer
+        // below reads Config.projects/networks/gpsTracks.
+        await configReady;
 
-        const geojsonMetadata = await loadGeoJSONMetadata();
+        // Marker images and the GeoJSON metadata are independent of each other,
+        // so download them concurrently. `metadataReady` is the prefetch started
+        // during init; awaiting it here just yields the already-inflight result.
+        const [, geojsonMetadata] = await Promise.all([
+            Layers.loadMarkerImages(),
+            metadataReady,
+        ]);
+        Layers.loadProjectVisibilityPrefs();
         Config.filterProjectsByGeoJSON(geojsonMetadata);
 
         if (initializePanels) {
@@ -576,13 +595,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             StationTags.init();
         }
 
-        await loadProjectAndStationLayers(geojsonMetadata, showProgress);
-        await loadSurfaceStationLayers();
+        // These layer-loading phases are independent of one another and each
+        // adds its own distinct layers, so run them concurrently instead of
+        // serially. A single authoritative reorderLayers() afterwards preserves
+        // the final z-order (the internal reorder calls remain harmless).
+        await Promise.all([
+            loadProjectAndStationLayers(geojsonMetadata, showProgress),
+            loadSurfaceStationLayers(),
+            loadLandmarkLayers(),
+            loadExplorationLeadLayers(),
+            loadCylinderInstallLayers(),
+            loadVisibleGPSTrackLayers(),
+        ]);
         Layers.reorderLayers();
-        await loadLandmarkLayers();
-        await loadExplorationLeadLayers();
-        await loadCylinderInstallLayers();
-        await loadVisibleGPSTrackLayers();
 
         if (fitCamera) fitInitialCamera();
         if (hideOverlay) hideLoadingOverlay();
@@ -590,7 +615,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('✅ Map Data Loaded (Projects, GeoJSON, Stations, Landmarks)');
     }
 
-    // 4. Load Data
+    // 5. Load Data
     map.on('load', async () => {
         await loadMapData({
             initializePanels: true,

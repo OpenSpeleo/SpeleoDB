@@ -2,6 +2,7 @@ const configMock = {
     loadProjects: vi.fn(),
     loadNetworks: vi.fn(),
     loadGPSTracks: vi.fn(),
+    filterProjectsByGeoJSON: vi.fn(),
     projects: [],
     networks: [],
     gpsTracks: [],
@@ -59,6 +60,11 @@ const utilsMock = {
     showNotification: vi.fn(),
 };
 
+const apiMock = {
+    getAllProjectsGeoJSON: vi.fn(),
+    updateCylinderInstall: vi.fn(),
+};
+
 vi.mock('./config.js', async () => {
     const actual = await vi.importActual('./config.js');
     return { Config: configMock, DEFAULTS: actual.DEFAULTS };
@@ -90,9 +96,7 @@ vi.mock('./components/gps_tracks_panel.js', () => ({
     GPSTracksPanel: { init: vi.fn(), refreshList: vi.fn() }
 }));
 vi.mock('./components/depth_legend.js', () => ({ DepthLegend: { init: vi.fn() } }));
-vi.mock('./api.js', () => ({
-    API: { getAllProjectsGeoJSON: vi.fn(), updateCylinderInstall: vi.fn() }
-}));
+vi.mock('./api.js', () => ({ API: apiMock }));
 
 describe('private map viewer entrypoint', () => {
     let domReadyHandler;
@@ -119,6 +123,7 @@ describe('private map viewer entrypoint', () => {
         configMock.loadGPSTracks.mockResolvedValue(undefined);
         mapCoreMock.init.mockReturnValue(mapMock);
         mapSourcesMock.requiresDataReload.mockReturnValue(false);
+        apiMock.getAllProjectsGeoJSON.mockResolvedValue([]);
 
         stateMock.allProjectLayers = new Map();
         stateMock.allNetworkLayers = new Map();
@@ -178,5 +183,43 @@ describe('private map viewer entrypoint', () => {
         expect(layersMock.loadMarkerImages).not.toHaveBeenCalled();
         expect(utilsMock.showNotification).not.toHaveBeenCalledWith('success', 'Map source updated');
         expect(stateMock.allProjectLayers).toEqual(new Map([['p1', ['project-layer-p1']]]));
+    });
+
+    it('initializes the map without waiting for startup config to resolve', async () => {
+        // Keep projects pending forever: a sequential `await` chain would block
+        // here and never initialize the map or start the other loads.
+        configMock.loadProjects.mockReturnValue(new Promise(() => { }));
+
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+
+        expect(mapCoreMock.init).toHaveBeenCalledWith('mapbox-token', 'map');
+    });
+
+    it('kicks off project, network and GPS track loads in parallel', async () => {
+        // Projects hangs; networks/gpsTracks must still be invoked, proving the
+        // three loads are started concurrently rather than awaited one-by-one.
+        configMock.loadProjects.mockReturnValue(new Promise(() => { }));
+
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+
+        expect(configMock.loadProjects).toHaveBeenCalledTimes(1);
+        expect(configMock.loadNetworks).toHaveBeenCalledTimes(1);
+        expect(configMock.loadGPSTracks).toHaveBeenCalledTimes(1);
+    });
+
+    it('prefetches the all-projects GeoJSON metadata once and consumes it during initial load', async () => {
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+
+        expect(apiMock.getAllProjectsGeoJSON).toHaveBeenCalledTimes(1);
+
+        const loadHandler = mapMock.on.mock.calls.find(([eventName]) => eventName === 'load')?.[1];
+        expect(loadHandler).toBeTypeOf('function');
+
+        await loadHandler();
+
+        expect(apiMock.getAllProjectsGeoJSON).toHaveBeenCalledTimes(1);
     });
 });

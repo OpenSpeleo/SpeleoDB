@@ -126,6 +126,102 @@ fetch /api/v2/gis-ogc/view/{gisToken}/geojson
 
 ---
 
+## Startup Load Scheduling (Parallelism)
+
+### Why this exists
+
+The startup sequence used to be a chain of blocking `await`s: the three
+independent startup API calls (`/projects/`, `/surface-networks/`,
+`/gps-tracks/`) ran one after another, the Mapbox map was only initialized
+*after* all three resolved, and the all-projects GeoJSON metadata fetch only
+started once the map `load` event fired. None of those steps actually depend on
+each other, so the critical path was dominated by latency that could overlap.
+
+A HAR capture of a real load showed map style/tile download not starting until
+~2.1s and the first project GeoJSON not starting until ~4.2s (~42% of total load
+was pure preamble).
+
+### The scheduling rules
+
+The entrypoints (`map_viewer/main.js` and `gis_view_main.js`) now schedule
+independent work concurrently. **No application logic changed** — same
+functions, same end state, same final layer z-order. Only *when* requests are
+issued changed.
+
+```mermaid
+flowchart TD
+    subgraph beforeFlow [Before serial]
+        b1["projects 1456ms"] --> b2["networks 105ms"]
+        b2 --> b3["gpsTracks 139ms"]
+        b3 --> b4["map.init + style"]
+        b4 --> b5["geojson metadata 1602ms"]
+        b5 --> b6["project GeoJSON ~4245ms"]
+    end
+    subgraph afterFlow [After parallel]
+        a0["map.init + style"]
+        a0 --> aLoad["map load"]
+        a1["projects 1456ms"]
+        a2["networks 105ms"]
+        a3["gpsTracks 139ms"]
+        a4["geojson metadata 1602ms"]
+        aLoad --> aWait["await configReady + metadata"]
+        a1 --> aWait
+        a2 --> aWait
+        a3 --> aWait
+        a4 --> aWait
+        aWait --> a6["project GeoJSON ~2000ms"]
+    end
+```
+
+Private viewer (`main.js`):
+
+- **Map init is decoupled from data.** `MapCore.init()` runs immediately, so the
+  Mapbox style/tiles download concurrently with the API calls instead of after
+  them.
+- **Startup config loads run in parallel.** `Config.loadProjects()`,
+  `loadNetworks()`, and `loadGPSTracks()` are kicked off together as a single
+  `configReady = Promise.all([...])` rather than three sequential `await`s.
+- **GeoJSON metadata is prefetched.** `loadGeoJSONMetadata()` starts during init
+  (`metadataReady`) instead of inside the `map.on('load')` handler. Its caching
+  is unchanged, so the source-change reload path still reuses the resolved value.
+- **`loadMapData` awaits readiness, then overlaps.** It `await`s `configReady`
+  before reading `Config.projects`, downloads marker images and the metadata
+  concurrently (`Promise.all([loadMarkerImages(), metadataReady])`), and runs the
+  previously-serial layer phases (project/station, surface stations, landmarks,
+  exploration leads, cylinder installs, GPS tracks) as one `Promise.all`.
+
+Public viewer (`gis_view_main.js`):
+
+- The map already initialized before data. Additionally, the single GIS-View
+  GeoJSON request is now prefetched during init (`pendingViewData`) and consumed
+  by `loadPublicMapData`, so it overlaps map style/tile loading. Later reloads
+  reuse `Config.projects` unless the project list is empty or fresh project data
+  is explicitly requested.
+
+### Invariants preserved
+
+- **Single authoritative reorder.** Because the layer phases now run
+  concurrently, exactly one `Layers.reorderLayers()` runs after the `Promise.all`
+  to fix final z-order. The internal reorder calls inside individual phases
+  remain harmless.
+- **Markers ready before layers.** `loadMarkerImages()` still completes before
+  any symbol layer is added (it is awaited before the layer `Promise.all`).
+- **Cached project metadata on reload.** `configReady` / `metadataReady` /
+  `pendingViewData` resolve once. Reload paths reuse cached config; the public
+  viewer only re-fetches GIS-View project data when `Config.projects` is empty
+  or the caller explicitly requests fresh project data.
+- **No unhandled rejections.** `Config.load*` and `loadGeoJSONMetadata` swallow
+  their own errors internally; the public prefetch attaches a no-op `.catch()`
+  while real error handling still happens where the promise is consumed.
+
+### Performance result
+
+Map style download moves from ~2.1s to ~0.4s, and the first project GeoJSON
+download moves from ~4.2s to ~2.0s, with post-map phases overlapping instead of
+serializing.
+
+---
+
 ## CRUD Operation Flows
 
 All entity types follow the same pattern:
