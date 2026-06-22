@@ -76,3 +76,27 @@ class Command(BaseCommand):
                 )
             except ClientError as e:
                 raise CommandError(f"Failed to apply policy: {e}") from e
+
+            # Allow the browser-based map viewer (served from the Django origin) to
+            # fetch presigned GeoJSON/asset URLs directly from S3/RustFS. Without a
+            # bucket CORS policy the cross-origin fetch is blocked by the browser.
+            cors_configuration = {
+                "CORSRules": [
+                    {
+                        "AllowedOrigins": ["*"],
+                        "AllowedMethods": ["GET", "HEAD"],
+                        "AllowedHeaders": ["*"],
+                        "ExposeHeaders": ["ETag"],
+                        "MaxAgeSeconds": 3000,
+                    }
+                ]
+            }
+            try:
+                s3.put_bucket_cors(
+                    Bucket=bucket_name, CORSConfiguration=cors_configuration
+                )
+                self.stdout.write(
+                    self.style.SUCCESS(f"CORS applied to bucket '{bucket_name}'.")
+                )
+            except ClientError as e:
+                raise CommandError(f"Failed to apply CORS: {e}") from e

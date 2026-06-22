@@ -38,6 +38,10 @@ if (s3_endpoint_url := env.str("AWS_S3_ENDPOINT_URL", default=None)) is not None
     AWS_S3_USE_SSL = False
     AWS_S3_VERIFY = False
     AWS_S3_ADDRESSING_STYLE = "path"
+    # RustFS/MinIO only accept AWS Signature V4. Without this, django-storages
+    # falls back to botocore's legacy SigV2 default for a custom endpoint_url,
+    # producing presigned URLs that fail with SignatureDoesNotMatch.
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
     AWS_S3_CUSTOM_DOMAIN = (
         f"{AWS_S3_ENDPOINT_URL.replace('http://', '')}/{AWS_STORAGE_BUCKET_NAME}"
     )
