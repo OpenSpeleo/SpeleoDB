@@ -17,8 +17,12 @@ services:
     image: speleodb_local_django
     container_name: speleodb_local_django
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      rustfs:
+        condition: service_healthy
     volumes:
       - .:/app:z
     env_file:
@@ -54,9 +58,6 @@ services:
     <<: *django
     image: speleodb_local_django_webserver
     container_name: speleodb_local_django_webserver
-    depends_on:
-      - redis
-      - postgres
     ports:
       - "8000:8000"
     command: /start
@@ -115,7 +116,7 @@ services:
       - speleodb_local_gitlab_data:/var/opt/gitlab
 
   rustfs:
-    image: rustfs/rustfs
+    image: rustfs/rustfs:1.0.0-beta.8
     container_name: speleodb_rustfs
     environment:
       - RUSTFS_ACCESS_KEY=access_key
@@ -126,3 +127,20 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  s3-init:
+    <<: *django
+    container_name: speleodb_local_s3_init
+    profiles: ["setup"]
+    depends_on:
+      postgres:
+        condition: service_started
+      rustfs:
+        condition: service_healthy
+    command: python manage.py create_s3_local_buckets

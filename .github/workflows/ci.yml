@@ -106,7 +106,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
 
       rustfs:
-        image: rustfs/rustfs:1.0.0-alpha.90
+        image: rustfs/rustfs:1.0.0-beta.8
         ports:
           - 9000:9000
         options: >-
@@ -143,15 +143,9 @@ jobs:
       - name: Install Dependencies
         run: uv sync --extra local --frozen
 
-      - name: Create S3 Bucket
-        run: aws --endpoint-url http://localhost:9000 s3 mb s3://speleodb-user-artifacts-test
-        env:
-          AWS_ACCESS_KEY_ID: rustfsadmin
-          AWS_SECRET_ACCESS_KEY: rustfsadmin
-          AWS_DEFAULT_REGION: us-east-1
-
       - name: Run Tests
         run: |
+          python manage.py create_s3_local_buckets --settings config.settings.test
           python manage.py validate_templates --settings config.settings.test --ignore-app allauth
           pytest
         env:

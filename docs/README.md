@@ -13,6 +13,9 @@ Unlike product docs, these files prioritize:
 
 ### Architecture and System Design
 
+- `local-object-storage.md`
+  - local RustFS ownership, one-time bucket/CORS bootstrap, signed URL flow,
+    production boundaries, diagnostics, and regression coverage
 - `map-viewer/architecture.md`
   - module dependency graph, private vs public comparison, initialization
     sequences, state management, layer system, event system, build pipeline
