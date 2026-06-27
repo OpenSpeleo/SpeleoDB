@@ -34,10 +34,10 @@ dependencies = [
 
     # Media Processing
     # ------------------------------------------------------------------------------
-    "av==17.0.1",           # https://github.com/PyAV-Org/PyAV
+    "av==17.1.0",           # https://github.com/PyAV-Org/PyAV
     "ffmpeg-python==0.2.0", # https://github.com/kkroening/ffmpeg-python
     "Pillow==12.2.0",       # https://github.com/python-pillow/Pillow
-    "pillow-heif==1.3.0",   # https://github.com/bigcat88/pillow_heif
+    "pillow-heif==1.4.0",   # https://github.com/bigcat88/pillow_heif
     "PyMuPDF==1.27.2.3",    # https://github.com/pymupdf/PyMuPDF
 
     # GeoJSON & GIS
@@ -52,7 +52,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "mnemo-lib==0.0.8",       # https://github.com/OpenSpeleo/pytool_mnemo_lib
     "compass-lib==0.0.7",     # https://github.com/OpenSpeleo/pytool_compass_lib
-    "openspeleo-lib==0.0.17", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
+    "openspeleo-lib==0.0.18", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 
     # Git Management
     # ------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "django==6.0.6",                   # https://www.djangoproject.com/
     "django-allauth==65.18.0",         # https://github.com/pennersr/django-allauth
-    "django-countries==8.2.0",         # https://github.com/SmileyChris/django-countries/
+    "django-countries==9.0.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.13.0",          # https://github.com/joke2k/django-environ
     "django-hijack==3.7.8",            # https://github.com/django-hijack/django-hijack/
@@ -82,8 +82,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.43.24", # https://github.com/boto/botocore
-    "boto3==1.43.24",    # https://github.com/boto/boto3
+    "botocore==1.43.34", # https://github.com/boto/botocore
+    "boto3==1.43.34",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -94,7 +94,7 @@ dependencies = [
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.61.1", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.63.0", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
@@ -110,7 +110,7 @@ local = [
     "mypy==2.1.0",           # https://github.com/python/mypy
     "parameterized==0.9.0",  # https://github.com/wolever/parameterized
     "pytest-sugar==1.1.1",   # https://github.com/Frozenball/pytest-sugar
-    "pytest==9.0.3",         # https://github.com/pytest-dev/pytest
+    "pytest==9.1.1",         # https://github.com/pytest-dev/pytest
 
     # Typing
     # ------------------------------------------------------------------------------
@@ -127,9 +127,9 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.15.16",    # https://github.com/astral-sh/ruff
+    "ruff==0.15.18",    # https://github.com/astral-sh/ruff
     "coverage==7.14.1", # https://github.com/nedbat/coveragepy
-    "djlint==1.39.0",   # https://github.com/Riverside-Healthcare/djLint
+    "djlint==1.39.2",   # https://github.com/Riverside-Healthcare/djLint
     "prek==0.4.4",      # https://github.com/j178/prek
 
     # Django
@@ -147,7 +147,7 @@ production = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "cryptography==48.0.0", # https://github.com/pyca/cryptography
+    "cryptography==49.0.0", # https://github.com/pyca/cryptography
 
     # Django
     # ------------------------------------------------------------------------------
