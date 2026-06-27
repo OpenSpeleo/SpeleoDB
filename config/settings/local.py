@@ -38,6 +38,9 @@ if (s3_endpoint_url := env.str("AWS_S3_ENDPOINT_URL", default=None)) is not None
     AWS_S3_USE_SSL = False
     AWS_S3_VERIFY = False
     AWS_S3_ADDRESSING_STYLE = "path"
+    # Keep local presigned URLs deterministic across S3-compatible backends even
+    # though current boto3/django-storages releases default to Signature V4.
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
     AWS_S3_CUSTOM_DOMAIN = (
         f"{AWS_S3_ENDPOINT_URL.replace('http://', '')}/{AWS_STORAGE_BUCKET_NAME}"
     )

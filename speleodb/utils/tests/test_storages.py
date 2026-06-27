@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import parse_qs
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.test import TestCase
 
 from speleodb.utils.s3_storages import AttachmentStorage
+from speleodb.utils.s3_storages import GeoJSONStorage
 from speleodb.utils.s3_storages import PersonPhotoStorage
 from speleodb.utils.s3_storages import S3MediaStorage
 
@@ -95,3 +98,14 @@ class AttachmentStorageTests(TestCase):
 
         for filename in ["test.jpg", "test.mp4", "test.pdf"]:
             assert storage.get_available_name(filename) == filename
+
+
+class S3PresignedURLTests(TestCase):
+    def test_geojson_url_uses_signature_version_4(self) -> None:
+        storage = GeoJSONStorage()
+
+        url = storage.url("project/commit/test.geojson")
+        query = parse_qs(urlparse(url).query)
+
+        assert settings.AWS_S3_SIGNATURE_VERSION == "s3v4"
+        assert query["X-Amz-Algorithm"] == ["AWS4-HMAC-SHA256"]
