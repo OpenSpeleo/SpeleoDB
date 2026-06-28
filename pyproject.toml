@@ -65,7 +65,7 @@ dependencies = [
     "django-allauth==65.18.0",         # https://github.com/pennersr/django-allauth
     "django-countries==9.0.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
-    "django-environ==0.13.0",          # https://github.com/joke2k/django-environ
+    "django-environ==0.14.0",          # https://github.com/joke2k/django-environ
     "django-hijack==3.7.8",            # https://github.com/django-hijack/django-hijack/
     "django-import-export==4.4.1",     # https://github.com/django-import-export/django-import-export
     "django-js-reverse==1.0.0",        # https://github.com/vintasoftware/django-js-reverse
