@@ -20,7 +20,7 @@ dependencies = [
     "pytz==2026.2",         # https://github.com/stub42/pytz
     "timeago==1.0.16",      # https://github.com/hustcc/timeago
     "tomlkit==0.15.0",      # https://github.com/python-poetry/tomlkit
-    "wrapt==2.2.1",         # https://github.com/GrahamDumpleton/wrapt
+    "wrapt==2.2.2",         # https://github.com/GrahamDumpleton/wrapt
 
     # Redis
     # ------------------------------------------------------------------------------
