@@ -24,5 +24,6 @@ the completed container again on a later `up` operation.
 - Use `docker compose --dry-run` when reviewing whether a supposedly one-shot
   service will be scheduled by normal startup.
 - With host networking, do not add Docker `EXPOSE` or Compose `ports` entries
-  solely for VS Code. Declare `forwardPorts` and `portsAttributes` in
-  `devcontainer.json` so the editor creates its remote tunnel automatically.
+  solely for VS Code. Use `forwardPorts` in `devcontainer.json` when reopening
+  in a Dev Container, and workspace-level remote auto-forwarding when running
+  plain Docker Compose through Remote SSH or Tunnels.

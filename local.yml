@@ -58,8 +58,6 @@ services:
     <<: *django
     image: speleodb_local_django_webserver
     container_name: speleodb_local_django_webserver
-    ports:
-      - "8000:8000"
     command: /start
 
   # celeryworker:

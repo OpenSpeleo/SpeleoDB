@@ -1,4 +1,13 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "remote.autoForwardPorts": true,
+    "remote.autoForwardPortsSource": "hybrid",
+    "remote.restoreForwardedPorts": true,
+    "remote.portsAttributes": {
+        "8000": {
+            "label": "SpeleoDB Django",
+            "onAutoForward": "notify"
+        }
+    }
 }

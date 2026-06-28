@@ -12,6 +12,17 @@
     // "remoteEnv": {"PATH": "/home/dev-user/.local/bin:${containerEnv:PATH}"},
     "remoteUser": "dev-user",
     "workspaceFolder": "/app",
+    // VS Code tunnel only: Docker still uses host networking and publishes no
+    // container port. This makes port 8000 appear automatically in Ports.
+    "forwardPorts": [
+        8000
+    ],
+    "portsAttributes": {
+        "8000": {
+            "label": "SpeleoDB Django",
+            "onAutoForward": "notify"
+        }
+    },
     // Set *default* container specific settings.json values on container create.
     "customizations": {
         "vscode": {
