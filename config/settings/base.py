@@ -345,13 +345,16 @@ AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN")
 # DJANGO CORS: https://github.com/adamchainz/django-cors-headers#setup
 # ------------------------------------------------------------------------------
 
+aws_s3_origin_host = AWS_S3_CUSTOM_DOMAIN.split("/", maxsplit=1)[0]
+PRODUCTION_CORS_ALLOWED_ORIGINS = [
+    f"https://{host}" for host in [*ALLOWED_HOSTS.copy(), aws_s3_origin_host]
+]
+
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 
 else:
-    CORS_ALLOWED_ORIGINS = [
-        f"https://{host}" for host in [*ALLOWED_HOSTS.copy(), AWS_S3_CUSTOM_DOMAIN]
-    ]
+    CORS_ALLOWED_ORIGINS = PRODUCTION_CORS_ALLOWED_ORIGINS
     CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
 CORS_URLS_REGEX = r"^/api/.*$"
