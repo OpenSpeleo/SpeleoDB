@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load vite_assets %}
 
 {% block title %}{{ gis_view.name }}{% endblock title %}
 
@@ -14,10 +15,8 @@
 <link rel="dns-prefetch" href="https://fonts.openmaptiles.org">
 <link rel="dns-prefetch" href="https://services.arcgisonline.com">
 <link rel="dns-prefetch" href="https://server.arcgisonline.com">
-<link href="{% static 'private/css/style.css' %}" rel="stylesheet">
-<link href="{% static 'private/css/custom.css' %}" rel="stylesheet">
-<link href="{% static 'private/css/shared-modal.css' %}" rel='stylesheet' />
-<link href="{% static 'private/css/map_viewer.css' %}" rel='stylesheet' />
+{% vite_styles 'style-private-shell' 'style-shared-modal' 'style-map-viewer' %}
+{% vite_preload 'controller-public-gis' %}
 <link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css' rel='stylesheet' />
 {% endblock extra_css %}
 
@@ -78,16 +77,13 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script>
-    // Context bridge - defined BEFORE the module loads to ensure availability
-    window.MAPVIEWER_CONTEXT = {
-        csrfToken: "{{ csrf_token }}",
-        mapboxToken: "{{ mapbox_api_token }}",
-        viewMode: "public",
-        gisToken: "{{ gis_token }}",
-        allowPreciseZoom: {{ gis_view.allow_precise_zoom|yesno:"true,false" }}
-    };
+<script type="application/json" data-speleodb-controller="public-gis">
+{
+    "csrfToken": "{{ csrf_token|escapejs }}",
+    "mapboxToken": "{{ mapbox_api_token|escapejs }}",
+    "viewMode": "public",
+    "gisToken": "{{ gis_token|escapejs }}",
+    "allowPreciseZoom": {{ gis_view.allow_precise_zoom|yesno:"true,false" }}
+}
 </script>
-<script src="{% static 'js/dist/gis_view.bundle.js' %}"></script>
 {% endblock inline_extra_js %}
-

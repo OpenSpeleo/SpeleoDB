@@ -1,10 +1,14 @@
 
 {% load static %}
+{% load vite_assets %}
 <!DOCTYPE html>
 <html lang="en-us">
     <head>
+        <meta name="color-scheme" content="dark">
+        <meta name="darkreader-lock">
         <title>SpeleoDB | {% block title %}ERROR{% endblock title %}</title>
-        <link type="text/css" rel="stylesheet" href="{% static 'css/error.css' %}" />
+        {% vite_styles 'style-error-page' %}
+        {% vite_preload 'app' 'controller-error-page' %}
 
         <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
         <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
@@ -25,6 +29,7 @@
             type="text/javascript"
             src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"
             ></script>
-        <script type="text/javascript" src="{% static 'js/error.js' %}"></script>
+        <script type="application/json" data-speleodb-controller="error-page">{}</script>
+        {% vite_script 'app' %}
     </body>
 </html>

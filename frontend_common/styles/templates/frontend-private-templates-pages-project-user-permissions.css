@@ -1,0 +1,71 @@
+/* Mobile card layout for user permissions */
+    @media (max-width: 768px) {
+        .permissions-table {
+            display: none;
+        }
+        
+        .permissions-cards {
+            display: block;
+        }
+        
+        .permission-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .permission-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .permission-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .permission-card-user {
+            flex: 1;
+        }
+        
+        .permission-card-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+        
+        .permission-card-email {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        
+        .permission-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .permission-card-body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .permissions-table {
+            display: block;
+        }
+        
+        .permissions-cards {
+            display: none;
+        }
+    }

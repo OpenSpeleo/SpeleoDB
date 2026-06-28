@@ -1,7 +1,9 @@
 {% extends "base_private.html" %}
-{% load static %}
+{% load static vite_assets %}
 {% load set_var %}
 {% load str_format %}
+
+{% block extra_css %}{% vite_preload 'controller-copy-token' %}{% endblock extra_css %}
 
 {% block content %}
 <main class="grow">
@@ -220,71 +222,23 @@
 {% endblock content %}
 
 {% block inline_extra_js %}
-<script>
-    $(document).ready(function() {
-        $('#landmark-collections-copy-btn').click(function() {
-            const url = $('#landmark-collections-api-url').text().trim();
-
-            navigator.clipboard.writeText(url).then(function() {
-                $('#landmark-collections-copy-text').text('Copied!');
-                $('#landmark-collections-copy-icon').html(`
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                `);
-
-                setTimeout(function() {
-                    $('#landmark-collections-copy-text').text('Copy');
-                    $('#landmark-collections-copy-icon').html(`
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                    `);
-                }, 2000);
-            }).catch(function(err) {
-                console.error('Failed to copy:', err);
-            });
-        });
-
-        const $refreshForm = $('#landmark-collections-refresh-token-form');
-        const $refreshModal = $('#landmark-collections-refresh-token-modal');
-        const $refreshCancel = $('#landmark-collections-refresh-token-cancel');
-        const $refreshConfirm = $('#landmark-collections-refresh-token-confirm');
-        let shouldSubmitRefresh = false;
-
-        function showRefreshModal() {
-            $refreshModal.css('display', 'flex');
-            $('body').css('overflow', 'hidden');
+<script type="application/json" data-speleodb-controller="copy-token">
+{
+    "copyButtons": [
+        {
+            "button": "#landmark-collections-copy-btn",
+            "value": "#landmark-collections-api-url",
+            "text": "#landmark-collections-copy-text",
+            "icon": "#landmark-collections-copy-icon"
         }
-
-        function hideRefreshModal() {
-            $refreshModal.hide();
-            $('body').css('overflow', '');
-        }
-
-        $refreshForm.on('submit', function(event) {
-            if (!shouldSubmitRefresh) {
-                event.preventDefault();
-                showRefreshModal();
-            }
-            shouldSubmitRefresh = false;
-        });
-
-        $refreshCancel.on('click', hideRefreshModal);
-
-        $refreshConfirm.on('click', function() {
-            shouldSubmitRefresh = true;
-            hideRefreshModal();
-            $refreshForm[0].submit();
-        });
-
-        $refreshModal.on('click', function(event) {
-            if ($(event.target).is($refreshModal)) {
-                hideRefreshModal();
-            }
-        });
-
-        $(document).on('keydown', function(event) {
-            if (event.key === 'Escape' && $refreshModal.is(':visible')) {
-                hideRefreshModal();
-            }
-        });
-    });
+    ],
+    "tokenModal": {
+        "form": "#landmark-collections-refresh-token-form",
+        "modal": "#landmark-collections-refresh-token-modal",
+        "cancel": "#landmark-collections-refresh-token-cancel",
+        "confirm": "#landmark-collections-refresh-token-confirm",
+        "namedSubmit": false
+    }
+}
 </script>
 {% endblock inline_extra_js %}

@@ -1,9 +1,12 @@
 {% load static %}
+{% load vite_assets %}
 <!DOCTYPE html>
 <html lang="en-us">
 
 <head>
     <meta charset="utf-8">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
     <title>SpeleoDB - Ariane</title>
 
     <meta property="og:locale" content="en_US" />
@@ -13,7 +16,7 @@
     <meta name="description" content="SpeleoDB Collaboration and Survey Data Exchange Server" />
     <meta name="author" content="Jonathan Dekhtiar" />
 
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% vite_styles 'style-app' %}
 
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">

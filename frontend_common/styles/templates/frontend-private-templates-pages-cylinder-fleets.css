@@ -1,0 +1,87 @@
+/* Mobile card layout for cylinder fleets */
+    @media (max-width: 768px) {
+        .cylinder-fleets-table {
+            display: none;
+        }
+        
+        .cylinder-fleets-cards {
+            display: block;
+        }
+        
+        .cylinder-fleet-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .cylinder-fleet-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .cylinder-fleet-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .cylinder-fleet-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            flex: 1;
+            margin-right: 12px;
+        }
+        
+        .cylinder-fleet-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .cylinder-fleet-card-body {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .cylinder-fleet-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .cylinder-fleet-card-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        
+        .cylinder-fleet-card-value {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+            text-align: right;
+        }
+        
+        .cylinder-fleet-card-badge {
+            text-align: right;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .cylinder-fleets-table {
+            display: block;
+        }
+        
+        .cylinder-fleets-cards {
+            display: none;
+        }
+    }

@@ -68,17 +68,17 @@ Current map viewer tests (20 files, 484+ tests):
 - project toggle hides related project-scoped layers
 - any domain or color-mode side effects remain synchronized
 
-## Tailwind/CSS Pipeline Checks
+## Vite/Tailwind Pipeline Checks
 
-When frontend build scripts or tailwind configs change:
+When frontend build scripts, registry entries, or Tailwind sources change:
 
 1. run
-   - `npm run build:tailwind:public`
-   - `npm run build:tailwind:private`
+   - `npm run build`
+   - `npm run test:assets-watch`
 2. ensure no "No utility classes were detected" warnings
-3. validate both output files are generated:
-   - `frontend_public/static/css/style.css`
-   - `frontend_private/static/private/css/style.css`
+3. validate `.vite/manifest.json`, `style-app`, the bootstrap, and all map
+   controller entries are generated under
+   `speleodb/common/static/speleodb/vite/`
 
 ## CI and Automation Context
 
@@ -96,4 +96,3 @@ Before finalizing changes:
 3. no duplicated logic introduced where centralized API exists
 4. docs updated for architecture-impacting behavior
 5. public/private parity confirmed for shared map features
-

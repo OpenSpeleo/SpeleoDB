@@ -37,6 +37,7 @@ vi.mock('../utils.js', () => {
             showNotification: vi.fn(),
             safeCssColor: vi.fn((c, fb) => (/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(String(c || '')) ? c : (fb || '#94a3b8'))),
             escapeHtml: vi.fn(escapeHtml),
+            mapActionAttributes: (action, ...args) => `data-map-action="${escapeHtml(action)}" data-map-args="${escapeHtml(JSON.stringify(args))}"`,
             raw: (html) => ({ [RAW]: true, value: String(html) }),
             safeHtml: (strings, ...values) => strings.reduce((r, s, i) => {
                 if (i < values.length) {

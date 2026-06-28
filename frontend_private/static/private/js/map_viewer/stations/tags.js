@@ -62,7 +62,7 @@ export const StationTags = {
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="flex items-center justify-between p-6 border-b border-slate-600">
                         <h3 class="text-lg font-semibold text-white">${station.tag ? 'Change Station Tag' : 'Add Tag to Station'}</h3>
-                        <button onclick="window.closeTagSelector()" class="text-slate-400 hover:text-white transition-colors">
+                        <button ${Utils.mapActionAttributes('tags.closeTagSelector')} class="text-slate-400 hover:text-white transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
@@ -72,7 +72,7 @@ export const StationTags = {
                         ${State.userTags.length > 0 ? `
                             <div class="flow-y-2">
                                 ${State.userTags.map(tag => `
-                                    <button onclick="window.setStationTag('${stationId}', '${tag.id}')"
+                                    <button ${Utils.mapActionAttributes('tags.setStationTag', stationId, tag.id)}
                                             class="w-full text-left px-4 py-2 rounded-lg ${currentTagId === tag.id ? 'bg-sky-600' : 'bg-slate-700'} hover:bg-slate-600 transition-colors flex items-center justify-between">
                                         <span class="station-tag" style="background-color: ${Utils.safeCssColor(tag.color)}">${Utils.escapeHtml(tag.name)}</span>
                                         ${currentTagId === tag.id ? '<span class="text-white text-sm">✓ Current</span>' : ''}
@@ -81,7 +81,7 @@ export const StationTags = {
                             </div>
                             ${currentTagId ? `
                                 <div class="mt-4 pt-4 border-t border-slate-600">
-                                    <button onclick="window.removeStationTag('${stationId}')" 
+                                    <button ${Utils.mapActionAttributes('tags.removeStationTag', stationId)}
                                             class="w-full px-4 py-2 rounded-lg bg-srgb-red-500-20 hover:bg-srgb-red-500-30 text-red-300 transition-colors text-sm">
                                         Remove Tag from Station
                                     </button>
@@ -90,10 +90,10 @@ export const StationTags = {
                         ` : '<p class="text-slate-400 text-center">No tags available. Create one below!</p>'}
                     </div>
                     <div class="flex justify-between items-center p-6 border-t border-slate-600">
-                        <button onclick="window.openTagCreationModal()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
+                        <button ${Utils.mapActionAttributes('tags.openTagCreationModal')} class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
                             + Create New Tag
                         </button>
-                        <button onclick="window.closeTagSelector()" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                        <button ${Utils.mapActionAttributes('tags.closeTagSelector')} class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
                             Close
                         </button>
                     </div>
@@ -124,7 +124,7 @@ export const StationTags = {
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="flex items-center justify-between p-6 border-b border-slate-600">
                         <h2 class="text-xl font-semibold text-white">Create New Tag</h2>
-                        <button onclick="window.closeTagCreationModal()" class="text-slate-400 hover:text-white transition-colors">
+                        <button ${Utils.mapActionAttributes('tags.closeTagCreationModal')} class="text-slate-400 hover:text-white transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
@@ -146,7 +146,7 @@ export const StationTags = {
                                     <div class="tag-color-option" 
                                          style="background-color: ${safe}" 
                                          data-color="${Utils.escapeHtml(safe)}"
-                                         onclick="window.selectTagColor('${Utils.escapeHtml(safe)}')" 
+                                         ${Utils.mapActionAttributes('tags.selectTagColor', safe)}
                                          title="${Utils.escapeHtml(safe)}"></div>
                                     `;
                                 }).join('')}
@@ -158,17 +158,17 @@ export const StationTags = {
                                 <label class="text-sm text-slate-400">Or pick a custom color:</label>
                                 <input type="color" id="new-tag-custom-color" 
                                        value="${Utils.safeCssColor(State.tagColors[0] || '#ef4444')}"
-                                       onchange="window.useCustomColorForNewTag()"
+                                       ${Utils.mapActionAttributes('tags.useCustomColorForNewTag')} data-map-event="change"
                                        class="h-10 w-20 rounded-sm cursor-pointer border border-slate-600"
                                        title="Pick custom color">
                             </div>
                         </div>
                     </div>
                     <div class="flex justify-end gap-3 p-6 border-t border-slate-600">
-                        <button onclick="window.closeTagCreationModal()" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                        <button ${Utils.mapActionAttributes('tags.closeTagCreationModal')} class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
                             Cancel
                         </button>
-                        <button onclick="window.createNewTag()" class="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors">
+                        <button ${Utils.mapActionAttributes('tags.createNewTag')} class="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors">
                             Create Tag
                         </button>
                     </div>
@@ -334,7 +334,7 @@ export const StationTags = {
             tagContainer.innerHTML = Utils.safeHtml`
                 <span class="station-tag" style="background-color: ${Utils.raw(Utils.safeCssColor(station.tag.color))}">
                     ${station.tag.name}
-                    <span class="remove-tag" onclick="window.removeStationTag('${stationId}')">×</span>
+                    <span class="remove-tag" ${Utils.mapActionAttributes('tags.removeStationTag', stationId)}>×</span>
                 </span>
             `;
         } else {
@@ -350,12 +350,3 @@ export const StationTags = {
 };
 
 // Expose functions globally for onclick handlers
-window.openTagSelector = (stationId) => StationTags.openTagSelector(stationId);
-window.closeTagSelector = () => StationTags.closeTagSelector();
-window.openTagCreationModal = () => StationTags.openTagCreationModal();
-window.closeTagCreationModal = () => StationTags.closeTagCreationModal();
-window.selectTagColor = (color) => StationTags.selectTagColor(color);
-window.useCustomColorForNewTag = () => StationTags.useCustomColorForNewTag();
-window.createNewTag = () => StationTags.createNewTag();
-window.setStationTag = (stationId, tagId) => StationTags.setStationTag(stationId, tagId);
-window.removeStationTag = (stationId) => StationTags.removeStationTag(stationId);

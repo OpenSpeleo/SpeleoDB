@@ -5,31 +5,18 @@
  * exercise production code rather than local copies.
  */
 
-/* global escapeHtml, formatNumber, getInitials, getAvatarColor, avatarColors,
-          getHeatmapLevel, groupTimestampsByLocalDate, computeHeatmapStats,
-          buildCommitsChartConfig, buildProjectsChartConfig */
-
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
-
-/* ── Load real source files ─────────────────────────────────────── */
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const XSS_PATH = resolve(__dirname, '..', 'xss-helpers.js');
-const XSS_SRC = readFileSync(XSS_PATH, 'utf-8');
-
-const HELPERS_PATH = resolve(__dirname, '..', 'dashboard-helpers.js');
-const HELPERS_SRC = readFileSync(HELPERS_PATH, 'utf-8');
-
-beforeAll(() => {
-    // Evaluate both scripts so their globals are available
-    // eslint-disable-next-line no-eval
-    (0, eval)(XSS_SRC);
-    // eslint-disable-next-line no-eval
-    (0, eval)(HELPERS_SRC);
-});
+import { escapeHtml } from '../xss-helpers.js';
+import {
+    avatarColors,
+    buildCommitsChartConfig,
+    buildProjectsChartConfig,
+    computeHeatmapStats,
+    formatNumber,
+    getAvatarColor,
+    getHeatmapLevel,
+    getInitials,
+    groupTimestampsByLocalDate,
+} from '../dashboard-helpers.js';
 
 
 /* ── DOM helpers used only by tests (populateStatCards, renderActivityFeed) ── */

@@ -1,0 +1,215 @@
+/* Mobile card layout for projects */
+    @media (max-width: 768px) {
+        .projects-table {
+            display: none;
+        }
+
+        .projects-cards {
+            display: block;
+        }
+
+        .project-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .project-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .project-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+
+        .project-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            flex: 1;
+            margin-right: 12px;
+        }
+
+        .project-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .project-card-body {
+            display: grid;
+            gap: 10px;
+        }
+
+        .project-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .project-card-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .project-card-value {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+            text-align: right;
+        }
+
+        .project-card-badge {
+            text-align: right;
+        }
+    }
+
+    @media (min-width: 769px) {
+        .projects-table {
+            display: block;
+        }
+
+        .projects-cards {
+            display: none;
+        }
+    }
+
+    /* Country group collapsible headers */
+    .country-group-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        cursor: pointer;
+        user-select: none;
+        background: rgba(30, 41, 59, 0.6);
+        border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+        font-size: 15px;
+        font-weight: 600;
+        color: #e2e8f0;
+        transition: background 0.15s ease;
+    }
+
+    .country-group-header:hover {
+        background: rgba(51, 65, 85, 0.7);
+    }
+
+    .country-group-chevron {
+        transition: transform 0.2s ease;
+    }
+
+    .country-group.collapsed .country-group-chevron {
+        transform: rotate(-90deg);
+    }
+
+    .country-group.collapsed .country-group-content {
+        display: none;
+    }
+
+    .country-group.collapsed .country-group-row {
+        display: none;
+    }
+
+    .country-group-count {
+        color: #94a3b8;
+        font-weight: 400;
+        font-size: 13px;
+    }
+
+    /* Desktop table country header row */
+    table .country-group-header {
+        background: rgba(30, 41, 59, 0.6);
+    }
+
+    table .country-group-header td {
+        padding: 10px 16px;
+    }
+
+    table .country-group-header .country-group-header-inner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 15px;
+        font-weight: 600;
+        color: #e2e8f0;
+    }
+
+    /*
+     * Responsive column hiding with width redistribution.
+     * Column indices (nth-child): 1=Name 2=Software 3=Collaborators
+     * 4=Revisions 5=Permission 6=GPS 7=LastEdit 8=Editor
+     * 9=EditingSince 10=Actions
+     *
+     * When a column is hidden its percentage is redistributed so
+     * visible columns still sum to 100% (required by table-fixed).
+     */
+
+    /* < 1700px: hide Collaborators (col 3) + Editing Since (col 9) — 8 columns */
+    @media (max-width: 1699px) {
+        .projects-table th:nth-child(3),
+        .projects-table td:nth-child(3),
+        .projects-table th:nth-child(9),
+        .projects-table td:nth-child(9) { display: none; }
+
+        .projects-table th:nth-child(1)  { width: 21%; }
+        .projects-table th:nth-child(2)  { width: 11%; }
+        .projects-table th:nth-child(4)  { width:  8%; }
+        .projects-table th:nth-child(5)  { width: 12%; }
+        .projects-table th:nth-child(6)  { width: 12%; }
+        .projects-table th:nth-child(7)  { width: 11%; }
+        .projects-table th:nth-child(8)  { width: 16%; }
+        .projects-table th:nth-child(10) { width:  9%; }
+    }
+
+    /* < 1500px: also hide Revisions (col 4) — 7 columns */
+    @media (max-width: 1499px) {
+        .projects-table th:nth-child(4),
+        .projects-table td:nth-child(4) { display: none; }
+
+        .projects-table th:nth-child(1)  { width: 23%; }
+        .projects-table th:nth-child(2)  { width: 13%; }
+        .projects-table th:nth-child(5)  { width: 14%; }
+        .projects-table th:nth-child(6)  { width: 13%; }
+        .projects-table th:nth-child(7)  { width: 12%; }
+        .projects-table th:nth-child(8)  { width: 16%; }
+        .projects-table th:nth-child(10) { width:  9%; }
+    }
+
+    /* < 1450px: also hide Current Editor (col 8) — 6 columns */
+    @media (max-width: 1449px) {
+        .projects-table th:nth-child(8),
+        .projects-table td:nth-child(8) { display: none; }
+
+        .projects-table th:nth-child(1)  { width: 28%; }
+        .projects-table th:nth-child(2)  { width: 15%; }
+        .projects-table th:nth-child(5)  { width: 16%; }
+        .projects-table th:nth-child(6)  { width: 15%; }
+        .projects-table th:nth-child(7)  { width: 15%; }
+        .projects-table th:nth-child(10) { width: 11%; }
+    }
+
+    /* < 1300px: also hide Last Edit (col 7) — 5 columns */
+    @media (max-width: 1299px) {
+        .projects-table th:nth-child(7),
+        .projects-table td:nth-child(7) { display: none; }
+
+        .projects-table th:nth-child(1)  { width: 33%; }
+        .projects-table th:nth-child(2)  { width: 18%; }
+        .projects-table th:nth-child(5)  { width: 19%; }
+        .projects-table th:nth-child(6)  { width: 17%; }
+        .projects-table th:nth-child(10) { width: 13%; }
+    }

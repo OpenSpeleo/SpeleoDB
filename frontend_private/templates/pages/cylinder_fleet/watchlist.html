@@ -1,5 +1,7 @@
 {% extends "pages/cylinder_fleet/base.html" %}
-{% load static %}
+{% load static vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-fleet' %}{% endblock extra_css %}
 
 {% block right_panel %}
 <div class="grow">
@@ -269,43 +271,17 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/fleet_watchlist.js' %}"></script>
-{% if has_write_access %}
-<script src="{% static 'private/js/forms/fleet_entity_crud.js' %}"></script>
-{% include 'snippets/cylinder_modal_helpers.js' %}
-{% endif %}
-<script>
-    $(window).on('load', function () {
-        attachFleetWatchlist({
-            tableSelector: '#watchlist_cylinders_table',
-            {% if has_write_access %}
-            dataTableOptions: { columnDefs: [{ targets: -1, orderable: false }] },
-            {% endif %}
-            {% if show_days_filter %}
-            formSelector: '#watchlist_form',
-            exportBtnSelector: '#btn_export_excel',
-            exportUrlBuilder: function (days) {
-                return Urls['api:v2:cylinder-fleet-watchlist-export']('{{ cylinder_fleet.id }}') + '?days=' + days;
-            },
-            {% endif %}
-        });
-
-        {% if has_write_access %}
-        attachFleetEntityCrud({
-            entityLabel: 'cylinder',
-            modalSelector: '#cylinder_modal',
-            editButtonSelector: '.edit-cylinder-btn',
-            cancelSelectors: '#cylinder_modal_cancel, #cylinder_modal_close_x',
-            saveButtonSelector: '#cylinder_modal_save',
-            modalTitleSelector: '#cylinder_modal_title',
-            editTitle: 'Edit Cylinder',
-            detailEndpoint: function (id) { return Urls['api:v2:cylinder-detail'](id); },
-            populateForEdit: cylinderPopulateForEdit,
-            collectPayload: cylinderCollectPayload,
-        });
-        {% endif %}
-    });
+<script type="application/json" data-speleodb-controller="fleet">
+{
+    "kind": "cylinder",
+    "mode": "watchlist",
+    "fleetId": "{{ cylinder_fleet.id }}",
+    "tableSelector": "#watchlist_cylinders_table",
+    "hasWrite": {% if has_write_access %}true{% else %}false{% endif %},
+    "showDaysFilter": {% if show_days_filter %}true{% else %}false{% endif %},
+    "exportRoute": "api:v2:cylinder-fleet-watchlist-export",
+    "entityCrud": {% if has_write_access %}true{% else %}false{% endif %},
+    "detailRoute": "api:v2:cylinder-detail"
+}
 </script>
 {% endblock inline_extra_js %}

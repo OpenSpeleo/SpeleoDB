@@ -36,7 +36,7 @@
 
 var EMAIL_REGEX_AUTH = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 
-function validateEmail(email) {
+export function validateEmail(email) {
     return EMAIL_REGEX_AUTH.test(email);
 }
 
@@ -50,7 +50,7 @@ function _defaultErrorMessage(xhr) {
     return 'An error occurred. Please try again.';
 }
 
-function attachAuthForm(options) {
+export function attachAuthForm(options) {
     var formId = options.formId;
     var endpoint = options.endpoint;
     var validators = options.validators || [];

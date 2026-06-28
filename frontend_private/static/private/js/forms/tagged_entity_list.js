@@ -56,14 +56,14 @@
  * Requires: jQuery, FormModals, showAjaxErrorModal.
  */
 
-/* global FormModals, showAjaxErrorModal */
-/* exported attachTaggedEntityList */
+import { showAjaxErrorModal } from './ajax_errors.js';
+import { FormModals } from './modals.js';
 
 function _tteGetCSRFToken() {
     return $('input[name^=csrfmiddlewaretoken]').val() || '';
 }
 
-function attachTaggedEntityList(options) {
+export function attachTaggedEntityList(options) {
     var listEndpoint = options.listEndpoint;
     var detailEndpointBuilder = options.detailEndpointBuilder;
     var editMethod = options.editMethod || 'PUT';

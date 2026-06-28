@@ -3,59 +3,76 @@
 ## Intent
 
 SpeleoDB compiles CSS with exact `tailwindcss@4.3.1` and
-`@tailwindcss/cli@4.3.1`. The migration is required to retain the rendered
+`@tailwindcss/vite@4.3.1` inside the Vite 8.1.0 graph. The migration is
+required to retain the rendered
 contract established by Tailwind 3.4.19; parity is a release condition, not an
-assumption. This is a compiler migration, not a redesign. Existing public and
-authenticated pages, map compositions, output paths, and npm command names
-must remain stable.
+assumption. The private application is the visual/configuration reference. The
+public application intentionally converges on its typography tokens while
+retaining namespaced marketing components.
 
 The supported browser floor is Tailwind v4's official floor: Chrome 111+,
 Safari 16.4+, and Firefox 128+.
 
-## Two-build ownership
+## Single-bundle ownership
 
-The repository deliberately produces two Tailwind stylesheets:
+`tailwind_css/style.css` is the only Tailwind source entrypoint. Vite registers
+it as `style-app` and emits a hashed stylesheet under
+`speleodb/common/static/speleodb/vite/assets/`. Every public and private
+document that uses Tailwind requests that logical asset exactly once through
+the Django manifest tags.
 
-- `tailwind_css/public/style.css` scans public templates, public top-level
-  JavaScript, and the people template tags.
-- `tailwind_css/private/style.css` scans private templates, the shared public
-  footer, private top-level JavaScript, private map-viewer JavaScript, and the
-  project-type template tags.
+The neutral entrypoint imports `tailwind_css/private/style.css` unchanged. That
+file remains the canonical theme, font, variant, private component, and private
+source contract, but it is not built or shipped independently. The neutral
+entrypoint adds public templates, top-level public JavaScript, the people
+template tags, public animations, and `tailwind_css/public/components.css`.
 
-Each entrypoint disables automatic detection with
-`@import 'tailwindcss' source(none)`, loads its adjacent JavaScript config with
-`@config`, and declares every source using stylesheet-relative `@source`
-directives. These lists are an isolation boundary: a public-only candidate must
-not leak into the private build, or vice versa. Contract coverage must compile
-temporary mirrored source trees and prove every included, excluded, shared,
-and cross-build sentinel; inspecting directive text alone is insufficient.
+Automatic detection stays disabled by the imported private reference. All
+sources remain explicit, stylesheet-relative `@source` directives. Compiler
+contracts build a mirrored union tree and prove all supported public/private
+sentinels are present while unsupported nested trees remain absent.
 
-The configs own theme extensions and register forms and typography once. They
-do not own source paths, dark mode, or custom variants. The forms plugin uses
-its base strategy because SpeleoDB's component layer owns `.form-*` classes.
+The shared design system registers forms and typography once. The forms plugin
+uses its base strategy because SpeleoDB owns `.form-*` components. JavaScript
+configs, `@config`, automatic detection, CLI `-c`, and a second generated
+Tailwind asset are prohibited.
 
 ## Layers and stylesheet composition
 
-Both builds use explicit Tailwind `theme`, `base`, `components`, and
-`utilities` layers. Font imports remain first. The shared design-system theme
-and browser normalization load before build-specific components; utility
-overrides load last where the product contract requires it.
+The bundle uses explicit Tailwind `theme`, `base`, `components`, and
+`utilities` layers. The unchanged private reference loads its font, shared
+design system, private components, and utility overrides in their established
+order. Namespaced public components join the components layer without
+redefining `.btn`, `.h*`, or `.form-*`.
 
 The migration-owned stylesheet order in the rendered templates is:
 
-1. Public pages: public Tailwind, then public custom CSS.
-2. Private pages: private Tailwind, then private custom CSS.
-3. Public GIS: public Tailwind/custom, private Tailwind/custom, shared modal,
+1. Public pages: unified Tailwind, then public custom CSS.
+2. Private pages: unified Tailwind, then private custom CSS.
+3. Public GIS: unified Tailwind, public custom, private custom, shared modal,
    map-viewer CSS, then Mapbox GL CSS.
-4. Private map: private Tailwind/custom, the base template's inline responsive
-   rules, Mapbox GL CSS, shared modal, then map-viewer CSS.
+4. Private map: unified Tailwind, private custom, the base template's extracted
+   responsive style entry, Mapbox GL CSS, shared modal, then map-viewer CSS.
 
-Do not consolidate the builds or change this order casually. Public GIS is the
-intentional dual-stylesheet consumer and is the strongest cascade regression
-case. Page-level inline `<style>` blocks remain at their Django block location
-and participate in the ordinary cascade. A parity harness must use the rendered
-order, including Mapbox, even when external traffic is deterministically
-stubbed.
+Public GIS is the strongest cascade regression case because it combines both
+application custom layers even though Tailwind now loads once. Page-level
+static styles are Vite entries rendered at their former Django block location
+and participate in the ordinary cascade. A parity harness must use the rendered order,
+including Mapbox, even when external traffic is deterministically stubbed.
+
+## Public convergence boundary
+
+Public headings, buttons, and authentication inputs use durable `site-*`
+components. Button/form geometry and marketing colors remain public-owned;
+typography resolves through the private `text-*` and `tracking-*` tokens. The
+public document separately requests Inter 800, so adding that weight does not
+change private font rendering. Public GIS map and welcome-modal controls retain
+the private `.btn` contract.
+
+The accepted public visual delta is limited to the private font-size,
+line-height, and letter-spacing values, resulting text reflow, and consistent
+public header components on GIS. Private pages permit no unexplained visual or
+computed-style difference.
 
 ## Design-system foundation
 
@@ -80,12 +97,21 @@ utility gets a durable semantic name such as `srgb-*`, `flow-*`,
 carry a migration-version prefix.
 
 Class-controlled dark mode, unguarded v3 hover/group-hover behavior, and the
-private `sidebar-expanded` variant are build-specific and therefore declared
-with `@custom-variant` in the owning entrypoints. Private-only theme or form
-overrides remain in the private entrypoint. Feature selectors and stable
-project variables remain in their application stylesheet. Only
+private `sidebar-expanded` variant remain in the imported private reference.
+Feature selectors and stable project variables remain in their application
+stylesheet. Only
 compiler-facing utilities may couple to Tailwind's private implementation
 variables, and that coupling must stay inside the design-system boundary.
+
+## Document color scheme
+
+Every SpeleoDB-owned root document declares the standard dark color scheme and
+the Dark Reader lock before loading stylesheets. The shared design system also
+sets `color-scheme: dark` on `:root`; the standalone error stylesheet owns the
+same declaration for error documents. The private root retains `.dark` because
+private variants are class-controlled. Public roots deliberately do not gain
+that class: the unified bundle contains the private class-controlled variants,
+and activating them would change the public cascade.
 
 ## Candidate migration rules
 
@@ -162,15 +188,11 @@ total must not be quoted as that evidence.
 
 ## Performance and removal plan
 
-Automatic source discovery is disabled, which keeps each compiler invocation
-bounded to the explicitly owned source set. The design-system foundation does
-not add runtime JavaScript or DOM scans. The repaired candidate's three clean
-minified builds are stable at 86,538 public bytes (+26.5% from the baseline)
-and 110,750 private bytes (+19.3%); full builds took 0.98–1.35 seconds in the
-isolated Node 22 review environment. Exact hashes, unminified sizes,
-structural inventories, and environment details live in the active
-adversarial review rather than this
-architecture document.
+Automatic source discovery is disabled, which bounds the single compiler to
+the explicit union source set. The design-system foundation adds no runtime
+JavaScript or DOM scans. Exact hashes, compressed sizes, structural
+inventories, and environment details live in the active single-bundle review
+rather than this architecture document.
 
 A real-route Chromium probe over 20 forced full-style passes found public-home
 style recalculation approximately flat (10.00→9.86 ms median for 292 nodes)
@@ -182,11 +204,14 @@ cross-engine fallback would be a compatibility change and is not part of this
 migration. Representative map-page timing remains an open release-evidence
 item.
 
-Tailwind watch mode retains a candidate after its sole source file is deleted
-in both the v3.4.19 baseline and v4.3.1. Restarting with a clean one-shot build
-removes it in both. Therefore watcher output is useful during development but
-is never parity evidence; browser certification must begin from a clean build
-and verified served hash.
+Tailwind watch mode retains a candidate after its sole template occurrence is
+deleted. Restarting with a clean one-shot build removes it. Therefore watcher
+output is useful during development but is never parity evidence; browser
+certification begins from `npm run build` and a verified served manifest hash.
+The Vite watcher does correctly rebuild imported CSS changes and deletions,
+Tailwind source additions, shared modules, and route controllers. The isolated
+watcher contract reproduces those boundaries without disturbing Django or a
+developer's running watcher.
 
 Custom design-system rules may be removed only after all consumers of the
 affected product behavior have been intentionally redesigned and the same

@@ -2,31 +2,19 @@
  * Tests for forms/entity_crud_form.js - shared new/edit JSON-CRUD form wiring.
  */
 
-/* global attachEntityCrudForm, FormModals */
-
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { attachEntityCrudForm } from './entity_crud_form.js';
+import { FormModals } from './modals.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const JQUERY_SRC = readFileSync(resolve(__dirname, '..', '..', '..', '..', '..', 'frontend_public', 'static', 'js', 'vendors', 'jquery-3.7.1.js'), 'utf-8');
-const XSS_SRC = readFileSync(resolve(__dirname, '..', 'xss-helpers.js'), 'utf-8');
-const MODALS_SRC = readFileSync(resolve(__dirname, 'modals.js'), 'utf-8');
-const AJAX_ERRORS_SRC = readFileSync(resolve(__dirname, 'ajax_errors.js'), 'utf-8');
-const ENTITY_SRC = readFileSync(resolve(__dirname, 'entity_crud_form.js'), 'utf-8');
 
 beforeAll(() => {
     // eslint-disable-next-line no-eval
     (0, eval)(JQUERY_SRC);
-    // eslint-disable-next-line no-eval
-    (0, eval)(XSS_SRC);
-    // eslint-disable-next-line no-eval
-    (0, eval)(MODALS_SRC);
-    // eslint-disable-next-line no-eval
-    (0, eval)(AJAX_ERRORS_SRC);
-    // eslint-disable-next-line no-eval
-    (0, eval)(ENTITY_SRC);
 });
 
 function setupPage() {

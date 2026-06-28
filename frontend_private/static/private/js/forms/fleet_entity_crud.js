@@ -42,10 +42,10 @@
  * Requires: jQuery, FormModals, showAjaxErrorModal.
  */
 
-/* global FormModals, showAjaxErrorModal */
-/* exported attachFleetEntityCrud */
+import { showAjaxErrorModal } from './ajax_errors.js';
+import { FormModals } from './modals.js';
 
-function attachFleetEntityCrud(options) {
+export function attachFleetEntityCrud(options) {
     var entityLabel = options.entityLabel || 'entity';
     var modalSelector = options.modalSelector;
     var deleteModalSelector = options.deleteModalSelector;

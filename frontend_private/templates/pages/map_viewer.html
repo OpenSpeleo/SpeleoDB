@@ -1,5 +1,6 @@
 {% extends "base_private.html" %}
 {% load static %}
+{% load vite_assets %}
 
 {% block extra_css %}
 {# Resource hints: warm cross-origin connections on the map load path so the #}
@@ -13,8 +14,8 @@
 <link rel="dns-prefetch" href="https://services.arcgisonline.com">
 <link rel="dns-prefetch" href="https://server.arcgisonline.com">
 <link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css' rel='stylesheet' />
-<link href="{% static 'private/css/shared-modal.css' %}" rel='stylesheet' />
-<link href="{% static 'private/css/map_viewer.css' %}" rel='stylesheet' />
+{% vite_styles 'style-shared-modal' 'style-map-viewer' %}
+{% vite_preload 'controller-private-map' %}
 {% endblock extra_css %}
 
 {% block content %}
@@ -53,7 +54,7 @@
                 </button>
 
                 <!-- Station Management button -->
-                <button id="station-manager-button" onclick="window.openSurveyStationManager()" class="btn bg-orange-500 hover:bg-orange-600 text-white">
+                <button id="station-manager-button" class="btn bg-orange-500 hover:bg-orange-600 text-white">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                         <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -62,7 +63,7 @@
                 </button>
                 
                 <!-- Surface Station Management button -->
-                <button id="surface-station-manager-button" onclick="window.openSurfaceStationManager()" class="btn bg-emerald-500 hover:bg-emerald-600 text-white">
+                <button id="surface-station-manager-button" class="btn bg-emerald-500 hover:bg-emerald-600 text-white">
                     <svg class="w-4 h-4 stroke-current fill-current shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="112.31 64 799.38 896">
                         <path d="m574 304 4 38a16 16 0 0 1-16 18h-18v122h12c9 0 16 7 16 16v36h103a120 120 0 1 1 0 56H572v76a16 16 0 0 1-16 16h-12v198h39a32 32 0 0 1 32 29l4 42a8 8 0 0 1-8 9H413a8 8 0 0 1-8-9l4-42a32 32 0 0 1 32-29h39V682h-12a16 16 0 0 1-16-16v-76H349a120 120 0 1 1 0-56h103v-36c0-9 7-16 16-16h12V360h-18a16 16 0 0 1-16-18l13-128a16 16 0 0 1 15-14h76c8 0 15 6 15 14l4 34h127l11-177a8 8 0 0 1 8-7h154c4 0 7 3 8 7l14 224a8 8 0 0 1-8 9H574zM232 518a44 44 0 1 0 0 88 44 44 0 0 0 0-88zm560 0a44 44 0 1 0 0 88 44 44 0 0 0 0-88zm32-398h-64l-8 128h80l-8-128z"></path>
                     </svg>
@@ -70,7 +71,7 @@
                 </button>
 
                 <!-- Landmark Management button -->
-                <button id="landmark-manager-button" onclick="window.openLandmarkManager()" class="btn bg-blue-500 hover:bg-blue-600 text-white">
+                <button id="landmark-manager-button" class="btn bg-blue-500 hover:bg-blue-600 text-white">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="2.5 2.5 19 19.01">
                         <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
                         <path d="M12 17l-1 -4l-4 -1l9 -4z"></path>
@@ -79,7 +80,7 @@
                 </button>
 
                 <!-- Import Data -->
-                <button id="import-data-button" onclick="showImportDataModal()" class="btn bg-red-600 hover:bg-red-700 text-white" title="Import GPX, KML, KMZ files (Google Earth)">
+                <button id="import-data-button" class="btn bg-red-600 hover:bg-red-700 text-white" title="Import GPX, KML, KMZ files (Google Earth)">
                     <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                     </svg>
@@ -266,34 +267,19 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script>
-    // Context bridge - defined BEFORE the module loads to ensure availability
-    window.MAPVIEWER_CONTEXT = {
-        csrfToken: "{{ csrf_token }}",
-        mapboxToken: "{{ mapbox_api_token }}",
-        // Static media URLs for use in JavaScript
-        icons: {
-            cylinderOrange: "{% static 'private/media/cylinder-orange-icon.png' %}",
-            explorationLead: "{% static 'private/media/exploration-lead-icon.png' %}",
-            // SubSurfaceStation Types
-            artifact: "{% static 'private/media/artifact-icon.png' %}",
-            bone: "{% static 'private/media/bones-icon.png' %}",
-            biology: "{% static 'private/media/fish-icon.png' %}",
-            geology: "{% static 'private/media/rock-icon.png' %}",
-            sensor: "{% static 'private/media/sensor-icon.png' %}",
-        }
-    };
-    
-    // Initialize Data Import module and set icon sources
-    document.addEventListener('DOMContentLoaded', function() {
-        // Set icon sources from MAPVIEWER_CONTEXT (ensures single source of truth)
-        const cylinderIcon = document.getElementById('cylinder-modal-icon');
-        if (cylinderIcon) {
-            cylinderIcon.src = window.MAPVIEWER_CONTEXT.icons.cylinderOrange;
-        }
-        
-        DataImport.init("{{ csrf_token }}");
-    });
+<script type="application/json" data-speleodb-controller="private-map">
+{
+    "csrfToken": "{{ csrf_token|escapejs }}",
+    "mapboxToken": "{{ mapbox_api_token|escapejs }}",
+    "icons": {
+        "cylinderOrange": "{% static 'private/media/cylinder-orange-icon.png' %}",
+        "explorationLead": "{% static 'private/media/exploration-lead-icon.png' %}",
+        "artifact": "{% static 'private/media/artifact-icon.png' %}",
+        "bone": "{% static 'private/media/bones-icon.png' %}",
+        "biology": "{% static 'private/media/fish-icon.png' %}",
+        "geology": "{% static 'private/media/rock-icon.png' %}",
+        "sensor": "{% static 'private/media/sensor-icon.png' %}"
+    }
+}
 </script>
-<script src="{% static 'private/js/dist/map_viewer.bundle.js' %}"></script>
 {% endblock inline_extra_js %}

@@ -1,5 +1,5 @@
 {% extends "pages/project/base.html" %}
-{% load static %}
+{% load static vite_assets %}
 
 {% load countries %}
 {% load visibility_scopes %}
@@ -8,12 +8,8 @@
 
 {% block extra_css %}
 {{ block.super }}
-<style>
-    .color-picker-disabled {
-        opacity: 0.5;
-        pointer-events: none;
-    }
-</style>
+{% vite_preload 'controller-entity-crud' %}
+{% vite_styles 'style-template-frontend-private-templates-pages-project-details' %}
 {% endblock extra_css %}
 
 {% block right_panel %}
@@ -141,32 +137,15 @@
 </div>
 {% endblock right_panel %}
 
-{% block extra_js %}
-<script src="{% static 'private/js/color-picker.js' %}"></script>
-{% endblock extra_js %}
-
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        initColorPicker({
-            preview:      '#color-preview',
-            hiddenInput:  '#color-value',
-            nativePicker: '#color-picker',
-            pickerBtn:    '#color-picker-btn',
-            hexInput:     '#color-hex-input',
-            presets:      '.color-preset',
-        });
-
-        attachEntityCrudForm({
-            formId: 'project_details_form',
-            endpoint: "{% url 'api:v2:project-detail' id=project.id %}",
-            method: 'PUT',
-            successMessage: 'The project has been updated.',
-            reloadOnSuccess: true
-        });
-    });
+<script type="application/json" data-speleodb-controller="entity-crud">
+{
+    "formId": "project_details_form",
+    "endpoint": "{% url 'api:v2:project-detail' id=project.id %}",
+    "method": "PUT",
+    "successMessage": "The project has been updated.",
+    "reloadOnSuccess": true,
+    "colorPicker": true
+}
 </script>
 {% endblock inline_extra_js %}

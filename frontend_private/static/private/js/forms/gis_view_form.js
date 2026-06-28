@@ -40,8 +40,9 @@
  * (for escaping project names into `<option>` text).
  */
 
-/* global FormModals, showAjaxErrorModal, Utils */
-/* exported attachGisViewForm */
+import { escapeHtml } from '../xss-helpers.js';
+import { showAjaxErrorModal } from './ajax_errors.js';
+import { FormModals } from './modals.js';
 
 function _gvfGetCSRFToken() {
     var cookieMatch = document.cookie
@@ -53,15 +54,10 @@ function _gvfGetCSRFToken() {
 }
 
 function _gvfEscape(value) {
-    if (typeof Utils !== 'undefined' && Utils && typeof Utils.escapeHtml === 'function') {
-        return Utils.escapeHtml(value);
-    }
-    var div = document.createElement('div');
-    div.textContent = value == null ? '' : String(value);
-    return div.innerHTML;
+    return escapeHtml(value);
 }
 
-function attachGisViewForm(options) {
+export function attachGisViewForm(options) {
     var endpoint = options.endpoint;
     var method = options.method || 'POST';
     var projectsEndpoint = options.projectsEndpoint;

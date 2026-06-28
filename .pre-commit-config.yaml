@@ -148,6 +148,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: build-vite-assets
+        name: Build Django-served Vite assets
+        entry: npm run pre-commit
+        language: system
+        pass_filenames: false
+        always_run: true
 
 # sets up .pre-commit-ci.yaml to ensure pre-commit dependencies stay up to date
 ci:

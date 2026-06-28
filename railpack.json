@@ -2,6 +2,7 @@
   "$schema": "https://schema.railpack.com",
   "provider": "python",
   "packages": {
+    "node": "24",
     "python": "3.14"
   },
   "steps": {
@@ -9,6 +10,15 @@
       "commands": [
         {
           "cmd": "uv sync --extra production --frozen"
+        },
+        {
+          "cmd": "npm ci"
+        },
+        {
+          "cmd": "npm run build"
+        },
+        {
+          "cmd": "rm -rf node_modules"
         }
       ],
       "caches": [
@@ -21,6 +31,7 @@
         "PYTHONFAULTHANDLER": "1",
         "PYTHONHASHSEED": "random",
         "PYTHONUNBUFFERED": "1",
+        "RAILPACK_NO_SPA": "1",
         "RAILPACK_DEPLOY_APT_PACKAGES": "git",
         "UV_CACHE_DIR": "/opt/uv-cache",
         "UV_COMPILE_BYTECODE": "1",

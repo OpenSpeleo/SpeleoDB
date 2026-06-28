@@ -6,6 +6,13 @@ Independently audit the staged Tailwind 4.3.1 migration against the exact
 Tailwind 3.4.19 baseline, repair every proven regression at its owning layer,
 and retain evidence for every completion claim.
 
+The subsequent Tailwind correction is tracked in
+`tasks/todos/tailwind-single-bundle-consolidation.md`, and its compiler/delivery
+successor in `tasks/todos/vite-asset-pipeline.md`. Current production ownership
+is one neutral Tailwind source inside the Vite graph, built from the unchanged
+private reference plus namespaced public components; two-output evidence below
+remains historical migration evidence only.
+
 ## Initial Git State
 
 - Branch: `dsf` (approved-plan branch name was
@@ -93,7 +100,7 @@ smallest falsifying test, conclusion, narrow fix, and regression proof.
   assertions, install-script-node assertions, and Node 22/24 build/lint/test
   results all pass. No generated output or Playwright package is tracked.
 
-### Tailwind sources, configs, and design system — 9 files / 77 hunks
+### Tailwind sources and design system — 9 files / 77 hunks
 
 - Contract: exact source ownership, layer/cascade semantics, v3 palette,
   Preflight, variants, forms, typography, utilities, transforms, and effects.
@@ -101,11 +108,11 @@ smallest falsifying test, conclusion, narrow fix, and regression proof.
   public `7daf1d31…` (88,382 bytes/4,246 lines) and private `f58cd60b…`
   (116,935 bytes/5,786 lines) unminified CSS. Their minified hashes are
   `927f57af…` (68,420 bytes) and `5e7a0fd4…` (92,824 bytes).
-- Candidate evidence: the repaired unminified public output is
-  `62ea39df…` (109,883 bytes/3,850 lines) and private is `4076eaf8…`
-  (137,282 bytes/4,923 lines). Three independent minified builds reproduced
-  public `87f0682d…` (86,538 bytes) and private `d2313d41…` (110,750 bytes).
-  Public selectors changed 767→693, at-rules 14→84, media rules 8→8,
+- Candidate evidence: after CSS-native consolidation, the repaired unminified
+  public output is `f46eb314…` (109,921 bytes/3,853 lines) and private is
+  `5a5b81df…` (137,320 bytes/4,926 lines). Three independent minified builds
+  reproduced public `6e4b5ec0…` (86,562 bytes) and private `a026197f…`
+  (110,774 bytes). Public selectors changed 767→694, at-rules 14→84, media rules 8→8,
   keyframes 4→4, and custom properties 99→203. Private changed 1,041→949,
   12→86, 8→8, 3→3, and 109→338 respectively.
 - Risk: this is the highest shared blast radius across both generated products.
@@ -119,12 +126,19 @@ smallest falsifying test, conclusion, narrow fix, and regression proof.
 - Fix: component line heights are literal `1.25rem`; the missing search, file
   selector, multiple-select, checked, and indeterminate declarations are
   centralized in the shared design system.
-- Regression proof: 14 compiler-backed contract tests pass, including durable
+- Regression proof: 15 compiler-backed contract tests pass, including durable
   production naming, mirrored source-tree sentinels, the complete v3 token
   fixture, runtime strings,
   package approvals, stylesheet order, `--tw-*` ownership, Git output, and
   component line-height behavior. Focused cross-engine form/component
   fixtures and the Git control matrix produced zero differing pixels.
+- CSS-native consolidation proof: both JavaScript configs and `@config` were
+  removed. The unminified and minified outputs are byte-identical to the
+  pre-consolidation artifacts after removing the single intentional dark
+  color-scheme rule. The contract suite now has 15 tests; the CSS-aware dev
+  wrapper repairs Tailwind CLI's failure to rebuild on input/imported CSS
+  changes and was proven to restart both builds for shared changes and only
+  the owning build for entrypoint changes.
 
 ### Handwritten browser CSS — 3 files / 5 hunks
 
@@ -192,16 +206,18 @@ smallest falsifying test, conclusion, narrow fix, and regression proof.
 
 ### Public templates — 19 files / 162 hunks
 
-- Contract: exact public/auth/webview UX and public-GIS dual-stylesheet
-  composition.
+- Contract: public/auth/webview UX converges only on private typography tokens;
+  public GIS loads the unified Tailwind asset once before public/private custom
+  and map styles.
 - Baseline evidence: v3 public output, source ownership, and rendered template
   suites were reproduced from the baseline worktree.
 - Candidate evidence: all 19 files/162 public-template hunks were reviewed;
   public-only, shared, excluded, and cross-build candidates are proven by real
   compiler runs over temporary mirrored trees.
-- Risk: public/private candidate leakage, typography/gradient changes, and GIS
-  cascade collisions.
-- Test: per-hunk audit, rendered routes, source isolation, and browser matrix.
+- Risk: union-source omissions, typography/gradient changes, selector
+  collisions, and GIS cascade changes.
+- Test: per-hunk audit, rendered routes, union-source sentinels, private-rule
+  subsequence proof, and browser matrix.
 - Conclusion: no additional public-template defect was proven. The complete
   public live-route, auth-state, GIS, responsive, and accessibility matrix is
   not yet certified.
@@ -231,12 +247,11 @@ smallest falsifying test, conclusion, narrow fix, and regression proof.
   unminified `7daf1d31…` (88,382 bytes/4,246 lines), private unminified
   `f58cd60…` (116,935/5,786), public minified `927f57af…` (68,420), and
   private minified `5e7a0fd4…` (92,824).
-- Candidate: three clean minified builds reproduced public `87f0682d…`
-  (86,538, +26.5%) and private `d2313d41…` (110,750, +19.3%). Full builds
-  took 1.35, 0.99, and 0.98 seconds; individual Tailwind builds took
-  approximately 84–124 ms outside the final container run.
-- Candidate unminified hashes/sizes are `62ea39df…` (109,883 bytes/3,850
-  lines, +24.3%) and `4076eaf8…` (137,282/4,923, +17.4%). Full structural
+- Candidate: three clean minified builds after CSS-native consolidation
+  reproduced public `6e4b5ec0…` (86,562, +26.5%) and private `a026197f…`
+  (110,774, +19.3%). A timed full Node 22 build took 1.83 seconds.
+- Candidate unminified hashes/sizes are `f46eb314…` (109,921 bytes/3,853
+  lines, +24.4%) and `5a5b81df…` (137,320/4,926, +17.4%). Full structural
   counts are recorded in `/private/tmp/speleodb-tailwind-final/inventory.json`.
 - The active watcher retains a deleted sole-source utility under both v3.4.19
   and v4.3.1; a clean one-shot build removes it under both versions. This is

@@ -22,10 +22,10 @@
  * (forms/ajax_errors.js), and the `{% csrf_token %}` hidden input.
  */
 
-/* global FormModals, showAjaxErrorModal */
-/* exported attachDangerZone */
+import { showAjaxErrorModal } from './ajax_errors.js';
+import { FormModals } from './modals.js';
 
-function attachDangerZone(options) {
+export function attachDangerZone(options) {
     var deleteUrl = options.deleteUrl;
     var successMessage = options.successMessage || 'Deleted successfully.';
     var successRedirect = options.successRedirect;

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 from django.conf import settings
 from django.test import TestCase
@@ -49,6 +50,7 @@ class TestDashboardPageAccess(BaseUserTestCaseMixin, TestCase):
 # ------------------------------------------------------------------ #
 class TestDashboardTemplateStructure(BaseUserTestCaseMixin, TestCase):
     html: str
+    controller_js: str
 
     def setUp(self) -> None:
         super().setUp()
@@ -57,6 +59,9 @@ class TestDashboardTemplateStructure(BaseUserTestCaseMixin, TestCase):
         response = self.client.get(url)
         assert response.status_code == status.HTTP_200_OK
         self.html = response.content.decode()
+        self.controller_js = (
+            Path(settings.BASE_DIR) / "frontend_common/controllers/dashboard.js"
+        ).read_text()
 
     def test_page_header_present(self) -> None:
         assert "Dashboard" in self.html
@@ -152,17 +157,18 @@ class TestDashboardTemplateStructure(BaseUserTestCaseMixin, TestCase):
         assert "border-radius:50%" in self.html
 
     def test_error_callback_text_in_template(self) -> None:
-        assert "Failed to load activity" in self.html
+        assert "Failed to load activity" in self.controller_js
 
     def test_show_stat_card_errors_function_defined(self) -> None:
-        assert "showStatCardErrors" in self.html
+        assert "showStatCardErrors" in self.controller_js
 
     def test_charts_have_aria_labels(self) -> None:
         assert 'aria-label="Line chart showing contributions' in self.html
         assert 'aria-label="Doughnut chart showing projects' in self.html
 
     def test_dashboard_helpers_loaded(self) -> None:
-        assert "dashboard-helpers.js" in self.html
+        assert 'data-speleodb-controller="dashboard"' in self.html
+        assert "dashboard-helpers.js" in self.controller_js
 
 
 # ------------------------------------------------------------------ #
@@ -341,6 +347,8 @@ class TestSidebarNavigation(BaseUserTestCaseMixin, TestCase):
 # ------------------------------------------------------------------ #
 class TestDashboardCharts(BaseUserTestCaseMixin, TestCase):
     html: str
+    controller_js: str
+    style_css: str
 
     def setUp(self) -> None:
         super().setUp()
@@ -348,6 +356,16 @@ class TestDashboardCharts(BaseUserTestCaseMixin, TestCase):
         url = reverse("private:user_dashboard")
         response = self.client.get(url)
         self.html = response.content.decode()
+        self.controller_js = (
+            Path(settings.BASE_DIR) / "frontend_common/controllers/dashboard.js"
+        ).read_text()
+        self.style_css = (
+            Path(settings.BASE_DIR)
+            / "frontend_common"
+            / "styles"
+            / "templates"
+            / "frontend-private-templates-pages-dashboard.css"
+        ).read_text()
 
     def test_commits_chart_canvas_exists(self) -> None:
         assert 'id="commits-chart"' in self.html
@@ -370,36 +388,36 @@ class TestDashboardCharts(BaseUserTestCaseMixin, TestCase):
         assert "position:relative" in preceding
 
     def test_js_creates_line_chart(self) -> None:
-        assert "buildCommitsChartConfig" in self.html
+        assert "buildCommitsChartConfig" in self.controller_js
 
     def test_js_creates_doughnut_chart(self) -> None:
-        assert "buildProjectsChartConfig" in self.html
+        assert "buildProjectsChartConfig" in self.controller_js
 
     def test_line_chart_has_two_datasets(self) -> None:
-        assert "initCommitsChart" in self.html
-        assert "commits_over_time" in self.html
+        assert "initCommitsChart" in self.controller_js
+        assert "commits_over_time" in self.controller_js
 
     def test_line_chart_dark_theme_colors(self) -> None:
-        assert "rgba(129,140,248,0.1)" in self.html
-        assert "rgba(52,211,153,0.1)" in self.html
+        assert "rgba(129,140,248,0.1)" in self.controller_js
+        assert "rgba(52,211,153,0.1)" in self.controller_js
 
     def test_doughnut_chart_uses_project_types(self) -> None:
-        assert "projects_by_type" in self.html
+        assert "projects_by_type" in self.controller_js
 
     def test_heatmap_table_has_colgroup(self) -> None:
-        assert "hm-label-col" in self.html
+        assert "hm-label-col" in self.controller_js
 
     def test_heatmap_uses_github_colors(self) -> None:
         for color in ("#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"):
-            assert color in self.html, f"Missing heatmap color: {color}"
+            assert color in self.style_css, f"Missing heatmap color: {color}"
 
     def test_heatmap_legend_has_all_levels(self) -> None:
         for level in range(5):
             assert f"hm-level-{level}" in self.html
 
     def test_heatmap_custom_tooltip_css(self) -> None:
-        assert "data-tip" in self.html
-        assert "animation-delay: 0.25s" in self.html
+        assert "data-tip" in self.controller_js
+        assert "animation-delay: 0.25s" in self.style_css
 
     def test_heatmap_stat_cards_grid(self) -> None:
         assert "grid-cols-2 md:grid-cols-4" in self.html
@@ -413,6 +431,8 @@ class TestDashboardCharts(BaseUserTestCaseMixin, TestCase):
 # ------------------------------------------------------------------ #
 class TestDashboardResponsiveCSS(BaseUserTestCaseMixin, TestCase):
     html: str
+    controller_js: str
+    style_css: str
 
     def setUp(self) -> None:
         super().setUp()
@@ -420,6 +440,16 @@ class TestDashboardResponsiveCSS(BaseUserTestCaseMixin, TestCase):
         url = reverse("private:user_dashboard")
         response = self.client.get(url)
         self.html = response.content.decode()
+        self.controller_js = (
+            Path(settings.BASE_DIR) / "frontend_common/controllers/dashboard.js"
+        ).read_text()
+        self.style_css = (
+            Path(settings.BASE_DIR)
+            / "frontend_common"
+            / "styles"
+            / "templates"
+            / "frontend-private-templates-pages-dashboard.css"
+        ).read_text()
 
     def _extract_mobile_block(self) -> str:
         """Find the dashboard's mobile @media block.
@@ -429,18 +459,18 @@ class TestDashboardResponsiveCSS(BaseUserTestCaseMixin, TestCase):
         marker = "max-width: 768px"
         start = 0
         while True:
-            start = self.html.find(marker, start)
+            start = self.style_css.find(marker, start)
             assert start != -1, "Dashboard mobile @media block not found"
-            open_brace = self.html.index("{", start)
+            open_brace = self.style_css.index("{", start)
             depth = 1
             pos = open_brace + 1
-            while depth > 0 and pos < len(self.html):
-                if self.html[pos] == "{":
+            while depth > 0 and pos < len(self.style_css):
+                if self.style_css[pos] == "{":
                     depth += 1
-                elif self.html[pos] == "}":
+                elif self.style_css[pos] == "}":
                     depth -= 1
                 pos += 1
-            block = self.html[open_brace + 1 : pos - 1]
+            block = self.style_css[open_brace + 1 : pos - 1]
             if ".heatmap-section-desktop" in block or ".activity-row" in block:
                 return block
             start = pos
@@ -500,11 +530,11 @@ class TestDashboardResponsiveCSS(BaseUserTestCaseMixin, TestCase):
         assert ".activity-time-short" in mobile
 
     def test_activity_has_dual_time_formats(self) -> None:
-        assert "activity-time-full" in self.html
-        assert "activity-time-short" in self.html
+        assert "activity-time-full" in self.controller_js
+        assert "activity-time-short" in self.controller_js
 
     def test_desktop_hides_short_time(self) -> None:
-        assert ".activity-time-short { display: none; }" in self.html
+        assert ".activity-time-short { display: none; }" in self.style_css
 
     def test_sidebar_profile_item_exists(self) -> None:
         profile_url = reverse("private:user_profile")

@@ -1,11 +1,14 @@
 {% load static %}
 {% load static debug_version %}
+{% load vite_assets %}
 
 <!DOCTYPE html>
 <html lang="en-us" class="scroll-smooth">
 
 <head>
     <meta charset="utf-8">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
     <title>SpeleoDB - {% block title %}Home{% endblock title %}</title>
 
     <meta property="og:locale" content="en_US" />
@@ -28,8 +31,9 @@
     />
     {% endif %}
     
-    <link href="{% static 'css/style.css' %}{% maybe_debug_version %}" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@800&amp;display=fallback" rel="stylesheet">
+    {% vite_styles 'style-app' 'style-public-shell' %}
+    {% vite_preload 'app' 'controller-public-shell' %}
 
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
@@ -95,7 +99,7 @@
                     <ul class="hidden md:flex flex-1 justify-end items-center">
                         {% if request.user.is_authenticated %}
                             <li>
-                                <a class="btn w-32! text-slate-300 hover:text-white transition duration-150 ease-in-out w-full group [background:linear-gradient(var(--color-slate-900),_var(--color-slate-900))_padding-box,_conic-gradient(var(--color-slate-400),_var(--color-slate-700)_25%,_var(--color-slate-700)_75%,_var(--color-slate-400)_100%)_border-box] relative before:absolute before:inset-0 before:bg-srgb-slate-800-30 before:rounded-full before:pointer-events-none">
+                                <a class="site-btn w-32! text-slate-300 hover:text-white transition duration-150 ease-in-out w-full group [background:linear-gradient(var(--color-slate-900),_var(--color-slate-900))_padding-box,_conic-gradient(var(--color-slate-400),_var(--color-slate-700)_25%,_var(--color-slate-700)_75%,_var(--color-slate-400)_100%)_border-box] relative before:absolute before:inset-0 before:bg-srgb-slate-800-30 before:rounded-full before:pointer-events-none">
                                     <form method="post" action="{% url 'account_logout' %}">
                                         {% csrf_token %}
                                         <button type="submit" class="relative inline-flex items-center">
@@ -111,7 +115,7 @@
                             </li>
                             {% if ACCOUNT_ALLOW_REGISTRATION %}
                                 <li class="ml-6">
-                                    <a class="btn-sm text-slate-300 hover:text-white transition duration-150 ease-in-out w-full group [background:linear-gradient(var(--color-slate-900),_var(--color-slate-900))_padding-box,_conic-gradient(var(--color-slate-400),_var(--color-slate-700)_25%,_var(--color-slate-700)_75%,_var(--color-slate-400)_100%)_border-box] relative before:absolute before:inset-0 before:bg-srgb-slate-800-30 before:rounded-full before:pointer-events-none" href="{% url 'account_signup' %}">
+                                    <a class="site-btn-sm text-slate-300 hover:text-white transition duration-150 ease-in-out w-full group [background:linear-gradient(var(--color-slate-900),_var(--color-slate-900))_padding-box,_conic-gradient(var(--color-slate-400),_var(--color-slate-700)_25%,_var(--color-slate-700)_75%,_var(--color-slate-400)_100%)_border-box] relative before:absolute before:inset-0 before:bg-srgb-slate-800-30 before:rounded-full before:pointer-events-none" href="{% url 'account_signup' %}">
                                         <span class="relative inline-flex items-center whitespace-nowrap">
                                             Sign Up
                                             <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">→</span>
@@ -230,12 +234,12 @@
     </script>
     {% endif %}
 
-    <script src="{% static 'js/main.js' %}"></script>
-
+    <script type="application/json" data-speleodb-controller="public-shell">{}</script>
     {% block extra_js %}{% endblock extra_js %}
     {% block inline_extra_js %}{% endblock inline_extra_js %}
+
+    {% vite_script 'app' %}
 
 </body>
 
 </html>
-

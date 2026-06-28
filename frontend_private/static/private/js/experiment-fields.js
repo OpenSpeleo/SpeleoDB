@@ -1,11 +1,12 @@
-/* global escapeHtml */
+import { escapeHtml } from './xss-helpers.js';
+
 /**
  * Experiment Fields Manager
  * Handles dynamic field creation, tag management, and validation
  * for experiment custom fields with Multiple Choice options
  */
 
-(function ($) {
+export const ExperimentFields = (function ($) {
     'use strict';
 
     // Field counter for unique IDs
@@ -367,12 +368,10 @@
         });
     }
 
-    // Export to global scope for use in templates
-    window.ExperimentFields = {
+    return {
         initialize: initializeExperimentFields,
         validateUniqueFieldNames: validateUniqueFieldNames,
         validateFieldsComplete: validateFieldsComplete
     };
 
 })(jQuery);
-

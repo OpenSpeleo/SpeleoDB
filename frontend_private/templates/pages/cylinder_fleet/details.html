@@ -1,5 +1,7 @@
 {% extends "pages/cylinder_fleet/base.html" %}
-{% load static %}
+{% load static vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-fleet' %}{% endblock extra_css %}
 
 {% block right_panel %}
 <div class="grow">
@@ -360,52 +362,19 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/fleet_watchlist.js' %}"></script>
-<script src="{% static 'private/js/forms/fleet_settings_form.js' %}"></script>
-<script src="{% static 'private/js/forms/fleet_entity_crud.js' %}"></script>
-{% include 'snippets/cylinder_modal_helpers.js' %}
-<script>
-    $(window).on('load', function () {
-        {% if cylinders %}
-        attachFleetWatchlist({
-            tableSelector: '#cylinders_table',
-            dataTableOptions: {
-                order: [[0, 'asc']],
-                {% if has_write_access %}
-                columnDefs: [{ targets: -1, orderable: false }],
-                {% endif %}
-            },
-        });
-        {% endif %}
-
-        attachFleetSettingsForm({
-            endpoint: Urls['api:v2:cylinder-fleet-detail']('{{ cylinder_fleet.id }}'),
-            successMessage: 'The cylinder fleet has been updated.',
-        });
-
-        attachFleetEntityCrud({
-            entityLabel: 'cylinder',
-            modalSelector: '#cylinder_modal',
-            deleteModalSelector: '#delete_cylinder_modal',
-            editButtonSelector: '.edit-cylinder-btn',
-            deleteButtonSelector: '.delete-cylinder-btn',
-            deleteIdInputSelector: '#delete_cylinder_id',
-            addButtonSelector: '#add_cylinder_btn, #add_first_cylinder_btn',
-            saveButtonSelector: '#cylinder_modal_save',
-            cancelSelectors: '#cylinder_modal_cancel, #cylinder_modal_close_x',
-            deleteCancelSelectors: '#delete_modal_cancel, #delete_modal_close_x',
-            confirmDeleteSelector: '#delete_modal_confirm',
-            modalTitleSelector: '#cylinder_modal_title',
-            addTitle: 'Add Cylinder',
-            editTitle: 'Edit Cylinder',
-            listEndpoint: "{% url 'api:v2:cylinder-fleet-cylinders' fleet_id=cylinder_fleet.id %}",
-            detailEndpoint: function (id) { return Urls['api:v2:cylinder-detail'](id); },
-            resetForCreate: cylinderResetForCreate,
-            populateForEdit: cylinderPopulateForEdit,
-            collectPayload: cylinderCollectPayload,
-        });
-    });
+<script type="application/json" data-speleodb-controller="fleet">
+{
+    "kind": "cylinder",
+    "mode": "details",
+    "tableSelector": "#cylinders_table",
+    "hasRows": {% if cylinders %}true{% else %}false{% endif %},
+    "hasWrite": {% if has_write_access %}true{% else %}false{% endif %},
+    "orderAscending": true,
+    "settingsEndpoint": "{% url 'api:v2:cylinder-fleet-detail' fleet_id=cylinder_fleet.id %}",
+    "settingsMessage": "The cylinder fleet has been updated.",
+    "entityCrud": true,
+    "listEndpoint": "{% url 'api:v2:cylinder-fleet-cylinders' fleet_id=cylinder_fleet.id %}",
+    "detailRoute": "api:v2:cylinder-detail"
+}
 </script>
 {% endblock inline_extra_js %}

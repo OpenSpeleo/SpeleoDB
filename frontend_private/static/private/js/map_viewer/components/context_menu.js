@@ -1,4 +1,5 @@
 import { Utils } from '../utils.js';
+import { getRuntimeContext } from '../runtime_context.js';
 
 export const ContextMenu = {
     menuEl: null,
@@ -65,7 +66,7 @@ export const ContextMenu = {
     },
 
     prefetchKnownIcons() {
-        const knownIcons = Object.values(window.MAPVIEWER_CONTEXT?.icons || {});
+        const knownIcons = Object.values(getRuntimeContext().icons);
         knownIcons.forEach((iconUrl) => {
             this.cacheIconAsDataUrl(iconUrl);
         });
@@ -199,5 +200,4 @@ export const ContextMenu = {
         }
     }
 };
-
 

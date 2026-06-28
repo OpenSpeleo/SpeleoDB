@@ -91,6 +91,7 @@ EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 # DEBUGGING FOR TEMPLATES
 # ------------------------------------------------------------------------------
 TEMPLATES[0]["OPTIONS"]["debug"] = True  # type: ignore[index]
+VITE_ALLOW_MISSING_MANIFEST = True
 
 # MEDIA
 # ------------------------------------------------------------------------------

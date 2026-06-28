@@ -4,7 +4,9 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
+        setupFiles: ['./frontend_common/test/setup.js'],
         include: [
+            'frontend_common/**/*.test.js',
             'frontend_public/static/js/**/*.test.js',
             'frontend_private/static/private/js/**/*.test.js'
         ],
@@ -21,4 +23,3 @@ export default defineConfig({
         silent: 'passed-only'
     }
 });
-

@@ -366,6 +366,10 @@ CORS_URLS_REGEX = r"^/api/.*$"
 STATIC_ROOT = str(BASE_DIR / "staticfiles")
 # https://docs.djangoproject.com/en/dev/ref/settings/#static-url
 STATIC_URL = "/static/" if DEBUG else f"https://{AWS_S3_CUSTOM_DOMAIN}/staticfiles/"
+VITE_ASSET_ROOT = BASE_DIR / "speleodb/common/static/speleodb/vite"
+VITE_MANIFEST_PATH = VITE_ASSET_ROOT / ".vite/manifest.json"
+VITE_ENTRY_REGISTRY_PATH = BASE_DIR / "frontend_common/entries.json"
+VITE_ALLOW_MISSING_MANIFEST = DEBUG
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
 # STATICFILES_DIRS = [str(APPS_DIR / "static")]
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#staticfiles-finders

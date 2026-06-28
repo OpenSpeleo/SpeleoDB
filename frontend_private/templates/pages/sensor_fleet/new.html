@@ -1,5 +1,7 @@
 {% extends "base_private.html" %}
-{% load static %}
+{% load static vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-entity-crud' %}{% endblock extra_css %}
 
 {% block content %}
 <main class="grow">
@@ -98,75 +100,16 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        let sensorIdCounter = 0;
-
-        $('#add_sensor_btn').click(function () {
-            sensorIdCounter++;
-            const sensorHtml = `
-                <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-slate-600 sensor-item" data-sensor-id="${sensorIdCounter}">
-                    <div class="flex flex-col sm:flex-row sm:items-start gap-3">
-                        <div class="flex-1">
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Sensor Name <span class="text-rose-600">*</span></label>
-                            <input type="text" class="sensor-name form-input w-full" placeholder="e.g., Flow Meter #023" />
-                        </div>
-                        <div class="flex-1">
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Notes</label>
-                            <textarea class="sensor-notes form-textarea w-full" rows="2" placeholder="Optional notes"></textarea>
-                        </div>
-                        <div class="flex flex-col gap-2 mt-5 sm:mt-0">
-                            <button type="button" class="remove-sensor-btn btn-sm bg-rose-500 hover:bg-rose-600 text-white">
-                                <svg class="w-3 h-3 fill-current inline-block" viewBox="0 0 16 16">
-                                    <path d="M5 7h6a1 1 0 010 2H5a1 1 0 010-2z" />
-                                </svg>
-                                Remove
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            $('#sensors_container').append(sensorHtml);
-        });
-
-        $(document).on('click', '.remove-sensor-btn', function () {
-            $(this).closest('.sensor-item').remove();
-        });
-
-        function collectSensors() {
-            const sensors = [];
-            $('.sensor-item').each(function () {
-                const name = $(this).find('.sensor-name').val().trim();
-                const notes = $(this).find('.sensor-notes').val().trim();
-                if (name) {
-                    sensors.push({ name: name, notes: notes });
-                }
-            });
-            return sensors;
-        }
-
-        attachEntityCrudForm({
-            formId: 'new_sensor_fleet_form',
-            endpoint: "{% url 'api:v2:sensor-fleets' %}",
-            method: 'POST',
-            successMessage: 'The sensor fleet has been created successfully.',
-            beforeSubmit: function (payload) {
-                if (!payload.name || !payload.name.trim()) {
-                    FormModals.showError('Fleet name is required.');
-                    return false;
-                }
-                // Inline-row "sensors" aren't in the form - attach them explicitly.
-                const sensors = collectSensors();
-                if (sensors.length > 0) { payload.sensors = sensors; }
-                return true;
-            },
-            redirectFromResponse: function (response) {
-                return Urls['private:sensor_fleet_details'](response.id);
-            }
-        });
-    });
+<script type="application/json" data-speleodb-controller="entity-crud">
+{
+    "formId": "new_sensor_fleet_form",
+    "endpoint": "{% url 'api:v2:sensor-fleets' %}",
+    "method": "POST",
+    "successMessage": "The sensor fleet has been created successfully.",
+    "requiredField": "name",
+    "requiredMessage": "Fleet name is required.",
+    "redirectRoute": "private:sensor_fleet_details",
+    "sensorRows": true
+}
 </script>
 {% endblock inline_extra_js %}

@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
+{% load vite_assets %}
+
+{% block extra_css %}
+  {% vite_preload 'controller-auth-form' %}
+{% endblock extra_css %}
 
 {% block title %}
   {% block head_title %}
@@ -27,7 +32,7 @@
                     </a>
                 </div>
                 <!-- Page title -->
-                <h1 class="h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60">
+                <h1 class="site-h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60">
                     {% block page_headline %}{% endblock page_headline %}
                 </h1>
             </div>
@@ -43,4 +48,3 @@
 </section>
 
 {% endblock content %}
-

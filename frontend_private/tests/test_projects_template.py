@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
@@ -41,6 +43,14 @@ class TestProjectsTableLayout(TestCase):
         response = self.client.get(url)
         assert response.status_code == status.HTTP_200_OK
         self.html = response.content.decode()
+        self.style_css = (
+            Path(settings.BASE_DIR)
+            / "frontend_common"
+            / "styles"
+            / "templates"
+            / "frontend-private-templates-pages-projects.css"
+        ).read_text()
+        self.app_js = (Path(settings.BASE_DIR) / "frontend_common/app.js").read_text()
 
     def test_table_wrapper_has_no_overflow_constraint(self) -> None:
         """The table wrapper must not constrain height or add its own scrollbar."""
@@ -99,29 +109,16 @@ class TestProjectsTableLayout(TestCase):
         total = sum(int(p) for p in percentages)
         assert total == 100, f"Column widths sum to {total}%, expected 100%"  # noqa: PLR2004
 
-    def test_collapse_restoration_before_document_ready(self) -> None:
-        """Collapse state must be restored via a synchronous inline <script>
-        placed after the .country-group elements and before $(document).ready()
-        to prevent FOUC (flash of uncollapsed content)."""
-        sync_script_pattern = re.compile(
-            r"<script>\s*\n?"
-            r".*speleo_projects_collapsed_countries.*"
-            r"classList\.add\(['\"]collapsed['\"]\)",
-            re.DOTALL,
-        )
-        sync_match = sync_script_pattern.search(self.html)
-        assert sync_match is not None, (
-            "Synchronous collapse-restoration <script> not found"
-        )
-
-        doc_ready_pos = self.html.find("$( document ).ready(")
-        if doc_ready_pos == -1:
-            doc_ready_pos = self.html.find("$(document).ready(")
-        assert doc_ready_pos != -1
-
-        assert sync_match.start() < doc_ready_pos, (
-            "Collapse restoration script must appear before $(document).ready()"
-        )
+    def test_collapse_restoration_before_controller_initialization(self) -> None:
+        """The tail bootstrap restores collapse state before controllers run."""
+        assert 'data-speleodb-controller="projects"' in self.html
+        storage_pos = self.app_js.find("speleo_projects_collapsed_countries")
+        critical_state_call = self.app_js.rfind("applyCriticalRouteState();")
+        controller_call = self.app_js.rfind("initializeControllers();")
+        assert storage_pos != -1
+        assert critical_state_call != -1
+        assert controller_call != -1
+        assert critical_state_call < controller_call
 
     # ------------------------------------------------------------------ #
     # Responsive column hiding
@@ -131,19 +128,19 @@ class TestProjectsTableLayout(TestCase):
         """Return the CSS inside ``@media (max-width: <max_width>px) { … }``,
         correctly handling nested braces."""
         marker = f"max-width: {max_width}px"
-        start = self.html.find(marker)
+        start = self.style_css.find(marker)
         assert start != -1, f"@media ({marker}) block not found"
 
-        open_brace = self.html.index("{", start)
+        open_brace = self.style_css.index("{", start)
         depth = 1
         pos = open_brace + 1
-        while depth > 0 and pos < len(self.html):
-            if self.html[pos] == "{":
+        while depth > 0 and pos < len(self.style_css):
+            if self.style_css[pos] == "{":
                 depth += 1
-            elif self.html[pos] == "}":
+            elif self.style_css[pos] == "}":
                 depth -= 1
             pos += 1
-        return self.html[open_brace + 1 : pos - 1]
+        return self.style_css[open_brace + 1 : pos - 1]
 
     def _assert_column_hidden(self, css_block: str, nth: int) -> None:
         """Assert that both th and td nth-child(nth) are display:none."""

@@ -162,7 +162,7 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                 <div class="flex justify-between items-center">
                     <h3 class="text-xl font-semibold text-white">Sensor Management</h3>
                     ${hasWriteAccess ? `
-                        <button onclick="window.StationSensors.loadInstallForm('${stationId}', '${projectId}')" class="btn-primary text-sm">
+                        <button ${Utils.mapActionAttributes('sensors.loadInstallForm', stationId, projectId)} class="btn-primary text-sm">
                             <svg class="w-4 h-4 fill-current opacity-80 shrink-0" viewBox="0 0 16 16">
                                 <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z"></path>
                             </svg>
@@ -175,13 +175,13 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                 <div class="flex flow-x-2 border-b border-slate-600">
                     <button
                         class="sensor-subtab px-4 py-2 text-sm font-medium transition-colors text-slate-400 hover:text-slate-300"
-                        onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}')"
+                        ${Utils.mapActionAttributes('sensors.loadCurrentInstalls', stationId, projectId)}
                         data-subtab="current">
                         Current Installs
                     </button>
                     <button
                         class="sensor-subtab px-4 py-2 text-sm font-medium transition-colors text-sky-400 border-b-2 border-sky-400"
-                        onclick="window.StationSensors.loadHistory('${stationId}', '${projectId}')"
+                        ${Utils.mapActionAttributes('sensors.loadHistory', stationId, projectId)}
                         data-subtab="history">
                         History
                     </button>
@@ -193,7 +193,7 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                         <label class="text-sm text-slate-400">Filter by Status:</label>
                         <select
                             id="status-filter-select"
-                            onchange="window.StationSensors.filterHistory()"
+                            ${Utils.mapActionAttributes('sensors.filterHistory')} data-map-event="change"
                             class="bg-slate-700 text-white text-sm rounded-lg px-3 py-1.5 border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:border-transparent">
                             <option value="all" ${currentFilter === 'all' ? 'selected' : ''}>All Statuses</option>
                             <option value="installed" ${currentFilter === 'installed' ? 'selected' : ''}>Installed</option>
@@ -204,7 +204,7 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                     </div>
                     <div class="flex items-center gap-2">
                         <button
-                            onclick="window.StationSensors.refreshHistory()"
+                            ${Utils.mapActionAttributes('sensors.refreshHistory')}
                             id="refresh-sensor-history-btn"
                             class="btn-secondary text-sm flex items-center gap-2"
                             title="Refresh sensor history">
@@ -214,7 +214,7 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                             <span>Refresh</span>
                         </button>
                         <button
-                            onclick="window.StationSensors.exportHistory('${stationId}')"
+                            ${Utils.mapActionAttributes('sensors.exportHistory', stationId)}
                             id="export-sensor-history-btn"
                             class="btn-secondary text-sm flex items-center justify-center gap-2"
                             style="background-color: #16a34a; border-color: #16a34a; color: white; width: 175px;">
@@ -232,39 +232,39 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                         <table class="w-full text-sm sensor-history-table">
                             <thead class="bg-srgb-slate-800-50 text-slate-300 text-left">
                                 <tr>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('sensor_name')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" ${Utils.mapActionAttributes('sensors.sortHistory', 'sensor_name')}>
                                         <div class="flex items-center gap-1">
                                             Sensor Name
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('sensor_fleet_name')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" ${Utils.mapActionAttributes('sensors.sortHistory', 'sensor_fleet_name')}>
                                         <div class="flex items-center gap-1">
                                             Fleet Name
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('status')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" ${Utils.mapActionAttributes('sensors.sortHistory', 'status')}>
                                         <div class="flex items-center gap-1">
                                             State
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('install_date')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" ${Utils.mapActionAttributes('sensors.sortHistory', 'install_date')}>
                                         <div class="flex items-center gap-1">
                                             Install Date
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
                                     <th class="px-4 py-3 font-medium">Install User</th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('uninstall_date')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" ${Utils.mapActionAttributes('sensors.sortHistory', 'uninstall_date')}>
                                         <div class="flex items-center gap-1">
                                             Retrieval Date
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
                                     <th class="px-4 py-3 font-medium">Retrieval User</th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('modified_date')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" ${Utils.mapActionAttributes('sensors.sortHistory', 'modified_date')}>
                                         <div class="flex items-center gap-1">
                                             Modified
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
@@ -345,7 +345,7 @@ export const StationSensors = {
                         <div class="flex justify-between items-center">
                             <h3 class="text-xl font-semibold text-white">Sensor Management</h3>
                             ${hasWriteAccess ? `
-                                <button onclick="window.StationSensors.loadInstallForm('${stationId}', '${projectId}')" class="btn-primary text-sm">
+                                <button ${Utils.mapActionAttributes('sensors.loadInstallForm', stationId, projectId)} class="btn-primary text-sm">
                                     <svg class="w-4 h-4 fill-current opacity-80 shrink-0" viewBox="0 0 16 16">
                                         <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z"></path>
                                     </svg>
@@ -358,13 +358,13 @@ export const StationSensors = {
                         <div class="flex flow-x-2 border-b border-slate-600">
                             <button
                                 class="sensor-subtab px-4 py-2 text-sm font-medium transition-colors ${subtab === 'current' ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-slate-300'}"
-                                onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}', 'current')"
+                                ${Utils.mapActionAttributes('sensors.loadCurrentInstalls', stationId, projectId, 'current')}
                                 data-subtab="current">
                                 Current Installs
                             </button>
                             <button
                                 class="sensor-subtab px-4 py-2 text-sm font-medium transition-colors ${subtab === 'history' ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-slate-300'}"
-                                onclick="window.StationSensors.loadHistory('${stationId}', '${projectId}')"
+                                ${Utils.mapActionAttributes('sensors.loadHistory', stationId, projectId)}
                                 data-subtab="history">
                                 History
                             </button>
@@ -412,19 +412,19 @@ export const StationSensors = {
                                             ${hasWriteAccess ? `
                                                 <div class="flex gap-2 mt-4 pt-4 border-t border-srgb-slate-600-50">
                                                     ${canChangeSensorInstallStatus(install) ? `
-                                                        <button onclick="window.StationSensors.loadEditForm('${install.id}', '${stationId}', '${projectId}')"
+                                                        <button ${Utils.mapActionAttributes('sensors.loadEditForm', install.id, stationId, projectId)}
                                                             class="btn-secondary text-sm flex-1">
                                                             ✏️ Edit
                                                         </button>
-                                                        <button onclick="window.StationSensors.showRetrieveModal('${install.id}', '${stationId}', '${projectId}')"
+                                                        <button ${Utils.mapActionAttributes('sensors.showRetrieveModal', install.id, stationId, projectId)}
                                                             class="btn-secondary text-sm flex-1">
                                                             ✓ Mark as Retrieved
                                                         </button>
-                                                        <button onclick="window.StationSensors.showInstallStatusChangeModal('${install.id}', 'lost', '${Utils.escapeHtml(install.sensor_name || 'Sensor')}', '${stationId}', '${projectId}')"
+                                                        <button ${Utils.mapActionAttributes('sensors.showInstallStatusChangeModal', install.id, 'lost', install.sensor_name || 'Sensor', stationId, projectId)}
                                                             class="btn-secondary text-sm flex-1">
                                                             ⚠ Mark as Lost
                                                         </button>
-                                                        <button onclick="window.StationSensors.showInstallStatusChangeModal('${install.id}', 'abandoned', '${Utils.escapeHtml(install.sensor_name || 'Sensor')}', '${stationId}', '${projectId}')"
+                                                        <button ${Utils.mapActionAttributes('sensors.showInstallStatusChangeModal', install.id, 'abandoned', install.sensor_name || 'Sensor', stationId, projectId)}
                                                             class="btn-secondary text-sm flex-1">
                                                             🚫 Mark as Abandoned
                                                         </button>
@@ -446,7 +446,7 @@ export const StationSensors = {
                                     <h3 class="text-white text-lg font-medium mb-2">No Sensors Currently Installed</h3>
                                     <p class="text-slate-400 mb-4">This station doesn't have any sensors installed yet.</p>
                                     ${hasWriteAccess ? `
-                                        <button onclick="window.StationSensors.loadInstallForm('${stationId}', '${projectId}')" class="btn-primary">
+                                        <button ${Utils.mapActionAttributes('sensors.loadInstallForm', stationId, projectId)} class="btn-primary">
                                             Install First Sensor
                                         </button>
                                     ` : ''}
@@ -694,7 +694,7 @@ export const StationSensors = {
                             </svg>
                             <h3 class="text-white text-lg font-medium mb-2">No Sensor Fleets Available</h3>
                             <p class="text-slate-400 mb-4">You need to create a sensor fleet before installing sensors.</p>
-                            <button onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}')" class="btn-secondary">
+                            <button ${Utils.mapActionAttributes('sensors.loadCurrentInstalls', stationId, projectId)} class="btn-secondary">
                                 ← Back to Sensor Management
                             </button>
                         </div>
@@ -738,7 +738,7 @@ export const StationSensors = {
                     <div class="flow-y-6">
                         <div class="flex justify-between items-center">
                             <h3 class="text-xl font-semibold text-white">Install Sensor</h3>
-                            <button onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}')" class="btn-secondary text-sm">
+                            <button ${Utils.mapActionAttributes('sensors.loadCurrentInstalls', stationId, projectId)} class="btn-secondary text-sm">
                                 ← Back
                             </button>
                         </div>
@@ -785,7 +785,7 @@ export const StationSensors = {
                                 <button type="submit" class="btn-primary flex-1" id="install-sensor-submit-btn">
                                     Install Sensor
                                 </button>
-                                <button type="button" onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}')" class="btn-secondary">
+                                <button type="button" ${Utils.mapActionAttributes('sensors.loadCurrentInstalls', stationId, projectId)} class="btn-secondary">
                                     Cancel
                                 </button>
                             </div>
@@ -1000,7 +1000,7 @@ export const StationSensors = {
                     <div class="flow-y-6">
                         <div class="flex justify-between items-center">
                             <h3 class="text-xl font-semibold text-white">Edit Sensor Installation</h3>
-                            <button onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}')" class="btn-secondary text-sm">
+                            <button ${Utils.mapActionAttributes('sensors.loadCurrentInstalls', stationId, projectId)} class="btn-secondary text-sm">
                                 ← Back
                             </button>
                         </div>
@@ -1054,7 +1054,7 @@ export const StationSensors = {
                                 <button type="submit" class="btn-primary flex-1" id="install-sensor-submit-btn">
                                     Update Installation
                                 </button>
-                                <button type="button" onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}')" class="btn-secondary">
+                                <button type="button" ${Utils.mapActionAttributes('sensors.loadCurrentInstalls', stationId, projectId)} class="btn-secondary">
                                     Cancel
                                 </button>
                             </div>
@@ -1107,7 +1107,7 @@ export const StationSensors = {
                             <button type="submit" class="btn-primary flex-1">
                                 Mark as Retrieved
                             </button>
-                            <button type="button" onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}')" class="btn-secondary">
+                            <button type="button" ${Utils.mapActionAttributes('sensors.loadCurrentInstalls', stationId, projectId)} class="btn-secondary">
                                 Cancel
                             </button>
                         </div>
@@ -1195,7 +1195,7 @@ export const StationSensors = {
                                 </div>
                                 <h3 class="text-xl font-semibold text-white">Mark Sensor as ${config.label}</h3>
                             </div>
-                            <button onclick="window.StationSensors.cancelStatusChange()" class="text-slate-400 hover:text-white transition-colors">
+                            <button ${Utils.mapActionAttributes('sensors.cancelStatusChange')} class="text-slate-400 hover:text-white transition-colors">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
@@ -1219,10 +1219,10 @@ export const StationSensors = {
                             <p class="text-amber-300 text-xs mt-1">${config.warning}</p>
                         </div>
                         <div class="flex gap-3 justify-end">
-                            <button onclick="window.StationSensors.cancelStatusChange()" class="btn-secondary">
+                            <button ${Utils.mapActionAttributes('sensors.cancelStatusChange')} class="btn-secondary">
                                 Cancel
                             </button>
-                            <button onclick="window.StationSensors.confirmStatusChange()" class="${config.btnClass}">
+                            <button ${Utils.mapActionAttributes('sensors.confirmStatusChange')} class="${config.btnClass}">
                                 ${config.btnText}
                             </button>
                         </div>
@@ -1284,7 +1284,5 @@ export const StationSensors = {
 };
 
 // Expose functions globally for onclick handlers
-window.StationSensors = StationSensors;
-
 
 

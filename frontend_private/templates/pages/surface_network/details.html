@@ -1,5 +1,7 @@
 {% extends "pages/surface_network/base.html" %}
-{% load static %}
+{% load static vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-entity-crud' %}{% endblock extra_css %}
 
 {% block right_panel %}
 <div class="grow">
@@ -66,25 +68,15 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        attachEntityCrudForm({
-            formId: 'surface_network_details_form',
-            endpoint: Urls['api:v2:surface-network']('{{ network.id }}'),
-            method: 'PUT',
-            successMessage: 'The surface network has been updated.',
-            beforeSubmit: function (payload) {
-                if (!payload.name || !payload.name.trim()) {
-                    FormModals.showError('Network name is required.');
-                    return false;
-                }
-                return true;
-            },
-            reloadOnSuccess: true
-        });
-    });
+<script type="application/json" data-speleodb-controller="entity-crud">
+{
+    "formId": "surface_network_details_form",
+    "endpoint": "{% url 'api:v2:surface-network' network_id=network.id %}",
+    "method": "PUT",
+    "successMessage": "The surface network has been updated.",
+    "requiredField": "name",
+    "requiredMessage": "Network name is required.",
+    "reloadOnSuccess": true
+}
 </script>
 {% endblock inline_extra_js %}

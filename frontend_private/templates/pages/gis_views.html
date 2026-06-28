@@ -1,94 +1,11 @@
 {% extends "base_private.html" %}
-{% load static %}
+{% load static vite_assets %}
 
 {% load set_var %}
 
 {% block extra_css %}
-<style>
-    /* Mobile card layout for GIS views */
-    @media (max-width: 768px) {
-        .gisviews-table {
-            display: none;
-        }
-        
-        .gisviews-cards {
-            display: block;
-        }
-        
-        .gisview-card {
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            transition: all 0.3s ease;
-        }
-        
-        .gisview-card:hover {
-            border-color: rgba(99, 102, 241, 0.5);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-        
-        .gisview-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
-        }
-        
-        .gisview-card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #e2e8f0;
-            flex: 1;
-            margin-right: 12px;
-        }
-        
-        .gisview-card-actions {
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-        
-        .gisview-card-body {
-            display: grid;
-            gap: 10px;
-        }
-        
-        .gisview-card-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .gisview-card-label {
-            font-size: 13px;
-            color: #94a3b8;
-            font-weight: 500;
-            flex-shrink: 0;
-        }
-        
-        .gisview-card-value {
-            font-size: 15px;
-            color: #cbd5e1;
-            font-weight: 500;
-            text-align: right;
-        }
-    }
-    
-    @media (min-width: 769px) {
-        .gisviews-table {
-            display: block;
-        }
-        
-        .gisviews-cards {
-            display: none;
-        }
-    }
-</style>
+{% vite_preload 'controller-copy-token' %}
+{% vite_styles 'style-template-frontend-private-templates-pages-gis-views' %}
 {% endblock extra_css %}
 
 {% block content %}
@@ -333,31 +250,11 @@
 {% endblock content %}
 
 {% block inline_extra_js %}
-<script>
-    $(document).ready(function() {
-        // Copy button functionality for Personal GIS View
-        $('#personal-copy-btn').click(function() {
-            const url = $('#personal-api-url').text().trim();
-            
-            navigator.clipboard.writeText(url).then(function() {
-                // Change button text to "Copied!"
-                $('#personal-copy-text').text('Copied!');
-                $('#personal-copy-icon').html(`
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                `);
-                
-                // Reset after 2 seconds
-                setTimeout(function() {
-                    $('#personal-copy-text').text('Copy');
-                    $('#personal-copy-icon').html(`
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                    `);
-                }, 2000);
-            }).catch(function(err) {
-                console.error('Failed to copy:', err);
-            });
-        });
-    });
+<script type="application/json" data-speleodb-controller="copy-token">
+{
+    "copyButtons": [
+        {"button": "#personal-copy-btn", "value": "#personal-api-url", "text": "#personal-copy-text", "icon": "#personal-copy-icon"}
+    ]
+}
 </script>
 {% endblock inline_extra_js %}
-

@@ -1295,5 +1295,3 @@ export const StationExperiments = {
         }
     }
 };
-
-window.StationExperiments = StationExperiments;

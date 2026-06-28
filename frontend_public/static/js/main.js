@@ -1,3 +1,4 @@
+export function initPublicShell() {
 AOS.init({
   once: true,
   disable: 'phone',
@@ -107,8 +108,16 @@ class ParticleAnimation {
 
   resizeCanvas() {
     this.circles.length = 0;
-    this.canvasSize.w = this.canvasContainer.offsetWidth;
-    this.canvasSize.h = this.canvasContainer.offsetHeight;
+    const initialWidth = Number(this.canvas.dataset.initialParticleWidth);
+    const initialHeight = Number(this.canvas.dataset.initialParticleHeight);
+    this.canvasSize.w = Number.isFinite(initialWidth) && initialWidth > 0
+      ? initialWidth
+      : this.canvasContainer.offsetWidth;
+    this.canvasSize.h = Number.isFinite(initialHeight) && initialHeight > 0
+      ? initialHeight
+      : this.canvasContainer.offsetHeight;
+    delete this.canvas.dataset.initialParticleWidth;
+    delete this.canvas.dataset.initialParticleHeight;
     this.canvas.width = this.canvasSize.w * this.dpr;
     this.canvas.height = this.canvasSize.h * this.dpr;
     this.canvas.style.width = this.canvasSize.w + 'px';
@@ -266,3 +275,4 @@ const highlighters = document.querySelectorAll('[data-highlighter]');
 highlighters.forEach((highlighter) => {
   new Highlighter(highlighter);
 });
+}

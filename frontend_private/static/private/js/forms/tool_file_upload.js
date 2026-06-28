@@ -35,9 +35,7 @@
  * Requires: jQuery.
  */
 
-/* exported attachToolFileUpload */
-
-function attachToolFileUpload(options) {
+export function attachToolFileUpload(options) {
     var $dropZone = $(options.dropZoneSelector);
     var $fileInput = $(options.fileInputSelector);
     var $fileNameDisplay = $(options.fileNameSelector);

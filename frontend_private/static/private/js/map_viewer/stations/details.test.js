@@ -3,6 +3,7 @@ import { Utils } from '../utils.js';
 import { Config } from '../config.js';
 import { State } from '../state.js';
 import { API } from '../api.js';
+import { configureRuntimeContext } from '../runtime_context.js';
 
 vi.mock('../api.js', () => ({
     API: {
@@ -24,6 +25,7 @@ vi.mock('../utils.js', () => {
             showLoadingOverlay: vi.fn(() => document.createElement('div')),
             hideLoadingOverlay: vi.fn(),
             escapeHtml: vi.fn(escapeHtml),
+            mapActionAttributes: (action, ...args) => `data-map-action="${escapeHtml(action)}" data-map-args="${escapeHtml(JSON.stringify(args))}"`,
             safeCssColor: vi.fn((c, fb) => /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(String(c || '')) ? c : (fb || '#94a3b8')),
             sanitizeUrl: vi.fn((url) => url || ''),
             raw: (html) => ({ [RAW]: true, value: String(html) }),
@@ -100,7 +102,7 @@ vi.mock('../map/layers.js', () => ({
 
 describe('StationDetails XSS', () => {
     beforeEach(() => {
-        window.MAPVIEWER_CONTEXT = {
+        configureRuntimeContext({
             icons: {
                 sensor: '/static/sensor.svg',
                 biology: '/static/biology.svg',
@@ -108,7 +110,7 @@ describe('StationDetails XSS', () => {
                 bone: '/static/bone.svg',
                 geology: '/static/geology.svg',
             },
-        };
+        });
         document.body.innerHTML = `
             <div id="station-modal-title"></div>
             <div id="station-modal-content"></div>
@@ -121,7 +123,7 @@ describe('StationDetails XSS', () => {
 
     afterEach(() => {
         document.body.innerHTML = '';
-        delete window.MAPVIEWER_CONTEXT;
+        configureRuntimeContext({});
     });
 
     it('escapes station.name in title and main heading', () => {
@@ -215,7 +217,7 @@ describe('StationDetails XSS', () => {
 
 describe('StationDetails.loadStationDetails (no const-reassignment regression)', () => {
     beforeEach(() => {
-        window.MAPVIEWER_CONTEXT = {
+        configureRuntimeContext({
             icons: {
                 sensor: '/static/sensor.svg',
                 biology: '/static/biology.svg',
@@ -223,7 +225,7 @@ describe('StationDetails.loadStationDetails (no const-reassignment regression)',
                 bone: '/static/bone.svg',
                 geology: '/static/geology.svg',
             },
-        };
+        });
         document.body.innerHTML = `
             <div id="station-modal-title"></div>
             <div id="station-modal-content"></div>
@@ -238,7 +240,7 @@ describe('StationDetails.loadStationDetails (no const-reassignment regression)',
 
     afterEach(() => {
         document.body.innerHTML = '';
-        delete window.MAPVIEWER_CONTEXT;
+        configureRuntimeContext({});
         State.allStations.clear();
         State.allSurfaceStations.clear();
     });

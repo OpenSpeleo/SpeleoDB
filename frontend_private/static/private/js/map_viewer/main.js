@@ -22,6 +22,11 @@ import { ProjectPanel } from './components/project_panel.js';
 import { GPSTracksPanel } from './components/gps_tracks_panel.js';
 import { DepthLegend } from './components/depth_legend.js';
 import { API } from './api.js';
+import { getRuntimeContext } from './runtime_context.js';
+import { initMapActionDispatcher } from './action_dispatcher.js';
+import { configureMapNavigation } from './map/navigation.js';
+import { StationSensors } from './stations/sensors.js';
+import { returnToStationManager } from './stations/details.js';
 
 // Parse URL parameters for initial map position
 // Usage: ?goto=LAT,LONG (e.g., ?goto=38.1234,-85.5678)
@@ -59,7 +64,7 @@ function getUrlParams() {
 }
 
 // Global entry point
-document.addEventListener('DOMContentLoaded', async () => {
+export async function initPrivateMapViewer() {
     console.log('🚀 SpeleoDB Map Viewer Initializing...');
 
     // 1. Initialize State
@@ -68,9 +73,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2. Initialize Map immediately so the Mapbox style and tiles download
     //    concurrently with the startup API calls below (the map does not need
     //    project/network/GPS data to begin loading its style).
-    const token = window.MAPVIEWER_CONTEXT?.mapboxToken || '';
+    const token = getRuntimeContext().mapboxToken || '';
 
     const map = MapCore.init(token, 'map');
+    configureMapNavigation(map);
 
     // 3. Kick off the independent startup API loads in parallel instead of
     //    awaiting them one after another. They are consumed later (in
@@ -166,11 +172,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Get appropriate label and icon based on station type
             const typeLabels = {
-                'artifact': { label: 'Artifact Station', icon: window.MAPVIEWER_CONTEXT.icons.artifact },
-                'biology': { label: 'Biology Station', icon: window.MAPVIEWER_CONTEXT.icons.biology },
-                'bone': { label: 'Bones Station', icon: window.MAPVIEWER_CONTEXT.icons.bone },
-                'geology': { label: 'Geology Station', icon: window.MAPVIEWER_CONTEXT.icons.geology },
-                'sensor': { label: 'Sensor Station', icon: window.MAPVIEWER_CONTEXT.icons.sensor },
+                'artifact': { label: 'Artifact Station', icon: getRuntimeContext().icons.artifact },
+                'biology': { label: 'Biology Station', icon: getRuntimeContext().icons.biology },
+                'bone': { label: 'Bones Station', icon: getRuntimeContext().icons.bone },
+                'geology': { label: 'Geology Station', icon: getRuntimeContext().icons.geology },
+                'sensor': { label: 'Sensor Station', icon: getRuntimeContext().icons.sensor },
             };
 
             switch (type) {
@@ -299,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             items.push({
                                 label: 'Mark Exploration Lead',
                                 subtitle: `On ${lineName} (${snapCheck.pointType} point)`,
-                                icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-5 h-5">`,
+                                icon: `<img src="${getRuntimeContext().icons.explorationLead}" class="w-5 h-5">`,
                                 onClick: () => {
                                     ExplorationLeadUI.showCreateModal(snapCheck.coordinates, lineName, nearestProjectId);
                                 }
@@ -328,7 +334,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             items.push({
                                 label: 'Install Safety Cylinder',
                                 subtitle: `At ${latDisplay}, ${lngDisplay}`,
-                                icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-5 h-5">`,
+                                icon: `<img src="${getRuntimeContext().icons.cylinderOrange}" class="w-5 h-5">`,
                                 onClick: () => {
                                     CylinderInstalls.showInstallModal(snapCheck.coordinates, lineName, nearestProjectId);
                                 }
@@ -748,48 +754,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Global Exposes
-    window.openSurveyStationManager = () => StationUI.openManagerModal();
-    window.openSurfaceStationManager = () => SurfaceStationUI.openManagerModal();
-    // Expose Landmark Manager for the button we added above or HTML onclick
-    window.openLandmarkManager = () => LandmarkUI.openManagerModal();
-    window.LandmarkUI = LandmarkUI; // Expose for inline HTML onclicks
-    window.StationUI = StationUI; // Expose for inline HTML onclicks
-    window.CylinderInstalls = CylinderInstalls; // Expose for cylinder install modals
-    window.refreshCylinderInstallsLayer = () => Layers.refreshCylinderInstallsLayer();
-    window.API = API; // Expose API for cylinder install and other modules
+    document.getElementById('station-manager-button')
+        ?.addEventListener('click', () => StationUI.openManagerModal());
+    document.getElementById('surface-station-manager-button')
+        ?.addEventListener('click', () => SurfaceStationUI.openManagerModal());
+    document.getElementById('landmark-manager-button')
+        ?.addEventListener('click', () => LandmarkUI.openManagerModal());
+    initMapActionDispatcher({
+        cylinder: CylinderInstalls,
+        sensors: StationSensors,
+        tags: StationTags,
+        navigation: {
+            reload: () => window.location.reload(),
+            returnToStationManager,
+        },
+    });
 
     // Listen for cylinder refresh events from the cylinder module
     document.addEventListener('speleo:refresh-cylinder-installs', () => {
         Layers.refreshCylinderInstallsLayer();
     });
 
-    // Close station modal function (used by cylinder install modal and others)
-    window.closeStationModal = () => {
-        const modal = document.getElementById('station-modal');
-        if (modal) modal.classList.add('hidden');
-    };
-
-    // Expose snap debugging functions (like old implementation)
-    window.getSnapInfo = () => Geometry.getSnapInfo();
-    window.setSnapRadius = (radius) => Geometry.setSnapRadius(radius);
-
-    window.goToStation = (id, lat, lon) => {
-        map.flyTo({ center: [lon, lat], zoom: DEFAULTS.MAP.FLY_TO_ZOOM });
-        // Check if it's a subsurface or surface station
-        const station = State.allStations.get(id);
-        const surfaceStation = State.allSurfaceStations.get(id);
-        if (station) {
-            Layers.toggleProjectVisibility(station.project, true);
-        } else if (surfaceStation) {
-            Layers.toggleNetworkVisibility(surfaceStation.network, true);
-        }
-    };
-
-    // Expose station modal for compatibility with old HTML handlers
-    window.openStationModal = (stationId, projectId, isNewlyCreated = false) => {
-        StationDetails.openModal(stationId, projectId, isNewlyCreated);
-    };
 
     // Landmark drag confirmation modal
     function showLandmarkDragConfirmModal(landmarkId, newCoords, originalCoords) {
@@ -994,10 +979,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         let typeLabel, typeIcon;
         if (markerType === 'cylinder-install') {
             typeLabel = 'Cylinder';
-            typeIcon = `<img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-5 h-5 inline">`;
+            typeIcon = `<img src="${getRuntimeContext().icons.cylinderOrange}" class="w-5 h-5 inline">`;
         } else {
             typeLabel = 'Exploration Lead';
-            typeIcon = `<img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-5 h-5 inline">`;
+            typeIcon = `<img src="${getRuntimeContext().icons.explorationLead}" class="w-5 h-5 inline">`;
         }
         const finalCoords = snapResult.coordinates;
 
@@ -1110,7 +1095,4 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    window.goToLandmark = (id, lat, lon) => {
-        map.flyTo({ center: [lon, lat], zoom: DEFAULTS.MAP.FLY_TO_ZOOM });
-    };
-});
+}

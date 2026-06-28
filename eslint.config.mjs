@@ -8,7 +8,8 @@ const sharedGlobals = {
     AOS: 'readonly',
     Swiper: 'readonly',
     mapboxgl: 'readonly',
-    Urls: 'readonly'
+    Urls: 'readonly',
+    tsParticles: 'readonly'
 };
 
 export default [
@@ -24,6 +25,10 @@ export default [
     },
     {
         files: [
+            'vite.config.mjs',
+            'scripts/**/*.mjs',
+            'frontend_common/**/*.js',
+            'frontend_errors/static/js/**/*.js',
             'frontend_private/static/private/js/**/*.js',
             'frontend_public/static/js/**/*.js'
         ],
@@ -38,6 +43,7 @@ export default [
     },
     {
         files: [
+            'frontend_common/**/*.test.js',
             'frontend_public/static/js/**/*.test.js',
             'frontend_private/static/private/js/**/*.test.js'
         ],
@@ -55,4 +61,3 @@ export default [
         }
     }
 ];
-

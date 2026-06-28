@@ -10,12 +10,12 @@
             avatarColors, groupTimestampsByLocalDate, computeHeatmapStats,
             buildCommitsChartConfig, buildProjectsChartConfig */
 
-function formatNumber(n) {
+export function formatNumber(n) {
     if (n == null) return '-';
     return n.toLocaleString();
 }
 
-function getHeatmapLevel(count) {
+export function getHeatmapLevel(count) {
     if (count >= 10) return 4;
     if (count >= 6) return 3;
     if (count >= 3) return 2;
@@ -23,21 +23,21 @@ function getHeatmapLevel(count) {
     return 0;
 }
 
-function getInitials(name) {
+export function getInitials(name) {
     var parts = name.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();
 }
 
-var avatarColors = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6'];
+export const avatarColors = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6'];
 
-function getAvatarColor(name) {
+export function getAvatarColor(name) {
     var hash = 0;
     for (var i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
     return avatarColors[Math.abs(hash) % avatarColors.length];
 }
 
-function groupTimestampsByLocalDate(timestamps) {
+export function groupTimestampsByLocalDate(timestamps) {
     var calendar = {};
     if (Array.isArray(timestamps)) {
         for (var t = 0; t < timestamps.length; t++) {
@@ -51,7 +51,7 @@ function groupTimestampsByLocalDate(timestamps) {
     return calendar;
 }
 
-function computeHeatmapStats(calendar) {
+export function computeHeatmapStats(calendar) {
     var today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -92,7 +92,7 @@ function computeHeatmapStats(calendar) {
              busiestDay: busiestDay, busiestDayCount: busiestDayCount, streak: streak };
 }
 
-function buildCommitsChartConfig(commitsOverTime) {
+export function buildCommitsChartConfig(commitsOverTime) {
     var labels = commitsOverTime.map(function(d) { return d.month; });
     var totalData = commitsOverTime.map(function(d) { return d.total; });
     var userData = commitsOverTime.map(function(d) { return d.user; });
@@ -108,7 +108,7 @@ function buildCommitsChartConfig(commitsOverTime) {
     };
 }
 
-function buildProjectsChartConfig(projectsByType) {
+export function buildProjectsChartConfig(projectsByType) {
     var colorMap = {
         ariane:     '#6366f1',
         compass:    '#22d3ee',

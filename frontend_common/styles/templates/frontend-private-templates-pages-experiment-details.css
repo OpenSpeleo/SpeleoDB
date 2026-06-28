@@ -1,0 +1,16 @@
+/* Drag and drop styles */
+    .sortable-ghost {
+        opacity: 0.4;
+        background: #334155;
+    }
+    
+    .sortable-drag {
+        opacity: 1;
+        cursor: grabbing !important;
+    }
+    
+    .sortable-fallback {
+        opacity: 0.8;
+        background: #1e293b;
+        border: 2px dashed #6366f1 !important;
+    }

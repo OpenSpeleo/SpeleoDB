@@ -22,18 +22,18 @@
 
       <div>
           <label class="block text-sm text-slate-300 font-medium mb-1" for="name">Full Name <span class="text-rose-500">*</span></label>
-          <input id="name" name="name" class="form-input w-full" type="text" placeholder="Sheck Exley" required />
+          <input id="name" name="name" class="site-form-input w-full" type="text" placeholder="Sheck Exley" required />
       </div>
 
       <div>
           <label class="block text-sm text-slate-300 font-medium mb-1" for="email">Email <span class="text-rose-500">*</span></label>
-          <input id="email" name="email" class="form-input w-full" type="email" placeholder="sheck@exley.com" required />
+          <input id="email" name="email" class="site-form-input w-full" type="email" placeholder="sheck@exley.com" required />
       </div>
 
       <div>
           <label class="block text-sm text-slate-300 font-medium mb-1" for="country">Country <span class="text-rose-500">*</span></label>
 
-            <select class="form-input w-full" name="country" id="country" required>
+            <select class="site-form-input w-full" name="country" id="country" required>
                 <option disabled selected value> -- select an option -- </option>
                 {% get_countries as countries %}
                 {% for country in countries %}
@@ -44,7 +44,7 @@
 
       <div>
           <label class="block text-sm text-slate-300 font-medium mb-1" for="password">Password <span class="text-rose-500">*</span></label>
-          <input id="password" name="password" class="form-input w-full" placeholder="Password" type="password" autocomplete="on" required />
+          <input id="password" name="password" class="site-form-input w-full" placeholder="Password" type="password" autocomplete="on" required />
           <div class="form-text md:col-span-12 text-sm text-slate-300 font-medium form_helptext pt-4">
             <u>Password Rules:</u>
             <ul>
@@ -58,17 +58,17 @@
 
       <div>
           <label class="block text-sm text-slate-300 font-medium mb-1" for="password2">Password (again)<span class="text-rose-500">*</span></label>
-          <input id="password2" name="password2" class="form-input w-full" placeholder="Password (again)" type="password" autocomplete="on" required />
+          <input id="password2" name="password2" class="site-form-input w-full" placeholder="Password (again)" type="password" autocomplete="on" required />
       </div>
 
       <div>
           <label class="block text-sm text-slate-300 font-medium mb-1" for="cave_marker">Anti-Robot:<br>What's the name of the cave marker indicating a jump ?<span class="text-rose-500">*</span></label>
-          <input id="cave_marker" name="cave_marker" class="form-input w-full" type="text" placeholder="A***w" required />
+          <input id="cave_marker" name="cave_marker" class="site-form-input w-full" type="text" placeholder="A***w" required />
       </div>
 
   </div>
   <div class="mt-6">
-      <button class="btn text-sm text-white bg-purple-500 hover:bg-purple-600 w-full shadow-xs group" type="submit" id="btn_submit">
+      <button class="site-btn text-sm text-white bg-purple-500 hover:bg-purple-600 w-full shadow-xs group" type="submit" id="btn_submit">
           Sign Up <span class="tracking-normal text-purple-300 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">→</span>
       </button>
   </div>
@@ -96,7 +96,7 @@
             </div>
             <!-- Modal footer -->
             <div class="flex justify-center">
-                <button id="cave_diver_modal_close" class="btn-sm bg-purple-500 hover:bg-purple-600 text-white w-32">
+                <button id="cave_diver_modal_close" class="site-btn-sm bg-purple-500 hover:bg-purple-600 text-white w-32">
                     Close
                 </button>
             </div>
@@ -108,52 +108,12 @@
 
 
 {% block inline_extra_js %}
-<script src="{% static 'js/auth_form.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        attachAuthForm({
-            formId: 'signup_form',
-            endpoint: "{% url 'headless:browser:account:signup' %}",
-            successMessage: 'Success! Please check your email !',
-            treat401AsSuccess: true,
-            beforeAjax: function (payload, formData) {
-                // Anti-robot: the `cave_marker` field must equal "ARROW".
-                var marker = (payload.cave_marker || '').trim().toUpperCase();
-                if (marker !== 'ARROW') {
-                    $('#cave_diver_modal').show();
-                    return false;
-                }
-                // Server never needs to see this field.
-                formData.delete('cave_marker');
-                delete payload.cave_marker;
-                return true;
-            },
-            validators: [
-                function (payload) {
-                    if (!payload.name) { return 'The `name` field is empty !'; }
-                    if (!payload.email || !validateEmail(payload.email)) {
-                        return 'The Email Address is not valid !';
-                    }
-                    if (!payload.password || !payload.password2) {
-                        return 'One of the `password` fields is empty !';
-                    }
-                    if (payload.password !== payload.password2) {
-                        return 'Password fields do not match !';
-                    }
-                    return null;
-                },
-            ],
-        });
-
-        $('#cave_diver_modal_close').click(function () {
-            $('#cave_diver_modal').hide();
-        });
-
-        $(window).click(function (event) {
-            if ($(event.target).is('#cave_diver_modal')) {
-                $('#cave_diver_modal').hide();
-            }
-        });
-    });
+<script type="application/json" data-speleodb-controller="auth-form">
+{
+    "mode": "signup",
+    "formId": "signup_form",
+    "endpoint": "{% url 'headless:browser:account:signup' %}",
+    "successMessage": "Success! Please check your email !"
+}
 </script>
 {% endblock inline_extra_js %}

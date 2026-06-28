@@ -1,5 +1,5 @@
 {% extends "base_private.html" %}
-{% load static %}
+{% load static vite_assets %}
 
 {% load countries %}
 {% load set_var %}
@@ -7,6 +7,8 @@
 {% load visibility_scopes %}
 {% load project_types %}
 {% load project_colors %}
+
+{% block extra_css %}{% vite_preload 'controller-entity-crud' %}{% endblock extra_css %}
 
 
 {% block content %}
@@ -150,33 +152,17 @@
 
 {% block extra_js %}
 <script src="{% url 'url_reverse.js' %}"></script>
-<script src="{% static 'private/js/color-picker.js' %}"></script>
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        initColorPicker({
-            preview:      '#color-preview',
-            hiddenInput:  '#color-value',
-            nativePicker: '#color-picker',
-            pickerBtn:    '#color-picker-btn',
-            hexInput:     '#color-hex-input',
-            presets:      '.color-preset',
-        });
-
-        attachEntityCrudForm({
-            formId: 'new_project_form',
-            endpoint: "{% url 'api:v2:projects' %}",
-            method: 'POST',
-            successMessage: 'The project has been created.',
-            redirectFromResponse: function (response) {
-                return Urls['private:project_details'](response['id']);
-            }
-        });
-    });
+<script type="application/json" data-speleodb-controller="entity-crud">
+{
+    "formId": "new_project_form",
+    "endpoint": "{% url 'api:v2:projects' %}",
+    "method": "POST",
+    "successMessage": "The project has been created.",
+    "redirectRoute": "private:project_details",
+    "colorPicker": true
+}
 </script>
 {% endblock inline_extra_js %}

@@ -1,8 +1,9 @@
-/* global escapeHtml */
+import { escapeHtml } from './xss-helpers.js';
+
 // Shared user autocomplete helper
 // Usage: attachUserAutocomplete($("#user"), $("#user_suggestions"), autocompleteUrl)
 
-function attachUserAutocomplete($input, $suggestions, autocompleteUrl) {
+export function attachUserAutocomplete($input, $suggestions, autocompleteUrl) {
     let lastQuery = "";
     let pending = null;
     let activeIndex = -1;
@@ -95,5 +96,4 @@ function attachUserAutocomplete($input, $suggestions, autocompleteUrl) {
         }
     });
 }
-
 

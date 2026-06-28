@@ -1,0 +1,12 @@
+/* Mobile Responsive Styles for Dashboard Page */
+    @media (max-width: 640px) {
+        /* Make form sections stack better */
+        .flex.flex-wrap {
+            flex-direction: column;
+        }
+
+        .flex.flex-wrap .mr-2 {
+            margin-right: 0 !important;
+            width: 100%;
+        }
+    }

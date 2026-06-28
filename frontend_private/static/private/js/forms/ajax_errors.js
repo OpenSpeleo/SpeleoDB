@@ -10,10 +10,9 @@
  * Requires: jQuery, globally-available `escapeHtml` (from xss-helpers.js).
  */
 
-/* global escapeHtml */
-/* exported showAjaxErrorModal */
+import { escapeHtml } from '../xss-helpers.js';
 
-function showAjaxErrorModal(xhr) {
+export function showAjaxErrorModal(xhr) {
     const errorKeys = ['error', 'errors', 'detail'];
     let found = false;
 

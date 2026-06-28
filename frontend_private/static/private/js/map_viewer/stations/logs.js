@@ -112,7 +112,7 @@ export const StationLogs = {
             const retryBtn = document.getElementById('logs-retry-btn');
             if (retryBtn) {
                 retryBtn.addEventListener('click', () => {
-                    window.StationLogs.render(stationId, document.getElementById('station-modal-content'));
+                    StationLogs.render(stationId, document.getElementById('station-modal-content'));
                 });
             }
         }
@@ -477,4 +477,3 @@ export const StationLogs = {
 };
 
 // Expose for global access if needed
-window.StationLogs = StationLogs;

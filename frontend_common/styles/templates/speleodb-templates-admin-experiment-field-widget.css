@@ -1,0 +1,100 @@
+.experiment-field-builder {
+    max-width: 1200px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.exp-container {
+    background: var(--darkened-bg, #f9fafb);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #e5e7eb);
+}
+.exp-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--body-fg, #374151);
+    margin-bottom: 12px;
+}
+.exp-mandatory-field {
+    background: var(--darkened-bg, #f3f4f6);
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--selected-bg, #79aec8);
+    color: var(--body-fg, #333);
+}
+.exp-mandatory-badge {
+    background: var(--selected-bg, #6366f1);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-left: 8px;
+}
+.exp-field-type {
+    color: var(--body-quiet-color, #6b7280);
+    font-size: 13px;
+}
+.exp-add-btn {
+    background: var(--button-bg, #417690);
+    color: var(--button-fg, white);
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+}
+.exp-add-btn:hover {
+    background: var(--button-hover-bg, #205067);
+}
+.exp-no-fields {
+    text-align: center;
+    padding: 40px;
+    color: var(--body-quiet-color, #999);
+    border: 2px dashed var(--border-color, #ccc);
+    border-radius: 6px;
+    background: var(--body-bg, white);
+}
+.exp-field-item {
+    background: var(--body-bg, white);
+    padding: 16px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 6px;
+}
+.exp-field-item label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--body-fg, #374151);
+    margin-bottom: 4px;
+}
+.exp-field-item input[type="text"],
+.exp-field-item select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    font-size: 13px;
+    background: var(--body-bg, white);
+    color: var(--body-fg, #333);
+}
+.exp-field-item input[type="text"]:focus,
+.exp-field-item select:focus {
+    outline: none;
+    border-color: var(--selected-bg, #417690);
+}
+.exp-remove-btn {
+    background: var(--delete-button-bg, #ba2121);
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.exp-remove-btn:hover {
+    background: var(--delete-button-hover-bg, #a41515);
+}
+.exp-required {
+    color: var(--error-fg, #ba2121);
+}

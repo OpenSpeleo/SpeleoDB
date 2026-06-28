@@ -26,10 +26,10 @@
  * Requires: jQuery, FormModals, showAjaxErrorModal.
  */
 
-/* global FormModals, showAjaxErrorModal */
-/* exported attachTeamPermissionModal */
+import { showAjaxErrorModal } from './ajax_errors.js';
+import { FormModals } from './modals.js';
 
-function attachTeamPermissionModal(options) {
+export function attachTeamPermissionModal(options) {
     var endpoint = options.endpoint;
     var addModalTitle = options.addModalTitle || 'Add a team';
     var addModalHeader = options.addModalHeader || 'What team would you like to add?';

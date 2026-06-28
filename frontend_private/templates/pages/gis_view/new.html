@@ -1,5 +1,7 @@
 {% extends "base_private.html" %}
-{% load static %}
+{% load static vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-gis-view-form' %}{% endblock extra_css %}
 
 {% block content %}
 <main class="grow">
@@ -128,24 +130,13 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/gis_view_form.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        attachGisViewForm({
-            endpoint: "{% url 'api:v2:gis-views' %}",
-            method: 'POST',
-            projectsEndpoint: "{% url 'api:v2:projects' %}",
-            commitsEndpointBuilder: function (projectId) {
-                return Urls['api:v2:project-geojson-commits'](projectId);
-            },
-            successMessage: 'The GIS view has been created successfully.',
-            onSuccess: function (data) {
-                window.location.href = Urls['private:gis_view_details'](data.id);
-            },
-        });
-    });
+<script type="application/json" data-speleodb-controller="gis-view-form">
+{
+    "endpoint": "{% url 'api:v2:gis-views' %}",
+    "method": "POST",
+    "projectsEndpoint": "{% url 'api:v2:projects' %}",
+    "successMessage": "The GIS view has been created successfully.",
+    "redirectRoute": "private:gis_view_details"
+}
 </script>
 {% endblock inline_extra_js %}
-

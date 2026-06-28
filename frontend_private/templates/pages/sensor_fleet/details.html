@@ -1,5 +1,7 @@
 {% extends "pages/sensor_fleet/base.html" %}
-{% load static %}
+{% load static vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-fleet' %}{% endblock extra_css %}
 
 {% block right_panel %}
 <div class="grow">
@@ -248,65 +250,19 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/fleet_watchlist.js' %}"></script>
-<script src="{% static 'private/js/forms/fleet_settings_form.js' %}"></script>
-<script src="{% static 'private/js/forms/fleet_entity_crud.js' %}"></script>
-{% include 'snippets/sensor_modal_helpers.js' %}
-<script>
-    $(window).on('load', function () {
-        {% if sensors %}
-        attachFleetWatchlist({
-            tableSelector: '#sensors_table',
-            dataTableOptions: {
-                order: [[0, 'asc']],
-                {% if has_write_access %}
-                columnDefs: [{ targets: -1, orderable: false }],
-                {% endif %}
-            },
-        });
-        {% endif %}
-
-        attachFleetSettingsForm({
-            endpoint: Urls['api:v2:sensor-fleet-detail']('{{ sensor_fleet.id }}'),
-            successMessage: 'The sensor fleet has been updated.',
-        });
-
-        attachFleetEntityCrud({
-            entityLabel: 'sensor',
-            modalSelector: '#sensor_modal',
-            deleteModalSelector: '#delete_sensor_modal',
-            editButtonSelector: '.edit-sensor-btn',
-            deleteButtonSelector: '.delete-sensor-btn',
-            deleteIdInputSelector: '#delete_sensor_id',
-            addButtonSelector: '#add_sensor_btn, #add_first_sensor_btn',
-            saveButtonSelector: '#sensor_modal_save',
-            cancelSelectors: '#sensor_modal_cancel, #sensor_modal_close_x',
-            deleteCancelSelectors: '#delete_modal_cancel, #delete_modal_close_x',
-            confirmDeleteSelector: '#delete_modal_confirm',
-            modalTitleSelector: '#sensor_modal_title',
-            addTitle: 'Add Sensor',
-            editTitle: 'Edit Sensor',
-            listEndpoint: "{% url 'api:v2:sensor-fleet-sensors' fleet_id=sensor_fleet.id %}",
-            detailEndpoint: function (id) { return Urls['api:v2:sensor-detail'](id); },
-            resetForCreate: sensorResetForCreate,
-            populateForEdit: sensorPopulateForEdit,
-            collectPayload: sensorCollectPayload,
-        });
-
-        // Sensor-specific: PATCH /sensors/:id/toggle-functional
-        $(document).on('click', '.toggle-sensor-btn', function () {
-            var sensorId = $(this).data('sensor-id');
-            var csrftoken = $('[name=csrfmiddlewaretoken]').val();
-            $.ajax({
-                url: Urls['api:v2:sensor-toggle-functional'](sensorId),
-                method: 'PATCH',
-                headers: { 'X-CSRFToken': csrftoken },
-                success: function () { location.reload(); },
-                error: function (xhr) { showAjaxErrorModal(xhr); },
-            });
-        });
-    });
+<script type="application/json" data-speleodb-controller="fleet">
+{
+    "kind": "sensor",
+    "mode": "details",
+    "tableSelector": "#sensors_table",
+    "hasRows": {% if sensors %}true{% else %}false{% endif %},
+    "hasWrite": {% if has_write_access %}true{% else %}false{% endif %},
+    "orderAscending": true,
+    "settingsEndpoint": "{% url 'api:v2:sensor-fleet-detail' fleet_id=sensor_fleet.id %}",
+    "settingsMessage": "The sensor fleet has been updated.",
+    "entityCrud": true,
+    "listEndpoint": "{% url 'api:v2:sensor-fleet-sensors' fleet_id=sensor_fleet.id %}",
+    "detailRoute": "api:v2:sensor-detail"
+}
 </script>
 {% endblock inline_extra_js %}

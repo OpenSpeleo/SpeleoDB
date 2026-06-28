@@ -6,12 +6,12 @@ set -o nounset
 
 python manage.py migrate
 
-# Install npm dependencies and ensure correct esbuild binary for container architecture
-rm -rf /app/node_modules/@esbuild /app/node_modules/esbuild
+# Install the root asset workspace.
 npm ci
 
-# Start Tailwind + esbuild watchers in background
-npm run dev &
+# Vite only rebuilds CSS/JS/TS to disk. Keep both watcher streams attached to
+# the container console while Django remains the HTTP server.
+npm run dev > /dev/stdout 2> /dev/stderr &
 
 # Forward SIGTERM/SIGINT to children
 trap "kill 0" SIGINT SIGTERM

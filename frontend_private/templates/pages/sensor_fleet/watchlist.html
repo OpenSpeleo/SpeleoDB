@@ -1,5 +1,7 @@
 {% extends "pages/sensor_fleet/base.html" %}
-{% load static %}
+{% load static vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-fleet' %}{% endblock extra_css %}
 
 {% block right_panel %}
 <div class="grow">
@@ -83,20 +85,16 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/fleet_watchlist.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        attachFleetWatchlist({
-            tableSelector: '#watchlist_sensors_table',
-            formSelector: '#watchlist_form',
-            exportBtnSelector: '#btn_export_excel',
-            exportUrlBuilder: function (days) {
-                return Urls['api:v2:sensor-fleet-watchlist-export']('{{ sensor_fleet.id }}') + '?days=' + days;
-            },
-        });
-    });
+<script type="application/json" data-speleodb-controller="fleet">
+{
+    "kind": "sensor",
+    "mode": "watchlist",
+    "fleetId": "{{ sensor_fleet.id }}",
+    "tableSelector": "#watchlist_sensors_table",
+    "hasWrite": false,
+    "showDaysFilter": true,
+    "exportRoute": "api:v2:sensor-fleet-watchlist-export",
+    "entityCrud": false
+}
 </script>
 {% endblock inline_extra_js %}
-

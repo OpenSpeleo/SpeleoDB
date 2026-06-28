@@ -15,10 +15,10 @@
  * Requires: jQuery, FormModals, showAjaxErrorModal.
  */
 
-/* global FormModals, showAjaxErrorModal */
-/* exported attachFleetSettingsForm */
+import { showAjaxErrorModal } from './ajax_errors.js';
+import { FormModals } from './modals.js';
 
-function attachFleetSettingsForm(options) {
+export function attachFleetSettingsForm(options) {
     var endpoint = options.endpoint;
     var successMessage = options.successMessage || 'Fleet updated.';
     var reloadDelayMs = typeof options.reloadDelayMs === 'number' ? options.reloadDelayMs : 2000;

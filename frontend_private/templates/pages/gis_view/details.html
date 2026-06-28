@@ -1,5 +1,7 @@
 {% extends "pages/gis_view/base.html" %}
-{% load static %}
+{% load static vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-gis-view-form' %}{% endblock extra_css %}
 
 {% block right_panel %}
 <div class="grow">
@@ -159,23 +161,15 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/gis_view_form.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        attachGisViewForm({
-            endpoint: "{% url 'api:v2:gis-view-detail' id=gis_view.id %}",
-            method: 'PUT',
-            projectsEndpoint: "{% url 'api:v2:projects' %}",
-            commitsEndpointBuilder: function (projectId) {
-                return Urls['api:v2:project-geojson-commits'](projectId);
-            },
-            successMessage: 'The GIS view has been updated successfully.',
-            seedFromExistingRows: true,
-            initialProjectCounter: {{ gis_view.project_views.count }},
-            newRowIdPrefix: 'new_',
-        });
-    });
+<script type="application/json" data-speleodb-controller="gis-view-form">
+{
+    "endpoint": "{% url 'api:v2:gis-view-detail' id=gis_view.id %}",
+    "method": "PUT",
+    "projectsEndpoint": "{% url 'api:v2:projects' %}",
+    "successMessage": "The GIS view has been updated successfully.",
+    "seedFromExistingRows": true,
+    "initialProjectCounter": {{ gis_view.project_views.count }},
+    "newRowIdPrefix": "new_"
+}
 </script>
 {% endblock inline_extra_js %}

@@ -1,15 +1,18 @@
-import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import tailwindcss from '@tailwindcss/vite';
+import { build as viteBuild } from 'vite';
+
 const ROOT = process.cwd();
-const TAILWIND_CLI = path.join(ROOT, 'node_modules', '.bin', 'tailwindcss');
 const CSS_EXTENSIONS = new Set(['.css']);
 const HTML_EXTENSIONS = new Set(['.html']);
 const JAVASCRIPT_EXTENSIONS = new Set(['.js']);
 
 const read = relativePath => fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
 const readJson = relativePath => JSON.parse(read(relativePath));
+const digest = relativePath => createHash('sha256').update(read(relativePath)).digest('hex');
 
 const listFiles = (relativePath, recursive, extensions) => {
     const absolutePath = path.join(ROOT, relativePath);
@@ -62,27 +65,45 @@ const writeMirrorFile = (mirrorRoot, relativePath, contents) => {
     fs.writeFileSync(absolutePath, contents);
 };
 
-const compile = (inputPath, outputPath, cwd) => {
-    execFileSync(TAILWIND_CLI, ['-i', inputPath, '-o', outputPath, '--minify'], {
-        cwd,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
+const compile = async (inputPath, cwd) => {
+    const result = await viteBuild({
+        root: cwd,
+        configFile: false,
+        logLevel: 'silent',
+        plugins: [tailwindcss()],
+        build: {
+            write: false,
+            minify: true,
+            cssMinify: 'lightningcss',
+            cssTarget: ['chrome111', 'firefox128', 'safari16.4'],
+            rolldownOptions: { input: inputPath },
+        },
     });
+    const output = Array.isArray(result)
+        ? result.flatMap(environment => environment.output)
+        : result.output;
+    const cssAssets = output.filter(
+        asset => asset.type === 'asset' && asset.fileName.endsWith('.css'),
+    );
+    expect(cssAssets).toHaveLength(1);
+    return String(cssAssets[0].source);
 };
 
-const compileSourceMirror = () => {
+const compileOutput = relativeInput => compile(path.join(ROOT, relativeInput), ROOT);
+
+const compileSourceMirror = async () => {
     const mirrorRoot = fs.mkdtempSync(path.join(ROOT, '.tailwind-contract-'));
 
     try {
         fs.cpSync(path.join(ROOT, 'tailwind_css'), path.join(mirrorRoot, 'tailwind_css'), { recursive: true });
 
         const sources = {
-            'frontend_public/templates/page.html': '<div class="z-[101]"></div>',
+            'frontend_public/templates/page.html': '<div class="z-[101] site-h1 site-btn site-form-input text-base text-3xl font-inter tracking-tight animate-float prose outline-blue max-w-9xl"></div>',
             'frontend_public/templates/footer.html': '<footer class="z-[102]"></footer>',
             'frontend_public/static/js/public.js': "const runtimeClasses = ['z-[103]'];",
             'frontend_public/static/js/nested/excluded.js': "const excluded = 'z-[191]';",
             'frontend_public/templatetags/people_tags.py': "PUBLIC_TAG_CLASS = 'z-[104]'",
-            'frontend_private/templates/page.html': '<div class="z-[201]"></div>',
+            'frontend_private/templates/page.html': '<div class="z-[201] text-base text-3xl font-inter w-128 min-w-36 max-w-9xl border-thin xs:block prose outline-blue animate-float"></div>',
             'frontend_private/static/private/js/private.js': "const runtimeClasses = ['z-[202]'];",
             'frontend_private/static/private/js/forms/excluded.js': "const excluded = 'z-[291]';",
             'frontend_private/static/private/js/map_viewer/deep/runtime.js': "const runtimeClasses = ['z-[203]'];",
@@ -94,29 +115,90 @@ const compileSourceMirror = () => {
             writeMirrorFile(mirrorRoot, relativePath, contents);
         }
 
-        const publicOutputPath = path.join(mirrorRoot, 'public.css');
-        const privateOutputPath = path.join(mirrorRoot, 'private.css');
-        compile(path.join(mirrorRoot, 'tailwind_css/public/style.css'), publicOutputPath, mirrorRoot);
-        compile(path.join(mirrorRoot, 'tailwind_css/private/style.css'), privateOutputPath, mirrorRoot);
-
         return {
-            publicOutput: fs.readFileSync(publicOutputPath, 'utf8'),
-            privateOutput: fs.readFileSync(privateOutputPath, 'utf8'),
+            unifiedOutput: await compile(
+                path.join(mirrorRoot, 'tailwind_css/style.css'),
+                mirrorRoot,
+            ),
+            privateOutput: await compile(
+                path.join(mirrorRoot, 'tailwind_css/private/style.css'),
+                mirrorRoot,
+            ),
         };
     } finally {
         fs.rmSync(mirrorRoot, { recursive: true, force: true });
     }
 };
 
-const compileCleanPrivateOutput = () => {
-    const outputRoot = fs.mkdtempSync(path.join(ROOT, '.tailwind-contract-'));
+const leafRuleSignatures = source => {
+    const css = source.replace(/\/\*[^]*?\*\//g, '');
+    const signatures = [];
 
-    try {
-        const outputPath = path.join(outputRoot, 'private.css');
-        compile(path.join(ROOT, 'tailwind_css/private/style.css'), outputPath, ROOT);
-        return fs.readFileSync(outputPath, 'utf8');
-    } finally {
-        fs.rmSync(outputRoot, { recursive: true, force: true });
+    const collect = text => {
+        let cursor = 0;
+
+        while (cursor < text.length) {
+            const openingBrace = text.indexOf('{', cursor);
+            if (openingBrace === -1) {
+                return;
+            }
+
+            const header = text.slice(cursor, openingBrace).replace(/^\s*;+/, '').trim();
+            let depth = 1;
+            let closingBrace = openingBrace + 1;
+            while (closingBrace < text.length && depth > 0) {
+                if (text[closingBrace] === '{') {
+                    depth += 1;
+                } else if (text[closingBrace] === '}') {
+                    depth -= 1;
+                }
+                closingBrace += 1;
+            }
+
+            const body = text.slice(openingBrace + 1, closingBrace - 1);
+            let bodyDepth = 0;
+            let hasNestedBlock = false;
+            for (const character of body) {
+                if (character === '{' && bodyDepth === 0) {
+                    hasNestedBlock = true;
+                    break;
+                }
+                if (character === '{') {
+                    bodyDepth += 1;
+                } else if (character === '}') {
+                    bodyDepth -= 1;
+                }
+            }
+
+            if (hasNestedBlock) {
+                collect(body);
+            } else if (header !== '') {
+                signatures.push(`${header}{${body.replace(/\s+/g, ' ').trim()}}`);
+            }
+            cursor = closingBrace;
+        }
+    };
+
+    collect(css);
+    return signatures;
+};
+
+const expectRuleSubsequence = (referenceCss, unifiedCss) => {
+    const declarationSupersets = [
+        '*,:before,:after,::backdrop{--tw-',
+        ':root,:host{--',
+    ];
+    const referenceRules = leafRuleSignatures(referenceCss)
+        .filter(rule => !declarationSupersets.some(prefix => rule.startsWith(prefix)))
+        .filter(rule => !rule.startsWith('@property --tw-'));
+    const unifiedRules = leafRuleSignatures(unifiedCss);
+    let unifiedIndex = 0;
+
+    for (const referenceRule of referenceRules) {
+        const foundIndex = unifiedRules.indexOf(referenceRule, unifiedIndex);
+        expect(foundIndex, `Unified output changed or omitted: ${referenceRule.slice(0, 160)}`)
+            .toBeGreaterThanOrEqual(unifiedIndex);
+        unifiedIndex = foundIndex + 1;
     }
 };
 
@@ -147,25 +229,24 @@ const candidateSourceText = (relativePath, source) => {
     return source.replace(/^\s*#.*$/gm, '');
 };
 
-describe('Tailwind v4 build contract', () => {
+describe('Tailwind v4 single-bundle contract', () => {
     const packageJson = readJson('package.json');
     const packageLock = readJson('package-lock.json');
     const v3Contract = readJson('frontend_private/static/private/js/forms/fixtures/tailwind-v3.4.19-contract.json');
-    const publicCss = read('tailwind_css/public/style.css');
+    const entryCss = read('tailwind_css/style.css');
     const privateCss = read('tailwind_css/private/style.css');
-    const publicConfig = read('tailwind_css/public/tailwind.config.js');
-    const privateConfig = read('tailwind_css/private/tailwind.config.js');
+    const publicComponents = read('tailwind_css/public/components.css');
     const privateComponents = read('tailwind_css/private/additional-styles/utility-patterns.css');
     const privateCustomCss = read('frontend_private/static/private/css/custom.css');
     const gitViewTemplate = read('frontend_private/templates/pages/project/git_view.html');
     const designSystemCss = read('tailwind_css/shared/design-system.css');
-
-    it('pins the compiler, CLI, and plugins to the approved package graph', () => {
+    it('pins the approved compiler, plugin, lockfile, and install-script graph', () => {
         const expectedPackages = {
-            '@tailwindcss/cli': '4.3.1',
             '@tailwindcss/forms': '0.5.11',
             '@tailwindcss/typography': '0.5.20',
+            '@tailwindcss/vite': '4.3.1',
             tailwindcss: '4.3.1',
+            vite: '8.1.0',
         };
 
         expect(packageJson.devDependencies).toMatchObject(expectedPackages);
@@ -180,72 +261,84 @@ describe('Tailwind v4 build contract', () => {
             expect(lockNode.integrity).toMatch(/^sha512-/);
         }
 
-        const cliNode = packageLock.packages['node_modules/@tailwindcss/cli'];
-        expect(cliNode.dependencies).toMatchObject({
-            '@parcel/watcher': '2.5.1',
-            '@tailwindcss/node': '4.3.1',
-            '@tailwindcss/oxide': '4.3.1',
-            tailwindcss: '4.3.1',
-        });
-        expect(packageLock.packages['node_modules/@tailwindcss/node'].dependencies.tailwindcss).toBe('4.3.1');
-
-        const oxideOptionalDependencies = packageLock.packages['node_modules/@tailwindcss/oxide'].optionalDependencies;
-        for (const [packageName, version] of Object.entries(oxideOptionalDependencies)) {
-            expect(version).toBe('4.3.1');
-            expect(packageLock.packages[`node_modules/${packageName}`]).toMatchObject({ optional: true, version });
-        }
-    });
-
-    it('approves exactly the packages whose locked nodes run install scripts', () => {
         const lockedInstallScripts = Object.entries(packageLock.packages)
             .filter(([, metadata]) => metadata.hasInstallScript)
             .map(([lockPath, metadata]) => `${lockPath.replace(/^node_modules\//, '')}@${metadata.version}`)
             .sort();
-
         expect(packageJson.allowScripts).toEqual({
-            '@parcel/watcher@2.5.1': true,
-            'esbuild@0.28.1': true,
             'fsevents@2.3.3': true,
         });
         expect(Object.keys(packageJson.allowScripts).sort()).toEqual(lockedInstallScripts);
     });
 
-    it('keeps all Tailwind script interfaces and uses the v4 CLI syntax', () => {
-        const expected = {
-            'build:tailwind:public': 'tailwindcss -i ./tailwind_css/public/style.css -o ./frontend_public/static/css/style.css --minify',
-            'build:tailwind:private': 'tailwindcss -i ./tailwind_css/private/style.css -o ./frontend_private/static/private/css/style.css --minify',
-            'dev:tailwind:public': 'tailwindcss -i ./tailwind_css/public/style.css -o ./frontend_public/static/css/style.css -w',
-            'dev:tailwind:private': 'tailwindcss -i ./tailwind_css/private/style.css -o ./frontend_private/static/private/css/style.css -w',
-            'pre-commit:tailwind:public': 'tailwindcss -i ./tailwind_css/public/style.css -o ./frontend_public/static/css/style.css',
-            'pre-commit:tailwind:private': 'tailwindcss -i ./tailwind_css/private/style.css -o ./frontend_private/static/private/css/style.css',
-        };
+    it('exposes exactly one neutral build, watch, and pre-commit interface', () => {
+        expect(packageJson.scripts['build:assets']).toBe('vite build --mode production');
+        expect(packageJson.scripts.dev).toBe('vite build --watch --mode development');
+        expect(packageJson.scripts['pre-commit']).toBe('npm run build');
 
-        for (const [name, command] of Object.entries(expected)) {
-            expect(packageJson.scripts[name]).toBe(command);
-            expect(command).not.toContain(' -c ');
+        for (const obsoleteName of [
+            'build:tailwind:public',
+            'build:tailwind:private',
+            'dev:tailwind:public',
+            'dev:tailwind:private',
+            'pre-commit:tailwind:public',
+            'pre-commit:tailwind:private',
+            'build:tailwind',
+            'dev:tailwind',
+            'pre-commit:tailwind',
+            'build:esbuild',
+            'build:esbuild:private',
+            'build:esbuild:public',
+            'dev:esbuild:private',
+            'dev:esbuild:public',
+            'pre-commit:esbuild',
+        ]) {
+            expect(packageJson.scripts[obsoleteName]).toBeUndefined();
         }
+
+        expect(packageJson.scripts.build).toBe('npm run build:clean && npm run build:assets');
+        expect(packageJson.scripts.start).toBe('npm run dev');
+        expect(packageJson.scripts['build:clean']).toContain('speleodb/common/static/speleodb/vite');
+        expect(packageJson.scripts['build:clean']).toContain('frontend_public/static/css/style.css');
+        expect(packageJson.scripts['build:clean']).toContain('frontend_private/static/private/css/style.css');
+        expect(Object.values(packageJson.scripts).join('\n')).not.toContain(' -c ');
+        expect(fs.existsSync(path.join(ROOT, 'scripts/tailwind-watch.mjs'))).toBe(false);
+        expect(fs.existsSync(path.join(ROOT, 'vite.config.mjs'))).toBe(true);
     });
 
-    it('freezes entrypoint import, source, layer, and variant order', () => {
-        expectInOrder(publicCss, [
-            "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=fallback');",
-            "@import 'tailwindcss' source(none);",
-            '@config "./tailwind.config.js";',
-            "@import '../shared/design-system.css';",
-            "@import './additional-styles/utility-patterns.css' layer(components);",
-            "@import './additional-styles/theme.css' layer(components);",
-            '@source "../../frontend_public/templates/**/*.html";',
-            '@source "../../frontend_public/static/js/*.js";',
-            '@source "../../frontend_public/templatetags/people_tags.py";',
-            '@custom-variant hover (&:hover);',
-            '@custom-variant group-hover (.group:hover &);',
-            '@layer utilities',
+    it('uses one production entrypoint while leaving the private reference byte-exact', () => {
+        expect(digest('tailwind_css/private/style.css')).toBe(
+            '44daabdbfa3b6b121750f7531b3b0570965e180398101f17e2a263609c614734',
+        );
+        expect(digest('tailwind_css/private/additional-styles/utility-patterns.css')).toBe(
+            '29990d20df6e3c8425819eef2558663958eeddd7164d727b32a4e8d0eb17b595',
+        );
+        expect(digest('tailwind_css/private/additional-styles/flatpickr.css')).toBe(
+            '876a74a84e774349c3c8bcdb5cb7d83f49c9b876d3d263f4f819b5286be4fb44',
+        );
+
+        expect(fs.existsSync(path.join(ROOT, 'tailwind_css/style.css'))).toBe(true);
+        expect(fs.existsSync(path.join(ROOT, 'tailwind_css/public/style.css'))).toBe(false);
+        expect(fs.existsSync(path.join(ROOT, 'tailwind_css/public/tailwind.config.js'))).toBe(false);
+        expect(fs.existsSync(path.join(ROOT, 'tailwind_css/private/tailwind.config.js'))).toBe(false);
+        expectInOrder(entryCss, [
+            "@import './private/style.css';",
+            "@import './public/components.css' layer(components);",
+            '@theme inline',
+            '@source "../frontend_public/templates/**/*.html";',
+            '@source "../frontend_public/static/js/*.js";',
+            '@source "../frontend_public/templatetags/people_tags.py";',
         ]);
+        expect(entryCss).not.toMatch(/--text-(?:base|lg|xl|[2-7]xl):/);
+        expect(entryCss).not.toMatch(/--tracking-/);
+    });
+
+    it('freezes private import, source, layer, theme, and variant order', () => {
         expectInOrder(privateCss, [
             "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=fallback');",
             "@import 'tailwindcss' source(none);",
-            '@config "./tailwind.config.js";',
             "@import '../shared/design-system.css';",
+            '@theme inline',
             "@import './additional-styles/utility-patterns.css' layer(components);",
             "@import './additional-styles/flatpickr.css' layer(components);",
             '@source "../../frontend_private/templates/**/*.html";',
@@ -261,15 +354,12 @@ describe('Tailwind v4 build contract', () => {
             '@layer base',
             '@layer utilities',
         ]);
-    });
-
-    it('disables automatic source detection and owns the exact source sets in CSS', () => {
-        expect(publicCss).toContain("@import 'tailwindcss' source(none);");
-        expect(privateCss).toContain("@import 'tailwindcss' source(none);");
-        expect(sourceDirectives(publicCss)).toEqual([
-            '../../frontend_public/templates/**/*.html',
-            '../../frontend_public/static/js/*.js',
-            '../../frontend_public/templatetags/people_tags.py',
+        expect(sourceDirectives(entryCss)).toEqual([
+            '../frontend_public/templates/**/*.html',
+            '../frontend_public/static/js/*.js',
+            '../frontend_public/templatetags/people_tags.py',
+            '../frontend_common/**/*.js',
+            '../frontend_common/**/*.css',
         ]);
         expect(sourceDirectives(privateCss)).toEqual([
             '../../frontend_private/templates/**/*.html',
@@ -280,59 +370,118 @@ describe('Tailwind v4 build contract', () => {
         ]);
     });
 
-    it('uses durable product names for shared production CSS', () => {
+    it('uses one CSS-native plugin foundation without legacy configuration', () => {
         const productionCss = listFiles('tailwind_css', true, CSS_EXTENSIONS);
-        const productionSources = [...new Set([
-            ...compilerOwnedSourceFiles(),
-            ...productionCss,
-        ])].sort();
+        const allCss = productionCss.map(read).join('\n');
 
+        expect(allCss).not.toContain('@config');
+        expect(allCss.match(/@plugin "@tailwindcss\/forms"/g)).toHaveLength(1);
+        expect(allCss.match(/@plugin "@tailwindcss\/typography"/g)).toHaveLength(1);
+        expect(designSystemCss).toMatch(
+            /@plugin "@tailwindcss\/forms"\s*\{\s*strategy:\s*"base";\s*\}/m,
+        );
+        expect(designSystemCss).toContain('--font-inter: Inter, sans-serif;');
+        expect(designSystemCss).toContain('color-scheme: dark;');
         expect(fs.existsSync(path.join(ROOT, 'tailwind_css/shared/v3-compat.css'))).toBe(false);
-        expect(fs.existsSync(path.join(ROOT, 'tailwind_css/shared/design-system.css'))).toBe(true);
 
-        for (const relativePath of productionSources) {
+        for (const relativePath of productionCss) {
             expect(read(relativePath), `${relativePath} exposes a migration-version name`)
                 .not.toMatch(/(?:^|[^a-z0-9])v3-/im);
         }
-
-        expect(designSystemCss).toContain('@utility flow-y-4');
-        expect(designSystemCss).toContain('@utility row-divide-y');
-        expect(designSystemCss).toContain('--color-srgb-slate-700-50:');
     });
 
-    it('proves source inclusion, exclusion, and cross-build isolation with the real compiler', () => {
-        const { publicOutput, privateOutput } = compileSourceMirror();
+    it('compiles the union source set and excludes unsupported nested trees', async () => {
+        const { unifiedOutput } = await compileSourceMirror();
 
-        for (const value of [101, 102, 103, 104]) {
-            expect(publicOutput, `Public build omitted z-[${value}]`).toContain(`z-index:${value}`);
+        for (const value of [101, 102, 103, 104, 201, 202, 203, 204]) {
+            expect(unifiedOutput, `Unified build omitted z-[${value}]`).toContain(`z-index:${value}`);
         }
-        for (const value of [191, 201, 202, 203, 204, 291, 292]) {
-            expect(publicOutput, `Public build leaked z-[${value}]`).not.toContain(`z-index:${value}`);
+        for (const value of [191, 291, 292]) {
+            expect(unifiedOutput, `Unified build leaked z-[${value}]`).not.toContain(`z-index:${value}`);
         }
 
-        for (const value of [102, 201, 202, 203, 204]) {
-            expect(privateOutput, `Private build omitted z-[${value}]`).toContain(`z-index:${value}`);
+        expect(cssRuleBodies(unifiedOutput, '.site-h1')).not.toHaveLength(0);
+        expect(cssRuleBodies(unifiedOutput, '.site-btn')).not.toHaveLength(0);
+        expect(cssRuleBodies(unifiedOutput, '.site-form-input')).not.toHaveLength(0);
+        expect(cssRuleBodies(unifiedOutput, '.animate-float').join(';'))
+            .toContain('animation:2s ease-in-out infinite float');
+        expect(cssRuleBodies(unifiedOutput, '.outline-blue').join(';'))
+            .toContain('outline:2px solid #0070f480');
+        expect(cssRuleBodies(unifiedOutput, '.max-w-9xl').join(';')).toContain('max-width:96rem');
+    }, 30_000);
+
+    it('preserves every compiled private leaf rule and its relative order', async () => {
+        const { unifiedOutput, privateOutput } = await compileSourceMirror();
+        expectRuleSubsequence(privateOutput, unifiedOutput);
+
+        for (const supersetSelector of ['*,:before,:after,::backdrop', ':root,:host']) {
+            const privateDeclarations = cssRuleBodies(privateOutput, supersetSelector).join(';');
+            const unifiedDeclarations = cssRuleBodies(unifiedOutput, supersetSelector).join(';');
+            for (const declaration of privateDeclarations.split(';').filter(Boolean)) {
+                expect(unifiedDeclarations, `Unified ${supersetSelector} omitted ${declaration}`)
+                    .toContain(declaration);
+            }
         }
-        for (const value of [101, 103, 104, 191, 291, 292]) {
-            expect(privateOutput, `Private build leaked z-[${value}]`).not.toContain(`z-index:${value}`);
+
+        const unifiedRules = new Set(leafRuleSignatures(unifiedOutput));
+        const privatePropertyRules = leafRuleSignatures(privateOutput)
+            .filter(rule => rule.startsWith('@property --tw-'));
+        for (const propertyRule of privatePropertyRules) {
+            expect(unifiedRules, `Unified output omitted ${propertyRule}`).toContain(propertyRule);
         }
     }, 30_000);
 
-    it('loads one legacy config and one copy of each plugin per build', () => {
-        expect(publicCss).toContain('@config "./tailwind.config.js";');
-        expect(privateCss).toContain('@config "./tailwind.config.js";');
+    it('uses private typography and namespaced public components without selector collisions', async () => {
+        const unifiedOutput = await compileOutput('tailwind_css/style.css');
+        const baseRules = cssRuleBodies(unifiedOutput, '.text-base').join(';');
+        const threeXlRules = cssRuleBodies(unifiedOutput, '.text-3xl').join(';');
 
-        for (const [css, config] of [[publicCss, publicConfig], [privateCss, privateConfig]]) {
-            expect(css).not.toContain('@plugin');
-            expect(config.match(/require\('@tailwindcss\/forms'\)/g)).toHaveLength(1);
-            expect(config.match(/require\('@tailwindcss\/typography'\)/g)).toHaveLength(1);
-            expect(config).toContain("require('@tailwindcss/forms')({ strategy: 'base' })");
-            expect(config).not.toMatch(/\bcontent\s*:/);
-            expect(config).not.toMatch(/\bdarkMode\s*:/);
+        expect(baseRules).toContain('font-size:1rem');
+        expect(baseRules).toContain('line-height:var(--tw-leading,1.5)');
+        expect(baseRules).toContain('letter-spacing:var(--tw-tracking,-.01em)');
+        expect(threeXlRules).toContain('font-size:1.88rem');
+        expect(threeXlRules).toContain('line-height:var(--tw-leading,1.33)');
+
+        expect(publicComponents).not.toMatch(
+            /(?:^|\n)\s*\.(?:btn(?:-(?:sm|lg|xs))?|h[1-5]|form-(?:input|textarea|multiselect|select|checkbox|radio))\b/m,
+        );
+        expect(cssRuleBodies(unifiedOutput, '.site-btn,.site-btn-sm').join(';'))
+            .toContain('border-radius:var(--radius-full)');
+        expect(cssRuleBodies(unifiedOutput, '.site-form-input').join(';'))
+            .toContain('background-color:var(--color-slate-800)');
+        expect(cssRuleBodies(unifiedOutput, '.site-shadow-sm-purple-25').join(';'))
+            .toContain('0 1px 2px -1px var(--color-srgb-purple-500-25)');
+        expect(read('frontend_public/templates/pages/home.html'))
+            .not.toContain('shadow-sm shadow-srgb-purple-500-25');
+        expect(read('frontend_public/templates/snippets/welcome_modal.html'))
+            .not.toContain('p-6 sm:p-8 md:p-12');
+
+        const allowedPrivateComponents = new Map([
+            ['frontend_public/templates/pages/gis_view_map.html', new Set(['btn'])],
+            ['frontend_public/templates/snippets/welcome_modal.html', new Set(['btn'])],
+        ]);
+        const conflictingTokens = new Set([
+            'btn', 'btn-sm', 'btn-lg', 'btn-xs',
+            'h1', 'h2', 'h3', 'h4', 'h5',
+            'form-input', 'form-textarea', 'form-multiselect', 'form-select', 'form-checkbox', 'form-radio',
+        ]);
+
+        for (const relativePath of listFiles('frontend_public/templates', true, HTML_EXTENSIONS)) {
+            const allowed = allowedPrivateComponents.get(relativePath) ?? new Set();
+            const classValues = [...candidateSourceText(relativePath, read(relativePath))
+                .matchAll(/\bclass\s*=\s*["']([^"']*)["']/g)]
+                .map(match => match[1]);
+            for (const classValue of classValues) {
+                for (const token of classValue.split(/\s+/)) {
+                    if (conflictingTokens.has(token)) {
+                        expect(allowed, `${relativePath} uses unnamespaced ${token}`).toContain(token);
+                    }
+                }
+            }
         }
-    });
+    }, 30_000);
 
-    it('freezes every v3 palette value and relevant default token against an independent fixture', () => {
+    it('freezes every v3 palette value and relevant default token', () => {
         const actualVariables = cssVariables(designSystemCss);
         const expectedPalette = {
             '--color-black': v3Contract.palette.black,
@@ -360,16 +509,9 @@ describe('Tailwind v4 build contract', () => {
         for (const [name, value] of Object.entries(v3Contract.defaults)) {
             expect(actualVariables[name], `${name} diverged from Tailwind 3.4.19`).toBe(value);
         }
-
-        expect(designSystemCss).toContain('border-color: var(--color-gray-200);');
-        expect(designSystemCss).toContain('@utility flow-y-4');
-        expect(designSystemCss).toContain('@utility row-divide-y');
-        expect(designSystemCss).toContain('& > :not([hidden]) ~ :not([hidden])');
-        expect(designSystemCss).toContain("input:where([type='checkbox']):checked");
-        expect(designSystemCss).toContain('data:image/svg+xml;base64');
     });
 
-    it('inspects all compiler-owned source and runtime candidate contexts for removed v3 forms', () => {
+    it('inspects all compiler-owned runtime contexts for removed candidates and private variables', () => {
         const removedCandidates = [
             /(?:^|\s)(?:[A-Za-z0-9_-]+:)*(?:bg|text|border|divide|ring)-opacity-\d+(?=\s|$)/m,
             /(?:^|\s)(?:[A-Za-z0-9_-]+:)*flex-(?:shrink|grow)(?:-\d+)?(?=\s|$)/m,
@@ -389,16 +531,6 @@ describe('Tailwind v4 build contract', () => {
             }
         }
 
-        const classContexts = compilerOwnedSourceFiles()
-            .flatMap(relativePath => [
-                ...read(relativePath).matchAll(/\b(?:class|:class|x-bind:class)\s*=\s*["'`]([^"'`]*)["'`]/g),
-            ])
-            .map(match => match[1])
-            .join('\n');
-        expect(classContexts).not.toMatch(/(?:^|\s)(?:![A-Za-z]|[A-Za-z0-9-]+:![A-Za-z])/m);
-    });
-
-    it('rejects application coupling to every Tailwind private variable', () => {
         const processedCss = [
             ...listFiles('tailwind_css', true, CSS_EXTENSIONS),
             ...listFiles('frontend_public', true, CSS_EXTENSIONS),
@@ -408,84 +540,71 @@ describe('Tailwind v4 build contract', () => {
             'frontend_public/static/css/style.css',
             'frontend_private/static/private/css/style.css',
         ].includes(relativePath) && !relativePath.includes('/vendors/'));
-        const applicationSources = [...new Set([
-            ...compilerOwnedSourceFiles(),
-            ...processedCss,
-        ])].sort();
 
-        for (const relativePath of applicationSources) {
-            expect(read(relativePath), `${relativePath} couples to Tailwind internals`).not.toMatch(/--tw-[a-z0-9-]+/i);
+        for (const relativePath of [...new Set([...compilerOwnedSourceFiles(), ...processedCss])].sort()) {
+            expect(read(relativePath), `${relativePath} couples to Tailwind internals`)
+                .not.toMatch(/--tw-[a-z0-9-]+/i);
         }
     });
 
-    it('freezes the four production stylesheet compositions', () => {
+    it('freezes the single-asset production stylesheet compositions', () => {
         const publicBase = read('frontend_public/templates/base.html');
         const privateBase = read('frontend_private/templates/base_private.html');
         const publicMap = read('frontend_public/templates/pages/gis_view_map.html');
         const privateMap = read('frontend_private/templates/pages/map_viewer.html');
+        const ariane = read('frontend_public/templates/webviews/ariane.html');
+        const allTemplates = listFiles('frontend_public/templates', true, HTML_EXTENSIONS)
+            .concat(listFiles('frontend_private/templates', true, HTML_EXTENSIONS))
+            .map(read)
+            .join('\n');
 
         expectInOrder(publicBase, [
             "{% static 'css/vendors/aos.css' %}",
             'https://cdnjs.cloudflare.com/ajax/libs/aos/3.0.0-beta.6/aos.css',
-            "{% static 'css/style.css' %}",
-            "{% static 'css/custom.css' %}",
+            'https://fonts.googleapis.com/css2?family=Inter:wght@800&amp;display=fallback',
+            "{% vite_styles 'style-app' 'style-public-shell' %}",
             '{% block extra_css %}',
         ]);
         expectInOrder(privateBase, [
-            "{% static 'private/css/style.css' %}",
-            "{% static 'private/css/custom.css' %}",
-            '<style>',
+            "{% vite_styles 'style-app' 'style-private-shell' %}",
+            "{% vite_styles 'style-template-frontend-private-templates-base-private' %}",
             '{% block extra_css %}',
         ]);
         expectInOrder(publicMap, [
-            "{% static 'private/css/style.css' %}",
-            "{% static 'private/css/custom.css' %}",
-            "{% static 'private/css/shared-modal.css' %}",
-            "{% static 'private/css/map_viewer.css' %}",
+            "{% vite_styles 'style-private-shell' 'style-shared-modal' 'style-map-viewer' %}",
             'https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css',
         ]);
+        expect(publicMap).not.toContain('private/css/style.css');
+        expect(ariane).toContain("{% vite_styles 'style-app' %}");
         expectInOrder(privateMap, [
             'https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css',
-            "{% static 'private/css/shared-modal.css' %}",
-            "{% static 'private/css/map_viewer.css' %}",
+            "{% vite_styles 'style-shared-modal' 'style-map-viewer' %}",
         ]);
+        expect(allTemplates).not.toContain("{% static 'css/style.css' %}");
+        expect(allTemplates).not.toContain("{% static 'private/css/style.css' %}");
     });
 
-    it('keeps component line-height literal so responsive text utilities can win', () => {
-        const cleanPrivateCss = compileCleanPrivateOutput();
+    it('retains private component cascade and the clean Git-browser surface', async () => {
+        const unifiedOutput = await compileOutput('tailwind_css/style.css');
         const buttonSelector = '.btn,.btn-lg,.btn-sm,.btn-xs';
         const formSelector = '.form-input,.form-textarea,.form-multiselect,.form-select';
-        const buttonRules = cssRuleBodies(cleanPrivateCss, buttonSelector).join(';');
-        const formRules = cssRuleBodies(cleanPrivateCss, formSelector).join(';');
-        const responsiveTextRule = cssRuleBodies(cleanPrivateCss, '.md\\:text-base').join(';');
+        const buttonRules = cssRuleBodies(unifiedOutput, buttonSelector).join(';');
+        const formRules = cssRuleBodies(unifiedOutput, formSelector).join(';');
 
         for (const [selector, rules] of [[buttonSelector, buttonRules], [formSelector, formRules]]) {
-            expect(rules, `Clean build omitted ${selector}`).not.toBe('');
+            expect(rules, `Unified build omitted ${selector}`).not.toBe('');
             expect(rules, `${selector} lost the v3 line-height`).toContain('line-height:1.25rem');
             expect(rules, `${selector} leaks inherited leading state`).not.toMatch(/--tw-leading\s*:/);
         }
 
-        expect(responsiveTextRule).toContain('font-size:1rem');
-        expect(responsiveTextRule).toContain('line-height:var(--tw-leading,1.5)');
-        expect(cleanPrivateCss.indexOf('.md\\:text-base{')).toBeGreaterThan(
-            Math.max(
-                cleanPrivateCss.lastIndexOf(`${buttonSelector}{`),
-                cleanPrivateCss.lastIndexOf(`${formSelector}{`),
-            ),
-        );
-    }, 30_000);
-
-    it('compiles the git browser surface without a stale background-owning component', () => {
         expect(gitViewTemplate.match(/bg-linear-to-b\/srgb from-white to-gray-100/g)).toHaveLength(2);
         expect(privateComponents).not.toMatch(/\.git_btn\s*{/);
         expect(privateCustomCss).not.toMatch(/\.git_btn\s*{/);
-
-        const cleanPrivateCss = compileCleanPrivateOutput();
-        expect(cleanPrivateCss).toContain('.bg-linear-to-b\\/srgb');
-        expect(cleanPrivateCss).toContain('.from-white');
-        expect(cleanPrivateCss).toContain('.to-gray-100');
-        expect(cleanPrivateCss).toContain('.rounded-full');
-        expect(cleanPrivateCss).toContain('.cursor-pointer');
-        expect(cleanPrivateCss).not.toMatch(/\.git_btn\s*\{[^}]*\bbackground(?:-image)?\s*:/);
+        expect(unifiedOutput).toContain('.bg-linear-to-b\\/srgb');
+        expect(unifiedOutput).toContain('.from-white');
+        expect(unifiedOutput).toContain('.to-gray-100');
+        expect(unifiedOutput).toContain('.rounded-full');
+        expect(unifiedOutput).toContain('.cursor-pointer');
+        expect(unifiedOutput).not.toMatch(/\.git_btn\s*\{[^}]*\bbackground(?:-image)?\s*:/);
     }, 30_000);
 });

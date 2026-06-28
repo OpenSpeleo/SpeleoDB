@@ -389,9 +389,3 @@ export function initLandmarkCollectionDetails() {
         state.collections = collections;
     });
 }
-
-if (typeof window !== 'undefined') {
-    window.addEventListener('load', () => {
-        initLandmarkCollectionDetails();
-    });
-}

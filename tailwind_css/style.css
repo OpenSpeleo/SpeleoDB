@@ -1,0 +1,79 @@
+/*
+ * SpeleoDB's single Tailwind production entrypoint.
+ *
+ * The private stylesheet is the canonical product configuration and component
+ * contract. Public sources add only namespaced site components and animations.
+ */
+@import './private/style.css';
+@import './public/components.css' layer(components);
+
+@theme inline {
+    --animate-endless: endless 20s linear infinite;
+    --animate-shine: shine 5s linear 500ms infinite;
+    --animate-float: float 2s ease-in-out infinite;
+
+    @keyframes endless {
+        0% {
+            transform: translateY(0);
+        }
+
+        100% {
+            transform: translateY(-245px);
+        }
+    }
+
+    @keyframes shine {
+        0% {
+            top: 0;
+            translate: 0 -100%;
+            scale: 1 10;
+            opacity: 0;
+        }
+
+        2% {
+            opacity: .5;
+        }
+
+        40% {
+            top: 100%;
+            translate: 0 0;
+            scale: 1 200;
+            opacity: 0;
+        }
+
+        100% {
+            top: 100%;
+            translate: 0 0;
+            scale: 1 1;
+            opacity: 0;
+        }
+    }
+
+    @keyframes float {
+        0% {
+            transform: translateY(3%);
+        }
+
+        50% {
+            transform: translateY(-3%);
+        }
+
+        100% {
+            transform: translateY(3%);
+        }
+    }
+}
+
+@source "../frontend_public/templates/**/*.html";
+@source "../frontend_public/static/js/*.js";
+@source "../frontend_public/templatetags/people_tags.py";
+@source "../frontend_common/**/*.js";
+@source "../frontend_common/**/*.css";
+
+/*
+ * Keep the pre-Vite Tailwind candidate set stable. These utilities used to be
+ * discovered in template-local CSS/markup that is now represented by routed
+ * stylesheets. Freezing them makes the compiler migration auditable without
+ * coupling application CSS back to template-scanning accidents.
+ */
+@source inline("flex-shrink border-collapse overflow-x-scroll outline backdrop-filter");

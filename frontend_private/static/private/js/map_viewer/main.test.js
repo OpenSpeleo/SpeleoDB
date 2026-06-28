@@ -78,7 +78,10 @@ vi.mock('./map/interactions.js', () => ({ Interactions: { init: vi.fn() } }));
 vi.mock('./map/geometry.js', () => ({ Geometry: { getSnapInfo: vi.fn(), setSnapRadius: vi.fn() } }));
 vi.mock('./stations/manager.js', () => ({ StationManager: {} }));
 vi.mock('./stations/ui.js', () => ({ StationUI: { openManagerModal: vi.fn() } }));
-vi.mock('./stations/details.js', () => ({ StationDetails: { openModal: vi.fn() } }));
+vi.mock('./stations/details.js', () => ({
+    StationDetails: { openModal: vi.fn() },
+    returnToStationManager: vi.fn(),
+}));
 vi.mock('./stations/tags.js', () => ({ StationTags: { init: vi.fn() } }));
 vi.mock('./surface_stations/manager.js', () => ({ SurfaceStationManager: {} }));
 vi.mock('./surface_stations/ui.js', () => ({ SurfaceStationUI: { openManagerModal: vi.fn() } }));
@@ -87,6 +90,9 @@ vi.mock('./landmarks/ui.js', () => ({ LandmarkUI: { openDetailsModal: vi.fn(), o
 vi.mock('./exploration_leads/manager.js', () => ({ ExplorationLeadManager: {} }));
 vi.mock('./exploration_leads/ui.js', () => ({ ExplorationLeadUI: { showDetailsModal: vi.fn() } }));
 vi.mock('./stations/cylinders.js', () => ({ CylinderInstalls: { showCylinderDetails: vi.fn() } }));
+vi.mock('./stations/sensors.js', () => ({ StationSensors: {} }));
+vi.mock('./action_dispatcher.js', () => ({ initMapActionDispatcher: vi.fn() }));
+vi.mock('./map/navigation.js', () => ({ configureMapNavigation: vi.fn() }));
 vi.mock('./utils.js', () => ({ Utils: utilsMock }));
 vi.mock('./components/context_menu.js', () => ({ ContextMenu: {} }));
 vi.mock('./components/project_panel.js', () => ({
@@ -106,10 +112,13 @@ describe('private map viewer entrypoint', () => {
     let consoleErrorSpy;
 
     async function importModuleAndGetDomReadyHandler() {
+        const context = window.MAPVIEWER_CONTEXT;
         vi.resetModules();
-        await import('./main.js');
-        expect(typeof domReadyHandler).toBe('function');
-        return domReadyHandler;
+        const { configureRuntimeContext } = await import('./runtime_context.js');
+        configureRuntimeContext(context);
+        const { initPrivateMapViewer } = await import('./main.js');
+        expect(typeof initPrivateMapViewer).toBe('function');
+        return initPrivateMapViewer;
     }
 
     beforeEach(() => {

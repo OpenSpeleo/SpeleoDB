@@ -5,6 +5,8 @@ import { Utils } from '../utils.js';
 import { StationDetails } from './details.js';
 import { Modal } from '../components/modal.js';
 import { Geometry } from '../map/geometry.js';
+import { getRuntimeContext } from '../runtime_context.js';
+import { goToStation } from '../map/navigation.js';
 
 export const StationUI = {
     openManagerModal() {
@@ -117,11 +119,11 @@ export const StationUI = {
 
                     // Station type badge
                     const typeLabels = {
-                        'sensor': { label: 'Sensor', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.sensor}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-orange-500-20 text-orange-300 border-srgb-orange-500-30' },
-                        'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-cyan-500-20 text-cyan-300 border-srgb-cyan-500-30' },
-                        'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-amber-500-20 text-amber-300 border-srgb-amber-500-30' },
-                        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-slate-500-20 text-slate-200 border-srgb-slate-400-30' },
-                        'geology': { label: 'Geology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-stone-500-20 text-stone-300 border-srgb-stone-500-30' }
+                        'sensor': { label: 'Sensor', icon: `<img src="${getRuntimeContext().icons.sensor}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-orange-500-20 text-orange-300 border-srgb-orange-500-30' },
+                        'biology': { label: 'Biology', icon: `<img src="${getRuntimeContext().icons.biology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-cyan-500-20 text-cyan-300 border-srgb-cyan-500-30' },
+                        'artifact': { label: 'Artifact', icon: `<img src="${getRuntimeContext().icons.artifact}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-amber-500-20 text-amber-300 border-srgb-amber-500-30' },
+                        'bone': { label: 'Bones', icon: `<img src="${getRuntimeContext().icons.bone}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-slate-500-20 text-slate-200 border-srgb-slate-400-30' },
+                        'geology': { label: 'Geology', icon: `<img src="${getRuntimeContext().icons.geology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-stone-500-20 text-stone-300 border-srgb-stone-500-30' }
                     };
                     const stationType = station.type;
                     const typeInfo = typeLabels[stationType];
@@ -191,9 +193,7 @@ export const StationUI = {
                     const lat = parseFloat(btn.dataset.lat);
                     const lon = parseFloat(btn.dataset.lon);
                     e.stopPropagation();
-                    if (window.goToStation) {
-                        window.goToStation(stationId, lat, lon);
-                    }
+                    goToStation(stationId, lat, lon);
                     return;
                 }
 
@@ -229,11 +229,11 @@ export const StationUI = {
 
         // Determine title and icon based on station type
         const typeLabels = {
-            'sensor': { label: 'Sensor Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.sensor}" class="w-6 h-6">`, color: 'text-orange-400' },
-            'biology': { label: 'Biology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-6 h-6">`, color: 'text-cyan-400' },
-            'artifact': { label: 'Artifact Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-6 h-6">`, color: 'text-amber-400' },
-            'bone': { label: 'Bones Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-6 h-6">`, color: 'text-slate-200' },
-            'geology': { label: 'Geology Station', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-6 h-6">`, color: 'text-stone-400' }
+            'sensor': { label: 'Sensor Station', icon: `<img src="${getRuntimeContext().icons.sensor}" class="w-6 h-6">`, color: 'text-orange-400' },
+            'biology': { label: 'Biology Station', icon: `<img src="${getRuntimeContext().icons.biology}" class="w-6 h-6">`, color: 'text-cyan-400' },
+            'artifact': { label: 'Artifact Station', icon: `<img src="${getRuntimeContext().icons.artifact}" class="w-6 h-6">`, color: 'text-amber-400' },
+            'bone': { label: 'Bones Station', icon: `<img src="${getRuntimeContext().icons.bone}" class="w-6 h-6">`, color: 'text-slate-200' },
+            'geology': { label: 'Geology Station', icon: `<img src="${getRuntimeContext().icons.geology}" class="w-6 h-6">`, color: 'text-stone-400' }
         };
         const typeInfo = typeLabels[stationType];
 

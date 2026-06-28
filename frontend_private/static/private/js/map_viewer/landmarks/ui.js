@@ -2,6 +2,7 @@ import { LandmarkManager } from './manager.js';
 import { State } from '../state.js';
 import { Utils } from '../utils.js';
 import { Modal } from '../components/modal.js';
+import { goToLandmark } from '../map/navigation.js';
 
 export const LandmarkUI = {
     getPersonalCollection() {
@@ -282,9 +283,7 @@ export const LandmarkUI = {
                 const landmarkId = btn.dataset.landmarkId;
                 const lat = parseFloat(btn.dataset.lat);
                 const lon = parseFloat(btn.dataset.lon);
-                if (window.goToLandmark) {
-                    window.goToLandmark(landmarkId, lat, lon);
-                }
+                goToLandmark(landmarkId, lat, lon);
             });
         });
 
@@ -493,9 +492,7 @@ export const LandmarkUI = {
                     Modal.close('create-landmark-manual-modal');
                     
                     // Fly to the newly created landmark
-                    if (window.goToLandmark) {
-                        window.goToLandmark(landmark.id, lat, lon);
-                    }
+                    goToLandmark(landmark.id, lat, lon);
                 } catch (err) {
                     errorEl.textContent = err.message || 'Failed to create landmark.';
                     errorEl.classList.remove('hidden');
@@ -593,9 +590,7 @@ export const LandmarkUI = {
                     Modal.close('landmark-details-modal');
                     
                     // Fly to the landmark's (potentially new) location
-                    if (window.goToLandmark) {
-                        window.goToLandmark(landmarkId, lat, lon);
-                    }
+                    goToLandmark(landmarkId, lat, lon);
                 } catch (err) {
                     errorEl.textContent = err.message || 'Failed to update landmark.';
                     errorEl.classList.remove('hidden');

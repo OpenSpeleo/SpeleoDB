@@ -6,15 +6,7 @@
  * production code rather than local copies.
  */
 
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
-
-/* ── Load real source ──────────────────────────────────────────── */
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC_PATH = resolve(__dirname, '..', 'color-picker.js');
-const SRC_TEXT = readFileSync(SRC_PATH, 'utf-8');
+import { _hexBodyRe, initColorPicker } from '../color-picker.js';
 
 /**
  * Minimal jQuery shim backed by jsdom's querySelectorAll.
@@ -64,8 +56,7 @@ function jQueryShim(selectorOrEl) {
     return wrapper;
 }
 
-const _loader = new Function('$', SRC_TEXT + '\nreturn { _hexBodyRe, initColorPicker };');
-const { _hexBodyRe, initColorPicker } = _loader(jQueryShim);
+globalThis.$ = jQueryShim;
 
 /* ── Selectors matching the test DOM ──────────────────────────── */
 

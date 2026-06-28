@@ -1,7 +1,8 @@
 {% extends "pages/project/base.html" %}
-{% load static %}
+{% load static vite_assets %}
 
 {% block extra_css %}
+{% vite_preload 'controller-git-instructions' %}
 {{ block.super }}
 
 {% if debug %}
@@ -154,21 +155,5 @@ git push
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script>
-
-    $(window).on('load', function() {
-
-        $("#btn_show_git_instructions").click(function () {
-            $("#modal_git_instructions").css('display', 'flex');
-            return false; // prevent default
-        });
-
-        $(".btn_close").click(function() {
-            if ($("#modal_git_instructions").is(":visible")) {
-                $("#modal_git_instructions").hide();
-            }
-        });
-    });
-</script>
-
+<script type="application/json" data-speleodb-controller="git-instructions">{}</script>
 {% endblock inline_extra_js %}

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Utils } from './utils.js';
+import { configureRuntimeContext } from './runtime_context.js';
 
 const VALID_CSRF_SECRET = 'a'.repeat(32);
 const VALID_CSRF_TOKEN = 'b'.repeat(64);
@@ -7,7 +8,7 @@ const VALID_CSRF_TOKEN = 'b'.repeat(64);
 function clearCSRFTestState() {
     document.body.innerHTML = '';
     document.cookie = 'csrftoken=; Max-Age=0; path=/';
-    delete window.MAPVIEWER_CONTEXT;
+    configureRuntimeContext({});
 }
 
 describe('Utils.escapeHtml', () => {
@@ -97,7 +98,7 @@ describe('Utils.getCSRFToken', () => {
     });
 
     it('falls back to the map viewer context token when form and cookie sources are missing', () => {
-        window.MAPVIEWER_CONTEXT = { csrfToken: VALID_CSRF_TOKEN };
+        configureRuntimeContext({ csrfToken: VALID_CSRF_TOKEN });
 
         expect(Utils.getCSRFToken()).toBe(VALID_CSRF_TOKEN);
     });
@@ -105,7 +106,7 @@ describe('Utils.getCSRFToken', () => {
     it('returns an empty string instead of malformed tokens that Django rejects', () => {
         document.body.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="">';
         document.cookie = 'csrftoken=short; path=/';
-        window.MAPVIEWER_CONTEXT = { csrfToken: 'NOTPROVIDED' };
+        configureRuntimeContext({ csrfToken: 'NOTPROVIDED' });
 
         expect(Utils.getCSRFToken()).toBe('');
     });

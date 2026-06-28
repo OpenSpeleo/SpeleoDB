@@ -4,6 +4,21 @@
  * These explicit tokens, browser defaults, and utilities are product-owned
  * CSS. Tailwind compiles them for both public and private applications.
  */
+@plugin "@tailwindcss/forms" {
+    strategy: "base";
+}
+
+@plugin "@tailwindcss/typography";
+
+@theme inline {
+    --font-inter: Inter, sans-serif;
+
+    --text-xs: 0.75rem;
+    --text-xs--line-height: 1.5;
+    --text-sm: 0.875rem;
+    --text-sm--line-height: 1.5715;
+}
+
 @theme {
     --color-black: #000;
     --color-white: #fff;
@@ -414,6 +429,10 @@
 }
 
 @layer base {
+    :root {
+        color-scheme: dark;
+    }
+
     *,
     ::before,
     ::after {
@@ -597,6 +616,34 @@
 
 @utility inset-ring-srgb-emerald-400-30-1 {
     box-shadow: inset 0 0 0 0 #fff, inset 0 0 0 1px rgb(52 211 153 / 30%), 0 0 #0000;
+}
+
+/* Named border widths preserve the product utility contract in v4. */
+@utility border-thin {
+    border-style: var(--tw-border-style);
+    border-width: var(--border-width-thin);
+}
+
+@utility border-medium {
+    border-style: var(--tw-border-style);
+    border-width: var(--border-width-medium);
+}
+
+@utility border-thick {
+    border-style: var(--tw-border-style);
+    border-width: var(--border-width-thick);
+}
+
+@utility border-opacity-subtle {
+    --tw-border-opacity: var(--border-opacity-subtle);
+}
+
+@utility border-opacity-medium {
+    --tw-border-opacity: var(--border-opacity-medium);
+}
+
+@utility border-opacity-full {
+    --tw-border-opacity: var(--border-opacity-full);
 }
 
 @utility gradient-purple-r {

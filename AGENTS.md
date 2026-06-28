@@ -75,6 +75,8 @@ rapid summary of the approach taken with key APIs & concepts.
 - `speleodb/`: Django backend code (APIs, models, permissions, tests).
 - `frontend_private/`: authenticated/private UI assets and templates.
 - `frontend_public/`: public UI assets and templates.
+- `frontend_common/`: Vite registry, bootstrap, route controllers, and extracted
+  template-owned styles.
 - `frontend_private/static/private/js/map_viewer/`: core map viewer modules.
 - `frontend_public/static/js/gis_view_main.js`: public viewer entrypoint.
 - `tailwind_css/`: Tailwind source styles and Tailwind configs.
@@ -91,14 +93,20 @@ The repository now uses a single Node workspace at the repo root.
   - `package.json`
   - `package-lock.json`
 - Do not re-introduce nested `package.json` files for frontend tooling.
-- Tailwind entrypoints are `tailwind_css/public/style.css` and
-  `tailwind_css/private/style.css`; their adjacent `tailwind.config.js` files
-  retain theme extensions and plugin registration only. All scripts run from
-  root.
-- Tailwind source ownership is CSS-first. Each entrypoint must keep
-  `@import 'tailwindcss' source(none)`, an adjacent `@config`, and explicit
-  stylesheet-relative `@source` directives. Do not add config `content`
-  arrays, automatic detection, or CLI `-c` flags.
+- Vite 8 is the only first-party asset compiler. `frontend_common/entries.json`
+  is the logical-entry registry consumed by `vite.config.mjs` and the Django
+  manifest tags. Production emits hashed ESM, CSS, shared chunks, and
+  `.vite/manifest.json` under
+  `speleodb/common/static/speleodb/vite/`. Generated output is ignored.
+- The only Tailwind entrypoint is `tailwind_css/style.css`. Vite compiles it as
+  logical entry `style-app`; it imports the private entrypoint as the immutable
+  configuration/component reference, then adds the public source set and
+  namespaced `site-*` components. Do not build or ship the private reference
+  independently.
+- Tailwind source ownership is CSS-first. The imported private reference keeps
+  `@import 'tailwindcss' source(none)` and both files declare explicit,
+  stylesheet-relative `@source` directives. Do not add JavaScript Tailwind
+  configs, `@config`, automatic detection, or CLI `-c` flags.
 - Shared product tokens, browser defaults, and compiler-facing utilities live
   in `tailwind_css/shared/design-system.css`. Use durable semantic names such
   as `srgb-*`, `flow-*`, and `row-divide-*`; production CSS must not expose a
@@ -107,25 +115,37 @@ The repository now uses a single Node workspace at the repo root.
   project variables stay in their owning application stylesheet. Do not
   introduce application/runtime coupling to Tailwind's private `--tw-*`
   variables.
-- Generated CSS and JavaScript bundles are ignored artifacts, not evidence.
-  Tailwind watch mode can retain a deleted candidate, so stop the watcher and
-  run `npm run build` (or clean and rebuild every output required by the route)
-  before browser verification. Confirm that the running application serves
-  that clean output.
+- Every SpeleoDB-owned document declares `color-scheme: dark` and includes the
+  Dark Reader lock before stylesheet loading. Keep the private root's `.dark`
+  class, but do not add it to public roots: the unified bundle contains the
+  private class-controlled variants, which `.dark` would activate publicly.
+- SpeleoDB-authored CSS/JS loads through `{% vite_styles %}`,
+  `{% vite_preload %}`, and `{% vite_script %}`. Templates declare route
+  controllers with inert JSON. Do not add executable inline application
+  scripts, application event attributes, compatibility globals, or direct
+  first-party `{% static %}` references. CDN/vendored libraries and Django's
+  generated `url_reverse.js` remain external globals in their established
+  order.
+- `npm run dev` is a Vite disk-build watcher; Django remains the only server.
+  There is no Vite dev server, proxy, HMR client, or HTML transformation.
+  Tailwind's in-process candidate set can retain a removed template class, so
+  stop the watcher and run `npm run build` before final browser evidence.
+  Confirm the manifest hash actually served by Django.
 
 ### Root JS commands
 
 - `npm run lint:js`
 - `npm run test:js`
-- `npm run build:tailwind:public`
-- `npm run build:tailwind:private`
-- `npm run build:esbuild:private`
-- `npm run build:esbuild:public`
+- `npm run build`
+- `npm run build:assets`
+- `npm run dev`
+- `npm run test:assets-watch`
 
 ### Related system hooks
 
 - Dev container/webserver bootstrap: `compose/start` (root npm commands).
-- Railway predeploy: `railway.toml` (root npm commands).
+- Railpack image build: `railpack.json` (Node 24, `npm ci && npm run build`).
+- Railway predeploy: `railway.toml` (migrations and `collectstatic` only).
 - CI jobs: `.github/workflows/ci.yml` (root npm install + test/lint paths).
 - Pre-commit hooks: `.pre-commit-config.yaml` (root npm scripts).
 
@@ -150,9 +170,12 @@ The repository now uses a single Node workspace at the repo root.
   on-map state; `getVisibleProjectIds()` reads from it, affecting
   stations, leads, cylinders, and depth domains.
 
-Most map viewer behavior is implemented in shared private modules and consumed by:
-- private entrypoint: `frontend_private/static/private/js/map_viewer/main.js`
-- public entrypoint: `frontend_public/static/js/gis_view_main.js`
+Most map viewer behavior is implemented in shared private modules and loaded by
+the `private-map` and `public-gis` Vite route controllers. Their lazy module
+roots remain:
+
+- private: `frontend_private/static/private/js/map_viewer/main.js`
+- public: `frontend_public/static/js/gis_view_main.js`
 
 When touching shared behavior, explicitly verify both entrypoints are still valid.
 
@@ -197,7 +220,7 @@ Before finishing map viewer work, check:
 2. Depth mode toggles still avoid per-feature rescans.
 3. Public and private map viewers still initialize shared modules correctly.
 4. Lint and tests pass from root.
-5. Tailwind outputs still generate from root scripts.
+5. The clean Vite build emits a valid manifest and all registered entries.
 6. No unescaped user/API data in `innerHTML`, `.html()`, or `insertAdjacentHTML`.
 
 ## Practical Do/Do-Not

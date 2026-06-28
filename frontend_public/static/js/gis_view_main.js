@@ -20,12 +20,13 @@ import { Utils } from '../../../frontend_private/static/private/js/map_viewer/ut
 import { ProjectPanel } from '../../../frontend_private/static/private/js/map_viewer/components/project_panel.js';
 import { DepthLegend } from '../../../frontend_private/static/private/js/map_viewer/components/depth_legend.js';
 import { Config, DEFAULTS } from '../../../frontend_private/static/private/js/map_viewer/config.js';
+import { getRuntimeContext } from '../../../frontend_private/static/private/js/map_viewer/runtime_context.js';
 
 // Global entry point for Public GIS View Map Viewer
-document.addEventListener('DOMContentLoaded', async () => {
+export async function initPublicGISViewer() {
     console.log('🚀 SpeleoDB Public GIS View Viewer Initializing...');
 
-    const context = window.MAPVIEWER_CONTEXT || {};
+    const context = getRuntimeContext();
 
     // Validate context for public view mode
     if (context.viewMode !== 'public' || !context.gisToken) {
@@ -199,4 +200,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 4. Setup Color Mode Toggle
     MapCore.setupColorModeToggle(map);
     MapCore.setupMapSourceControl(map, token);
-});
+}

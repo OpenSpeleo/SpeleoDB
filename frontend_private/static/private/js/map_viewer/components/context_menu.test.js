@@ -1,4 +1,5 @@
 import { ContextMenu } from './context_menu.js';
+import { configureRuntimeContext } from '../runtime_context.js';
 
 describe('ContextMenu', () => {
     beforeEach(() => {
@@ -6,12 +7,12 @@ describe('ContextMenu', () => {
         ContextMenu.menuEl = null;
         ContextMenu.iconDataUrlCache = new Map();
         ContextMenu.iconFetchPromises = new Map();
-        window.MAPVIEWER_CONTEXT = { icons: {} };
+        configureRuntimeContext({ icons: {} });
     });
 
     afterEach(() => {
         vi.restoreAllMocks();
-        delete window.MAPVIEWER_CONTEXT;
+        configureRuntimeContext({});
     });
 
     function makeItems(count = 2) {

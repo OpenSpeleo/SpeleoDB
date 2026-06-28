@@ -17,8 +17,8 @@
  * Requires: jQuery, FormModals, showAjaxErrorModal.
  */
 
-/* global FormModals, showAjaxErrorModal */
-/* exported attachMutexLock */
+import { showAjaxErrorModal } from './ajax_errors.js';
+import { FormModals } from './modals.js';
 
 function _postMutexAction(url, successMessage, reloadDelayMs) {
     var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
@@ -44,7 +44,7 @@ function _postMutexAction(url, successMessage, reloadDelayMs) {
     });
 }
 
-function attachMutexLock(options) {
+export function attachMutexLock(options) {
     var lockUrl = options.lockUrl;
     var unlockUrl = options.unlockUrl;
     var lockMessage = options.lockMessage || 'The project has been locked for edition.';

@@ -5,25 +5,18 @@
  * we exercise the production module.
  */
 
-/* global showAjaxErrorModal */
-
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { showAjaxErrorModal } from './ajax_errors.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const JQUERY_SRC = readFileSync(resolve(__dirname, '..', '..', '..', '..', '..', 'frontend_public', 'static', 'js', 'vendors', 'jquery-3.7.1.js'), 'utf-8');
-const XSS_SRC = readFileSync(resolve(__dirname, '..', 'xss-helpers.js'), 'utf-8');
-const AJAX_ERRORS_SRC = readFileSync(resolve(__dirname, 'ajax_errors.js'), 'utf-8');
 
 beforeAll(() => {
     // eslint-disable-next-line no-eval
     (0, eval)(JQUERY_SRC);
-    // eslint-disable-next-line no-eval
-    (0, eval)(XSS_SRC);
-    // eslint-disable-next-line no-eval
-    (0, eval)(AJAX_ERRORS_SRC);
 });
 
 function setupModal() {

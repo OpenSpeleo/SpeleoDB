@@ -21,18 +21,18 @@
     <div class="flow-y-4">
         <div>
             <label class="block text-sm text-slate-300 font-medium mb-1" for="email">Email</label>
-            <input id="email" name="email" class="form-input w-full" type="email" required />
+            <input id="email" name="email" class="site-form-input w-full" type="email" required />
         </div>
         <div>
             <div class="flex justify-between">
                 <label class="block text-sm text-slate-300 font-medium mb-1" for="password">Password</label>
                 <a class="text-sm font-medium text-purple-500 hover:text-purple-400 transition duration-150 ease-in-out ml-2" href="{% url 'account_reset_password' %}">Forgot?</a>
             </div>
-            <input id="password" name="password" class="form-input w-full" type="password" autocomplete="on" required />
+            <input id="password" name="password" class="site-form-input w-full" type="password" autocomplete="on" required />
         </div>
     </div>
     <div class="mt-6">
-        <button class="btn text-sm text-white bg-purple-500 hover:bg-purple-600 w-full shadow-xs group" id="btn_submit" type="submit">
+        <button class="site-btn text-sm text-white bg-purple-500 hover:bg-purple-600 w-full shadow-xs group" id="btn_submit" type="submit">
             Sign In <span class="tracking-normal text-purple-300 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
         </button>
     </div>
@@ -48,41 +48,12 @@
 
 
 {% block inline_extra_js %}
-<script src="{% static 'js/auth_form.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        attachAuthForm({
-            formId: 'login_form',
-            endpoint: "{% url 'headless:browser:account:login' %}",
-            onSuccess: function () {
-                window.location.href = "{% url 'private:user_dashboard' %}";
-            },
-            validators: [
-                function (payload) {
-                    if (!payload.email || !validateEmail(payload.email)) {
-                        return 'The Email Address is not valid !';
-                    }
-                    if (!payload.password) {
-                        return 'The Password field is empty !';
-                    }
-                    return null;
-                },
-            ],
-            errorHandler: function (xhr) {
-                // allauth 401 with a `verify_email` flow means the account
-                // is unverified; without it the account is inactive.
-                if (xhr.status === 401 && xhr.responseJSON && xhr.responseJSON.data) {
-                    var flows = xhr.responseJSON.data.flows || [];
-                    for (var i = 0; i < flows.length; i++) {
-                        if (flows[i].id === 'verify_email') {
-                            return 'Your email is not verified. We just resent you an activation link on your email.';
-                        }
-                    }
-                    return 'Your account is inactive. If you believe this is an error, please contact us.';
-                }
-                return null; // fall through to default handler
-            },
-        });
-    });
+<script type="application/json" data-speleodb-controller="auth-form">
+{
+    "mode": "login",
+    "formId": "login_form",
+    "endpoint": "{% url 'headless:browser:account:login' %}",
+    "successRedirect": "{% url 'private:user_dashboard' %}"
+}
 </script>
 {% endblock inline_extra_js %}

@@ -1,5 +1,7 @@
 {% extends "pages/gis_view/base.html" %}
-{% load static %}
+{% load static vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-copy-token' %}{% endblock extra_css %}
 
 {% block right_panel %}
 <div class="grow">
@@ -142,37 +144,12 @@
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
-<script>
-    $(document).ready(function() {
-        // Generic copy button handler
-        function setupCopyButton(btnId, urlId, textId, iconId) {
-            $(btnId).click(function() {
-                const url = $(urlId).text().trim();
-                
-                navigator.clipboard.writeText(url).then(function() {
-                    // Change button text to "Copied!"
-                    $(textId).text('Copied!');
-                    $(iconId).html(`
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    `);
-                    
-                    // Reset after 2 seconds
-                    setTimeout(function() {
-                        $(textId).text('Copy');
-                        $(iconId).html(`
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                        `);
-                    }, 2000);
-                }).catch(function(err) {
-                    console.error('Failed to copy:', err);
-                });
-            });
-        }
-
-        // Setup copy buttons for both URLs
-        setupCopyButton('#copy-map-btn', '#map-url', '#copy-map-text', '#copy-map-icon');
-        setupCopyButton('#copy-api-btn', '#api-url', '#copy-api-text', '#copy-api-icon');
-    });
+<script type="application/json" data-speleodb-controller="copy-token">
+{
+    "copyButtons": [
+        {"button": "#copy-map-btn", "value": "#map-url", "text": "#copy-map-text", "icon": "#copy-map-icon"},
+        {"button": "#copy-api-btn", "value": "#api-url", "text": "#copy-api-text", "icon": "#copy-api-icon"}
+    ]
+}
 </script>
 {% endblock inline_extra_js %}
-

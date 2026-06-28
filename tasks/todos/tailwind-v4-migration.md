@@ -17,6 +17,12 @@ has been reopened below and is tracked in
 checkmarks and metrics have been restored; the exhaustive live-matrix items
 and final completion remain open.
 
+The later delivery consolidation is tracked in
+`tasks/todos/tailwind-single-bundle-consolidation.md`. It supersedes the
+historical two-output commands and source-isolation architecture recorded in
+this migration handoff while retaining the private build as its immutable
+reference.
+
 ## Repository Setup and Baseline
 
 - [ ] Create `codex/tailwind-v4-migration` from starting commit
@@ -46,8 +52,8 @@ and final completion remain open.
   dependency upgrades.
 - [x] Update all six Tailwind production/watch/pre-commit commands and remove
   legacy `-c` flags while keeping script names and output paths stable.
-- [x] Keep JavaScript configs for theme extensions and plugins, loading them
-  through stylesheet-relative `@config` directives.
+- [x] Consolidate theme extensions and plugins into CSS-native shared and
+  entrypoint-owned declarations; remove JavaScript configs and `@config`.
 - [x] Disable automatic source detection with `source(none)`.
 - [x] Register the exact public source set with stylesheet-relative `@source`
   directives.
@@ -194,18 +200,18 @@ implementation is already present.
   mismatch without switching around the staged migration.
 - Both prompt files are preserved as untracked files. Migration repairs remain
   unstaged so the original index and review changes stay distinguishable.
-- Exact Tailwind/plugin pins, six script interfaces, generated output paths,
-  root-only Node workspace, and CSS-owned public/private source sets remain the
-  implementation contract.
+- Exact Tailwind/plugin pins, the root-only Node workspace, CSS-owned union
+  source set, and the single neutral build/watch/pre-commit interface are the
+  current implementation contract.
 - `tailwind_css/shared/design-system.css` owns shared product tokens, browser
   normalization, and semantic compiler-facing utilities.
   Build-specific variants stay in their CSS entrypoint; feature selectors and
   stable project variables stay in their application stylesheet. Application
   code must not couple to Tailwind's private `--tw-*` variables.
-- The public GIS cascade is public Tailwind/custom, private Tailwind/custom,
+- The public GIS cascade is unified Tailwind, public custom, private custom,
   shared modal, map-viewer CSS, then Mapbox GL CSS. The private map cascade is
-  private Tailwind/custom, base inline responsive CSS, Mapbox GL CSS, shared
-  modal, then map-viewer CSS.
+  unified Tailwind, private custom, base inline responsive CSS, Mapbox GL CSS,
+  shared modal, then map-viewer CSS.
 
 The old parity harness is not live-application evidence. Its broad suite read
 raw Django template files, stripped resources and scripts, and passed the
@@ -230,10 +236,13 @@ unexplained computed-style differences, or deterministic pixel differences.
   (88,382 bytes/4,246 lines), private unminified `f58cd60b…`
   (116,935/5,786), public minified `927f57af…` (68,420), and private minified
   `5e7a0fd4…` (92,824).
-- Three clean candidate builds reproduced public minified `87f0682d…`
-  (86,538 bytes) and private `d2313d41…` (110,750). Candidate unminified output
-  is public `62ea39df…` (109,883/3,850) and private `4076eaf8…`
-  (137,282/4,923). Full builds took 0.98–1.35 seconds.
+- After CSS-native consolidation, three clean candidate builds reproduced
+  public minified `6e4b5ec0…` (86,562 bytes) and private `a026197f…`
+  (110,774). Candidate unminified output is public `f46eb314…`
+  (109,921/3,853) and private `5a5b81df…` (137,320/4,926). Removing the one
+  intentional minified `:root{color-scheme:dark}` rule makes both outputs
+  byte-identical to the pre-consolidation artifacts. A timed full build took
+  1.83 seconds.
 - Structural counts are public selectors 767→693, at-rules 14→84, media
   8→8, keyframes 4→4, custom properties 99→203; private 1,041→949,
   12→86, 8→8, 3→3, and 109→338.
@@ -280,16 +289,17 @@ in `/tmp/speleodb-tailwind-candidate`, and the temporary browser harness is in
 The exact upgrade CLI was run from a clean committed disposable v3 copy after
 baseline capture. Its proposed output deleted the public JavaScript config,
 moved that config into CSS, retained the private config, used unrestricted
-source discovery, and did not address visual compatibility. Only reviewed,
-behavior-preserving concepts were retained: v4 imports/layers, CSS config
-loading, and candidate renames.
+source discovery, and did not address visual compatibility. The later
+CSS-native consolidation removed both configs only after proving that the
+unminified public/private outputs remained byte-identical apart from the
+intentional dark color-scheme declaration.
 
 #### Architecture and migration
 
 The six npm command interfaces and output paths are unchanged. CSS entrypoints
-now own `source(none)`, exact relative `@source` lists, adjacent `@config`
-loading, and dark/hover/group-hover/sidebar variants. Config files only own
-effective theme extensions and one base-only forms plus one typography plugin
+now own `source(none)`, exact relative `@source` lists, build-specific theme
+values, and dark/hover/group-hover/sidebar variants. The shared design system
+owns common theme values and one base-only forms plus one typography plugin
 registration. Sentinel builds proved included, excluded, and cross-build
 isolation.
 

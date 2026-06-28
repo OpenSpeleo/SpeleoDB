@@ -122,10 +122,13 @@ describe('frontend_public gis_view_main', () => {
     let consoleErrorSpy;
 
     async function importModuleAndGetDomReadyHandler() {
+        const context = window.MAPVIEWER_CONTEXT;
         vi.resetModules();
-        await import('./gis_view_main.js');
-        expect(typeof domReadyHandler).toBe('function');
-        return domReadyHandler;
+        const { configureRuntimeContext } = await import('../../../frontend_private/static/private/js/map_viewer/runtime_context.js');
+        configureRuntimeContext(context);
+        const { initPublicGISViewer } = await import('./gis_view_main.js');
+        expect(typeof initPublicGISViewer).toBe('function');
+        return initPublicGISViewer;
     }
 
     beforeEach(() => {

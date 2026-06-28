@@ -8,7 +8,7 @@
 
 /* exported escapeHtml, isValidCssColor, safeCssColor, sanitizeUrl */
 
-function escapeHtml(text) {
+export function escapeHtml(text) {
     if (text === null || text === undefined) return '';
     var str = String(text);
     if (!str) return '';
@@ -17,16 +17,16 @@ function escapeHtml(text) {
     return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function isValidCssColor(color) {
+export function isValidCssColor(color) {
     if (!color || typeof color !== 'string') return false;
     return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color);
 }
 
-function safeCssColor(color, fallback) {
+export function safeCssColor(color, fallback) {
     return isValidCssColor(color) ? color : (fallback || '#94a3b8');
 }
 
-function sanitizeUrl(url) {
+export function sanitizeUrl(url) {
     if (!url || typeof url !== 'string') return '';
     var trimmed = url.trim();
     if (trimmed === '') return '';

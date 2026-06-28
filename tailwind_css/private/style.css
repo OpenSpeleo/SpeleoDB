@@ -1,9 +1,50 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=fallback');
 @import 'tailwindcss' source(none);
 
-@config "./tailwind.config.js";
-
 @import '../shared/design-system.css';
+
+@theme inline {
+    --text-base: 1rem;
+    --text-base--line-height: 1.5;
+    --text-base--letter-spacing: -0.01em;
+    --text-lg: 1.125rem;
+    --text-lg--line-height: 1.5;
+    --text-lg--letter-spacing: -0.01em;
+    --text-xl: 1.25rem;
+    --text-xl--line-height: 1.5;
+    --text-xl--letter-spacing: -0.01em;
+    --text-2xl: 1.5rem;
+    --text-2xl--line-height: 1.33;
+    --text-2xl--letter-spacing: -0.01em;
+    --text-3xl: 1.88rem;
+    --text-3xl--line-height: 1.33;
+    --text-3xl--letter-spacing: -0.01em;
+    --text-4xl: 2.25rem;
+    --text-4xl--line-height: 1.25;
+    --text-4xl--letter-spacing: -0.02em;
+    --text-5xl: 3rem;
+    --text-5xl--line-height: 1.25;
+    --text-5xl--letter-spacing: -0.02em;
+    --text-6xl: 3.75rem;
+    --text-6xl--line-height: 1.2;
+    --text-6xl--letter-spacing: -0.02em;
+
+    --breakpoint-xs: 480px;
+    --spacing-128: 32rem;
+    --min-width-36: 9rem;
+    --min-width-44: 11rem;
+    --min-width-56: 14rem;
+    --min-width-60: 15rem;
+    --min-width-72: 18rem;
+    --min-width-80: 20rem;
+    --container-8xl: 88rem;
+    --container-9xl: 96rem;
+}
+
+@utility outline-blue {
+    outline: 2px solid rgba(0, 112, 244, 0.5);
+}
+
 @import './additional-styles/utility-patterns.css' layer(components);
 @import './additional-styles/flatpickr.css' layer(components);
 

@@ -47,8 +47,9 @@
  * Requires: jQuery, FormModals, showAjaxErrorModal, attachUserAutocomplete.
  */
 
-/* global FormModals, showAjaxErrorModal, attachUserAutocomplete */
-/* exported attachPermissionModal */
+import { attachUserAutocomplete } from '../user_autocomplete.js';
+import { showAjaxErrorModal } from './ajax_errors.js';
+import { FormModals } from './modals.js';
 
 var EMAIL_REGEX = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 
@@ -64,7 +65,7 @@ var DEFAULT_PERMISSION_SELECTORS = {
     closeBtn: '.btn_close',
 };
 
-function attachPermissionModal(options) {
+export function attachPermissionModal(options) {
     var endpoint = options.endpoint;
     var autocompleteUrl = options.autocompleteUrl;
     var addModalTitle = options.addModalTitle || 'Add a collaborator';

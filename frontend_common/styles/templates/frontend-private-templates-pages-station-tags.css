@@ -1,0 +1,114 @@
+/* Mobile card layout for station tags */
+    @media (max-width: 768px) {
+        .tags-table {
+            display: none;
+        }
+        
+        .tags-cards {
+            display: block;
+        }
+        
+        .tag-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .tag-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .tag-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .tag-card-title {
+            flex: 1;
+            margin-right: 12px;
+        }
+        
+        .tag-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .tag-card-body {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .tag-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .tag-card-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        
+        .tag-card-value {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+            text-align: right;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .tags-table {
+            display: block;
+        }
+        
+        .tags-cards {
+            display: none;
+        }
+    }
+
+    .color-swatch {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .tag-color-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .tag-color-picker-option {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tag-color-picker-option:hover {
+        transform: scale(1.1);
+        border-color: white;
+    }
+
+    .tag-color-picker-option.selected {
+        border-color: white;
+        box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+    }

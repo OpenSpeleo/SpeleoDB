@@ -419,47 +419,53 @@ modules. All are dispatched on `window` unless noted.
 
 ## Build System
 
-### esbuild Bundling
+### Vite route graph
 
-Each entry point is bundled separately into a single output file:
+The map viewers are lazy branches of the single Vite graph, not independent
+compiler pipelines. Django emits inert structured context for the
+`private-map`, `public-gis`, or `landmark-details` controller. The small
+application bootstrap initializes controllers in document order, and each map
+controller dynamically imports its existing module root:
 
-| Entry | Output | Command |
-|---|---|---|
-| `frontend_private/static/private/js/map_viewer/main.js` | `frontend_private/static/private/js/dist/map_viewer.bundle.js` | `npm run build:esbuild:private` |
-| `frontend_public/static/js/gis_view_main.js` | `frontend_public/static/js/dist/gis_view.bundle.js` | `npm run build:esbuild:public` |
+| Controller | Lazy module root |
+|---|---|
+| `private-map` | `frontend_private/static/private/js/map_viewer/main.js` |
+| `public-gis` | `frontend_public/static/js/gis_view_main.js` |
+| `landmark-details` | `frontend_private/static/private/js/landmark_collection/details_main.js` |
 
-**Development mode** (`npm run dev`): Uses `--watch` + `--sourcemap` for hot
-rebuild on file changes. Runs concurrently with Tailwind watchers.
-
-**Production mode** (`npm run build`): Uses `--minify` without sourcemaps.
-
-**Pre-commit** (`npm run pre-commit`): Bundles without minification to produce
-readable diffs for review.
+Common map modules become shared chunks. Public pages do not preload or fetch
+the private map controller. Vite owns compilation and disk watching while
+Django remains the server; production is minified and hashed, development uses
+stable entry names and source maps.
 
 ### Tailwind CSS
 
-Two separate Tailwind configurations for private and public frontends:
+The public and private applications consume one Tailwind product asset:
 
-| Config | Input | Output |
+| Canonical reference | Production input | Output |
 |---|---|---|
-| `tailwind_css/private/tailwind.config.js` | `tailwind_css/private/style.css` | `frontend_private/static/private/css/style.css` |
-| `tailwind_css/public/tailwind.config.js` | `tailwind_css/public/style.css` | `frontend_public/static/css/style.css` |
+| `tailwind_css/private/style.css` | `tailwind_css/style.css` | Vite logical entry `style-app` |
 
-Production builds use `--minify`.
+The neutral input imports the private reference unchanged, then adds public
+sources and namespaced public-site components. Vite emits the hashed product
+stylesheet and records it in its manifest. Public GIS therefore receives
+the Tailwind asset once; its private custom/modal/map styles continue to load
+after the public custom stylesheet. Production builds use `--minify`.
 
 ### Key npm Scripts
 
 | Script | Purpose |
 |---|---|
-| `npm run dev` | Watch mode for all builds (Tailwind + esbuild, private + public) |
+| `npm run dev` | One Vite disk-build watcher; Django remains the server |
 | `npm run build` | Full clean + production build |
-| `npm run lint:js` | ESLint across all frontend JS (excludes `dist/` and `vendors/`) |
+| `npm run test:assets-watch` | Isolated CSS/Tailwind/module invalidation proof |
+| `npm run lint:js` | ESLint across frontend and Node tooling JS (excludes `dist/` and `vendors/`) |
 | `npm run test:js` | Jest test runner for frontend tests |
 
 ### Integration Points
 
-- **Pre-commit hooks** (`.pre-commit-config.yaml`): Run `npm run pre-commit`
-  which cleans, rebuilds Tailwind, and bundles JS.
-- **CI** (`.github/workflows/ci.yml`): `npm install` + `test:js` + `lint:js`.
+- **Pre-commit hooks** (`.pre-commit-config.yaml`): Run `npm run pre-commit`,
+  which performs the clean production Vite build.
+- **CI** (`.github/workflows/ci.yml`): root install, build, JS tests, and lint.
 - **Railway deploy** (`railway.toml`): Production build via root npm commands.
 - **Django**: Templates reference the bundled output files in `dist/` directories.

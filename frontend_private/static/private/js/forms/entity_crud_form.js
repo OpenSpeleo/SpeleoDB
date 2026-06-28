@@ -32,10 +32,10 @@
  * Requires: jQuery, FormModals, showAjaxErrorModal.
  */
 
-/* global FormModals, showAjaxErrorModal */
-/* exported attachEntityCrudForm */
+import { showAjaxErrorModal } from './ajax_errors.js';
+import { FormModals } from './modals.js';
 
-function attachEntityCrudForm(options) {
+export function attachEntityCrudForm(options) {
     var formId = options.formId;
     var endpoint = options.endpoint;
     var method = (options.method || 'POST').toUpperCase();

@@ -23,10 +23,9 @@
  * Requires: jQuery, DataTables, FormModals.
  */
 
-/* global FormModals */
-/* exported attachFleetWatchlist */
+import { FormModals } from './modals.js';
 
-function attachFleetWatchlist(options) {
+export function attachFleetWatchlist(options) {
     var tableSelector = options.tableSelector;
     var dataTableOptions = Object.assign({
         paging: false,

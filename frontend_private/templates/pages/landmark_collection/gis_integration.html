@@ -1,4 +1,7 @@
 {% extends "pages/landmark_collection/base.html" %}
+{% load vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-copy-token' %}{% endblock extra_css %}
 
 {% block right_panel %}
 <div class="grow">
@@ -68,17 +71,11 @@
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
-<script>
-    $(document).ready(function() {
-        $('#copy-api-btn').click(function() {
-            var url = $('#api-url').text().trim();
-            navigator.clipboard.writeText(url).then(function() {
-                $('#copy-api-text').text('Copied!');
-                window.setTimeout(function() {
-                    $('#copy-api-text').text('Copy');
-                }, 2000);
-            });
-        });
-    });
+<script type="application/json" data-speleodb-controller="copy-token">
+{
+    "copyButtons": [
+        {"button": "#copy-api-btn", "value": "#api-url", "text": "#copy-api-text"}
+    ]
+}
 </script>
 {% endblock inline_extra_js %}

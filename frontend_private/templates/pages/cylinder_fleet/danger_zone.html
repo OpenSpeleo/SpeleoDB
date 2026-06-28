@@ -1,5 +1,6 @@
 {% extends "pages/cylinder_fleet/base.html" %}
 {% load static %}
+{% load vite_assets %}
 
 {% block right_panel %}
 <div class="grow">
@@ -35,17 +36,12 @@
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/danger_zone.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        attachDangerZone({
-            deleteUrl: "{% url 'api:v2:cylinder-fleet-detail' fleet_id=cylinder_fleet.id %}",
-            successMessage: "The Cylinder Fleet has been deleted successfully.",
-            successRedirect: "{% url 'private:cylinder_fleets' %}"
-        });
-    });
+{% vite_preload 'controller-danger-zone' %}
+<script type="application/json" data-speleodb-controller="danger-zone">
+{
+    "deleteUrl": "{% url 'api:v2:cylinder-fleet-detail' fleet_id=cylinder_fleet.id %}",
+    "successMessage": "The Cylinder Fleet has been deleted successfully.",
+    "successRedirect": "{% url 'private:cylinder_fleets' %}"
+}
 </script>
 {% endblock inline_extra_js %}
-

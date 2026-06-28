@@ -1,25 +1,13 @@
 {% extends "pages/user/base.html" %}
-{% load static %}
+{% load static vite_assets %}
 
 {% load countries %}
 
 {% block extra_css %}
 {{ block.super }}
+{% vite_preload 'controller-entity-crud' %}
 
-<style>
-    /* Mobile Responsive Styles for Dashboard Page */
-    @media (max-width: 640px) {
-        /* Make form sections stack better */
-        .flex.flex-wrap {
-            flex-direction: column;
-        }
-
-        .flex.flex-wrap .mr-2 {
-            margin-right: 0 !important;
-            width: 100%;
-        }
-    }
-</style>
+{% vite_styles 'style-template-frontend-private-templates-pages-user-dashboard' %}
 {% endblock extra_css %}
 
 {% block right_panel %}
@@ -86,52 +74,12 @@
 
 
 {% block inline_extra_js %}
-<script>
-
-    $(window).on('load', function() {
-
-        $("body").click(function() {
-            if ($("#modal_success").is(":visible")) {
-                $("#modal_success").hide();
-            }
-            if ($("#modal_error").is(":visible")) {
-                $("#modal_error").hide();
-            }
-        });
-
-        $('#btn_submit').click(function () {
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let update_user_info_form = document.getElementById('update_user_info_form');
-            var formData = new FormData(update_user_info_form);
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            $.ajax({
-                url: "{% url 'api:v2:user-detail' %}",
-                method: "PATCH",
-                data: JSON.stringify(Object.fromEntries(formData)),
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-
-                },
-                success: function (data) {
-                    $("#modal_success_txt").html(
-                        "Success your information has been updated.<br>" +
-                        "If you modified your email address, please check your emails."
-                    );
-                    $("#modal_success").css('display', 'flex');
-                },
-                error: function (data) {
-                    {% include 'snippets/ajax_error_modal_management.js' %}
-                }
-            });
-            return false; // prevent default
-        });
-
-    });
+<script type="application/json" data-speleodb-controller="entity-crud">
+{
+    "formId": "update_user_info_form",
+    "endpoint": "{% url 'api:v2:user-detail' %}",
+    "method": "PATCH",
+    "successMessage": "Success your information has been updated.<br>If you modified your email address, please check your emails."
+}
 </script>
 {% endblock inline_extra_js %}

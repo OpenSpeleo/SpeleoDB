@@ -1,131 +1,13 @@
 {% extends "pages/landmark_collection/base.html" %}
 {% load static %}
 {% load project_colors %}
+{% load vite_assets %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="{% static 'private/css/shared-modal.css' %}">
-<style>
-    #collection_landmarks_table thead th,
-    #collection_landmarks_table tbody td {
-        text-align: center !important;
-    }
-    /* Hide table until DataTables has finished processing to prevent layout shift */
-    #collection_landmarks_table:not(.dataTable) {
-        visibility: hidden;
-    }
-    .color-picker-disabled {
-        opacity: 0.5;
-        pointer-events: none;
-    }
-
-    /* Selection highlight */
-    #collection_landmarks_table tbody tr.is-selected {
-        background-color: rgba(99, 102, 241, 0.08) !important;
-    }
-    #collection_landmarks_table tbody tr.is-selected:hover {
-        background-color: rgba(99, 102, 241, 0.14) !important;
-    }
-
-    /* Coordinate cells: click-to-copy */
-    .landmark-coord-cell {
-        cursor: copy;
-        transition: color 0.15s;
-    }
-    .landmark-coord-cell:hover {
-        color: #a5b4fc !important;
-    }
-
-    /* Icon action buttons */
-    .landmark-action-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 1.75rem;
-        height: 1.75rem;
-        border-radius: 0.375rem;
-        transition: all 0.15s;
-    }
-    .landmark-action-btn:not([disabled]):hover {
-        transform: scale(1.1);
-    }
-    .landmark-action-btn[disabled] {
-        opacity: 0.35;
-        cursor: default;
-    }
-    .landmark-action-btn.locate { color: #38bdf8; }
-    .landmark-action-btn.locate:hover { background: rgba(56, 189, 248, 0.12); }
-    .landmark-action-btn.edit   { color: #f59e0b; }
-    .landmark-action-btn.edit:hover   { background: rgba(245, 158, 11, 0.12); }
-    .landmark-action-btn.delete { color: #f87171; }
-    .landmark-action-btn.delete:hover { background: rgba(248, 113, 113, 0.12); }
-
-    /* Batch action bar */
-    #landmarks-bulk-action-bar {
-        transition: transform 0.25s ease, opacity 0.2s ease;
-    }
-    #landmarks-bulk-action-bar[hidden] {
-        display: flex !important;
-        transform: translateY(100%);
-        opacity: 0;
-        pointer-events: none;
-    }
-    #landmarks-bulk-action-bar:not([hidden]) {
-        transform: translateY(0);
-        opacity: 1;
-    }
-
-    /* Row checkbox -- subdued by default, visible on hover/check */
-    .landmark-row-select,
-    #collection_landmarks_table_select_all {
-        appearance: none;
-        -webkit-appearance: none;
-        width: 0.875rem;
-        height: 0.875rem;
-        border: 1.5px solid #475569;
-        border-radius: 0.2rem;
-        background: transparent;
-        cursor: pointer;
-        transition: all 0.15s;
-        position: relative;
-        vertical-align: middle;
-    }
-    .landmark-row-select:hover,
-    #collection_landmarks_table_select_all:hover {
-        border-color: #818cf8;
-    }
-    .landmark-row-select:checked,
-    #collection_landmarks_table_select_all:checked {
-        background-color: #6366f1;
-        border-color: #6366f1;
-    }
-    .landmark-row-select:checked::after,
-    #collection_landmarks_table_select_all:checked::after {
-        content: '';
-        position: absolute;
-        top: 1px;
-        left: 4px;
-        width: 4px;
-        height: 7px;
-        border: solid white;
-        border-width: 0 1.5px 1.5px 0;
-        transform: rotate(45deg);
-    }
-    #collection_landmarks_table_select_all:indeterminate {
-        background-color: #6366f1;
-        border-color: #6366f1;
-    }
-    #collection_landmarks_table_select_all:indeterminate::after {
-        content: '';
-        position: absolute;
-        top: 5px;
-        left: 2px;
-        width: 8px;
-        height: 0;
-        border-bottom: 1.5px solid white;
-    }
-
-</style>
+{% vite_styles 'style-shared-modal' %}
+{% vite_preload 'controller-landmark-details' 'controller-entity-crud' %}
+{% vite_styles 'style-template-frontend-private-templates-pages-landmark-collection-details' %}
 {% endblock extra_css %}
 
 {% block right_panel %}
@@ -358,50 +240,22 @@
 
 {% block inline_extra_js %}
 {% if not collection.is_personal %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
-<script src="{% static 'private/js/color-picker.js' %}"></script>
-{% endif %}
-<script>
-    window.LANDMARK_DETAILS_CONTEXT = {
-        canWrite: {% if has_write_access %}true{% else %}false{% endif %}
-    };
-</script>
-{% if debug %}
-<script type="module" src="{% static 'private/js/landmark_collection/details_main.js' %}"></script>
-{% else %}
-<script src="{% static 'private/js/dist/landmark_collection_details.bundle.js' %}"></script>
-{% endif %}
-{% if not collection.is_personal %}
-<script>
-    $(window).on('load', function () {
-        {% if has_write_access %}
-        initColorPicker({
-            preview: '#color-preview',
-            hiddenInput: '#color-value',
-            nativePicker: '#color-picker',
-            pickerBtn: '#color-picker-btn',
-            hexInput: '#color-hex-input',
-            presets: '.color-preset',
-        });
-        {% endif %}
-
-        attachEntityCrudForm({
-            formId: 'landmark_collection_details_form',
-            endpoint: "{% url 'api:v2:landmark-collection-detail' collection_id=collection.id %}",
-            method: 'PUT',
-            successMessage: 'The landmark collection has been updated.',
-            beforeSubmit: function (payload) {
-                if (!payload.name || !payload.name.trim()) {
-                    FormModals.showError('Collection name is required.');
-                    return false;
-                }
-                return true;
-            },
-            reloadOnSuccess: true
-        });
-    });
+<script type="application/json" data-speleodb-controller="entity-crud">
+{
+    "formId": "landmark_collection_details_form",
+    "endpoint": "{% url 'api:v2:landmark-collection-detail' collection_id=collection.id %}",
+    "method": "PUT",
+    "successMessage": "The landmark collection has been updated.",
+    "requiredField": "name",
+    "requiredMessage": "Collection name is required.",
+    "reloadOnSuccess": true,
+    "colorPicker": {% if has_write_access %}true{% else %}false{% endif %}
+}
 </script>
 {% endif %}
+<script type="application/json" data-speleodb-controller="landmark-details">
+{
+    "canWrite": {% if has_write_access %}true{% else %}false{% endif %}
+}
+</script>
 {% endblock inline_extra_js %}

@@ -255,10 +255,10 @@ class ProjectViewsTest(BaseProjectTestCaseMixin, BaseTestCase):
             is None
         )
 
-        generated_css_position = content.index("private/css/style.css")
-        custom_css_position = content.index("private/css/custom.css")
+        generated_css_position = content.index("speleodb/vite/assets/style-app")
+        custom_css_position = content.index("speleodb/vite/assets/style-private-shell")
         inline_git_css_position = content.index(
-            "/* Mobile responsive styles for git file browser */"
+            "style-template-frontend-private-templates-pages-project-git-view"
         )
         assert generated_css_position < custom_css_position < inline_git_css_position
 
@@ -399,8 +399,10 @@ class LandmarkCollectionViewsTest(BaseTestCase):
         assert response.status_code == status.HTTP_200_OK
         content = response.content.decode()
         assert "collection_landmarks_table" in content
-        assert "#collection_landmarks_table thead th" in content
-        assert "text-align: center !important;" in content
+        assert (
+            "style-template-frontend-private-templates-pages-landmark-collection-details"
+            in content
+        )
         assert '<th class="px-4 py-3 text-center">Name</th>' in content
         assert '<th class="px-4 py-3 text-center">Created By</th>' in content
         assert '<td class="px-4 py-3 text-center">' in content
@@ -565,7 +567,7 @@ class LandmarkCollectionViewsTest(BaseTestCase):
         assert 'id="description"' not in content
         assert 'id="color-picker-btn"' not in content
         assert 'name="color"' not in content
-        assert "collection_landmarks_table" in content
+        assert "No landmarks in this collection yet" in content
         assert (
             reverse(
                 "api:v2:landmark-collection-landmarks-export-excel",

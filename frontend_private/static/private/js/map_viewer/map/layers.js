@@ -9,6 +9,7 @@ import {
 } from './depth.js';
 import { Geometry } from './geometry.js';
 import { API } from '../api.js';
+import { getRuntimeContext } from '../runtime_context.js';
 
 // Track whether custom marker images have been loaded
 let markerImagesLoaded = false;
@@ -1421,37 +1422,37 @@ export const Layers = {
         try {
             // Load pre-colored orange cylinder SVG for cylinder installs
             if (!map.hasImage('cylinder-icon')) {
-                const cylinderImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.cylinderOrange);
+                const cylinderImage = await loadImage(getRuntimeContext().icons.cylinderOrange);
                 map.addImage('cylinder-icon', cylinderImage);
             }
 
             // Load exploration lead SVG
             if (!map.hasImage('exploration-lead-icon')) {
-                const leadImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.explorationLead);
+                const leadImage = await loadImage(getRuntimeContext().icons.explorationLead);
                 map.addImage('exploration-lead-icon', leadImage);
             }
 
             // Load biology icon for biology stations
             if (!map.hasImage('biology-station-icon')) {
-                const biologyImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.biology);
+                const biologyImage = await loadImage(getRuntimeContext().icons.biology);
                 map.addImage('biology-station-icon', biologyImage);
             }
 
             // Load bone icon for bone stations
             if (!map.hasImage('bone-station-icon')) {
-                const boneImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.bone);
+                const boneImage = await loadImage(getRuntimeContext().icons.bone);
                 map.addImage('bone-station-icon', boneImage);
             }
 
             // Load artifact icon for artifact stations
             if (!map.hasImage('artifact-station-icon')) {
-                const artifactImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.artifact);
+                const artifactImage = await loadImage(getRuntimeContext().icons.artifact);
                 map.addImage('artifact-station-icon', artifactImage);
             }
 
             // Load geology icon for geology stations
             if (!map.hasImage('geology-station-icon')) {
-                const geologyImage = await loadImage(window.MAPVIEWER_CONTEXT.icons.geology);
+                const geologyImage = await loadImage(getRuntimeContext().icons.geology);
                 map.addImage('geology-station-icon', geologyImage);
             }
 

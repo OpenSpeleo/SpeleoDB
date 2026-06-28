@@ -35,6 +35,6 @@ When you change the order or membership of `MAP_SOURCES`:
    base map; confirm that is the intended default.
 3. Update `docs/map-viewer/features.md` so the documented source list matches
    the in-menu order.
-4. Rebuild the bundles (`npm run build:esbuild:private` and
-   `:public`) and grep them to confirm the feature and order actually shipped —
-   `dist/*.bundle.js` are gitignored and can silently go stale.
+4. Run `npm run build` and inspect the manifest-owned map chunks to confirm the
+   feature and order actually shipped. Generated Vite assets are gitignored and
+   can silently go stale if a watcher was interrupted.

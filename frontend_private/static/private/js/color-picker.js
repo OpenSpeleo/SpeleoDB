@@ -16,9 +16,9 @@
 
 /* exported initColorPicker */
 
-var _hexBodyRe = /^[0-9a-fA-F]{6}$/;
+export const _hexBodyRe = /^[0-9a-fA-F]{6}$/;
 
-function initColorPicker(opts) {
+export function initColorPicker(opts) {
     function setColor(hex) {
         var lower = hex.toLowerCase();
         $(opts.hiddenInput).val(lower);

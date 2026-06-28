@@ -54,4 +54,6 @@ const particles = {
   detectRetina: true,
 };
 
-tsParticles.load("tsparticles", particles);
+export function initErrorPage() {
+  return tsParticles.load("tsparticles", particles);
+}

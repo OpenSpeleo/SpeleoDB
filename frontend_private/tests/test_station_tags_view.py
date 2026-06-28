@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from django.conf import settings
 from django.test import Client
 from django.urls import reverse
 
@@ -108,14 +110,7 @@ class TestStationTagsView:
     def test_station_tags_page_javascript_functions(
         self, authenticated_client: Client, user: User
     ) -> None:
-        """Test that the page wires up the shared tagged-entity CRUD module.
-
-        The load/edit/delete flow lives in
-        `frontend_private/static/private/js/forms/tagged_entity_list.js`; the
-        template is only responsible for pulling that module in and calling
-        `attachTaggedEntityList({...})` with the right options. The template
-        also keeps the color-picker wiring inline.
-        """
+        """Test that the route controller owns tagged-entity behavior."""
         url = reverse("private:station_tags")
         response = authenticated_client.get(url)
 
@@ -123,19 +118,19 @@ class TestStationTagsView:
 
         content = response.content.decode("utf-8")
 
-        # Shared CRUD module is loaded and invoked.
-        assert "forms/tagged_entity_list.js" in content
-        assert "attachTaggedEntityList" in content
-
-        # Template-specific callbacks / wiring still live inline.
-        assert "renderTags" in content  # renderList callback
-        assert "populateColorPicker" in content  # color-picker callback
-        assert "selectColor" in content
+        controller = (
+            Path(settings.BASE_DIR) / "frontend_common/controllers/station-tags.js"
+        ).read_text()
+        assert 'data-speleodb-controller="station-tags"' in content
+        assert "attachTaggedEntityList" in controller
+        assert "renderTags" in controller
+        assert "populateColorPicker" in controller
+        assert "selectColor" in controller
 
         # DOM hooks that the shared module binds to still exist.
         assert "btn-create-tag" in content
-        assert "btn-edit-tag" in content
-        assert "btn-delete-tag" in content
+        assert "btn-edit-tag" in controller
+        assert "btn-delete-tag" in controller
 
     def test_station_tags_page_color_picker(
         self, authenticated_client: Client, user: User
@@ -148,11 +143,14 @@ class TestStationTagsView:
 
         content = response.content.decode("utf-8")
 
-        # Check for predefined colors array
-        assert "predefinedColors" in content
-        assert "#ef4444" in content.lower()
-        assert "#22c55e" in content.lower()
-        assert "#3b82f6" in content.lower()
+        controller = (
+            Path(settings.BASE_DIR) / "frontend_common/controllers/station-tags.js"
+        ).read_text()
+        assert 'data-speleodb-controller="station-tags"' in content
+        assert "predefinedColors" in controller
+        assert "#ef4444" in controller.lower()
+        assert "#22c55e" in controller.lower()
+        assert "#3b82f6" in controller.lower()
 
     def test_station_tags_page_csrf_token(
         self, authenticated_client: Client, user: User

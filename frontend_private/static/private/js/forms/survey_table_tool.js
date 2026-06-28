@@ -52,18 +52,13 @@
  * Requires: jQuery, Utils.escapeHtml (or a global `escapeHtml`).
  */
 
-/* exported attachSurveyTableTool */
+import { escapeHtml } from '../xss-helpers.js';
 
 function _stEscape(value) {
-    if (typeof window !== 'undefined' && typeof window.escapeHtml === 'function') {
-        return window.escapeHtml(value);
-    }
-    var div = document.createElement('div');
-    div.textContent = value == null ? '' : String(value);
-    return div.innerHTML;
+    return escapeHtml(value);
 }
 
-function attachSurveyTableTool(options) {
+export function attachSurveyTableTool(options) {
     var tableBodySelector = options.tableBodySelector;
     var statusSelector = options.statusSelector || '#status';
     var addRowBtnSelector = options.addRowBtnSelector;

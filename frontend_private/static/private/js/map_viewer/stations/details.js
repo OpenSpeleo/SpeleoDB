@@ -10,6 +10,8 @@ import { StationManager } from './manager.js';
 import { SurfaceStationManager } from '../surface_stations/manager.js';
 import { Layers } from '../map/layers.js';
 import { StationTags } from './tags.js';
+import { getRuntimeContext } from '../runtime_context.js';
+import { setCurrentStationIsNew } from './session.js';
 
 // Track current station state
 let currentStationId = null;
@@ -22,11 +24,11 @@ let activeTab = 'details';
 // Helper to get station type label and icon
 function getStationTypeInfo(subsurfaceType) {
     const typeLabels = {
-        'sensor': { label: 'Sensor', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.sensor}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-orange-500-20 text-orange-300 border-srgb-orange-500-30' },
-        'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-cyan-500-20 text-cyan-300 border-srgb-cyan-500-30' },
-        'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-amber-500-20 text-amber-300 border-srgb-amber-500-30' },
-        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-slate-500-20 text-slate-200 border-srgb-slate-400-30' },
-        'geology': { label: 'Geology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-stone-500-20 text-stone-300 border-srgb-stone-500-30' }
+        'sensor': { label: 'Sensor', icon: `<img src="${getRuntimeContext().icons.sensor}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-orange-500-20 text-orange-300 border-srgb-orange-500-30' },
+        'biology': { label: 'Biology', icon: `<img src="${getRuntimeContext().icons.biology}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-cyan-500-20 text-cyan-300 border-srgb-cyan-500-30' },
+        'artifact': { label: 'Artifact', icon: `<img src="${getRuntimeContext().icons.artifact}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-amber-500-20 text-amber-300 border-srgb-amber-500-30' },
+        'bone': { label: 'Bones', icon: `<img src="${getRuntimeContext().icons.bone}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-slate-500-20 text-slate-200 border-srgb-slate-400-30' },
+        'geology': { label: 'Geology', icon: `<img src="${getRuntimeContext().icons.geology}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-stone-500-20 text-stone-300 border-srgb-stone-500-30' }
     };
     return typeLabels[subsurfaceType];
 }
@@ -73,7 +75,7 @@ export const StationDetails = {
         try { modal.style.removeProperty('display'); } catch (e) { modal.style.display = ''; }
 
         // Store the newly created state for later use
-        window.currentStationIsNew = isNewlyCreated;
+        setCurrentStationIsNew(isNewlyCreated);
 
         // Clear modal content first
         const modalContent = document.getElementById('station-modal-content');
@@ -87,7 +89,7 @@ export const StationDetails = {
         const stationManagerModal = document.getElementById('station-manager-modal');
         if (titleElement && stationManagerModal && !stationManagerModal.classList.contains('hidden')) {
             titleElement.innerHTML = `
-                <button onclick="window.returnToStationManager()" class="text-sky-400 hover:text-sky-300 mr-2" title="Back to Station Manager">
+                <button ${Utils.mapActionAttributes('navigation.returnToStationManager')} class="text-sky-400 hover:text-sky-300 mr-2" title="Back to Station Manager">
                     <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                     </svg>
@@ -517,7 +519,7 @@ export const StationDetails = {
                                     ${Utils.raw((station.tag && station.tag.name && station.tag.color) ? Utils.safeHtml`
                                         <span class="station-tag" style="background-color: ${Utils.raw(Utils.safeCssColor(station.tag.color))}">
                                             ${station.tag.name}
-                                            <span class="remove-tag" onclick="window.removeStationTag('${station.id}')">×</span>
+                                            <span class="remove-tag" ${Utils.mapActionAttributes('tags.removeStationTag', station.id)}>×</span>
                                         </span>
                                     ` : '<span class="text-slate-400 text-sm">No tag assigned</span>')}
                                 </div>
@@ -763,15 +765,12 @@ export const StationDetails = {
     }
 };
 
-// Global function for return to station manager button
-window.returnToStationManager = function () {
+export function returnToStationManager() {
     console.log('↩️ Returning to Station Manager');
     const stationModal = document.getElementById('station-modal');
     if (stationModal) {
         stationModal.classList.add('hidden');
         stationModal.style.display = 'none';
     }
-    if (window.openSurveyStationManager) {
-        window.openSurveyStationManager();
-    }
-};
+    document.getElementById('station-manager-button')?.click();
+}

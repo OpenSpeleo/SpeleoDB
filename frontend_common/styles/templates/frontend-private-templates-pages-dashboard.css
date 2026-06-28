@@ -1,0 +1,279 @@
+.stat-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        border-color: rgba(99, 102, 241, 0.4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #e2e8f0;
+        line-height: 1;
+    }
+    .stat-label {
+        font-size: 0.8125rem;
+        color: #94a3b8;
+        font-weight: 500;
+        margin-top: 6px;
+    }
+    .skeleton-pulse {
+        background: linear-gradient(90deg, rgba(51,65,85,0.4) 25%, rgba(71,85,105,0.5) 50%, rgba(51,65,85,0.4) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 4px;
+    }
+    @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* Heatmap — GitHub-style contribution graph */
+    .heatmap-table {
+        border-spacing: 3px;
+        border-collapse: separate;
+        width: 100%;
+        table-layout: fixed;
+    }
+    .heatmap-table col.hm-label-col {
+        width: 36px;
+    }
+    .heatmap-table td {
+        padding: 0;
+    }
+    .heatmap-table td.hm-day-label {
+        font-size: 11px;
+        color: #64748b;
+        padding-right: 4px;
+        text-align: right;
+        white-space: nowrap;
+        overflow: hidden;
+        vertical-align: middle;
+    }
+    .heatmap-table thead td {
+        font-size: 11px;
+        color: #64748b;
+        padding-bottom: 2px;
+    }
+    .hm-cell {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        border-radius: 2px;
+        position: relative;
+    }
+    .hm-cell[data-tip]:hover::after {
+        content: attr(data-tip);
+        position: absolute;
+        bottom: calc(100% + 6px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: #e2e8f0;
+        font-size: 12px;
+        white-space: nowrap;
+        padding: 5px 10px;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        z-index: 50;
+        pointer-events: none;
+        animation: hm-tip-in 0.15s ease-out;
+        animation-delay: 0.25s;
+        animation-fill-mode: both;
+    }
+    .hm-cell[data-tip]:hover::before {
+        content: '';
+        position: absolute;
+        bottom: calc(100% + 2px);
+        left: 50%;
+        transform: translateX(-50%);
+        border: 4px solid transparent;
+        border-top-color: #334155;
+        z-index: 50;
+        pointer-events: none;
+        animation: hm-tip-in 0.15s ease-out;
+        animation-delay: 0.25s;
+        animation-fill-mode: both;
+    }
+    @keyframes hm-tip-in {
+        from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+        to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .hm-level-0 { background-color: #161b22; }
+    .hm-level-1 { background-color: #0e4429; }
+    .hm-level-2 { background-color: #006d32; }
+    .hm-level-3 { background-color: #26a641; }
+    .hm-level-4 { background-color: #39d353; }
+
+    .hm-legend-cell {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+
+    .hm-stat-card {
+        background: rgba(22, 27, 34, 0.6);
+        border: 1px solid rgba(100, 116, 139, 0.2);
+        border-radius: 8px;
+        padding: 12px 14px;
+    }
+
+    .activity-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        transition: background 0.15s ease;
+        border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+    }
+    .activity-row:last-child { border-bottom: none; }
+    .activity-row:hover {
+        background: rgba(51, 65, 85, 0.3);
+    }
+    .activity-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+        text-transform: uppercase;
+    }
+    .activity-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 500;
+        text-decoration: none;
+        white-space: nowrap;
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: background 0.15s ease;
+    }
+    .activity-badge-project {
+        background: rgba(99, 102, 241, 0.15);
+        color: #a5b4fc;
+    }
+    .activity-badge-project:hover {
+        background: rgba(99, 102, 241, 0.3);
+    }
+    .activity-badge-sha {
+        background: rgba(51, 65, 85, 0.5);
+        color: #94a3b8;
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        letter-spacing: 0.3px;
+    }
+    .activity-badge-sha:hover {
+        background: rgba(51, 65, 85, 0.8);
+        color: #cbd5e1;
+    }
+    .activity-msg {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+        color: #94a3b8;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .activity-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+        font-size: 11px;
+        color: #64748b;
+        white-space: nowrap;
+    }
+    .activity-meta a {
+        color: #64748b;
+        text-decoration: none;
+        transition: color 0.15s ease;
+    }
+    .activity-meta a:hover { color: #a5b4fc; }
+    .activity-time-short { display: none; }
+
+    .quick-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        background: rgba(30, 41, 59, 0.6);
+        color: #e2e8f0;
+        font-weight: 500;
+        font-size: 0.8125rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .quick-action-btn:hover {
+        border-color: rgba(99, 102, 241, 0.5);
+        background: rgba(99, 102, 241, 0.1);
+        color: #a5b4fc;
+    }
+
+    @media (max-width: 640px) {
+        .stat-value { font-size: 1.5rem; }
+        .stat-card { padding: 14px; }
+    }
+
+    /* ---- Mobile overhaul (tablets and below) ---- */
+    @media (max-width: 768px) {
+        /* Quick actions: full-width stacked buttons */
+        .quick-action-btn {
+            display: flex;
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 0.875rem;
+        }
+
+        /* Hide contribution heatmap entirely */
+        .heatmap-section-desktop {
+            display: none !important;
+        }
+
+        /* Activity feed: 3-column compact layout — Who / Project / When */
+        .activity-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 6px 10px;
+            align-items: center;
+            padding: 8px 6px;
+        }
+        .activity-avatar,
+        .activity-msg,
+        .activity-badge-sha {
+            display: none;
+        }
+        .activity-row .text-sm.font-medium.text-slate-200 {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        .activity-badge-project {
+            max-width: none;
+            font-size: 11px;
+        }
+        .activity-meta {
+            font-size: 11px;
+        }
+        .activity-time-full { display: none; }
+        .activity-time-short { display: inline; }
+    }

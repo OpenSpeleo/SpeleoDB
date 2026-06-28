@@ -11,6 +11,7 @@
 import { API } from '../api.js';
 import { Config } from '../config.js';
 import { Utils } from '../utils.js';
+import { getRuntimeContext } from '../runtime_context.js';
 import { Modal } from '../components/modal.js';
 
 // Cache for cylinder fleets and their cylinders
@@ -47,7 +48,7 @@ function openCylinderModal(title = 'Safety Cylinder') {
     }
     if (titleEl) {
         titleEl.innerHTML = `
-            <img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-6 h-6">
+            <img src="${getRuntimeContext().icons.cylinderOrange}" class="w-6 h-6">
             ${Utils.escapeHtml(title)}
         `;
     }
@@ -171,13 +172,13 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
                 
                 <!-- Action Buttons -->
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-700">
-                    <button type="button" onclick="window.CylinderInstalls.closeModal()"
+                    <button type="button" ${Utils.mapActionAttributes('cylinder.closeModal')}
                         class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
                         Cancel
                     </button>
-                    <button type="button" onclick="window.CylinderInstalls.handleInstall()"
+                    <button type="button" ${Utils.mapActionAttributes('cylinder.handleInstall')}
                         class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2">
-                        <img src="${window.MAPVIEWER_CONTEXT.icons.cylinderOrange}" class="w-4 h-4 filter brightness-200">
+                        <img src="${getRuntimeContext().icons.cylinderOrange}" class="w-4 h-4 filter brightness-200">
                         Install Cylinder
                     </button>
                 </div>
@@ -200,7 +201,6 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
     `;
 
     // Store coordinates for later use
-    window._pendingCylinderCoordinates = coordinates;
 
     // Open the cylinder modal
     openCylinderModal('Install Safety Cylinder');
@@ -494,11 +494,11 @@ function renderCylinderDetails(install) {
             <!-- Sub-tabs for cylinder details -->
             <div class="flex flow-x-2 border-b border-slate-600">
                 <button class="cylinder-subtab px-4 py-2 text-sm font-medium text-sky-400 border-b-2 border-sky-400"
-                    data-subtab="info" onclick="window.CylinderInstalls.switchTab('info', '${Utils.escapeHtml(install.id)}')">
+                    data-subtab="info" ${Utils.mapActionAttributes('cylinder.switchTab', 'info', install.id)}>
                     Cylinder Info
                 </button>
                 <button class="cylinder-subtab px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300"
-                    data-subtab="pressure" onclick="window.CylinderInstalls.switchTab('pressure', '${Utils.escapeHtml(install.id)}')">
+                    data-subtab="pressure" ${Utils.mapActionAttributes('cylinder.switchTab', 'pressure', install.id)}>
                     Pressure Checks (${install.pressure_check_count || 0})
                 </button>
             </div>
@@ -620,15 +620,15 @@ function renderCylinderInfoTab(install) {
         ${isInstalled ? `
         <!-- Actions -->
         <div class="flex flex-wrap justify-end gap-2 pt-6 border-t border-slate-700">
-            <button type="button" onclick="window.CylinderInstalls.markAsRetrieved('${Utils.escapeHtml(install.id)}')"
+            <button type="button" ${Utils.mapActionAttributes('cylinder.markAsRetrieved', install.id)}
                 class="px-3 py-2 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors">
                 Mark as Retrieved
             </button>
-            <button type="button" onclick="window.CylinderInstalls.markAsAbandoned('${Utils.escapeHtml(install.id)}')"
+            <button type="button" ${Utils.mapActionAttributes('cylinder.markAsAbandoned', install.id)}
                 class="px-3 py-2 bg-slate-500 text-white text-sm rounded-lg hover:bg-slate-600 transition-colors">
                 Mark as Abandoned
             </button>
-            <button type="button" onclick="window.CylinderInstalls.markAsLost('${Utils.escapeHtml(install.id)}')"
+            <button type="button" ${Utils.mapActionAttributes('cylinder.markAsLost', install.id)}
                 class="px-3 py-2 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition-colors">
                 Mark as Lost
             </button>
@@ -656,7 +656,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                 <!-- Add new check button -->
                 <div class="flex justify-between items-center">
                     <h4 class="text-lg font-medium text-white">Pressure Check History</h4>
-                    <button type="button" onclick="window.CylinderInstalls.showAddPressureCheck('${Utils.escapeHtml(installId)}')"
+                    <button type="button" ${Utils.mapActionAttributes('cylinder.showAddPressureCheck', installId)}
                         class="px-3 py-1.5 bg-sky-500 text-white text-sm rounded-lg hover:bg-sky-600 transition-colors flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -696,7 +696,6 @@ async function renderPressureChecksTab(installId, contentEl) {
                                     // Escape user-controlled fields to prevent XSS
                                     const safeUser = Utils.escapeHtml(check.user) || 'Unknown';
                                     const safeNotes = Utils.escapeHtml(check.notes) || '-';
-                                    const safeCheckId = Utils.escapeHtml(check.id);
                                     return `
                                         <tr class="hover:bg-srgb-slate-700-30">
                                             <td class="px-4 py-3 text-white">${checkDate}</td>
@@ -704,7 +703,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                                             <td class="px-4 py-3 text-slate-400">${safeUser}</td>
                                             <td class="px-4 py-3 text-slate-400 max-w-xs truncate">${safeNotes}</td>
                                             <td class="px-4 py-3 text-right">
-                                                <button onclick="window.CylinderInstalls.editPressureCheck('${Utils.escapeHtml(installId)}', '${safeCheckId}')"
+                                                <button ${Utils.mapActionAttributes('cylinder.editPressureCheck', installId, check.id)}
                                                     class="text-sky-400 hover:text-sky-300 mr-2" title="Edit">
                                                     <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -712,7 +711,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                                                         </path>
                                                     </svg>
                                                 </button>
-                                                <button onclick="window.CylinderInstalls.deletePressureCheck('${Utils.escapeHtml(installId)}', '${safeCheckId}')"
+                                                <button ${Utils.mapActionAttributes('cylinder.deletePressureCheck', installId, check.id)}
                                                     class="text-rose-400 hover:text-rose-300" title="Delete">
                                                     <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -790,11 +789,11 @@ function showAddPressureCheck(installId) {
             </div>
             
             <div class="flex justify-end gap-3">
-                <button type="button" onclick="window.CylinderInstalls.switchTab('pressure', '${Utils.escapeHtml(installId)}')"
+                <button type="button" ${Utils.mapActionAttributes('cylinder.switchTab', 'pressure', installId)}
                     class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors">
                     Cancel
                 </button>
-                <button type="button" onclick="window.CylinderInstalls.savePressureCheck('${Utils.escapeHtml(installId)}')"
+                <button type="button" ${Utils.mapActionAttributes('cylinder.savePressureCheck', installId)}
                     class="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors">
                     Save Check
                 </button>
@@ -862,8 +861,6 @@ async function editPressureCheck(installId, checkId) {
     try {
         const check = await API.getCylinderPressureCheckDetails(installId, checkId);
 
-        const safeInstallId = Utils.escapeHtml(installId);
-        const safeCheckId = Utils.escapeHtml(checkId);
 
         // Get the check_date or fallback to today
         const checkDateValue = check.check_date || new Date().toISOString().split('T')[0];
@@ -909,11 +906,11 @@ async function editPressureCheck(installId, checkId) {
                 </div>
                 
                 <div class="flex justify-end gap-3">
-                    <button type="button" onclick="window.CylinderInstalls.switchTab('pressure', '${safeInstallId}')"
+                    <button type="button" ${Utils.mapActionAttributes('cylinder.switchTab', 'pressure', installId)}
                         class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors">
                         Cancel
                     </button>
-                    <button type="button" onclick="window.CylinderInstalls.updatePressureCheck('${safeInstallId}', '${safeCheckId}')"
+                    <button type="button" ${Utils.mapActionAttributes('cylinder.updatePressureCheck', installId, checkId)}
                         class="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors">
                         Save Changes
                     </button>
@@ -926,7 +923,7 @@ async function editPressureCheck(installId, checkId) {
         contentEl.innerHTML = `
             <div class="text-center py-8 text-rose-400">
                 <p>Failed to load pressure check</p>
-                <button type="button" onclick="window.CylinderInstalls.switchTab('pressure', '${Utils.escapeHtml(installId)}')"
+                <button type="button" ${Utils.mapActionAttributes('cylinder.switchTab', 'pressure', installId)}
                     class="mt-4 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors">
                     Back to List
                 </button>
@@ -1178,5 +1175,3 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Make available globally
-window.CylinderInstalls = CylinderInstalls;
-

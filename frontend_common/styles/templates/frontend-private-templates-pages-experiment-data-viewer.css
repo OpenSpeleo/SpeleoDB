@@ -1,0 +1,21 @@
+/* Custom AG Grid Dark Theme Overrides */
+    .ag-theme-alpine-dark {
+        --ag-background-color: rgb(30, 41, 59);
+        --ag-header-background-color: rgb(51, 65, 85);
+        --ag-odd-row-background-color: rgb(30, 41, 59);
+        --ag-header-foreground-color: rgb(226, 232, 240);
+        --ag-foreground-color: rgb(203, 213, 225);
+        --ag-border-color: rgb(71, 85, 105);
+        --ag-row-hover-color: rgba(99, 102, 241, 0.1);
+        --ag-selected-row-background-color: rgba(99, 102, 241, 0.2);
+        --ag-range-selection-background-color: rgba(99, 102, 241, 0.2);
+        --ag-input-focus-border-color: rgb(99, 102, 241);
+    }
+    
+    .ag-theme-alpine-dark .ag-header-cell-text {
+        font-weight: 600;
+    }
+    
+    .ag-theme-alpine-dark .ag-cell {
+        line-height: 40px;
+    }

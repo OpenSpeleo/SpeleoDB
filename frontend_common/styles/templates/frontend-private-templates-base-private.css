@@ -1,0 +1,132 @@
+/* Mobile Responsive Styles - Only affects mobile devices */
+        @media (max-width: 1023px) {
+            /* Prevent horizontal scrolling */
+            body {
+                overflow-x: hidden;
+            }
+
+            /* Fix iOS Safari auto-zoom on form inputs */
+            /* iOS Safari zooms the page when font-size < 16px */
+            .form-input,
+            .form-select,
+            .form-textarea,
+            input[type="text"],
+            input[type="email"],
+            input[type="password"],
+            input[type="number"],
+            input[type="date"],
+            textarea,
+            select {
+                font-size: 16px !important;
+            }
+
+            /* Sidebar header spacing and logo sizing */
+            #sidebar .flex.justify-between.mb-10 {
+                gap: 16px;
+                align-items: center;
+            }
+
+            #sidebar .flex.justify-between.mb-10 a img {
+                max-width: 120px;
+                height: auto;
+            }
+
+            /* Header adjustments */
+            header .flex.items-center.justify-between {
+                flex-wrap: nowrap;
+            }
+
+            /* Hide non-essential header items on mobile - they go in user menu */
+            header .relative.inline-flex:has(a[href*="home"]),
+            header .relative.inline-flex:has(a[href*="api-schema"]),
+            header .relative.inline-flex:has(a[href*="api-docs"]),
+            header .relative.inline-flex:has(a[href*="admin"]),
+            header .relative.inline-flex:has(button[type="submit"]) {
+                display: none;
+            }
+
+            /* Keep only user dropdown visible, make it prominent */
+            header .flex.items-center.flow-x-3 {
+                gap: 8px;
+            }
+
+            /* Hide dividers on mobile */
+            header hr.w-px {
+                display: none;
+            }
+
+            /* Make user button more prominent on mobile */
+            header .relative.inline-flex:has(button[aria-haspopup]) {
+                display: flex !important;
+            }
+
+            header .relative.inline-flex button[aria-haspopup] {
+                background: rgba(100, 116, 139, 0.3);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+
+            /* User dropdown - make it scroll better on small screens */
+            header .origin-top-right.absolute {
+                right: 0;
+                left: auto;
+                max-width: 90vw;
+            }
+        }
+
+        /* Mobile-specific improvements for tablets and below */
+        @media (max-width: 768px) {
+            /* Reduce padding on main content area */
+            main .px-4 {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+
+            main .sm\:py-0 {
+                padding-top: 0px !important;
+                padding-bottom: 0px !important;
+            }
+
+            /* Make page titles smaller on mobile */
+            h1.text-2xl.md\:text-3xl {
+                font-size: 1.5rem !important;
+            }
+
+            /* Improve sidebar scrolling */
+            .flex.flex-nowrap.overflow-x-scroll {
+                -webkit-overflow-scrolling: touch;
+                scroll-behavior: smooth;
+            }
+
+            /* Make cards/panels stack better */
+            .flex.flex-col.md\:flex-row {
+                overflow-x: hidden;
+            }
+        }
+
+        /* Phone-specific (very small screens) */
+        @media (max-width: 640px) {
+            /* Make secondary navigation tabs more compact */
+            .flex.flex-nowrap.overflow-x-scroll ul li a {
+                font-size: 12px;
+                padding: 8px 12px;
+            }
+
+            /* Reduce overall padding */
+            .p-6 {
+                padding: 1rem !important;
+            }
+
+            /* Welcome banner adjustments */
+            .relative.bg-indigo-500 {
+                padding: 1rem !important;
+            }
+
+            .relative.bg-indigo-500 h1 {
+                font-size: 1.25rem !important;
+            }
+
+            .relative.bg-indigo-500 p {
+                font-size: 0.875rem !important;
+            }
+        }

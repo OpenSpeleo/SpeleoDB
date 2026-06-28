@@ -1,5 +1,7 @@
 {% extends "base_private.html" %}
-{% load static %}
+{% load static vite_assets %}
+
+{% block extra_css %}{% vite_preload 'controller-entity-crud' %}{% endblock extra_css %}
 
 {% block content %}
 <main class="grow">
@@ -77,27 +79,15 @@
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        attachEntityCrudForm({
-            formId: 'new_surface_network_form',
-            endpoint: "{% url 'api:v2:surface-networks' %}",
-            method: 'POST',
-            successMessage: 'The surface network has been created successfully.',
-            beforeSubmit: function (payload) {
-                if (!payload.name || !payload.name.trim()) {
-                    FormModals.showError('Network name is required.');
-                    return false;
-                }
-                return true;
-            },
-            redirectFromResponse: function (response) {
-                return Urls['private:surface_network_details'](response.id);
-            }
-        });
-    });
+<script type="application/json" data-speleodb-controller="entity-crud">
+{
+    "formId": "new_surface_network_form",
+    "endpoint": "{% url 'api:v2:surface-networks' %}",
+    "method": "POST",
+    "successMessage": "The surface network has been created successfully.",
+    "requiredField": "name",
+    "requiredMessage": "Network name is required.",
+    "redirectRoute": "private:surface_network_details"
+}
 </script>
 {% endblock inline_extra_js %}

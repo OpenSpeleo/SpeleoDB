@@ -8,29 +8,19 @@
  * legacy `{data: [...]}` envelope.
  */
 
-/* global attachUserAutocomplete */
-
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { attachUserAutocomplete } from './user_autocomplete.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const JQUERY_PATH = resolve(__dirname, '..', '..', '..', '..', 'frontend_public', 'static', 'js', 'vendors', 'jquery-3.7.1.js');
-const XSS_PATH = resolve(__dirname, 'xss-helpers.js');
-const AUTOCOMPLETE_PATH = resolve(__dirname, 'user_autocomplete.js');
-
 const JQUERY_SRC = readFileSync(JQUERY_PATH, 'utf-8');
-const XSS_SRC = readFileSync(XSS_PATH, 'utf-8');
-const AUTOCOMPLETE_SRC = readFileSync(AUTOCOMPLETE_PATH, 'utf-8');
 
 beforeAll(() => {
     // eslint-disable-next-line no-eval
     (0, eval)(JQUERY_SRC);
-    // eslint-disable-next-line no-eval
-    (0, eval)(XSS_SRC);
-    // eslint-disable-next-line no-eval
-    (0, eval)(AUTOCOMPLETE_SRC);
 });
 
 const URL = '/api/v2/user/autocomplete/';

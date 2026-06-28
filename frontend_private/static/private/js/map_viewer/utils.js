@@ -1,5 +1,6 @@
 import { Notification } from './components/notification.js';
 import { DEFAULTS } from './config.js';
+import { getRuntimeContext } from './runtime_context.js';
 
 const RAW_HTML = Symbol('RAW_HTML');
 
@@ -39,6 +40,15 @@ export const Utils = {
         return { [RAW_HTML]: true, value: String(htmlString) };
     },
 
+    mapActionAttributes: function(action, ...args) {
+        if (!/^[a-z][a-z0-9-]*\.[A-Za-z][A-Za-z0-9]*$/.test(action)) {
+            throw new Error(`Invalid map action: ${action}`);
+        }
+        const safeAction = Utils.escapeHtml(action);
+        const safeArgs = Utils.escapeHtml(JSON.stringify(args));
+        return `data-map-action="${safeAction}" data-map-args="${safeArgs}"`;
+    },
+
     safeHtml: function(strings, ...values) {
         return strings.reduce((result, str, i) => {
             if (i < values.length) {
@@ -55,7 +65,7 @@ export const Utils = {
     getCSRFToken: function() {
         return getCSRFTokenFromInput()
             || getCSRFTokenFromCookie()
-            || normalizeCSRFToken(window.MAPVIEWER_CONTEXT?.csrfToken);
+            || normalizeCSRFToken(getRuntimeContext().csrfToken);
     },
 
     formatDateString: function(dateStr) {

@@ -1,4 +1,5 @@
 {% extends "base_private.html" %}
+{% load vite_assets %}
 {% load static %}
 
 {% load countries %}
@@ -6,95 +7,7 @@
 {% load str_format %}
 
 {% block extra_css %}
-<style>
-    /* Mobile card layout for sensor fleets */
-    @media (max-width: 768px) {
-        .sensor-fleets-table {
-            display: none;
-        }
-        
-        .sensor-fleets-cards {
-            display: block;
-        }
-        
-        .sensor-fleet-card {
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            transition: all 0.3s ease;
-        }
-        
-        .sensor-fleet-card:hover {
-            border-color: rgba(99, 102, 241, 0.5);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-        
-        .sensor-fleet-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
-        }
-        
-        .sensor-fleet-card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #e2e8f0;
-            flex: 1;
-            margin-right: 12px;
-        }
-        
-        .sensor-fleet-card-actions {
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-        
-        .sensor-fleet-card-body {
-            display: grid;
-            gap: 10px;
-        }
-        
-        .sensor-fleet-card-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .sensor-fleet-card-label {
-            font-size: 13px;
-            color: #94a3b8;
-            font-weight: 500;
-            flex-shrink: 0;
-        }
-        
-        .sensor-fleet-card-value {
-            font-size: 15px;
-            color: #cbd5e1;
-            font-weight: 500;
-            text-align: right;
-        }
-        
-        .sensor-fleet-card-badge {
-            text-align: right;
-        }
-    }
-    
-    @media (min-width: 769px) {
-        .sensor-fleets-table {
-            display: block;
-        }
-        
-        .sensor-fleets-cards {
-            display: none;
-        }
-    }
-</style>
+{% vite_styles 'style-template-frontend-private-templates-pages-sensor-fleets' %}
 {% endblock extra_css %}
 
 {% block content %}

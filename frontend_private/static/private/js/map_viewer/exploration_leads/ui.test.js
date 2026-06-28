@@ -1,4 +1,5 @@
 import { ExplorationLeadUI } from './ui.js';
+import { configureRuntimeContext } from '../runtime_context.js';
 
 vi.mock('./manager.js', () => ({
     ExplorationLeadManager: {
@@ -68,13 +69,13 @@ import { State } from '../state.js';
 describe('ExplorationLeadUI coordinate formatting', () => {
     beforeEach(() => {
         document.body.innerHTML = '';
-        window.MAPVIEWER_CONTEXT = { icons: { explorationLead: 'https://example.test/lead.png' } };
+        configureRuntimeContext({ icons: { explorationLead: 'https://example.test/lead.png' } });
         vi.clearAllMocks();
     });
 
     afterEach(() => {
         document.body.innerHTML = '';
-        delete window.MAPVIEWER_CONTEXT;
+        configureRuntimeContext({});
     });
 
     describe('showCreateModal', () => {

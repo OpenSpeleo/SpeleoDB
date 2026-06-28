@@ -1,6 +1,7 @@
 import { CylinderInstalls } from './cylinders.js';
 import { API } from '../api.js';
 import { Utils } from '../utils.js';
+import { configureRuntimeContext } from '../runtime_context.js';
 
 vi.mock('../utils.js', () => {
     const escapeHtml = (text) => {
@@ -16,6 +17,7 @@ vi.mock('../utils.js', () => {
             showLoadingOverlay: vi.fn(() => document.createElement('div')),
             hideLoadingOverlay: vi.fn(),
             escapeHtml,
+            mapActionAttributes: (action, ...args) => `data-map-action="${escapeHtml(action)}" data-map-args="${escapeHtml(JSON.stringify(args))}"`,
             safeCssColor: vi.fn((c, fb) => /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(c) ? c : (fb || '#94a3b8')),
             sanitizeUrl: vi.fn((url) => url || ''),
             raw: (html) => ({ [RAW]: true, value: String(html) }),
@@ -60,7 +62,7 @@ vi.mock('../api.js', () => ({
 
 describe('StationCylinders XSS', () => {
     beforeEach(() => {
-        window.MAPVIEWER_CONTEXT = { icons: { cylinderOrange: 'https://example.test/cyl.png' } };
+        configureRuntimeContext({ icons: { cylinderOrange: 'https://example.test/cyl.png' } });
         const modalShell = document.createElement('div');
         modalShell.id = 'cylinder-modal';
         const titleEl = document.createElement('div');
@@ -75,7 +77,7 @@ describe('StationCylinders XSS', () => {
 
     afterEach(() => {
         document.body.innerHTML = '';
-        delete window.MAPVIEWER_CONTEXT;
+        configureRuntimeContext({});
     });
 
     it('escapes cylinder and fleet names and location in install UI HTML', async () => {

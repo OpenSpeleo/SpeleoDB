@@ -2,6 +2,7 @@ import { SurfaceStationManager } from './manager.js';
 import { State } from '../state.js';
 import { Config } from '../config.js';
 import { Utils } from '../utils.js';
+import { goToStation } from '../map/navigation.js';
 import { StationDetails } from '../stations/details.js';
 import { Modal } from '../components/modal.js';
 
@@ -181,9 +182,7 @@ export const SurfaceStationUI = {
                     const lat = parseFloat(btn.dataset.lat);
                     const lon = parseFloat(btn.dataset.lon);
                     e.stopPropagation();
-                    if (window.goToStation) {
-                        window.goToStation(stationId, lat, lon);
-                    }
+                    goToStation(stationId, lat, lon);
                     return;
                 }
 

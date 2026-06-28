@@ -14,7 +14,7 @@
 
 /* exported FormModals */
 
-var FormModals = (function () {
+export const FormModals = (function () {
     function hideAll() {
         $('#modal_success').hide();
         $('#modal_error').hide();

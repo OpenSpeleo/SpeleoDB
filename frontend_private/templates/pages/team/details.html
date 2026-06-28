@@ -1,7 +1,9 @@
 {% extends "pages/team/base.html" %}
-{% load static %}
+{% load static vite_assets %}
 
 {% load countries %}
+
+{% block extra_css %}{% vite_preload 'controller-entity-crud' %}{% endblock extra_css %}
 
 {% block right_panel %}
 <div class="grow">
@@ -75,18 +77,13 @@
 
 {% if is_team_leader %}
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/entity_crud_form.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        attachEntityCrudForm({
-            formId: 'team_details_form',
-            endpoint: "{% url 'api:v2:team-detail' id=team.id %}",
-            method: 'PUT',
-            successMessage: 'The team has been updated.'
-        });
-    });
+<script type="application/json" data-speleodb-controller="entity-crud">
+{
+    "formId": "team_details_form",
+    "endpoint": "{% url 'api:v2:team-detail' id=team.id %}",
+    "method": "PUT",
+    "successMessage": "The team has been updated."
+}
 </script>
 {% endblock inline_extra_js %}
 {% endif %}

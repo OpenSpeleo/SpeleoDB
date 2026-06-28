@@ -1,5 +1,6 @@
 import { API } from '../api.js';
 import { Utils } from '../utils.js';
+import { isCurrentStationNew } from './session.js';
 import { Config, DEFAULTS } from '../config.js';
 import { State } from '../state.js';
 import { createProgressBarHTML, UploadProgressController } from '../components/upload.js';
@@ -65,7 +66,7 @@ export const StationResources = {
                             </div>
                         ` : `
                             <div class="text-center py-12">
-                                ${window.currentStationIsNew ? `
+                                ${isCurrentStationNew() ? `
                                     <div class="bg-srgb-blue-500-20 border border-srgb-blue-500-50 rounded-lg p-6 mb-6 max-w-md center-x">
                                         <span class="text-3xl mb-3 block">🎊</span>
                                         <h4 class="text-blue-200 font-semibold mb-2">Station Ready for Resources!</h4>
@@ -104,7 +105,7 @@ export const StationResources = {
             container.innerHTML = `
                 <div class="tab-content active p-6 text-center">
                     <div class="text-red-400 mb-4">Error loading resources</div>
-                    <button onclick="location.reload()" class="btn-secondary text-sm">Retry</button>
+                    <button ${Utils.mapActionAttributes('navigation.reload')} class="btn-secondary text-sm">Retry</button>
                 </div>
             `;
         }
@@ -1134,5 +1135,4 @@ export const StationResources = {
         return parts[parts.length - 1] || 'File';
     }
 };
-
 

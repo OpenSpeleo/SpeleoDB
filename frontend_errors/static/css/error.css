@@ -1,5 +1,9 @@
 @import url("https://fonts.googleapis.com/css?family=Dosis:300,400,700,800");
 
+:root {
+  color-scheme: dark;
+}
+
 /** Styles for the 403 Page **/
 
 .particle-error,

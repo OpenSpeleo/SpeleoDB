@@ -1,5 +1,5 @@
 {% extends "base_private.html" %}
-{% load static %}
+{% load static vite_assets %}
 
 {% load countries %}
 {% load set_var %}
@@ -192,24 +192,8 @@
 {% endblock content %}
 
 {% block extra_css %}
-<style>
-    /* Drag and drop styles */
-    .sortable-ghost {
-        opacity: 0.4;
-        background: #334155;
-    }
-    
-    .sortable-drag {
-        opacity: 1;
-        cursor: grabbing !important;
-    }
-    
-    .sortable-fallback {
-        opacity: 0.8;
-        background: #1e293b;
-        border: 2px dashed #6366f1 !important;
-    }
-</style>
+{% vite_preload 'controller-experiment-form' %}
+{% vite_styles 'style-template-frontend-private-templates-pages-experiment-new' %}
 {% endblock extra_css %}
 
 {% block extra_js %}
@@ -226,149 +210,17 @@
 </script>
 {% endif %}
 
-<script src="{% static 'private/js/experiment-fields.js' %}"></script>
 {% endblock extra_js %}
 
 {% block inline_extra_js %}
-<script>
-    $(window).on('load', function() {
-        // Initialize common experiment fields functionality
-        ExperimentFields.initialize();
-
-        // Initialize drag and drop for field reordering
-        const allFieldsContainer = document.getElementById('all_fields_container');
-        if (allFieldsContainer) {
-            Sortable.create(allFieldsContainer, {
-                animation: 150,
-                handle: '.drag-handle',
-                ghostClass: 'sortable-ghost',
-                dragClass: 'sortable-drag',
-                forceFallback: true,
-                fallbackClass: 'sortable-fallback',
-                draggable: '.mandatory-field-item, .field-item' // Only field elements are draggable, not headers
-            });
-        }
-
-        // Collect ALL fields data in DOM order (new.html specific)
-        // Note: UUIDs and order are auto-generated server-side
-        // Mandatory fields are identified by their name matching
-        function collectCustomFields() {
-            const fields = [];
-            
-            // Iterate through all children of the sortable container in DOM order
-            $('#all_fields_container').children().each(function() {
-                const $element = $(this);
-                
-                // Skip non-field elements (like headers)
-                if (!$element.hasClass('mandatory-field-item') && !$element.hasClass('field-item')) {
-                    return true; // continue to next element
-                }
-                
-                // Check if this is a mandatory field
-                if ($element.hasClass('mandatory-field-item')) {
-                    const fieldName = $element.data('field-name');
-                    const fieldType = $element.data('field-type');
-                    const fieldRequired = $element.data('field-required');
-                    
-                    fields.push({
-                        name: fieldName,
-                        type: fieldType,
-                        required: fieldRequired
-                    });
-                }
-                // Check if this is a custom field
-                else if ($element.hasClass('field-item')) {
-                    const fieldName = $element.find('.field-name').val().trim();
-                    const fieldType = $element.find('.field-type').val();
-                    const fieldRequired = $element.find('.field-required').is(':checked');
-                    
-                    if (fieldName && fieldType) {
-                        const fieldData = {
-                            name: fieldName,
-                            type: fieldType,
-                            required: fieldRequired
-                        };
-                        
-                        // If field type is select, collect options from tags
-                        if (fieldType === 'select') {
-                            const options = [];
-                            $element.find('.field-tags-container .tag-text').each(function() {
-                                options.push($(this).text());
-                            });
-                            fieldData.options = options;
-                        }
-                        
-                        fields.push(fieldData);
-                    }
-                }
-            });
-            
-            return fields;
-        }
-
-        // Form submission handler
-        $('#btn_submit').click(function (e) {
-            e.preventDefault();
-
-            $("#error_div").hide();
-            $("#success_div").hide();
-
-            // Validate that all fields are complete (have name and type)
-            const completenessValidation = ExperimentFields.validateFieldsComplete();
-            if (!completenessValidation.isValid) {
-                $("#modal_error_txt").text(completenessValidation.errorMessage);
-                $("#modal_error").css('display', 'flex');
-                return false;
-            }
-
-            // Validate unique field names
-            if (!ExperimentFields.validateUniqueFieldNames()) {
-                $("#modal_error_txt").html("Duplicate field names detected. Each field must have a unique name. Please check the highlighted fields.");
-                $("#modal_error").css('display', 'flex');
-                return false;
-            }
-
-            // Validate that at least custom fields exist
-            const customFields = collectCustomFields();
-            if (customFields.length === 2) { // Only mandatory fields
-                $("#modal_error_txt").html("Please add at least one custom field for data collection.");
-                $("#modal_error").css('display', 'flex');
-                return false;
-            }
-
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
-            let new_experiment_form = document.getElementById('new_experiment_form');
-            var formData = new FormData(new_experiment_form);
-            
-            // Convert to object and add custom fields
-            // Note: Backend serializer will generate slugs and hashes
-            var dataObject = Object.fromEntries(formData);
-            dataObject.experiment_fields = customFields;
-
-            $.ajax({
-                url: "{% url 'api:v2:experiments' %}",
-                method: "POST",
-                data: JSON.stringify(dataObject),
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-                },
-                success: function (data) {
-                    $("#modal_success_txt").html("The experiment has been created.");
-                    $("#modal_success").css('display', 'flex');
-
-                    window.setTimeout(function(){
-                        window.location.href = Urls['private:experiment_details'](data["id"]);
-                    }, 2000);
-                },
-                error: function (data) {
-                    {% include 'snippets/ajax_error_modal_management.js' %}
-                }
-            });
-            return false; // prevent default
-        });
-    });
+<script type="application/json" data-speleodb-controller="experiment-form">
+{
+    "mode": "create",
+    "formId": "new_experiment_form",
+    "endpoint": "{% url 'api:v2:experiments' %}",
+    "method": "POST",
+    "successMessage": "The experiment has been created.",
+    "redirectRoute": "private:experiment_details"
+}
 </script>
 {% endblock inline_extra_js %}

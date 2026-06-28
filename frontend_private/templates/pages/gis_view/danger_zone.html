@@ -1,5 +1,6 @@
 {% extends "pages/gis_view/base.html" %}
 {% load static %}
+{% load vite_assets %}
 
 {% block right_panel %}
 <div class="grow">
@@ -35,17 +36,12 @@
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/danger_zone.js' %}"></script>
-<script>
-    $(window).on('load', function () {
-        attachDangerZone({
-            deleteUrl: "{% url 'api:v2:gis-view-detail' id=gis_view.id %}",
-            successMessage: "The GIS view has been deleted successfully.",
-            successRedirect: "{% url 'private:gis_views' %}"
-        });
-    });
+{% vite_preload 'controller-danger-zone' %}
+<script type="application/json" data-speleodb-controller="danger-zone">
+{
+    "deleteUrl": "{% url 'api:v2:gis-view-detail' id=gis_view.id %}",
+    "successMessage": "The GIS view has been deleted successfully.",
+    "successRedirect": "{% url 'private:gis_views' %}"
+}
 </script>
 {% endblock inline_extra_js %}
-

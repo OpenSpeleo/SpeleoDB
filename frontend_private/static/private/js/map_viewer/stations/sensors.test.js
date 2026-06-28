@@ -18,6 +18,7 @@ vi.mock('../utils.js', () => {
             showLoadingOverlay: vi.fn(() => document.createElement('div')),
             hideLoadingOverlay: vi.fn(),
             escapeHtml,
+            mapActionAttributes: (action, ...args) => `data-map-action="${escapeHtml(action)}" data-map-args="${escapeHtml(JSON.stringify(args))}"`,
             safeCssColor: vi.fn((c, fb) => /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(c) ? c : (fb || '#94a3b8')),
             sanitizeUrl: vi.fn((url) => url || ''),
             raw: (html) => ({ [RAW]: true, value: String(html) }),
@@ -98,10 +99,11 @@ describe('StationSensors XSS', () => {
         expect(html).toContain('&lt;b&gt;');
     });
 
-    it('escapes double quotes in sensor name used inside onclick attribute strings', async () => {
+    it('serializes sensor names safely in delegated action data', async () => {
+        const sensorName = 'evil" onclick=alert(1)//';
         API.getStationSensorInstallsWithStatus.mockResolvedValue([{
             id: 'i2',
-            sensor_name: 'evil" onclick=alert(1)//',
+            sensor_name: sensorName,
             sensor_fleet_name: 'F',
             status: 'installed',
             install_date: '2020-01-01',
@@ -111,8 +113,11 @@ describe('StationSensors XSS', () => {
         await StationSensors.loadCurrentInstalls('st-1', 'proj-1', 'current', false);
 
         const html = container.innerHTML;
-        expect(html).toContain('&quot;');
-        expect(html).toContain("'evil&quot; onclick=alert(1)//'");
+        const action = container.querySelector(
+            '[data-map-action="sensors.showInstallStatusChangeModal"]'
+        );
+        expect(JSON.parse(action.dataset.mapArgs)[2]).toBe(sensorName);
+        expect(container.querySelectorAll('[onclick]')).toHaveLength(0);
     });
 
     it('escapes sensor fleet and user fields in history table HTML', async () => {
