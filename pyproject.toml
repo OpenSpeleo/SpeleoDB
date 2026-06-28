@@ -20,7 +20,7 @@ dependencies = [
     "pytz==2026.2",         # https://github.com/stub42/pytz
     "timeago==1.0.16",      # https://github.com/hustcc/timeago
     "tomlkit==0.15.0",      # https://github.com/python-poetry/tomlkit
-    "wrapt==2.2.1",         # https://github.com/GrahamDumpleton/wrapt
+    "wrapt==2.2.2",         # https://github.com/GrahamDumpleton/wrapt
 
     # Redis
     # ------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ dependencies = [
     "django-allauth==65.18.0",         # https://github.com/pennersr/django-allauth
     "django-countries==9.0.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
-    "django-environ==0.13.0",          # https://github.com/joke2k/django-environ
+    "django-environ==0.14.0",          # https://github.com/joke2k/django-environ
     "django-hijack==3.7.8",            # https://github.com/django-hijack/django-hijack/
     "django-import-export==4.4.1",     # https://github.com/django-import-export/django-import-export
     "django-js-reverse==1.0.0",        # https://github.com/vintasoftware/django-js-reverse
@@ -128,13 +128,13 @@ local = [
     # Code quality
     # ------------------------------------------------------------------------------
     "ruff==0.15.18",    # https://github.com/astral-sh/ruff
-    "coverage==7.14.1", # https://github.com/nedbat/coveragepy
+    "coverage==7.14.2", # https://github.com/nedbat/coveragepy
     "djlint==1.39.2",   # https://github.com/Riverside-Healthcare/djLint
-    "prek==0.4.4",      # https://github.com/j178/prek
+    "prek==0.4.5",      # https://github.com/j178/prek
 
     # Django
     # ------------------------------------------------------------------------------
-    "django-debug-toolbar==6.3.0",    # https://github.com/jazzband/django-debug-toolbar
+    "django-debug-toolbar==7.0.0",    # https://github.com/jazzband/django-debug-toolbar
     "django-extensions==4.1",         # https://github.com/django-extensions/django-extensions
     "django-schema-viewer==0.5.3",    # https://github.com/pikhovkin/django-schema-viewer
     "django-silk[formatting]==5.5.0", # https://github.com/jazzband/django-silk
